@@ -12,4 +12,10 @@ function findExampleData(db, id) {
     .findOne({ exampleId: id }, { projection: { _id: 0 } })
 }
 
-export { findAllExampleData, findExampleData }
+function findExampleDataV2(db, id) {
+  return db
+    .collection('example-data')
+    .findOne({ exampleId: id }, { projection: { _id: 0 } })
+}
+
+export { findAllExampleData, findExampleData, findExampleDataV2 }
