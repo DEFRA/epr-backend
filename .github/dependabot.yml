@@ -8,38 +8,28 @@ updates:
 
     # Group packages into shared PR
     groups:
-      build:
+      dev:
+        applies-to: 'version-updates'
+        dependency-type: 'development'
+        update-types:
+          - 'minor'
+          - 'patch'
         patterns:
-          - 'autoprefixer'
+          - '*'
 
-      lint:
+      prod:
+        applies-to: 'version-updates'
+        dependency-type: 'production'
+        update-types:
+          - 'minor'
+          - 'patch'
         patterns:
-          - 'prettier'
-          - 'stylelint'
-          - 'stylelint-*'
+          - '*'
 
-      logging:
+      security:
+        applies-to: 'security-updates'
         patterns:
-          - '*-pino'
-          - '*-pino-format'
-          - 'pino'
-          - 'pino-*'
-
-      tools:
-        patterns:
-          - 'babel-jest'
-          - 'husky'
-          - 'jest'
-          - 'nodemon'
-          - 'npm-run-all'
-
-      types:
-        patterns:
-          - '@types/*'
-
-    ignore:
-      - dependency-name: 'eslint-*'
-      - dependency-name: 'eslint'
+          - '*'
 
     # Schedule run every Thursday, local time
     schedule:
