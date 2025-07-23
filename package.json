@@ -28,10 +28,10 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@defra/hapi-tracing": "1.0.0",
+    "@defra/hapi-tracing": "1.26.0",
     "@elastic/ecs-pino-format": "1.5.0",
     "@hapi/boom": "10.0.1",
-    "@hapi/hapi": "21.3.12",
+    "@hapi/hapi": "21.4.0",
     "aws-embedded-metrics": "4.2.0",
     "aws4": "1.13.2",
     "convict": "6.2.4",
@@ -39,14 +39,14 @@
     "global-agent": "3.0.0",
     "hapi-pino": "12.1.0",
     "hapi-pulse": "3.0.1",
-    "https-proxy-agent": "7.0.5",
+    "https-proxy-agent": "7.0.6",
     "joi": "17.13.3",
     "mongo-locks": "3.0.2",
-    "mongodb": "6.10.0",
+    "mongodb": "6.18.0",
     "node-fetch": "3.3.2",
-    "pino": "9.5.0",
+    "pino": "9.7.0",
     "pino-pretty": "13.0.0",
-    "undici": "7.5.0"
+    "undici": "7.12.0"
   },
   "devDependencies": {
     "@babel/core": "7.26.9",
