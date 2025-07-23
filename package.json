@@ -39,7 +39,7 @@
     "global-agent": "3.0.0",
     "hapi-pino": "12.1.0",
     "hapi-pulse": "3.0.1",
-    "https-proxy-agent": "7.0.5",
+    "https-proxy-agent": "7.0.6",
     "joi": "17.13.3",
     "mongo-locks": "3.0.2",
     "mongodb": "6.10.0",
