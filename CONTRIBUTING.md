@@ -1,0 +1,222 @@
+# Contributing
+
+<!-- TOC -->
+
+- [Contributing](#contributing)
+  - [Requirements](#requirements)
+    - [Node.js](#nodejs)
+  - [Local development](#local-development)
+    - [Setup](#setup)
+    - [Development](#development)
+    - [Testing](#testing)
+    - [Production](#production)
+    - [Npm scripts](#npm-scripts)
+    - [Update dependencies](#update-dependencies)
+    - [Formatting](#formatting)
+      - [Windows prettier issue](#windows-prettier-issue)
+  - [Development helpers](#development-helpers)
+    - [MongoDB Locks](#mongodb-locks)
+    - [Proxy](#proxy)
+  - [Docker](#docker)
+  _ [Development image](#development-image)
+  _ [Production image](#production-image)
+  _ [Docker Compose](#docker-compose)
+  _ [Dependabot](#dependabot) \* [SonarCloud](#sonarcloud)
+  <!-- TOC -->
+
+## Requirements
+
+### Node.js
+
+Please install [Node.js](http://nodejs.org/) `>= v22` and [npm](https://nodejs.org/) `>= v11`. You will find it
+easier to use the Node Version Manager [nvm](https://github.com/creationix/nvm)
+
+To use the correct version of Node.js for this application, via nvm:
+
+```bash
+cd epr-backend
+nvm use
+```
+
+## Local development
+
+### Setup
+
+Install application dependencies:
+
+```bash
+npm install
+```
+
+### Development
+
+To run the application in `development` mode run:
+
+```bash
+npm run dev
+```
+
+### Testing
+
+To test the application run:
+
+```bash
+npm run test
+```
+
+### Production
+
+To mimic the application running in `production` mode locally run:
+
+```bash
+npm start
+```
+
+### Npm scripts
+
+All available Npm scripts can be seen in [package.json](./package.json).
+To view them in your command line run:
+
+```bash
+npm run
+```
+
+### Update dependencies
+
+To update dependencies use [npm-check-updates](https://github.com/raineorshine/npm-check-updates):
+
+> The following script is a good start. Check out all the options on
+> the [npm-check-updates](https://github.com/raineorshine/npm-check-updates)
+
+```bash
+ncu --interactive --format group
+```
+
+### Formatting
+
+#### Windows prettier issue
+
+If you are having issues with formatting of line breaks on Windows update your global git config by running:
+
+```bash
+git config --global core.autocrlf false
+```
+
+## Development helpers
+
+### MongoDB Locks
+
+If you require a write lock for Mongo you can acquire it via `server.locker` or `request.locker`:
+
+```javascript
+async function doStuff(server) {
+  const lock = await server.locker.lock('unique-resource-name')
+
+  if (!lock) {
+    // Lock unavailable
+    return
+  }
+
+  try {
+    // do stuff
+  } finally {
+    await lock.free()
+  }
+}
+```
+
+Keep it small and atomic.
+
+You may use **using** for the lock resource management.
+Note test coverage reports do not like that syntax.
+
+```javascript
+async function doStuff(server) {
+  await using lock = await server.locker.lock('unique-resource-name')
+
+  if (!lock) {
+    // Lock unavailable
+    return
+  }
+
+  // do stuff
+
+  // lock automatically released
+}
+```
+
+Helper methods are also available in `/src/helpers/mongo-lock.js`.
+
+### Proxy
+
+We are using forward-proxy which is set up by default. To make use of this: `import { fetch } from 'undici'` then
+because of the `setGlobalDispatcher(new ProxyAgent(proxyUrl))` calls will use the ProxyAgent Dispatcher
+
+If you are not using Wreck, Axios or Undici or a similar http that uses `Request`. Then you may have to provide the
+proxy dispatcher:
+
+To add the dispatcher to your own client:
+
+```javascript
+import { ProxyAgent } from 'undici'
+
+return await fetch(url, {
+  dispatcher: new ProxyAgent({
+    uri: proxyUrl,
+    keepAliveTimeout: 10,
+    keepAliveMaxTimeout: 10
+  })
+})
+```
+
+## Docker
+
+### Development image
+
+Build:
+
+```bash
+docker build --target development --no-cache --tag epr-backend:development .
+```
+
+Run:
+
+```bash
+docker run -e PORT=3001 -p 3001:3001 epr-backend:development
+```
+
+### Production image
+
+Build:
+
+```bash
+docker build --no-cache --tag epr-backend .
+```
+
+Run:
+
+```bash
+docker run -e PORT=3001 -p 3001:3001 epr-backend
+```
+
+### Docker Compose
+
+A local environment with:
+
+- Localstack for AWS services (S3, SQS)
+- Redis
+- MongoDB
+- This service.
+- A commented out frontend example.
+
+```bash
+docker compose up --build -d
+```
+
+### Dependabot
+
+Dependabot is configured for this repository. You can [find the configuration here](.github/dependabot.yml).
+
+### SonarCloud
+
+SonarCloud is configured for this repository. You can [find the configuration here](./sonar-project.properties).
