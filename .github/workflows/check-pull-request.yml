@@ -31,10 +31,8 @@ jobs:
               core.exportVariable('TICKET_KEY', ticketKey.toUpperCase());
             }
       - name: Update PR Description
-        if: ${{ github.ref == 'refs/heads/PAE-' }}
         run: |
-          PR_BODY="
-          Ticket: [${TICKET_KEY}](https://eaflood.atlassian.net/browse/${TICKET_KEY})
+          PR_BODY="Ticket: [${TICKET_KEY}](https://eaflood.atlassian.net/browse/${TICKET_KEY})
 
           $(gh api /repos/$OWNER/$REPO/pulls/$PR_NUMBER | jq -r '.body')"
           gh api --method PATCH /repos/$OWNER/$REPO/pulls/$PR_NUMBER -f body="$PR_BODY"

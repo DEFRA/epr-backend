@@ -1,5 +1,3 @@
-Ticket: [PAE-XXX](https://eaflood.atlassian.net/browse/PAE-XXX)
-
 ## Description
 
 <!-- Describe your changes -->
