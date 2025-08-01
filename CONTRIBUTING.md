@@ -38,6 +38,23 @@ cd epr-backend
 nvm use
 ```
 
+### ADR tools
+
+To simplify the creation and management of ADRs, please [install ADR tools](https://github.com/npryce/adr-tools/blob/master/INSTALL.md)
+
+## Documentation
+
+Please see the [root `README.md`](./README.md).
+
+### Architecture Decision Records (ADRs)
+
+This project uses ADRs and `adr-tools`, to create new ADRs:
+
+1. Ensure you have [installed adr-tools](./CONTRIBUTING.md#adr-tools)
+2. From any directory in the repository: `adr new {name of ADR}`
+3. Complete the Context, Decision & Consequence sections
+4. Commit and push the code, the TOC file should be updated automatically
+
 ## Local development
 
 ### Setup
