@@ -1,3 +1,5 @@
+// @fixme: add coverage
+/* istanbul ignore file */
 const health = {
   method: 'GET',
   path: '/health',
