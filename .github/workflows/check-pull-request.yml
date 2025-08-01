@@ -3,20 +3,18 @@ name: Check Pull Request
 on:
   pull_request:
     branches:
-      - main
+      - '*'
     types:
       - opened
-      - edited
       - reopened
       - synchronize
-      - ready_for_review
 
 jobs:
   pr-prep:
     name: Preparation
     runs-on: ubuntu-latest
     steps:
-      - name: Check Branch Name
+      - name: Check branch name
         uses: actions/github-script@v6
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
@@ -28,19 +26,28 @@ jobs:
             if (!match || !ticketKey) {
               core.setFailed('Branch name does not match the required format: PAE-<NUMBER>-<desc>');
             } else {
-              core.exportVariable('TICKET_KEY', ticketKey.toUpperCase());
+              core.exportVariable('ticketKey', ticketKey.toUpperCase());
             }
-      - name: Update PR Description
-        run: |
-          PR_BODY="Ticket: [${TICKET_KEY}](https://eaflood.atlassian.net/browse/${TICKET_KEY})
+      - name: Add ticket link to PR description
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const { pull_request, repository } = context.payload;
+            const { body: previousBody } = pull_request;
+            const { ticketKey } = process.env;
+            const ticketLink = `[${ticketKey}](https://eaflood.atlassian.net/browse/${ticketKey})`;
 
-          $(gh api /repos/$OWNER/$REPO/pulls/$PR_NUMBER | jq -r '.body')"
-          gh api --method PATCH /repos/$OWNER/$REPO/pulls/$PR_NUMBER -f body="$PR_BODY"
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-          OWNER: ${{ github.repository_owner }}
-          REPO: ${{ github.event.repository.name }}
-          PR_NUMBER: ${{ github.event.number }}
+            if (!previousBody.includes(ticketLink)) {
+              github.rest.pulls.update({
+                owner: repository.owner.login,
+                repo: repository.name,
+                pull_number: pull_request.number,
+                body: `Ticket: ${ticketLink}\n${previousBody}`,
+              });
+            } else {
+              console.log('PR description already contains a link to the ticket')
+            }
 
   pr-validator:
     name: Run Pull Request Checks
