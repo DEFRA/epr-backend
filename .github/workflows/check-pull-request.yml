@@ -12,9 +12,43 @@ on:
       - ready_for_review
 
 jobs:
+  pr-prep:
+    name: Run Pull Request Preparation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Branch Name
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const branchName = context.payload.pull_request.head.ref;
+            const regex = /^(PAE-\d+)[-_]{1}.+$/i;
+            const [match, ticketKey] = branchName.match(regex) ?? [null, null];
+
+            if (!match || !ticketKey) {
+              core.setFailed('Branch name does not match the required format: PAE-<NUMBER>-<desc>');
+            } else {
+              core.exportVariable('TICKET_KEY', ticketKey.toUpperCase());
+            }
+      - name: Update PR Description
+        if: ${{ github.ref == 'refs/heads/PAE-' }}
+        run: |
+          PR_BODY="
+          Ticket: [${TICKET_KEY}](https://eaflood.atlassian.net/browse/${TICKET_KEY})
+
+          $(gh api /repos/$OWNER/$REPO/pulls/$PR_NUMBER | jq -r '.body')"
+          gh api --method PATCH /repos/$OWNER/$REPO/pulls/$PR_NUMBER -f body="$PR_BODY"
+        env:
+          GITHUB_TOKEN: ${{ secrets.PROJECT_MOD_PERSONAL_TOKEN_CLASSIC }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.number }}
+          TICKET_NUMBER: ${{ github.event.branchName }}
+
   pr-validator:
     name: Run Pull Request Checks
     runs-on: ubuntu-latest
+    needs: pr-prep
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -37,7 +71,7 @@ jobs:
           exit $?
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@master
+        uses: SonarSource/sonarqube-scan-action@v5
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
