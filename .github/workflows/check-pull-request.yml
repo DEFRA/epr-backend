@@ -13,7 +13,7 @@ on:
 
 jobs:
   pr-prep:
-    name: Run Pull Request Preparation
+    name: Preparation
     runs-on: ubuntu-latest
     steps:
       - name: Check Branch Name
@@ -37,11 +37,10 @@ jobs:
           $(gh api /repos/$OWNER/$REPO/pulls/$PR_NUMBER | jq -r '.body')"
           gh api --method PATCH /repos/$OWNER/$REPO/pulls/$PR_NUMBER -f body="$PR_BODY"
         env:
-          GITHUB_TOKEN: ${{ secrets.PROJECT_MOD_PERSONAL_TOKEN_CLASSIC }}
+          GITHUB_TOKEN: ${{ github.token }}
           OWNER: ${{ github.repository_owner }}
           REPO: ${{ github.event.repository.name }}
           PR_NUMBER: ${{ github.event.number }}
-          TICKET_NUMBER: ${{ github.event.branchName }}
 
   pr-validator:
     name: Run Pull Request Checks
