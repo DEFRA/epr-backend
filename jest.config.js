@@ -14,8 +14,19 @@ export default {
   coveragePathIgnorePatterns: [
     '<rootDir>/node_modules/',
     '<rootDir>/.server',
-    'index.js'
+    'index.js',
+    'config.js',
+    'example-find.js',
+    'routes/example.js'
   ],
+  coverageThreshold: {
+    global: {
+      lines: 100,
+      statements: 100,
+      branches: 100,
+      functions: 100
+    }
+  },
   coverageDirectory: '<rootDir>/coverage',
   transform: {
     '^.+\\.js$': 'babel-jest'

@@ -20,7 +20,7 @@
     "lint:fix": "npm run lint -- --fix",
     "postversion": "git add package.json package-lock.json && git commit -m $npm_package_version",
     "test": "node --no-experimental-require-module ./node_modules/jest/bin/jest.js --coverage --verbose --runInBand",
-    "test:watch": "node --no-experimental-require-module ./node_modules/jest/bin/jest.js --watch",
+    "test:watch": "npm run test -- --watch",
     "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch ./src",
     "server:debug": "nodemon --inspect-brk=0.0.0.0 --ext js,json --legacy-watch ./src",
     "start": "NODE_ENV=production node --use-strict .",

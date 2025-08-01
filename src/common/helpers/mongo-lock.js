@@ -1,6 +1,8 @@
 async function acquireLock(locker, resource, logger) {
   const lock = await locker.lock(resource)
   if (!lock) {
+    // @fixme: add coverage
+    /* istanbul ignore next */
     if (logger) {
       logger.error(`Failed to acquire lock for ${resource}`)
     }

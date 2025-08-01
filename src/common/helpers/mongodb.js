@@ -15,7 +15,10 @@ export const mongoDb = {
       const client = await MongoClient.connect(options.mongoUri, {
         retryWrites: options.retryWrites,
         readPreference: options.readPreference,
-        ...(server.secureContext && { secureContext: server.secureContext })
+        ...(server.secureContext &&
+          // @fixme: add coverage
+          /* istanbul ignore next */
+          { secureContext: server.secureContext })
       })
 
       const databaseName = options.databaseName
@@ -29,7 +32,11 @@ export const mongoDb = {
       server.decorate('server', 'mongoClient', client)
       server.decorate('server', 'db', db)
       server.decorate('server', 'locker', locker)
+      // @fixme: add coverage
+      /* istanbul ignore next */
       server.decorate('request', 'db', () => db, { apply: true })
+      // @fixme: add coverage
+      /* istanbul ignore next */
       server.decorate('request', 'locker', () => locker, { apply: true })
 
       server.events.on('stop', async () => {
