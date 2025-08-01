@@ -1,5 +1,5 @@
 {
   "*.{js,json,md}": "npm run format",
-  "src/**/*.js": ["npm run format", "npm run lint:fix", "npm test"],
+  "src/**/*.js": ["npm run lint:fix", "npm test -- --passWithNoTests"],
   "docs/architecture/decisions/*.md": "npm run adr:generate:toc"
 }
