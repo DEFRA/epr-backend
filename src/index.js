@@ -1,7 +1,8 @@
 import process from 'node:process'
-
 import { createLogger } from './common/helpers/logging/logger.js'
 import { startServer } from './common/helpers/start-server.js'
+
+console.log('ENV API KEY:', process.env.GOVUK_NOTIFY_API_KEY)
 
 await startServer()
 
