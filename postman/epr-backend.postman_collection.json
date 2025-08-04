@@ -45,6 +45,28 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "/send-email",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"your@email.com\",\n  \"personalisation\": { \"companyName\": \"Noramo\" },\n  \"template\": \"registration\"\n}"
+        },
+        "url": {
+          "raw": "{{host}}/send-email",
+          "host": ["{{host}}"],
+          "path": ["send-email"]
+        }
+      },
+      "response": []
     }
   ]
 }

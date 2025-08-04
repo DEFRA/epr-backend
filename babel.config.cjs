@@ -11,7 +11,10 @@ module.exports = {
   ],
   env: {
     test: {
-      plugins: ['babel-plugin-transform-import-meta']
+      plugins: [
+        'babel-plugin-transform-import-meta',
+        '@babel/plugin-syntax-throw-expressions'
+      ]
     }
   }
 }

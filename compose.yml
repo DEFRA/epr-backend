@@ -86,6 +86,9 @@ services:
       NODE_ENV: development
       LOCALSTACK_ENDPOINT: http://localstack:4566
       MONGO_URI: mongodb://mongodb:27017/
+      GOVUK_NOTIFY_API_KEY: /run/secrets/govuk_notify_api_key
+    secrets:
+      - govuk_notify_api_key
     networks:
       - cdp-tenant
     volumes:
@@ -101,3 +104,7 @@ networks:
   cdp-tenant:
     driver: bridge
     name: cdp-tenant
+
+secrets:
+  govuk_notify_api_key:
+    environment: GOVUK_NOTIFY_API_KEY
