@@ -2,9 +2,9 @@ const mockSendEmail = jest.fn()
 
 jest.mock('notifications-node-client', () => {
   return {
-    NotifyClient: jest.fn().mockImplementation(() => ({
-      sendEmail: mockSendEmail
-    }))
+    NotifyClient: jest
+      .fn()
+      .mockImplementation(() => ({ sendEmail: mockSendEmail }))
   }
 })
 
@@ -31,20 +31,26 @@ describe('sendEmail', () => {
   it('calls notifyClient.sendEmail with correct arguments', async () => {
     mockSendEmail.mockResolvedValueOnce({})
     await sendEmail(templateId, emailAddress, personalisation)
-    expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, { personalisation })
+    expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, {
+      personalisation
+    })
   })
 
   it('calls notifyClient.sendEmail with empty personalisation if not provided', async () => {
     mockSendEmail.mockResolvedValueOnce({})
     await sendEmail(templateId, emailAddress)
-    expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, { personalisation: {} })
+    expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, {
+      personalisation: {}
+    })
   })
 
   it('throws and logs error if notifyClient.sendEmail rejects', async () => {
     const error = new Error('fail')
     mockSendEmail.mockRejectedValueOnce(error)
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
-    await expect(sendEmail(templateId, emailAddress, personalisation)).rejects.toThrow('fail')
+    await expect(
+      sendEmail(templateId, emailAddress, personalisation)
+    ).rejects.toThrow('fail')
     expect(spy).toHaveBeenCalledWith('Notify Error:', error)
     spy.mockRestore()
   })
