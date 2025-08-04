@@ -25,7 +25,6 @@ const notify = {
         ? process.env.GOVUK_NOTIFY_TEMPLATE_ID_REGISTRATION
         : process.env.GOVUK_NOTIFY_TEMPLATE_ID_ACCREDITATION
 
-    console.log('templateId: ', templateId)
     try {
       await sendEmail(templateId, email, personalisation)
       return h.response({ success: true }).code(200)

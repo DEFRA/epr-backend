@@ -2,6 +2,7 @@ import { createServer } from '../server.js' // adjust if your Hapi server is in 
 import * as notifyHelper from '../common/helpers/notify.js'
 
 jest.mock('../common/helpers/notify.js')
+
 let server
 
 describe('/send-email route', () => {
@@ -60,6 +61,8 @@ describe('/send-email route', () => {
   })
 
   it('returns 500 if sendEmail throws', async () => {
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {}) // silence it
+
     notifyHelper.sendEmail.mockRejectedValue(new Error('Notify API failed'))
 
     const response = await server.inject({
@@ -77,6 +80,8 @@ describe('/send-email route', () => {
       success: false,
       error: 'Notify API failed'
     })
+
+    errorSpy.mockRestore()
   })
 
   it('returns 400 if payload is invalid', async () => {
