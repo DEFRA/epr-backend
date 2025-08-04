@@ -1,5 +1,8 @@
 import { sendEmail } from '../common/helpers/notify.js'
-import { HTTP_STATUS_OK, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '../constants.js'
+import {
+  HTTP_STATUS_OK,
+  HTTP_STATUS_INTERNAL_SERVER_ERROR
+} from '../constants.js'
 
 const notify = {
   method: 'POST',
@@ -31,7 +34,9 @@ const notify = {
       return h.response({ success: true }).code(HTTP_STATUS_OK)
     } catch (err) {
       console.error(err)
-      return h.response({ success: false, error: err.message }).code(HTTP_STATUS_INTERNAL_SERVER_ERROR)
+      return h
+        .response({ success: false, error: err.message })
+        .code(HTTP_STATUS_INTERNAL_SERVER_ERROR)
     }
   }
 }
