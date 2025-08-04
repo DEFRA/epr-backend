@@ -7,6 +7,11 @@ jest.mock('notifications-node-client', () => {
       .mockImplementation(() => ({ sendEmail: mockSendEmail }))
   }
 })
+jest.mock('mongodb', () => ({
+  connect: jest.fn().mockResolvedValue(),
+  disconnect: jest.fn().mockResolvedValue(),
+  connection: { on: jest.fn() }
+}))
 
 describe('sendEmail', () => {
   const templateId = 'template-id'
