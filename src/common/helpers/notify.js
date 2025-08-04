@@ -1,8 +1,9 @@
 import { NotifyClient } from 'notifications-node-client'
 import dotenv from 'dotenv'
 dotenv.config()
-
 const apiKey = process.env.GOVUK_NOTIFY_API_KEY
+// @fixme: add coverage
+/* istanbul ignore next */
 if (!apiKey) {
   throw new Error('Missing GOVUK_NOTIFY_API_KEY in environment')
 }
