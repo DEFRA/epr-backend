@@ -1,11 +1,12 @@
 import { sendEmail } from '../common/helpers/notify.js'
+import { HTTP_STATUS_OK, HTTP_STATUS_INTERNAL_SERVER_ERROR } from '../constants.js'
 
 const notify = {
   method: 'POST',
   path: '/send-email',
   options: {
     validate: {
-      payload: (value, options) => {
+      payload: (value, _options) => {
         if (
           !value.email ||
           !value.template ||
@@ -27,10 +28,10 @@ const notify = {
 
     try {
       await sendEmail(templateId, email, personalisation)
-      return h.response({ success: true }).code(200)
+      return h.response({ success: true }).code(HTTP_STATUS_OK)
     } catch (err) {
       console.error(err)
-      return h.response({ success: false, error: err.message }).code(500)
+      return h.response({ success: false, error: err.message }).code(HTTP_STATUS_INTERNAL_SERVER_ERROR)
     }
   }
 }
