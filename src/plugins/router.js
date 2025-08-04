@@ -2,7 +2,6 @@ import { health } from '../routes/health.js'
 import { example } from '../routes/example.js'
 import { notify } from '../routes/notify.js'
 
-
 const router = {
   plugin: {
     name: 'router',
