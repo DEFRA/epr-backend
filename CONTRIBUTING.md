@@ -5,8 +5,12 @@
 - [Contributing](#contributing)
   - [Requirements](#requirements)
     - [Node.js](#nodejs)
+    - [ADR tools](#adr-tools)
+  - [Documentation](#documentation)
+    - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
   - [Local development](#local-development)
     - [Setup](#setup)
+    - [Testing endpoints](#testing-endpoints)
     - [Development](#development)
     - [Testing](#testing)
     - [Production](#production)
@@ -14,14 +18,19 @@
     - [Update dependencies](#update-dependencies)
     - [Formatting](#formatting)
       - [Windows prettier issue](#windows-prettier-issue)
+    - [Database GUI](#database-gui)
   - [Development helpers](#development-helpers)
     - [MongoDB Locks](#mongodb-locks)
     - [Proxy](#proxy)
   - [Docker](#docker)
-  _ [Development image](#development-image)
-  _ [Production image](#production-image)
-  _ [Docker Compose](#docker-compose)
-  _ [Dependabot](#dependabot) \* [SonarCloud](#sonarcloud)
+    - [Development image](#development-image)
+    - [Production image](#production-image)
+    - [Docker Compose](#docker-compose)
+  - [Repository](#repository)
+    - [Pull Requests](#pull-requests)
+    - [Dependabot](#dependabot)
+    - [SonarCloud](#sonarcloud)
+  - [Deployments](#deployments)
   <!-- TOC -->
 
 ## Requirements
@@ -65,7 +74,21 @@ Install application dependencies:
 npm install
 ```
 
+### Testing endpoints
+
+For basic development and manual testing purposes:
+
+1. Install Postman (or similar)
+2. Import the environments and collections from the [postman dir](./postman)
+3. Run docker compose
+4. [optional] Obtain the API service address with `docker compose ps` and update the Local environment (if necessary)
+5. Call the endpoints you want to test via Postman
+
 ### Development
+
+> [!TIP]
+> You probably won't need this command as you're more likely to need a stack of docker containers running via compose,
+> [see below on how to run and access them](#docker-compose).
 
 To run the application in `development` mode run:
 
@@ -100,6 +123,10 @@ npm run
 
 ### Update dependencies
 
+> [!TIP]
+> You probably won't need this command as you're more likely to rely on Dependabot,
+> [see below for more info](#dependabot).
+
 To update dependencies use [npm-check-updates](https://github.com/raineorshine/npm-check-updates):
 
 > The following script is a good start. Check out all the options on
@@ -118,6 +145,14 @@ If you are having issues with formatting of line breaks on Windows update your g
 ```bash
 git config --global core.autocrlf false
 ```
+
+### Database GUI
+
+To access the MongoDB via GUI, you can use whichever database GUI client works best for you.
+
+MongoDB produce their own tools called [Compass (free download)](https://www.mongodb.com/products/tools/compass).
+
+Setup should be zero config, please add steps here if you discover otherwise.
 
 ## Development helpers
 
@@ -230,6 +265,18 @@ A local environment with:
 docker compose up --build -d
 ```
 
+See the running services with:
+
+```bash
+docker compose ps
+```
+
+## Repository
+
+### Pull Requests
+
+The repository is configured to only allow updates via Pull Requests, please ensure that you follow the [pull request standards](https://defra.github.io/software-development-standards/processes/pull_requests).
+
 ### Dependabot
 
 Dependabot is configured for this repository. You can [find the configuration here](.github/dependabot.yml).
@@ -237,3 +284,9 @@ Dependabot is configured for this repository. You can [find the configuration he
 ### SonarCloud
 
 SonarCloud is configured for this repository. You can [find the configuration here](./sonar-project.properties).
+
+## Deployments
+
+Deployments are managed by Defra tooling, speak with the engineering team to be briefed on this.
+
+Deployments are conducted automatically for lower environments and manually for prod.

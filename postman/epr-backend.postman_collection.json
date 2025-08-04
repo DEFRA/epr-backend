@@ -1,0 +1,50 @@
+{
+  "info": {
+    "_postman_id": "45f52a77-d0f9-4ef3-a307-66f78ffa0540",
+    "name": "EPR Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "47294073",
+    "_collection_link": "https://nick-aspinall-6032393.postman.co/workspace/Nick-Aspinall's-Workspace~7f483b02-c6a4-46b7-8b2e-644427bf5ed7/collection/47294073-45f52a77-d0f9-4ef3-a307-66f78ffa0540?action=share&source=collection_link&creator=47294073"
+  },
+  "item": [
+    {
+      "name": "/health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/health",
+          "host": ["{{host}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/example",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/example",
+          "host": ["{{host}}"],
+          "path": ["example"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/example/{exampleId}",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{host}}/example/1",
+          "host": ["{{host}}"],
+          "path": ["example", "1"]
+        }
+      },
+      "response": []
+    }
+  ]
+}
