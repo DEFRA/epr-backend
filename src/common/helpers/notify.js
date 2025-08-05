@@ -1,6 +1,6 @@
 import { NotifyClient } from 'notifications-node-client'
-import dotenv from 'dotenv'
-dotenv.config()
+import { createLogger } from './logging/logger.js'
+
 const apiKey = process.env.GOVUK_NOTIFY_API_KEY
 // @fixme: add coverage
 /* istanbul ignore next */
@@ -13,7 +13,9 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
   try {
     await notifyClient.sendEmail(templateId, emailAddress, { personalisation })
   } catch (err) {
-    console.error('Notify Error:', err)
+    const logger = createLogger()
+    logger.info('Notify Error')
+    logger.error(err)
     throw err
   }
 }
