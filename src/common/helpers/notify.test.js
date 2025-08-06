@@ -52,11 +52,25 @@ describe('sendEmail', () => {
   it('throws and logs error if notifyClient.sendEmail rejects', async () => {
     const error = new Error('fail')
     mockSendEmail.mockRejectedValueOnce(error)
-    const spy = jest.spyOn(console, 'error').mockImplementation(() => {})
+
+    // Mock the logger
+    const infoSpy = jest.fn()
+    const errorSpy = jest.fn()
+    jest.doMock('./logging/logger.js', () => ({
+      createLogger: () => ({
+        info: infoSpy,
+        error: errorSpy
+      })
+    }))
+
+    // Re-import sendEmail to use the mocked logger
+    jest.resetModules()
+    process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
+    const { sendEmail } = require('./notify')
+
     await expect(
       sendEmail(templateId, emailAddress, personalisation)
     ).rejects.toThrow('fail')
-    expect(spy).toHaveBeenCalledWith('Notify Error:', error)
-    spy.mockRestore()
+    expect(errorSpy).toHaveBeenCalledWith(error)
   })
 })
