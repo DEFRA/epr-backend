@@ -2,6 +2,7 @@ import hapi from '@hapi/hapi'
 
 const mockLoggerInfo = jest.fn()
 const mockLoggerError = jest.fn()
+const mockLoggerWarn = jest.fn()
 
 const mockHapiLoggerInfo = jest.fn()
 const mockHapiLoggerError = jest.fn()
@@ -18,7 +19,8 @@ jest.mock('hapi-pino', () => ({
 jest.mock('./logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args)
+    error: (...args) => mockLoggerError(...args),
+    warn: (...args) => mockLoggerWarn(...args)
   })
 }))
 

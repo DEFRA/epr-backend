@@ -1,5 +1,9 @@
 const mockSendEmail = jest.fn()
 
+const mockLoggerInfo = jest.fn()
+const mockLoggerError = jest.fn()
+const mockLoggerWarn = jest.fn()
+
 jest.mock('notifications-node-client', () => {
   return {
     NotifyClient: jest
@@ -11,6 +15,14 @@ jest.mock('mongodb', () => ({
   connect: jest.fn().mockResolvedValue(),
   disconnect: jest.fn().mockResolvedValue(),
   connection: { on: jest.fn() }
+}))
+
+jest.mock('./logging/logger.js', () => ({
+  createLogger: () => ({
+    info: (...args) => mockLoggerInfo(...args),
+    error: (...args) => mockLoggerError(...args),
+    warn: (...args) => mockLoggerWarn(...args)
+  })
 }))
 
 describe('sendEmail', () => {
@@ -53,24 +65,12 @@ describe('sendEmail', () => {
     const error = new Error('fail')
     mockSendEmail.mockRejectedValueOnce(error)
 
-    // Mock the logger
-    const infoSpy = jest.fn()
-    const errorSpy = jest.fn()
-    jest.doMock('./logging/logger.js', () => ({
-      createLogger: () => ({
-        info: infoSpy,
-        error: errorSpy
-      })
-    }))
-
-    // Re-import sendEmail to use the mocked logger
-    jest.resetModules()
     process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
     const { sendEmail } = require('./notify')
 
     await expect(
       sendEmail(templateId, emailAddress, personalisation)
     ).rejects.toThrow('fail')
-    expect(errorSpy).toHaveBeenCalledWith(error)
+    expect(mockLoggerError).toHaveBeenCalledWith(error)
   })
 })
