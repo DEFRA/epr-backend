@@ -3,7 +3,7 @@ import { sendEmail } from '../common/helpers/notify.js'
 
 /**
  * Route to send email notifications using GOV.UK Notify
- * This is not required for the main functionality but is used to demonstrate how to set up a route for sending emails.
+ * This is not required for the main functionality but is used to demonstrate how to set up a route for sending emails
  * @module routes/notify
  */
 const notify = {

@@ -14,12 +14,8 @@
         "header": [],
         "url": {
           "raw": "{{host}}/health",
-          "host": [
-            "{{host}}"
-          ],
-          "path": [
-            "health"
-          ]
+          "host": ["{{host}}"],
+          "path": ["health"]
         }
       },
       "response": []
@@ -31,12 +27,8 @@
         "header": [],
         "url": {
           "raw": "{{host}}/example",
-          "host": [
-            "{{host}}"
-          ],
-          "path": [
-            "example"
-          ]
+          "host": ["{{host}}"],
+          "path": ["example"]
         }
       },
       "response": []
@@ -48,13 +40,8 @@
         "header": [],
         "url": {
           "raw": "{{host}}/example/1",
-          "host": [
-            "{{host}}"
-          ],
-          "path": [
-            "example",
-            "1"
-          ]
+          "host": ["{{host}}"],
+          "path": ["example", "1"]
         }
       },
       "response": []
@@ -75,12 +62,8 @@
         },
         "url": {
           "raw": "{{host}}/send-email",
-          "host": [
-            "{{host}}"
-          ],
-          "path": [
-            "send-email"
-          ]
+          "host": ["{{host}}"],
+          "path": ["send-email"]
         }
       },
       "response": []

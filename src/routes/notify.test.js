@@ -1,6 +1,5 @@
 import { createServer } from '../server.js'
-import {sendEmail} from '../common/helpers/notify.js'
-import { HTTP_STATUS_INTERNAL_SERVER_ERROR } from '../constants.js'
+import { sendEmail } from '../common/helpers/notify.js'
 
 jest.mock('../common/helpers/notify.js')
 
@@ -31,11 +30,9 @@ describe('/send-email route', () => {
       }
     })
 
-    expect(sendEmail).toHaveBeenCalledWith(
-      'registration',
-      'test@example.com',
-      { name: 'Test' }
-    )
+    expect(sendEmail).toHaveBeenCalledWith('registration', 'test@example.com', {
+      name: 'Test'
+    })
     expect(response.statusCode).toEqual(200)
     expect(JSON.parse(response.payload)).toEqual({ success: true })
   })
@@ -57,9 +54,9 @@ describe('/send-email route', () => {
 
     expect(response.statusCode).toEqual(500)
     expect(JSON.parse(response.payload)).toEqual({
-      message: "An internal server error occurred",
-      statusCode: HTTP_STATUS_INTERNAL_SERVER_ERROR,
-      error: "Internal Server Error",
+      message: 'An internal server error occurred',
+      statusCode: 500,
+      error: 'Internal Server Error'
     })
 
     errorSpy.mockRestore()
@@ -71,8 +68,8 @@ describe('/send-email route', () => {
       url: '/send-email',
       payload: {
         email: 'bad@example.com',
-        template: 'registration'
-        // personalisation is missing
+        template: 'registration',
+        personalisation: undefined
       }
     })
 
