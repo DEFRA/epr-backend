@@ -5,6 +5,7 @@
 - [Contributing](#contributing)
   - [Requirements](#requirements)
     - [Node.js](#nodejs)
+  - [Secrets](#secrets)
     - [ADR tools](#adr-tools)
   - [Documentation](#documentation)
     - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
@@ -30,7 +31,7 @@
     - [Pull Requests](#pull-requests)
     - [Dependabot](#dependabot)
     - [SonarCloud](#sonarcloud)
-  - [Deployments](#deployments)
+  - [Deployments](#deployments) \* [Secrets and Environment Variables](#secrets-and-environment-variables)
   <!-- TOC -->
 
 ## Requirements
@@ -47,6 +48,23 @@ cd epr-backend
 nvm use
 ```
 
+## Secrets
+
+Certain secrets are required to run this repository, to ensure these are safeguarded we use [Docker Compose Secrets](https://docs.docker.com/compose/how-tos/use-secrets/) during local development.
+
+To configure these, please complete the following actions:
+
+1. Obtain the necessary secret values from a team member
+2. Create the following Env Var(s):
+   - `export GOVUK_NOTIFY_API_KEY=AskTeamMemberForSecretValue`
+3. Optionally [persist these Env Vars in your CLI environment](https://unix.stackexchange.com/questions/117467/how-to-permanently-set-environmental-variables)
+
+> [!NOTE]
+> Docker Compose secrets cannot be accidentally exposed via `process.env`
+
+> [!IMPORTANT]
+> Secrets also need to be managed on the deployment platform, [see here for next steps](#secrets-and-environment-variables)
+
 ### ADR tools
 
 To simplify the creation and management of ADRs, please [install ADR tools](https://github.com/npryce/adr-tools/blob/master/INSTALL.md)
@@ -59,7 +77,7 @@ Please see the [root `README.md`](./README.md).
 
 This project uses ADRs and `adr-tools`, to create new ADRs:
 
-1. Ensure you have [installed adr-tools](./CONTRIBUTING.md#adr-tools)
+1. Ensure you have [installed adr-tools](#adr-tools)
 2. From any directory in the repository: `adr new {name of ADR}`
 3. Complete the Context, Decision & Consequence sections
 4. Commit and push the code, the TOC file should be updated automatically
@@ -290,3 +308,7 @@ SonarCloud is configured for this repository. You can [find the configuration he
 Deployments are managed by Defra tooling, speak with the engineering team to be briefed on this.
 
 Deployments are conducted automatically for lower environments and manually for prod.
+
+### Secrets and Environment Variables
+
+Both secrets and environment variables are managed by Defra tooling, speak with the engineering team to be briefed on this.
