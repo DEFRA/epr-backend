@@ -22,14 +22,14 @@ describe('sendEmail', () => {
 
   beforeEach(() => {
     jest.resetModules()
-    process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
+    process.env.GOVUK_NOTIFY_API = 'dummy-key'
     mockSendEmail.mockReset()
     sendEmail = require('./notify').sendEmail
   })
 
   afterEach(() => {
     jest.clearAllMocks()
-    delete process.env.GOVUK_NOTIFY_API_KEY
+    delete process.env.GOVUK_NOTIFY_API
     jest.resetModules()
   })
 
@@ -65,7 +65,7 @@ describe('sendEmail', () => {
 
     // Re-import sendEmail to use the mocked logger
     jest.resetModules()
-    process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
+    process.env.GOVUK_NOTIFY_API = 'dummy-key'
     const { sendEmail } = require('./notify')
 
     await expect(

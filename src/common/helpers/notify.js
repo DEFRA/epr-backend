@@ -1,11 +1,12 @@
 import { NotifyClient } from 'notifications-node-client'
 import { createLogger } from './logging/logger.js'
 
-const apiKey = process.env.GOVUK_NOTIFY_API_KEY
+const logger = createLogger()
+const apiKey = process.env.GOVUK_NOTIFY_API ?? ""
 // @fixme: add coverage
 /* istanbul ignore next */
 if (!apiKey) {
-  throw new Error('Missing GOVUK_NOTIFY_API_KEY in environment')
+  logger.warn('Missing GOVUK_NOTIFY_API in environment')
 }
 const notifyClient = new NotifyClient(apiKey)
 
