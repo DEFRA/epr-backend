@@ -1,5 +1,6 @@
-import { createServer } from '../server.js' // adjust if your Hapi server is in a different path
-import * as notifyHelper from '../common/helpers/notify.js'
+import { createServer } from '../server.js'
+import {sendEmail} from '../common/helpers/notify.js'
+import { HTTP_STATUS_INTERNAL_SERVER_ERROR } from '../constants.js'
 
 jest.mock('../common/helpers/notify.js')
 
@@ -17,8 +18,8 @@ describe('/send-email route', () => {
     await server.stop()
   })
 
-  it('returns 200 on successful email send (registration template)', async () => {
-    notifyHelper.sendEmail.mockResolvedValue()
+  it('returns 200 on successful email send', async () => {
+    sendEmail.mockResolvedValue()
 
     const response = await server.inject({
       method: 'POST',
@@ -30,40 +31,19 @@ describe('/send-email route', () => {
       }
     })
 
-    expect(notifyHelper.sendEmail).toHaveBeenCalledWith(
-      'reg-template-id',
+    expect(sendEmail).toHaveBeenCalledWith(
+      'registration',
       'test@example.com',
       { name: 'Test' }
     )
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toEqual(200)
     expect(JSON.parse(response.payload)).toEqual({ success: true })
-  })
-
-  it('returns 200 on successful email send (accreditation template)', async () => {
-    notifyHelper.sendEmail.mockResolvedValue()
-
-    const response = await server.inject({
-      method: 'POST',
-      url: '/send-email',
-      payload: {
-        email: 'user@example.com',
-        template: 'accreditation',
-        personalisation: { name: 'User' }
-      }
-    })
-
-    expect(notifyHelper.sendEmail).toHaveBeenCalledWith(
-      'acc-template-id',
-      'user@example.com',
-      { name: 'User' }
-    )
-    expect(response.statusCode).toBe(200)
   })
 
   it('returns 500 if sendEmail throws', async () => {
     const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {}) // silence it
 
-    notifyHelper.sendEmail.mockRejectedValue(new Error('Notify API failed'))
+    sendEmail.mockRejectedValue(new Error('Notify API failed'))
 
     const response = await server.inject({
       method: 'POST',
@@ -75,10 +55,11 @@ describe('/send-email route', () => {
       }
     })
 
-    expect(response.statusCode).toBe(500)
+    expect(response.statusCode).toEqual(500)
     expect(JSON.parse(response.payload)).toEqual({
-      success: false,
-      error: 'Notify API failed'
+      message: "An internal server error occurred",
+      statusCode: HTTP_STATUS_INTERNAL_SERVER_ERROR,
+      error: "Internal Server Error",
     })
 
     errorSpy.mockRestore()
@@ -95,7 +76,7 @@ describe('/send-email route', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
+    expect(response.statusCode).toEqual(400)
     expect(JSON.parse(response.payload).message).toMatch(/Invalid payload/)
   })
 })

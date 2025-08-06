@@ -1,9 +1,11 @@
+import Boom from '@hapi/boom'
 import { sendEmail } from '../common/helpers/notify.js'
-import {
-  HTTP_STATUS_OK,
-  HTTP_STATUS_INTERNAL_SERVER_ERROR
-} from '../constants.js'
 
+/**
+ * Route to send email notifications using GOV.UK Notify
+ * This is not required for the main functionality but is used to demonstrate how to set up a route for sending emails.
+ * @module routes/notify
+ */
 const notify = {
   method: 'POST',
   path: '/send-email',
@@ -15,7 +17,7 @@ const notify = {
           !value.template ||
           typeof value.personalisation !== 'object'
         ) {
-          throw new Error('Invalid payload')
+          throw Boom.badRequest('Invalid payload')
         }
         return value
       }
@@ -24,19 +26,12 @@ const notify = {
   handler: async (request, h) => {
     const { email, template, personalisation } = request.payload
 
-    const templateId =
-      template === 'registration'
-        ? process.env.GOVUK_NOTIFY_TEMPLATE_ID_REGISTRATION
-        : process.env.GOVUK_NOTIFY_TEMPLATE_ID_ACCREDITATION
-
     try {
-      await sendEmail(templateId, email, personalisation)
-      return h.response({ success: true }).code(HTTP_STATUS_OK)
+      await sendEmail(template, email, personalisation)
+      return h.response({ success: true })
     } catch (err) {
-      console.error(err)
-      return h
-        .response({ success: false, error: err.message })
-        .code(HTTP_STATUS_INTERNAL_SERVER_ERROR)
+      console.error('Notify error:', err)
+      throw Boom.badImplementation('Failed to send email')
     }
   }
 }
