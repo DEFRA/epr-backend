@@ -14,7 +14,6 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
   try {
     await notifyClient.sendEmail(templateId, emailAddress, { personalisation })
   } catch (err) {
-    const logger = createLogger()
     logger.error(err)
     throw err
   }
