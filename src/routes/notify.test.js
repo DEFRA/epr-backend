@@ -7,9 +7,6 @@ let server
 
 describe('/send-email route', () => {
   beforeAll(async () => {
-    process.env.GOVUK_NOTIFY_TEMPLATE_ID_REGISTRATION = 'reg-template-id'
-    process.env.GOVUK_NOTIFY_TEMPLATE_ID_ACCREDITATION = 'acc-template-id'
-
     server = await createServer()
   })
 

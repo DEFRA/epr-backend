@@ -5,7 +5,7 @@
 - [Contributing](#contributing)
   - [Requirements](#requirements)
     - [Node.js](#nodejs)
-  - [Secrets](#secrets)
+    - [Secrets](#secrets)
     - [ADR tools](#adr-tools)
   - [Documentation](#documentation)
     - [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
@@ -31,8 +31,9 @@
     - [Pull Requests](#pull-requests)
     - [Dependabot](#dependabot)
     - [SonarCloud](#sonarcloud)
-  - [Deployments](#deployments) \* [Secrets and Environment Variables](#secrets-and-environment-variables)
-  <!-- TOC -->
+  - [Deployments](#deployments)
+    - [Secrets and Environment Variables](#secrets-and-environment-variables)
+    <!-- TOC -->
 
 ## Requirements
 
@@ -48,7 +49,7 @@ cd epr-backend
 nvm use
 ```
 
-## Secrets
+### Secrets
 
 Certain secrets are required to run this repository, to ensure these are safeguarded we use [Docker Compose Secrets](https://docs.docker.com/compose/how-tos/use-secrets/) during local development.
 

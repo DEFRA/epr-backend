@@ -1,20 +1,14 @@
+import { sendEmail } from './notify.js'
+import { getLocalSecret } from './get-local-secret.js'
+
 const mockSendEmail = jest.fn()
 
 const mockLoggerInfo = jest.fn()
 const mockLoggerError = jest.fn()
 const mockLoggerWarn = jest.fn()
 
-jest.mock('notifications-node-client', () => {
-  return {
-    NotifyClient: jest
-      .fn()
-      .mockImplementation(() => ({ sendEmail: mockSendEmail }))
-  }
-})
-jest.mock('mongodb', () => ({
-  connect: jest.fn().mockResolvedValue(),
-  disconnect: jest.fn().mockResolvedValue(),
-  connection: { on: jest.fn() }
+jest.mock('notifications-node-client', () => ({
+  NotifyClient: jest.fn(() => ({ sendEmail: mockSendEmail }))
 }))
 
 jest.mock('./logging/logger.js', () => ({
@@ -25,28 +19,40 @@ jest.mock('./logging/logger.js', () => ({
   })
 }))
 
+jest.mock('./get-local-secret.js')
+
 describe('sendEmail', () => {
   const templateId = 'template-id'
   const emailAddress = 'test@example.com'
   const personalisation = { name: 'Test' }
-
-  let sendEmail
+  const originalProcessEnv = { ...process.env }
 
   beforeEach(() => {
     jest.resetModules()
     process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
-    mockSendEmail.mockReset()
-    sendEmail = require('./notify').sendEmail
+    mockSendEmail.mockResolvedValue({})
   })
 
   afterEach(() => {
     jest.clearAllMocks()
-    delete process.env.GOVUK_NOTIFY_API_KEY
-    jest.resetModules()
+    process.env = originalProcessEnv
+  })
+
+  it('calls notifyClient with apiKey from getLocalSecret in NODE_ENV=development', async () => {
+    process.env.NODE_ENV = 'development'
+    await sendEmail(templateId, emailAddress, personalisation)
+    expect(getLocalSecret).toHaveBeenCalledWith('GOVUK_NOTIFY_API_KEY')
+  })
+
+  it('calls logger.warn if apiKey is not set', async () => {
+    process.env.GOVUK_NOTIFY_API_KEY = undefined
+    await sendEmail(templateId, emailAddress, personalisation)
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      'Missing GOVUK_NOTIFY_API_KEY in environment, notifyClient will not be available'
+    )
   })
 
   it('calls notifyClient.sendEmail with correct arguments', async () => {
-    mockSendEmail.mockResolvedValueOnce({})
     await sendEmail(templateId, emailAddress, personalisation)
     expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, {
       personalisation
@@ -54,7 +60,6 @@ describe('sendEmail', () => {
   })
 
   it('calls notifyClient.sendEmail with empty personalisation if not provided', async () => {
-    mockSendEmail.mockResolvedValueOnce({})
     await sendEmail(templateId, emailAddress)
     expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, {
       personalisation: {}
@@ -64,9 +69,6 @@ describe('sendEmail', () => {
   it('throws and logs error if notifyClient.sendEmail rejects', async () => {
     const error = new Error('fail')
     mockSendEmail.mockRejectedValueOnce(error)
-
-    process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
-    const { sendEmail } = require('./notify')
 
     await expect(
       sendEmail(templateId, emailAddress, personalisation)

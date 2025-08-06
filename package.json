@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "@babel/core": "7.28.0",
+    "@babel/plugin-syntax-throw-expressions": "7.27.1",
     "@babel/preset-env": "7.28.0",
     "@shelf/jest-mongodb": "4.3.2",
     "autoprefixer": "10.4.21",
