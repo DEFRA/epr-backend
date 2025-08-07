@@ -1,17 +1,32 @@
-import { createServer } from '../server.js'
 import { sendEmail } from '../common/helpers/notify.js'
 
 vi.mock('../common/helpers/notify.js')
+
+const mockLoggerInfo = vi.fn()
+const mockLoggerError = vi.fn()
+const mockLoggerWarn = vi.fn()
+
+vi.mock('../common/helpers/logging/logger.js', () => ({
+  createLogger: () => ({
+    info: (...args) => mockLoggerInfo(...args),
+    error: (...args) => mockLoggerError(...args),
+    warn: (...args) => mockLoggerWarn(...args)
+  })
+}))
 
 let server
 
 describe('/send-email route', () => {
   beforeAll(async () => {
+    // Dynamic import needed due to config being updated by vitest-mongodb
+    const { createServer } = await import('../server.js')
+
     server = await createServer()
+    await server.initialize()
   })
 
   afterAll(async () => {
-    await server.stop()
+    await server.stop({ timeout: 0 })
   })
 
   it('returns 200 on successful email send', async () => {
