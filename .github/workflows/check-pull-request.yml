@@ -68,7 +68,7 @@ jobs:
           npm ci
           npm run format:check
           npm run lint
-          npm test
+          npm test -- --no-isolate
 
       - name: Test Docker Image Build
         run: |

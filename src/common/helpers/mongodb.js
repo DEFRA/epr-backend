@@ -8,6 +8,8 @@ export const mongoDb = {
     register: async function (server, options) {
       server.logger.info('Setting up MongoDb')
 
+      console.log('options.mongoUrl', options.mongoUrl)
+
       const client = await MongoClient.connect(options.mongoUrl, {
         ...options.mongoOptions
       })
