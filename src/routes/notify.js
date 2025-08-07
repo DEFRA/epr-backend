@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { createLogger } from '../common/helpers/logging/logger.js'
 import { sendEmail } from '../common/helpers/notify.js'
 
 /**
@@ -30,7 +31,8 @@ const notify = {
       await sendEmail(template, email, personalisation)
       return h.response({ success: true })
     } catch (err) {
-      console.error('Notify error:', err)
+      const logger = createLogger()
+      logger.error(`Notify error:\n${err}`)
       throw Boom.badImplementation('Failed to send email')
     }
   }
