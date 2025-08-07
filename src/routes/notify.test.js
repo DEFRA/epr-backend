@@ -25,10 +25,6 @@ describe('/send-email route', () => {
     await server.initialize()
   })
 
-  afterAll(async () => {
-    await server.stop()
-  })
-
   it('returns 200 on successful email send', async () => {
     sendEmail.mockResolvedValue()
 

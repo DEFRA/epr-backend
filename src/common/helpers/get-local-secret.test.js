@@ -17,16 +17,15 @@ vi.mock('./logging/logger.js', () => ({
 
 describe('getLocalSecret', () => {
   const secretName = 'SECRET_NAME'
-  const originalProcessEnv = { ...process.env }
 
   beforeEach(() => {
     vi.resetModules()
-    process.env.SECRET_NAME = 'path/to/secret/file'
+    vi.stubEnv(secretName, 'path/to/secret/file')
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-    process.env = originalProcessEnv
+    vi.unstubAllEnvs()
   })
 
   it('returns a value from file', async () => {
