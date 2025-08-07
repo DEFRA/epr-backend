@@ -1,17 +1,17 @@
 import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
 
-const mockSendEmail = jest.fn()
+const mockSendEmail = vi.fn()
 
-const mockLoggerInfo = jest.fn()
-const mockLoggerError = jest.fn()
-const mockLoggerWarn = jest.fn()
+const mockLoggerInfo = vi.fn()
+const mockLoggerError = vi.fn()
+const mockLoggerWarn = vi.fn()
 
-jest.mock('notifications-node-client', () => ({
-  NotifyClient: jest.fn(() => ({ sendEmail: mockSendEmail }))
+vi.mock('notifications-node-client', () => ({
+  NotifyClient: vi.fn(() => ({ sendEmail: mockSendEmail }))
 }))
 
-jest.mock('./logging/logger.js', () => ({
+vi.mock('./logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
@@ -19,7 +19,7 @@ jest.mock('./logging/logger.js', () => ({
   })
 }))
 
-jest.mock('./get-local-secret.js')
+vi.mock('./get-local-secret.js')
 
 describe('sendEmail', () => {
   const templateId = 'template-id'
@@ -28,13 +28,13 @@ describe('sendEmail', () => {
   const originalProcessEnv = { ...process.env }
 
   beforeEach(() => {
-    jest.resetModules()
+    vi.resetModules()
     process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
     mockSendEmail.mockResolvedValue({})
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     process.env = originalProcessEnv
   })
 

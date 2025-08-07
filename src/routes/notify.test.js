@@ -1,7 +1,7 @@
 import { createServer } from '../server.js'
 import { sendEmail } from '../common/helpers/notify.js'
 
-jest.mock('../common/helpers/notify.js')
+vi.mock('../common/helpers/notify.js')
 
 let server
 
@@ -35,7 +35,7 @@ describe('/send-email route', () => {
   })
 
   it('returns 500 if sendEmail throws', async () => {
-    const errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {}) // silence it
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {}) // silence it
 
     sendEmail.mockRejectedValue(new Error('Notify API failed'))
 

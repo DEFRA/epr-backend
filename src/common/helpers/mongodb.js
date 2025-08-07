@@ -1,10 +1,6 @@
 import { MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 
-import { config } from '../../config.js'
-
-const mongoConfig = config.get('mongo')
-
 export const mongoDb = {
   plugin: {
     name: 'mongodb',
@@ -12,13 +8,14 @@ export const mongoDb = {
     register: async function (server, options) {
       server.logger.info('Setting up MongoDb')
 
-      const client = await MongoClient.connect(options.mongoUri, {
-        retryWrites: options.retryWrites,
-        readPreference: options.readPreference,
-        ...(server.secureContext &&
-          // @fixme: add coverage
-          /* istanbul ignore next */
-          { secureContext: server.secureContext })
+      const client = await MongoClient.connect(options.mongoUrl, {
+        ...options.mongoOptions,
+        // @fixme: add coverage
+        /* c8 ignore start */
+        ...(server?.secureContext && {
+          secureContext: server.secureContext
+        })
+        /* c8 ignore stop */
       })
 
       const databaseName = options.databaseName
@@ -33,23 +30,16 @@ export const mongoDb = {
       server.decorate('server', 'db', db)
       server.decorate('server', 'locker', locker)
       // @fixme: add coverage
-      /* istanbul ignore next */
+      /* c8 ignore start */
       server.decorate('request', 'db', () => db, { apply: true })
-      // @fixme: add coverage
-      /* istanbul ignore next */
       server.decorate('request', 'locker', () => locker, { apply: true })
+      /* c8 ignore stop */
 
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')
         await client.close(true)
       })
     }
-  },
-  options: {
-    mongoUri: mongoConfig.uri,
-    databaseName: mongoConfig.databaseName,
-    retryWrites: false,
-    readPreference: 'secondary'
   }
 }
 

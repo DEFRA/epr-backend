@@ -1,13 +1,13 @@
 import fs from 'fs'
 import { getLocalSecret } from './get-local-secret.js'
 
-const mockLoggerInfo = jest.fn()
-const mockLoggerError = jest.fn()
-const mockLoggerWarn = jest.fn()
+const mockLoggerInfo = vi.fn()
+const mockLoggerError = vi.fn()
+const mockLoggerWarn = vi.fn()
 const secretFixture = 'secret'
 
-jest.mock('fs')
-jest.mock('./logging/logger.js', () => ({
+vi.mock('fs')
+vi.mock('./logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
@@ -20,23 +20,23 @@ describe('getLocalSecret', () => {
   const originalProcessEnv = { ...process.env }
 
   beforeEach(() => {
-    jest.resetModules()
+    vi.resetModules()
     process.env.SECRET_NAME = 'path/to/secret/file'
   })
 
   afterEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
     process.env = originalProcessEnv
   })
 
   it('returns a value from file', async () => {
-    jest.mocked(fs).readFileSync.mockImplementationOnce(() => secretFixture)
+    vi.mocked(fs).readFileSync.mockImplementationOnce(() => secretFixture)
     expect(getLocalSecret(secretName)).toEqual(secretFixture)
   })
 
   it('returns a null if secret not found', async () => {
     const error = new Error('file not found')
-    jest.mocked(fs).readFileSync.mockImplementationOnce(() => {
+    vi.mocked(fs).readFileSync.mockImplementationOnce(() => {
       throw error
     })
     const result = getLocalSecret(secretName)
