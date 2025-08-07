@@ -25,27 +25,26 @@ describe('sendEmail', () => {
   const templateId = 'template-id'
   const emailAddress = 'test@example.com'
   const personalisation = { name: 'Test' }
-  const originalProcessEnv = { ...process.env }
 
   beforeEach(() => {
     vi.resetModules()
-    process.env.GOVUK_NOTIFY_API_KEY = 'dummy-key'
+    vi.stubEnv('GOVUK_NOTIFY_API_KEY', 'dummy-key')
     mockSendEmail.mockResolvedValue({})
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-    process.env = originalProcessEnv
+    vi.unstubAllEnvs()
   })
 
   it('calls notifyClient with apiKey from getLocalSecret in NODE_ENV=development', async () => {
-    process.env.NODE_ENV = 'development'
+    vi.stubEnv('NODE_ENV', 'development')
     await sendEmail(templateId, emailAddress, personalisation)
     expect(getLocalSecret).toHaveBeenCalledWith('GOVUK_NOTIFY_API_KEY')
   })
 
   it('calls logger.warn if apiKey is not set', async () => {
-    process.env.GOVUK_NOTIFY_API_KEY = undefined
+    vi.stubEnv('GOVUK_NOTIFY_API_KEY', undefined)
     await sendEmail(templateId, emailAddress, personalisation)
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       'Missing GOVUK_NOTIFY_API_KEY in environment, notifyClient will not be available'

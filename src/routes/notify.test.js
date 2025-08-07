@@ -26,7 +26,7 @@ describe('/send-email route', () => {
   })
 
   afterAll(async () => {
-    await server.stop({ timeout: 0 })
+    await server.stop()
   })
 
   it('returns 200 on successful email send', async () => {
