@@ -64,7 +64,7 @@ To configure these, please complete the following actions:
 > Docker Compose secrets cannot be accidentally exposed via `process.env`
 
 > [!IMPORTANT]
-> Secrets also need to be managed on the deployment platform, [see here for next steps](#secrets-and-environment-variables)
+> Secrets also need to be managed on CDP, [see here for next steps](#secrets-and-environment-variables)
 
 ### ADR tools
 
@@ -306,10 +306,10 @@ SonarCloud is configured for this repository. You can [find the configuration he
 
 ## Deployments
 
-Deployments are managed by Defra tooling, speak with the engineering team to be briefed on this.
+Deployments are managed by CDP, speak with the engineering team to be briefed on this.
 
 Deployments are conducted automatically for lower environments and manually for prod.
 
 ### Secrets and Environment Variables
 
-Both secrets and environment variables are managed by Defra tooling, speak with the engineering team to be briefed on this.
+Both secrets and environment variables are managed by CDP, speak with the engineering team to be briefed on this.

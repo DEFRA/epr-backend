@@ -51,7 +51,7 @@ ORGANISATION {
   int schema_version
   enum region
   string orgName
-  string address
+  ADDRESS address
   json rawSubmissionData
 }
 
