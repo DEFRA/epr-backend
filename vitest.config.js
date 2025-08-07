@@ -27,7 +27,7 @@ export default defineConfig({
         functions: 100
       }
     },
-    pool: 'forks',
+    pool: 'threads',
     setupFiles: ['.vite/mongo-memory-server.js', '.vite/setup-files.js']
   }
 })
