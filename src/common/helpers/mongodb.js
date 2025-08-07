@@ -32,7 +32,7 @@ export const mongoDb = {
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')
         try {
-          await client.close(true)
+          await client.close()
           // @fixme: add coverage
           /* c8 ignore start */
         } catch (e) {
