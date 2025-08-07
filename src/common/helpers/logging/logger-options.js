@@ -27,7 +27,7 @@ export const loggerOptions = {
   ...formatters[logConfig.format],
   nesting: true,
   // @fixme: add coverage
-  /* istanbul ignore next */
+  /* c8 ignore start */
   mixin() {
     const mixinValues = {}
     const traceId = getTraceId()
@@ -36,4 +36,5 @@ export const loggerOptions = {
     }
     return mixinValues
   }
+  /* c8 ignore stop */
 }
