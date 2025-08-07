@@ -9,13 +9,7 @@ export const mongoDb = {
       server.logger.info('Setting up MongoDb')
 
       const client = await MongoClient.connect(options.mongoUrl, {
-        ...options.mongoOptions,
-        // @fixme: add coverage
-        /* c8 ignore start */
-        ...(server?.secureContext && {
-          secureContext: server.secureContext
-        })
-        /* c8 ignore stop */
+        ...options.mongoOptions
       })
 
       const databaseName = options.databaseName
@@ -37,7 +31,14 @@ export const mongoDb = {
 
       server.events.on('stop', async () => {
         server.logger.info('Closing Mongo client')
-        await client.close(true)
+        try {
+          await client.close(true)
+          // @fixme: add coverage
+          /* c8 ignore start */
+        } catch (e) {
+          server.logger.error(e, 'failed to close mongo client')
+        }
+        /* c8 ignore stop */
       })
     }
   }
