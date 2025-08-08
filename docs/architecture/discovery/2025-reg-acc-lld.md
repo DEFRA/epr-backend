@@ -4,6 +4,25 @@ For 2025 pEPR registration & accreditation applications, we will be using Defra 
 
 Please see the [High Level Design](./2025-reg-acc-hld.md) for an overview.
 
+<!-- TOC -->
+
+- [2025 Registration & Accreditation applications: Low Level Design](#2025-registration--accreditation-applications-low-level-design)
+  - [Project scope](#project-scope)
+    - [Functional requirements](#functional-requirements)
+    - [Non-functional requirements](#non-functional-requirements)
+  - [Technical approach](#technical-approach)
+  _ [Endpoint: `POST` `/v1/apply/organisation`](#endpoint-post-v1applyorganisation)
+  _ [Success case](#success-case)
+  _ [Error case](#error-case)
+  _ [Endpoint: `POST` `/v1/apply/registration`](#endpoint-post-v1applyregistration)
+  _ [Success case](#success-case-1)
+  _ [Error case](#error-case-1)
+  _ [Endpoint: `POST` `/v1/apply/accreditation`](#endpoint-post-v1applyaccreditation)
+  _ [Success case](#success-case-2)
+  _ [Error case](#error-case-2)
+  _ [Database mappings](#database-mappings)
+  <!-- TOC -->
+
 ## Project scope
 
 We need to deliver an API Service hosted on CDP (Core Delivery Platform) providing multiple endpoints that each:
@@ -48,7 +67,7 @@ regulator[Regulator]
 form[Organisation Defra form]
 endpoint([POST apply/organisation])
 idGenerator[[orgId generator]]
-database((Collection: \n Organisation))
+database((Collection: ORGANISATION))
 govNotify{{GovNotify}}
 
 %% Flow
@@ -118,7 +137,7 @@ operator[Operator or Consultant]
 regulator[Regulator]
 form[Registration Defra form]
 endpoint([POST apply/registration])
-database((Collection: \n Registration))
+database((Collection: REGISTRATION))
 
 %% Flow
 operator:::user --submits-->form
@@ -182,7 +201,7 @@ operator[Operator or Consultant]
 regulator[Regulator]
 form[Accreditation Defra form]
 endpoint([POST apply/accreditation])
-database((Collection: \n Accreditation))
+database((Collection: ACCREDITATION))
 
 %% Flow
 operator:::user --submits-->form
