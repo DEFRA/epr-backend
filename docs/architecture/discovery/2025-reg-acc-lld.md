@@ -39,14 +39,15 @@ We need to deliver an API Service hosted on CDP (Core Delivery Platform) providi
 flowchart TD;
 
 %% Styles
-classDef user fill:#D64124,stroke:#47150B,stroke-width:2px
-classDef service fill:#7B1582,stroke:#3A0A3D,stroke-width:2px
+classDef user fill:#FF8870,stroke:#5E342B,stroke-width:2px
+classDef service fill:#6B72FF,stroke:#27295E,stroke-width:2px
 
 %% Entities
 operator[Operator or Consultant]
 regulator[Regulator]
 form[Organisation Defra form]
 endpoint([POST apply/organisation])
+idGenerator[[orgId generator]]
 database((Collection: \n Organisation))
 govNotify{{GovNotify}}
 
@@ -54,6 +55,7 @@ govNotify{{GovNotify}}
 operator:::user --submits-->form
 form-.calls.->endpoint:::service
 form--sends email with: form data-->regulator
+endpoint:::service <-.calls.->idGenerator:::service
 endpoint:::service -.stores.->database:::service
 endpoint-.calls.->govNotify
 govNotify--sends email with: orgId & orgName-->operator
@@ -76,6 +78,7 @@ sequenceDiagram
   Operator->>Defra Forms: submits organisation form
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
+  API Service->>API Service: generates orgId
   API Service->>Defra Forms: responds with orgId & orgName
   API Service->>Operator: sends email with orgId & orgName
   Defra Forms->>Operator: renders success page with orgId & orgName
@@ -107,8 +110,8 @@ sequenceDiagram
 flowchart TD;
 
 %% Styles
-classDef user fill:#D64124,stroke:#47150B,stroke-width:2px
-classDef service fill:#7B1582,stroke:#3A0A3D,stroke-width:2px
+classDef user fill:#FF8870,stroke:#5E342B,stroke-width:2px
+classDef service fill:#6B72FF,stroke:#27295E,stroke-width:2px
 
 %% Entities
 operator[Operator or Consultant]
@@ -171,8 +174,8 @@ sequenceDiagram
 flowchart TD;
 
 %% Styles
-classDef user fill:#D64124,stroke:#47150B,stroke-width:2px
-classDef service fill:#7B1582,stroke:#3A0A3D,stroke-width:2px
+classDef user fill:#FF8870,stroke:#5E342B,stroke-width:2px
+classDef service fill:#6B72FF,stroke:#27295E,stroke-width:2px
 
 %% Entities
 operator[Operator or Consultant]
@@ -233,6 +236,12 @@ sequenceDiagram
 
 The API Service database collections will be mapped to one another via a foreign key on the `REGISTRATION` and `ACCREDITATION` entities which correspond to the primary key on the `ORGANISATION` entity.
 
+> [!IMPORTANT]
+> All Defra forms field values will be stored in the `rawSubmissionData` database field.
+>
+> Fields that are not schema-validated are mapped as cloned values for debugging convenience.
+> This process will be undertaken on a "best-efforts" basis and depending on the data quality these non-validated fields may be empty if they can't be mapped
+
 All entities will contain embedded entities for `ADDRESS`
 
 ```mermaid
@@ -248,9 +257,9 @@ ADDRESS
 ORGANISATION {
   primaryKey _id PK "schema validated"
   int schema_version "schema validated"
-  enum region
-  string orgName
-  ADDRESS address
+  enum region "nullable"
+  string orgName "nullable"
+  ADDRESS address "nullable"
   json rawSubmissionData "schema validated"
 }
 
@@ -258,10 +267,10 @@ REGISTRATION {
   primaryKey _id PK "schema validated"
   foreignKey orgId FK "schema validated"
   int schema_version "schema validated"
-  enum region
-  enum activity
-  ADDRESS site
-  enum materials
+  enum region "nullable"
+  enum activity "nullable"
+  ADDRESS site "nullable"
+  enum materials "nullable"
   json rawSubmissionData "schema validated"
 }
 
@@ -269,21 +278,21 @@ ACCREDITATION {
   primaryKey _id PK "schema validated"
   foreignKey orgId FK "schema validated"
   int schema_version "schema validated"
-  enum region
-  enum activity
-  ADDRESS site
-  enum material
-  enum tonnageBand
+  enum region "nullable"
+  enum activity "nullable"
+  ADDRESS site "nullable"
+  enum material "nullable"
+  enum tonnageBand "nullable"
   json rawSubmissionData "schema validated"
 }
 
 ADDRESS {
-  string lineOne
-  string lineTwo
-  string townCity
-  string county
-  string postcode
-  string gridRef
+  string lineOne "nullable"
+  string lineTwo "nullable"
+  string townCity "nullable"
+  string county "nullable"
+  string postcode "nullable"
+  string gridRef "nullable"
 }
 
 %% Relationships
