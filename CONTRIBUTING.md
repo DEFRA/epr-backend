@@ -649,3 +649,65 @@ To activate the integration, we must provide the DEFRA Forms team with our endpo
 - name: pERP test form
 - [Link to form](https://forms-designer.test.cdp-int.defra.cloud/library/pepr-test-form)
 - All applications will be sent to [ERP service email](mailto:REEXServiceTeam@defra.gov.uk)
+
+## ADR: Use of GOV.UK Notify for Email Delivery
+
+### Context
+
+Our system needs to send emails as part of the organisation registration and accreditation process. These include confirmation emails to users and notifications to regulators.
+
+To avoid building and maintaining our own email infrastructure, we integrate with [GOV.UK Notify](https://www.notifications.service.gov.uk/), a government-approved platform for sending transactional emails.
+
+### Decision
+
+We will use GOV.UK Notify to send system-generated emails triggered by form submissions. This allows us to:
+
+- Centralise and manage email templates via the GOV.UK Notify dashboard
+- Simplify integration via a standard API
+- Use a secure, government-trusted delivery service
+
+Emails are triggered after we receive submission data, and reference GOV.UK Notify templates by ID. We populate the required placeholders (e.g. organisation ID) and send a request via the GOV.UK Notify API.
+
+To use GOV.UK Notify in this project:
+
+- An email template must be created in the GOV.UK Notify dashboard
+- We must provide Notify with a list of allowed email recipients (in non-live mode)
+- The template’s ID is referenced in code and populated with submission data
+
+> Template creation and access must be done via the GOV.UK Notify web interface. Developers will need access to the team account.
+
+### Diagram: Email Trigger Flow
+
+```mermaid
+sequenceDiagram
+    participant DEFRA_Forms as DEFRA Forms
+    participant pERP as pERP Service
+    participant GOVUK as GOV.UK Notify
+    participant User as Email Recipient
+
+    DEFRA_Forms->>pERP: Submit form data
+    pERP->>pERP: Generate org ID
+    pERP->>GOVUK: Send email using template ID + personalisation
+    GOVUK-->>User: Deliver email
+```
+
+### GOV.UK Notify Setup
+
+We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automated emails from the pERP service.
+
+#### Access
+
+- Request to be added to the GOV.UK Notify team account.
+- All templates are created and managed in the Notify dashboard.
+
+#### Using Templates
+
+- Each email template has a **Template ID**.
+- This ID is referenced in code and populated with submission data before sending.
+- Placeholders in templates (e.g. `((org_id))`) are replaced at runtime.
+
+#### Development Notes
+
+- API keys are stored securely in CDP — never commit them to the repo.
+- New templates must be created in Notify and their IDs updated in code.
+- In non-live mode, only approved recipient email addresses can be used.
