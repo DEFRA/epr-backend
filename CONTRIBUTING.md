@@ -654,7 +654,7 @@ Both secrets and environment variables are managed by CDP, speak with the engine
 
 ### DEFRA form test
 
-This test form is used to support integration between the DEFRA Forms platform and the pERP service. It provides a safe, standalone environment for developers to verify that form submissions (including file uploads) are correctly received and processed by our system.
+This test form is used to support integration between the DEFRA Forms platform and the pEPR service. It provides a safe, standalone environment for developers to verify that form submissions (including file uploads) are correctly received and processed by our system.
 
 Having our own dedicated form allows us to:
 
@@ -664,7 +664,7 @@ Having our own dedicated form allows us to:
 
 To activate the integration, we must provide the DEFRA Forms team with our endpoint so they can configure the test form to send submissions to it.
 
-- name: pERP test form
+- name: pEPR test form
 - [Link to form](https://forms-designer.test.cdp-int.defra.cloud/library/pepr-test-form)
 - All applications will be sent to [ERP service email](mailto:REEXServiceTeam@defra.gov.uk)
 
@@ -689,7 +689,7 @@ Emails are triggered after we receive submission data, and reference GOV.UK Noti
 To use GOV.UK Notify in this project:
 
 - An email template must be created in the GOV.UK Notify dashboard
-- We must provide Notify with a list of allowed email recipients (in non-live mode)
+- We must provide GOV.UK Notify with a list of allowed email recipients (in non-live mode)
 - The template’s ID is referenced in code and populated with submission data
 
 > Template creation and access must be done via the GOV.UK Notify web interface. Developers will need access to the team account.
@@ -699,33 +699,34 @@ To use GOV.UK Notify in this project:
 ```mermaid
 sequenceDiagram
     participant DEFRA_Forms as DEFRA Forms
-    participant pERP as pERP Service
+    participant pEPR as pEPR Service
     participant GOVUK as GOV.UK Notify
     participant User as Email Recipient
 
-    DEFRA_Forms->>pERP: Submit form data
-    pERP->>pERP: Generate org ID
-    pERP->>GOVUK: Send email using template ID + personalisation
+    DEFRA_Forms->>pEPR: Submit form data
+    pEPR->>pEPR: Generate org ID
+    pEPR->>GOVUK: Send email using template ID + personalisation
     GOVUK-->>User: Deliver email
 ```
 
 ### GOV.UK Notify Setup
 
-We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automated emails from the pERP service.
+We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automated emails from the pEPR service.
 
 #### Access
 
 - Request to be added to the GOV.UK Notify team account.
-- All templates are created and managed in the Notify dashboard.
+- All templates are created and managed in the GOV.UK Notify dashboard.
 
 #### Using Templates
 
 - Each email template has a **Template ID**.
 - This ID is referenced in code and populated with submission data before sending.
-- Placeholders in templates (e.g. `((org_id))`) are replaced at runtime.
+- Placeholders in templates (e.g. `((org_id))`) are replaced at runtime with values from our system, mapped from the form submission data or generated internally (e.g. `org_id` is created when the organisation form is processed).  
+  See the [GOV.UK Notify personalisation documentation](https://www.notifications.service.gov.uk/using-notify/guidance/personalisation) for details on how placeholders work.
 
 #### Development Notes
 
-- API keys are stored securely in CDP — never commit them to the repo.
-- New templates must be created in Notify and their IDs updated in code.
+- API keys are stored securely in CDP — never commit them to the repo. See [Secrets](#secrets) for how to handle them.
+- New templates must be created in GOV.UK Notify and their IDs updated in code.
 - In non-live mode, only approved recipient email addresses can be used.
