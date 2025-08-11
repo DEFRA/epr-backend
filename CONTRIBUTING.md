@@ -33,6 +33,15 @@
     - [SonarCloud](#sonarcloud)
   - [Deployments](#deployments)
     - [Secrets and Environment Variables](#secrets-and-environment-variables)
+  - [ADR: Use of GOV.UK Notify for Email Delivery](#adr-use-of-govuk-notify-for-email-delivery)
+    - [Context](#context)
+    - [Decision](#decision)
+    - [Diagram: Email Trigger Flow](#diagram-email-trigger-flow)
+    - [Consequences](#consequences)
+  - [GOV.UK Notify Setup](#govuk-notify-setup)
+    - [Access](#access)
+    - [Using Templates](#using-templates)
+    - [Development Notes](#development-notes)
     <!-- TOC -->
 
 ## Requirements
@@ -351,6 +360,15 @@ Both secrets and environment variables are managed by CDP, speak with the engine
     - [Secrets and Environment Variables](#secrets-and-environment-variables)
   - [Demo Applications](#demo-applications)
     - [DEFRA form test](#defra-form-test)
+  - [ADR: Use of GOV.UK Notify for Email Delivery](#adr-use-of-govuk-notify-for-email-delivery)
+    - [Context](#context)
+    - [Decision](#decision)
+    - [Diagram: Email Trigger Flow](#diagram-email-trigger-flow)
+    - [Consequences](#consequences)
+  - [GOV.UK Notify Setup](#govuk-notify-setup)
+    - [Access](#access)
+    - [Using Templates](#using-templates)
+    - [Development Notes](#development-notes)
     <!-- TOC -->
 
 ## Requirements
