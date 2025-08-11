@@ -6,7 +6,10 @@ export const mongoDb = {
     name: 'mongodb',
     version: '1.0.0',
     register: async function (server, options) {
-      server.logger.info('Setting up MongoDb')
+      server.logger.info({
+        message: 'Setting up MongoDb',
+        event: { category: 'database', action: 'connection_initialising' }
+      })
 
       const client = await MongoClient.connect(options.mongoUrl, {
         ...options.mongoOptions
@@ -18,7 +21,10 @@ export const mongoDb = {
 
       await createIndexes(db)
 
-      server.logger.info(`MongoDb connected to ${databaseName}`)
+      server.logger.info({
+        message: `MongoDb connected to ${databaseName}`,
+        event: { category: 'database', action: 'connection_succeeded' }
+      })
 
       server.decorate('server', 'mongoClient', client)
       server.decorate('server', 'db', db)
@@ -30,13 +36,20 @@ export const mongoDb = {
       /* c8 ignore stop */
 
       server.events.on('stop', async () => {
-        server.logger.info('Closing Mongo client')
+        server.logger.info({
+          message: 'Closing Mongo client',
+          event: { category: 'database', action: 'connection_closing' }
+        })
         try {
           await client.close()
           // @fixme: add coverage
           /* c8 ignore start */
-        } catch (e) {
-          server.logger.error(e, 'failed to close mongo client')
+        } catch (err) {
+          server.logger.error({
+            err,
+            message: 'failed to close mongo client',
+            event: { category: 'database', action: 'connection_closing' }
+          })
         }
         /* c8 ignore stop */
       })
