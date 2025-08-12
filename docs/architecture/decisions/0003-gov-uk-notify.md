@@ -45,28 +45,6 @@ sequenceDiagram
     GOVUK-->>User: Deliver email
 ```
 
-### GOV.UK Notify Setup
-
-We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automated emails from the pEPR service.
-
-#### Access
-
-- Request to be added to the GOV.UK Notify team account.
-- All templates are created and managed in the GOV.UK Notify dashboard.
-
-#### Using Templates
-
-- Each email template has a **Template ID**.
-- This ID is referenced in code and populated with submission data before sending.
-- Placeholders in templates (e.g. `((org_id))`) are replaced at runtime with values from our system, mapped from the form submission data or generated internally (e.g. `org_id` is created when the organisation form is processed).  
-  See the [GOV.UK Notify personalisation documentation](https://www.notifications.service.gov.uk/using-notify/guidance/personalisation) for details on how placeholders work.
-
-### Development Notes
-
-- API keys are stored securely in CDP — never commit them to the repo. See [Secrets](#secrets) for how to handle them.
-- New templates must be created in GOV.UK Notify and their IDs updated in code.
-- In non-live mode, only approved recipient email addresses can be used.
-
 ## Consequences
 
 **Positive:**
