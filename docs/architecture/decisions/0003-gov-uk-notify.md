@@ -30,7 +30,7 @@ To use GOV.UK Notify in this project:
 
 > Template creation and access must be done via the GOV.UK Notify web interface. Developers will need access to the team account.
 
-## Diagram: Email Trigger Flow
+### Diagram: Email Trigger Flow
 
 ```mermaid
 sequenceDiagram
@@ -45,16 +45,16 @@ sequenceDiagram
     GOVUK-->>User: Deliver email
 ```
 
-## GOV.UK Notify Setup
+### GOV.UK Notify Setup
 
 We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automated emails from the pEPR service.
 
-### Access
+#### Access
 
 - Request to be added to the GOV.UK Notify team account.
 - All templates are created and managed in the GOV.UK Notify dashboard.
 
-### Using Templates
+#### Using Templates
 
 - Each email template has a **Template ID**.
 - This ID is referenced in code and populated with submission data before sending.
@@ -66,3 +66,16 @@ We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automa
 - API keys are stored securely in CDP — never commit them to the repo. See [Secrets](#secrets) for how to handle them.
 - New templates must be created in GOV.UK Notify and their IDs updated in code.
 - In non-live mode, only approved recipient email addresses can be used.
+
+## Consequences
+
+**Positive:**
+
+- Reduces operational overhead by using a trusted, government-approved service
+- Improves deliverability and compliance with government standards
+- Provides a centralised place for template management
+
+**Negative / Trade-offs:**
+
+- Development in non-live mode is restricted to pre-approved email addresses
+- Template changes require manual updates via the GOV.UK Notify dashboard
