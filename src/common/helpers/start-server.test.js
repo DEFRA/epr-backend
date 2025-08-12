@@ -29,6 +29,7 @@ vi.mock('./logging/logger.js', () => ({
 vi.mock('./common/helpers/mongodb.js')
 
 describe('#startServer', () => {
+  const eventCategoryDb = 'database'
   let createServerSpy
   let hapiServerSpy
   let startServerImport
@@ -54,10 +55,20 @@ describe('#startServer', () => {
 
       expect(createServerSpy).toHaveBeenCalled()
       expect(hapiServerSpy).toHaveBeenCalled()
-      expect(mockHapiLoggerInfo).toHaveBeenCalledWith('Setting up MongoDb')
-      expect(mockHapiLoggerInfo).toHaveBeenCalledWith(
-        'MongoDb connected to epr-backend'
-      )
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
+        message: 'Setting up MongoDb',
+        event: expect.objectContaining({
+          category: eventCategoryDb,
+          action: 'connection_initialising'
+        })
+      })
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
+        message: 'MongoDb connected to epr-backend',
+        event: expect.objectContaining({
+          category: eventCategoryDb,
+          action: 'connection_succeeded'
+        })
+      })
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith(
         'Server started successfully'
       )
