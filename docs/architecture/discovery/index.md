@@ -4,5 +4,4 @@ Documentation relating to architecture that we are in the process of defining, t
 
 ## Contents
 
-1. [2025 Registration & Accreditation applications: High Level Design](./2025-reg-acc-hld.md)
-2. [pEPR: High Level Design](./pepr-hld.md)
+1. [pEPR: High Level Design](./pepr-hld.md)

@@ -2,26 +2,28 @@
 
 For 2025 pEPR registration & accreditation applications, we will be using Defra Forms created and managed by the EA.
 
-Please see the [High Level Design](./2025-reg-acc-hld.md) for an overview.
+Please see the [High Level Design](2025-reg-acc-hld.md) for an overview.
 
+<!-- prettier-ignore-start -->
+<!-- TOC -->
+* [2025 Registration & Accreditation applications: Low Level Design](#2025-registration--accreditation-applications-low-level-design)
+  * [Project scope](#project-scope)
+    * [Functional requirements](#functional-requirements)
+    * [Non-functional requirements](#non-functional-requirements)
+  * [Technical approach](#technical-approach)
+    * [Endpoint: `POST` `/v1/apply/organisation`](#endpoint-post-v1applyorganisation)
+      * [Success case](#success-case)
+      * [Error case](#error-case)
+    * [Endpoint: `POST` `/v1/apply/registration`](#endpoint-post-v1applyregistration)
+      * [Success case](#success-case-1)
+      * [Error case](#error-case-1)
+    * [Endpoint: `POST` `/v1/apply/accreditation`](#endpoint-post-v1applyaccreditation)
+      * [Success case](#success-case-2)
+      * [Error case](#error-case-2)
+    * [Database mappings](#database-mappings)
 <!-- TOC -->
 
-- [2025 Registration & Accreditation applications: Low Level Design](#2025-registration--accreditation-applications-low-level-design)
-  - [Project scope](#project-scope)
-    - [Functional requirements](#functional-requirements)
-    - [Non-functional requirements](#non-functional-requirements)
-  - [Technical approach](#technical-approach)
-  _ [Endpoint: `POST` `/v1/apply/organisation`](#endpoint-post-v1applyorganisation)
-  _ [Success case](#success-case)
-  _ [Error case](#error-case)
-  _ [Endpoint: `POST` `/v1/apply/registration`](#endpoint-post-v1applyregistration)
-  _ [Success case](#success-case-1)
-  _ [Error case](#error-case-1)
-  _ [Endpoint: `POST` `/v1/apply/accreditation`](#endpoint-post-v1applyaccreditation)
-  _ [Success case](#success-case-2)
-  _ [Error case](#error-case-2)
-  _ [Database mappings](#database-mappings)
-  <!-- TOC -->
+<!-- prettier-ignore-end -->
 
 ## Project scope
 
@@ -32,7 +34,7 @@ We need to deliver an API Service hosted on CDP (Core Delivery Platform) providi
 1. Accept form submission data in JSON from an associated Defra Form(s)
 2. Minimally map the submitted data to the relevant entity schema
 3. Store the submitted data in a schema versioned and minimally validated collection
-4. Optionally send an email via Gov Notify to the nominated email address in the form data with further information, e.g. `orgId` & `orgName`
+4. Optionally send an email via Gov Notify to the nominated email address in the form data with further information, e.g. `orgId`, `orgName` & `referenceNumber`
 
 > [!NOTE]
 > The Defra forms will call the API Service endpoints be the `onSave` page event, [see docs](https://defra.github.io/forms-engine-plugin/features/configuration-based/PAGE_EVENTS.html).
@@ -77,7 +79,8 @@ form--sends email with: form data-->regulator
 endpoint:::service <-.calls.->idGenerator:::service
 endpoint:::service -.stores.->database:::service
 endpoint-.calls.->govNotify
-govNotify--sends email with: orgId & orgName-->operator
+govNotify--sends email with: orgId, orgName & referenceNumber-->operator
+govNotify--sends email with: orgId, orgName & referenceNumber-->regulator
 
 %% Legend
 subgraph legend [Legend]
@@ -98,9 +101,10 @@ sequenceDiagram
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
   API Service->>API Service: generates orgId
-  API Service->>Defra Forms: responds with orgId & orgName
-  API Service->>Operator: sends email with orgId & orgName
-  Defra Forms->>Operator: renders success page with orgId & orgName
+  API Service->>Operator: sends email with orgId, orgName & referenceNumber
+  API Service->>Regulator: sends email with orgId, orgName & referenceNumber
+  API Service->>Defra Forms: responds with orgId, orgName & referenceNumber
+  Defra Forms->>Operator: renders success page with orgId, orgName & referenceNumber
 ```
 
 #### Error case
@@ -160,7 +164,7 @@ sequenceDiagram
   participant Defra Forms
   participant API Service
   participant Regulator
-  Operator->>Defra Forms: submits registration form with orgId
+  Operator->>Defra Forms: submits registration form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
   API Service->>Defra Forms: responds with success
@@ -180,7 +184,7 @@ sequenceDiagram
   participant Defra Forms
   participant API Service
   participant Regulator
-  Operator->>Defra Forms: submits registration form with orgId
+  Operator->>Defra Forms: submits registration form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
   API Service->>Defra Forms: responds with error
@@ -224,7 +228,7 @@ sequenceDiagram
   participant Defra Forms
   participant API Service
   participant Regulator
-  Operator->>Defra Forms: submits accreditation form with orgId
+  Operator->>Defra Forms: submits accreditation form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
   API Service->>Defra Forms: responds with success
@@ -244,7 +248,7 @@ sequenceDiagram
   participant Defra Forms
   participant API Service
   participant Regulator
-  Operator->>Defra Forms: submits accreditation form with orgId
+  Operator->>Defra Forms: submits accreditation form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
   API Service->>Defra Forms: responds with error
@@ -274,7 +278,8 @@ ADDRESS
 
 %% Structure
 ORGANISATION {
-  primaryKey _id PK "schema validated"
+  ObjectId _id PK "a.k.a 'referenceNumber', schema validated"
+  int orgId UK "schema validated"
   int schema_version "schema validated"
   enum region "nullable"
   string orgName "nullable"
@@ -283,19 +288,21 @@ ORGANISATION {
 }
 
 REGISTRATION {
-  primaryKey _id PK "schema validated"
-  foreignKey orgId FK "schema validated"
+  ObjectId _id PK "schema validated"
+  ObjectId referenceNumber FK "schema validated"
+  int orgId "schema validated"
   int schema_version "schema validated"
   enum region "nullable"
   enum activity "nullable"
   ADDRESS site "nullable"
-  enum materials "nullable"
+  enum material "nullable"
   json rawSubmissionData "schema validated"
 }
 
 ACCREDITATION {
-  primaryKey _id PK "schema validated"
-  foreignKey orgId FK "schema validated"
+  ObjectId _id PK "schema validated"
+  ObjectId referenceNumber FK "schema validated"
+  int orgId "schema validated"
   int schema_version "schema validated"
   enum region "nullable"
   enum activity "nullable"
