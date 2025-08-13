@@ -67,6 +67,28 @@
         }
       },
       "response": []
+    },
+    {
+      "name": "/test-endpoint-dxt",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{host}}/test-endpoint-dxt",
+          "host": ["{{host}}"],
+          "path": ["send-email"]
+        }
+      },
+      "response": []
     }
   ]
 }
