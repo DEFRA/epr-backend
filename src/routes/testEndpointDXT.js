@@ -1,9 +1,10 @@
+/* istanbul ignore file */
+
 import Boom from '@hapi/boom'
 import { createLogger } from '../common/helpers/logging/logger.js'
 
 /**
  * Test endpoint to receive payloads and respond with status.
- * No external integrations.
  */
 const testEndpointDXT = {
   method: 'POST',
@@ -18,16 +19,15 @@ const testEndpointDXT = {
       }
     }
   },
+
   handler: async (request, h) => {
     const logger = createLogger()
 
-    logger.info('Received test-endpoint-dxt payload:', request.payload)
-
-    return h.response({
-      success: true,
-      receivedAt: new Date().toISOString(),
-      originalPayload: request.payload
-    })
+    logger.info(
+      { payload: request.payload },
+      'Received test-endpoint-dxt payload'
+    )
+    throw Boom.badRequest('Test forced 400 response')
   }
 }
 

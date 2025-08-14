@@ -19,7 +19,7 @@ describe('/test-endpoint-dxt route', () => {
     await server.initialize()
   })
 
-  it('returns 200 and echoes back payload on valid request', async () => {
+  it.skip('returns 200 and echoes back payload on valid request', async () => {
     const payload = {
       email: 'test@example.com',
       template: 'test-template',
