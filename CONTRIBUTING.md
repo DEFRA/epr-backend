@@ -27,6 +27,7 @@
     * [Development image](#development-image)
     * [Production image](#production-image)
     * [Docker Compose](#docker-compose)
+    * [Logging](#logging)
   * [Repository](#repository)
     * [Pull Requests](#pull-requests)
     * [Dependabot](#dependabot)
