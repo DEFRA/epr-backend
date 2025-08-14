@@ -1,6 +1,10 @@
 import Boom from '@hapi/boom'
 import { createLogger } from '../common/helpers/logging/logger.js'
 import { sendEmail } from '../common/helpers/notify.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../common/enums/event.js'
 
 /**
  * Route to send email notifications using GOV.UK Notify
@@ -31,8 +35,20 @@ const notify = {
       await sendEmail(template, email, personalisation)
       return h.response({ success: true })
     } catch (err) {
+      const message = 'Failed to send email'
       const logger = createLogger()
-      logger.error(`Notify error:\n${err}`)
+      logger.error({
+        message,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.HTTP,
+          action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
+        },
+        error: {
+          message: err.message,
+          stack_trace: err.stack,
+          type: err.name
+        }
+      })
       throw Boom.badImplementation('Failed to send email')
     }
   }

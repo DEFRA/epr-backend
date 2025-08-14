@@ -1,5 +1,10 @@
 import hapi from '@hapi/hapi'
 
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../enums/event.js'
+
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
@@ -29,7 +34,6 @@ vi.mock('./logging/logger.js', () => ({
 vi.mock('./common/helpers/mongodb.js')
 
 describe('#startServer', () => {
-  const eventCategoryDb = 'database'
   let createServerSpy
   let hapiServerSpy
   let startServerImport
@@ -58,23 +62,26 @@ describe('#startServer', () => {
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
         message: 'Setting up MongoDb',
         event: expect.objectContaining({
-          category: eventCategoryDb,
-          action: 'connection_initialising'
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.CONNECTION_INITIALISING
         })
       })
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
         message: 'MongoDb connected to epr-backend',
         event: expect.objectContaining({
-          category: eventCategoryDb,
-          action: 'connection_succeeded'
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.CONNECTION_SUCCESS
         })
       })
-      expect(mockHapiLoggerInfo).toHaveBeenCalledWith(
-        'Server started successfully'
-      )
-      expect(mockHapiLoggerInfo).toHaveBeenCalledWith(
-        'Access your backend on http://localhost:3098'
-      )
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
+        message: expect.stringMatching(
+          /^Server started successfully at http:\/\/localhost:[0-9]+/
+        ),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+        }
+      })
     })
   })
 
@@ -86,9 +93,15 @@ describe('#startServer', () => {
     test('Should log failed startup message', async () => {
       await startServerImport.startServer()
 
-      expect(mockLoggerInfo).toHaveBeenCalledWith('Server failed to start :(')
       expect(mockLoggerError).toHaveBeenCalledWith(
-        Error('Server failed to start')
+        Error('Server failed to start'),
+        {
+          message: 'Server failed to start',
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.START_FAILURE
+          }
+        }
       )
     })
   })
