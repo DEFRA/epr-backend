@@ -1,16 +1,33 @@
-import { acquireLock, requireLock } from './mongo-lock.js'
+import { acquireLock, requireLock, MongoLockError } from './mongo-lock.js'
+
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../enums/event.js'
+
+const mockLoggerError = vi.fn()
+
+vi.mock('./logging/logger.js', () => ({
+  createLogger: () => ({
+    error: (...args) => mockLoggerError(...args)
+  })
+}))
 
 describe('Lock Functions', () => {
   let locker
-  let logger
 
   beforeEach(() => {
     locker = {
       lock: vi.fn()
     }
-    logger = {
-      error: vi.fn()
-    }
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterAll(() => {
+    vi.resetAllMocks()
   })
 
   describe('acquireLock', () => {
@@ -20,10 +37,10 @@ describe('Lock Functions', () => {
 
       locker.lock.mockResolvedValue(mockLock) // Mocking lock method to resolve a lock
 
-      const result = await acquireLock(locker, resource, logger)
+      const result = await acquireLock(locker, resource)
 
       expect(result).toEqual(mockLock)
-      expect(logger.error).not.toHaveBeenCalled()
+      expect(mockLoggerError).not.toHaveBeenCalled()
       expect(locker.lock).toHaveBeenCalledWith(resource)
     })
 
@@ -32,11 +49,18 @@ describe('Lock Functions', () => {
 
       locker.lock.mockResolvedValue(null) // Mocking lock method to resolve to null
 
-      const result = await acquireLock(locker, resource, logger)
+      const result = await acquireLock(locker, resource)
 
       expect(result).toBeNull()
-      expect(logger.error).toHaveBeenCalledWith(
-        `Failed to acquire lock for ${resource}`
+      expect(mockLoggerError).toHaveBeenCalledWith(
+        new MongoLockError('Could not acquire mongo resource lock'),
+        {
+          message: `Failed to acquire lock for ${resource}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.DB,
+            action: LOGGING_EVENT_ACTIONS.LOCK_ACQUISITION_FAILED
+          }
+        }
       )
       expect(locker.lock).toHaveBeenCalledWith(resource)
     })

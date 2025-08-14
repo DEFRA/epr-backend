@@ -1,5 +1,9 @@
 import fs from 'fs'
 import { getLocalSecret } from './get-local-secret.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../enums/event.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -40,8 +44,12 @@ describe('getLocalSecret', () => {
     })
     const result = getLocalSecret(secretName)
     expect(result).toEqual(null)
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      `An error occurred while trying to read the secret: ${secretName}.\n${error}`
-    )
+    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+      message: `An error occurred while trying to read the secret: ${secretName}.\n${error}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SECRET,
+        action: LOGGING_EVENT_ACTIONS.READ_ERROR
+      }
+    })
   })
 })

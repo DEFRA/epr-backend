@@ -2,10 +2,21 @@ import { pino } from 'pino'
 
 import { loggerOptions } from './logger-options.js'
 
-const logger = pino(loggerOptions)
-
 function createLogger() {
-  return logger
+  const logger = pino(loggerOptions)
+
+  return {
+    ...logger,
+    error: (err, log) =>
+      logger.error({
+        error: {
+          message: err.message,
+          stack_trace: err.stack,
+          type: err.name
+        },
+        ...log
+      })
+  }
 }
 
 export { createLogger }

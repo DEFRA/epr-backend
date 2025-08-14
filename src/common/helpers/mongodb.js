@@ -1,5 +1,9 @@
 import { MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../enums/event.js'
 
 export const mongoDb = {
   plugin: {
@@ -8,7 +12,10 @@ export const mongoDb = {
     register: async function (server, options) {
       server.logger.info({
         message: 'Setting up MongoDb',
-        event: { category: 'database', action: 'connection_initialising' }
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.CONNECTION_INITIALISING
+        }
       })
 
       const client = await MongoClient.connect(options.mongoUrl, {
@@ -23,7 +30,10 @@ export const mongoDb = {
 
       server.logger.info({
         message: `MongoDb connected to ${databaseName}`,
-        event: { category: 'database', action: 'connection_succeeded' }
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.CONNECTION_SUCCESS
+        }
       })
 
       server.decorate('server', 'mongoClient', client)
@@ -38,7 +48,10 @@ export const mongoDb = {
       server.events.on('stop', async () => {
         server.logger.info({
           message: 'Closing Mongo client',
-          event: { category: 'database', action: 'connection_closing' }
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.DB,
+            action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING
+          }
         })
         try {
           await client.close()
@@ -47,8 +60,11 @@ export const mongoDb = {
         } catch (err) {
           server.logger.error({
             err,
-            message: 'failed to close mongo client',
-            event: { category: 'database', action: 'connection_closing' }
+            message: 'Failed to close mongo client',
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.DB,
+              action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING
+            }
           })
         }
         /* c8 ignore stop */

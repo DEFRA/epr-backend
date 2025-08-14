@@ -1,5 +1,9 @@
 import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../enums/event.js'
 
 const mockSendEmail = vi.fn()
 
@@ -46,9 +50,13 @@ describe('sendEmail', () => {
   it('calls logger.warn if apiKey is not set', async () => {
     vi.stubEnv('GOVUK_NOTIFY_API_KEY', undefined)
     await sendEmail(templateId, emailAddress, personalisation)
-    expect(mockLoggerWarn).toHaveBeenCalledWith(
-      'Missing GOVUK_NOTIFY_API_KEY in environment, notifyClient will not be available'
-    )
+    expect(mockLoggerWarn).toHaveBeenCalledWith({
+      message: expect.any(String),
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.CONFIG,
+        action: LOGGING_EVENT_ACTIONS.NOT_FOUND
+      }
+    })
   })
 
   it('calls notifyClient.sendEmail with correct arguments', async () => {
@@ -72,6 +80,12 @@ describe('sendEmail', () => {
     await expect(
       sendEmail(templateId, emailAddress, personalisation)
     ).rejects.toThrow('fail')
-    expect(mockLoggerError).toHaveBeenCalledWith(error)
+    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+      message: expect.any(String),
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.HTTP,
+        action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
+      }
+    })
   })
 })
