@@ -2,7 +2,9 @@ import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
+  LOGGING_EVENT_CATEGORIES,
+  AUDIT_EVENT_CATEGORIES,
+  AUDIT_EVENT_ACTIONS
 } from '../enums/event.js'
 
 const mockSendEmail = vi.fn()
@@ -10,6 +12,7 @@ const mockSendEmail = vi.fn()
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
+const mockAudit = vi.fn()
 
 vi.mock('notifications-node-client', () => ({
   NotifyClient: vi.fn(() => ({ sendEmail: mockSendEmail }))
@@ -21,6 +24,10 @@ vi.mock('./logging/logger.js', () => ({
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
   })
+}))
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockAudit(...args)
 }))
 
 vi.mock('./get-local-secret.js')
@@ -70,6 +77,20 @@ describe('sendEmail', () => {
     await sendEmail(templateId, emailAddress)
     expect(mockSendEmail).toHaveBeenCalledWith(templateId, emailAddress, {
       personalisation: {}
+    })
+  })
+
+  it('calls audit when notifyClient.sendEmail succeeds', async () => {
+    await sendEmail(templateId, emailAddress)
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: AUDIT_EVENT_CATEGORIES.EMAIL,
+        action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
+      },
+      context: {
+        template_id: templateId,
+        email_address: emailAddress
+      }
     })
   })
 

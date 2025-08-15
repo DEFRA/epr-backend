@@ -12,6 +12,8 @@ const mockLoggerWarn = vi.fn()
 const mockHapiLoggerInfo = vi.fn()
 const mockHapiLoggerError = vi.fn()
 
+const mockEnabledAuditing = vi.fn()
+
 vi.mock('hapi-pino', () => ({
   default: {
     register: (server) => {
@@ -32,6 +34,10 @@ vi.mock('./logging/logger.js', () => ({
 }))
 
 vi.mock('./common/helpers/mongodb.js')
+
+vi.mock('@defra/cdp-auditing', () => ({
+  enableAuditing: (...args) => mockEnabledAuditing(...args)
+}))
 
 describe('#startServer', () => {
   let createServerSpy
@@ -82,6 +88,18 @@ describe('#startServer', () => {
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
       })
+    })
+
+    test('Should enable auditing by default', async () => {
+      vi.stubEnv('AUDIT_ENABLED', undefined)
+      await startServerImport.startServer()
+      expect(mockEnabledAuditing).toHaveBeenCalledWith(true)
+    })
+
+    test('Should disable auditing if AUDIT_ENBLED env var is "false"', async () => {
+      vi.stubEnv('AUDIT_ENABLED', 'false')
+      await startServerImport.startServer()
+      expect(mockEnabledAuditing).toHaveBeenCalledWith(false)
     })
   })
 

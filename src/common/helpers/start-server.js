@@ -6,9 +6,12 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/event.js'
+import { enableAuditing } from '@defra/cdp-auditing'
 
 async function startServer() {
   let server
+
+  enableAuditing(process.env.AUDIT_ENABLED !== 'false')
 
   try {
     server = await createServer()

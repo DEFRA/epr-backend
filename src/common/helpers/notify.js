@@ -1,9 +1,12 @@
+import { audit } from '@defra/cdp-auditing'
 import { NotifyClient } from 'notifications-node-client'
 import { createLogger } from './logging/logger.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
+  LOGGING_EVENT_CATEGORIES,
+  AUDIT_EVENT_ACTIONS,
+  AUDIT_EVENT_CATEGORIES
 } from '../enums/event.js'
 
 async function sendEmail(templateId, emailAddress, personalisation = {}) {
@@ -31,6 +34,16 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
   try {
     await notifyClient.sendEmail?.(templateId, emailAddress, {
       personalisation
+    })
+    audit({
+      event: {
+        category: AUDIT_EVENT_CATEGORIES.EMAIL,
+        action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
+      },
+      context: {
+        template_id: templateId,
+        email_address: emailAddress
+      }
     })
   } catch (err) {
     logger.error(err, {
