@@ -40,8 +40,10 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
         category: AUDIT_EVENT_CATEGORIES.EMAIL,
         action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
       },
-      template_id: templateId,
-      email_address: emailAddress
+      context: {
+        template_id: templateId,
+        email_address: emailAddress
+      }
     })
   } catch (err) {
     logger.error(err, {
