@@ -57,7 +57,7 @@ jobs:
     needs: pr-prep
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-node@v4
