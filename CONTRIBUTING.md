@@ -376,6 +376,25 @@ therefore helping yourself and other engineers.
 
 You can find the [enums of event values here]()
 
+### Auditing
+
+For those operations requiring an audit trial, we use the [CDP Auditing library](https://github.com/DEFRA/cdp-libraries/tree/main/packages/cdp-auditing#readme).
+
+The library provides a simple `audit` function accepts either a string or a serialisable object.
+
+```js
+import { audit } from '@defra/cdp-auditing'
+audit('This is a test of auditing')
+// {"log.level":"audit","time":"2025-07-04T11:46:33.278Z","msg":"This is a test of auditing"}
+
+audit({ id: '1234', event: 'login', outcome: 'denied' }, 'Login failed')
+// {"log.level":"audit","time":"2025-07-04T11:46:33.278Z","id":"1234","event":"login","outcome":"denied","msg":"Login failed"}
+```
+
+Behind the scenes, audits are just logs with a "log.level" field set to "audit", which will be used to send them to an audit stream instead of the same OpenSearch pipeline with the other logs.
+
+The library also provides an `enableAuditing` function that accepts a boolean to easily switch auditing on and off.
+
 ## Repository
 
 ### Pull Requests
