@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
 import { createLogger } from '../common/helpers/logging/logger.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../common/enums/event.js'
 
 /**
  * Test endpoint to receive payloads and respond with status.
@@ -20,7 +24,14 @@ const signup = {
   handler: async (request, h) => {
     const logger = createLogger()
 
-    logger.info({ payload: request.payload }, 'Received signup payload')
+    logger.info({
+      message: 'Received accreditation payload',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.API,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
+      },
+      payload: request.payload
+    })
 
     return h.response({
       success: true,

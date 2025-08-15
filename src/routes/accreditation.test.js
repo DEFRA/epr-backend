@@ -37,10 +37,14 @@ describe('/accreditation route', () => {
     const body = JSON.parse(response.payload)
     expect(body.success).toBe(true)
     expect(body.originalPayload).toEqual(payload)
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
-      { payload },
-      'Received accreditation payload'
-    )
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message: expect.any(String),
+      payload,
+      event: {
+        action: undefined,
+        category: undefined
+      }
+    })
   })
 
   it('returns 400 if payload is not an object', async () => {
