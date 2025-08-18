@@ -43,13 +43,11 @@ describe('/registration route', () => {
 
     expect(response.statusCode).toEqual(200)
 
-    const body = JSON.parse(response.payload)
-    expect(body.success).toBe(true)
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: expect.any(String),
       event: {
         category: LOGGING_EVENT_CATEGORIES.API,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
+        action: LOGGING_EVENT_ACTIONS.REQUEST_COMPLETED
       }
     })
   })

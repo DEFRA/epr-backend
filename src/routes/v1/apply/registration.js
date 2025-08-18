@@ -31,13 +31,11 @@ const registration = {
       message: 'Received accreditation payload',
       event: {
         category: LOGGING_EVENT_CATEGORIES.API,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
+        action: LOGGING_EVENT_ACTIONS.REQUEST_COMPLETED
       }
     })
 
-    return h.response({
-      success: true
-    })
+    return h.response('').code(200)
   }
 }
 
