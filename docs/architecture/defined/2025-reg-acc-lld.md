@@ -95,6 +95,9 @@ end
 > Defra Forms built with the standalone Forms Builder cannot render values into its success page that are returned by
 > the API Service, meaning that this design is reliant on an email (sent by the API Service) being received by the form submitter.
 
+> [!INFO]
+> For automated testing purposes this endpoint will return a success response body containing `orgId`, `orgName` & `referenceNumber`
+
 ```mermaid
 sequenceDiagram
   participant Operator
@@ -107,7 +110,7 @@ sequenceDiagram
   API Service->>API Service: generates orgId
   API Service->>Operator: sends email with orgId, orgName & referenceNumber
   API Service->>Regulator: sends email with orgId, orgName & referenceNumber
-  API Service->>Defra Forms: responds with success
+  API Service->>Defra Forms: succeeds with orgId, orgName & referenceNumber
   Defra Forms->>Operator: renders success page with hardcoded message
 ```
 
@@ -127,7 +130,7 @@ sequenceDiagram
   Operator->>Defra Forms: submits organisation form
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
-  API Service->>Defra Forms: responds with error
+  API Service->>Defra Forms: fails with error
   Defra Forms->>Operator: renders error message
 ```
 
@@ -171,7 +174,7 @@ sequenceDiagram
   Operator->>Defra Forms: submits registration form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
-  API Service->>Defra Forms: responds with success
+  API Service->>Defra Forms: succeeds
   Defra Forms->>Operator: renders success page with hardcoded message
 ```
 
@@ -191,7 +194,7 @@ sequenceDiagram
   Operator->>Defra Forms: submits registration form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
-  API Service->>Defra Forms: responds with error
+  API Service->>Defra Forms: fails with error
   Defra Forms->>Operator: renders error message
 ```
 
@@ -235,7 +238,7 @@ sequenceDiagram
   Operator->>Defra Forms: submits accreditation form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
-  API Service->>Defra Forms: responds with success
+  API Service->>Defra Forms: succeeds
   Defra Forms->>Operator: renders success page with hardcoded message
 ```
 
@@ -255,7 +258,7 @@ sequenceDiagram
   Operator->>Defra Forms: submits accreditation form with orgId & referenceNumber
   Defra Forms->>Regulator: sends email containing form data
   Defra Forms->>API Service: sends JSON form data
-  API Service->>Defra Forms: responds with error
+  API Service->>Defra Forms: fails with error
   Defra Forms->>Operator: renders error message
 ```
 
