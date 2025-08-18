@@ -5,6 +5,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
 
+/*
+ * Organisation endpoint
+ * Purpose: The initial signup manage organisation records.
+ * Provides organisation-level data to support registration and accreditation flows through org id.
+ */
+
 const organisation = {
   method: 'POST',
   path: '/v1/apply/organisation',

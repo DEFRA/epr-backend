@@ -5,6 +5,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
 
+/*
+ * Registration endpoint
+ * Purpose: To register an applicant organisation.
+ * Handles initial organisation details and stores them for further processing.
+ */
+
 const registration = {
   method: 'POST',
   path: '/v1/apply/registration',
