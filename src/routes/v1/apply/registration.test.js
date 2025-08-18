@@ -26,9 +26,13 @@ describe('/registration route', () => {
 
   it('returns 200 and echoes back payload on valid request', async () => {
     const payload = {
-      email: 'test@example.com',
-      template: 'test-template',
-      personalisation: { name: 'Test' }
+      orgId: 'ORG12345',
+      scheme: 'Producer Responsibility',
+      applicant: {
+        name: 'John Smith',
+        role: 'Compliance Officer',
+        email: 'john.smith@greentech.co.uk'
+      }
     }
 
     const response = await server.inject({

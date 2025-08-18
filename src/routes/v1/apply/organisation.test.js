@@ -26,9 +26,20 @@ describe('/v1/apply/organisation route', () => {
 
   it('returns 200 and echoes back payload on valid request', async () => {
     const payload = {
-      email: 'test@example.com',
-      template: 'test-template',
-      personalisation: { name: 'Test' }
+      orgName: 'GreenTech Solutions Ltd',
+      orgType: 'Private Limited Company',
+      companyNumber: '12345678',
+      address: {
+        line1: '123 High Street',
+        line2: 'Innovation Park',
+        city: 'Manchester',
+        postcode: 'M1 2AB'
+      },
+      contact: {
+        name: 'Jane Doe',
+        email: 'jane.doe@greentech.co.uk',
+        phone: '+44 161 123 4567'
+      }
     }
 
     const response = await server.inject({

@@ -26,9 +26,20 @@ describe('/accreditation route', () => {
 
   it('returns 200 and echoes back payload on valid request', async () => {
     const payload = {
-      email: 'test@example.com',
-      template: 'test-template',
-      personalisation: { name: 'Test' }
+      orgId: 'ORG12345',
+      accreditationType: 'Approved Exporter',
+      site: {
+        name: 'GreenTech Recycling Plant',
+        address: {
+          line1: '45 Industrial Road',
+          city: 'Leeds',
+          postcode: 'LS1 4AB'
+        }
+      },
+      contact: {
+        name: 'Sarah Lee',
+        email: 'sarah.lee@greentech.co.uk'
+      }
     }
 
     const response = await server.inject({
