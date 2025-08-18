@@ -18,7 +18,7 @@ const registration = {
       }
     }
   },
-  handler: async (request, h) => {
+  handler: async (_request, h) => {
     const logger = createLogger()
 
     logger.info({
