@@ -8,9 +8,9 @@ import {
 /**
  * Test endpoint to receive payloads and respond with status.
  */
-const signup = {
+const organisation = {
   method: 'POST',
-  path: '/signup',
+  path: '/v1/apply/organisation',
   options: {
     validate: {
       payload: (value, _options) => {
@@ -41,4 +41,4 @@ const signup = {
   }
 }
 
-export { signup }
+export { organisation }

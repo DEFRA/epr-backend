@@ -10,7 +10,7 @@ import {
  */
 const registration = {
   method: 'POST',
-  path: '/registration',
+  path: '/v1/apply/registration',
   options: {
     validate: {
       payload: (value, _options) => {

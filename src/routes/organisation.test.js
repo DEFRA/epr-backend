@@ -12,7 +12,7 @@ vi.mock('../common/helpers/logging/logger.js', () => ({
 
 let server
 
-describe('/signup route', () => {
+describe('/v1/apply/organisation route', () => {
   beforeAll(async () => {
     const { createServer } = await import('../server.js')
     server = await createServer()
@@ -28,7 +28,7 @@ describe('/signup route', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/signup',
+      url: '/v1/apply/organisation',
       payload
     })
 
@@ -50,7 +50,7 @@ describe('/signup route', () => {
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/signup',
+      url: '/v1/apply/organisation',
       payload: 'not-an-object'
     })
 
@@ -62,7 +62,7 @@ describe('/signup route', () => {
   it('returns 400 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/signup',
+      url: '/v1/apply/organisation',
       payload: null
     })
 

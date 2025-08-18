@@ -10,7 +10,7 @@ import {
  */
 const accreditation = {
   method: 'POST',
-  path: '/accreditation',
+  path: '/v1/apply/accreditation',
   options: {
     validate: {
       payload: (value, _options) => {

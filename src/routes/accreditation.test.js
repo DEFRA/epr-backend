@@ -28,7 +28,7 @@ describe('/accreditation route', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/accreditation',
+      url: '/v1/apply/accreditation',
       payload
     })
 
@@ -50,7 +50,7 @@ describe('/accreditation route', () => {
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/accreditation',
+      url: '/v1/apply/accreditation',
       payload: 'not-an-object'
     })
 
@@ -62,7 +62,7 @@ describe('/accreditation route', () => {
   it('returns 400 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/accreditation',
+      url: '/v1/apply/accreditation',
       payload: null
     })
 

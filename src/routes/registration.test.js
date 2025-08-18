@@ -28,7 +28,7 @@ describe('/registration route', () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/registration',
+      url: '/v1/apply/registration',
       payload
     })
 
@@ -50,7 +50,7 @@ describe('/registration route', () => {
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/registration',
+      url: '/v1/apply/registration',
       payload: 'not-an-object'
     })
 
@@ -62,7 +62,7 @@ describe('/registration route', () => {
   it('returns 400 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/registration',
+      url: '/v1/apply/registration',
       payload: null
     })
 
