@@ -69,7 +69,7 @@
       "response": []
     },
     {
-      "name": "/signup",
+      "name": "/v1/apply/organisation",
       "request": {
         "method": "POST",
         "header": [
@@ -83,7 +83,7 @@
           "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
-          "raw": "{{host}}/signup",
+          "raw": "{{host}}/v1/apply/organisation",
           "host": ["{{host}}"],
           "path": ["send-email"]
         }
@@ -91,7 +91,7 @@
       "response": []
     },
     {
-      "name": "/registration",
+      "name": "/v1/apply/registration",
       "request": {
         "method": "POST",
         "header": [
@@ -105,7 +105,7 @@
           "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
-          "raw": "{{host}}/registration",
+          "raw": "{{host}}/v1/apply/registration",
           "host": ["{{host}}"],
           "path": ["send-email"]
         }
@@ -113,7 +113,7 @@
       "response": []
     },
     {
-      "name": "/accreditation",
+      "name": "/v1/apply/accreditation",
       "request": {
         "method": "POST",
         "header": [
@@ -127,7 +127,7 @@
           "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
         },
         "url": {
-          "raw": "{{host}}/accreditation",
+          "raw": "{{host}}/v1/apply/accreditation",
           "host": ["{{host}}"],
           "path": ["send-email"]
         }
