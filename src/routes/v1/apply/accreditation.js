@@ -1,13 +1,10 @@
 import Boom from '@hapi/boom'
-import { createLogger } from '../common/helpers/logging/logger.js'
+import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../common/enums/event.js'
+} from '../../../common/enums/event.js'
 
-/**
- * Test endpoint to receive payloads and respond with status.
- */
 const accreditation = {
   method: 'POST',
   path: '/v1/apply/accreditation',
@@ -29,14 +26,11 @@ const accreditation = {
       event: {
         category: LOGGING_EVENT_CATEGORIES.API,
         action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
-      },
-      payload: request.payload
+      }
     })
 
     return h.response({
-      success: true,
-      receivedAt: new Date().toISOString(),
-      originalPayload: request.payload
+      success: true
     })
   }
 }

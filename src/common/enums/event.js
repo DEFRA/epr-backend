@@ -4,7 +4,8 @@ export const LOGGING_EVENT_CATEGORIES = {
   HTTP: 'http',
   PROXY: 'proxy',
   SECRET: 'secret',
-  SERVER: 'server'
+  SERVER: 'server',
+  API: 'api'
 }
 
 export const LOGGING_EVENT_ACTIONS = {
@@ -16,6 +17,8 @@ export const LOGGING_EVENT_ACTIONS = {
   NOT_FOUND: 'env_var_not_found',
   READ_ERROR: 'read_error',
   PROXY_INITIALISING: 'proxy_initialising',
+  REQUEST_RECEIVED: 'request_received',
+  REQUEST_COMPLETED: 'request_completed',
   REQUEST_FAILURE: 'response_failure',
   RESPONSE_FAILURE: 'response_failure',
   SEND_EMAIL_FAILURE: 'send_email_failure',

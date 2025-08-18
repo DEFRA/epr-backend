@@ -1,8 +1,13 @@
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '../../../common/enums/event.js'
+
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
 
-vi.mock('../common/helpers/logging/logger.js', () => ({
+vi.mock('../../../common/helpers/logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
@@ -14,7 +19,7 @@ let server
 
 describe('/registration route', () => {
   beforeAll(async () => {
-    const { createServer } = await import('../server.js')
+    const { createServer } = await import('../../../server.js')
     server = await createServer()
     await server.initialize()
   })
@@ -36,13 +41,11 @@ describe('/registration route', () => {
 
     const body = JSON.parse(response.payload)
     expect(body.success).toBe(true)
-    expect(body.originalPayload).toEqual(payload)
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: expect.any(String),
-      payload,
       event: {
-        action: undefined,
-        category: undefined
+        category: LOGGING_EVENT_CATEGORIES.API,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
       }
     })
   })

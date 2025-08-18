@@ -1,16 +1,13 @@
 import Boom from '@hapi/boom'
-import { createLogger } from '../common/helpers/logging/logger.js'
+import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../common/enums/event.js'
+} from '../../../common/enums/event.js'
 
-/**
- * Test endpoint to receive payloads and respond with status.
- */
-const registration = {
+const organisation = {
   method: 'POST',
-  path: '/v1/apply/registration',
+  path: '/v1/apply/organisation',
   options: {
     validate: {
       payload: (value, _options) => {
@@ -35,10 +32,11 @@ const registration = {
 
     return h.response({
       success: true,
-      receivedAt: new Date().toISOString(),
-      originalPayload: request.payload
+      orgId: 'ORG12345', // TODO: generate correctly structured orgId to be specified and done in later ticket
+      orgName: 'ORGABCD', // depending on the field names from the form creators, given in the response
+      referenceNumber: 'REF12345' // TODO: generate correctly structured reference number to be specified and done in later ticket
     })
   }
 }
 
-export { registration }
+export { organisation }
