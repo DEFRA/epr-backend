@@ -22,3 +22,11 @@ export const LOGGING_EVENT_ACTIONS = {
   START_FAILURE: 'start_failure',
   START_SUCCESS: 'start_success'
 }
+
+export const AUDIT_EVENT_CATEGORIES = {
+  EMAIL: 'email'
+}
+
+export const AUDIT_EVENT_ACTIONS = {
+  EMAIL_SENT: 'email_sent'
+}

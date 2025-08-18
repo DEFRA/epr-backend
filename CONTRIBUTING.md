@@ -28,6 +28,9 @@
     * [Production image](#production-image)
     * [Docker Compose](#docker-compose)
     * [Logging](#logging)
+      * [Handling errors](#handling-errors)
+      * [Logging Events](#logging-events)
+    * [Auditing](#auditing)
   * [Repository](#repository)
     * [Pull Requests](#pull-requests)
     * [Dependabot](#dependabot)
@@ -375,6 +378,43 @@ new values if genuinely necessary. By doing this, you will be making it easier t
 therefore helping yourself and other engineers.
 
 You can find the [enums of event values here]()
+
+### Auditing
+
+For those operations requiring an audit trial, we use the [CDP Auditing library](https://github.com/DEFRA/cdp-libraries/tree/main/packages/cdp-auditing#readme).
+
+The library provides a simple `audit` function accepts either a string or a serialisable object.
+
+```javascript
+import { audit } from '@defra/cdp-auditing'
+
+audit({
+  event: { category: 'email', action: 'email_sent' },
+  context: {
+    template_id: 'some_template_id',
+    email_address: 'example@example.com'
+  }
+})
+
+// {
+//   "log.level": "audit",
+//   "time": "2025-08-15T16:44:49.028Z",
+//   "event": {
+//     "category": "email",
+//     "action": "email_sent"
+//   },
+//   "context": {
+//     "template_id": "registration",
+//     "email_address": "your@email.com"
+//   }
+// }
+```
+
+Behind the scenes, audits are just logs with a "log.level" field set to "audit", which will be used to send them to an audit stream instead of the same OpenSearch pipeline with the other logs.
+
+The library also provides an `enableAuditing` function that accepts a boolean to easily switch auditing on and off.
+
+Auditing can be turned off by setting the `AUDIT_ENABLED` env var to `false`.
 
 ## Repository
 
