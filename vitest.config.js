@@ -15,8 +15,7 @@ export default defineConfig({
         'coverage',
         'src/index.js',
         'src/config.js',
-        'src/**/example-*.js',
-        'src/routes/example.js'
+        'src/**/example-*.js'
       ]
     },
     coverageThreshold: {
