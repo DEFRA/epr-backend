@@ -59,7 +59,7 @@
         "url": {
           "raw": "{{host}}/v1/apply/organisation",
           "host": ["{{host}}"],
-          "path": ["send-email"]
+          "path": ["v1", "apply", "organisation"]
         }
       },
       "response": []
@@ -81,7 +81,7 @@
         "url": {
           "raw": "{{host}}/v1/apply/registration",
           "host": ["{{host}}"],
-          "path": ["send-email"]
+          "path": ["v1", "apply", "registration"]
         }
       },
       "response": []
@@ -103,7 +103,7 @@
         "url": {
           "raw": "{{host}}/v1/apply/accreditation",
           "host": ["{{host}}"],
-          "path": ["send-email"]
+          "path": ["v1", "apply", "accreditation"]
         }
       },
       "response": []
