@@ -50,8 +50,6 @@ describe('/v1/apply/organisation route', () => {
 
     expect(response.statusCode).toEqual(200)
 
-    const body = JSON.parse(response.payload)
-    expect(body.success).toBe(true)
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: expect.any(String),
       payload,

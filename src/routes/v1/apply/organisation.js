@@ -54,12 +54,13 @@ const organisation = {
       payload: request.payload
     })
 
-    return h.response({
-      success: true,
-      orgId: 'ORG12345', // TODO: generate correctly structured orgId to be specified and done in later ticket
-      orgName: 'ORGABCD', // depending on the field names from the form creators, given in the response
-      referenceNumber: 'REF12345' // TODO: generate correctly structured reference number to be specified and done in later ticket
-    })
+    return h
+      .response({
+        orgId: 'ORG12345', // TODO: generate correctly structured orgId to be specified and done in later ticket
+        orgName: 'ORGABCD', // depending on the field names from the form creators, given in the response
+        referenceNumber: 'REF12345' // TODO: generate correctly structured reference number to be specified and done in later ticket
+      })
+      .code(HTTP_STATUS.OK)
   }
 }
 
