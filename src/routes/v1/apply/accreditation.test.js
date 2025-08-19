@@ -54,7 +54,7 @@ describe('/accreditation route', () => {
       message: expect.any(String),
       event: {
         category: LOGGING_EVENT_CATEGORIES.API,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_COMPLETED
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })
   })

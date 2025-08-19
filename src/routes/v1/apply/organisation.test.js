@@ -57,7 +57,7 @@ describe('/v1/apply/organisation route', () => {
       payload,
       event: {
         category: LOGGING_EVENT_CATEGORIES.API,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })
   })

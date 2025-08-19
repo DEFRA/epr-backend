@@ -1,9 +1,11 @@
-import Boom from '@hapi/boom'
+import Joi from 'joi'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
+import { HTTP_STATUS } from '../../../common/constants/http-status-codes.js'
+import { badRequestResponseSchema } from '../../../schemas/bad-request-response-schema.js'
 
 /*
  * Organisation endpoint
@@ -16,11 +18,27 @@ const organisation = {
   path: '/v1/apply/organisation',
   options: {
     validate: {
-      payload: (value, _options) => {
-        if (!value || typeof value !== 'object') {
-          throw Boom.badRequest('Invalid payload — must be JSON object')
+      payload: Joi.object().unknown(true).required().messages({
+        'object.base': 'Invalid payload — must be a JSON object',
+        'any.required': 'Invalid payload — required'
+      })
+    },
+    plugins: {
+      'hapi-swagger': {
+        responses: {
+          [HTTP_STATUS.OK]: {
+            description: 'Registration submission successful',
+            schema: Joi.object({
+              message: Joi.string().example(
+                'Registration submission successful'
+              )
+            })
+          },
+          [HTTP_STATUS.BAD_REQUEST]: {
+            description: 'Invalid payload',
+            schema: badRequestResponseSchema
+          }
         }
-        return value
       }
     }
   },
@@ -31,7 +49,7 @@ const organisation = {
       message: 'Received accreditation payload',
       event: {
         category: LOGGING_EVENT_CATEGORIES.API,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_RECEIVED
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       },
       payload: request.payload
     })
