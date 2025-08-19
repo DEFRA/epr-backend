@@ -15,10 +15,8 @@ export default defineConfig({
         'coverage',
         'src/index.js',
         'src/config.js'
-      ]
-    },
-    coverageThreshold: {
-      global: {
+      ],
+      thresholds: {
         lines: 100,
         statements: 100,
         branches: 100,
