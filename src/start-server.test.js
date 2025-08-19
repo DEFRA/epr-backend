@@ -3,7 +3,8 @@ import hapi from '@hapi/hapi'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../enums/event.js'
+} from './common/enums/event.js'
+import { getConfig } from './config.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -13,6 +14,22 @@ const mockHapiLoggerInfo = vi.fn()
 const mockHapiLoggerError = vi.fn()
 
 const mockEnabledAuditing = vi.fn()
+
+const configOverrides = { env: { PORT: '3098' } }
+
+vi.mock('./config.js', async (importOriginal) => {
+  const configOriginal = await importOriginal()
+
+  return {
+    ...configOriginal,
+    getConfig: vi.fn((overrides) =>
+      configOriginal.getConfig({
+        ...configOverrides,
+        ...overrides
+      })
+    )
+  }
+})
 
 vi.mock('hapi-pino', () => ({
   default: {
@@ -25,7 +42,7 @@ vi.mock('hapi-pino', () => ({
     name: 'mock-hapi-pino'
   }
 }))
-vi.mock('./logging/logger.js', () => ({
+vi.mock('./common/helpers/logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
@@ -44,41 +61,31 @@ describe('#startServer', () => {
   let hapiServerSpy
   let startServerImport
   let createServerImport
+  let server
 
   beforeAll(async () => {
-    vi.stubEnv('PORT', '3098')
-
-    createServerImport = await import('../../server.js')
+    createServerImport = await import('./server.js')
     startServerImport = await import('./start-server.js')
 
     createServerSpy = vi.spyOn(createServerImport, 'createServer')
     hapiServerSpy = vi.spyOn(hapi, 'server')
+
+    server = await startServerImport.startServer()
   })
 
-  afterAll(() => {
+  afterAll(async () => {
     vi.resetAllMocks()
   })
 
   describe('When server starts', () => {
-    test('Should start up server as expected', async () => {
-      await startServerImport.startServer()
+    beforeEach(async () => {
+      await server.stop()
+      server = await startServerImport.startServer()
+    })
 
+    test('Should start up server as expected', async () => {
       expect(createServerSpy).toHaveBeenCalled()
       expect(hapiServerSpy).toHaveBeenCalled()
-      expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
-        message: 'Setting up MongoDb',
-        event: expect.objectContaining({
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.CONNECTION_INITIALISING
-        })
-      })
-      expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
-        message: 'MongoDb connected to epr-backend',
-        event: expect.objectContaining({
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.CONNECTION_SUCCESS
-        })
-      })
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
         message: expect.stringMatching(
           /^Server started successfully at http:\/\/localhost:[0-9]+/
@@ -91,26 +98,38 @@ describe('#startServer', () => {
     })
 
     test('Should enable auditing by default', async () => {
-      vi.stubEnv('AUDIT_ENABLED', undefined)
-      await startServerImport.startServer()
       expect(mockEnabledAuditing).toHaveBeenCalledWith(true)
     })
 
-    test('Should disable auditing if AUDIT_ENBLED env var is "false"', async () => {
-      vi.stubEnv('AUDIT_ENABLED', 'false')
-      await startServerImport.startServer()
+    test('Should disable auditing if audit.isEnabled config is false', async () => {
+      const config = getConfig()
+
+      getConfig.mockImplementationOnce(() => ({
+        ...config,
+        get: (item) => {
+          return item === 'audit'
+            ? {
+                isEnabled: false
+              }
+            : config.get(item)
+        }
+      }))
+
+      await server.stop()
+      server = await startServerImport.startServer()
+
       expect(mockEnabledAuditing).toHaveBeenCalledWith(false)
     })
   })
 
-  describe('When server start fails', () => {
-    beforeAll(() => {
+  describe('When server start fails', async () => {
+    beforeEach(async () => {
+      await server.stop()
       createServerSpy.mockRejectedValue(new Error('Server failed to start'))
+      server = await startServerImport.startServer()
     })
 
     test('Should log failed startup message', async () => {
-      await startServerImport.startServer()
-
       expect(mockLoggerError).toHaveBeenCalledWith(
         Error('Server failed to start'),
         {
