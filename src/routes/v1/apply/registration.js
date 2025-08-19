@@ -52,7 +52,7 @@ const registration = {
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })
-    return h.response().code(200)
+    return h.response().code(HTTP_STATUS.OK)
   }
 }
 

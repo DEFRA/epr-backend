@@ -53,7 +53,7 @@ const accreditation = {
       }
     })
 
-    return h.response().code(200)
+    return h.response().code(HTTP_STATUS.OK)
   }
 }
 
