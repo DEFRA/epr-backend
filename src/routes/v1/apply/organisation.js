@@ -27,10 +27,10 @@ const organisation = {
       'hapi-swagger': {
         responses: {
           [HTTP_STATUS.OK]: {
-            description: 'Registration submission successful',
+            description: 'Organisation submission successful',
             schema: Joi.object({
               message: Joi.string().example(
-                'Registration submission successful'
+                'Organisation submission successful'
               )
             })
           },
