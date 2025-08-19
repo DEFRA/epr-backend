@@ -4,7 +4,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
-import { HTTP_STATUS } from '../../../common/constants/http-status-codes.js'
 
 /*
  * Accreditation endpoint
@@ -36,7 +35,7 @@ const accreditation = {
       }
     })
 
-    return h.response().code(HTTP_STATUS.OK)
+    return h.response()
   }
 }
 

@@ -34,7 +34,7 @@ describe('/accreditation route', () => {
       payload
     })
 
-    expect(response.statusCode).toEqual(200)
+    expect(response.statusCode).toEqual(204)
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: expect.any(String),
       event: {

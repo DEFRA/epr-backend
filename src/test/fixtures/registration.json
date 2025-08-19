@@ -11,14 +11,6 @@
       "email": "david.thompson@example.com",
       "telephone": "+44 7700 800456",
       "jobTitle": "Operations Director"
-    },
-    "files": {
-      "attachments": [
-        {
-          "fileId": "reg-002-abc",
-          "link": "https://forms-designer/file-download/reg-002-abc"
-        }
-      ]
     }
   }
 }

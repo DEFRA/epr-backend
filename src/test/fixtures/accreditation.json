@@ -12,14 +12,6 @@
         "email": "alice.johnson@example.com",
         "telephone": "+44 7700 900123",
         "jobTitle": "Compliance Manager"
-      },
-      "files": {
-        "attachments": [
-          {
-            "fileId": "acc-001-xyz",
-            "link": "https://forms-designer/file-download/acc-001-xyz"
-          }
-        ]
       }
     }
   }
