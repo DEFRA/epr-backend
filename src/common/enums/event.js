@@ -4,8 +4,7 @@ export const LOGGING_EVENT_CATEGORIES = {
   HTTP: 'http',
   PROXY: 'proxy',
   SECRET: 'secret',
-  SERVER: 'server',
-  API: 'api'
+  SERVER: 'server'
 }
 
 export const LOGGING_EVENT_ACTIONS = {

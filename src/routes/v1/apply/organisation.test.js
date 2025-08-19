@@ -39,7 +39,7 @@ describe('/v1/apply/organisation route', () => {
       message: expect.any(String),
       payload,
       event: {
-        category: LOGGING_EVENT_CATEGORIES.API,
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       }
     })

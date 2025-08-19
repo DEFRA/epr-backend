@@ -31,7 +31,7 @@ const organisation = {
     logger.info({
       message: 'Received accreditation payload',
       event: {
-        category: LOGGING_EVENT_CATEGORIES.API,
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
       },
       payload: request.payload
