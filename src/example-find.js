@@ -1,3 +1,4 @@
+/* c8 ignore start */
 function findAllExampleData(db) {
   const cursor = db
     .collection('example-data')
@@ -19,3 +20,4 @@ function findExampleDataV2(db, id) {
 }
 
 export { findAllExampleData, findExampleData, findExampleDataV2 }
+/* c8 ignore stop */

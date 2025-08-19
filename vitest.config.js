@@ -14,13 +14,9 @@ export default defineConfig({
         ...configDefaults.exclude,
         'coverage',
         'src/index.js',
-        'src/config.js',
-        'src/**/example-*.js',
-        'src/routes/example.js'
-      ]
-    },
-    coverageThreshold: {
-      global: {
+        'src/config.js'
+      ],
+      thresholds: {
         lines: 100,
         statements: 100,
         branches: 100,

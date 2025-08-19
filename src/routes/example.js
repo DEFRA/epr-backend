@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { findAllExampleData, findExampleData } from '../example-find.js'
 
+/* c8 ignore start */
 const example = [
   {
     method: 'GET',
@@ -26,3 +27,4 @@ const example = [
 ]
 
 export { example }
+/* c8 ignore stop */
