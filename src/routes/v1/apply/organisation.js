@@ -33,8 +33,7 @@ const organisation = {
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-      },
-      payload: request.payload
+      }
     })
 
     return h
