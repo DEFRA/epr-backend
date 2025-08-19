@@ -21,32 +21,6 @@
       "response": []
     },
     {
-      "name": "/example",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{host}}/example",
-          "host": ["{{host}}"],
-          "path": ["example"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "/example/{exampleId}",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{host}}/example/1",
-          "host": ["{{host}}"],
-          "path": ["example", "1"]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "/send-email",
       "request": {
         "method": "POST",
