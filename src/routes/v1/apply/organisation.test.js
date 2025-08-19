@@ -37,7 +37,6 @@ describe('/v1/apply/organisation route', () => {
 
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: expect.any(String),
-      payload,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
