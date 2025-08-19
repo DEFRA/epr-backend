@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
+import accreditationData from '../../../../fixtures/accreditation.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -25,22 +26,7 @@ describe('/accreditation route', () => {
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
-    const payload = {
-      orgId: 'ORG12345',
-      accreditationType: 'Approved Exporter',
-      site: {
-        name: 'GreenTech Recycling Plant',
-        address: {
-          line1: '45 Industrial Road',
-          city: 'Leeds',
-          postcode: 'LS1 4AB'
-        }
-      },
-      contact: {
-        name: 'Sarah Lee',
-        email: 'sarah.lee@greentech.co.uk'
-      }
-    }
+    const payload = accreditationData
 
     const response = await server.inject({
       method: 'POST',
@@ -49,7 +35,6 @@ describe('/accreditation route', () => {
     })
 
     expect(response.statusCode).toEqual(200)
-
     expect(mockLoggerInfo).toHaveBeenCalledWith({
       message: expect.any(String),
       event: {

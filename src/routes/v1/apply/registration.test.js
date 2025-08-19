@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
+import registrationData from '../../../../fixtures/registration.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -25,15 +26,7 @@ describe('/registration route', () => {
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
-    const payload = {
-      orgId: 'ORG12345',
-      scheme: 'Producer Responsibility',
-      applicant: {
-        name: 'John Smith',
-        role: 'Compliance Officer',
-        email: 'john.smith@greentech.co.uk'
-      }
-    }
+    const payload = registrationData
 
     const response = await server.inject({
       method: 'POST',

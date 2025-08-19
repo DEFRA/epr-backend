@@ -2,6 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
+import organisationData from '../../../../fixtures/organisation.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -25,23 +26,7 @@ describe('/v1/apply/organisation route', () => {
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
-    const payload = {
-      orgName: 'GreenTech Solutions Ltd',
-      orgType: 'Private Limited Company',
-      companyNumber: '12345678',
-      address: {
-        line1: '123 High Street',
-        line2: 'Innovation Park',
-        city: 'Manchester',
-        postcode: 'M1 2AB'
-      },
-      contact: {
-        name: 'Jane Doe',
-        email: 'jane.doe@greentech.co.uk',
-        phone: '+44 161 123 4567'
-      }
-    }
-
+    const payload = organisationData
     const response = await server.inject({
       method: 'POST',
       url: '/v1/apply/organisation',
