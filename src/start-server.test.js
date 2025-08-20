@@ -6,9 +6,9 @@ import {
 } from './common/enums/event.js'
 import { getConfig } from './config.js'
 
-const mockLoggerInfo = vi.fn(console.log)
-const mockLoggerError = vi.fn(console.error)
-const mockLoggerWarn = vi.fn(console.warn)
+const mockLoggerInfo = vi.fn()
+const mockLoggerError = vi.fn()
+const mockLoggerWarn = vi.fn()
 
 const mockHapiLoggerInfo = vi.fn()
 const mockHapiLoggerError = vi.fn()
