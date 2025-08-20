@@ -3,7 +3,8 @@ import { LockManager } from 'mongo-locks'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../enums/event.js'
+} from '../enums/index.js'
+import { createSeedData } from '../../data/seed/index.js'
 
 export const mongoDb = {
   plugin: {
@@ -26,6 +27,7 @@ export const mongoDb = {
       const db = client.db(databaseName)
       const locker = new LockManager(db.collection('mongo-locks'))
 
+      await createSeedData(db)
       await createIndexes(db)
 
       server.logger.info({
