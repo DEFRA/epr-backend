@@ -48,6 +48,15 @@ describe('Logger', () => {
     )
   })
 
+  it('calls pino error directly if first argument is not an Error', () => {
+    const logger = createLogger()
+    const message = 'plain error message'
+    const log = { foo: 'bar' }
+
+    logger.error(message, log)
+    expect(mockPinoError).toHaveBeenCalledWith(message, log)
+  })
+
   test.each(['debug', 'fatal', 'info', 'trace', 'warn'])(
     'calls pino method',
     (method) => {

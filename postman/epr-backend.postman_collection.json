@@ -21,32 +21,6 @@
       "response": []
     },
     {
-      "name": "/example",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{host}}/example",
-          "host": ["{{host}}"],
-          "path": ["example"]
-        }
-      },
-      "response": []
-    },
-    {
-      "name": "/example/{exampleId}",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{host}}/example/1",
-          "host": ["{{host}}"],
-          "path": ["example", "1"]
-        }
-      },
-      "response": []
-    },
-    {
       "name": "/send-email",
       "request": {
         "method": "POST",
@@ -64,6 +38,72 @@
           "raw": "{{host}}/send-email",
           "host": ["{{host}}"],
           "path": ["send-email"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/v1/apply/organisation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/apply/organisation",
+          "host": ["{{host}}"],
+          "path": ["v1", "apply", "organisation"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/v1/apply/registration",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/apply/registration",
+          "host": ["{{host}}"],
+          "path": ["v1", "apply", "registration"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "/v1/apply/accreditation",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{host}}/v1/apply/accreditation",
+          "host": ["{{host}}"],
+          "path": ["v1", "apply", "accreditation"]
         }
       },
       "response": []

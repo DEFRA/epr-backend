@@ -1,0 +1,16 @@
+{
+  "meta": {
+    "schemaVersion": "2",
+    "timestamp": "2025-03-25T12:00:00Z"
+  },
+  "data": {
+    "main": {
+      "organisationId": "123456",
+      "systemId": "65f4c2d1a1b3c4d5e6f789ab",
+      "fullName": "David Thompson",
+      "email": "david.thompson@example.com",
+      "telephone": "+44 7700 800456",
+      "jobTitle": "Operations Director"
+    }
+  }
+}

@@ -16,6 +16,7 @@ export const LOGGING_EVENT_ACTIONS = {
   NOT_FOUND: 'env_var_not_found',
   READ_ERROR: 'read_error',
   PROXY_INITIALISING: 'proxy_initialising',
+  REQUEST_SUCCESS: 'request_success',
   REQUEST_FAILURE: 'response_failure',
   RESPONSE_FAILURE: 'response_failure',
   SEND_EMAIL_FAILURE: 'send_email_failure',

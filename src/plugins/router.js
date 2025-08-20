@@ -1,12 +1,12 @@
 import { health } from '../routes/health.js'
-import { example } from '../routes/example.js'
 import { notify } from '../routes/notify.js'
+import { apply } from '../routes/v1/apply/index.js'
 
 const router = {
   plugin: {
     name: 'router',
     register: (server, _options) => {
-      server.route([health, notify, ...example])
+      server.route([health, notify, ...apply])
     }
   }
 }
