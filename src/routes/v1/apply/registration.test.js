@@ -16,6 +16,8 @@ vi.mock('../../../common/helpers/logging/logger.js', () => ({
   })
 }))
 
+vi.mock('./common/helpers/mongodb.js')
+
 let server
 
 describe('/registration route', () => {

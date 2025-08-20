@@ -9,7 +9,7 @@ convict.addFormats(convictFormatWithValidator)
 const isProduction = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'
 
-const config = convict({
+const baseConfig = {
   serviceVersion: {
     doc: 'The service version, this variable is injected into your docker container in CDP environments',
     format: String,
@@ -48,6 +48,14 @@ const config = convict({
     ],
     default: 'local',
     env: 'ENVIRONMENT'
+  },
+  audit: {
+    isEnabled: {
+      doc: 'Is auditing enabled',
+      format: Boolean,
+      default: true,
+      env: 'AUDIT_ENABLED'
+    }
   },
   log: {
     isEnabled: {
@@ -129,8 +137,14 @@ const config = convict({
       env: 'TRACING_HEADER'
     }
   }
-})
+}
+
+const config = convict(baseConfig)
 
 config.validate({ allowed: 'strict' })
 
-export { config }
+function getConfig(overrides) {
+  return convict(baseConfig, overrides)
+}
+
+export { config, getConfig }

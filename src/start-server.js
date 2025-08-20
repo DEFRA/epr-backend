@@ -1,17 +1,19 @@
-import { config } from '../../config.js'
+import { getConfig } from './config.js'
 
-import { createServer } from '../../server.js'
-import { createLogger } from './logging/logger.js'
+import { createServer } from './server.js'
+import { createLogger } from './common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../enums/event.js'
+} from './common/enums/event.js'
 import { enableAuditing } from '@defra/cdp-auditing'
 
 async function startServer() {
+  const config = getConfig()
+  const auditConfig = config.get('audit')
   let server
 
-  enableAuditing(process.env.AUDIT_ENABLED !== 'false')
+  enableAuditing(auditConfig.isEnabled)
 
   try {
     server = await createServer()

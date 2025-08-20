@@ -87,6 +87,7 @@ services:
       LOCALSTACK_ENDPOINT: http://localstack:4566
       MONGO_URI: mongodb://mongodb:27017/
       GOVUK_NOTIFY_API_KEY: /run/secrets/govuk_notify_api_key
+      AUDIT_ENABLED: false
     secrets:
       - govuk_notify_api_key
     networks:
