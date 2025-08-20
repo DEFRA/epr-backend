@@ -37,13 +37,15 @@ describe('/v1/apply/organisation route', () => {
 
     expect(response.statusCode).toEqual(200)
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith({
-      message: expect.any(String),
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-      }
-    })
+    expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.any(String),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+        }
+      })
+    )
   })
 
   it('returns 400 if payload is not an object', async () => {

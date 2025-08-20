@@ -24,11 +24,12 @@ const registration = {
       }
     }
   },
-  handler: async (_request, h) => {
+  handler: async ({ payload }, h) => {
     const logger = createLogger()
 
     logger.info({
-      message: 'Received accreditation payload',
+      message: 'Received registration payload',
+      data: JSON.stringify(payload), // @fixme: remove!!!
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
