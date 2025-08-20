@@ -6,28 +6,39 @@ import {
 } from './common/enums/event.js'
 import { getConfig } from './config.js'
 
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
+const mockLoggerInfo = vi.fn(console.log)
+const mockLoggerError = vi.fn(console.error)
+const mockLoggerWarn = vi.fn(console.warn)
 
 const mockHapiLoggerInfo = vi.fn()
 const mockHapiLoggerError = vi.fn()
 
 const mockEnabledAuditing = vi.fn()
 
-const configOverrides = { env: { PORT: '3098' } }
+const configOverrides = { audit: { isEnabled: true }, port: 3098 }
 
 vi.mock('./config.js', async (importOriginal) => {
-  const configOriginal = await importOriginal()
+  const configImportOriginal = await importOriginal()
 
   return {
-    ...configOriginal,
-    getConfig: vi.fn((overrides) =>
-      configOriginal.getConfig({
-        ...configOverrides,
-        ...overrides
-      })
-    )
+    ...configImportOriginal,
+    getConfig: vi.fn((overrides) => {
+      const originalConfig = configImportOriginal.getConfig(overrides)
+
+      return {
+        ...originalConfig,
+        get: (item) => {
+          switch (item) {
+            case 'audit':
+              return configOverrides.audit
+            case 'port':
+              return configOverrides.port
+            default:
+              originalConfig.get(item)
+          }
+        }
+      }
+    })
   }
 })
 
@@ -42,6 +53,7 @@ vi.mock('hapi-pino', () => ({
     name: 'mock-hapi-pino'
   }
 }))
+
 vi.mock('./common/helpers/logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
@@ -107,11 +119,17 @@ describe('#startServer', () => {
       getConfig.mockImplementationOnce(() => ({
         ...config,
         get: (item) => {
-          return item === 'audit'
-            ? {
+          switch (item) {
+            case 'audit':
+              return {
+                ...configOverrides.audit,
                 isEnabled: false
               }
-            : config.get(item)
+            case 'port':
+              return configOverrides.port
+            default:
+              config.get(item)
+          }
         }
       }))
 
