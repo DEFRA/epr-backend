@@ -15,7 +15,11 @@ const mockHapiLoggerError = vi.fn()
 
 const mockEnabledAuditing = vi.fn()
 
-const configOverrides = { audit: { isEnabled: true }, port: 3098 }
+const configOverrides = {
+  audit: { isEnabled: true },
+  host: '0.0.0.0',
+  port: 3098
+}
 
 vi.mock('./config.js', async (importOriginal) => {
   const configImportOriginal = await importOriginal()
@@ -31,6 +35,8 @@ vi.mock('./config.js', async (importOriginal) => {
           switch (item) {
             case 'audit':
               return configOverrides.audit
+            case 'host':
+              return configOverrides.host
             case 'port':
               return configOverrides.port
             default:
@@ -63,6 +69,8 @@ vi.mock('./common/helpers/logging/logger.js', () => ({
 }))
 
 vi.mock('./common/helpers/mongodb.js')
+
+vi.mock('@defra/hapi-secure-context')
 
 vi.mock('@defra/cdp-auditing', () => ({
   enableAuditing: (...args) => mockEnabledAuditing(...args)
@@ -100,7 +108,7 @@ describe('#startServer', () => {
       expect(hapiServerSpy).toHaveBeenCalled()
       expect(mockHapiLoggerInfo).toHaveBeenCalledWith({
         message: expect.stringMatching(
-          /^Server started successfully at http:\/\/localhost:[0-9]+/
+          /^Server started successfully at http:\/\/0.0.0.0:[0-9]+ with Auditing: on/
         ),
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -125,6 +133,8 @@ describe('#startServer', () => {
                 ...configOverrides.audit,
                 isEnabled: false
               }
+            case 'host':
+              return configOverrides.host
             case 'port':
               return configOverrides.port
             default:
@@ -137,6 +147,13 @@ describe('#startServer', () => {
       server = await startServerImport.startServer()
 
       expect(mockEnabledAuditing).toHaveBeenCalledWith(false)
+      expect(mockHapiLoggerInfo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringMatching(
+            /^Server started successfully at http:\/\/0.0.0.0:[0-9]+ with Auditing: off/
+          )
+        })
+      )
     })
   })
 

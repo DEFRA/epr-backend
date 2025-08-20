@@ -20,7 +20,7 @@ async function startServer() {
     await server.start()
 
     server.logger.info({
-      message: `Server started successfully at http://localhost:${config.get('port')}`,
+      message: `Server started successfully at http://${config.get('host')}:${config.get('port')} with Auditing: ${auditConfig.isEnabled ? `on` : `off`}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.START_SUCCESS
