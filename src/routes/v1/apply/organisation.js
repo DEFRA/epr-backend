@@ -24,12 +24,11 @@ const organisation = {
       }
     }
   },
-  handler: async ({ payload }, h) => {
+  handler: async (_request, h) => {
     const logger = createLogger()
 
     logger.info({
       message: 'Received accreditation payload',
-      data: payload, // @fixme: remove!!!
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
