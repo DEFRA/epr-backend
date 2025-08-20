@@ -2,7 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
-import accreditationData from '../../../test/fixtures/accreditation.json'
+import accreditationData from '../../../data/fixtures/accreditation.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()

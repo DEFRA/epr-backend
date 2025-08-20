@@ -2,7 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
-import registrationData from '../../../test/fixtures/registration.json'
+import registrationData from '../../../data/fixtures/registration.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
