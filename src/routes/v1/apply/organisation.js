@@ -3,7 +3,7 @@ import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../common/enums/event.js'
+} from '../../../common/enums/index.js'
 
 /*
  * Organisation endpoint
