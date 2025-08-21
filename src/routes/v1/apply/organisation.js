@@ -2,8 +2,11 @@ import Boom from '@hapi/boom'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
+  LOGGING_EVENT_CATEGORIES,
+  ORG_ID_START_NUMBER,
+  SCHEMA_VERSION
 } from '../../../common/enums/index.js'
+import { extractAnswers } from '../../../common/helpers/apply/extract-answers.js'
 
 /*
  * Organisation endpoint
@@ -24,8 +27,21 @@ const organisation = {
       }
     }
   },
-  handler: async ({ payload, db }, h) => {
+  handler: async ({ db, payload }, h) => {
     const logger = createLogger()
+
+    const count = await db.collection('organisation').countDocuments({
+      orgId: {
+        $gte: ORG_ID_START_NUMBER
+      }
+    })
+
+    db.collection('organisation').insertOne({
+      orgId: ORG_ID_START_NUMBER + count + 1,
+      schemaVersion: SCHEMA_VERSION,
+      answers: extractAnswers(payload),
+      rawSubmissionData: payload
+    })
 
     logger.info({
       message: 'Received accreditation payload',

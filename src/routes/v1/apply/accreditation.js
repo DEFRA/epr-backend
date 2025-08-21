@@ -2,8 +2,10 @@ import Boom from '@hapi/boom'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '../../../common/enums/event.js'
+  LOGGING_EVENT_CATEGORIES,
+  SCHEMA_VERSION
+} from '../../../common/enums/index.js'
+import { extractAnswers } from '../../../common/helpers/apply/extract-answers.js'
 
 /*
  * Accreditation endpoint
@@ -24,8 +26,14 @@ const accreditation = {
       }
     }
   },
-  handler: async (_request, h) => {
+  handler: async ({ db, payload }, h) => {
     const logger = createLogger()
+
+    db.collection('accreditation').insertOne({
+      schemaVersion: SCHEMA_VERSION,
+      answers: extractAnswers(payload),
+      rawSubmissionData: payload
+    })
 
     logger.info({
       message: 'Received accreditation payload',
