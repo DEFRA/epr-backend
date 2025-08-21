@@ -14,7 +14,7 @@ export function accreditationFactory({
   rawSubmissionData
 }) {
   return deepmerge(accreditation, {
-    createdAt: new Date().toISOString(),
+    createdAt: new Date(),
     orgId,
     referenceNumber,
     answers,

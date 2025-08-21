@@ -2,7 +2,8 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
-import registrationData from '../../../data/fixtures/registration.json'
+import registrationFixture from '../../../data/fixtures/registration.json'
+import { registrationPath } from './registration.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -18,9 +19,10 @@ vi.mock('../../../common/helpers/logging/logger.js', () => ({
 
 vi.mock('./common/helpers/mongodb.js')
 
+const url = registrationPath
 let server
 
-describe('/registration route', () => {
+describe(`${url} route`, () => {
   beforeAll(async () => {
     const { createServer } = await import('../../../server.js')
     server = await createServer()
@@ -28,12 +30,10 @@ describe('/registration route', () => {
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
-    const payload = registrationData
-
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/apply/registration',
-      payload
+      url,
+      payload: registrationFixture
     })
 
     expect(response.statusCode).toEqual(204)
@@ -52,7 +52,7 @@ describe('/registration route', () => {
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/apply/registration',
+      url,
       payload: 'not-an-object'
     })
 
@@ -64,7 +64,7 @@ describe('/registration route', () => {
   it('returns 400 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/apply/registration',
+      url,
       payload: null
     })
 

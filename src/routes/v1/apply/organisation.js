@@ -5,15 +5,15 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/index.js'
 
-/*
- * Organisation endpoint
- * Purpose: The initial signup manage organisation records.
- * Provides organisation-level data to support registration and accreditation flows through org id.
- */
+const path = '/v1/apply/organisation'
 
+/**
+ * Apply: Organisation
+ * Stores organisation data.
+ */
 const organisation = {
   method: 'POST',
-  path: '/v1/apply/organisation',
+  path,
   options: {
     validate: {
       payload: (value, _options) => {
@@ -43,4 +43,6 @@ const organisation = {
   }
 }
 
-export { organisation }
+const organisationPath = path
+
+export { organisation, organisationPath }

@@ -2,7 +2,8 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
-import organisationData from '../../../data/fixtures/organisation.json'
+import { organisationPath } from './organisation.js'
+import organisationFixture from '../../../data/fixtures/organisation.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -18,9 +19,10 @@ vi.mock('../../../common/helpers/logging/logger.js', () => ({
 
 vi.mock('./common/helpers/mongodb.js')
 
+const url = organisationPath
 let server
 
-describe('/v1/apply/organisation route', () => {
+describe(`${url} route`, () => {
   beforeAll(async () => {
     const { createServer } = await import('../../../server.js')
     server = await createServer()
@@ -28,11 +30,10 @@ describe('/v1/apply/organisation route', () => {
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
-    const payload = organisationData
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/apply/organisation',
-      payload
+      url,
+      payload: organisationFixture
     })
 
     expect(response.statusCode).toEqual(200)
@@ -51,7 +52,7 @@ describe('/v1/apply/organisation route', () => {
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/apply/organisation',
+      url,
       payload: 'not-an-object'
     })
 
@@ -63,7 +64,7 @@ describe('/v1/apply/organisation route', () => {
   it('returns 400 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/apply/organisation',
+      url,
       payload: null
     })
 
