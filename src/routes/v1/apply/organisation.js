@@ -3,7 +3,7 @@ import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../common/enums/event.js'
+} from '../../../common/enums/index.js'
 
 /*
  * Organisation endpoint
@@ -24,12 +24,11 @@ const organisation = {
       }
     }
   },
-  handler: async ({ payload }, h) => {
+  handler: async (_request, h) => {
     const logger = createLogger()
 
     logger.info({
-      message: 'Received accreditation payload',
-      data: payload, // @fixme: remove!!!
+      message: 'Received organisation payload',
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS

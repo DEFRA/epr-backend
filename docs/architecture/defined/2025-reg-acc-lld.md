@@ -37,7 +37,8 @@ We need to deliver an API Service hosted on CDP (Core Delivery Platform) providi
 4. Send an email via Gov Notify to the nominated email address in the form data with further information, e.g. `orgId`, `orgName` & `referenceNumber`
 
 > [!NOTE]
-> The Defra forms will call the API Service endpoints be the `onSave` page event, [see docs](https://defra.github.io/forms-engine-plugin/features/configuration-based/PAGE_EVENTS.html).
+> The Defra forms will call the API Service endpoints be the `onSave` page event,
+> [see docs](https://defra.github.io/forms-engine-plugin/features/configuration-based/PAGE_EVENTS.html).
 
 ### Non-functional requirements
 
@@ -93,10 +94,12 @@ end
 
 > [!WARNING]
 > Defra Forms built with the standalone Forms Builder cannot render values into its success page that are returned by
-> the API Service, meaning that this design is reliant on an email (sent by the API Service) being received by the form submitter.
+> the API Service, meaning that this design is reliant on an email (sent by the API Service) being received by the form
+> submitter.
 
 > [!INFO]
-> For automated testing purposes this endpoint will return a success response body containing `orgId`, `orgName` & `referenceNumber`
+> For automated testing purposes this endpoint will return a success response body containing `orgId`, `orgName` &
+> `referenceNumber`
 
 ```mermaid
 sequenceDiagram
@@ -119,7 +122,8 @@ sequenceDiagram
 This case should only happen if there are technical issues with the API Service or Gov Notify
 
 > [!WARNING]
-> This results in the Regulator receiving the form submission data, but that data may not be stored in the database of the API Service
+> This results in the Regulator receiving the form submission data, but that data may not be stored in the database of
+> the API Service
 
 ```mermaid
 sequenceDiagram
@@ -183,7 +187,8 @@ sequenceDiagram
 This case should only happen if there are technical issues with the API Service or Gov Notify
 
 > [!WARNING]
-> This results in the Regulator receiving the form submission data, but that data may not be stored in the database of the API Service
+> This results in the Regulator receiving the form submission data, but that data may not be stored in the database of
+> the API Service
 
 ```mermaid
 sequenceDiagram
@@ -247,7 +252,8 @@ sequenceDiagram
 This case should only happen if there are technical issues with the API Service or Gov Notify
 
 > [!WARNING]
-> This results in the Regulator receiving the form submission data, but that data may not be stored in the database of the API Service
+> This results in the Regulator receiving the form submission data, but that data may not be stored in the database
+> of the API Service
 
 ```mermaid
 sequenceDiagram
@@ -264,74 +270,67 @@ sequenceDiagram
 
 ### Database mappings
 
-The API Service database collections will be mapped to one another via a foreign key on the `REGISTRATION` and `ACCREDITATION` entities which correspond to the primary key on the `ORGANISATION` entity.
+The API Service database collections will be mapped to one another via a foreign key on the
+`REGISTRATION` and `ACCREDITATION` entities which correspond to the primary key on the `ORGANISATION` entity.
 
 > [!IMPORTANT]
 > All Defra forms field values will be stored in the `rawSubmissionData` database field.
 >
-> Fields that are not schema-validated are mapped as cloned values for debugging convenience.
-> This process will be undertaken on a "best-efforts" basis and depending on the data quality these non-validated fields may be empty if they can't be mapped
+> Answers will be cloned from `rawSubmissionData` for debugging convenience.
+> This process will be undertaken on a "best-efforts" basis and depending on the data quality the answers values
+> may not be reliable for future processing
 
-All entities will contain embedded entities for `ADDRESS`
+All entities will contain embedded entities of `ANSWER`
 
 ```mermaid
 erDiagram
 
 %% Entities
 ORGANISATION
-REGISTRATION["REGISTRATION: one per activity/site"]
+REGISTRATION["REGISTRATION: one per activity/site/material"]
 ACCREDITATION["ACCREDITATION: one per activity/site/material"]
-ADDRESS
+ANSWER
 
 %% Structure
 ORGANISATION {
   ObjectId _id PK "a.k.a 'referenceNumber', schema validated"
   int orgId UK "schema validated"
-  int schema_version "schema validated"
-  enum region "nullable"
-  string orgName "nullable"
-  ADDRESS address "nullable"
+  int schemaVersion "schema validated"
+  string orgName "schema validated"
+  string email "schema validated"
+  ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
 
 REGISTRATION {
   ObjectId _id PK "schema validated"
   ObjectId referenceNumber FK "schema validated"
-  int orgId "schema validated"
-  int schema_version "schema validated"
-  enum region "nullable"
-  enum activity "nullable"
-  ADDRESS site "nullable"
-  enum material "nullable"
+  int orgId FK "schema validated"
+  int schemaVersion "schema validated"
+  ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
 
 ACCREDITATION {
   ObjectId _id PK "schema validated"
   ObjectId referenceNumber FK "schema validated"
-  int orgId "schema validated"
-  int schema_version "schema validated"
-  enum region "nullable"
-  enum activity "nullable"
-  ADDRESS site "nullable"
-  enum material "nullable"
-  enum tonnageBand "nullable"
+  int orgId FK "schema validated"
+  int schemaVersion "schema validated"
+  ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
 
-ADDRESS {
-  string lineOne "nullable"
-  string lineTwo "nullable"
-  string townCity "nullable"
-  string county "nullable"
-  string postcode "nullable"
-  string gridRef "nullable"
+ANSWER {
+  string shortDescription
+  string title
+  string type
+  string value
 }
 
 %% Relationships
-ORGANISATION ||--|| ADDRESS : contains
-REGISTRATION ||--|| ADDRESS : contains
-ACCREDITATION ||--|| ADDRESS : contains
-ORGANISATION ||--|{ REGISTRATION : "relates to"
-ORGANISATION ||--|{ ACCREDITATION : "relates to"
+ORGANISATION ||--|{ ANSWER : contains
+REGISTRATION ||--|{ ANSWER : contains
+ACCREDITATION ||--|{ ANSWER : contains
+ORGANISATION ||--o{ REGISTRATION : "relates to"
+ORGANISATION ||--o{ ACCREDITATION : "relates to"
 ```
