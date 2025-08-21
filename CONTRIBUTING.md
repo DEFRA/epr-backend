@@ -185,6 +185,46 @@ MongoDB produce their own tools called [Compass (free download)](https://www.mon
 
 Setup should be zero config, please add steps here if you discover otherwise.
 
+### Database export/restore
+
+#### Exporting from a non-prod CDP environment
+
+See the [CDP process for exporting a non-prod database](https://github.com/DEFRA/cdp-documentation/blob/080aee7c5736af4c91d982aba8fc4a689ef896bd/how-to/developer-toolbox.md#export-mongo-database)
+
+#### Exporting a database from a local environment
+
+You'll need to command line access on the local environment running mongo,
+most likely that will be the mongodb docker container.
+
+1. Create a mount directory for database backups: `mkdir -p mongodb-backups`
+2. Rebuild the docker containers: `docker compose down && docker compose up --build -d`
+3. Find the name of the mongodb container with `docker compose ps`
+4. ssh into the container: `docker exec -it <NAME-OF-CONTAINER> /bin/bash`
+5. Export the database: `mongodump --gzip --archive=/backups/$(date +"%Y-%m-%dT%H:%M:%S").archive`
+6. See the archive is created in the `mongodb-backups` directory of your local copy of this repository
+
+#### Restoring a database to a local environment
+
+> [!WARNING]
+> Depending on your circumstances, restoring a database may be a destructive action
+
+You'll need to command line access on the local environment running mongo,
+most likely that will be the mongodb docker container.
+
+1. Create a mount directory for database backups: `mkdir -p mongodb-backups`
+2. Place the database archive from the steps above in the `mongodb-backups` directory of your local copy of this repository
+3. Rebuild the docker containers: `docker compose down && docker compose up --build -d`
+4. Find the name of the mongodb container with `docker compose ps`
+5. ssh into the container: `docker exec -it <NAME-OF-CONTAINER> /bin/bash`
+6. Restore the database: `mongorestore --gzip --archive=/backups/<NAME-OF-ARCHIVE>`
+
+> [!TIP]
+> Consider using `--dryRun` the first time you run `mongorestore`
+>
+> Consider using `--nsInclude=<namespace pattern>` to restore specific databases and/or collections
+>
+> [See the mongorestore docs](https://www.mongodb.com/docs/database-tools/mongorestore)
+
 ## Development helpers
 
 ### MongoDB Locks

@@ -38,6 +38,7 @@ services:
       - '27017:27017'
     volumes:
       - mongodb-data:/data
+      - ./mongodb-backups:/backups
     restart: always
 
   ################################################################################
@@ -100,6 +101,8 @@ services:
 
 volumes:
   mongodb-data:
+  mongodb-backups:
+    external: true
 
 networks:
   cdp-tenant:

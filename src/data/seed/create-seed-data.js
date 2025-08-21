@@ -11,67 +11,68 @@ import { accreditationFactory } from './accreditation.js'
 
 export async function createSeedData(db) {
   const organisationDocCount = await db.collection('organisation').count()
-  const addressBelfast = addressFactory({}, { usePreset: 'belfast' })
-  const addressCardiff = addressFactory({}, { usePreset: 'cardiff' })
-  const addressEdinburgh = addressFactory({}, { usePreset: 'edinburgh' })
-  const addressBelfastWithGridRef = addressFactory(
-    {},
-    { useGridRef: true, usePreset: 'belfast' }
-  )
-  const addressCardiffWithGridRef = addressFactory(
-    {},
-    { useGridRef: true, usePreset: 'cardiff' }
-  )
-  const addressEdinburghWithGridRef = addressFactory(
-    {},
-    { useGridRef: true, usePreset: 'edinburgh' }
-  )
-  const addressLondonWithGridRef = addressFactory(
-    {},
-    { useGridRef: true, usePreset: 'london' }
-  )
 
   if (organisationDocCount === 0) {
+    const addressBelfast = addressFactory({}, { usePreset: 'belfast' })
+    const addressCardiff = addressFactory({}, { usePreset: 'cardiff' })
+    const addressEdinburgh = addressFactory({}, { usePreset: 'edinburgh' })
+    const addressBelfastWithGridRef = addressFactory(
+      {},
+      { useGridRef: true, usePreset: 'belfast' }
+    )
+    const addressCardiffWithGridRef = addressFactory(
+      {},
+      { useGridRef: true, usePreset: 'cardiff' }
+    )
+    const addressEdinburghWithGridRef = addressFactory(
+      {},
+      { useGridRef: true, usePreset: 'edinburgh' }
+    )
+    const addressLondonWithGridRef = addressFactory(
+      {},
+      { useGridRef: true, usePreset: 'london' }
+    )
+
     const { insertedIds } = await db.collection('organisation').insertMany([
-      organisationFactory(200001, {
+      organisationFactory('200001', {
         address: addressLondonWithGridRef
       }),
-      organisationFactory(200002, {
+      organisationFactory('200002', {
         address: addressBelfastWithGridRef,
         region: REGION.NORTHERN_IRELAND
       }),
-      organisationFactory(200003, {
+      organisationFactory('200003', {
         address: addressEdinburghWithGridRef,
         region: REGION.SCOTLAND
       }),
-      organisationFactory(200004, {
+      organisationFactory('200004', {
         address: addressCardiffWithGridRef,
         region: REGION.WALES
       })
     ])
 
     await db.collection('registration').insertMany([
-      registrationFactory(200001, insertedIds[0]),
-      registrationFactory(200002, insertedIds[1], {
+      registrationFactory('200001', insertedIds[0]),
+      registrationFactory('200002', insertedIds[1], {
         address: addressBelfast,
         region: REGION.NORTHERN_IRELAND
       }),
-      registrationFactory(200003, insertedIds[2], {
+      registrationFactory('200003', insertedIds[2], {
         address: addressEdinburgh,
         region: REGION.SCOTLAND,
         material: MATERIAL.FIBRE_BASED_COMPOSITE
       }),
-      registrationFactory(200003, insertedIds[2], {
+      registrationFactory('200003', insertedIds[2], {
         address: addressEdinburgh,
         region: REGION.SCOTLAND,
         material: MATERIAL.WOOD
       }),
-      registrationFactory(200004, insertedIds[3], {
+      registrationFactory('200004', insertedIds[3], {
         address: addressCardiff,
         region: REGION.WALES,
         material: MATERIAL.PLASTIC
       }),
-      registrationFactory(200004, insertedIds[3], {
+      registrationFactory('200004', insertedIds[3], {
         address: addressCardiff,
         region: REGION.WALES,
         material: MATERIAL.PLASTIC,
@@ -80,30 +81,30 @@ export async function createSeedData(db) {
     ])
 
     await db.collection('accreditation').insertMany([
-      accreditationFactory(200001, insertedIds[0]),
-      accreditationFactory(200002, insertedIds[1], {
+      accreditationFactory('200001', insertedIds[0]),
+      accreditationFactory('200002', insertedIds[1], {
         address: addressBelfast,
         region: REGION.NORTHERN_IRELAND
       }),
-      accreditationFactory(200003, insertedIds[2], {
+      accreditationFactory('200003', insertedIds[2], {
         address: addressEdinburgh,
         region: REGION.SCOTLAND,
         material: MATERIAL.FIBRE_BASED_COMPOSITE,
         tonnageBand: TONNAGE_BAND.GT500LTE5000
       }),
-      accreditationFactory(200003, insertedIds[2], {
+      accreditationFactory('200003', insertedIds[2], {
         address: addressEdinburgh,
         region: REGION.SCOTLAND,
         material: MATERIAL.WOOD,
         tonnageBand: TONNAGE_BAND.GT5000LTE10000
       }),
-      accreditationFactory(200004, insertedIds[3], {
+      accreditationFactory('200004', insertedIds[3], {
         address: addressCardiff,
         region: REGION.WALES,
         material: MATERIAL.PLASTIC,
         tonnageBand: TONNAGE_BAND.GTE10000
       }),
-      accreditationFactory(200004, insertedIds[3], {
+      accreditationFactory('200004', insertedIds[3], {
         address: addressCardiff,
         region: REGION.WALES,
         material: MATERIAL.PLASTIC,

@@ -2,8 +2,7 @@ import Boom from '@hapi/boom'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES,
-  SCHEMA_VERSION
+  LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/index.js'
 
 /*
@@ -27,12 +26,6 @@ const organisation = {
   },
   handler: async ({ payload, db }, h) => {
     const logger = createLogger()
-
-    db.collection('organisation').insertOne({
-      orgId: '000000',
-      schemaVersion: SCHEMA_VERSION,
-      rawSubmissionData: payload
-    })
 
     logger.info({
       message: 'Received accreditation payload',
