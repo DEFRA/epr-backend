@@ -191,6 +191,10 @@ Setup should be zero config, please add steps here if you discover otherwise.
 
 See the [CDP process for exporting a non-prod database](https://github.com/DEFRA/cdp-documentation/blob/080aee7c5736af4c91d982aba8fc4a689ef896bd/how-to/developer-toolbox.md#export-mongo-database)
 
+> [!TIP]
+> Use timestamps in the export archive file name, e.g.
+> `mongodump --uri=${MONGO_URI} --gzip --archive=$(date +"%Y-%m-%dT%H:%M:%S").archive`
+
 #### Exporting a database from a local environment
 
 You'll need to command line access on the local environment running mongo,

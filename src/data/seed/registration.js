@@ -1,18 +1,9 @@
 import deepmerge from 'deepmerge'
-import { addressFactory } from './address.js'
-import {
-  ACTIVITY,
-  MATERIAL,
-  REGION,
-  SCHEMA_VERSION
-} from '../../common/enums/index.js'
+import { SCHEMA_VERSION } from '../../common/enums/index.js'
 
 const registration = {
   schemaVersion: SCHEMA_VERSION,
-  region: REGION.ENGLAND,
-  site: addressFactory(),
-  activity: ACTIVITY.REPROCESSOR,
-  material: MATERIAL.ALUMINIUM,
+  answers: {},
   rawSubmissionData: {}
 }
 

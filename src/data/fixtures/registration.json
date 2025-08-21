@@ -1,16 +1,898 @@
 {
   "meta": {
-    "schemaVersion": "2",
-    "timestamp": "2025-03-25T12:00:00Z"
+    "schemaVersion": "1",
+    "timestamp": "2025-08-21T12:37:43.392Z",
+    "referenceNumber": "72B-DD0-989",
+    "definition": {
+      "name": "Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste exporter (EA)",
+      "engine": "V2",
+      "schema": 2,
+      "startPage": "/summary",
+      "pages": [
+        {
+          "title": "Form guidance",
+          "path": "/form-guidance",
+          "components": [
+            {
+              "id": "1ca3c9c3-5036-42e8-88cd-299078ebc4dd",
+              "type": "Markdown",
+              "content": "This form is used to apply for registration with the Environment Agency (EA) as an exporter of packaging waste.\r\n\r\n**You must submit this form once for each packaging waste category you intend to register.**\r\n\r\nThe form will take around 30 minutes to complete. It is recommended to have the following information to hand before starting to fill in the form.\r\n\r\n## What you'll need to complete this form\r\nBelow is a list of the information you'll need in order to submit the form:\r\n\r\n* organisation ID number\r\n* address for service of notices\r\n* waste carrier, broker or dealer registration number\r\n* permit details (if applicable)\r\n* waste exemption details (if applicable)\r\n* a list of the types of supplier you use\r\n* list of the UK ports you export from\r\n* Packaging Exporter Sampling and Inspection Plan – Part 1: Registration - template available on gov.uk [here](https://www.gov.uk/government/publications/extended-producer-responsibility-for-packaging-templates-for-sampling-and-inspection-plans)\r\n* Overseas reprocessing and interim sites log (ORS Log) - template available on gov.uk [here](https://www.gov.uk/government/publications/extended-producer-responsibility-for-packaging-templates-for-sampling-and-inspection-plans)\r\n\r\n**You cannot save and return to the form, it must be completed within one sitting.**",
+              "options": {},
+              "schema": {}
+            }
+          ],
+          "next": [],
+          "id": "47805296-9b87-43cc-91dc-f0b5344429db"
+        },
+        {
+          "title": "Do you have an Organisation ID number?",
+          "path": "/do-you-have-an-organisation-id-number",
+          "components": [
+            {
+              "type": "YesNoField",
+              "title": "Do you have an Organisation ID number?",
+              "name": "LoZFoG",
+              "shortDescription": "Have an Org ID?",
+              "hint": "You should have received the Organisation ID number (Org ID) by email when submitting your organisation details",
+              "options": {
+                "required": true,
+                "classes": "govuk-radios--inline"
+              },
+              "schema": {},
+              "id": "9873016c-80ed-4f8d-acb0-e7751cbce528"
+            }
+          ],
+          "next": [],
+          "id": "af51f7b0-e328-49a1-a1a2-411a2355a455"
+        },
+        {
+          "title": "Apply for an Organisation ID",
+          "controller": "TerminalPageController",
+          "path": "/apply-for-an-organisation-id",
+          "components": [
+            {
+              "id": "a16e6626-aaa8-42c0-8df3-2f0a52fdbed6",
+              "type": "Markdown",
+              "content": "To be able to register as an exporter of packaging waste you must first apply for an Organisation ID (Org ID). \r\n\r\nYou can apply for an Org ID with the Environment Agency by using this form: https://submit-form-to-defra.service.gov.uk/form/preview/draft/extended-producer-responsibilities-provide-your-organisation-details-ea",
+              "options": {},
+              "schema": {}
+            }
+          ],
+          "next": [],
+          "id": "1ad6dda6-c0e3-4b4e-86dc-b48ef15c934d",
+          "condition": "b485fbfb-bca7-4076-b83d-b3ba765552bb"
+        },
+        {
+          "title": "Organisation details",
+          "path": "/organisation-details",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is your Organisation ID number?",
+              "name": "QnSRcX",
+              "shortDescription": "Organisation ID",
+              "hint": "Your Org ID number is a 6 digit number, for example 123456",
+              "options": {
+                "required": true,
+                "classes": "govuk-input govuk-input--width-10"
+              },
+              "schema": {
+                "min": 6,
+                "max": 6,
+                "regex": "\\d{6}"
+              },
+              "id": "54ba8e2e-3566-4cfa-90f2-b44e5b2990fa"
+            },
+            {
+              "type": "TextField",
+              "title": "What is your System Reference number?",
+              "name": "RIXIzA",
+              "shortDescription": "System Reference",
+              "hint": "The System Reference number was provided within the same email as the Org ID - it is 24 characters long, for example  123ab456789cd01e23fghi45",
+              "options": {
+                "required": false
+              },
+              "schema": {
+                "min": 24,
+                "max": 24,
+                "regex": "^[0-9a-fA-F]{24}$"
+              },
+              "id": "14ce2fd8-b8a7-4185-8f3c-613ec52282f6"
+            }
+          ],
+          "next": [],
+          "id": "46b2418f-b36e-4c60-b924-b1e7efa1be43"
+        },
+        {
+          "title": "Application contact details",
+          "path": "/application-contact-details",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is the full name of the application contact?",
+              "name": "CzNRVZ",
+              "shortDescription": "App contact name",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "2dbe17fc-e306-4211-b10d-24b16b397950"
+            },
+            {
+              "type": "EmailAddressField",
+              "title": "What is their email address?",
+              "name": "xpDUqn",
+              "shortDescription": "App contact email address",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "000959bf-d09f-4a21-b4db-77f2e2882591"
+            },
+            {
+              "type": "TelephoneNumberField",
+              "title": "What is their telephone number?",
+              "name": "ZgTfLO",
+              "shortDescription": "App contact telephone number",
+              "hint": "",
+              "options": {
+                "required": true,
+                "classes": "govuk-input--width-20"
+              },
+              "schema": {},
+              "id": "aab2bf5b-9384-411c-a67a-0be92615c6fa"
+            },
+            {
+              "type": "TextField",
+              "title": "What is their job title?",
+              "name": "aSKIDS",
+              "shortDescription": "App contact job title",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "b5ec7fab-f5e3-40f5-915c-5c3e01d37957"
+            }
+          ],
+          "next": [],
+          "id": "a71da126-bb11-40c8-b64e-681facaf8955"
+        },
+        {
+          "title": "What address should the regulator serve notices to?",
+          "path": "/what-address-should-the-regulator-serve-notices-to",
+          "components": [
+            {
+              "type": "UkAddressField",
+              "title": "What address should the regulator serve notices to?",
+              "name": "pGYoub",
+              "shortDescription": "Address to serve notices",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "98f90e13-a975-4361-93ad-af950c4a3f42"
+            }
+          ],
+          "next": [],
+          "id": "4086647b-70e6-4808-8a54-504a176a6fde"
+        },
+        {
+          "title": "What is your waste carrier, broker or dealer registration number?",
+          "path": "/what-is-your-waste-carrier-broker-or-dealer-registration-number",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is your waste carrier, broker or dealer registration number?",
+              "name": "fubWwR",
+              "shortDescription": "Carrier, broker or dealer number",
+              "hint": "This must be an upper tier waste carrier, broker or dealer registration and is CBDU followed by a 4 to 6 digit number, for example CBDU123456",
+              "options": {
+                "required": true,
+                "classes": "govuk-input govuk-input--width-20"
+              },
+              "schema": {
+                "min": 8,
+                "max": 10,
+                "regex": "^[cC][bB][dD][uU]"
+              },
+              "id": "d2490c5c-e8e5-4c4c-a824-25f8dfeaaafb"
+            }
+          ],
+          "next": [],
+          "id": "3f05f59d-e0b6-408d-a576-762cf18705cb"
+        },
+        {
+          "title": "Do you hold a permit or waste exemption?",
+          "path": "/do-you-hold-a-permit-or-waste-exemption",
+          "components": [
+            {
+              "type": "RadiosField",
+              "title": "Do you hold a permit or waste exemption?",
+              "name": "QHJFhL",
+              "shortDescription": "Permit type",
+              "hint": "",
+              "list": "cd75b8a3-8844-466a-8c79-89140ce057db",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "463a1071-22fd-47a1-bc16-6ad7d71da07c"
+            }
+          ],
+          "next": [],
+          "id": "1fa00848-806a-4801-9227-56f688cc9479"
+        },
+        {
+          "title": "What is your waste management licence or environmental permit number?",
+          "path": "/what-is-your-waste-management-licence-or-environmental-permit-number",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is your waste management licence or environmental permit number?",
+              "name": "CACJrG",
+              "shortDescription": "WML or Permit number",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "ff6f3386-058a-4bf8-be70-18446c4512f3"
+            }
+          ],
+          "next": [],
+          "id": "45ef9a4f-852b-4584-80d1-d0f284a46d3c",
+          "condition": "f094edb0-b9f3-4dd1-ab37-f0db67f01565"
+        },
+        {
+          "title": "What is your installation permit or Pollution Prevention and and Control (PPC) permit number?",
+          "path": "/what-is-your-installation-permit-or-pollution-prevention-and-and-control-ppc-permit-number",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is your installation permit or Pollution Prevention and and Control (PPC) permit number?",
+              "name": "xqzUwh",
+              "shortDescription": "Installation permit or PPC number",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "9ffb5479-8171-4159-8794-049cf42f20bf"
+            }
+          ],
+          "next": [],
+          "id": "68e07af8-4269-4219-8ff1-b094e97e8348",
+          "condition": "d6aabaa4-72f8-4d28-9967-4aeb8a9c170c"
+        },
+        {
+          "title": "Waste exemption details",
+          "path": "/waste-exemption-details",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is the waste exemption reference number?",
+              "name": "OOMqRS",
+              "shortDescription": "Exemption reference",
+              "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+              "options": {
+                "required": true,
+                "classes": "govuk-input govuk-input--width-10"
+              },
+              "schema": {
+                "max": 10,
+                "regex": "[wW][eE][xX][0-9]{6}"
+              },
+              "id": "49ec3013-0084-403b-bb43-f69a2f816e5e"
+            },
+            {
+              "type": "TextField",
+              "title": "What is the waste exemption?",
+              "name": "mqLZZA",
+              "shortDescription": "Exemption",
+              "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+              "options": {
+                "required": true,
+                "classes": "govuk-input govuk-input--width-5"
+              },
+              "schema": {
+                "min": 2,
+                "max": 3,
+                "regex": "^[studSTUD][0-9]{1,2}"
+              },
+              "id": "ab613d44-b717-4561-97be-61bf344b9019"
+            }
+          ],
+          "next": [],
+          "id": "f398820f-9be8-495d-8481-e15f59fe9dff",
+          "condition": "5835fb48-62b9-4579-9c90-d9d2ccfa846c",
+          "controller": "RepeatPageController",
+          "repeat": {
+            "options": {
+              "name": "BSMbZf",
+              "title": "Waste exemption"
+            },
+            "schema": {
+              "min": 1,
+              "max": 10
+            }
+          }
+        },
+        {
+          "title": "Which packaging waste category are you applying to register?",
+          "path": "/which-packaging-waste-category-are-you-applying-to-register",
+          "components": [
+            {
+              "type": "RadiosField",
+              "title": "Which packaging waste category are you applying to register?",
+              "name": "BeHQjA",
+              "shortDescription": "Packaging waste category to be registered",
+              "hint": "You can apply for another category after you've submitted this application",
+              "list": "4bc4ac3f-1a1c-49ef-80d9-d3f0b22af346",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "19857d8f-b179-4152-aa51-5bff01e03aa4"
+            }
+          ],
+          "next": [],
+          "id": "997d4252-6023-4c5d-9fee-fe6c9f52a7c6"
+        },
+        {
+          "title": "What is the recycling process intended for the glass?",
+          "path": "/what-is-the-recycling-process-intended-for-the-glass",
+          "components": [
+            {
+              "type": "RadiosField",
+              "title": "What is the recycling process intended for the glass?",
+              "name": "RaiIHT",
+              "shortDescription": "Glass process",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "list": "22df9b5f-7ad7-4f6a-b7ea-8cb5a43f8d4b",
+              "id": "62cde97f-5e08-451f-b862-60c1cd73845c"
+            }
+          ],
+          "next": [],
+          "id": "cc4b4d7e-3958-49cf-856d-5feeedb99509",
+          "condition": "a12c5fb2-7d4d-43fd-985c-68f555a1869d"
+        },
+        {
+          "title": "What type of suppliers do you receive this packaging waste category from?",
+          "path": "/what-type-of-suppliers-do-you-receive-this-packaging-waste-category-from",
+          "components": [
+            {
+              "type": "MultilineTextField",
+              "title": "What type of suppliers do you receive this packaging waste category from?",
+              "name": "vsaLhJ",
+              "shortDescription": "Suppliers",
+              "hint": "For example local council collections, direct from producer, material recovery facility",
+              "options": {
+                "required": true
+              },
+              "schema": {
+                "max": 500
+              },
+              "id": "90a49220-bf26-45cd-9adf-e5a400929901"
+            }
+          ],
+          "next": [],
+          "id": "696a802d-0f7e-436f-a831-e2985a8fb304"
+        },
+        {
+          "title": "What UK ports do you use for exporting this packaging waste category?",
+          "path": "/what-uk-ports-do-you-use-for-exporting-this-packaging-waste-category",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What UK ports do you use for exporting this packaging waste category?",
+              "name": "ZcjmuP",
+              "shortDescription": "Port name",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "978a9afd-f9a8-48e2-acab-019e9c0d5c11"
+            }
+          ],
+          "next": [],
+          "id": "ffe0ce33-a0b9-491c-8158-bfab741c4051",
+          "controller": "RepeatPageController",
+          "repeat": {
+            "options": {
+              "name": "GzScMv",
+              "title": "Port name"
+            },
+            "schema": {
+              "min": 1,
+              "max": 25
+            }
+          }
+        },
+        {
+          "title": "Sampling and inspection plan",
+          "path": "/sampling-and-inspection-plan",
+          "components": [
+            {
+              "id": "aa8a2066-0137-4a13-a400-64b4225be63b",
+              "type": "Markdown",
+              "content": "You need to supply a plan explaining how you determine the amount of UK packaging waste received for export - this is also called a sampling and inspection plan (SIP). \r\n\r\nThe template for the SIP is available on gov.uk here: https://www.gov.uk/government/publications/extended-producer-responsibility-for-packaging-templates-for-sampling-and-inspection-plans\r\n\r\nUse the template called 'Packaging Exporter Sampling and Inspection Plan - Part 1: Registration.'",
+              "options": {},
+              "schema": {}
+            },
+            {
+              "type": "FileUploadField",
+              "title": "Upload part 1 of your sampling and inspection plan",
+              "name": "qEZeYC",
+              "shortDescription": "Sampling and inspection plan",
+              "hint": "You may also upload supporting documentation",
+              "options": {
+                "required": true,
+                "accept": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text,text/plain,image/jpeg,image/png,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/vnd.oasis.opendocument.spreadsheet"
+              },
+              "schema": {},
+              "id": "829f13ee-6b09-40f0-9167-8af8ae021433"
+            }
+          ],
+          "controller": "FileUploadPageController",
+          "next": [],
+          "id": "5f22851c-fe26-491d-b932-6369bc91c841"
+        },
+        {
+          "title": "Overseas reprocessing sites and interim sites",
+          "path": "/overseas-reprocessing-sites-and-interim-sites",
+          "components": [
+            {
+              "type": "Markdown",
+              "content": "Provide the details of the overseas reprocessing sites to be included within your registration application. \r\n\r\nUpload a completed Overseas reprocessing and interim sites log (ORS Log). The template for the ORS Log is available on gov.uk here: https://www.gov.uk/government/publications/extended-producer-responsibility-for-packaging-templates-for-sampling-and-inspection-plans",
+              "options": {},
+              "schema": {},
+              "id": "09b2de77-bdac-478a-8017-e0183fdd8440"
+            },
+            {
+              "type": "FileUploadField",
+              "title": "Upload your ORS Log",
+              "name": "uUWjUW",
+              "shortDescription": "Overseas reprocessing and interim sites",
+              "hint": "",
+              "options": {
+                "required": true,
+                "accept": "application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/vnd.oasis.opendocument.spreadsheet"
+              },
+              "schema": {
+                "length": 1
+              },
+              "id": "690368ed-13cf-4609-b98d-564637ebe9aa"
+            }
+          ],
+          "next": [],
+          "id": "945f1fab-e172-473c-8786-d9669a15d4d0",
+          "controller": "FileUploadPageController"
+        },
+        {
+          "title": "Approved person",
+          "path": "/approved-person",
+          "components": [
+            {
+              "id": "20b4b12b-8c97-42bc-a70d-b9e9ef97cb05",
+              "type": "Markdown",
+              "content": "An 'approved person' is needed to take on tasks on behalf of the organisation. One must be added to:\r\n\r\n* apply for accreditation\r\n* submit and verify data returns\r\n\r\nAn approved person may delegate their function to another person (a delegate) at a later stage - subject to regulator approval. \r\n\r\nContact the regulator if you wish to delegate the functions of the approved person or add an additional approved person. \r\n\r\n##  Approved person details",
+              "options": {},
+              "schema": {}
+            },
+            {
+              "type": "TextField",
+              "title": "What is the approved person's full name?",
+              "name": "NOwTKr",
+              "shortDescription": "AP name",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "9c817a10-4f30-4ef0-b617-35c0ab2b21ab"
+            },
+            {
+              "type": "EmailAddressField",
+              "title": "What is their email address?",
+              "name": "rYgNmR",
+              "shortDescription": "AP email address",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "63493460-0f46-4df7-9f26-3509c204dffa"
+            },
+            {
+              "type": "TelephoneNumberField",
+              "title": "What is their telephone number?",
+              "name": "inueIm",
+              "shortDescription": "AP telephone number",
+              "hint": "",
+              "options": {
+                "required": true,
+                "classes": "govuk-input--width-20"
+              },
+              "schema": {},
+              "id": "d451eb99-3365-4cce-8a3f-dd446aa40de0"
+            },
+            {
+              "type": "RadiosField",
+              "title": "What is their role within the organisation?",
+              "name": "MdZwoU",
+              "shortDescription": "AP role",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "list": "9b5c4a7f-1efd-4fc4-9463-0aef987094a2",
+              "id": "1997e2f1-5316-47f8-8db8-af9fbcc042b7"
+            }
+          ],
+          "next": [],
+          "id": "79256ccb-feab-43fa-972d-b48d7f26a2a3"
+        },
+        {
+          "title": "Your contact details",
+          "path": "/your-contact-details",
+          "components": [
+            {
+              "type": "TextField",
+              "title": "What is your full name?",
+              "name": "RPiGkV",
+              "shortDescription": "Submitter name",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "90fdf5b4-540b-495f-88e7-a05d8ea8a7c5"
+            },
+            {
+              "type": "EmailAddressField",
+              "title": "What is your email address?",
+              "name": "eSxaKY",
+              "shortDescription": "Submitter email address",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "83ef10c8-67c9-4539-ab32-c03222f6a258"
+            },
+            {
+              "type": "TelephoneNumberField",
+              "title": "What is your telephone number?",
+              "name": "AkoyKd",
+              "shortDescription": "Submitter telephone number",
+              "hint": "",
+              "options": {
+                "required": true,
+                "classes": "govuk-input--width-20"
+              },
+              "schema": {},
+              "id": "68f6dfca-a03f-4de2-8bd9-f0bea874743b"
+            },
+            {
+              "type": "TextField",
+              "title": "What is your job title?",
+              "name": "mGpVDA",
+              "shortDescription": "Submitter job title",
+              "hint": "",
+              "options": {
+                "required": true
+              },
+              "schema": {},
+              "id": "1e80ff32-4332-4fbf-8c3e-f75d0295c473"
+            }
+          ],
+          "next": [],
+          "id": "1029ceac-a226-4063-a150-4508126aeffc"
+        },
+        {
+          "id": "449a45f6-4541-4a46-91bd-8b8931b07b50",
+          "title": "Summary",
+          "path": "/summary",
+          "controller": "SummaryPageController",
+          "events": {
+            "onSave": {
+              "type": "http",
+              "options": {
+                "method": "POST",
+                "url": "https://epr-backend.test.cdp-int.defra.cloud/v1/apply/registration"
+              }
+            }
+          },
+          "next": [],
+          "components": [
+            {
+              "id": "340082a0-a969-4080-8994-47a60a104801",
+              "type": "Markdown",
+              "content": "If you want to keep a record of your submitted answers please print this page.\r\n\r\nBy submitting this application you confirm the information you provided is accurate.\r\n\r\n**You may face enforcement action if the data is inaccurate.**",
+              "options": {},
+              "schema": {}
+            }
+          ]
+        }
+      ],
+      "conditions": [
+        {
+          "items": [
+            {
+              "id": "c00da21b-0f90-493c-a0fc-0b4b383a9411",
+              "componentId": "9873016c-80ed-4f8d-acb0-e7751cbce528",
+              "operator": "is",
+              "value": false,
+              "type": "BooleanValue"
+            }
+          ],
+          "displayName": "No Org ID",
+          "id": "b485fbfb-bca7-4076-b83d-b3ba765552bb"
+        },
+        {
+          "items": [
+            {
+              "id": "90a4d7e6-a42b-46a8-9a88-d5598397b27d",
+              "componentId": "463a1071-22fd-47a1-bc16-6ad7d71da07c",
+              "operator": "is",
+              "value": {
+                "itemId": "ed13bd70-d6c7-4978-b208-c67b6abdcd8c",
+                "listId": "cd75b8a3-8844-466a-8c79-89140ce057db"
+              },
+              "type": "ListItemRef"
+            }
+          ],
+          "displayName": "Has WEX",
+          "id": "5835fb48-62b9-4579-9c90-d9d2ccfa846c"
+        },
+        {
+          "items": [
+            {
+              "id": "dd066494-2ed5-4592-812b-f1af2026d688",
+              "componentId": "463a1071-22fd-47a1-bc16-6ad7d71da07c",
+              "operator": "is",
+              "value": {
+                "itemId": "afbbfb74-c83d-4120-a9ea-e5a89fae6879",
+                "listId": "cd75b8a3-8844-466a-8c79-89140ce057db"
+              },
+              "type": "ListItemRef"
+            }
+          ],
+          "displayName": "Has WML or Permit",
+          "id": "f094edb0-b9f3-4dd1-ab37-f0db67f01565"
+        },
+        {
+          "items": [
+            {
+              "id": "cccad183-4d35-46af-b965-cf6b803252e7",
+              "componentId": "463a1071-22fd-47a1-bc16-6ad7d71da07c",
+              "operator": "is",
+              "value": {
+                "itemId": "09b0b820-0905-42f3-8952-3c24e3b1bae2",
+                "listId": "cd75b8a3-8844-466a-8c79-89140ce057db"
+              },
+              "type": "ListItemRef"
+            }
+          ],
+          "displayName": "Has Installation or PPC",
+          "id": "d6aabaa4-72f8-4d28-9967-4aeb8a9c170c"
+        },
+        {
+          "items": [
+            {
+              "id": "e1eeb2dd-169f-4269-a76f-d18a92bab354",
+              "componentId": "19857d8f-b179-4152-aa51-5bff01e03aa4",
+              "operator": "is",
+              "value": {
+                "itemId": "316b65d8-8fe6-4a59-84cb-63f95731055f",
+                "listId": "4bc4ac3f-1a1c-49ef-80d9-d3f0b22af346"
+              },
+              "type": "ListItemRef"
+            }
+          ],
+          "displayName": "Is Glass",
+          "id": "a12c5fb2-7d4d-43fd-985c-68f555a1869d"
+        }
+      ],
+      "sections": [],
+      "lists": [
+        {
+          "name": "pVKSsg",
+          "title": "List for question BeHQjA",
+          "type": "string",
+          "items": [
+            {
+              "id": "a5e5a37f-2096-4bdb-aa4e-714579168b19",
+              "text": "Aluminium (R4)",
+              "value": "Aluminium (R4)"
+            },
+            {
+              "id": "bcee59fa-f288-4f9f-b82a-c22386a0f86e",
+              "text": "Fibre-based composite material (R3)",
+              "value": "Fibre-based composite material (R3)"
+            },
+            {
+              "id": "316b65d8-8fe6-4a59-84cb-63f95731055f",
+              "text": "Glass (R5)",
+              "value": "Glass (R5)"
+            },
+            {
+              "id": "a45d942a-d3dc-4d94-94e0-75de49ae57c7",
+              "text": "Paper or board (R3)",
+              "value": "Paper or board (R3)"
+            },
+            {
+              "id": "7c23dff3-3259-4419-916b-f5e04ab5d975",
+              "text": "Plastic (R3)",
+              "value": "Plastic (R3)"
+            },
+            {
+              "id": "8eaf6536-7b7a-468a-8e7a-abc44a8b48ff",
+              "text": "Steel (R4)",
+              "value": "Steel (R4)"
+            },
+            {
+              "id": "8d11b982-0d4b-43d1-b8c7-46c97ebda358",
+              "text": "Wood (R3)",
+              "value": "Wood (R3)"
+            }
+          ],
+          "id": "4bc4ac3f-1a1c-49ef-80d9-d3f0b22af346"
+        },
+        {
+          "name": "VAPSNo",
+          "title": "List for question QHJFhL",
+          "type": "string",
+          "items": [
+            {
+              "text": "Waste management licence or environmental permit",
+              "value": "Waste management licence or environmental permit",
+              "id": "afbbfb74-c83d-4120-a9ea-e5a89fae6879"
+            },
+            {
+              "text": "Installation permit or Pollution Prevention and Control (PPC) permit",
+              "value": "Installation permit or Pollution Prevention and Control (PPC) permit",
+              "id": "09b0b820-0905-42f3-8952-3c24e3b1bae2"
+            },
+            {
+              "text": "Waste exemption",
+              "value": "Waste exemption",
+              "id": "ed13bd70-d6c7-4978-b208-c67b6abdcd8c"
+            },
+            {
+              "text": "None of the above",
+              "value": "None of the above",
+              "id": "28f7a9f3-a82c-43e2-973a-f35fc51f69c9"
+            }
+          ],
+          "id": "cd75b8a3-8844-466a-8c79-89140ce057db"
+        },
+        {
+          "name": "bSgwTd",
+          "title": "List for question MdZwoU",
+          "type": "string",
+          "items": [
+            {
+              "id": "519eeda3-e311-4928-a42a-15219d3a7c8e",
+              "text": "Director",
+              "value": "Director"
+            },
+            {
+              "id": "cbf39060-1bea-4a08-a6c6-4f75ea215a18",
+              "text": "Company secretary",
+              "value": "Company secretary"
+            },
+            {
+              "id": "477b4fa9-c084-45eb-a061-fe9191035522",
+              "text": "Partner",
+              "value": "Partner"
+            },
+            {
+              "id": "10f0b040-c66b-4bcc-a7f3-b9d68350d87b",
+              "text": "Sole trader",
+              "value": "Sole trader"
+            }
+          ],
+          "id": "9b5c4a7f-1efd-4fc4-9463-0aef987094a2"
+        },
+        {
+          "name": "wcYKOX",
+          "title": "List for question RaiIHT",
+          "type": "string",
+          "items": [
+            {
+              "id": "42a9f06a-6e82-4c8f-b18b-36fa252f0aca",
+              "text": "Glass re-melt",
+              "value": "Glass re-melt"
+            },
+            {
+              "id": "1b48de81-a5dd-4ab3-8f32-67d98692612d",
+              "text": "Glass other",
+              "value": "Glass other"
+            },
+            {
+              "id": "6ecbae8b-7c99-4d03-aefb-e01ded57b384",
+              "text": "Both",
+              "value": "Both"
+            }
+          ],
+          "id": "22df9b5f-7ad7-4f6a-b7ea-8cb5a43f8d4b"
+        },
+        {
+          "id": "3167ecb5-61f9-4918-b7d0-6793b56aa814",
+          "name": "__yesNo",
+          "title": "Yes/No",
+          "type": "boolean",
+          "items": [
+            {
+              "id": "02900d42-83d1-4c72-a719-c4e8228952fa",
+              "text": "Yes",
+              "value": true
+            },
+            {
+              "id": "f39000eb-c51b-4019-8f82-bbda0423f04d",
+              "text": "No",
+              "value": false
+            }
+          ]
+        }
+      ]
+    }
   },
   "data": {
     "main": {
-      "organisationId": "123456",
-      "systemId": "65f4c2d1a1b3c4d5e6f789ab",
-      "fullName": "David Thompson",
-      "email": "david.thompson@example.com",
-      "telephone": "+44 7700 800456",
-      "jobTitle": "Operations Director"
+      "LoZFoG": "true",
+      "QnSRcX": "500001",
+      "RIXIzA": "68a66ec3dabf09f3e442b2da",
+      "CzNRVZ": "Alice",
+      "xpDUqn": "alice@foo.com",
+      "ZgTfLO": "+44987654321",
+      "aSKIDS": "Manager",
+      "pGYoub": "Downing Street,London,SW1A 2AA",
+      "fubWwR": "CBDU123456",
+      "QHJFhL": "Waste management licence or environmental permit",
+      "CACJrG": "1234567890",
+      "BeHQjA": "Aluminium (R4)",
+      "vsaLhJ": "council",
+      "NOwTKr": "Alice",
+      "rYgNmR": "alice@foo.com",
+      "inueIm": "+44987654321",
+      "MdZwoU": "Director",
+      "RPiGkV": "Alice",
+      "eSxaKY": "alice@foo.com",
+      "AkoyKd": "+44987654321",
+      "mGpVDA": "Manager"
+    },
+    "repeaters": {
+      "GzScMv": [
+        {
+          "ZcjmuP": "southampton"
+        }
+      ]
+    },
+    "files": {
+      "qEZeYC": [
+        {
+          "fileId": "d5e8e077-f2fc-46ed-b235-b1e67386046b",
+          "userDownloadLink": "https://forms-designer.test.cdp-int.defra.cloud/file-download/d5e8e077-f2fc-46ed-b235-b1e67386046b"
+        }
+      ],
+      "uUWjUW": [
+        {
+          "fileId": "c4d1e05d-e79c-4a81-9d96-2ac38ce2cb7b",
+          "userDownloadLink": "https://forms-designer.test.cdp-int.defra.cloud/file-download/c4d1e05d-e79c-4a81-9d96-2ac38ce2cb7b"
+        }
+      ]
     }
   }
 }
