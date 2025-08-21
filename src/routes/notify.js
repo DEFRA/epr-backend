@@ -37,16 +37,11 @@ const notify = {
     } catch (err) {
       const message = 'Failed to send email'
       const logger = createLogger()
-      logger.error({
+      logger.error(err, {
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.HTTP,
           action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
-        },
-        error: {
-          message: err.message,
-          stack_trace: err.stack,
-          type: err.name
         }
       })
       throw Boom.badImplementation('Failed to send email')

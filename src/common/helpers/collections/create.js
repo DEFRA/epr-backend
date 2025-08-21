@@ -8,7 +8,12 @@ import {
   accreditationFactory
 } from './factories/index.js'
 
-import { extractAnswers } from '../apply/extract-answers.js'
+import {
+  extractAnswers,
+  extractEmail,
+  extractNations,
+  extractOrgName
+} from '../apply/extract-answers.js'
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 
 import organisationFixture from '../../../data/fixtures/organisation.json' with { type: 'json' }
@@ -48,19 +53,9 @@ export async function createSeedData(db) {
     const { insertedIds } = await db.collection('organisation').insertMany([
       organisationFactory({
         orgId: ORG_ID_START_NUMBER,
-        orgName: organisationAnswers.find(
-          ({ shortDescription }) => shortDescription === 'Organisation name'
-        ).value,
-        email: organisationAnswers.find(
-          ({ shortDescription }) =>
-            shortDescription === 'Submitter email address'
-        ).value,
-        nations: organisationAnswers
-          .find(
-            ({ shortDescription }) => shortDescription === 'Nations with sites'
-          )
-          .value.split(',')
-          .map((nation) => nation.trim()),
+        orgName: extractOrgName(organisationAnswers),
+        email: extractEmail(organisationAnswers),
+        nations: extractNations(organisationAnswers),
         answers: organisationAnswers,
         rawSubmissionData: organisationFixture
       })

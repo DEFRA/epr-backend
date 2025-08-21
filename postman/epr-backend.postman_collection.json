@@ -32,7 +32,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"email\": \"your@email.com\",\n  \"personalisation\": { \"companyName\": \"Noramo\" },\n  \"template\": \"a974f5c0-0721-4201-8000-32e317cc43c8\"\n}"
+          "raw": "{\n  \"email\": \"your@email.com\",\n  \"personalisation\": { \"orgName\": \"Noramo\", \"orgId\": \"654321\", \"referenceNumber\": \"123ab456789cd01e23fabc45\" },\n  \"template\": \"a974f5c0-0721-4201-8000-32e317cc43c8\"\n}"
         },
         "url": {
           "raw": "{{host}}/send-email",
