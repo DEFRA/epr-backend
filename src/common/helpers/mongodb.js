@@ -4,7 +4,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
-import { createSeedData } from '../../data/seed/index.js'
+import {
+  createCollections,
+  createIndexes,
+  createSeedData
+} from './collections/create.js'
 
 export const mongoDb = {
   plugin: {
@@ -27,8 +31,9 @@ export const mongoDb = {
       const db = client.db(databaseName)
       const locker = new LockManager(db.collection('mongo-locks'))
 
-      await createSeedData(db)
+      await createCollections(db)
       await createIndexes(db)
+      await createSeedData(db)
 
       server.logger.info({
         message: `MongoDb connected to ${databaseName}`,
@@ -73,12 +78,4 @@ export const mongoDb = {
       })
     }
   }
-}
-
-async function createIndexes(db) {
-  await db.collection('mongo-locks').createIndex({ id: 1 })
-
-  await db.collection('organisation').createIndex({ orgId: 1 })
-  await db.collection('registration').createIndex({ referenceNumber: 1 })
-  await db.collection('accreditation').createIndex({ referenceNumber: 1 })
 }
