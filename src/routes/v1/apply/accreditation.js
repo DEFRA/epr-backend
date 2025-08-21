@@ -5,15 +5,15 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
 
-/*
- * Accreditation endpoint
- * Purpose: To accredit an organisation or site under a specified accreditation type.
- * Handles accreditation details and stores them for further processing.
- */
+const path = '/v1/apply/accreditation'
 
+/**
+ * Apply: Accreditation
+ * Stores accreditation data an activity/site/material combinations against an organisation.
+ */
 const accreditation = {
   method: 'POST',
-  path: '/v1/apply/accreditation',
+  path,
   options: {
     validate: {
       payload: (value, _options) => {
@@ -40,4 +40,6 @@ const accreditation = {
   }
 }
 
-export { accreditation }
+const accreditationPath = path
+
+export { accreditation, accreditationPath }

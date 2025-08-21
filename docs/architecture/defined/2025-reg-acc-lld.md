@@ -296,8 +296,10 @@ ORGANISATION {
   ObjectId _id PK "a.k.a 'referenceNumber', schema validated"
   int orgId UK "schema validated"
   int schemaVersion "schema validated"
+  date createdAt "schema validated"
   string orgName "schema validated"
   string email "schema validated"
+  enum[] nations "schema validated"
   ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
@@ -307,6 +309,7 @@ REGISTRATION {
   ObjectId referenceNumber FK "schema validated"
   int orgId FK "schema validated"
   int schemaVersion "schema validated"
+  ISO8601 createdAt "schema validated"
   ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
@@ -316,15 +319,16 @@ ACCREDITATION {
   ObjectId referenceNumber FK "schema validated"
   int orgId FK "schema validated"
   int schemaVersion "schema validated"
+  ISO8601 createdAt "schema validated"
   ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
 
 ANSWER {
-  string shortDescription
-  string title
-  string type
-  string value
+  string shortDescription "schema validated"
+  string title "schema validated"
+  string type "schema validated"
+  string value "schema validated"
 }
 
 %% Relationships

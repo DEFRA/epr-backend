@@ -1,5 +1,5 @@
 import deepmerge from 'deepmerge'
-import { SCHEMA_VERSION } from '../../common/enums/index.js'
+import { SCHEMA_VERSION } from '../../../enums/index.js'
 
 const registration = {
   schemaVersion: SCHEMA_VERSION,
@@ -7,14 +7,17 @@ const registration = {
   rawSubmissionData: {}
 }
 
-export function registrationFactory(
+export function registrationFactory({
   orgId,
   referenceNumber,
-  partialRegistration = {}
-) {
+  answers,
+  rawSubmissionData
+}) {
   return deepmerge(registration, {
-    ...partialRegistration,
+    createdAt: new Date(),
+    referenceNumber,
     orgId,
-    referenceNumber
+    answers,
+    rawSubmissionData
   })
 }

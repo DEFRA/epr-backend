@@ -1,5 +1,5 @@
 import deepmerge from 'deepmerge'
-import { SCHEMA_VERSION } from '../../common/enums/index.js'
+import { SCHEMA_VERSION } from '../../../enums/index.js'
 
 const accreditation = {
   schemaVersion: SCHEMA_VERSION,
@@ -7,14 +7,17 @@ const accreditation = {
   rawSubmissionData: {}
 }
 
-export function accreditationFactory(
+export function accreditationFactory({
   orgId,
   referenceNumber,
-  partialAccreditation = {}
-) {
+  answers,
+  rawSubmissionData
+}) {
   return deepmerge(accreditation, {
-    ...partialAccreditation,
+    createdAt: new Date(),
     orgId,
-    referenceNumber
+    referenceNumber,
+    answers,
+    rawSubmissionData
   })
 }
