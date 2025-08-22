@@ -2,8 +2,18 @@ import Boom from '@hapi/boom'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
+  LOGGING_EVENT_CATEGORIES,
+  ORG_ID_START_NUMBER,
+  USER_SUBMISSION_EMAIL_TEMPLATE_ID
 } from '../../../common/enums/index.js'
+import {
+  extractAnswers,
+  extractEmail,
+  extractNations,
+  extractOrgName
+} from '../../../common/helpers/apply/extract-answers.js'
+import { organisationFactory } from '../../../common/helpers/collections/factories/index.js'
+import { sendEmail } from '../../../common/helpers/notify.js'
 
 const path = '/v1/apply/organisation'
 
@@ -16,30 +26,92 @@ const organisation = {
   path,
   options: {
     validate: {
-      payload: (value, _options) => {
-        if (!value || typeof value !== 'object') {
-          throw Boom.badRequest('Invalid payload — must be JSON object')
+      payload: (data, _options) => {
+        if (!data || typeof data !== 'object') {
+          throw Boom.badRequest('Invalid payload')
         }
-        return value
+
+        const answers = extractAnswers(data)
+        const email = extractEmail(answers)
+        const orgName = extractOrgName(answers)
+        const nations = extractNations(answers)
+
+        if (!email) {
+          throw Boom.badRequest('Could not extract email from answers')
+        }
+
+        if (!nations.length) {
+          throw Boom.badRequest('Could not extract nations from answers')
+        }
+
+        if (!orgName) {
+          throw Boom.badRequest(
+            'Could not extract organisation name from answers'
+          )
+        }
+
+        return { answers, email, orgName, nations, rawSubmissionData: data }
       }
     }
   },
-  handler: async (_request, h) => {
+  handler: async ({ db, payload }, h) => {
+    const collection = db.collection('organisation')
+    const { answers, email, orgName, nations, rawSubmissionData } = payload
     const logger = createLogger()
 
-    logger.info({
-      message: 'Received organisation payload',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-      }
-    })
+    try {
+      const count = await collection.countDocuments({
+        orgId: {
+          $gte: ORG_ID_START_NUMBER
+        }
+      })
+      const orgId = ORG_ID_START_NUMBER + count + 1
 
-    return h.response({
-      orgId: 'ORG12345', // TODO: generate correctly structured orgId to be specified and done in later ticket
-      orgName: 'ORGABCD', // depending on the field names from the form creators, given in the response
-      referenceNumber: 'REF12345' // TODO: generate correctly structured reference number to be specified and done in later ticket
-    })
+      const { insertedId } = await collection.insertOne(
+        organisationFactory({
+          orgId,
+          orgName,
+          email,
+          nations,
+          answers,
+          rawSubmissionData
+        })
+      )
+
+      const referenceNumber = insertedId.toString()
+
+      logger.info({
+        message: `Stored organisation data for orgId: ${orgId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+        }
+      })
+
+      await sendEmail(USER_SUBMISSION_EMAIL_TEMPLATE_ID, email, {
+        orgId,
+        orgName,
+        referenceNumber
+      })
+
+      return h.response({
+        orgId,
+        orgName,
+        referenceNumber
+      })
+    } catch (err) {
+      const message = `Failure on ${organisationPath}`
+
+      logger.error(err, {
+        message,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+        }
+      })
+
+      throw Boom.badImplementation(message)
+    }
   }
 }
 
