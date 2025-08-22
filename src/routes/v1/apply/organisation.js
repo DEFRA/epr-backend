@@ -105,7 +105,7 @@ const organisation = {
       logger.error(err, {
         message,
         event: {
-          category: LOGGING_EVENT_CATEGORIES.HTTP,
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
         }
       })
