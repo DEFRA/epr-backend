@@ -47,8 +47,7 @@ const registration = {
       }
     }
   },
-  handler: async (req, h) => {
-    const { db, payload } = req
+  handler: async ({ db, payload }, h) => {
     const { answers, orgId, rawSubmissionData, referenceNumber } = payload
     const logger = createLogger()
 
