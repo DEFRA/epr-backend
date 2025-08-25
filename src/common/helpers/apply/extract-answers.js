@@ -50,9 +50,28 @@ export function extractNations(answers) {
   }, [])
 }
 
+export function extractOrgId(answers) {
+  const { value } =
+    answers.find(
+      ({ shortDescription }) =>
+        shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID
+    ) ?? {}
+
+  const orgId = parseInt(value, 10)
+
+  return isNaN(orgId) ? undefined : orgId
+}
+
 export function extractOrgName(answers) {
   return answers.find(
     ({ shortDescription }) =>
       shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_NAME
+  )?.value
+}
+
+export function extractReferenceNumber(answers) {
+  return answers.find(
+    ({ shortDescription }) =>
+      shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER
   )?.value
 }

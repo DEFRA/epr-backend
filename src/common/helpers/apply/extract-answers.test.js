@@ -3,7 +3,9 @@ import {
   extractAnswers,
   extractEmail,
   extractNations,
-  extractOrgName
+  extractOrgId,
+  extractOrgName,
+  extractReferenceNumber
 } from './extract-answers.js'
 import { FORM_FIELDS_SHORT_DESCRIPTIONS, NATION } from '../../enums/index.js'
 
@@ -79,8 +81,24 @@ describe('extractNations', () => {
   })
 })
 
+describe('extractOrgId', () => {
+  it('should extract organisation id from answers', () => {
+    const answers = [
+      {
+        shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
+        value: '500019'
+      }
+    ]
+    expect(extractOrgId(answers)).toBe(500019)
+  })
+
+  it('should return undefined if organisation id not found', () => {
+    expect(extractOrgId([])).toBeUndefined()
+  })
+})
+
 describe('extractOrgName', () => {
-  it('should extract organization name from answers', () => {
+  it('should extract organisation name from answers', () => {
     const answers = [
       {
         shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_NAME,
@@ -90,7 +108,23 @@ describe('extractOrgName', () => {
     expect(extractOrgName(answers)).toBe('Test Org')
   })
 
-  it('should return undefined if organization name not found', () => {
+  it('should return undefined if organisation name not found', () => {
     expect(extractOrgName([])).toBeUndefined()
+  })
+})
+
+describe('extractReferenceNumber', () => {
+  it('should extract reference number from answers', () => {
+    const answers = [
+      {
+        shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER,
+        value: '68a66ec3dabf09f3e442b2da'
+      }
+    ]
+    expect(extractReferenceNumber(answers)).toBe('68a66ec3dabf09f3e442b2da')
+  })
+
+  it('should return undefined if organisation name not found', () => {
+    expect(extractReferenceNumber([])).toBeUndefined()
   })
 })
