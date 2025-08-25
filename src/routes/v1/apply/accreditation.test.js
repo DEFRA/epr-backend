@@ -2,12 +2,15 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../../common/enums/index.js'
 import accreditationFixture from '../../../data/fixtures/accreditation.json'
 import { accreditationPath } from './accreditation.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
+
+const mockInsertOne = vi.fn()
 
 vi.mock('../../../common/helpers/logging/logger.js', () => ({
   createLogger: () => ({
@@ -16,8 +19,6 @@ vi.mock('../../../common/helpers/logging/logger.js', () => ({
     warn: (...args) => mockLoggerWarn(...args)
   })
 }))
-
-vi.mock('./common/helpers/mongodb.js')
 
 const url = accreditationPath
 let server
@@ -29,14 +30,24 @@ describe(`${url} route`, () => {
     await server.initialize()
   })
 
-  it('returns 200 and echoes back payload on valid request', async () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      insertOne: mockInsertOne
+    })
+  })
+
+  it('returns 201 and echoes back payload on valid request', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
       payload: accreditationFixture
     })
 
-    expect(response.statusCode).toEqual(204)
+    expect(response.statusCode).toEqual(201)
+
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
@@ -70,5 +81,102 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(400)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
+  })
+
+  it('returns 400 if payload is missing orgId', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: {
+        meta: {
+          definition: {
+            pages: [
+              {
+                components: [
+                  {
+                    name: 'asd123',
+                    shortDescription:
+                      FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER,
+                    title: 'What is your System Reference number?',
+                    type: 'TextField'
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        data: {
+          main: {
+            asd123: '68a66ec3dabf09f3e442b2da'
+          }
+        }
+      }
+    })
+
+    const message = 'Could not extract orgId from answers'
+    const body = JSON.parse(response.payload)
+
+    expect(response.statusCode).toEqual(400)
+    expect(body.message).toEqual(message)
+  })
+
+  it('returns 400 if payload is missing reference number', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: {
+        meta: {
+          definition: {
+            pages: [
+              {
+                components: [
+                  {
+                    name: 'asd456',
+                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
+                    title: 'What is your Organisation ID number?',
+                    type: 'TextField'
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        data: {
+          main: {
+            asd456: '500019'
+          }
+        }
+      }
+    })
+
+    const message = 'Could not extract referenceNumber from answers'
+    const body = JSON.parse(response.payload)
+
+    expect(response.statusCode).toEqual(400)
+    expect(body.message).toEqual(message)
+  })
+
+  it('returns 500 if error is thrown by insertOne', async () => {
+    const error = new Error('db.collection.insertOne failed')
+    mockInsertOne.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: accreditationFixture
+    })
+
+    expect(response.statusCode).toEqual(500)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toMatch(`An internal server error occurred`)
+    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+      message: `Failure on ${accreditationPath}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      }
+    })
   })
 })

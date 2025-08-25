@@ -1,45 +1,24 @@
-import Boom from '@hapi/boom'
-import { createLogger } from '../../../common/helpers/logging/logger.js'
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '../../../common/enums/event.js'
+import { registrationAndAccreditationPayload } from '../../../common/helpers/apply/payload.js'
+import { registrationAndAccreditationHandler } from '../../../common/helpers/apply/handler.js'
+import { accreditationFactory } from '../../../common/helpers/collections/factories/index.js'
 
-const path = '/v1/apply/accreditation'
+export const accreditationPath = '/v1/apply/accreditation'
 
 /**
  * Apply: Accreditation
- * Stores accreditation data an activity/site/material combinations against an organisation.
+ * Stores accreditation data an activity/site/material combinations against an orgId and referenceNumber.
  */
-const accreditation = {
+export const accreditation = {
   method: 'POST',
-  path,
+  path: accreditationPath,
   options: {
     validate: {
-      payload: (value, _options) => {
-        if (!value || typeof value !== 'object') {
-          throw Boom.badRequest('Invalid payload — must be JSON object')
-        }
-        return value
-      }
+      payload: registrationAndAccreditationPayload
     }
   },
-  handler: async ({ payload }, h) => {
-    const logger = createLogger()
-
-    logger.info({
-      message: 'Received accreditation payload',
-      data: payload, // @fixme: remove!!!
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-      }
-    })
-
-    return h.response()
-  }
+  handler: registrationAndAccreditationHandler(
+    'accreditation',
+    accreditationPath,
+    accreditationFactory
+  )
 }
-
-const accreditationPath = path
-
-export { accreditation, accreditationPath }
