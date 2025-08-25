@@ -15,17 +15,15 @@ import {
 import { organisationFactory } from '../../../common/helpers/collections/factories/index.js'
 import { sendEmail } from '../../../common/helpers/notify.js'
 
-const path = '/v1/apply/organisation'
-
-const organisationPath = path
+export const organisationPath = '/v1/apply/organisation'
 
 /**
  * Apply: Organisation
  * Stores organisation data.
  */
-const organisation = {
+export const organisation = {
   method: 'POST',
-  path,
+  path: organisationPath,
   options: {
     validate: {
       payload: (data, _options) => {
@@ -116,5 +114,3 @@ const organisation = {
     }
   }
 }
-
-export { organisation, organisationPath }
