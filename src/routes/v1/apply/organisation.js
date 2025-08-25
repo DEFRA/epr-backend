@@ -17,6 +17,8 @@ import { sendEmail } from '../../../common/helpers/notify.js'
 
 const path = '/v1/apply/organisation'
 
+const organisationPath = path
+
 /**
  * Apply: Organisation
  * Stores organisation data.
@@ -81,7 +83,7 @@ const organisation = {
       const referenceNumber = insertedId.toString()
 
       logger.info({
-        message: `Stored organisation data for orgId: ${orgId}`,
+        message: `Stored organisation data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -114,7 +116,5 @@ const organisation = {
     }
   }
 }
-
-const organisationPath = path
 
 export { organisation, organisationPath }

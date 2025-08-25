@@ -15,6 +15,11 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
 
+const mockInsertOne = vi.fn(() => ({
+  insertedId: { toString: () => '12345678901234567890abcd' }
+}))
+const mockCountDocuments = vi.fn(() => 1)
+
 vi.mock('../../../common/helpers/logging/logger.js', () => ({
   createLogger: () => ({
     info: (...args) => mockLoggerInfo(...args),
@@ -35,8 +40,14 @@ describe(`${url} route`, () => {
     await server.initialize()
   })
 
-  afterEach(() => {
+  beforeEach(() => {
     vi.clearAllMocks()
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
@@ -232,9 +243,32 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 500 if error is thrown', async () => {
-    const errorMessage = 'Notify API failed'
-    const error = new Error(errorMessage)
+  it('returns 500 if error is thrown by insertOne', async () => {
+    const error = new Error('db.collection.insertOne failed')
+    mockInsertOne.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: organisationFixture
+    })
+
+    expect(response.statusCode).toEqual(500)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toMatch(`An internal server error occurred`)
+    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+      message: `Failure on ${organisationPath}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      }
+    })
+  })
+
+  it('returns 500 if error is thrown by sendEmail', async () => {
+    const error = new Error('Notify API failed')
     sendEmail.mockRejectedValueOnce(error)
 
     const response = await server.inject({
