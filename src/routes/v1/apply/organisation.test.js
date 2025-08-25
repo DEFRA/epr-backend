@@ -59,10 +59,10 @@ describe(`${url} route`, () => {
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
-        event: expect.objectContaining({
+        event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        })
+        }
       })
     )
   })

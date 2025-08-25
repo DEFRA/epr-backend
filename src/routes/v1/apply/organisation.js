@@ -84,13 +84,7 @@ const organisation = {
         message: `Stored organisation data for orgId: ${orgId}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-          reference: JSON.stringify({
-            email,
-            orgId,
-            orgName,
-            referenceNumber
-          })
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
         }
       })
 
