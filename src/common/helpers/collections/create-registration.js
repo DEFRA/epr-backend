@@ -16,8 +16,8 @@ export async function createRegistrationCollection(db) {
         required: [
           'schemaVersion',
           'createdAt',
-          'referenceNumber',
           'orgId',
+          'referenceNumber',
           'answers',
           'rawSubmissionData'
         ],

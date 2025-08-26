@@ -136,6 +136,40 @@ const baseConfig = {
       default: 'x-cdp-request-id',
       env: 'TRACING_HEADER'
     }
+  },
+  regulator: {
+    EA: {
+      email: {
+        doc: 'EA regulator email address',
+        format: String,
+        default: 'test@ea.gov.uk',
+        env: 'REGULATOR_EMAIL_EA'
+      }
+    },
+    NIEA: {
+      email: {
+        doc: 'NIEA regulator email address',
+        format: String,
+        default: 'test@niea.gov.uk',
+        env: 'REGULATOR_EMAIL_NIEA'
+      }
+    },
+    NRW: {
+      email: {
+        doc: 'NRW regulator email address',
+        format: String,
+        default: 'test@nrw.gov.uk',
+        env: 'REGULATOR_EMAIL_NRW'
+      }
+    },
+    SEPA: {
+      email: {
+        doc: 'SEPA regulator email address',
+        format: String,
+        default: 'test@sepa.gov.uk',
+        env: 'REGULATOR_EMAIL_SEPA'
+      }
+    }
   }
 }
 

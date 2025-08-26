@@ -5,7 +5,8 @@ import {
 import {
   FORM_FIELDS_SHORT_DESCRIPTIONS,
   NATION,
-  USER_SUBMISSION_EMAIL_TEMPLATE_ID
+  ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+  ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '../../../common/enums/index.js'
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '../../../common/helpers/notify.js'
@@ -59,8 +60,17 @@ describe(`${url} route`, () => {
 
     expect(response.statusCode).toEqual(200)
     expect(sendEmail).toHaveBeenCalledWith(
-      USER_SUBMISSION_EMAIL_TEMPLATE_ID,
+      ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
       'alice@foo.com',
+      {
+        orgId: 500002,
+        orgName: 'ACME ltd',
+        referenceNumber: expect.any(String)
+      }
+    )
+    expect(sendEmail).toHaveBeenCalledWith(
+      ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+      'test@ea.gov.uk',
       {
         orgId: 500002,
         orgName: 'ACME ltd',
@@ -109,6 +119,7 @@ describe(`${url} route`, () => {
       payload: {
         meta: {
           definition: {
+            name: organisationFixture.meta.definition.name,
             pages: [
               {
                 components: [
@@ -156,6 +167,7 @@ describe(`${url} route`, () => {
       payload: {
         meta: {
           definition: {
+            name: organisationFixture.meta.definition.name,
             pages: [
               {
                 components: [
@@ -203,6 +215,7 @@ describe(`${url} route`, () => {
       payload: {
         meta: {
           definition: {
+            name: organisationFixture.meta.definition.name,
             pages: [
               {
                 components: [
@@ -237,6 +250,29 @@ describe(`${url} route`, () => {
     })
 
     const message = 'Could not extract organisation name from answers'
+    const body = JSON.parse(response.payload)
+
+    expect(response.statusCode).toEqual(400)
+    expect(body.message).toEqual(message)
+  })
+
+  it('returns 400 if payload is missing regulatorEmail', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: {
+        meta: {
+          definition: {
+            name: undefined
+          }
+        },
+        data: {
+          main: {}
+        }
+      }
+    })
+
+    const message = 'Could not get regulator name from data'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(400)
