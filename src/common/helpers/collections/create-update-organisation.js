@@ -2,15 +2,16 @@ import {
   answers,
   createdAt,
   email,
-  nations,
   orgId,
   orgName,
   rawSubmissionData,
   schemaVersion
 } from './schema-properties.js'
 
-export async function createOrganisationCollection(db) {
-  await db.createCollection('organisation', {
+const collectionName = 'organisation'
+
+export async function createOrUpdateOrganisationCollection(db, collections) {
+  const options = {
     validator: {
       $jsonSchema: {
         bsonType: 'object',
@@ -21,7 +22,6 @@ export async function createOrganisationCollection(db) {
           'orgId',
           'orgName',
           'email',
-          'nations',
           'answers',
           'rawSubmissionData'
         ],
@@ -31,11 +31,16 @@ export async function createOrganisationCollection(db) {
           orgId,
           orgName,
           email,
-          nations,
           answers,
           rawSubmissionData
         }
       }
     }
-  })
+  }
+
+  if (!collections.find(({ name }) => name === collectionName)) {
+    await db.createCollection(collectionName, options)
+  } else {
+    await db.command({ collMod: collectionName }, options)
+  }
 }

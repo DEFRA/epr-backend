@@ -1,6 +1,6 @@
-import { createAccreditationCollection } from './create-accreditation.js'
-import { createOrganisationCollection } from './create-organisation.js'
-import { createRegistrationCollection } from './create-registration.js'
+import { createOrUpdateAccreditationCollection } from './create-update-accreditation.js'
+import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
+import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
 
 import {
   organisationFactory,
@@ -11,7 +11,6 @@ import {
 import {
   extractAnswers,
   extractEmail,
-  extractNations,
   extractOrgName
 } from '../apply/extract-answers.js'
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
@@ -20,20 +19,12 @@ import organisationFixture from '../../../data/fixtures/organisation.json' with 
 import registrationFixture from '../../../data/fixtures/registration.json' with { type: 'json' }
 import accreditationFixture from '../../../data/fixtures/accreditation.json' with { type: 'json' }
 
-export async function createCollections(db) {
+export async function createOrUpdateCollections(db) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
 
-  if (!collections.find(({ name }) => name === 'organisation')) {
-    await createOrganisationCollection(db)
-  }
-
-  if (!collections.find(({ name }) => name === 'registration')) {
-    await createRegistrationCollection(db)
-  }
-
-  if (!collections.find(({ name }) => name === 'accreditation')) {
-    await createAccreditationCollection(db)
-  }
+  await createOrUpdateOrganisationCollection(db, collections)
+  await createOrUpdateRegistrationCollection(db, collections)
+  await createOrUpdateAccreditationCollection(db, collections)
 }
 
 export async function createIndexes(db) {
@@ -55,7 +46,6 @@ export async function createSeedData(db) {
         orgId: ORG_ID_START_NUMBER,
         orgName: extractOrgName(organisationAnswers),
         email: extractEmail(organisationAnswers),
-        nations: extractNations(organisationAnswers),
         answers: organisationAnswers,
         rawSubmissionData: organisationFixture
       })

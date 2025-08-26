@@ -1,4 +1,4 @@
-import { FORM_FIELDS_SHORT_DESCRIPTIONS, NATION } from '../../enums/index.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 import { getConfig } from '../../../config.js'
 
 export function extractAnswers(payload) {
@@ -33,22 +33,6 @@ export function extractEmail(answers) {
     ({ shortDescription }) =>
       shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.EMAIL
   )?.value
-}
-
-export function extractNations(answers) {
-  const nations = Object.values(NATION)
-
-  const answer =
-    answers.find(
-      ({ shortDescription }) =>
-        shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.NATIONS
-    )?.value ?? ''
-
-  return answer?.split(',')?.reduce((prev, item) => {
-    const foundNation = nations.find((nation) => nation === item.trim())
-
-    return foundNation ? [...prev, foundNation] : prev
-  }, [])
 }
 
 export function extractOrgId(answers) {

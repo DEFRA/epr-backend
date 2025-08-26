@@ -10,7 +10,6 @@ import {
 import {
   extractAnswers,
   extractEmail,
-  extractNations,
   extractOrgName,
   getRegulatorEmail
 } from '../../../common/helpers/apply/extract-answers.js'
@@ -36,7 +35,6 @@ export const organisation = {
         const answers = extractAnswers(data)
         const email = extractEmail(answers)
         const orgName = extractOrgName(answers)
-        const nations = extractNations(answers)
         const regulatorEmail = getRegulatorEmail(data)
 
         if (!regulatorEmail) {
@@ -45,10 +43,6 @@ export const organisation = {
 
         if (!email) {
           throw Boom.badRequest('Could not extract email from answers')
-        }
-
-        if (!nations.length) {
-          throw Boom.badRequest('Could not extract nations from answers')
         }
 
         if (!orgName) {
@@ -61,7 +55,6 @@ export const organisation = {
           answers,
           email,
           orgName,
-          nations,
           rawSubmissionData: data,
           regulatorEmail
         }
@@ -70,14 +63,8 @@ export const organisation = {
   },
   handler: async ({ db, payload }, h) => {
     const collection = db.collection('organisation')
-    const {
-      answers,
-      email,
-      orgName,
-      nations,
-      rawSubmissionData,
-      regulatorEmail
-    } = payload
+    const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
+      payload
     const logger = createLogger()
 
     try {
@@ -93,7 +80,6 @@ export const organisation = {
           orgId,
           orgName,
           email,
-          nations,
           answers,
           rawSubmissionData
         })

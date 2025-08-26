@@ -4,7 +4,6 @@ import {
 } from '../../../common/enums/event.js'
 import {
   FORM_FIELDS_SHORT_DESCRIPTIONS,
-  NATION,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '../../../common/enums/index.js'
@@ -124,16 +123,6 @@ describe(`${url} route`, () => {
               {
                 components: [
                   {
-                    name: 'asd123',
-                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.NATIONS,
-                    title: 'Which nations do you operate within?',
-                    type: 'CheckboxesField'
-                  }
-                ]
-              },
-              {
-                components: [
-                  {
                     name: 'asd456',
                     shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_NAME,
                     title: 'What is the name of your organisation?',
@@ -146,7 +135,6 @@ describe(`${url} route`, () => {
         },
         data: {
           main: {
-            asd123: `${NATION.ENGLAND}, ${NATION.SCOTLAND}`,
             asd456: 'ACME LTD'
           }
         }
@@ -154,54 +142,6 @@ describe(`${url} route`, () => {
     })
 
     const message = 'Could not extract email from answers'
-    const body = JSON.parse(response.payload)
-
-    expect(response.statusCode).toEqual(400)
-    expect(body.message).toEqual(message)
-  })
-
-  it('returns 400 if payload is missing nations', async () => {
-    const response = await server.inject({
-      method: 'POST',
-      url,
-      payload: {
-        meta: {
-          definition: {
-            name: organisationFixture.meta.definition.name,
-            pages: [
-              {
-                components: [
-                  {
-                    name: 'asd123',
-                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.EMAIL,
-                    title: 'What is your email address?',
-                    type: 'EmailAddressField'
-                  }
-                ]
-              },
-              {
-                components: [
-                  {
-                    name: 'asd456',
-                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_NAME,
-                    title: 'What is the name of your organisation?',
-                    type: 'TextField'
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        data: {
-          main: {
-            asd123: 'a@b.com',
-            asd456: 'ACME LTD'
-          }
-        }
-      }
-    })
-
-    const message = 'Could not extract nations from answers'
     const body = JSON.parse(response.payload)
 
     expect(response.statusCode).toEqual(400)
@@ -221,16 +161,6 @@ describe(`${url} route`, () => {
                 components: [
                   {
                     name: 'asd123',
-                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.NATIONS,
-                    title: 'Which nations do you operate within?',
-                    type: 'CheckboxesField'
-                  }
-                ]
-              },
-              {
-                components: [
-                  {
-                    name: 'asd123',
                     shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.EMAIL,
                     title: 'What is your email address?',
                     type: 'EmailAddressField'
@@ -242,8 +172,7 @@ describe(`${url} route`, () => {
         },
         data: {
           main: {
-            asd123: `${NATION.ENGLAND}, ${NATION.SCOTLAND}`,
-            asd456: 'a@b.com'
+            asd123: 'a@b.com'
           }
         }
       }

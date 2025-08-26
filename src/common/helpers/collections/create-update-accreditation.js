@@ -7,12 +7,14 @@ import {
   schemaVersion
 } from './schema-properties.js'
 
-export async function createRegistrationCollection(db) {
-  await db.createCollection('registration', {
+const collectionName = 'accreditation'
+
+export async function createOrUpdateAccreditationCollection(db, collections) {
+  const options = {
     validator: {
       $jsonSchema: {
         bsonType: 'object',
-        title: 'Registration Validation',
+        title: 'Accreditation Validation',
         required: [
           'schemaVersion',
           'createdAt',
@@ -31,5 +33,11 @@ export async function createRegistrationCollection(db) {
         }
       }
     }
-  })
+  }
+
+  if (!collections.find(({ name }) => name === collectionName)) {
+    await db.createCollection(collectionName, options)
+  } else {
+    await db.command({ collMod: collectionName }, options)
+  }
 }

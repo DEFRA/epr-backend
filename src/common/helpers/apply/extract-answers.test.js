@@ -1,13 +1,12 @@
 import {
   extractAnswers,
   extractEmail,
-  extractNations,
   extractOrgId,
   extractOrgName,
   extractReferenceNumber,
   getRegulatorEmail
 } from './extract-answers.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS, NATION } from '../../enums/index.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 import { getConfig } from '../../../config.js'
 
 vi.mock('../../../config.js', async (importOriginal) => {
@@ -76,22 +75,6 @@ describe('extractEmail', () => {
 
   it('should return undefined if email not found', () => {
     expect(extractEmail([])).toBeUndefined()
-  })
-})
-
-describe('extractNations', () => {
-  it('should extract nations from answers', () => {
-    const answers = [
-      {
-        shortDescription: 'Nations with sites',
-        value: `${NATION.ENGLAND}, ${NATION.SCOTLAND}`
-      }
-    ]
-    expect(extractNations(answers)).toEqual([NATION.ENGLAND, NATION.SCOTLAND])
-  })
-
-  it('should return empty array if nations not found', () => {
-    expect(extractNations([])).toEqual([])
   })
 })
 
