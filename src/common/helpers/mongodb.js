@@ -5,10 +5,10 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
 import {
-  createCollections,
+  createOrUpdateCollections,
   createIndexes,
   createSeedData
-} from './collections/create.js'
+} from './collections/create-update.js'
 
 export const mongoDb = {
   plugin: {
@@ -31,7 +31,7 @@ export const mongoDb = {
       const db = client.db(databaseName)
       const locker = new LockManager(db.collection('mongo-locks'))
 
-      await createCollections(db)
+      await createOrUpdateCollections(db)
       await createIndexes(db)
       await createSeedData(db)
 

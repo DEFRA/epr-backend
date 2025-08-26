@@ -1,4 +1,4 @@
-import { NATION, ORG_ID_START_NUMBER } from '../../enums/index.js'
+import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 
 export const answers = {
   bsonType: 'array',
@@ -35,21 +35,6 @@ export const createdAt = {
 export const email = {
   bsonType: 'string',
   description: "'email' must be a string and is required"
-}
-
-export const nations = {
-  bsonType: 'array',
-  description: "'nations' must be an array and is required",
-  items: {
-    bsonType: 'string',
-    description: `'nation' must be one of [${NATION.ENGLAND}, ${NATION.NORTHERN_IRELAND}, ${NATION.SCOTLAND}, ${NATION.WALES}] and is required`,
-    oneOf: [
-      { type: 'string', pattern: `^${NATION.ENGLAND}$` },
-      { type: 'string', pattern: `^${NATION.NORTHERN_IRELAND}$` },
-      { type: 'string', pattern: `^${NATION.SCOTLAND}$` },
-      { type: 'string', pattern: `^${NATION.WALES}$` }
-    ]
-  }
 }
 
 export const orgId = {
