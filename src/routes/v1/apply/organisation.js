@@ -4,13 +4,15 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   ORG_ID_START_NUMBER,
-  USER_SUBMISSION_EMAIL_TEMPLATE_ID
+  ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+  ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '../../../common/enums/index.js'
 import {
   extractAnswers,
   extractEmail,
   extractNations,
-  extractOrgName
+  extractOrgName,
+  getRegulatorEmail
 } from '../../../common/helpers/apply/extract-answers.js'
 import { organisationFactory } from '../../../common/helpers/collections/factories/index.js'
 import { sendEmail } from '../../../common/helpers/notify.js'
@@ -35,6 +37,11 @@ export const organisation = {
         const email = extractEmail(answers)
         const orgName = extractOrgName(answers)
         const nations = extractNations(answers)
+        const regulatorEmail = getRegulatorEmail(data)
+
+        if (!regulatorEmail) {
+          throw Boom.badRequest('Could not get regulator name from data')
+        }
 
         if (!email) {
           throw Boom.badRequest('Could not extract email from answers')
@@ -50,13 +57,27 @@ export const organisation = {
           )
         }
 
-        return { answers, email, orgName, nations, rawSubmissionData: data }
+        return {
+          answers,
+          email,
+          orgName,
+          nations,
+          rawSubmissionData: data,
+          regulatorEmail
+        }
       }
     }
   },
   handler: async ({ db, payload }, h) => {
     const collection = db.collection('organisation')
-    const { answers, email, orgName, nations, rawSubmissionData } = payload
+    const {
+      answers,
+      email,
+      orgName,
+      nations,
+      rawSubmissionData,
+      regulatorEmail
+    } = payload
     const logger = createLogger()
 
     try {
@@ -88,11 +109,25 @@ export const organisation = {
         }
       })
 
-      await sendEmail(USER_SUBMISSION_EMAIL_TEMPLATE_ID, email, {
-        orgId,
-        orgName,
-        referenceNumber
-      })
+      await sendEmail(
+        ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
+        email,
+        {
+          orgId,
+          orgName,
+          referenceNumber
+        }
+      )
+
+      await sendEmail(
+        ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+        regulatorEmail,
+        {
+          orgId,
+          orgName,
+          referenceNumber
+        }
+      )
 
       return h.response({
         orgId,

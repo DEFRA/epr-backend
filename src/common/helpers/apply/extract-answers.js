@@ -1,4 +1,5 @@
 import { FORM_FIELDS_SHORT_DESCRIPTIONS, NATION } from '../../enums/index.js'
+import { getConfig } from '../../../config.js'
 
 export function extractAnswers(payload) {
   return (
@@ -74,4 +75,17 @@ export function extractReferenceNumber(answers) {
     ({ shortDescription }) =>
       shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER
   )?.value
+}
+
+export function getRegulatorEmail({ meta }) {
+  const config = getConfig()
+  const { name } = meta?.definition ?? {}
+
+  const [, regulatorId] = name?.match(/\((\w+)\)$/) ?? []
+
+  if (!regulatorId) {
+    return undefined
+  }
+
+  return config.get(`regulator.${regulatorId}.email`) ?? undefined
 }

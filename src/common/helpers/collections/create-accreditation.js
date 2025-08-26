@@ -16,8 +16,8 @@ export async function createAccreditationCollection(db) {
         required: [
           'schemaVersion',
           'createdAt',
-          'referenceNumber',
           'orgId',
+          'referenceNumber',
           'answers',
           'rawSubmissionData'
         ],
