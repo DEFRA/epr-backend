@@ -38,6 +38,6 @@ export async function createOrUpdateRegistrationCollection(db, collections) {
   if (!collections.find(({ name }) => name === collectionName)) {
     await db.createCollection(collectionName, options)
   } else {
-    await db.command({ collMod: collectionName }, options)
+    await db.command({ collMod: collectionName, ...options })
   }
 }
