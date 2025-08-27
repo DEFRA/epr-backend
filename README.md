@@ -8,6 +8,7 @@ Backend APIs for: Packaging Extended Producer Responsibilities
   - [API endpoints](#api-endpoints)
   - [Contributing](#contributing)
   - [Architecture](#architecture)
+  - [Runbooks](#runbooks)
   - [Known issues](#known-issues)
   - [Workarounds](#workarounds)
   - [Licence](#licence) \* [About the licence](#about-the-licence)
