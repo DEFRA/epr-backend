@@ -231,6 +231,7 @@ describe(`${url} route`, () => {
   })
 
   it('returns 500 if error is thrown by insertOne', async () => {
+    const statusCode = 500
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
       throw error
@@ -242,7 +243,7 @@ describe(`${url} route`, () => {
       payload: organisationFixture
     })
 
-    expect(response.statusCode).toEqual(500)
+    expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(mockLoggerError).toHaveBeenCalledWith(error, {
@@ -250,11 +251,17 @@ describe(`${url} route`, () => {
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      },
+      http: {
+        response: {
+          status_code: statusCode
+        }
       }
     })
   })
 
   it('returns 500 if error is thrown by sendEmail', async () => {
+    const statusCode = 500
     const error = new Error('Notify API failed')
     sendEmail.mockRejectedValueOnce(error)
 
@@ -264,7 +271,7 @@ describe(`${url} route`, () => {
       payload: organisationFixture
     })
 
-    expect(response.statusCode).toEqual(500)
+    expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(mockLoggerError).toHaveBeenCalledWith(error, {
@@ -272,6 +279,11 @@ describe(`${url} route`, () => {
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      },
+      http: {
+        response: {
+          status_code: statusCode
+        }
       }
     })
   })

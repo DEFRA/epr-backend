@@ -50,6 +50,11 @@ export function registrationAndAccreditationHandler(name, path, factory) {
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+        },
+        http: {
+          response: {
+            status_code: 500
+          }
         }
       })
 
