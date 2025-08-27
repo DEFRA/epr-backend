@@ -41,17 +41,15 @@ export const organisation = {
         const regulatorEmail = getRegulatorEmail(data)
 
         if (!regulatorEmail) {
-          throw Boom.badRequest('Could not get regulator name from data')
+          throw Boom.badData('Could not get regulator name from data')
         }
 
         if (!email) {
-          throw Boom.badRequest('Could not extract email from answers')
+          throw Boom.badData('Could not extract email from answers')
         }
 
         if (!orgName) {
-          throw Boom.badRequest(
-            'Could not extract organisation name from answers'
-          )
+          throw Boom.badData('Could not extract organisation name from answers')
         }
 
         return {

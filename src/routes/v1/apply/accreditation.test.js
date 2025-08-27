@@ -101,7 +101,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 400 if payload is missing orgId', async () => {
+  it('returns 422 if payload is missing orgId', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -134,11 +134,11 @@ describe(`${url} route`, () => {
     const message = 'Could not extract orgId from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(422)
     expect(body.message).toEqual(message)
   })
 
-  it('returns 400 if payload is missing reference number', async () => {
+  it('returns 422 if payload is missing reference number', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -170,7 +170,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract referenceNumber from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(422)
     expect(body.message).toEqual(message)
   })
 
