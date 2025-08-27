@@ -25,9 +25,11 @@ export const LOGGING_EVENT_ACTIONS = {
 }
 
 export const AUDIT_EVENT_CATEGORIES = {
-  EMAIL: 'email'
+  EMAIL: 'email',
+  DB: 'database'
 }
 
 export const AUDIT_EVENT_ACTIONS = {
-  EMAIL_SENT: 'email_sent'
+  EMAIL_SENT: 'email_sent',
+  DB_INSERT: 'database_insert'
 }

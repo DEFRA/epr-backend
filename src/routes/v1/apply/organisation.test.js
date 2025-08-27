@@ -1,4 +1,6 @@
 import {
+  AUDIT_EVENT_ACTIONS,
+  AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
@@ -14,6 +16,7 @@ import organisationFixture from '../../../data/fixtures/organisation.json'
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
+const mockAudit = vi.fn()
 
 const mockInsertOne = vi.fn(() => ({
   insertedId: { toString: () => '12345678901234567890abcd' }
@@ -26,6 +29,10 @@ vi.mock('../../../common/helpers/logging/logger.js', () => ({
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
   })
+}))
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockAudit(...args)
 }))
 
 vi.mock('../../../common/helpers/notify.js')
@@ -57,13 +64,28 @@ describe(`${url} route`, () => {
       payload: organisationFixture
     })
 
+    const orgId = 500002
+    const orgName = 'ACME ltd'
+
     expect(response.statusCode).toEqual(200)
+
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: AUDIT_EVENT_CATEGORIES.DB,
+        action: AUDIT_EVENT_ACTIONS.DB_INSERT
+      },
+      context: {
+        orgId,
+        orgName,
+        referenceNumber: expect.any(String)
+      }
+    })
     expect(sendEmail).toHaveBeenCalledWith(
       ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
       'alice@foo.com',
       {
-        orgId: 500002,
-        orgName: 'ACME ltd',
+        orgId,
+        orgName,
         referenceNumber: expect.any(String)
       }
     )
@@ -71,8 +93,8 @@ describe(`${url} route`, () => {
       ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
       'test@ea.gov.uk',
       {
-        orgId: 500002,
-        orgName: 'ACME ltd',
+        orgId,
+        orgName,
         referenceNumber: expect.any(String)
       }
     )

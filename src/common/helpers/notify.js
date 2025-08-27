@@ -1,5 +1,7 @@
-import { audit } from '@defra/cdp-auditing'
+import obfuscateEmail from 'obfuscate-mail'
+
 import { NotifyClient } from 'notifications-node-client'
+import { audit } from '@defra/cdp-auditing'
 import { createLogger } from './logging/logger.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
@@ -41,8 +43,15 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
         action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
       },
       context: {
-        template_id: templateId,
-        email_address: emailAddress
+        templateId,
+        emailAddress: obfuscateEmail(emailAddress, {
+          asterisksLength: 8,
+          showDomainName: false,
+          minimumNameObfuscationLength: 3,
+          visibleCharactersEndLength: 4,
+          visibleCharactersStartLength: 4
+        }),
+        personalisation
       }
     })
   } catch (err) {

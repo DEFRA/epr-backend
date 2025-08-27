@@ -34,7 +34,7 @@ vi.mock('./get-local-secret.js')
 
 describe('sendEmail', () => {
   const templateId = 'template-id'
-  const emailAddress = 'test@example.com'
+  const emailAddress = 'testing@example.com'
   const personalisation = { name: 'Test' }
 
   beforeEach(() => {
@@ -81,15 +81,21 @@ describe('sendEmail', () => {
   })
 
   it('calls audit when notifyClient.sendEmail succeeds', async () => {
+    const emailFirstFourChars = emailAddress.slice(0, 4)
+    const emailLastFourChars = emailAddress.slice(-4)
     await sendEmail(templateId, emailAddress)
+
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
         category: AUDIT_EVENT_CATEGORIES.EMAIL,
         action: AUDIT_EVENT_ACTIONS.EMAIL_SENT
       },
       context: {
-        template_id: templateId,
-        email_address: emailAddress
+        templateId,
+        emailAddress: expect.stringMatching(
+          new RegExp(`^${emailFirstFourChars}[*@]+${emailLastFourChars}$`)
+        ),
+        personalisation: expect.any(Object)
       }
     })
   })
