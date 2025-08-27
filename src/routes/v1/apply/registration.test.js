@@ -1,4 +1,6 @@
 import {
+  AUDIT_EVENT_ACTIONS,
+  AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../../common/enums/event.js'
@@ -9,6 +11,7 @@ import { registrationPath } from './registration.js'
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
+const mockAudit = vi.fn()
 
 const mockInsertOne = vi.fn()
 
@@ -18,6 +21,10 @@ vi.mock('../../../common/helpers/logging/logger.js', () => ({
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
   })
+}))
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockAudit(...args)
 }))
 
 const url = registrationPath
@@ -47,6 +54,17 @@ describe(`${url} route`, () => {
     })
 
     expect(response.statusCode).toEqual(201)
+
+    expect(mockAudit).toHaveBeenCalledWith({
+      event: {
+        category: AUDIT_EVENT_CATEGORIES.DB,
+        action: AUDIT_EVENT_ACTIONS.DB_INSERT
+      },
+      context: {
+        orgId: expect.any(Number),
+        referenceNumber: expect.any(String)
+      }
+    })
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,5 +1,8 @@
+import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
 import {
+  AUDIT_EVENT_ACTIONS,
+  AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
@@ -19,6 +22,17 @@ export function registrationAndAccreditationHandler(name, path, factory) {
           rawSubmissionData
         })
       )
+
+      audit({
+        event: {
+          category: AUDIT_EVENT_CATEGORIES.DB,
+          action: AUDIT_EVENT_ACTIONS.DB_INSERT
+        },
+        context: {
+          orgId,
+          referenceNumber
+        }
+      })
 
       logger.info({
         message: `Stored ${name} data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,

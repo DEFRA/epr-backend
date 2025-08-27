@@ -1,6 +1,9 @@
+import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
 import { createLogger } from '../../../common/helpers/logging/logger.js'
 import {
+  AUDIT_EVENT_ACTIONS,
+  AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
   ORG_ID_START_NUMBER,
@@ -86,6 +89,18 @@ export const organisation = {
       )
 
       const referenceNumber = insertedId.toString()
+
+      audit({
+        event: {
+          category: AUDIT_EVENT_CATEGORIES.DB,
+          action: AUDIT_EVENT_ACTIONS.DB_INSERT
+        },
+        context: {
+          orgId,
+          orgName,
+          referenceNumber
+        }
+      })
 
       logger.info({
         message: `Stored organisation data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
