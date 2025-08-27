@@ -30,6 +30,10 @@ If you intend to contribute to this repository and/or run the application locall
 You can find more information about [the project's architecture here](./docs/architecture/index.md),
 also see the [Architecture Decision Records](docs/architecture/decisions/index.md).
 
+## Runbooks
+
+You can find [this service's runbooks here](https://eaflood.atlassian.net/wiki/spaces/MWR/pages/5873762458/Runbooks).
+
 ## Known issues
 
 None
