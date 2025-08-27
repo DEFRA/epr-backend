@@ -16,11 +16,12 @@ Backend APIs for: Packaging Extended Producer Responsibilities
 
 ## API endpoints
 
-| Endpoint             | Description                    |
-| :------------------- | :----------------------------- |
-| `GET: /health`       | Health                         |
-| `GET: /example    `  | Example API (remove as needed) |
-| `GET: /example/<id>` | Example API (remove as needed) |
+| Endpoint                        | Description                   |
+| :------------------------------ | :---------------------------- |
+| `GET: /health`                  | Health                        |
+| `POST: /v1/apply/organisation`  | Organisation data submission  |
+| `POST: /v1/apply/registration`  | Registration data submission  |
+| `POST: /v1/apply/accreditation` | Accreditation data submission |
 
 ## Contributing
 
