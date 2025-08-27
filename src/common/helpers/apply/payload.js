@@ -15,11 +15,11 @@ export function registrationAndAccreditationPayload(data, _options) {
   const referenceNumber = extractReferenceNumber(answers)
 
   if (!orgId) {
-    throw Boom.badRequest('Could not extract orgId from answers')
+    throw Boom.badData('Could not extract orgId from answers')
   }
 
   if (!referenceNumber) {
-    throw Boom.badRequest('Could not extract referenceNumber from answers')
+    throw Boom.badData('Could not extract referenceNumber from answers')
   }
 
   return { answers, orgId, rawSubmissionData: data, referenceNumber }

@@ -133,7 +133,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 400 if payload is missing email', async () => {
+  it('returns 422 if payload is missing email', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -166,11 +166,11 @@ describe(`${url} route`, () => {
     const message = 'Could not extract email from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(422)
     expect(body.message).toEqual(message)
   })
 
-  it('returns 400 if payload is missing orgName', async () => {
+  it('returns 422 if payload is missing orgName', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -203,11 +203,11 @@ describe(`${url} route`, () => {
     const message = 'Could not extract organisation name from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(422)
     expect(body.message).toEqual(message)
   })
 
-  it('returns 400 if payload is missing regulatorEmail', async () => {
+  it('returns 422 if payload is missing regulatorEmail', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -226,7 +226,7 @@ describe(`${url} route`, () => {
     const message = 'Could not get regulator name from data'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(422)
     expect(body.message).toEqual(message)
   })
 
