@@ -4,10 +4,10 @@ import { loggerOptions } from './logger-options.js'
 let loggerInstance
 
 function createLogger() {
-  const logger = pino(loggerOptions)
+  const baseLogger = pino(loggerOptions)
 
-  const pinoError = logger.error.bind(logger)
-  logger.error = (err, log = {}) => {
+  const pinoError = baseLogger.error.bind(baseLogger)
+  baseLogger.error = (err, log = {}) => {
     if (err instanceof Error) {
       return pinoError({
         error: {
@@ -21,7 +21,7 @@ function createLogger() {
     return pinoError(err, log)
   }
 
-  return logger
+  return baseLogger
 }
 
 export function getLoggerInstance() {
