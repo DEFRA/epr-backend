@@ -61,11 +61,11 @@ vi.mock('hapi-pino', () => ({
 }))
 
 vi.mock('./common/helpers/logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
-  })
+  }
 }))
 
 vi.mock('./common/helpers/mongodb.js')

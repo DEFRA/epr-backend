@@ -20,7 +20,9 @@ vi.mock('aws-embedded-metrics', async (importOriginal) => {
 })
 
 vi.mock('./logging/logger.js', () => ({
-  createLogger: () => ({ error: (...args) => mockLoggerError(...args) })
+  logger: {
+    error: (...args) => mockLoggerError(...args)
+  }
 }))
 
 const mockMetricsName = 'mock-metrics-name'

@@ -19,11 +19,11 @@ vi.mock('notifications-node-client', () => ({
 }))
 
 vi.mock('./logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
-  })
+  }
 }))
 
 vi.mock('@defra/cdp-auditing', () => ({

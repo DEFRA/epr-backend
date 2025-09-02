@@ -6,12 +6,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
-import { createLogger } from '../logging/logger.js'
+import { logger } from '../logging/logger.js'
 
 export function registrationAndAccreditationHandler(name, path, factory) {
   return async ({ db, payload }, h) => {
     const { answers, orgId, rawSubmissionData, referenceNumber } = payload
-    const logger = createLogger()
 
     try {
       await db.collection(name).insertOne(

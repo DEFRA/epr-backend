@@ -2,7 +2,7 @@ import obfuscateEmail from 'obfuscate-mail'
 
 import { NotifyClient } from 'notifications-node-client'
 import { audit } from '@defra/cdp-auditing'
-import { createLogger } from './logging/logger.js'
+import { logger } from './logging/logger.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -12,7 +12,6 @@ import {
 } from '../enums/event.js'
 
 async function sendEmail(templateId, emailAddress, personalisation = {}) {
-  const logger = createLogger()
   const apiKey =
     process.env.NODE_ENV === 'development'
       ? getLocalSecret('GOVUK_NOTIFY_API_KEY')

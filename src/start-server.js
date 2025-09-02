@@ -1,7 +1,7 @@
 import { getConfig } from './config.js'
 
 import { createServer } from './server.js'
-import { createLogger } from './common/helpers/logging/logger.js'
+import { logger } from './common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -27,7 +27,6 @@ async function startServer() {
       }
     })
   } catch (err) {
-    const logger = createLogger()
     logger.error(err, {
       message: 'Server failed to start',
       event: {
