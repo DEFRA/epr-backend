@@ -18,17 +18,28 @@ Requesting data dump from other teams is not sustainable and it doesn't cater to
 
 ## Decision
 
+## Location of endpoints
+
 We have considered placing all the data extraction functionality into a separate repository to the `epr-backend` versus collocating it in the `epr-backend`.
 
 Given our time constraints and the fact that there is overhead in setting up and maintaining another repo and a separate service, we have decided to leverage the `epr-backend` code infrastructure by adding one or more protected endpoints dedicated to meeting our data extraction needs.
 
+## Privacy
+
 In order to follow Data Minisation and Least Privilege best practices, we have also decided the following approach:
 
-- Only extract the fields/keys that are necessary for our current debugging goals
-- Limit the number of documents extracted in any request by requiring a "sinceDate" parameter that will discourage the retrieval of excessive amounts of data in a single operation. A "fromDate" may also be added as an optional parameter.
-- Return in masked form any fields that are likely to contain PII (including all form answers) by default and explicitly define which ones can be returned in clear form through an allow list.
+- Only retrieve answers not `rawSubmissionJson`.
+- Allow retrieval by `referenceNumber` or by `orgId`
+- Limit the number of documents extracted in any request by requiring a `sinceDate` parameter that will discourage the retrieval of excessive amounts of data in a single operation. A `fromDate` may also be added as an optional parameter.
+- Return all answers in masked form by default and explicitly define which ones can be returned in clear form through an allow list.
 
-We have also decided to include a "count" field reporting the number of documents returned as part of the metadata mandatory in each of these new GET endpoints.
+## Safety
+
+The endpoints must be protected with authentication.
+
+## Others
+
+Responses must include a `metadata` section with a `count` field reporting the number of documents included in the response.
 
 ## Consequences
 
