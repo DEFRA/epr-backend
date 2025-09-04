@@ -12,7 +12,7 @@ async function startServer() {
   const config = getConfig()
   const auditConfig = config.get('audit')
   let server
-
+  const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)
 
   try {
@@ -20,7 +20,7 @@ async function startServer() {
     await server.start()
 
     server.logger.info({
-      message: `Server started successfully at http://${config.get('host')}:${config.get('port')} with Auditing: ${auditConfig.isEnabled ? `on` : `off`}`,
+      message: `Server started successfully at http://${config.get('host')}:${config.get('port')} with Auditing: ${auditingStatus}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.START_SUCCESS
