@@ -37,13 +37,13 @@ In order to follow Data Minimisation and Least Privilege best practices, we have
 
 The endpoints must be protected with basic HTTP authentication (HTTPS only).
 
-### Agreed
+### Agreed solution
 
 As a way to alleviate our most immediate needs, we have decided to add with the endpoint that would give us the most visibility on what happens with our organisation applications.
 
 A new `GET /v1/apply/report` endpoint is added which provides retrieves 3 document collections from our database: `organisations`, `registrations` and `accreditations`.
 
-The endpoint is protected by basic authentication. Where to keep the authentication credentials is to be defined during the implementation phase.
+The endpoint is protected by basic authentication. We will store the credentials in [CDP Secrets](https://portal.cdp-int.defra.cloud/documentation/how-to/secrets.md) and we will share them with the team according to CDP's official policy for secret sharing.
 
 The response omits the `rawSubmissionData`.
 
