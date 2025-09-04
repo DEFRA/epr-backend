@@ -55,4 +55,6 @@ The response includes a `metadata` field which itself includes a `count` field r
 
 ## Consequences
 
-Separation between form processing endpoints and data extraction ones would give us better flexibility, while keeping the `epr-backend` focused on servicing our users. However, the proposed tactical architecture doesn't prevent us from separating the two functions into separate services in the future.
+Separation between form processing endpoints and data extraction ones might give us better flexibility, while keeping the `epr-backend` focused on servicing our users. However, that approach is incompatible with [CDP's core piciples](https://portal.cdp-int.defra.cloud/documentation/onboarding/onboarding-considerations.md#microservices) which states:
+
+> A single database cannot be natively accessed by more than 1 microservice. Data exchange must be via the owning microservices through the use of APIs, messages etc.
