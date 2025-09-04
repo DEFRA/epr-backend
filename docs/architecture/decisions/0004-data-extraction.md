@@ -1,10 +1,10 @@
-# 4. data-extraction
+# 4. Data Extraction
 
 Date: 2025-09-03
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -37,11 +37,11 @@ In order to follow Data Minimisation and Least Privilege best practices, we have
 
 The endpoints must be protected with basic HTTP authentication (HTTPS only).
 
-### MVP
+### Agreed
 
-As a way to alleviate our most immediate needs, we have decided to start with the endpoint that would give us the most visibility on what happens with our organisation applications.
+As a way to alleviate our most immediate needs, we have decided to add with the endpoint that would give us the most visibility on what happens with our organisation applications.
 
-A new `GET /v1/apply/organisations` endpoint is added which provides retrieves a collection of `organisation` documents from our database.
+A new `GET /v1/apply/report` endpoint is added which provides retrieves 3 document collections from our database: `organisations`, `registrations` and `accreditations`.
 
 The endpoint is protected by basic authentication. Where to keep the authentication credentials is to be defined during the implementation phase.
 
@@ -49,12 +49,33 @@ The response omits the `rawSubmissionData`.
 
 The response initially masks all `answers` and `email` but all other fields `referenceNumber`, `orgId` and `orgName` are sent in clear form.
 
-The endpoint requires a `fromDate` query parameter and supports an optional `toDate` parameter. These parameters are used to filter the records to be retrieved by their creation date. These parameters must follow the ISO 8601 date-time format. If the number of records matching the filtering criteria exceeds a limit (to be defined), the endpoint should returns a `413 Payload Too Large` error; otherwise, it returns an array of `organisation` records in the order of their creation date.
+The endpoint requires a `fromDate` query parameter and supports an optional `toDate` parameter. These parameters are used to filter the documents to be retrieved by their creation date. These parameters must follow the ISO 8601 date-time format. If the number of records matching the filtering criteria exceeds a limit (to be defined), the endpoint should returns a `413 Payload Too Large` error; otherwise, it returns an array of `organisation` records in the order of their creation date.
 
-The response includes a `metadata` field which itself includes a `count` field reporing the number of organisation records returned.
+The response includes a `metadata` field which itself includes a `count` field reporting the number of organisation records returned.
+
+The resulting response's payload should look something like this:
+
+```json
+{
+  "data": {
+    "organisations": {
+      "count": 3,
+      "items": []
+    },
+    "registrations": {
+      "count": 3,
+      "items": []
+    },
+    "accreditations": {
+      "count": 3,
+      "items": []
+    }
+  }
+}
+```
 
 ## Consequences
 
-Separation between form processing endpoints and data extraction ones might give us better flexibility, while keeping the `epr-backend` focused on servicing our users. However, that approach is incompatible with [CDP's core piciples](https://portal.cdp-int.defra.cloud/documentation/onboarding/onboarding-considerations.md#microservices) which states:
+Separation between form processing endpoints and data extraction ones might give us better flexibility, while keeping the `epr-backend` focused on servicing our users. However, that approach is incompatible with [CDP's core principles](https://portal.cdp-int.defra.cloud/documentation/onboarding/onboarding-considerations.md#microservices) which states:
 
 > A single database cannot be natively accessed by more than 1 microservice. Data exchange must be via the owning microservices through the use of APIs, messages etc.
