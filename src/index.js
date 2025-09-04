@@ -4,13 +4,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from './common/enums/index.js'
 
-import { createLogger } from './common/helpers/logging/logger.js'
+import { logger } from './common/helpers/logging/logger.js'
 import { startServer } from './start-server.js'
 
 await startServer()
 
 process.on('unhandledRejection', (error) => {
-  const logger = createLogger()
   logger.error(error, {
     message: 'Unhandled rejection',
     event: {

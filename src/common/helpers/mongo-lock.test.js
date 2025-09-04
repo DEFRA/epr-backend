@@ -8,9 +8,9 @@ import {
 const mockLoggerError = vi.fn()
 
 vi.mock('./logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     error: (...args) => mockLoggerError(...args)
-  })
+  }
 }))
 
 describe('Lock Functions', () => {

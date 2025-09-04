@@ -17,19 +17,19 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
 const mockAudit = vi.fn()
-
-const mockInsertOne = vi.fn(() => ({
+const mockInsertOne = vi.fn().mockResolvedValue({
   insertedId: { toString: () => '12345678901234567890abcd' }
-}))
-const mockCountDocuments = vi.fn(() => 1)
+})
 
 vi.mock('../../../common/helpers/logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
-  })
+  }
 }))
+
+const mockCountDocuments = vi.fn(() => 1)
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)

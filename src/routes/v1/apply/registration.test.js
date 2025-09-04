@@ -16,11 +16,11 @@ const mockAudit = vi.fn()
 const mockInsertOne = vi.fn()
 
 vi.mock('../../../common/helpers/logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
-  })
+  }
 }))
 
 vi.mock('@defra/cdp-auditing', () => ({

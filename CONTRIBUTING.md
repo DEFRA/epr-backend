@@ -356,13 +356,11 @@ CDP implements most of the fields suggested by the Defra standards but omits the
 to ensure these are provided in logging calls you write, please follow the example below:
 
 ```javascript
-import { createLogger } from './common/helpers/logging/logger.js'
+import { logger } from './common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from './common/enums/event.js'
-
-const logger = createLogger()
 
 logger.info({
   message: 'Setting up database',

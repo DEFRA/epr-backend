@@ -1,4 +1,4 @@
-import { createLogger } from './logging/logger.js'
+import { logger } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -23,7 +23,6 @@ async function acquireLock(locker, resource) {
   const lock = await locker.lock(resource)
 
   if (!lock) {
-    const logger = createLogger()
     const err = new MongoLockError('Could not acquire mongo resource lock')
 
     logger.error(err, {

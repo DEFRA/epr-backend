@@ -2,9 +2,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
-import { createLogger } from './logging/logger.js'
-
-const logger = createLogger()
+import { logger } from './logging/logger.js'
 
 export function failAction(_request, _h, error) {
   logger.warn({

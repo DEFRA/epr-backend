@@ -12,11 +12,11 @@ const secretFixture = 'secret'
 
 vi.mock('fs')
 vi.mock('./logging/logger.js', () => ({
-  createLogger: () => ({
+  logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
     warn: (...args) => mockLoggerWarn(...args)
-  })
+  }
 }))
 
 describe('getLocalSecret', () => {

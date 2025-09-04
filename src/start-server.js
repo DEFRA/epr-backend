@@ -1,7 +1,7 @@
 import { getConfig } from './config.js'
 
 import { createServer } from './server.js'
-import { createLogger } from './common/helpers/logging/logger.js'
+import { logger } from './common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -12,7 +12,7 @@ async function startServer() {
   const config = getConfig()
   const auditConfig = config.get('audit')
   let server
-
+  const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)
 
   try {
@@ -20,14 +20,13 @@ async function startServer() {
     await server.start()
 
     server.logger.info({
-      message: `Server started successfully at http://${config.get('host')}:${config.get('port')} with Auditing: ${auditConfig.isEnabled ? `on` : `off`}`,
+      message: `Server started successfully at http://${config.get('host')}:${config.get('port')} with Auditing: ${auditingStatus}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.START_SUCCESS
       }
     })
   } catch (err) {
-    const logger = createLogger()
     logger.error(err, {
       message: 'Server failed to start',
       event: {

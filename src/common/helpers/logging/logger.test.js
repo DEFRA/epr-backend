@@ -1,6 +1,9 @@
-import { pino } from 'pino'
+import { vi } from 'vitest'
 
-import { createLogger } from './logger.js'
+let logger
+beforeAll(async () => {
+  ;({ logger } = await import('./logger.js'))
+})
 
 const mockPinoDebug = vi.fn()
 const mockPinoError = vi.fn()
@@ -18,24 +21,22 @@ const mockPino = {
   warn: mockPinoWarn
 }
 
-vi.mock('pino')
+vi.mock('pino', () => ({
+  pino: vi.fn(() => mockPino)
+}))
 
 describe('Logger', () => {
   beforeEach(() => {
-    pino.mockImplementation(() => mockPino)
-  })
-
-  afterEach(() => {
     vi.clearAllMocks()
   })
 
   it('overloads pino error with error object mapping', () => {
-    const logger = createLogger()
     const errorMessage = 'something went wrong'
     const error = new Error(errorMessage)
     const message = 'log message'
 
     logger.error(error, { message })
+
     expect(mockPinoError).toHaveBeenCalledExactlyOnceWith(
       expect.objectContaining({
         error: {
@@ -49,21 +50,21 @@ describe('Logger', () => {
   })
 
   it('calls pino error directly if first argument is not an Error', () => {
-    const logger = createLogger()
     const message = 'plain error message'
     const log = { foo: 'bar' }
 
     logger.error(message, log)
+
     expect(mockPinoError).toHaveBeenCalledWith(message, log)
   })
 
   test.each(['debug', 'fatal', 'info', 'trace', 'warn'])(
     'calls pino method',
     (method) => {
-      const logger = createLogger()
       const message = 'log message'
 
       logger[method](message)
+
       expect(mockPino[method]).toHaveBeenCalledExactlyOnceWith(message)
     }
   )
