@@ -39,6 +39,8 @@ The endpoints must be protected with basic HTTP authentication (HTTPS only).
 
 ### MVP
 
+As a way to alleviate our most immediate needs, we have decided to start with the endpoint that would give us the most visibility on what happens with our organisation applications.
+
 A new `GET /v1/apply/organisations` endpoint is added which provides retrieves a collection of `organisation` documents from our database.
 
 The endpoint is protected by basic authentication. Where to keep the authentication credentials is to be defined during the implementation phase.
