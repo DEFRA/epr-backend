@@ -135,11 +135,9 @@ To test the application run:
 npm run test
 ```
 
-Additional integration tests are available in the epr-backend-journey-tests suite:
-https://github.com/DEFRA/epr-backend-journey-tests
+Additional integration tests are available in the [epr-backend-journey-tests test suite](https://github.com/DEFRA/epr-backend-journey-tests)
 
-To generate data locally for testing (This assumes your service and relevant Docker services are running), please refer to the following documentation:
-https://github.com/DEFRA/epr-backend-journey-tests?tab=readme-ov-file#running-the-data-generator-for-epr-backend
+To generate data locally for testing (This assumes your service and relevant Docker services are running), please refer to the [Test Data Generation documentation](https://github.com/DEFRA/epr-backend-journey-tests?tab=readme-ov-file#running-the-data-generator-for-epr-backend)
 
 ### Production
 
