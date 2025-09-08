@@ -89,7 +89,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - run: docker build -t defradigital/epr-backend:${{github.sha}} .
-      - uses: DEFRA/epr-backend-journey-tests/run-journey-tests@PAE-195-test-docker-logs
+      - uses: DEFRA/epr-backend-journey-tests/run-journey-tests@8bb1d6e1df511e3e8d77dc45fb9209b1d37e22f4
         with:
           epr-backend: ${{github.sha}}
           branch: main
