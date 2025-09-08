@@ -1,10 +1,7 @@
 {
   "info": {
-    "_postman_id": "45f52a77-d0f9-4ef3-a307-66f78ffa0540",
     "name": "EPR Backend",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "_exporter_id": "47294073",
-    "_collection_link": "https://nick-aspinall-6032393.postman.co/workspace/Nick-Aspinall's-Workspace~7f483b02-c6a4-46b7-8b2e-644427bf5ed7/collection/47294073-45f52a77-d0f9-4ef3-a307-66f78ffa0540?action=share&source=collection_link&creator=47294073"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "item": [
     {
@@ -32,7 +29,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+          "raw": "{ /* see src/data/fixtures/organisation.json for example request body */ }"
         },
         "url": {
           "raw": "{{host}}/v1/apply/organisation",
@@ -54,7 +51,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+          "raw": "{ /* see src/data/fixtures/registration.json for example request body */ }"
         },
         "url": {
           "raw": "{{host}}/v1/apply/registration",
@@ -76,7 +73,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"meta\": {\n    \"schemaVersion\": \"2\",\n    \"timestamp\": \"2025-03-25T10:00:00Z\"\n  },\n  \"data\": {\n    \"main\": {\n      \"componentName\": \"Some value from the form\",\n      \"richComponentName\": { \"foo\": \"bar\", \"baz\": true }\n    },\n    \"repeaters\": {\n      \"repeaterName\": [\n        { \"textComponentName\": \"First repeater value\" },\n        { \"richComponentName\": { \"foo\": \"bar\", \"baz\": true } }\n      ]\n    },\n    \"files\": {\n      \"fileComponentName\": [\n        {\n          \"fileId\": \"123-456-789\",\n          \"link\": \"https://forms-designer/file-download/123-456-789\"\n        }\n      ]\n    }\n  }\n}"
+          "raw": "{ /* see src/data/fixtures/accreditation.json for example request body */ }"
         },
         "url": {
           "raw": "{{host}}/v1/apply/accreditation",

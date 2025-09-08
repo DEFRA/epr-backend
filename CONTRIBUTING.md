@@ -110,10 +110,15 @@ npm install
 For basic development and manual testing purposes:
 
 1. Install Postman (or similar)
-2. Import the environments and collections from the [postman dir](./postman)
-3. Run docker compose
-4. [optional] Obtain the API service address with `docker compose ps` and update the Local environment (if necessary)
-5. Call the endpoints you want to test via Postman
+1. Import the [Postman environments and collections](./postman) for this project
+1. Manually update the request payloads in the collection using [the test fixtures](./src/data/fixtures/)
+   - by default the request payloads in the collection are empty (to avoid duplication of the payloads)
+1. Start the service and its dependencies with `docker compose up`
+   - [optional] Obtain the (`epr-backend`) API service address (including port) with `docker compose ps` and update the [Local](./postman/local.postman_environment.json) Postman environment (if necessary)
+1. Call the endpoints you want to test via Postman
+
+> [!NOTE]
+> Postman should only be used to call the API of the service running on your local machine. To call the the API on `dev|test` use the Terminal in CDP Portal
 
 ### Development
 

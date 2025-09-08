@@ -23,6 +23,8 @@ Backend APIs for: Packaging Extended Producer Responsibilities
 | `POST: /v1/apply/registration`  | Registration data submission  |
 | `POST: /v1/apply/accreditation` | Accreditation data submission |
 
+_The application runs at `https://epr-backend.{env}.cdp-int.defra.cloud`, where `{env}` is one of `dev|test|prod`_
+
 ## Contributing
 
 If you intend to contribute to this repository and/or run the application locally, please [see the contributing guidance](./CONTRIBUTING.md).
