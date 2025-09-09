@@ -16,6 +16,7 @@ regulator["👤 Regulator"]
 producer["👤 Producer"]
 site["Site"]
 accreditation["Accreditation"]
+notification["Notification"]
 material["Material"]
 summaryLog["📁 Summary Log"]
 summaryLogArchive["Summary Log Archive"]
@@ -30,6 +31,10 @@ wasteReprocessed["Waste Reprocessed"]
 wasteSentOn["Waste Sent On"]
 
 %% Structure
+notification }|--|{ user : "sent to"
+notification }|--|{ approver : "sent to"
+notification }|--|{ signatory : "sent to"
+notification }|--|{ regulator : "sent to"
 accreditation |o--|| material : "child of"
 wasteRecord }|--|| material : "linked to"
 material }|--|| site : "child of"
@@ -92,6 +97,11 @@ Used to retrieve a list of organisation summary data for Consultants to select f
 #### `GET /v1/organisations/{id}`
 
 Used to retrieve an organisation by ID for Operators to view the sites, materials & accreditations associated with the organisation.
+
+Registrations can be cancelled, Accreditations can be cancelled/suspended.
+
+Cancelled registrations will result in changed permissions for PRNs and no reporting requirements
+Cancelled/Suspended accreditations will result in changed permissions for PRNs and different reporting requirements.
 
 ### Summary Logs
 
@@ -258,6 +268,24 @@ flowchart TD;
     EPR_FRONTEND-->EPR_BFF;
     EPR_ADMIN_FRONTEND-->EPR_ADMIN_BFF;
 
-    EPR_BFF--call SSO protected & unprotected endpoints -->EPR_BACKEND;
-    EPR_ADMIN_BFF--call SSO protected endpoints -->EPR_BACKEND;
+    EPR_BFF--call AAD SSO protected & authenticated endpoints -->EPR_BACKEND;
+    EPR_ADMIN_BFF--call AAD SSO protected endpoints -->EPR_BACKEND;
 ```
+
+### Role-Based Access Control by Entity Type
+
+| Entity Type        | Admin: SuperUser | Admin: Regulator | Public: User | Notes                                                                                             |
+| ------------------ | ---------------- | ---------------- | ------------ | ------------------------------------------------------------------------------------------------- |
+| User               | CRUD             | CRUD             | -R--         | Only draft users eligible for deletion                                                            |
+| Organisation       | -RU-             | -RU-             | -R--         | Created on application                                                                            |
+| Accreditation      | -RU-             | -RU-             | -R--         | Created on application                                                                            |
+| Summary Log        | -R--             | -R--             | CR--         | Summary Logs are immutable and kept for auditing/history purposes                                 |
+| Waste Record       | -R--             | -R--             | -RU-         | Update is result of Summary Log create                                                            |
+| Waste Record Event | -R--             | -R--             | -R--         | Update is result of Waste Record update                                                           |
+| Waste Balance      | -R--             | -R--             | -RU-         | Update is result of Summary Log create or PRN create/update                                       |
+| PRN                | -RU-             | -RU-             | CRU-         |                                                                                                   |
+| PRN Event          | -R--             | -R--             | -R--         | Created on PRN actions, stored for history purposes, immutable                                    |
+| Report             | -R--             | -R--             | CRU-         |                                                                                                   |
+| Notification       | -RU-             | -RU-             | -RU-         | All Notifications are system generated, updates take place via status changes on related entities |
+| Regulator          | CRUD             | ----             | -R--         | Used for managing regulator access                                                                |
+| System Log         | -R--             | ----             | ----         | For monitoring purposes, not to be confused with SOC auditing                                     |
