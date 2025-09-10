@@ -221,55 +221,55 @@ TBD
 
 ## Ingestion of Registrations & Accreditations data from Regulators
 
-TBD
+There are two ways to ingest data from Regulators:
 
-## Potential approach to de-risking project
+1. Through a data processing pipeline, where a feed of data is provided via a file store, e.g. SFTP uploads, processed on a schedule and then imported into the system
+2. Directly via an Admin UI: Regulators log in, locate entities and edit them directly
 
-### Spike tickets:
+Benefits of Admin UI over a data processing pipeline:
 
-1. Investigate how other teams are using Admin Frontends
-2. Investigate Defra ID, including AAD SSO
-3. PoC Admin Frontend, locked down by IP address (VPN only)
-4. PAE-203: with SSO protection
-5. API integration using SSO
-6. Using Prototype Kit for Frontend
+1. Monitoring capability of the running System from day one
+2. Provides Regulators access to the system
+3. Management of Regulator access
+4. Provides a System Log of actions completed by colleagues, regulators & users
 
-> Of these, items that also de-risks the EPR frontend are: 2, 3 (limited), 4, 5 & 6.
-
-Benefits of Admin Frontend:
-
-1. Starts the de-risking of the frontend early in the project
-2. System observability
-3. Access to a paper-trail/auditing of actions completed by users
-4. Formations of a system that provides Regulatory access to the system
-
-Other spikes, that could be started soon:
-
-1. CDP Uploader
-2. S3 storage, e.g. Summary Logs
-3. Data merging/migration
-4. Investigate trade-offs between storing Summary Log files vs Waste Record History in database
-
-### Basic solution overview that incorporates front-end & admin front-end
+### Services overview
 
 ```mermaid
 flowchart TD;
-    USER[User]
-    COLLEAGUE[Colleague]
-    EPR_BACKEND[EPR Backend]
-    EPR_FRONTEND["EPR Frontend (public)"]
-    EPR_BFF[EPR Backend For Frontend]
-    EPR_ADMIN_FRONTEND[EPR Admin Frontend]
-    EPR_ADMIN_BFF[EPR Admin Backend For Frontend]
+    USER((User))
+    COLLEAGUE((Colleague))
+    REGULATOR((Regulator))
 
-    USER-- via Defra ID -->EPR_FRONTEND;
-    COLLEAGUE-- via VPN & Defra ID w/ AAD SSO -->EPR_ADMIN_FRONTEND;
+  classDef invisible opacity:0
 
-    EPR_FRONTEND-->EPR_BFF;
-    EPR_ADMIN_FRONTEND-->EPR_ADMIN_BFF;
+  subgraph protected zone
+    subgraph PROTECTED_ZONE_NESTED
+      EPR_ADMIN_UI([EPR Admin UI])
+      EPR_ADMIN_BFF(EPR Admin Backend For Frontend)
+      EPR_BACKEND{{EPR Backend}}
+    end
+  end
 
-    EPR_BFF--call AAD SSO protected & authenticated endpoints -->EPR_BACKEND;
-    EPR_ADMIN_BFF--call AAD SSO protected endpoints -->EPR_BACKEND;
+  subgraph public zone
+    subgraph PUBLIC_ZONE_NESTED
+      EPR_FRONTEND([EPR Frontend])
+      EPR_BFF(EPR Backend For Frontend)
+    end
+  end
+
+  PROTECTED_ZONE_NESTED:::invisible
+  PUBLIC_ZONE_NESTED:::invisible
+
+  USER-. public access: Defra ID .->EPR_FRONTEND;
+  REGULATOR-. restricted access: AAD SSO .->EPR_ADMIN_UI;
+  COLLEAGUE-. restricted access: AAD SSO .->EPR_ADMIN_UI;
+
+  EPR_FRONTEND-->EPR_BFF;
+  EPR_ADMIN_UI-->EPR_ADMIN_BFF;
+
+  EPR_BFF--access authenticated endpoints -->EPR_BACKEND;
+  EPR_ADMIN_BFF--access AAD SSO protected endpoints -->EPR_BACKEND;
 ```
 
 ### Role-Based Access Control by Entity Type
