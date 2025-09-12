@@ -27,12 +27,12 @@ The service will have the following characteristics:
 - It will be based on the CDP Node.js Frontend Template
 - It will live in CDP's private zone with all users signing in via AAD/SSO
 - The `server` part of the service will act as a backend for the frontend (BFF approach) taking care of
-  auth flows, enforcing security policies where applicable and, potentially, a number of other tasks
+  auth flows, enforcing security policies where applicable, and potentially, a number of other tasks
 - It will use a simple role-based access control model (RBAC) to provide the best user experience and prevent unnecessary requests to `epr-backend` from unauthorised users
 
 ### Place in the architecture
 
-The following diagram outlines how `epr-portal` fits in the overall architecture of the EPR service:
+The following diagram outlines how `epr-portal` fits into the overall architecture of the EPR service:
 
 ```mermaid
 flowchart TD;
@@ -83,12 +83,12 @@ This service is taking inspiration from the following projects in the CDP space:
 - [Forms Designer](https://github.com/DEFRA/forms-designer)
 - [BTMS Portal Frontend](https://github.com/DEFRA/btms-portal-frontend)
 
-A PoC of a first private endpoint in the `epr-backend` service is already underway which is helping refine the system's requirements and future ADRs.
+A PoC of a first private endpoint in the `epr-backend` service is already underway, which is helping refine the system's requirements and future ADRs.
 
 ## Consequences
 
-Having an Admin UI in CDP's private space adds an additional layer of security to the system by preventing making access to the private network an additional requirement.
+Having an Admin UI in CDP's private space adds an additional layer of security to the system by making access to the private network an additional requirement.
 
-From the organisational point of view, it establishes a clear separation between the publicly and privately accessible functions while helping the product team to separate concerns and define parallel streams of works, which will help us divide our work.
+From the organisational point of view, it establishes a clear separation between the publicly and privately accessible functions while helping the product team to separate concerns and define parallel streams of works, which will help us divide our tasks.
 
-The full scope of the project is still being defined as part of the (High Level Design)(../discovery/pepr-hld.md), but we believe there are no risks associated with creating an Admin UI as starting point for managing the needs of system administrators and the Regulator and as a gateway to the protected endpoints in `epr-backend`.
+The full scope of the project is still being defined as part of the (High Level Design)(../discovery/pepr-hld.md), but we believe there are no risks associated with creating an Admin UI as a starting point for managing the needs of system administrators and the Regulator, and as a gateway to the protected endpoints in `epr-backend`.
