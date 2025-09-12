@@ -43,6 +43,7 @@
     * [Access](#access)
     * [Using Templates](#using-templates)
     * [Development Notes](#development-notes)
+  * [Further Documentation](#further-documentation)
 <!-- TOC -->
 
 <!-- prettier-ignore-end -->
@@ -530,3 +531,11 @@ We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automa
 - API keys are stored securely in CDP — never commit them to the repo. See [Secrets](#secrets) for how to handle them.
 - New templates must be created in GOV.UK Notify and their IDs updated in code.
 - In non-live mode, only approved recipient email addresses can be used.
+
+## Further Documentation
+
+This `CONTRIBUTING.md` focuses on repository-specific guidance such as setup, development, and deployment.
+
+For wider engineering documentation (including runbooks, hotfix process, non-technical resources, and dummy data assets), please see our Confluence space:
+
+[Engineering Documentation Home](https://eaflood.atlassian.net/wiki/spaces/MWR/pages/5895749782/Engineering)
