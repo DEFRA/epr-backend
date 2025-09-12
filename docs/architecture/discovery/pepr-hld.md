@@ -267,49 +267,49 @@ flowchart TD;
 
 | Permission                | Super User | Regulator | Approved Person | PRN Signatory | User |
 | ------------------------- | ---------- | --------- | --------------- | ------------- | ---- |
-| **User:view**             | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **User:add**              | ✔         | ✔        |                 |               |      |
-| **User:edit**             | ✔         | ✔        |                 |               |      |
-| **User:remove**           | ✔         | ✔        |                 |               |      |
+| **User:view**             | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **User:add**              | ✅         | ✅        |                 |               |      |
+| **User:edit**             | ✅         | ✅        |                 |               |      |
+| **User:remove**           | ✅         | ✅        |                 |               |      |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Organisation:view**     | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **Organisation:edit**     | ✔         | ✔        |                 |               |      |
-| **Organisation:approve**  | ✔         | ✔        |                 |               |      |
-| **Organisation:reject**   | ✔         | ✔        |                 |               |      |
+| **Organisation:view**     | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **Organisation:edit**     | ✅         | ✅        |                 |               |      |
+| **Organisation:approve**  | ✅         | ✅        |                 |               |      |
+| **Organisation:reject**   | ✅         | ✅        |                 |               |      |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Material:view**         | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **Material:edit**         | ✔         | ✔        |                 |               |      |
-| **Material:approve**      | ✔         | ✔        |                 |               |      |
-| **Material:reject**       | ✔         | ✔        |                 |               |      |
+| **Material:view**         | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **Material:edit**         | ✅         | ✅        |                 |               |      |
+| **Material:approve**      | ✅         | ✅        |                 |               |      |
+| **Material:reject**       | ✅         | ✅        |                 |               |      |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Accreditation:view**    | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **Accreditation:edit**    | ✔         | ✔        |                 |               |      |
-| **Accreditation:approve** | ✔         | ✔        |                 |               |      |
-| **Accreditation:reject**  | ✔         | ✔        |                 |               |      |
+| **Accreditation:view**    | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **Accreditation:edit**    | ✅         | ✅        |                 |               |      |
+| **Accreditation:approve** | ✅         | ✅        |                 |               |      |
+| **Accreditation:reject**  | ✅         | ✅        |                 |               |      |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Summary-Log:view**      | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **Summary-Log:validate**  |            |           | ✔              | ✔            | ✔   |
-| **Summary-Log:submit**    |            |           | ✔              | ✔            | ✔   |
+| **Summary-Log:view**      | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **Summary-Log:validate**  |            |           | ✅              | ✅            | ✅   |
+| **Summary-Log:submit**    |            |           | ✅              | ✅            | ✅   |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Waste-Record:view**     | ✔         | ✔        | ✔              | ✔            | ✔   |
+| **Waste-Record:view**     | ✅         | ✅        | ✅              | ✅            | ✅   |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Waste-Balance:view**    | ✔         | ✔        | ✔              | ✔            | ✔   |
+| **Waste-Balance:view**    | ✅         | ✅        | ✅              | ✅            | ✅   |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **PRN:view**              | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **PRN:add**               |            |           | ✔              | ✔            | ✔   |
-| **PRN:edit**              |            |           | ✔              | ✔            | ✔   |
-| **PRN:approve**           |            |           |                 | ✔            |      |
-| **PRN:reject**            |            |           |                 | ✔            |      |
+| **PRN:view**              | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **PRN:add**               |            |           | ✅              | ✅            | ✅   |
+| **PRN:edit**              |            |           | ✅              | ✅            | ✅   |
+| **PRN:approve**           |            |           |                 | ✅            |      |
+| **PRN:reject**            |            |           |                 | ✅            |      |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Report:view**           | ✔         | ✔        | ✔              | ✔            | ✔   |
-| **Report:add**            |            |           | ✔              | ✔            | ✔   |
-| **Report:edit**           |            |           | ✔              | ✔            | ✔   |
-| **Report:approve**        |            |           | ✔              |               |      |
-| **Report:reject**         |            |           | ✔              |               |      |
+| **Report:view**           | ✅         | ✅        | ✅              | ✅            | ✅   |
+| **Report:add**            |            |           | ✅              | ✅            | ✅   |
+| **Report:edit**           |            |           | ✅              | ✅            | ✅   |
+| **Report:approve**        |            |           | ✅              |               |      |
+| **Report:reject**         |            |           | ✅              |               |      |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **Notification:view**     | ✔         | ✔        | ✔              | ✔            | ✔   |
+| **Notification:view**     | ✅         | ✅        | ✅              | ✅            | ✅   |
 | =====================     | ========== | ========= | =============== | ============= | ==== |
-| **System-Log:view**       | ✔         |           |                 |               |      |
+| **System-Log:view**       | ✅         |           |                 |               |      |
 
 ### Waste Record
 
