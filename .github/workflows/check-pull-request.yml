@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check branch name
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
@@ -30,7 +30,7 @@ jobs:
               core.exportVariable('ticketKey', ticketKey.toUpperCase());
             }
       - name: Add ticket link to PR description
-        uses: actions/github-script@v6
+        uses: actions/github-script@v8
         if: ${{ github.actor != 'dependabot[bot]' }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
