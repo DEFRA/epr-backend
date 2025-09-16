@@ -25,10 +25,12 @@ The goal of the service is to act as an administrative tool for both system admi
 The service will have the following characteristics:
 
 - It will be based on the CDP Node.js Frontend Template
-- It will live in CDP's private zone with all users signing in via AAD/SSO
-- The `server` part of the service will act as a backend for the frontend (BFF approach) taking care of
-  auth flows, enforcing security policies where applicable, and potentially, a number of other tasks
-- It will use a simple role-based access control model (RBAC) to provide the best user experience and prevent unnecessary requests to `epr-backend` from unauthorised users
+- It will live in CDP's protected zone with all users signing in via AAD/SSO
+- The app will follow a role-based access control approach (RBAC) with only two roles (at least initially): System Administrator and Regulator.
+- A user's role will be inferred from their AAD auth token claims
+- The app will follow a "route guarding" approach by which most pages will be protected by access control and users will be redirected to a login page (if not logged in) or a not-found page (if logged-in but don't have permission to access that page).
+- The app will get all its data from `epr-backend`. Calls to `epr-backend` will include AAD's auth token to ensure the user is authorised to access the affected endpoint.
+- The app will take inspiration from mature projects such as `forms-designer` and `cdp-portal-frontend` for its implementation of authentication flows
 
 ### Place in the architecture
 
@@ -45,10 +47,7 @@ flowchart TD;
 
   subgraph protected zone
     subgraph PROTECTED-ZONE-NESTED
-      subgraph epr-portal
-        EPR-ADMIN-UI([EPR Admin UI])
-        EPR-ADMIN-BFF(EPR Admin Backend For Frontend)
-      end
+      EPR-ADMIN-UI([EPR Admin UI])
       EPR-BACKEND{{EPR Backend}}
     end
   end
@@ -56,23 +55,21 @@ flowchart TD;
   subgraph public zone
     subgraph PUBLIC-ZONE-NESTED
       EPR-FRONTEND([EPR Frontend])
-      EPR-BFF(EPR Backend For Frontend)
     end
   end
 
   PROTECTED-ZONE-NESTED:::invisible
   PUBLIC-ZONE-NESTED:::invisible
-  epr-portal:::adminBox
+EPR-ADMIN-UI:::adminBox
+
 
   USER-. public access: Defra ID .->EPR-FRONTEND;
   REGULATOR-. restricted access: AAD SSO .->EPR-ADMIN-UI;
   SUPER-USER-. restricted access: AAD SSO .->EPR-ADMIN-UI;
 
-  EPR-FRONTEND-->EPR-BFF;
-  EPR-ADMIN-UI-->EPR-ADMIN-BFF;
 
-  EPR-BFF--access authenticated endpoints -->EPR-BACKEND;
-  EPR-ADMIN-BFF--access AAD SSO protected endpoints -->EPR-BACKEND;
+  EPR-FRONTEND--access authenticated endpoints -->EPR-BACKEND;
+  EPR-ADMIN-UI--access AAD SSO protected endpoints -->EPR-BACKEND;
 ```
 
 ### Other considerations
@@ -83,7 +80,7 @@ This service is taking inspiration from the following projects in the CDP space:
 - [Forms Designer](https://github.com/DEFRA/forms-designer)
 - [BTMS Portal Frontend](https://github.com/DEFRA/btms-portal-frontend)
 
-A PoC of a first private endpoint in the `epr-backend` service is already underway, which is helping refine the system's requirements and future ADRs.
+A proof-of-concept of a first protected endpoint in the `epr-backend` service is already being discussed, which is helping refine the system's requirements and future ADRs.
 
 ## Consequences
 
