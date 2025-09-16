@@ -1,10 +1,14 @@
 import {
+  extractAddress,
   extractAnswers,
+  extractOrgAddress,
   extractEmail,
   extractOrgId,
   extractOrgName,
   extractReferenceNumber,
-  getRegulatorEmail
+  getRegulatorEmail,
+  extractCompaniesHouseNumber,
+  extractReprocessingNations
 } from './extract-answers.js'
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 import { getConfig } from '../../../config.js'
@@ -198,5 +202,96 @@ describe('getRegulatorEmail', () => {
     }
 
     expect(getRegulatorEmail(data)).toBeUndefined()
+  })
+
+  describe('extractOrgAddress', () => {
+    it('should extract address from answers', () => {
+      const answers = [
+        {
+          shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ADDRESS,
+          value: 'Palace of Westminster,London,SW1A 0AA'
+        }
+      ]
+      expect(extractOrgAddress(answers)).toEqual({
+        line1: 'Palace of Westminster',
+        line2: null,
+        city: 'London',
+        county: null,
+        postcode: 'SW1A 0AA'
+      })
+    })
+
+    it('should return undefined if address is not of known format', () => {
+      const answers = [
+        {
+          shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ADDRESS,
+          value: 'Palace of Westminster,London'
+        }
+      ]
+      expect(extractAddress(answers)).toBeNull()
+    })
+  })
+
+  describe('extractCompaniesHouseNumber', () => {
+    it('should extract england company registration number from answers', () => {
+      const answers = [
+        {
+          shortDescription:
+            FORM_FIELDS_SHORT_DESCRIPTIONS.COMPANIES_HOUSE_NUMBER,
+          value: '12345678'
+        }
+      ]
+      expect(extractCompaniesHouseNumber(answers)).toEqual('12345678')
+    })
+
+    it('should extract scottish company registration number from answers', () => {
+      const answers = [
+        {
+          shortDescription:
+            FORM_FIELDS_SHORT_DESCRIPTIONS.COMPANIES_HOUSE_NUMBER,
+          value: 'SC345678'
+        }
+      ]
+      expect(extractCompaniesHouseNumber(answers)).toEqual('SC345678')
+    })
+
+    it('should return null if company registration number is not provided', () => {
+      expect(extractCompaniesHouseNumber([])).toBeNull()
+    })
+  })
+
+  describe('extractReprocessingNations', () => {
+    it('should extract reprocessing nations from answers', () => {
+      const answers = [
+        {
+          shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.REPROCESSING_NATIONS,
+          value: 'England, Northern Ireland, Scotland, Wales'
+        }
+      ]
+      expect(extractReprocessingNations(answers)).toEqual([
+        'England',
+        'Northern Ireland',
+        'Scotland',
+        'Wales'
+      ])
+    })
+
+    it('should extract only valid reprocessing nations from answers', () => {
+      const answers = [
+        {
+          shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.REPROCESSING_NATIONS,
+          value: 'England, Northern Ireland, Scotland, Waes'
+        }
+      ]
+      expect(extractReprocessingNations(answers)).toEqual([
+        'England',
+        'Northern Ireland',
+        'Scotland'
+      ])
+    })
+
+    it('should return null if reprocessing nations is not provided', () => {
+      expect(extractReprocessingNations([])).toEqual([])
+    })
   })
 })
