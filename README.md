@@ -38,6 +38,8 @@ also see the [Architecture Decision Records](docs/architecture/decisions/index.m
 
 You can find [this service's runbooks here](https://eaflood.atlassian.net/wiki/spaces/MWR/pages/5873762458/Runbooks).
 
+Testing only.
+
 ## Known issues
 
 None
