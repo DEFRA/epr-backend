@@ -1,6 +1,6 @@
 # 5. Admin UI
 
-Date: 2025-09-12
+Date: 2025-09-17
 
 ## Status
 
@@ -16,7 +16,7 @@ It's especially pressing for the team supporting the EPR service to gain the abi
 
 ## Decision
 
-We have chosen to build an Admin UI (`epr-portal`) for the EPR service.
+We have chosen to build an Admin UI (`epr-re-ex-admin-frontend`) for the EPR service.
 
 The goal of the service is to act as an administrative tool for both system administrators and for the Regulator of EPR service to perform their duties based on different user's authorisation levels.
 
@@ -25,16 +25,16 @@ The goal of the service is to act as an administrative tool for both system admi
 The service will have the following characteristics:
 
 - It will be based on the CDP Node.js Frontend Template
-- It will live in CDP's protected zone with all users signing in via AAD/SSO
+- It will live in CDP's protected zone with all users signing in via AAD/SSO (Entra Id)
 - The app will follow a role-based access control approach (RBAC) with only two roles (at least initially): System Administrator and Regulator.
-- A user's role will be inferred from their AAD auth token claims
-- The app will follow a "route guarding" approach by which most pages will be protected by access control and users will be redirected to a login page (if not logged in) or a not-found page (if logged-in but don't have permission to access that page).
-- The app will get all its data from `epr-backend`. Calls to `epr-backend` will include AAD's auth token to ensure the user is authorised to access the affected endpoint.
-- The app will take inspiration from mature projects such as `forms-designer` and `cdp-portal-frontend` for its implementation of authentication flows
+- A user's role will be derived from their AAD auth token claims. Specifically, by the user belonging to the appropriate AD security group. This means, the app will not rely, at least initially, on any additional service (such as an entitlements API) for obtaining credentials.
+- User administration will be, at least initially, performed outside of the app by managing the membership of the appropriate AD security groups.
+- The app will follow a "route guarding" approach by which pages will be protected by access control and users will be redirected to Microsoft's login page (if not logged in) or they will receive a 403 response and see a "You do not have access to this page" message without a redirect.
+- The app will get all its data from `epr-backend`. Calls to `epr-backend` will relay AAD's auth token to ensure the user is authorised to access the affected endpoint.
 
-### Place in the architecture
+### Place in the Re-Ex EPR architecture
 
-The following diagram outlines how `epr-portal` fits into the overall architecture of the EPR service:
+The following diagram outlines how `epr-re-ex-admin-frontend` fits into the overall architecture of the EPR service:
 
 ```mermaid
 flowchart TD;
@@ -47,7 +47,7 @@ flowchart TD;
 
   subgraph protected zone
     subgraph PROTECTED-ZONE-NESTED
-      EPR-ADMIN-UI([EPR Admin UI])
+      EPR-ADMIN-UI([epr-re-ex-admin-frontend])
       EPR-BACKEND{{EPR Backend}}
     end
   end
@@ -60,7 +60,7 @@ flowchart TD;
 
   PROTECTED-ZONE-NESTED:::invisible
   PUBLIC-ZONE-NESTED:::invisible
-EPR-ADMIN-UI:::adminBox
+  EPR-ADMIN-UI:::adminBox
 
 
   USER-. public access: Defra ID .->EPR-FRONTEND;
@@ -88,4 +88,4 @@ Having an Admin UI in CDP's private space adds an additional layer of security t
 
 From the organisational point of view, it establishes a clear separation between the publicly and privately accessible functions while helping the product team to separate concerns and define parallel streams of works, which will help us divide our tasks.
 
-The full scope of the project is still being defined as part of the (High Level Design)(../discovery/pepr-hld.md), but we believe there are no risks associated with creating an Admin UI as a starting point for managing the needs of system administrators and the Regulator, and as a gateway to the protected endpoints in `epr-backend`.
+The full scope of the project is still being defined as part of the (High Level Design)(../discovery/pepr-hld.md), but we believe there are no risks associated with creating an Admin UI as a starting point for managing the needs of Service Maintainers and the Regulator, and as a gateway to the protected endpoints in `epr-backend`.
