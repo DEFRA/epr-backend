@@ -3,6 +3,52 @@
 > [!WARNING]
 > This document is a work in progress and is subject to change.
 
+<!-- prettier-ignore-start -->
+<!-- TOC -->
+* [pEPR Low level design](#pepr-low-level-design)
+  * [API Endpoints](#api-endpoints)
+    * [Organisations](#organisations)
+      * [`GET /v1/organisations`](#get-v1organisations)
+      * [`GET /v1/organisations/{id}`](#get-v1organisationsid)
+    * [Summary Logs](#summary-logs)
+      * [`POST /v1/organisations/{id}/materials/{id}/summary-logs/validate`](#post-v1organisationsidmaterialsidsummary-logsvalidate)
+      * [`POST /v1/organisations/{id}/materials/{id}/summary-logs/{id}/submit`](#post-v1organisationsidmaterialsidsummary-logsidsubmit)
+    * [Waste Records](#waste-records)
+      * [`GET /v1/organisations/{id}/materials/{id}/waste-records`](#get-v1organisationsidmaterialsidwaste-records)
+      * [`GET /v1/organisations/{id}/materials/{id}/waste-records/{id}`](#get-v1organisationsidmaterialsidwaste-recordsid)
+      * [`PUT /v1/organisations/{id}/materials/{id}/waste-records/{id}/status`](#put-v1organisationsidmaterialsidwaste-recordsidstatus)
+    * [PRNs](#prns)
+      * [`POST /v1/organisations/{id}/materials/{id}/packaging-recycling-notes`](#post-v1organisationsidmaterialsidpackaging-recycling-notes)
+      * [`PUT /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}`](#put-v1organisationsidmaterialsidpackaging-recycling-notesid)
+      * [`PUT /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}/status`](#put-v1organisationsidmaterialsidpackaging-recycling-notesidstatus)
+      * [`GET /v1/organisations/{id}/materials/{id}/packaging-recycling-notes`](#get-v1organisationsidmaterialsidpackaging-recycling-notes)
+      * [`GET /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}`](#get-v1organisationsidmaterialsidpackaging-recycling-notesid)
+      * [RPD Integration](#rpd-integration)
+    * [Reports](#reports)
+      * [`POST /v1/organisations/{id}/materials/{id}/reports`](#post-v1organisationsidmaterialsidreports)
+      * [`PUT /v1/organisations/{id}/materials/{id}/reports/{id}`](#put-v1organisationsidmaterialsidreportsid)
+      * [`PUT /v1/organisations/{id}/materials/{id}/reports/{id}/approve`](#put-v1organisationsidmaterialsidreportsidapprove)
+      * [`GET /v1/organisations/{id}/reports`](#get-v1organisationsidreports)
+      * [`GET /v1/organisations/{id}/materials/{id}/reports`](#get-v1organisationsidmaterialsidreports)
+      * [`GET /v1/organisations/{id}/materials/{id}/reports/{id}`](#get-v1organisationsidmaterialsidreportsid)
+  * [CRUD by Entity Type](#crud-by-entity-type)
+  * [Role-Based Access Control](#role-based-access-control)
+  * [Entity Relationships](#entity-relationships)
+    * [Users](#users)
+    * [Waste Record](#waste-record)
+      * [Type: Received](#type-received)
+      * [Type: processed](#type-processed)
+      * [Type: sentOn](#type-senton)
+    * [Waste Balance](#waste-balance)
+    * [PRN](#prn)
+    * [Report](#report)
+    * [Summary Log upload & ingest](#summary-log-upload--ingest)
+      * [Phase 1 - upload, virus scan & creation of SUMMARY-LOG entity](#phase-1---upload-virus-scan--creation-of-summary-log-entity)
+      * [Phase 2 - processing and submission of summary log](#phase-2---processing-and-submission-of-summary-log)
+<!-- TOC -->
+
+<!-- prettier-ignore-end -->
+
 ## API Endpoints
 
 The endpoints below are grouped by the entity they are associated with, the idea here being by providing
