@@ -28,7 +28,7 @@ The service will have the following characteristics:
 - It will live in CDP's protected zone with all users signing in via AAD/SSO (Entra Id)
 - Authorisation will be based on role-based access control approach (RBAC) supporting only two different roles (at least initially): System Administrator and Regulator.
 - A simple secret-based mechanism will be used initially to map users to roles. In the future a more sophisticated mechanism that enables user management capabilities will need to be devised. This implies that user administration will be performed manually by the team in the initial phases.
-- Like on similar projects, all AAD (Entra Id) users will be allowed to login (authenticate). Access to the different resources will follow a "route guarding" approach by which different pages will require different user roles, i.e. a user without the right access level will receive 403 response and see a "You do not have access to this page" message when visiting that page/resource.
+- All AAD (Entra Id) users will be allowed to login (authenticate). Access to the different resources will follow a "route guarding" approach by which different pages will require different user roles, i.e. a user without the right access level will receive 403 response and see a "You do not have access to this page" message when visiting that page/resource.
 - The app will get all its data from `epr-backend`. Calls to `epr-backend` will relay AAD's auth token to ensure the user is authorised to access the affected endpoint.
 - The app will not support multiple languages, at least not initially, and English will be the only language available.
 
