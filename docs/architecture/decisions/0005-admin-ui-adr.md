@@ -39,7 +39,7 @@ The following diagram outlines how `epr-re-ex-admin-frontend` fits into the over
 ```mermaid
 flowchart TD;
     USER((User))
-    SUPER-USER((Super User))
+    SUPER-USER((Service Maintainer))
     REGULATOR((Regulator))
 
   classDef invisible opacity:0
@@ -48,13 +48,13 @@ flowchart TD;
   subgraph protected zone
     subgraph PROTECTED-ZONE-NESTED
       EPR-ADMIN-UI([epr-re-ex-admin-frontend])
-      EPR-BACKEND{{EPR Backend}}
+      EPR-BACKEND{{epr-backend}}
     end
   end
 
   subgraph public zone
     subgraph PUBLIC-ZONE-NESTED
-      EPR-FRONTEND([EPR Frontend])
+      EPR-FRONTEND([epr-frontend])
     end
   end
 
@@ -92,7 +92,7 @@ The full scope of the project is still being defined as part of the [High Level 
 
 In the future a more sophisticated mechanism that enables user management capabilities will need to be devised. This implies that user administration will be performed manually by the team in the initial phases.
 
-The decision to **authenticate** users with AAD, with **authorization** happening within the service (via a simple RBAC implementation)
+The decision to **authenticate** users with AAD, with **authorization** happening within the service (via a simple RBAC implementation):
 
 - is consistent with the approach taken in other CDP services (so should be familiar to future maintainers)
 - means user administration will be performed manually by the team in the initial phases
