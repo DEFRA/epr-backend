@@ -26,11 +26,11 @@ The service will have the following characteristics:
 
 - It will be based on the CDP Node.js Frontend Template
 - It will live in CDP's protected zone with all users signing in via AAD/SSO (Entra Id)
-- The app will follow a role-based access control approach (RBAC) with only two roles (at least initially): System Administrator and Regulator.
-- A user's role will be derived from their AAD auth token claims. Specifically, by the user belonging to the appropriate AD security group. This means, the app will not rely, at least initially, on any additional service (such as an entitlements API) for obtaining credentials.
-- User administration will be, at least initially, performed outside of the app by managing the membership of the appropriate AD security groups.
-- The app will follow a "route guarding" approach by which pages will be protected by access control and users will be redirected to Microsoft's login page (if not logged in) or they will receive a 403 response and see a "You do not have access to this page" message without a redirect.
+- Authorisation will be based on role-based access control approach (RBAC) supporting only two different roles (at least initially): System Administrator and Regulator.
+- A simple secret-based mechanism will be used initially to map users to roles. In the future a more sophisticated mechanism that enables user management capabilities will need to be devised. This implies that user administration will be performed manually by the team in the initial phases.
+- Like on similar projects, all AAD (Entra Id) users will be allowed to login (authenticate). Access to the different resources will follow a "route guarding" approach by which different pages will require different user roles, i.e. a user without the right access level will receive 403 response and see a "You do not have access to this page" message when visiting that page/resource.
 - The app will get all its data from `epr-backend`. Calls to `epr-backend` will relay AAD's auth token to ensure the user is authorised to access the affected endpoint.
+- The app will not support multiple languages, at least not initially, and English will be the only language available.
 
 ### Place in the Re-Ex EPR architecture
 
