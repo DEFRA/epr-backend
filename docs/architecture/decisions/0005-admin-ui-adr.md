@@ -38,35 +38,31 @@ The following diagram outlines how `epr-re-ex-admin-frontend` fits into the over
 
 ```mermaid
 flowchart TD;
-    USER((User))
-    SUPER-USER((Service Maintainer))
-    REGULATOR((Regulator))
+  USER((User))
+  SUPER-USER((Service<br>Maintainer))
+  REGULATOR((Regulator))
 
   classDef invisible opacity:0
+  classDef discreet fill:transparent,stroke:gray,color:gray
   classDef adminBox fill:blue,stroke:lightblue,color:white
 
-  subgraph protected zone
-    subgraph PROTECTED-ZONE-NESTED
-      EPR-ADMIN-UI([epr-re-ex-admin-frontend])
-      EPR-BACKEND{{epr-backend}}
-    end
-  end
+  EPR-ADMIN-UI([epr-re-ex-admin-frontend])
+  EPR-BACKEND{{epr-backend}}
+  EPR-FRONTEND([epr-frontend])
 
-  subgraph public zone
-    subgraph PUBLIC-ZONE-NESTED
-      EPR-FRONTEND([epr-frontend])
-    end
-  end
+  PUBLIC-ALB[public load balancer]
+  PROTECTED-ALB[private load balancer]
 
-  PROTECTED-ZONE-NESTED:::invisible
-  PUBLIC-ZONE-NESTED:::invisible
+  PUBLIC-ALB:::discreet
+  PROTECTED-ALB:::discreet
   EPR-ADMIN-UI:::adminBox
 
+  USER-. public access: Defra Id .-> PUBLIC-ALB;
+  PUBLIC-ALB-->EPR-FRONTEND;
 
-  USER-. public access: Defra ID .->EPR-FRONTEND;
-  REGULATOR-. restricted access: AAD SSO .->EPR-ADMIN-UI;
-  SUPER-USER-. restricted access: AAD SSO .->EPR-ADMIN-UI;
-
+  REGULATOR-. restricted access: AAD SSO .->PROTECTED-ALB;
+  SUPER-USER-. restricted access: AAD SSO .->PROTECTED-ALB;
+  PROTECTED-ALB-->EPR-ADMIN-UI;
 
   EPR-FRONTEND--access authenticated endpoints -->EPR-BACKEND;
   EPR-ADMIN-UI--access AAD SSO protected endpoints -->EPR-BACKEND;
