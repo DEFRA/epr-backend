@@ -28,7 +28,7 @@ In addition, it will likely be more robust, less maintenance and easier to reaso
 
 ```mermaid
 flowchart TD;
-    SUPER-USER((Super User))
+    SUPER-USER((Service Maintainer))
     REGULATOR((Regulator))
 
   classDef invisible opacity:0
