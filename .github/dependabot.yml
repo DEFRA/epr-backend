@@ -38,12 +38,10 @@ updates:
         patterns:
           - '*'
 
-    # Schedule run every Thursday, local time
+    # Schedule run nightly
     schedule:
-      interval: weekly
-      day: 'thursday'
-      time: '10:30'
-      timezone: 'Europe/London'
+      interval: "cron"
+      cronjob: "0 0 * * *"
 
     versioning-strategy: increase
 
@@ -55,9 +53,7 @@ updates:
   - package-ecosystem: github-actions
     directory: /
 
-    # Schedule run every Thursday, local time
+    # Schedule run nightly
     schedule:
-      interval: weekly
-      day: 'thursday'
-      time: '10:30'
-      timezone: 'Europe/London'
+      interval: "cron"
+      cronjob: "0 0 * * *"
