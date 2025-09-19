@@ -61,19 +61,13 @@ flowchart TD;
     REGULATOR((Regulator))
 
   classDef invisible opacity:0
+  classDef discreet fill:transparent,stroke:gray,color:gray
 
-  subgraph protected zone
-    subgraph PROTECTED-ZONE-NESTED
-      EPR-ADMIN-UI([EPR Admin UI])
-      EPR-BACKEND{{EPR Backend}}
-    end
-  end
-
-  subgraph public zone
-    subgraph PUBLIC-ZONE-NESTED
-      EPR-FRONTEND([EPR Frontend])
-    end
-  end
+  PROTECTED-ALB[private load balancer]
+  PUBLIC-ALB[public load balancer]
+  EPR-ADMIN-UI([EPR Admin UI])
+  EPR-BACKEND{{EPR Backend}}
+  EPR-FRONTEND([EPR Frontend])
 
   subgraph external systems
     subgraph EXTERNAL-SYSTEMS
@@ -81,15 +75,16 @@ flowchart TD;
     end
   end
 
-  PROTECTED-ZONE-NESTED:::invisible
-  PUBLIC-ZONE-NESTED:::invisible
   EXTERNAL-SYSTEMS:::invisible
+  PROTECTED-ALB:::discreet
+  PUBLIC-ALB:::discreet
 
-  USER-. public access .->EPR-FRONTEND;
+  USER-. public access .->PUBLIC-ALB;
+  PUBLIC-ALB-->EPR-FRONTEND;
   PRODUCER-. public access .->RPD;
-  REGULATOR-. restricted access .->EPR-ADMIN-UI;
-  SUPER-USER-. restricted access .->EPR-ADMIN-UI;
-
+  REGULATOR-. restricted access .->PROTECTED-ALB;
+  SUPER-USER-. restricted access .->PROTECTED-ALB;
+  PROTECTED-ALB-->EPR-ADMIN-UI;
 
   EPR-FRONTEND-- authenticated endpoints -->EPR-BACKEND;
   EPR-ADMIN-UI-- restricted endpoints -->EPR-BACKEND;
