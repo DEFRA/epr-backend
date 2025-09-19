@@ -1,4 +1,4 @@
-# 5. Data updates: processing pipeline vs Admin UI
+# 6. Data updates: processing pipeline vs Admin UI
 
 Date: 2025-09-15
 
@@ -28,26 +28,23 @@ In addition, it will likely be more robust, less maintenance and easier to reaso
 
 ```mermaid
 flowchart TD;
-    SUPER-USER((Service Maintainer))
+    SUPER-USER((Service<br>Maintainer))
     REGULATOR((Regulator))
 
-  classDef invisible opacity:0
+    classDef invisible opacity:0
+    classDef discreet fill:transparent,stroke:gray,color:gray
 
-  subgraph protected zone
-    subgraph PROTECTED-ZONE-NESTED
-      EPR-ADMIN-UI([EPR Admin UI])
-      EPR-BACKEND{{EPR Backend}}
-    end
-  end
+    EPR-ADMIN-UI([EPR Admin UI])
+    EPR-BACKEND{{EPR Backend}}
 
-  PROTECTED-ZONE-NESTED:::invisible
-  PUBLIC-ZONE-NESTED:::invisible
+    PROTECTED-ALB[private load balancer]
+    PROTECTED-ALB:::discreet
 
-  REGULATOR-. restricted access: AAD SSO .->EPR-ADMIN-UI;
-  SUPER-USER-. restricted access: AAD SSO .->EPR-ADMIN-UI;
+    REGULATOR-. restricted access: AAD SSO .->PROTECTED-ALB;
+    SUPER-USER-. restricted access: AAD SSO .->PROTECTED-ALB;
+    PROTECTED-ALB-->EPR-ADMIN-UI;
 
-
-  EPR-ADMIN-UI--access AAD SSO protected endpoints -->EPR-BACKEND;
+    EPR-ADMIN-UI--access AAD SSO protected endpoints -->EPR-BACKEND;
 ```
 
 ## Consequences
