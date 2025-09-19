@@ -4,7 +4,16 @@ import {
   orgId,
   referenceNumber,
   rawSubmissionData,
-  schemaVersion
+  schemaVersion,
+  registrationStatus,
+  wasteCarrierNumber,
+  permitType,
+  wasteCategory,
+  wasteExemptions,
+  exportPorts,
+  noticeAddress,
+  overseasSites,
+  permitNumber
 } from './schema-properties.js'
 
 const collectionName = 'registration'
@@ -29,7 +38,16 @@ export async function createOrUpdateRegistrationCollection(db, collections) {
           orgId,
           referenceNumber,
           answers,
-          rawSubmissionData
+          rawSubmissionData,
+          registrationStatus,
+          wasteCarrierNumber,
+          permitType,
+          permitNumber,
+          wasteCategory,
+          wasteExemptions,
+          exportPorts,
+          noticeAddress,
+          overseasSites
         }
       }
     }

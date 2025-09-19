@@ -4,7 +4,12 @@ import {
   orgId,
   referenceNumber,
   rawSubmissionData,
-  schemaVersion
+  schemaVersion,
+  accreditationYear,
+  accreditationStatus,
+  glassProcess,
+  tonnageBand,
+  overseasSites
 } from './schema-properties.js'
 
 const collectionName = 'accreditation'
@@ -29,7 +34,12 @@ export async function createOrUpdateAccreditationCollection(db, collections) {
           orgId,
           referenceNumber,
           answers,
-          rawSubmissionData
+          rawSubmissionData,
+          accreditationStatus,
+          accreditationYear,
+          glassProcess,
+          tonnageBand,
+          overseasSites
         }
       }
     }

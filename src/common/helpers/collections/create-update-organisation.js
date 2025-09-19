@@ -5,7 +5,16 @@ import {
   orgId,
   orgName,
   rawSubmissionData,
-  schemaVersion
+  schemaVersion,
+  businessAddress,
+  tradingName,
+  companiesHouseNumber,
+  organizationType,
+  partnershipType,
+  partners,
+  reprocessingType,
+  reprocessingNations,
+  originalSubmitter
 } from './schema-properties.js'
 
 const collectionName = 'organisation'
@@ -32,7 +41,16 @@ export async function createOrUpdateOrganisationCollection(db, collections) {
           orgName,
           email,
           answers,
-          rawSubmissionData
+          rawSubmissionData,
+          tradingName,
+          businessAddress,
+          companiesHouseNumber,
+          organizationType,
+          partnershipType,
+          partners,
+          reprocessingType,
+          reprocessingNations,
+          originalSubmitter
         }
       }
     }
