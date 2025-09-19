@@ -5,3 +5,4 @@ Documentation relating to architecture that we are in the process of defining, t
 ## Contents
 
 1. [pEPR: High Level Design](./pepr-hld.md)
+2. [pEPR: Low Level Design](./pepr-lld.md)

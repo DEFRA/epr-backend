@@ -70,7 +70,7 @@ regulator[Regulator]
 form[Organisation Defra form]
 endpoint([POST apply/organisation])
 idGenerator[[orgId generator]]
-database((Collection: ORGANISATION))
+database[(ORGANISATION)]
 govNotify{{GovNotify}}
 
 %% Flow
@@ -152,7 +152,7 @@ operator[Operator or Consultant]
 regulator[Regulator]
 form[Registration Defra form]
 endpoint([POST apply/registration])
-database((Collection: REGISTRATION))
+database[(REGISTRATION)]
 
 %% Flow
 operator:::user --submits-->form
@@ -217,7 +217,7 @@ operator[Operator or Consultant]
 regulator[Regulator]
 form[Accreditation Defra form]
 endpoint([POST apply/accreditation])
-database((Collection: ACCREDITATION))
+database[(ACCREDITATION)]
 
 %% Flow
 operator:::user --submits-->form
@@ -299,7 +299,6 @@ ORGANISATION {
   date createdAt "schema validated"
   string orgName "schema validated"
   string email "schema validated"
-  enum[] nations "schema validated"
   ANSWER[] answers "schema validated"
   json rawSubmissionData "schema validated"
 }
