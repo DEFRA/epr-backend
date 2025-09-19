@@ -1,4 +1,4 @@
-# 5. Data updates: processing pipeline vs Admin UI
+# 6. Data updates: processing pipeline vs Admin UI
 
 Date: 2025-09-15
 

@@ -4,5 +4,5 @@
 * [2. Registration & Accreditation form database schema](0002-registration-accreditation-form-database-schema.md)
 * [3. GOV.UK Notify](0003-gov-uk-notify.md)
 * [4. Data Extraction](0004-data-extraction.md)
-* [5. Data updates: processing pipeline vs Admin UI](0005-data-updates-processing-pipeline-vs-admin-ui.md)
-* [6. Admin UI](0006-admin-ui-adr.md)
+* [5. Admin UI](0005-admin-ui-adr.md)
+* [6. Data updates: processing pipeline vs Admin UI](0006-data-updates-processing-pipeline-vs-admin-ui.md)
