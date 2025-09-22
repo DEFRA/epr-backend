@@ -239,6 +239,12 @@ Note that updating an entity _may_ include changing its `status`. See a summary 
 2. `active`: user has completed the login process
 3. `archived`: user has been archived and can no longer be used
 
+### Summary Log
+
+1. `created`: summary log has been created (after upload by User) but has not yet been ingested by the service
+2. `ingested`: summary log has been ingested by the service and the prospective modifications to waste records can be reviewed by the user
+3. `approved`: summary log has been approved by the user and modifications applied to waste records
+
 ### Waste Record Version
 
 1. `created`: the first version of a waste record that created the entity, this version can be used to understand the original data
