@@ -167,7 +167,7 @@ Producers purchase PRNs/PERNs (Packaging Recycling Notes/Packaging Export Recycl
 
 Operators are the regulated organisations who handle waste material.
 
-They fall into two categories of activity: repressors and exporters.
+They fall into two categories of activity: reprocessors and exporters.
 
 These activities are not mutually exclusive, operators can perform both activities on the same or different materials.
 
