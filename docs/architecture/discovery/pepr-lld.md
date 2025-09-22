@@ -296,7 +296,7 @@ erDiagram
 
   SUMMARY-LOG {
     ObjectId _id PK
-    enum status "uploaded, processed, rejected, submitted"
+    enum status "created, ingested, approved"
     string summaryLogUri UK "S3 object URI"
     ISO8601 createdAt
     USER-SUMMARY createdBy FK
