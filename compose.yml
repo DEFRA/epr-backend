@@ -19,6 +19,7 @@ services:
       interval: 5s
       start_period: 5s
       retries: 3
+      
     networks:
       - cdp-tenant
 
