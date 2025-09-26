@@ -19,6 +19,7 @@
     * [Registration](#registration)
     * [Accreditation](#accreditation)
     * [User](#user)
+    * [Summary Log](#summary-log)
     * [Waste Record Version](#waste-record-version)
     * [PRN](#prn)
     * [Report](#report)
