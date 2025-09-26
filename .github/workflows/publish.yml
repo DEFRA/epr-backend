@@ -34,13 +34,13 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: |
-          npm ci
+          npm ci --ignore-scripts
           npm run format:check
           npm run lint
           npm test
 
       - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v5 #  (or check latest version on https://github.com/marketplace/actions/official-sonarqube-scan)
+        uses: SonarSource/sonarqube-scan-action@v6 #  (or check latest version on https://github.com/marketplace/actions/official-sonarqube-scan)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

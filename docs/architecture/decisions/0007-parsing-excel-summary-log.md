@@ -24,34 +24,11 @@ The open question is where parsing should occur — in the frontend (browser) or
 
 ## Decision
 
-### Option 1 – Frontend Parsing, Backend Validation
+We will use **Backend Parsing and Validation**.  
+This ensures files are virus scanned, parsed centrally, and retained for audit purposes.  
+It aligns with compliance and security requirements, despite slower feedback and increased backend load.
 
-- Flow
-  1. User uploads Excel file in browser.
-  2. Browser parses the file directly using [SheetJS](https://github.com/SheetJS/sheetjs).
-  3. Parsed data is converted to JSON in the browser.
-  4. JSON is sent to the backend.
-  5. Backend applies validation rules (Joi).
-  6. Validated data returned for preview/approval.
-
-- Error and Expiry Handling
-  - If validation fails → frontend prompts user to correct and re-upload.
-  - If session expires/closes → no files are stored (Excel never leaves browser). Nothing persists.
-
-- Pros
-  - No Excel file is ever uploaded → reduced backend file handling and no need for virus scanning.
-  - Fast feedback for users (parsing occurs locally).
-  - Backend only receives structured JSON (lighter processing).
-  - Easier local development — no extra dependencies beyond Node.js and Excel parsing library.
-
-- Cons
-  - Browser performance may degrade with large files.
-  - Business logic split between frontend (parsing) and backend (validation).
-  - No copy of the original Excel retained for audit trail.
-
----
-
-### Option 2 – Backend Parsing and Validation
+### Backend Parsing and Validation
 
 - Flow
   1. User uploads Excel file → sent to backend.
@@ -79,17 +56,36 @@ The open question is where parsing should occur — in the frontend (browser) or
   - Increased storage requirements.
   - Requires local replication or mocking of S3 for development and testing.
 
+### Option – Alternative consideration Frontend Parsing, Backend Validation
+
+- Flow
+  1. User uploads Excel file in browser.
+  2. Browser parses the file directly using [SheetJS](https://github.com/SheetJS/sheetjs).
+  3. Parsed data is converted to JSON in the browser.
+  4. JSON is sent to the backend.
+  5. Backend applies validation rules (Joi).
+  6. Validated data returned for preview/approval.
+
+- Error and Expiry Handling
+  - If validation fails → frontend prompts user to correct and re-upload.
+  - If session expires/closes → no files are stored (Excel never leaves browser). Nothing persists.
+
+- Pros
+  - No Excel file is ever uploaded → reduced backend file handling and no need for virus scanning.
+  - Fast feedback for users (parsing occurs locally).
+  - Backend only receives structured JSON (lighter processing).
+  - Easier local development — no extra dependencies beyond Node.js and Excel parsing library.
+
+- Cons
+  - Browser performance may degrade with large files.
+  - Business logic split between frontend (parsing) and backend (validation).
+  - No copy of the original Excel retained for audit trail.
+
 ---
 
 ## Consequences
 
-If Option 1 is chosen:
-
-- Lightweight, fast, and avoids file handling.
-- No compliance audit trail, but no need for orphaned-file cleanup.
-
-If Option 2 is chosen:
-
-- Heavier backend load and slower feedback.
-- Requires S3 lifecycle management for failed/abandoned uploads.
-- Stronger on security, reliability, and auditability.
+- Uploaded files will be stored in S3 via CDP Uploader.
+- Backend will handle parsing and validation with ExcelJS + Joi.
+- Lifecycle policies are required to clean up incomplete or failed uploads.
+- Slower user feedback compared to frontend parsing, but more secure and auditable.
