@@ -4,7 +4,7 @@ Date: 2025-09-11
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -24,7 +24,7 @@ The open question is where parsing should occur — in the frontend (browser) or
 
 ## Decision
 
-We will use **Backend Parsing and Validation**.  
+We have decided to use **Backend Parsing and Validation**.  
 This ensures files are virus scanned, parsed centrally, and retained for audit purposes.  
 It aligns with compliance and security requirements, despite slower feedback and increased backend load.
 
@@ -56,7 +56,9 @@ It aligns with compliance and security requirements, despite slower feedback and
   - Increased storage requirements.
   - Requires local replication or mocking of S3 for development and testing.
 
-### Option – Alternative consideration Frontend Parsing, Backend Validation
+### Alternatives considered – Frontend Parsing, Backend Validation
+
+We considered Frontend Parsing with Backend Validation. While this would reduce backend complexity and improve user feedback speed, it is not viable because GOV.UK and Defra guidelines require services to be HTML-first, meaning uploads must pass through the backend.
 
 - Flow
   1. User uploads Excel file in browser.
@@ -85,7 +87,7 @@ It aligns with compliance and security requirements, despite slower feedback and
 
 ## Consequences
 
-- Uploaded files will be stored in S3 via CDP Uploader.
+- By choosing backend parsing, uploaded files will be stored in S3 via CDP Uploader and subject to virus scanning.
 - Backend will handle parsing and validation with ExcelJS + Joi.
 - Lifecycle policies are required to clean up incomplete or failed uploads.
 - Slower user feedback compared to frontend parsing, but more secure and auditable.
