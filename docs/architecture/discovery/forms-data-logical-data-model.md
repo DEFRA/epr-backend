@@ -21,7 +21,7 @@ erDiagram
     string systemReference "_id from form submission Organisation schema"
     int schemaVersion
     int version "Version of the document. incremented during write"
-    array wasteOperations "Enum: reprocessor, exporter"
+    array wasteProcessingTypes "Enum: reprocessor, exporter"
     array reprocessingNations "Enum: england,wales, scotland,northern_ireland"
     string businessType "Enum: individual, unincorporated, partnership"
     object companyDetails "Company details"
@@ -42,12 +42,12 @@ erDiagram
   }
 
   Registration {
-    int id "uuid generated from siteAddress(can be null for exporters),material,processingType,form submission time"
+    int id "uuid generated from siteAddress(can be null for exporters),material,wasteProcessingType,form submission time"
     string formSubmissionTime
     string status
     object siteAddress "applicable only for reprocessor"
     string material "Enum:aluminium,fibre,glass,paper,plastic,steel,wood"
-    string processingType "Enum: reprocessor, exporter. This might need to be parsed from form name or another field"
+    string wasteProcessingType "Enum: reprocessor, exporter. This might need to be parsed from form name or another field"
     string accreditationId "automatically linked when possible"
     string gridReference "applicable only for reprocessor"
     array recylingProcess "Enum:glass_re_melt,glass_other"
@@ -67,11 +67,11 @@ erDiagram
   }
 
   Accreditation {
-    int id "uuid generated from siteAddress(can be null for exporters),material,processingType,form submission time"
+    int id "uuid generated from siteAddress(can be null for exporters),material,wasteProcessingType,form submission time"
     string formSubmissionTime
     object siteAddress "applicable only for reprocessor"
     string material "Enum: aluminium,fibre,glass,paper,plastic,steel,wood"
-    string processingType "Enum: reprocessor, exporter"
+    string wasteProcessingType "Enum: reprocessor, exporter"
     string status
     object prnIssuance
     array businessPlan "object(description|detailedDescription|percentSpent)"
@@ -204,7 +204,7 @@ erDiagram
         "postcode": "SW2A 0AA"
       },
       "material": "glass",
-      "processingType": "reprocessor",
+      "wasteProcessingType": "reprocessor",
       "accreditationId": "04de8fb2-2dab-48ad-a203-30a80f595c0b"
       "gridReference": "123455",
       "wasteRegistrationNumber": "CBDU123456",
@@ -235,7 +235,7 @@ erDiagram
       "status": "created",
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
       "material": "plastic",
-      "processingType": "exporter",
+      "wasteProcessingType": "exporter",
       "wasteRegistrationNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
@@ -270,7 +270,7 @@ erDiagram
         "postcode": "SW2A 0AA"
       },
       "material": "glass",
-      "processingType": "reprocessor",
+      "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "plannedIssuance": "10000 tonnes",
         "prnIncomeBusinessPlan": [
@@ -303,7 +303,7 @@ erDiagram
         "postcode": "SW2A 0AA"
       },
       "material": "glass",
-      "processingType": "reprocessor",
+      "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "plannedIssuance": "10000 tonnes",
         "prnIncomeBusinessPlan": [
@@ -332,7 +332,7 @@ erDiagram
       "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
       "status": "created",
       "material": "plastic",
-      "processingType": "exporter",
+      "wasteProcessingType": "exporter",
       "prnIssuance": {
         "plannedIssuance": "300 tonnes",
         "prnIncomeBusinessPlan": [
@@ -382,8 +382,8 @@ This data needs to be parsed and stored in the logical model proposed above:
 - Parsing should take into account questions being worded slightly differently across different nation (England, Wales, Scotland, NI) forms
 - For each organisation, fetch all registrations and accreditations using the referenceNumber
 - Parse required fields from registrations and accreditations (material, site address, etc.). Whether the submission is for a reprocessor or exporter might have to be inferred from the form name
-- Generate a unique UUID for each registration/accreditation using "site address, material, processingType, form submission time". Form submission time is used to account for duplicate form submissions. UUIDs are used so that values are not easily guessable, as opposed to using integers
-- Link registration ID to accreditation ID using "1st line of address, postcode, material, processingType"
+- Generate a unique UUID for each registration/accreditation using "site address, material, wasteProcessingType, form submission time". Form submission time is used to account for duplicate form submissions. UUIDs are used so that values are not easily guessable, as opposed to using integers
+- Link registration ID to accreditation ID using "1st line of address, postcode, material, wasteProcessingType"
 
 ### Linking registrations to accreditations
 
