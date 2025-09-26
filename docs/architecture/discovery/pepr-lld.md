@@ -183,7 +183,7 @@ Used to retrieve a report by ID for Operators to view the details of the report.
 | ------------- | ---------------- | ---------------- | ------------ | ------------------------------------------------------------------------------------------------- |
 | User          | CRU-             | CRU-             | -R--         | Users can only be soft deleted via status change                                                  |
 | Organisation  | -RU-             | -RU-             | -R--         | Created on application                                                                            |
-| Material      | -RU-             | -RU-             | -R--         | Created on application, unique to Activity & Site, contains Accreditation                         |
+| Registration  | -RU-             | -RU-             | -R--         | Created on application, unique to Activity & Site, contains Accreditation                         |
 | Accreditation | -RU-             | -RU-             | -R--         | Created on application, nested under Material                                                     |
 | Summary-Log   | -R--             | -R--             | CR--         | Summary Logs are immutable and stored in S3 for history purposes                                  |
 | Waste-Record  | -R--             | -R--             | -RU-         | Update is result of Summary-Log create                                                            |
@@ -212,10 +212,10 @@ Used to retrieve a report by ID for Operators to view the details of the report.
 | **Organisation:approve**        | ✅            | ✅            |                     |                   |          |
 | **Organisation:reject**         | ✅            | ✅            |                     |                   |          |
 | ============================    | ============= | ============= | =================== | ================= | ======   |
-| **Material:view**               | ✅            | ✅            | ✅                  | ✅                | ✅       |
-| **Material:edit**               | ✅            | ✅            |                     |                   |          |
-| **Material:approve**            | ✅            | ✅            |                     |                   |          |
-| **Material:reject**             | ✅            | ✅            |                     |                   |          |
+| **Registration:view**           | ✅            | ✅            | ✅                  | ✅                | ✅       |
+| **Registration:edit**           | ✅            | ✅            |                     |                   |          |
+| **Registration:approve**        | ✅            | ✅            |                     |                   |          |
+| **Registration:reject**         | ✅            | ✅            |                     |                   |          |
 | ========================        | ============= | ============= | =================== | ================= | ======== |
 | **Accreditation:view**          | ✅            | ✅            | ✅                  | ✅                | ✅       |
 | **Accreditation:edit**          | ✅            | ✅            |                     |                   |          |
@@ -509,67 +509,82 @@ TBD
 
 ### Summary Log upload & ingest
 
-#### Phase 1 - upload, virus scan & creation of SUMMARY-LOG entity
+#### Phase 1: upload & async processes: virus scan, file parsing & data validation
 
 ```mermaid
 sequenceDiagram
   actor Op as Operator
   participant Frontend as EPR Frontend
   participant Backend as EPR Backend
+  participant BackendWorker as EPR Backend Worker
   participant CDP as CDP Uploader
   participant S3
-  participant SQS
 
-  Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-log-upload
+  Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/summary-log-upload-progress/{summaryLogId}`,<br>callbackUrl: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
-  CDP->>Frontend: 200: { uploadId, uploadUrl }
-  Note over Frontend: Write to Redis<br>'summaryLogUpload:{userId}': [{ organisationId, registrationId, summaryLogId, uploadId }]
-  Frontend->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
+  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/progress`,<br>callbackUrl: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
+  CDP-->>Frontend: 200: { uploadId, uploadUrl }
+  Note over Frontend: Write session cookie<br>[{ organisationId, registrationId, summaryLogId, uploadId, summaryLogStatus: 'initiated' }]
+  Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDP: POST /upload-and-scan/{uploadId}
   CDP->>S3: store
-  CDP->>Op: 301: { redirectUrl }
+  CDP-->>Op: 302: redirectUrl
 
-  Activate CDP
-  Note over CDP: START async virus scan
-
-  loop polling: while uploading...
-    Op->>Frontend: GET /summary-log-upload-progress/{summaryLogId}
-    Note over Frontend: Read from Redis<br>'summaryLogUpload:{userId}': [{ organisationId, registrationId, summaryLogId, uploadId }]
-    Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
-    Backend->>Frontend: 404
+  loop polling, while summaryLogStatus IN (initiated, validating)
+    Note over CDP: START async virus scan
+    Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
+    Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+    Note over Frontend: Read session cookie<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
     Frontend->>CDP: GET /status/{uploadId}
-    CDP->>Frontend: 200: { status: created }
-    Frontend->>Op: <html>Uploading...</html>
+    CDP-->>Frontend: 200: { status: 'pending' }
+    Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'uploading', ... }]
+    Frontend-->>Op: <html>Uploading...</html>
+    Note over CDP: END async virus scan
+
+    alt FileStatus: complete
+      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Note over Frontend: Read session cookie<br>[{ uploadId }]
+      Frontend->>CDP: GET /status/{uploadId}
+      CDP-->>Frontend: 200: { status: 'ready' }
+      Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/validate<br>{ s3Bucket, s3Key, fileId, filename }
+      Note over BackendWorker: START async file validation
+      Backend->>BackendWorker: validate file
+      Backend-->>Frontend: 200: { status: 'validating' }
+      Note over BackendWorker: create SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key, fileId, filename }
+      Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'validating', ... }]
+      Frontend-->>Op: <html>Validating...</html>
+      BackendWorker->>S3: fetch: s3Key/fileId
+      S3-->>BackendWorker: S3 file
+      loop each row
+        Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
+      end
+      Note over BackendWorker: update SUMMARY-LOG entity<br>{ status: 'injested', data }
+      Note over BackendWorker: END async file validation
+      Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
+      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Note over Frontend: Read session cookie<br>[{ uploadId }]
+      Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
+      Note over Backend: lookup SUMMARY-LOG entity
+      Backend-->>Frontend: 200: { status: 'injested' }
+      Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'validationSucceeded', ... }]
+      Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/result
+      Note over Op: End Journey
+    else FileStatus: rejected
+      Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
+      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Note over Frontend: Read session cookie<br>[{ uploadId }]
+      Frontend->>CDP: GET /status/{uploadId}
+      CDP-->>Frontend: 200: { status: 'rejected' }
+      Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'validationFailed', ... }]
+      Frontend-->>Op: <html>Upload failed...</html>
+      Note over Op: End Journey
+    end
   end
 
 
-  Note over CDP: END async virus scan
-  alt Scan passed
-    CDP->>Backend: POST /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
-    Note over Backend: create SUMMARY-LOG entity<br>{ status: created }
-    Backend-)SQS: publish "summary log uploaded" message
-    Backend->>CDP: 200
-    Deactivate CDP
-
-    Op->>Frontend: GET /summary-log-upload-progress/{summaryLogId}
-    Note over Frontend: Read from Redis<br>'summaryLogUpload:{userId}': [{ organisationId, registrationId, summaryLogId, uploadId }]
-    Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
-    Note over Backend: lookup SUMMARY-LOG entity
-    Backend->>Frontend: 200: { status: created }
-    Frontend->>Op: <html>Processing...</html>
-  else Scan failed
-    Op->>Frontend: GET /summary-log-upload-progress/{summaryLogId}
-    Note over Frontend: Read from Redis<br>'summaryLogUpload:{userId}': [{ organisationId, registrationId, summaryLogId, uploadId }]
-    Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
-    Backend->>Frontend: 404
-    Frontend->>CDP: GET /status/{uploadId}
-    CDP->>Frontend: 200: { status: rejected }
-    Frontend->>Op: <html>Error with file upload...</html>
-  end
 ```
 
-#### Phase 2 - processing and submission of summary log
+#### Phase 2: validation results & submission
 
 ```mermaid
 sequenceDiagram
@@ -577,42 +592,31 @@ sequenceDiagram
   participant Frontend as EPR Frontend
   participant Backend as EPR Backend
   participant S3
-  participant SQS
 
 
-  SQS->>Backend: receive "summary log uploaded" message
-  Note over Backend: lookup SUMMARY-LOG entity
-  Backend->>S3: GET /s3-uri
-  S3->>Backend: summaryLog.xlsx
-  loop each row
-    Note over Backend: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data
-  end
-  Note over Backend: Update SUMMARY-LOG<br>{ status: ingested }
-
-  Op->>Frontend: GET /summary-log-upload-progress/{summaryLogId}
-  Note over Frontend: Read from Redis<br>'summaryLogUpload:{userId}': [{ organisationId, registrationId, summaryLogId, uploadId }]
+  Op->>Frontend: GET .../summary-logs/{summaryLogId}/result
+  Note over Frontend: Read session cookie<br>[{ summaryLogStatus }]
   Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
   Note over Backend: lookup SUMMARY-LOG entity
-  Backend->>Frontend: 200: { status: ingested, data: [ ... ] }
-  Frontend->>Op: <html>Summary of changes...<button>Submit</button></html>
+  Backend-->>Frontend: 200: { status: 'ingested', data: [ ... ] }
+  Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
 
   Note over Op: Review changes
 
-  Op->>Frontend: POST /summary-log-upload-progress/{summaryLogId}/submit
-  Note over Frontend: Read from Redis<br>'summaryLogUpload:{userId}': [{ organisationId, registrationId, summaryLogId, uploadId }]
+  Op->>Frontend: POST .../summary-logs/{summaryLogId}/submit
+  Note over Frontend: Read session cookie<br>[{ summaryLogStatus }]
   Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit
   Note over Backend: lookup SUMMARY-LOG entity
   Note over Backend: apply SUMMARY-LOG.data to WASTE-RECORD entities
   Note over Backend: update WASTE-BALANCE
-  Note over Backend: update SUMMARY-LOG<br>{ status: approved }
-  Backend->>Frontend: 200: { status: ingested, data: [ ... ] }
-  Frontend->>Op: <html>Success</html>
+  Note over Backend: update SUMMARY-LOG<br>{ status: 'approved' }
+  Backend-->>Frontend: 200: { status: 'approved', data: [ ... ] }
+  Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/complete
 ```
 
-To avoid race-conditions / multiple uploads of a summary log to the same site + material before approving a previously uploaded summary log
-
-The epr-backend API should
-
-- fail any attempt to approve a `created` summary log
-- fail any attempt to approve an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
-- fail any attempt to approve an `approved` summary log
+> [!IMPORTANT]
+> To avoid race-conditions / multiple uploads of a summary log to the same site + material before approving a previously uploaded summary log, the epr-backend API should:
+>
+> 1. fail any attempt to approve a `created` summary log
+> 2. fail any attempt to approve an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
+> 3. fail any attempt to approve an `approved` summary log
