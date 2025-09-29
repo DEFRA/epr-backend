@@ -43,8 +43,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
       return h.response().code(201)
     } catch (err) {
       const validationFailedForFields = getValidationFailedFields(err)
-      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, validation failed on fields: ${validationFailedForFields}`
-
+      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
       logger.error(err, {
         message,
         event: {
@@ -64,17 +63,10 @@ export function registrationAndAccreditationHandler(name, path, factory) {
 }
 
 function getValidationFailedFields(err) {
-  const details = err?.errInfo?.details?.schemaRulesNotSatisfied;
-  if (!details) return [];
-
-  const failedFields = [];
-  details.forEach(rule => {
-    if (rule.propertiesNotSatisfied) {
-      rule.propertiesNotSatisfied.forEach(prop => {
-        failedFields.push(prop.propertyName);
-      });
-    }
-  });
-
-  return [...new Set(failedFields)];
+  return (
+    err?.errInfo?.details?.schemaRulesNotSatisfied
+      ?.filter((rule) => rule.propertiesNotSatisfied)
+      ?.flatMap((rule) => rule.propertiesNotSatisfied)
+      .map((prop) => `${prop.propertyName} - ${prop.description}`) ?? []
+  )
 }

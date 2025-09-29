@@ -191,7 +191,41 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(mockLoggerError).toHaveBeenCalledWith(error, {
-      message: `Failure on ${registrationPath}`,
+      message: `Failure on ${registrationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      },
+      http: {
+        response: {
+          status_code: statusCode
+        }
+      }
+    })
+  })
+
+  it('returns 500 if insertOne fails with mongo validation failures', async () => {
+    const statusCode = 500
+    const error = Object.assign(new Error('db.collection.insertOne failed'), {
+      errInfo: JSON.parse(
+        '{"failingDocumentId":"68da86a39a36abfab162b707","details":{"operatorName":"$jsonSchema","title":"Registration Validation","schemaRulesNotSatisfied":[{"operatorName":"properties","propertiesNotSatisfied":[{"propertyName":"orgId","description":"\'orgId\' must be a positive integer above 500000 and is required","details":[{"operatorName":"minimum","specifiedAs":{"minimum":500000},"reason":"comparison failed","consideredValue":100000}]}]}]}}'
+      )
+    })
+    mockInsertOne.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: registrationFixture
+    })
+
+    expect(response.statusCode).toEqual(statusCode)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toMatch(`An internal server error occurred`)
+    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+      message: `Failure on /v1/apply/registration for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
