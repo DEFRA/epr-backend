@@ -170,6 +170,14 @@ const baseConfig = {
         env: 'REGULATOR_EMAIL_SEPA'
       }
     }
+  },
+  featureFlags: {
+    summaryLogs: {
+      doc: 'Feature Flag: Summary Logs',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_SUMMARY_LOGS'
+    }
   }
 }
 
