@@ -174,7 +174,6 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-
   it('returns 500 if error is thrown by insertOne', async () => {
     const statusCode = 500
     const error = new Error('db.collection.insertOne failed')
