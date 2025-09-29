@@ -17,10 +17,10 @@ This describes logical data model for storing data collected though forms for `o
 ```mermaid
 erDiagram
   Organisation {
-    string orgId PK "Primary identifier"
-    string systemReference "_id from form submission Organisation schema"
+    string _id "systemReference from organisation form submission"
+    string orgId PK "unique identifier"
     int schemaVersion
-    int version "Version of the document. incremented during write"
+    int version "Version of the document. incremented during write and can be used for optimistic locking in future"
     array wasteProcessingTypes "Enum: reprocessor, exporter"
     array reprocessingNations "Enum: england,wales, scotland,northern_ireland"
     string businessType "Enum: individual, unincorporated, partnership"
@@ -42,7 +42,7 @@ erDiagram
   }
 
   Registration {
-    int id "uuid generated from siteAddress(can be null for exporters),material,wasteProcessingType,form submission time"
+    int id "ObjectId"
     string formSubmissionTime
     string status
     object siteAddress "applicable only for reprocessor"
@@ -67,7 +67,7 @@ erDiagram
   }
 
   Accreditation {
-    int id "uuid generated from siteAddress(can be null for exporters),material,wasteProcessingType,form submission time"
+    int id "ObjectId"
     string formSubmissionTime
     object siteAddress "applicable only for reprocessor"
     string material "Enum: aluminium,fibre,glass,paper,plastic,steel,wood"
@@ -382,8 +382,17 @@ This data needs to be parsed and stored in the logical model proposed above:
 - Parsing should take into account questions being worded slightly differently across different nation (England, Wales, Scotland, NI) forms
 - For each organisation, fetch all registrations and accreditations using the referenceNumber
 - Parse required fields from registrations and accreditations (material, site address, etc.). Whether the submission is for a reprocessor or exporter might have to be inferred from the form name
-- Generate a unique UUID for each registration/accreditation using "site address, material, wasteProcessingType, form submission time". Form submission time is used to account for duplicate form submissions. UUIDs are used so that values are not easily guessable, as opposed to using integers
+- Generate a unique id using ObjectId for each registration/accreditation
 - Link registration ID to accreditation ID using "1st line of address, postcode, material, wasteProcessingType"
+
+### ID generation for registration and accreditation
+
+There were two options considered
+
+1. Generate uuid from "site address, material, wasteProcessingType, form submission time". Form submission time is used to account for duplicate form submissions. This has the advantage of ensuring uniqueness at db level.
+2. Generate a random unique id using ObjectId. At code level validation should be done to make sure duplicate ids are not generated for same registrations if form data is replayed.
+
+Option #2 has been chosen as it makes it easy to evolve list of fields that constitute a unique registration
 
 ### Linking registrations to accreditations
 
@@ -391,29 +400,42 @@ There were two options considered for modelling registrations and accreditations
 
 1. Store both under a single WasteOperations object within the organisation. Waste operations are identified by combination of "material, reprocessor/exporter, site address (line1, postcode)". This means registration and accreditation for the same waste operation are stored together and easy to link. However, the problem is that users can submit slightly different data in registration/accreditation forms. For example, a user provides the first line of address as "171 street" during registration and during accreditation as "171". Users might also submit duplicate forms, in which case data has to be deduplicated.
 
-2. Store registrations and accreditations as separate arrays under organisations. Identify them uniquely by generating a UUID from "material, reprocessor/exporter, site address (line1, postcode), form submission time". Automatically link registration to accreditation when "material, reprocessor/exporter, site address (line1, postcode)" matches. When it doesn't match, linking has to be resolved from the admin UI. There has to be logic to ensure any write operation doesn't leave registration to accreditation linkage invalid. For example, site address being updated in registration object.
+2. Store registrations and accreditations as separate arrays under organisations. Generate a unique id for registration/accreditation using ObjectId. Automatically link registration to accreditation when "material, reprocessor/exporter, site address (line1, postcode)" matches. When it doesn't match, linking has to be resolved from the admin UI. There has to be logic to ensure any write operation doesn't leave registration to accreditation linkage invalid. For example, site address being updated in registration object.
 
 Option 2 has been chosen as it handles users submitting slightly different data between registration/accreditation and duplicate submissions.
-
-### Auditing changes to organisation
-
-There's no requirement to show changes to organisation data over time. However, it will be good to store history for auditing/debugging.
-For summary log it has been decided to track changes over time as a field inside same record. This is a variation of [slowly changing dimension Type 3](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
-
-The proposal for organisation is to store the current version and historical versions in separate collections following [slowly changing dimension Type 4](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
-As organisation is complex nested structure easy store full historic versions than working out what has changed.
-The collection will have a version column which will be incremented during writes.
-One option to write to historic collection is using [MongoDB change streams](https://www.mongodb.com/docs/manual/changestreams/).
 
 ### Schema version
 
 Schema changes will be versioned and stored at record level.
 
+### Document version field
+
+The version field will start from 1(insert) then get incremented for every update. It can be used for optimistic locking in future
+
+### Auditing changes to organisation
+
+**Info:** This is only a suggestion and needs to be discussed and agreed
+
+There's no requirement to show changes to organisation data over time. However, it will be good to store history for auditing/debugging.
+For summary log it has been decided to track changes over time as a field inside same record. This is a variation of [slowly changing dimension Type 3](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
+
+The proposal for organisation is to store the current version and historical versions in separate collections following [slowly changing dimension Type 4](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
+As organisation is complex nested structure easy to store full historic versions than working out what has changed
+One option is write to organisation_history everytime there's an update to organisation using [MongoDB change streams](https://www.mongodb.com/docs/manual/changestreams/).
+
 ### Creating new collection
 
-Create a new collection to store combined data from `organisation`, `registration`, `accreditation`. This means original data remain intact if needed.
 Existing collections won't be used once data is moved to new organisation_epr/form_submissions collection.
-As organisation collection name is already used can use organisation_epr as new collection name.
+Create a new collection to store combined data from `organisation`, `registration`, `accreditation`. This means original data remain intact if needed.
+
+As organisation collection name is already used, there are two options available
+
+1. rename existing collections to `organisation_forms`, `registration_forms`, `accreditation_forms` and use organisation as new collection name.
+   This can be down in straightforward manner with downtime. A bit more involved to deploy renaming without downtime
+   One option is to deploy code change to fall back to new name if old name doesn't exist then deploy name change
+2. Use organisation_epr, or another name for new collection
+
+The rest of document assumes option#2 is being chosen as its less risky but this is not agreed yet.
 
 ### Flow diagram for converting to logical data model
 
@@ -443,7 +465,7 @@ flowchart TD
     direction TB
     E5[find registrations for given org referenceNumber] --> E6[from form answers infer its reprocessor/exporter]
     E6-->E7[get material type,site address]
-    E7--> E8[generate registration id i.e UUID from org referenceNumber,site address, processing type, form submission time]
+    E7--> E8[generate registration id]
     E8 --> E9[store raw form submission data in form_submissions collection and reference _id here]
   end
 
@@ -453,7 +475,7 @@ flowchart TD
     direction TB
     E10[find accreditations for given org referenceNumber] --> E11[from form answers infer its reprocessor/exporter]
     E11-->E12[get material type, site address]
-    E12--> E13[generate accreditation id i.e UUID from org referenceNumber,site address, processing type, form submission time]
+    E12--> E13[generate accreditation id ]
     E13 --> E14[store raw form submission data in form_submissions collection and reference _id here]
     E14 --> E15[link registration to accreditation id using site address, material, processing type]
   end
