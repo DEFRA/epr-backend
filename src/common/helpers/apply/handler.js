@@ -42,8 +42,8 @@ export function registrationAndAccreditationHandler(name, path, factory) {
       })
       return h.response().code(201)
     } catch (err) {
-      const message = `Failure on ${path}`
-
+      const validationFailedForFields = getValidationFailedFields(err)
+      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
       logger.error(err, {
         message,
         event: {
@@ -60,4 +60,13 @@ export function registrationAndAccreditationHandler(name, path, factory) {
       throw Boom.badImplementation(message)
     }
   }
+}
+
+function getValidationFailedFields(err) {
+  return (
+    err?.errInfo?.details?.schemaRulesNotSatisfied
+      ?.filter((rule) => rule.propertiesNotSatisfied)
+      ?.flatMap((rule) => rule.propertiesNotSatisfied)
+      .map((prop) => `${prop.propertyName} - ${prop.description}`) ?? []
+  )
 }
