@@ -618,5 +618,5 @@ sequenceDiagram
 > To avoid race-conditions / multiple uploads of a summary log to the same site + material before approving a previously uploaded summary log, the epr-backend API should:
 >
 > 1. fail any attempt to submit a `created` summary log
-> 2. fail any attempt to approve an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
+> 2. fail any attempt to submit an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
 > 3. fail any attempt to approve an `approved` summary log
