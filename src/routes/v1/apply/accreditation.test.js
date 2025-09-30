@@ -46,7 +46,7 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 201 and echoes back payload on valid request', async () => {
+  it('returns 201 and echoes back payload on  valid request', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
