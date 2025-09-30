@@ -619,4 +619,4 @@ sequenceDiagram
 >
 > 1. fail any attempt to submit a `created` summary log
 > 2. fail any attempt to submit an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
-> 3. fail any attempt to approve an `approved` summary log
+> 3. fail any attempt to submit an `approved` summary log
