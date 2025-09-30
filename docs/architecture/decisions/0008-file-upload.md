@@ -23,8 +23,8 @@ We will integrate with CDP Uploader for our file uploads.
 The flow works like this:
 
 - The frontend asks CDP to start an upload, and CDP gives back an `uploadId` and URL.
-- The operator uploads their Excel file directly to CDP.
-- CDP runs an async virus scan.
+- The operator uploads their Excel file and the frontend sends it to CDP.
+- CDP runs an async virus scan. [See documentation](https://github.com/DEFRA/cdp-uploader/blob/main/README.md)
 - CDP stores the file in our S3 bucket.
 - If the file is clean, CDP calls back to the frontend.
 - Errors are handled through the frontend, either through error on upload component or through an error page
