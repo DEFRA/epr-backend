@@ -522,28 +522,28 @@ sequenceDiagram
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/progress`,<br>callbackUrl: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
+  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/progress`
   CDP-->>Frontend: 200: { uploadId, uploadUrl }
-  Note over Frontend: Write session cookie<br>[{ organisationId, registrationId, summaryLogId, uploadId, summaryLogStatus: 'initiated' }]
+  Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId, summaryLogStatus: 'initiated' }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDP: POST /upload-and-scan/{uploadId}
   CDP->>S3: store
   CDP-->>Op: 302: redirectUrl
 
-  loop polling, while summaryLogStatus IN (initiated, validating)
+  loop polling
     Note over CDP: START async virus scan
     Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
     Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
-    Note over Frontend: Read session cookie<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
+    Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
     Frontend->>CDP: GET /status/{uploadId}
     CDP-->>Frontend: 200: { status: 'pending' }
-    Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'uploading', ... }]
+    Note over Frontend: Write session<br>[{ summaryLogStatus: 'uploading', ... }]
     Frontend-->>Op: <html>Uploading...</html>
     Note over CDP: END async virus scan
 
     alt FileStatus: complete
       Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
-      Note over Frontend: Read session cookie<br>[{ uploadId }]
+      Note over Frontend: Read session<br>[{ uploadId, summaryLogStatus: 'uploading' }]
       Frontend->>CDP: GET /status/{uploadId}
       CDP-->>Frontend: 200: { status: 'ready' }
       Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/validate<br>{ s3Bucket, s3Key, fileId, filename }
@@ -551,31 +551,31 @@ sequenceDiagram
       Backend->>BackendWorker: validate file
       Backend-->>Frontend: 200: { status: 'validating' }
       Note over BackendWorker: create SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key, fileId, filename }
-      Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'validating', ... }]
+      Note over Frontend: Write session<br>[{ summaryLogStatus: 'validating', ... }]
       Frontend-->>Op: <html>Validating...</html>
       BackendWorker->>S3: fetch: s3Key/fileId
       S3-->>BackendWorker: S3 file
       loop each row
         Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
       end
-      Note over BackendWorker: update SUMMARY-LOG entity<br>{ status: 'injested', data }
+      Note over BackendWorker: update SUMMARY-LOG entity<br>{ status: 'ingested', data }
       Note over BackendWorker: END async file validation
       Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
       Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
-      Note over Frontend: Read session cookie<br>[{ uploadId }]
+      Note over Frontend: Read session<br>[{ uploadId, summaryLogStatus: 'validating' }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Backend: lookup SUMMARY-LOG entity
-      Backend-->>Frontend: 200: { status: 'injested' }
-      Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'validationSucceeded', ... }]
+      Backend-->>Frontend: 200: { status: 'ingested' }
+      Note over Frontend: Write session<br>[{ summaryLogStatus: 'validationSucceeded', ... }]
       Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/result
       Note over Op: End Journey
     else FileStatus: rejected
       Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
       Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
-      Note over Frontend: Read session cookie<br>[{ uploadId }]
+      Note over Frontend: Read session<br>[{ uploadId, summaryLogStatus: 'validating' }]
       Frontend->>CDP: GET /status/{uploadId}
       CDP-->>Frontend: 200: { status: 'rejected' }
-      Note over Frontend: Write session cookie<br>[{ summaryLogStatus: 'validationFailed', ... }]
+      Note over Frontend: Write session<br>[{ summaryLogStatus: 'validationFailed', ... }]
       Frontend-->>Op: <html>Upload failed...</html>
       Note over Op: End Journey
     end
@@ -595,7 +595,7 @@ sequenceDiagram
 
 
   Op->>Frontend: GET .../summary-logs/{summaryLogId}/result
-  Note over Frontend: Read session cookie<br>[{ summaryLogStatus }]
+  Note over Frontend: Read session<br>[{ summaryLogStatus }]
   Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
   Note over Backend: lookup SUMMARY-LOG entity
   Backend-->>Frontend: 200: { status: 'ingested', data: [ ... ] }
@@ -604,7 +604,7 @@ sequenceDiagram
   Note over Op: Review changes
 
   Op->>Frontend: POST .../summary-logs/{summaryLogId}/submit
-  Note over Frontend: Read session cookie<br>[{ summaryLogStatus }]
+  Note over Frontend: Read session<br>[{ summaryLogStatus }]
   Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit
   Note over Backend: lookup SUMMARY-LOG entity
   Note over Backend: apply SUMMARY-LOG.data to WASTE-RECORD entities
