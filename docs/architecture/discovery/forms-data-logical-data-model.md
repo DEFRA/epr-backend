@@ -32,8 +32,13 @@ erDiagram
     string formSubmissionRawDataId
   }
 
-  %% (Optional) If needed for auditing can be populated using change streams
-  Organisation_History {
+  Organisation_Audit{
+    int _id "ObjectId - Primary key for the edit record"
+    int orgId
+    string timestamp "When the edit occurred - indexed"
+    object updatedBy "email|fullName"
+    array changes "list of what has been updated from and to"
+    string version "Version number of the organisation document after this edit"
   }
 
   FormSubmissions{
@@ -45,7 +50,7 @@ erDiagram
     int id "ObjectId"
     string formSubmissionTime
     string status
-    object siteAddress "applicable only for reprocessor"
+    object site "applicable only for reprocessor"
     string material "Enum:aluminium,fibre,glass,paper,plastic,steel,wood"
     string wasteProcessingType "Enum: reprocessor, exporter. This might need to be parsed from form name or another field"
     string accreditationId "automatically linked when possible"
@@ -66,10 +71,12 @@ erDiagram
     string formSubmissionRawDataId
   }
 
+
+
   Accreditation {
     int id "ObjectId"
     string formSubmissionTime
-    object siteAddress "applicable only for reprocessor"
+    object site "applicable only for reprocessor"
     string material "Enum: aluminium,fibre,glass,paper,plastic,steel,wood"
     string wasteProcessingType "Enum: reprocessor, exporter"
     string status
@@ -127,6 +134,10 @@ erDiagram
     enum type "Enum:company,individual"
   }
 
+  Site {
+   address Address
+  }
+
   Address {
     string line1 "Address line 1"
     string line2 "Address line 2 (optional)"
@@ -157,7 +168,9 @@ erDiagram
   Organisation ||--o| User: "embeds_contact_details"
   CompanyDetails ||--o| Address: "embeds_registered_address"
   Partnership ||--o{ Partner: "contains_partners"
-  Registration ||--|| Address: "embeds_site_address"
+  Registration ||--|| Site: "embeds_site_address"
+  Accreditation ||--|| Site: "embeds_site_address"
+  Site ||--|| Address: "embeds_address"
   Accreditation ||--|| Address: "embeds_site_address"
   Organisation ||--o{ Registration: "contains_registrations"
   Organisation ||--o{ Accreditation: "contains__accreditations"
@@ -169,7 +182,7 @@ erDiagram
   Registration ||--o| YearlyMetrics: "embeds_yearly_metrics"
   Registration ||--o| PrnIssuance: "embeds_prn_issuance"
 
-  Organisation ||--o{ Organisation_History: "contains_list_of_changes"
+  Organisation ||--o{ Organisation_Audit: "contains_list_of_changes"
 
   Organisation ||--|| FormSubmissions: "linked_to_form_submission"
   Registration ||--|| FormSubmissions: "linked_to_form_submission"
@@ -419,13 +432,17 @@ The version field will start from 1(insert) then get incremented for every updat
 There's no requirement to show changes to organisation data over time. However, it will be good to store history for auditing/debugging.
 For summary log it has been decided to track changes over time as a field inside same record. This is a variation of [slowly changing dimension Type 3](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
 
-The proposal for organisation is to store the current version and historical versions in separate collections following [slowly changing dimension Type 4](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
-As organisation is complex nested structure easy to store full historic versions than working out what has changed
-One option is write to organisation_history everytime there's an update to organisation using [MongoDB change streams](https://www.mongodb.com/docs/manual/changestreams/).
+Two options are being considered for organisation data.
+
+1. Store the current version and historical versions in separate collections following [slowly changing dimension Type 4](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
+   As organisation is complex nested structure easy to store full historic versions than working out what has changed
+   One option is write to organisation_audit everytime there's an update to organisation using [MongoDB change streams](https://www.mongodb.com/docs/manual/changestreams/).
+
+2. Every time there's an update a new record will be written to the audit table describing old and new value, who has changed.
 
 ### Creating new collection
 
-Existing collections won't be used once data is moved to new organisation_epr/form_submissions collection.
+Existing collections won't be used once data is moved to new epr_organisations/form_submissions collection.
 Create a new collection to store combined data from `organisation`, `registration`, `accreditation`. This means original data remain intact if needed.
 
 As organisation collection name is already used, there are two options available
@@ -433,7 +450,7 @@ As organisation collection name is already used, there are two options available
 1. rename existing collections to `organisation_forms`, `registration_forms`, `accreditation_forms` and use organisation as new collection name.
    This can be down in straightforward manner with downtime. A bit more involved to deploy renaming without downtime
    One option is to deploy code change to fall back to new name if old name doesn't exist then deploy name change
-2. Use organisation_epr, or another name for new collection
+2. Use epr_organisations, or another name for new collection
 
 The rest of document assumes option#2 is being chosen as its less risky but this is not agreed yet.
 
@@ -448,7 +465,7 @@ flowchart TD
 
   subgraph ProcessedFormData ["Processed Collections"]
     direction LR
-    OrganisationEpr[(organisation_epr)] ~~~  OrganisationHistory[(organisation_history)] ~~~ FormSubmissions[(form_submissions)]
+    OrganisationEpr[(epr_organisations)] ~~~  OrganisationHistory[(organisations_audit)] ~~~ FormSubmissions[(form_submissions)]
   end
 
   FormsData --> ForEach{"For each organisation"}
