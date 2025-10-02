@@ -59,6 +59,12 @@ end
    - Integrates with AWS Cognito to get a temporary token
    - uses `client-id` and the temporary token (from AWS Cognito) to authenticate interactions with AAD
 
+> [!IMPORTANT]
+> Compared to secrets-based authentatication, federated authentication
+>
+> - has more external dependencies at runtime (and thus a more involved implementation)
+> - requires more requests to external teams during intial set up
+
 ```mermaid
 sequenceDiagram
 
