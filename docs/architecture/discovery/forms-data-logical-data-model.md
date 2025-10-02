@@ -2,7 +2,8 @@
 
 There is a set of forms provided to users as part of a contingency solution to apply for registration and accreditations.
 
-This describes logical data model for storing data collected though forms for `organisation`, `registration`, `accreditation`
+This describes logical data model for storing data collected through forms for `organisation`, `registration`, `accreditation`
+
 
 ### Test env form urls
 
@@ -12,128 +13,137 @@ This describes logical data model for storing data collected though forms for `o
 - [Exporter accreditation](https://forms-runner.test.cdp-int.defra.cloud/form/preview/draft/demo-for-pepr-extended-producer-responsibilities-apply-for-accreditation-as-a-packaging-waste-exporter-ea/form-guidance)
 - [Reprocessor accreditation](https://forms-runner.test.cdp-int.defra.cloud/form/preview/draft/demo-for-pepr-extended-producer-responsibilities-apply-for-accreditation-as-a-packaging-waste-reprocessor-ea/form-guidance)
 
-## LDM
+## Logical Data Model (LDM)
 
 ```mermaid
 erDiagram
-  Organisation {
-    string _id PK "systemReference from organisation form submission"
-    string orgId "org id provided by users during registration/accreditation form submissions"
+  ORGANISATION {
+    ObjectId _id PK "systemReference from organisation form submission"
+    int orgId "org id provided by users during registration/accreditation form submissions"
+    enum status "created,approved,rejected,suspended,archived"
+    STATUS-HISTORY[] statusHistory "Status change history"
     int schemaVersion
     int version "Version of the document. incremented during write and can be used for optimistic locking in future"
-    array wasteProcessingTypes "Enum: reprocessor, exporter"
-    array reprocessingNations "Enum: england,wales, scotland,northern_ireland"
-    string businessType "Enum: individual, unincorporated, partnership"
-    object companyDetails "Company details"
-    object partnership "Partnership details"
-    object contactDetails "Contact details submitted in the form"
-    array registrations
-    array accreditations
-    string formSubmissionId
+    enum[] wasteProcessingTypes "reprocessor, exporter"
+    enum[] reprocessingNations "england,wales, scotland,northern_ireland"
+    enum businessType "individual, unincorporated, partnership"
+    COMPANY-DETAILS companyDetails
+    PARTNERSHIP partnership "company partnership details"
+    USER contactDetails "organisation application contact details"
+    REGISTRATION[] registrations
+    ACCREDITATION[] accreditations
+    ObjectId formSubmissionId FK "organisation form submission raw data link "
+    ISO8601 formSubmissionTime
   }
 
-  Organisation_Audit{
-    int _id "ObjectId - Primary key for the edit record"
-    int orgId
-    string timestamp "When the edit occurred - indexed"
-    object updatedBy "email|fullName"
-    array changes "list of what has been updated from and to"
-    string version "Version number of the organisation document after this edit"
-  }
 
-  Registration {
-    int id "ObjectId"
-    string formSubmissionTime
-    string status
-    object site "applicable only for reprocessor"
-    string material "Enum:aluminium,fibre,glass,paper,plastic,steel,wood"
-    string wasteProcessingType "Enum: reprocessor, exporter. This might need to be parsed from form name or another field"
-    string accreditationId "automatically linked when possible"
+  REGISTRATION {
+    ObjectId id  PK
+    ISO8601 formSubmissionTime
+    enum status "created,approved,rejected,suspended,archived"
+    STATUS-HISTORY[] statusHistory "Status change history"
+    SITE site "applicable only for reprocessor"
+    enum material "aluminium,fibre,glass,paper,plastic,steel,wood"
+    enum wasteProcessingType "reprocessor, exporter. This might need to be parsed from form name or another field"
+    ObjectId accreditationId FK "automatically linked when possible"
     string gridReference "applicable only for reprocessor"
-    array recylingProcess "Enum:glass_re_melt,glass_other"
-    object noticeAddress
-    string wasteRegistrationNumber
-    array wasteManagementPermits
-    array approvedPersons
-    string suppliers "applicable only for exporter"
-    array exportPorts "applicable only for exporter"
-    array yearlyMetrics "applicable only for reprocessor"
-    string plantEquipmentDetails "applicable only for reprocessor"
-    object contactDetails
-    object submitterContactDetails
-    array samplingInspectionPlan "list of references to documents"
-    array overseasSites "list of references to documents. applicable only for exporters"
-    string formSubmissionId
+    enum[] recyclingProcess "glass_re_melt,glass_other"
+    ADDRESS noticeAddress
+    string wasteRegistrationNumber "waste carrier, broker or dealer registration number"
+    WASTE-MANAGEMENT-PERMIT[] wasteManagementPermits "permit or waste exemption details"
+    USER[] approvedPersons "approved persons for this site"
+    string suppliers "Waste supplier details. applicable only for exporter"
+    string[] exportPorts "List of ports from which waste is exported."
+    YEARLY-METRICS[] yearlyMetrics "Yearly metrics related to how much input is received, output produced etc..."
+    string plantEquipmentDetails "a list of the key plant and equipment used for reprocessing. applicable only for reprocessor"
+    USER contactDetails "contact details for registration"
+    USER submitterContactDetails "who submitted the application"
+    string[] samplingInspectionPlan "sampling and inspection plan documents"
+    string[] overseasSites "overseas reprocessing and interim sites log documents"
+    ObjectId formSubmissionId FK "registration form submission raw data link "
   }
 
 
+  STATUS-HISTORY{
+    enum status "created,approved,rejected,suspended,archived"
+    ISO8601 changedAt "At what time the status changed"
+  }
 
-  Accreditation {
-    int id "ObjectId"
-    string formSubmissionTime
-    object site "applicable only for reprocessor"
-    string material "Enum: aluminium,fibre,glass,paper,plastic,steel,wood"
-    string wasteProcessingType "Enum: reprocessor, exporter"
-    string status
-    object prnIssuance
+  ACCREDITATION {
+    ObjectId id "ObjectId"
+    ISO8601 formSubmissionTime
+    SITE site "applicable only for reprocessor"
+    enum material "aluminium,fibre,glass,paper,plastic,steel,wood"
+    enum wasteProcessingType "reprocessor, exporter. This might need to be parsed from form name or another field"
+    enum status "created,approved,rejected,suspended,archived"
+    STATUS-HISTORY[] statusHistory "Status change history"
+    PRN-ISSUANCE prnIssuance "How much PRN will be issued"
+    PERN-ISSUANCE pernIssuance "How much PERN will be issued"
     array businessPlan "object(description|detailedDescription|percentSpent)"
-    object contactDetails
-    object submitterContactDetails
-    array samplingInspectionPlan "list of references to documents"
-    array overseasSites "list of references to documents. applicable only for exporters"
-    string formSubmissionId
+    ADDRESS noticeAddress
+    USER contactDetails "contact details for accreditation"
+    USER submitterContactDetails "who submitted the application"
+    string[] samplingInspectionPlan "sampling and inspection plan documents"
+    string[] overseasSites "overseas reprocessing and interim sites log documents"
+    ObjectId formSubmissionId FK "accreditation form submission raw data link "
   }
 
-  PrnIssuance {
+  PRN-ISSUANCE {
     string tonnageBand
-    object signatories
-    object prnIncomeBusinessPlan "array(percentIncomeSpent|usageDescription|detailedExplanation)"
+    USER[] signatories
+    json prnIncomeBusinessPlan "How the income from PRN will be used i.e percentIncomeSpent|usageDescription|detailedExplanation"
   }
 
-  YearlyMetrics {
+  PERN-ISSUANCE {
+    string tonnageBand
+    USER[] signatories
+    json pernIncomeBusinessPlan "How the income from PERN will be used i.e percentIncomeSpent|usageDescription|detailedExplanation"
+  }
+
+
+  YEARLY-METRICS {
     string year
-    object input "type(actual|estimated)|ukPackagingWaste|nonUkPackagingWaste|nonPackagingWaste"
-    array rawMaterailInputs "material|tonnage"
-    object output "type(actual|estimated)|sentToAnotherSite|contaminants|processLoss"
-    string metric "tonnage default"
-    array productsMadeFromRecyling "name|weight"
+    json input "Information about the input i.e type(actual|estimated)|ukPackagingWaste|nonUkPackagingWaste|nonPackagingWaste"
+    json rawMaterialInputs "Details about any input during recycling i.e material|tonnage"
+    json output "Information about the  output produced i.e type(actual|estimated)|sentToAnotherSite|contaminants|processLoss"
+    json[] productsMadeFromRecycling "Details about any products made from recycling i.e name|weight"
   }
 
-  WasteManagementPermit {
-    string type "Enum: wmlL,ppc,waste_exemption"
+  WASTE-MANAGEMENT-PERMIT {
+    enum type "wml,ppc,waste_exemption"
     string permitNumber
-    array exemptions "WasteExemption type"
+    WASTE_EXEMPTION[] exemptions "Waste exemptions obtained for the site"
     string authorisedWeight "in tonnes"
-    string permitWindow "Enum: weekly, monthly, yearly"
+    enum permitWindow "weekly, monthly, yearly"
   }
 
-  WasteExemption {
+  WASTE_EXEMPTION {
     string reference
     string exemptionCode
   }
 
-  CompanyDetails {
+  COMPANY-DETAILS {
     string name "Official company name"
     string tradingName "Trading name if different"
     string registrationNumber "Companies House number"
-    object registeredAddress
+    ADDRESS registeredAddress
   }
 
-  Partnership {
-    string type "ltd,ltd_liability"
-    array partners "Partner type"
+  PARTNERSHIP {
+    enum type "ltd,ltd_liability"
+    PARTNER[] partners "List of partners"
   }
 
-  Partner {
+  PARTNER {
     string name
-    enum type "Enum:company,individual"
+    enum type "company,individual"
   }
 
-  Site {
-   address Address
+  SITE {
+    ADDRESS address
   }
 
-  Address {
+  ADDRESS {
     string line1 "Address line 1"
     string line2 "Address line 2 (optional)"
     string town "Town or city"
@@ -145,7 +155,7 @@ erDiagram
     string line2ToCounty "If it cant be parsed"
   }
 
-  User {
+  USER {
     string fullName
     string email
     string phone
@@ -153,73 +163,89 @@ erDiagram
     string title
   }
 
-  LoginDetails{
-    string defra_id PK
-    string email UK
+  USER-LOGINS{
+    string defra_id PK "DEFRA id created for user logins"
+    string email UK "email id submitted through forms"
   }
 
-  Organisation ||--o| CompanyDetails: "embeds_company_details"
-  Organisation ||--o| Partnership: "embeds_partnership_details"
-  Organisation ||--o| User: "embeds_contact_details"
-  CompanyDetails ||--o| Address: "embeds_registered_address"
-  Partnership ||--o{ Partner: "contains_partners"
-  Registration ||--|| Site: "embeds_site_address"
-  Accreditation ||--|| Site: "embeds_site_address"
-  Site ||--|| Address: "embeds_address"
-  Accreditation ||--|| Address: "embeds_site_address"
-  Organisation ||--o{ Registration: "contains_registrations"
-  Organisation ||--o{ Accreditation: "contains__accreditations"
-  Registration ||--|| User: "embeds_registration_contact_details"
-  Registration ||--|| User: "embeds_registration_submitter_details"
-  Accreditation ||--|| User: "embeds_accreditation_submitter_details"
-  Registration ||--o{ WasteManagementPermit: "contains_waste_permits"
-  WasteManagementPermit ||--o{ WasteExemption: "contains_exemptions"
-  Registration ||--o| YearlyMetrics: "embeds_yearly_metrics"
-  Registration ||--o| PrnIssuance: "embeds_prn_issuance"
+  ORGANISATION ||--o| COMPANY-DETAILS: contains
+  ORGANISATION ||--o| PARTNERSHIP: contains
+  ORGANISATION ||--o| USER: contains
+  COMPANY-DETAILS ||--o| ADDRESS: contains
+  PARTNERSHIP ||--o{ PARTNER: contains
+  REGISTRATION ||--|| SITE: contains
+  ACCREDITATION ||--|| SITE: contains
+  SITE ||--|| ADDRESS: contains
+  ACCREDITATION ||--|| ADDRESS: contains
+  ORGANISATION ||--o{ REGISTRATION: contains
+  ORGANISATION ||--o{ ACCREDITATION: contains
+  REGISTRATION ||--|| USER: contains
+  ACCREDITATION ||--|| USER: contains
+  REGISTRATION ||--o{ WASTE-MANAGEMENT-PERMIT: contains
+  WASTE-MANAGEMENT-PERMIT ||--o{ WASTE_EXEMPTION: contains
+  REGISTRATION ||--o| YEARLY-METRICS: contains
+  ACCREDITATION ||--o| PRN-ISSUANCE: contains
+  ACCREDITATION ||--o| PERN-ISSUANCE: contains
 
-  Organisation ||--o{ Organisation_Audit: "contains_list_of_changes"
 
+  ORGANISATION ||--|{ STATUS-HISTORY: contains
+  REGISTRATION ||--|{ STATUS-HISTORY: contains
+  ACCREDITATION ||--|{ STATUS-HISTORY: contains
 
   %% Whether to model users as separate collection with foreign key or embedded one needs to be explored
-  Registration ||--o{ User: "contains_approved_persons"
-  PrnIssuance ||--o{ User: "contains_signatories"
+  REGISTRATION ||--o{ USER: contains
+  PRN-ISSUANCE ||--o{ USER: contains
+  PERN-ISSUANCE ||--o{ USER: contains
 
-  User ||--o| LoginDetails: "has_defra_id"
+  USER ||--o| USER-LOGINS: contains
 
 ```
 
 ### Example data using LDM
 
-```
+```json
 {
   "_id": "6507f1f77bcf86cd79943901",
   "orgId": "50002",
   "schemaVersion": 1,
   "version": 1,
+  "wasteProcessingTypes": ["reprocessor", "exporter"],
   "reprocessingNations": ["england", "wales"],
   "businessType": "partnership",
+  "statusHistory": [
+    {
+      "status": "created",
+      "changedAt": "2025-08-22T19:34:44.944Z"
+    }
+  ],
   "registrations": [
     {
-      "id": 2,
+      "id": "6507f1f77bcf86cd79943902",
       "status": "created",
+      "statusHistory": [
+        {
+          "status": "created",
+          "changedAt": "2025-08-22T19:34:44.944Z"
+        }
+      ],
       "formSubmissionTime": "2025-08-20T19:34:44.944Z",
-      "site":{
+      "site": {
         "address": {
           "line1": "7 Glass processing site",
           "town": "London",
           "postcode": "SW2A 0AA"
-       }
+        }
       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
-      "accreditationId": "04de8fb2-2dab-48ad-a203-30a80f595c0b"
+      "accreditationId": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
       "gridReference": "123455",
       "wasteRegistrationNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
           "type": "wml",
           "permitNumber": "WML123456",
-          "authroisedWeight": "10",
+          "authorisedWeight": "10",
           "permitWindow": "yearly"
         }
       ],
@@ -240,6 +266,12 @@ erDiagram
     {
       "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
       "status": "created",
+      "statusHistory": [
+        {
+          "status": "created",
+          "changedAt": "2025-08-22T19:34:44.944Z"
+        }
+      ],
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
@@ -248,7 +280,7 @@ erDiagram
         {
           "type": "wml",
           "permitNumber": "WML123456",
-          "authroisedWeight": "10",
+          "authorisedWeight": "10",
           "permitWindow": "yearly"
         }
       ],
@@ -272,16 +304,30 @@ erDiagram
       "id": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
       "formSubmissionTime": "2025-08-20T21:34:44.944Z",
       "status": "created",
-      "site":{
+      "statusHistory": [
+        {
+          "status": "created",
+          "changedAt": "2025-08-22T19:34:44.944Z"
+        }
+      ],
+      "site": {
         "address": {
           "line1": "7 Glass processing site",
           "postcode": "SW2A 0AA"
         }
-       },
+      },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "plannedIssuance": "10000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Yoda",
+            "email": "yoda@starwars.com",
+            "title": "PRN signatory",
+            "phone": "1234567890"
+          }
+        ],
         "prnIncomeBusinessPlan": [
           {
             "description": "New reprocessing infrastructure and maintaining existing infrastructure",
@@ -290,14 +336,6 @@ erDiagram
           }
         ]
       },
-      "signatories": [
-        {
-          "fullName": "Yoda",
-          "email": "toda@starwars.com",
-          "title": "PRN signatory",
-          "phone": "1234567890"
-        }
-      ],
       "noticeAddress": {
         "line1": "7 Glass processing site",
         "town": "London",
@@ -307,16 +345,30 @@ erDiagram
     {
       "id": "26673c70-5f03-4865-a796-585ef4ddca30",
       "status": "created",
-      "site":{
-        "address": {
-         "line1": "7",
-         "postcode": "SW2A 0AA"
+      "statusHistory": [
+        {
+          "status": "created",
+          "changedAt": "2025-08-22T19:34:44.944Z"
         }
-       },
+      ],
+      "site": {
+        "address": {
+          "line1": "7",
+          "postcode": "SW2A 0AA"
+        }
+      },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "plannedIssuance": "10000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Yoda",
+            "email": "yoda@starwars.com",
+            "title": "PRN signatory",
+            "phone": "1234567890"
+          }
+        ],
         "prnIncomeBusinessPlan": [
           {
             "description": "New reprocessing infrastructure and maintaining existing infrastructure",
@@ -325,14 +377,6 @@ erDiagram
           }
         ]
       },
-      "signatories": [
-        {
-          "fullName": "Yoda",
-          "email": "yoda@starwars.com",
-          "title": "PRN signatory",
-          "phone": "1234567890"
-        }
-      ],
       "noticeAddress": {
         "line1": "7a",
         "town": "London",
@@ -342,10 +386,28 @@ erDiagram
     {
       "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
       "status": "created",
+      "statusHistory": [
+        {
+          "status": "created",
+          "changedAt": "2025-08-22T19:34:44.944Z"
+        },
+        {
+          "status": "rejected",
+          "changedAt": "2025-08-25T19:34:44.944Z"
+        }
+      ],
       "material": "plastic",
       "wasteProcessingType": "exporter",
       "prnIssuance": {
         "plannedIssuance": "300 tonnes",
+        "signatories": [
+          {
+            "fullName": "Princess Leia",
+            "email": "princess.leia@starwars.com",
+            "title": "PRN signatory",
+            "phone": "7234567890"
+          }
+        ],
         "prnIncomeBusinessPlan": [
           {
             "description": "New vehicle to transport",
@@ -353,14 +415,6 @@ erDiagram
           }
         ]
       },
-      "signatories": [
-        {
-          "fullName": "Princess Leia",
-          "email": "princess.leia@starwars.com",
-          "title": "PRN signatory",
-          "phone": "7234567890"
-        }
-      ],
       "noticeAddress": {
         "line1": "7a",
         "town": "London",
@@ -403,7 +457,7 @@ There were two options considered
 1. Generate uuid from "site address, material, wasteProcessingType, form submission time". Form submission time is used to account for duplicate form submissions. This has the advantage of ensuring uniqueness at db level.
 2. Generate a random unique id using ObjectId. At code level validation should be done to make sure duplicate ids are not generated for same registrations if form data is replayed.
 
-Option #2 has been chosen as it makes it easy to evolve list of fields that constitute a unique registration
+Option #2 has been chosen as option #1 would make it difficult to evolve list of fields that constitute a unique registration
 
 ### Linking registrations to accreditations
 
@@ -415,8 +469,27 @@ There were two options considered for modelling registrations and accreditations
 
 Option 2 has been chosen as it handles users submitting slightly different data between registration/accreditation and duplicate submissions.
 
-### Site modelling
-  Intuitively
+### Site Modelling Approach
+
+Registrations and accreditations are **not** modelled as children of Site (which itself is a child of Organisation). This design decision is based on the following considerations:
+
+#### 1. Data Integrity and Reconciliation
+
+Reprocessors handling multiple materials at a single site submit multiple forms: `number of materials × 2 (one registration and one accreditation per material)`. Most reprocessors will submit at least two forms.
+
+When address details vary slightly across these submissions, attempting to automatically link them to a single Site entity becomes problematic. Instead, we store the data exactly as submitted and perform reconciliation through the admin UI, preserving the original submission data.
+
+#### 2. Inconsistent Site Concepts Across reprocessors/exporters
+
+- **Reprocessors** have physical site addresses where processing occurs
+- **Exporters** operate from ports, which are identified by name rather than physical addresses
+
+If we modelled registrations/accreditations as Site children, we would need two different parent structures:
+
+- Reprocessors: Organisation → Site → Registration/Accreditation
+- Exporters: Organisation → Registration/Accreditation (no Site entity)
+
+To maintain consistency and simplicity, registrations and accreditations are linked to a Site entity that is identified by its address details. This provides a cleaner data model while accommodating both reprocessors/exporters and allowing for post-submission reconciliation.
 
 ### Schema version
 
@@ -426,21 +499,6 @@ Schema changes will be versioned and stored at record level.
 
 The version field will start from 1(insert) then get incremented for every update. It can be used for optimistic locking in future
 
-### Auditing changes to organisation
-
-**Info:** This is only a suggestion and needs to be discussed and agreed
-
-There's no requirement to show changes to organisation data over time. However, it will be good to store history for auditing/debugging.
-For summary log it has been decided to track changes over time as a field inside same record. This is a variation of [slowly changing dimension Type 3](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
-
-Two options are being considered for organisation data.
-
-1. Store the current version and historical versions in separate collections following [slowly changing dimension Type 4](https://en.wikipedia.org/wiki/Slowly_changing_dimension).
-   As organisation is complex nested structure easy to store full historic versions than working out what has changed
-   One option is write to organisation_audit everytime there's an update to organisation using [MongoDB change streams](https://www.mongodb.com/docs/manual/changestreams/).
-
-2. Every time there's an update a new record will be written to the audit table describing old and new value, who has changed.
-
 ### Creating new collection
 
 Existing collections won't be used once data is moved to new epr_organisations/form_submissions collection.
@@ -449,11 +507,11 @@ Create a new collection to store combined data from `organisation`, `registratio
 As organisation collection name is already used, there are two options available
 
 1. rename existing collections to `organisation_forms`, `registration_forms`, `accreditation_forms` and use organisation as new collection name.
-   This can be down in straightforward manner with downtime. A bit more involved to deploy renaming without downtime
+   This can be done in straightforward manner with downtime. A bit more involved to deploy renaming without downtime
    One option is to deploy code change to fall back to new name if old name doesn't exist then deploy name change
 2. Use epr_organisations, or another name for new collection
 
-Option#2 has been chosen as its less risky and taking account of delivery timelines
+Option #2 has been chosen as its less risky and taking account of delivery timelines
 
 ### Flow diagram for converting to logical data model
 
@@ -476,7 +534,7 @@ flowchart TD
     direction TB
     E1[_id as org id in new collection] --> E2[parse company details like name, partnership, registrationNo etc..]
     E2 --> E3[parse contact details ]
-    E3 --> E4[store formSubmissionId as link to original submission data in organisation]
+    E3 --> E4[store link to organisation form submission data]
   end
 
   subgraph RegistrationData ["Parse registration details"]
@@ -484,7 +542,7 @@ flowchart TD
     E5[find registrations for given org referenceNumber] --> E6[from form answers infer its reprocessor/exporter]
     E6-->E7[get material type,site address]
     E7--> E8[generate registration id]
-    E8 --> E9[store formSubmissionId as link to original submission data in registration]
+    E8 --> E9[store link to registration form submission data]
   end
 
   OrgData --> RegistrationData[Extract registration data]
@@ -495,7 +553,7 @@ flowchart TD
     E11-->E12[get material type, site address]
     E12--> E13[generate accreditation id ]
     E13 --> E14[store formSubmissionId as link to original submission data in accreditation]
-    E14 --> E15[link registration to accreditation id using site address, material, processing type]
+    E14 --> E15[store link to accreditation form submission data]
   end
 
   RegistrationData --> AccreditationData[Extract accreditation data]
