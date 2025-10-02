@@ -53,7 +53,7 @@ end
 ### Approach 2 - federated authentication
 
 1. Register the Admin UI app with AAD, receive a `client-id`
-1. Register the Admin UI app with AWS Congnito (on CDP)
+1. Register the Admin UI app with AWS Cognito (on CDP)
 1. Update the Admin UI app in AAD to support federated access (using details from the AWS Cognito registration)
 1. At runtime the app
    - Integrates with AWS Cognito to get a temporary token
