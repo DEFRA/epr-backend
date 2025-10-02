@@ -204,7 +204,7 @@ describe(`${url} route`, () => {
         },
         data: {
           main: {
-            orgIdField: '5000',
+            orgIdField: '499999',
             refField: 'abcdef123456fedcba654321'
           }
         }
@@ -218,7 +218,7 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
     expect(mockLoggerWarn).toHaveBeenCalledWith({
       message:
-        'orgId: 5000, referenceNumber: abcdef123456fedcba654321 - Organisation ID must be at least 500000',
+        'orgId: 499999, referenceNumber: abcdef123456fedcba654321 - Organisation ID must be at least 500000',
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
