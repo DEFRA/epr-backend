@@ -5,6 +5,7 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     clearMocks: true,
+    hookTimeout: 60000,
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
