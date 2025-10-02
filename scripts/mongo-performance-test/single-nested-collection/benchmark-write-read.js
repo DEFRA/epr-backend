@@ -2,7 +2,7 @@
 
 import { generateOrganisation } from './data-generators.js'
 import { MongoClient } from 'mongodb'
-import { createOrganisationCollection } from './create_collection.js'
+import { createOrganisationCollection } from './create-collection.js'
 
 const TOTAL_ORGANISATIONS = 20000
 const REGISTRATION_ACCREDITATION_COUNT = 3

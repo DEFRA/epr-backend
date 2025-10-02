@@ -9,7 +9,7 @@ import {
   createAccreditationCollection,
   createOrganisationCollection,
   createRegistrationCollection
-} from './create_collections.js'
+} from './create-collections.js'
 
 const TOTAL_ORGANISATIONS = 20000
 const REGISTRATION_ACCREDITATION_COUNT = 3

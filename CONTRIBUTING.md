@@ -532,6 +532,13 @@ We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automa
 - New templates must be created in GOV.UK Notify and their IDs updated in code.
 - In non-live mode, only approved recipient email addresses can be used.
 
+## Scripts
+
+#### Mongo performance tests
+
+[Mongo performance test](scripts/mongo-performance-test/README.md) contains set of scripts used for evaluating storing organisation data from form submissions as single nested collection vs 3 separate collection.
+These scripts were written and used to finalise the [ADR](docs/architecture/decisions/0008-forms-physical-data-model.md)
+
 ## Further Documentation
 
 This `CONTRIBUTING.md` focuses on repository-specific guidance such as setup, development, and deployment.
