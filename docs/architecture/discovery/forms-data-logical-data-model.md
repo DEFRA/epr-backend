@@ -4,7 +4,6 @@ There is a set of forms provided to users as part of a contingency solution to a
 
 This describes logical data model for storing data collected through forms for `organisation`, `registration`, `accreditation`
 
-
 ### Test env form urls
 
 - [Organisation details](https://forms-runner.test.cdp-int.defra.cloud/form/preview/draft/demo-for-pepr-extended-producer-responsibilities-provide-your-organisation-details-ea/form-guidance)
@@ -18,8 +17,8 @@ This describes logical data model for storing data collected through forms for `
 ```mermaid
 erDiagram
   ORGANISATION {
-    ObjectId _id PK "systemReference from organisation form submission"
-    int orgId "org id provided by users during registration/accreditation form submissions"
+    ObjectId _id PK "_id from organisation collection"
+    int orgId "org id from organisation collection"
     enum status "created,approved,rejected,suspended,archived"
     STATUS-HISTORY[] statusHistory "Status change history"
     int schemaVersion
@@ -32,13 +31,12 @@ erDiagram
     USER contactDetails "organisation application contact details"
     REGISTRATION[] registrations
     ACCREDITATION[] accreditations
-    ObjectId formSubmissionId FK "organisation form submission raw data link "
     ISO8601 formSubmissionTime
   }
 
 
   REGISTRATION {
-    ObjectId id  PK
+    ObjectId id  PK "_id from registration collection"
     ISO8601 formSubmissionTime
     enum status "created,approved,rejected,suspended,archived"
     STATUS-HISTORY[] statusHistory "Status change history"
@@ -60,7 +58,6 @@ erDiagram
     USER submitterContactDetails "who submitted the application"
     string[] samplingInspectionPlan "sampling and inspection plan documents"
     string[] overseasSites "overseas reprocessing and interim sites log documents"
-    ObjectId formSubmissionId FK "registration form submission raw data link "
   }
 
 
@@ -70,7 +67,7 @@ erDiagram
   }
 
   ACCREDITATION {
-    ObjectId id "ObjectId"
+    ObjectId id PK "_id from accreditation collection"
     ISO8601 formSubmissionTime
     SITE site "applicable only for reprocessor"
     enum material "aluminium,fibre,glass,paper,plastic,steel,wood"
@@ -85,7 +82,6 @@ erDiagram
     USER submitterContactDetails "who submitted the application"
     string[] samplingInspectionPlan "sampling and inspection plan documents"
     string[] overseasSites "overseas reprocessing and interim sites log documents"
-    ObjectId formSubmissionId FK "accreditation form submission raw data link "
   }
 
   PRN-ISSUANCE {
@@ -163,41 +159,43 @@ erDiagram
     string title
   }
 
-  USER-LOGINS{
+  USER-LOGIN-DETAILS{
     string defra_id PK "DEFRA id created for user logins"
     string email UK "email id submitted through forms"
   }
 
+  %% ORGANISATION relationships
   ORGANISATION ||--o| COMPANY-DETAILS: contains
   ORGANISATION ||--o| PARTNERSHIP: contains
   ORGANISATION ||--o| USER: contains
-  COMPANY-DETAILS ||--o| ADDRESS: contains
-  PARTNERSHIP ||--o{ PARTNER: contains
-  REGISTRATION ||--|| SITE: contains
-  ACCREDITATION ||--|| SITE: contains
-  SITE ||--|| ADDRESS: contains
-  ACCREDITATION ||--|| ADDRESS: contains
   ORGANISATION ||--o{ REGISTRATION: contains
   ORGANISATION ||--o{ ACCREDITATION: contains
+  ORGANISATION ||--|{ STATUS-HISTORY: contains
+
+  %% REGISTRATION relationships
+  REGISTRATION ||--|| SITE: contains
   REGISTRATION ||--|| USER: contains
-  ACCREDITATION ||--|| USER: contains
   REGISTRATION ||--o{ WASTE-MANAGEMENT-PERMIT: contains
-  WASTE-MANAGEMENT-PERMIT ||--o{ WASTE_EXEMPTION: contains
   REGISTRATION ||--o| YEARLY-METRICS: contains
+  REGISTRATION ||--|{ STATUS-HISTORY: contains
+  REGISTRATION ||--o{ USER: contains
+
+  %% ACCREDITATION relationships
+  ACCREDITATION ||--|| SITE: contains
+  ACCREDITATION ||--|| ADDRESS: contains
+  ACCREDITATION ||--|| USER: contains
   ACCREDITATION ||--o| PRN-ISSUANCE: contains
   ACCREDITATION ||--o| PERN-ISSUANCE: contains
-
-
-  ORGANISATION ||--|{ STATUS-HISTORY: contains
-  REGISTRATION ||--|{ STATUS-HISTORY: contains
   ACCREDITATION ||--|{ STATUS-HISTORY: contains
 
-  %% Whether to model users as separate collection with foreign key or embedded one needs to be explored
-  REGISTRATION ||--o{ USER: contains
+  %% Supporting entity relationships
+  COMPANY-DETAILS ||--o| ADDRESS: contains
+  PARTNERSHIP ||--o{ PARTNER: contains
+  SITE ||--|| ADDRESS: contains
+  WASTE-MANAGEMENT-PERMIT ||--o{ WASTE_EXEMPTION: contains
   PRN-ISSUANCE ||--o{ USER: contains
   PERN-ISSUANCE ||--o{ USER: contains
-
-  USER ||--o| USER-LOGINS: contains
+  USER ||--o| USER-LOGIN-DETAILS: contains
 
 ```
 
@@ -469,7 +467,7 @@ There were two options considered for modelling registrations and accreditations
 
 Option 2 has been chosen as it handles users submitting slightly different data between registration/accreditation and duplicate submissions.
 
-### Site Modelling Approach
+### Site modelling approach
 
 Registrations and accreditations are **not** modelled as children of Site (which itself is a child of Organisation). This design decision is based on the following considerations:
 
@@ -490,6 +488,30 @@ If we modelled registrations/accreditations as Site children, we would need two 
 - Exporters: Organisation → Registration/Accreditation (no Site entity)
 
 To maintain consistency and simplicity, registrations and accreditations are linked to a Site entity that is identified by its address details. This provides a cleaner data model while accommodating both reprocessors/exporters and allowing for post-submission reconciliation.
+
+### Status History
+
+The `statusHistory` field tracks all status changes for organisations, registrations, and accreditations. This is particularly important for accreditations to determine if they were active at a given point in time.
+
+#### How It Works
+
+- **Initial creation**: When created, an entry with status `"created"` and current timestamp is added
+- **Status changes**: Every time status changes, a new entry is appended with the new status and timestamp
+- **Immutable**: Existing entries are never modified, only new entries are added
+
+#### Determining Active Periods
+
+```javascript
+// Check if accreditation was active on a specific date
+const wasActiveOn = (accreditation, targetDate) => {
+  const statusAt = accreditation.statusHistory
+    .sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt))
+    .filter((entry) => new Date(entry.changedAt) <= targetDate)
+    .pop()
+
+  return statusAt?.status === 'approved'
+}
+```
 
 ### Schema version
 
@@ -513,53 +535,50 @@ As organisation collection name is already used, there are two options available
 
 Option #2 has been chosen as its less risky and taking account of delivery timelines
 
-### Flow diagram for converting to logical data model
+### Sequence diagram for converting to logical data model
 
 ```mermaid
-flowchart TD
-  subgraph FormsData ["Source Collections"]
-    direction LR
-    Organisation[(organisation)] ~~~ Registration[(registration)] ~~~ Accreditation[(accreditation)]
-  end
+sequenceDiagram
+    participant MP as Migration Process
+    participant OC as organisation collection
+    participant RC as registration collection
+    participant AC as accreditation collection
+    participant EC as epr_organisations collection
 
-  subgraph ProcessedFormData ["Processed Collections"]
-    direction LR
-    OrganisationEpr[(epr_organisations)]
-  end
+    MP->>OC: Fetch all organisations
+    OC-->>MP: Return organisations
 
-  FormsData --> ForEach{"For each organisation"}
+    loop For each organisation
+        Note over MP: Parse organisation details
+        MP->>MP: Use ObjectId from organisation collection as id
+        MP->>MP: Parse company details (name, partnership, registrationNo)
+        MP->>MP: Parse contact details
 
-  ForEach ---> OrgData
-  subgraph OrgData ["Parse organisation details"]
-    direction TB
-    E1[_id as org id in new collection] --> E2[parse company details like name, partnership, registrationNo etc..]
-    E2 --> E3[parse contact details ]
-    E3 --> E4[store link to organisation form submission data]
-  end
+        MP->>RC: Fetch registrations by referenceNumber
+        RC-->>MP: Return registrations
 
-  subgraph RegistrationData ["Parse registration details"]
-    direction TB
-    E5[find registrations for given org referenceNumber] --> E6[from form answers infer its reprocessor/exporter]
-    E6-->E7[get material type,site address]
-    E7--> E8[generate registration id]
-    E8 --> E9[store link to registration form submission data]
-  end
+        loop For each registration
+            Note over MP: Parse registration details
+            MP->>MP: Infer reprocessor/exporter from form name
+            MP->>MP: Extract material type, site address
+            MP->>MP: Use ObjectId from registration collection as id
 
-  OrgData --> RegistrationData[Extract registration data]
+        end
 
-  subgraph AccreditationData ["Parse accreditation details"]
-    direction TB
-    E10[find accreditations for given org referenceNumber] --> E11[from form answers infer its reprocessor/exporter]
-    E11-->E12[get material type, site address]
-    E12--> E13[generate accreditation id ]
-    E13 --> E14[store formSubmissionId as link to original submission data in accreditation]
-    E14 --> E15[store link to accreditation form submission data]
-  end
+        MP->>AC: Fetch accreditations by referenceNumber
+        AC-->>MP: Return accreditations
 
-  RegistrationData --> AccreditationData[Extract accreditation data]
-  AccreditationData --> ProcessedOutput{"Store all processed org data in new collection"}
-  ProcessedOutput --> ProcessedFormData[(Processed Data)]
+        loop For each accreditation
+            Note over MP: Parse accreditation details
+            MP->>MP: Infer reprocessor/exporter from form name
+            MP->>MP: Extract material type, site address
+            MP->>MP: Use ObjectId from accreditation collection as id
+            MP->>MP: Link registration to accreditation using (site address, material, processing type)
+        end
 
+        MP->>EC: Insert combined organisation document
+        EC-->>MP: Confirm insertion
+    end
 ```
 
 ## Assumptions

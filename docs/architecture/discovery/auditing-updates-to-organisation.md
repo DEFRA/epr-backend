@@ -3,8 +3,7 @@
 > [!WARNING]
 > This document is a work in progress and is subject to change.
 
-
-##  Overview
+## Overview
 
 There's no requirement to show changes to organisation data over time. However, it will be good to store history for auditing/debugging.
 For summary log it has been decided to track changes over time as a field inside same record. This is a variation of [slowly changing dimension Type 3](https://en.wikipedia.org/wiki/Slowly_changing_dimension).

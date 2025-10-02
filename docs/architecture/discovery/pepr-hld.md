@@ -212,7 +212,6 @@ Note that updating an entity _may_ include changing its `status`. See a summary 
 
 ### Organisation
 
-
 1. `created`: organisation has been created but has not yet been approved by the regulator
 2. `approved`: organisation has been approved by the regulator
 3. `rejected`: organisation has been rejected by the regulator
