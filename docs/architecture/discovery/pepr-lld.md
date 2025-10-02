@@ -11,8 +11,9 @@
       * [`GET /v1/organisations`](#get-v1organisations)
       * [`GET /v1/organisations/{id}`](#get-v1organisationsid)
     * [Summary Logs](#summary-logs)
-      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/validate`](#post-v1organisationsidregistrationsidsummary-logsvalidate)
-      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{id}/submit`](#post-v1organisationsidregistrationsidsummary-logsidsubmit)
+      * [`GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`](#get-v1organisationsidregistrationsidsummary-logssummarylogid)
+      * [`PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`](#put-v1organisationsidregistrationsidsummary-logssummarylogidupload-completed)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`](#post-v1organisationsidregistrationsidsummary-logssummarylogidsubmit)
     * [Waste Records](#waste-records)
       * [`GET /v1/organisations/{id}/registrations/{id}/waste-records`](#get-v1organisationsidregistrationsidwaste-records)
       * [`GET /v1/organisations/{id}/registrations/{id}/waste-records/{id}`](#get-v1organisationsidregistrationsidwaste-recordsid)
@@ -87,7 +88,7 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 
 Used to retrieve the current state and data of a summary log.
 
-#### `PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/cdp-callback`
+#### `PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
 
 Internal endpoint used by CDP to notify the backend when a file upload is complete or has failed virus scan.
 
@@ -515,6 +516,9 @@ TBD
 
 ### Summary Log upload & ingest
 
+> [!NOTE]
+> The frontend only needs a single page to handle the entire upload and validation flow. The page polls the backend state document and updates the UI based on the current status, without requiring redirects between different URLs.
+
 #### Phase 1: upload & async processes: virus scan, file parsing & data validation
 
 ```mermaid
@@ -541,7 +545,7 @@ sequenceDiagram
   Note over CDP: END async virus scan
 
   alt FileStatus: complete
-    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/cdp-callback<br>TODO: request body TBC
+    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>TODO: request body TBC
     Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created', s3 details }
     Backend->>SQS: send message { summaryLogId, organisationId, registrationId }
     Backend-->>CDP: 200
@@ -576,7 +580,7 @@ sequenceDiagram
       end
     end
   else FileStatus: rejected
-    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/cdp-callback<br>TODO: request body TBC
+    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>TODO: request body TBC
     Note over Backend: create SUMMARY-LOG entity<br>{ status: 'upload-failed', failure details }
     Backend-->>CDP: 200
 
