@@ -17,8 +17,8 @@ This describes logical data model for storing data collected though forms for `o
 ```mermaid
 erDiagram
   Organisation {
-    string _id "systemReference from organisation form submission"
-    string orgId PK "unique identifier"
+    string _id PK "systemReference from organisation form submission"
+    string orgId "org id provided by users during registration/accreditation form submissions"
     int schemaVersion
     int version "Version of the document. incremented during write and can be used for optimistic locking in future"
     array wasteProcessingTypes "Enum: reprocessor, exporter"
@@ -29,7 +29,7 @@ erDiagram
     object contactDetails "Contact details submitted in the form"
     array registrations
     array accreditations
-    string formSubmissionRawDataId
+    string formSubmissionId
   }
 
   Organisation_Audit{
@@ -39,11 +39,6 @@ erDiagram
     object updatedBy "email|fullName"
     array changes "list of what has been updated from and to"
     string version "Version number of the organisation document after this edit"
-  }
-
-  FormSubmissions{
-    string id
-    object rawFormData
   }
 
   Registration {
@@ -68,7 +63,7 @@ erDiagram
     object submitterContactDetails
     array samplingInspectionPlan "list of references to documents"
     array overseasSites "list of references to documents. applicable only for exporters"
-    string formSubmissionRawDataId
+    string formSubmissionId
   }
 
 
@@ -86,11 +81,11 @@ erDiagram
     object submitterContactDetails
     array samplingInspectionPlan "list of references to documents"
     array overseasSites "list of references to documents. applicable only for exporters"
-    string formSubmissionRawDataId
+    string formSubmissionId
   }
 
   PrnIssuance {
-    string plannedIssuance
+    string tonnageBand
     object signatories
     object prnIncomeBusinessPlan "array(percentIncomeSpent|usageDescription|detailedExplanation)"
   }
@@ -184,9 +179,6 @@ erDiagram
 
   Organisation ||--o{ Organisation_Audit: "contains_list_of_changes"
 
-  Organisation ||--|| FormSubmissions: "linked_to_form_submission"
-  Registration ||--|| FormSubmissions: "linked_to_form_submission"
-  Accreditation ||--|| FormSubmissions: "linked_to_form_submission"
 
   %% Whether to model users as separate collection with foreign key or embedded one needs to be explored
   Registration ||--o{ User: "contains_approved_persons"
@@ -211,10 +203,12 @@ erDiagram
       "id": 2,
       "status": "created",
       "formSubmissionTime": "2025-08-20T19:34:44.944Z",
-      "siteAddress": {
-        "line1": "7 Glass processing site",
-        "town": "London",
-        "postcode": "SW2A 0AA"
+      "site":{
+        "address": {
+          "line1": "7 Glass processing site",
+          "town": "London",
+          "postcode": "SW2A 0AA"
+       }
       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
@@ -278,10 +272,12 @@ erDiagram
       "id": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
       "formSubmissionTime": "2025-08-20T21:34:44.944Z",
       "status": "created",
-      "siteAddress": {
-        "line1": "7 Glass processing site",
-        "postcode": "SW2A 0AA"
-      },
+      "site":{
+        "address": {
+          "line1": "7 Glass processing site",
+          "postcode": "SW2A 0AA"
+        }
+       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
@@ -311,10 +307,12 @@ erDiagram
     {
       "id": "26673c70-5f03-4865-a796-585ef4ddca30",
       "status": "created",
-      "siteAddress": {
-        "line1": "7",
-        "postcode": "SW2A 0AA"
-      },
+      "site":{
+        "address": {
+         "line1": "7",
+         "postcode": "SW2A 0AA"
+        }
+       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
@@ -417,6 +415,9 @@ There were two options considered for modelling registrations and accreditations
 
 Option 2 has been chosen as it handles users submitting slightly different data between registration/accreditation and duplicate submissions.
 
+### Site modelling
+  Intuitively
+
 ### Schema version
 
 Schema changes will be versioned and stored at record level.
@@ -452,7 +453,7 @@ As organisation collection name is already used, there are two options available
    One option is to deploy code change to fall back to new name if old name doesn't exist then deploy name change
 2. Use epr_organisations, or another name for new collection
 
-The rest of document assumes option#2 is being chosen as its less risky but this is not agreed yet.
+Option#2 has been chosen as its less risky and taking account of delivery timelines
 
 ### Flow diagram for converting to logical data model
 
@@ -465,7 +466,7 @@ flowchart TD
 
   subgraph ProcessedFormData ["Processed Collections"]
     direction LR
-    OrganisationEpr[(epr_organisations)] ~~~  OrganisationHistory[(organisations_audit)] ~~~ FormSubmissions[(form_submissions)]
+    OrganisationEpr[(epr_organisations)]
   end
 
   FormsData --> ForEach{"For each organisation"}
@@ -475,7 +476,7 @@ flowchart TD
     direction TB
     E1[_id as org id in new collection] --> E2[parse company details like name, partnership, registrationNo etc..]
     E2 --> E3[parse contact details ]
-    E3 --> E4[store raw form submission data in form_submissions collection and reference _id here]
+    E3 --> E4[store formSubmissionId as link to original submission data in organisation]
   end
 
   subgraph RegistrationData ["Parse registration details"]
@@ -483,7 +484,7 @@ flowchart TD
     E5[find registrations for given org referenceNumber] --> E6[from form answers infer its reprocessor/exporter]
     E6-->E7[get material type,site address]
     E7--> E8[generate registration id]
-    E8 --> E9[store raw form submission data in form_submissions collection and reference _id here]
+    E8 --> E9[store formSubmissionId as link to original submission data in registration]
   end
 
   OrgData --> RegistrationData[Extract registration data]
@@ -493,7 +494,7 @@ flowchart TD
     E10[find accreditations for given org referenceNumber] --> E11[from form answers infer its reprocessor/exporter]
     E11-->E12[get material type, site address]
     E12--> E13[generate accreditation id ]
-    E13 --> E14[store raw form submission data in form_submissions collection and reference _id here]
+    E13 --> E14[store formSubmissionId as link to original submission data in accreditation]
     E14 --> E15[link registration to accreditation id using site address, material, processing type]
   end
 
