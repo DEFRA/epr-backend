@@ -10,7 +10,7 @@ Accepted
 
 As per the [Admin UI ADR](./0005-admin-ui-adr), the Admin UI will leverage Azure Active Directory (AAD) to present a single-sign-on journey to **authenticate** users trying to access the Admin UI. The Admin UI itself must authenticate with AAD to support the SSO interactions.
 
-At the time of writing, there are two documented/supported approaches
+At the time of writing, there are two supported approaches in the CDP platform.
 
 > [!NOTE]
 > The Admin UI runs on the CDP platform (which is an abstracation over AWS), whereas AAD runs in (central) Defra's Azure account.
