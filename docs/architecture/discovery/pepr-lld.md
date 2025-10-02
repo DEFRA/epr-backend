@@ -11,26 +11,26 @@
       * [`GET /v1/organisations`](#get-v1organisations)
       * [`GET /v1/organisations/{id}`](#get-v1organisationsid)
     * [Summary Logs](#summary-logs)
-      * [`POST /v1/organisations/{id}/materials/{id}/summary-logs/validate`](#post-v1organisationsidmaterialsidsummary-logsvalidate)
-      * [`POST /v1/organisations/{id}/materials/{id}/summary-logs/{id}/submit`](#post-v1organisationsidmaterialsidsummary-logsidsubmit)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/validate`](#post-v1organisationsidregistrationsidsummary-logsvalidate)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{id}/submit`](#post-v1organisationsidregistrationsidsummary-logsidsubmit)
     * [Waste Records](#waste-records)
-      * [`GET /v1/organisations/{id}/materials/{id}/waste-records`](#get-v1organisationsidmaterialsidwaste-records)
-      * [`GET /v1/organisations/{id}/materials/{id}/waste-records/{id}`](#get-v1organisationsidmaterialsidwaste-recordsid)
-      * [`PUT /v1/organisations/{id}/materials/{id}/waste-records/{id}/status`](#put-v1organisationsidmaterialsidwaste-recordsidstatus)
+      * [`GET /v1/organisations/{id}/registrations/{id}/waste-records`](#get-v1organisationsidregistrationsidwaste-records)
+      * [`GET /v1/organisations/{id}/registrations/{id}/waste-records/{id}`](#get-v1organisationsidregistrationsidwaste-recordsid)
+      * [`PUT /v1/organisations/{id}/registrations/{id}/waste-records/{id}/status`](#put-v1organisationsidregistrationsidwaste-recordsidstatus)
     * [PRNs](#prns)
-      * [`POST /v1/organisations/{id}/materials/{id}/packaging-recycling-notes`](#post-v1organisationsidmaterialsidpackaging-recycling-notes)
-      * [`PUT /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}`](#put-v1organisationsidmaterialsidpackaging-recycling-notesid)
-      * [`PUT /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}/status`](#put-v1organisationsidmaterialsidpackaging-recycling-notesidstatus)
-      * [`GET /v1/organisations/{id}/materials/{id}/packaging-recycling-notes`](#get-v1organisationsidmaterialsidpackaging-recycling-notes)
-      * [`GET /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}`](#get-v1organisationsidmaterialsidpackaging-recycling-notesid)
+      * [`POST /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes`](#post-v1organisationsidregistrationsidpackaging-recycling-notes)
+      * [`PUT /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes/{id}`](#put-v1organisationsidregistrationsidpackaging-recycling-notesid)
+      * [`PUT /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes/{id}/status`](#put-v1organisationsidregistrationsidpackaging-recycling-notesidstatus)
+      * [`GET /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes`](#get-v1organisationsidregistrationsidpackaging-recycling-notes)
+      * [`GET /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes/{id}`](#get-v1organisationsidregistrationsidpackaging-recycling-notesid)
       * [RPD Integration](#rpd-integration)
     * [Reports](#reports)
-      * [`POST /v1/organisations/{id}/materials/{id}/reports`](#post-v1organisationsidmaterialsidreports)
-      * [`PUT /v1/organisations/{id}/materials/{id}/reports/{id}`](#put-v1organisationsidmaterialsidreportsid)
-      * [`PUT /v1/organisations/{id}/materials/{id}/reports/{id}/approve`](#put-v1organisationsidmaterialsidreportsidapprove)
+      * [`POST /v1/organisations/{id}/registrations/{id}/reports`](#post-v1organisationsidregistrationsidreports)
+      * [`PUT /v1/organisations/{id}/registrations/{id}/reports/{id}`](#put-v1organisationsidregistrationsidreportsid)
+      * [`PUT /v1/organisations/{id}/registrations/{id}/reports/{id}/approve`](#put-v1organisationsidregistrationsidreportsidapprove)
       * [`GET /v1/organisations/{id}/reports`](#get-v1organisationsidreports)
-      * [`GET /v1/organisations/{id}/materials/{id}/reports`](#get-v1organisationsidmaterialsidreports)
-      * [`GET /v1/organisations/{id}/materials/{id}/reports/{id}`](#get-v1organisationsidmaterialsidreportsid)
+      * [`GET /v1/organisations/{id}/registrations/{id}/reports`](#get-v1organisationsidregistrationsidreports)
+      * [`GET /v1/organisations/{id}/registrations/{id}/reports/{id}`](#get-v1organisationsidregistrationsidreportsid)
   * [CRUD by Entity Type](#crud-by-entity-type)
   * [Role-Based Access Control](#role-based-access-control)
   * [Entity Relationships](#entity-relationships)
@@ -83,27 +83,27 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 
 ### Summary Logs
 
-#### `POST /v1/organisations/{id}/materials/{id}/summary-logs/validate`
+#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{id}`
 
 Returns a SUMMARY-LOG id, which can be used to retrieve data for creation of the waste record
 
 Used to upload a summary log for validation.
 
-#### `POST /v1/organisations/{id}/materials/{id}/summary-logs/{id}/submit`
+#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{id}/submit`
 
-Used to upload a summary log to a material.
+Used to upload a summary log to a registration.
 
 ### Waste Records
 
-#### `GET /v1/organisations/{id}/materials/{id}/waste-records`
+#### `GET /v1/organisations/{id}/registrations/{id}/waste-records`
 
 Used to retrieve a list of waste records for Operators to select from.
 
-#### `GET /v1/organisations/{id}/materials/{id}/waste-records/{id}`
+#### `GET /v1/organisations/{id}/registrations/{id}/waste-records/{id}`
 
 Used to retrieve a waste record by ID for Operators to view the events associated with the waste record.
 
-#### `PUT /v1/organisations/{id}/materials/{id}/waste-records/{id}/status`
+#### `PUT /v1/organisations/{id}/registrations/{id}/waste-records/{id}/status`
 
 Used to update a waste record's status
 
@@ -115,15 +115,15 @@ Used to update a waste record's status
 
 ### PRNs
 
-#### `POST /v1/organisations/{id}/materials/{id}/packaging-recycling-notes`
+#### `POST /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes`
 
 Used to create packaging recycling notes for a material.
 
-#### `PUT /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}`
+#### `PUT /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes/{id}`
 
 Used to update packaging recycling notes for a material.
 
-#### `PUT /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}/status`
+#### `PUT /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes/{id}/status`
 
 Used to update a packaging recycling note's status.
 
@@ -133,11 +133,11 @@ Used to update a packaging recycling note's status.
 > [!WARNING]
 > N.B. This will need to be protected with role/permission authorisation
 
-#### `GET /v1/organisations/{id}/materials/{id}/packaging-recycling-notes`
+#### `GET /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes`
 
 Used to retrieve a list of packaging recycling notes for a material.
 
-#### `GET /v1/organisations/{id}/materials/{id}/packaging-recycling-notes/{id}`
+#### `GET /v1/organisations/{id}/registrations/{id}/packaging-recycling-notes/{id}`
 
 Used to retrieve a packaging recycling note by ID for Operators to view the details of the note.
 
@@ -147,18 +147,18 @@ We will likely need some endpoints for integration purposes with RPD, this is an
 
 ### Reports
 
-#### `POST /v1/organisations/{id}/materials/{id}/reports`
+#### `POST /v1/organisations/{id}/registrations/{id}/reports`
 
 Used to create a report for a material.
 
-#### `PUT /v1/organisations/{id}/materials/{id}/reports/{id}`
+#### `PUT /v1/organisations/{id}/registrations/{id}/reports/{id}`
 
 Used to update a report for a material. e.g. add "user entered" fields such as "weight of waste recycled", "weight of waste not recycled", "PRNs revenue"
 
 > [!INFO]
 > This could alternatively be provided by a `PATCH` verb on the Report resource, limited to the fields listed above
 
-#### `PUT /v1/organisations/{id}/materials/{id}/reports/{id}/approve`
+#### `PUT /v1/organisations/{id}/registrations/{id}/reports/{id}/approve`
 
 Used to approve/submit a report.
 
@@ -169,11 +169,11 @@ Used to approve/submit a report.
 
 Used to retrieve a list of reports for all materials.
 
-#### `GET /v1/organisations/{id}/materials/{id}/reports`
+#### `GET /v1/organisations/{id}/registrations/{id}/reports`
 
 Used to retrieve a list of reports for a material.
 
-#### `GET /v1/organisations/{id}/materials/{id}/reports/{id}`
+#### `GET /v1/organisations/{id}/registrations/{id}/reports/{id}`
 
 Used to retrieve a report by ID for Operators to view the details of the report.
 
@@ -183,7 +183,7 @@ Used to retrieve a report by ID for Operators to view the details of the report.
 | ------------- | ---------------- | ---------------- | ------------ | ------------------------------------------------------------------------------------------------- |
 | User          | CRU-             | CRU-             | -R--         | Users can only be soft deleted via status change                                                  |
 | Organisation  | -RU-             | -RU-             | -R--         | Created on application                                                                            |
-| Material      | -RU-             | -RU-             | -R--         | Created on application, unique to Activity & Site, contains Accreditation                         |
+| Registration  | -RU-             | -RU-             | -R--         | Created on application, unique to Activity & Site, contains Accreditation                         |
 | Accreditation | -RU-             | -RU-             | -R--         | Created on application, nested under Material                                                     |
 | Summary-Log   | -R--             | -R--             | CR--         | Summary Logs are immutable and stored in S3 for history purposes                                  |
 | Waste-Record  | -R--             | -R--             | -RU-         | Update is result of Summary-Log create                                                            |
@@ -212,10 +212,10 @@ Used to retrieve a report by ID for Operators to view the details of the report.
 | **Organisation:approve**        | ✅            | ✅            |                     |                   |          |
 | **Organisation:reject**         | ✅            | ✅            |                     |                   |          |
 | ============================    | ============= | ============= | =================== | ================= | ======   |
-| **Material:view**               | ✅            | ✅            | ✅                  | ✅                | ✅       |
-| **Material:edit**               | ✅            | ✅            |                     |                   |          |
-| **Material:approve**            | ✅            | ✅            |                     |                   |          |
-| **Material:reject**             | ✅            | ✅            |                     |                   |          |
+| **Registration:view**           | ✅            | ✅            | ✅                  | ✅                | ✅       |
+| **Registration:edit**           | ✅            | ✅            |                     |                   |          |
+| **Registration:approve**        | ✅            | ✅            |                     |                   |          |
+| **Registration:reject**         | ✅            | ✅            |                     |                   |          |
 | ========================        | ============= | ============= | =================== | ================= | ======== |
 | **Accreditation:view**          | ✅            | ✅            | ✅                  | ✅                | ✅       |
 | **Accreditation:edit**          | ✅            | ✅            |                     |                   |          |
@@ -509,66 +509,82 @@ TBD
 
 ### Summary Log upload & ingest
 
-#### Phase 1 - upload, virus scan & creation of SUMMARY-LOG entity
+#### Phase 1: upload & async processes: virus scan, file parsing & data validation
 
 ```mermaid
 sequenceDiagram
   actor Op as Operator
   participant Frontend as EPR Frontend
   participant Backend as EPR Backend
+  participant BackendWorker as EPR Backend Worker
   participant CDP as CDP Uploader
   participant S3
-  participant SQS
 
-  Op->>Frontend: GET /accreditation/{id}/upload-a-summary-log
-  Note over Frontend: generate GUID
-  Frontend->>CDP: POST /initiate<br>{ redirectUrl = /summary-log-upload-progress/{GUID},<br>callbackUr: POST epr-backend/summary-log/{GUID} }
-  CDP->>Frontend: { uploadId, uploadUrl }
-  Note over Frontend: Write toRedis<br>{ GUID: { accreditationId, uploadId } }
-  Frontend->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
+  Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
+  Note over Frontend: generate summaryLogId
+  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/progress`
+  CDP-->>Frontend: 200: { uploadId, uploadUrl }
+  Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId, summaryLogStatus: 'initiated' }]
+  Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDP: POST /upload-and-scan/{uploadId}
   CDP->>S3: store
-  CDP->>Op: 301: {redirectUrl}
+  CDP-->>Op: 302: redirectUrl
 
-  Activate CDP
-  Note over CDP: START async virus scan
-
-  loop polling: while uploading...
-    Op->>Frontend: GET /summary-log-upload-progress/{GUID}
-    Frontend->>Backend: GET /summary-log/{GUID}
-    Backend->>Frontend: 404
-    Note over Frontend: Read from Redis<br>{ GUID: { uploadId, accreditationId }}
+  loop polling
+    Note over CDP: START async virus scan
+    Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
+    Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+    Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
     Frontend->>CDP: GET /status/{uploadId}
-    CDP->>Frontend: 200: { status: pending }
-    Frontend->>Op: <html>Uploading...</html>
+    CDP-->>Frontend: 200: { status: 'pending' }
+    Note over Frontend: Write session<br>[{ summaryLogStatus: 'uploading', ... }]
+    Frontend-->>Op: <html>Uploading...</html>
+    Note over CDP: END async virus scan
+
+    alt FileStatus: complete
+      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Note over Frontend: Read session<br>[{ uploadId, summaryLogStatus: 'uploading' }]
+      Frontend->>CDP: GET /status/{uploadId}
+      CDP-->>Frontend: 200: { status: 'ready' }
+      Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/validate<br>{ s3Bucket, s3Key, fileId, filename }
+      Note over BackendWorker: START async file validation
+      Backend->>BackendWorker: validate file
+      Backend-->>Frontend: 200: { status: 'validating' }
+      Note over BackendWorker: create SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key, fileId, filename }
+      Note over Frontend: Write session<br>[{ summaryLogStatus: 'validating', ... }]
+      Frontend-->>Op: <html>Validating...</html>
+      BackendWorker->>S3: fetch: s3Key/fileId
+      S3-->>BackendWorker: S3 file
+      loop each row
+        Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
+      end
+      Note over BackendWorker: update SUMMARY-LOG entity<br>{ status: 'ingested', data }
+      Note over BackendWorker: END async file validation
+      Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
+      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Note over Frontend: Read session<br>[{ uploadId, summaryLogStatus: 'validating' }]
+      Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
+      Note over Backend: lookup SUMMARY-LOG entity
+      Backend-->>Frontend: 200: { status: 'ingested' }
+      Note over Frontend: Write session<br>[{ summaryLogStatus: 'validationSucceeded', ... }]
+      Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/result
+      Note over Op: End Journey
+    else FileStatus: rejected
+      Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
+      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Note over Frontend: Read session<br>[{ uploadId, summaryLogStatus: 'validating' }]
+      Frontend->>CDP: GET /status/{uploadId}
+      CDP-->>Frontend: 200: { status: 'rejected' }
+      Note over Frontend: Write session<br>[{ summaryLogStatus: 'validationFailed', ... }]
+      Frontend-->>Op: <html>Upload failed...</html>
+      Note over Op: End Journey
+    end
   end
 
 
-  Note over CDP: END async virus scan
-  alt Scan passed
-    CDP->>Backend: POST /summary-log/{GUID}
-    Note over Backend: create SUMMARY-LOG entity<br>{ status: created }
-    Backend-)SQS: publish "summary log uploaded" message
-    Backend->>CDP: 200 OK
-    Deactivate CDP
-
-    Op->>Frontend: GET /summary-log-upload-progress/{GUID}
-    Frontend->>Backend: GET /summary-log/{GUID}
-    Note over Backend: lookup SUMMARY-LOG entity
-    Backend->>Frontend: 200 { status: created }
-    Frontend->>Op: <html>Processing...</html>
-  else Scan failed
-    Op->>Frontend: GET /summary-log-upload-progress/{GUID}
-    Frontend->>Backend: GET /summary-log/{GUID}
-    Backend->>Frontend: 404
-    Note over Frontend: Read from Redis<br>{ GUID: { uploadId, accreditationId }}
-    Frontend->>CDP: GET /status/{uploadId}
-    CDP->>Frontend: 200: { status: rejected }
-    Frontend->>Op: <html>Error with file upload...</html>
-  end
 ```
 
-#### Phase 2 - processing and submission of summary log
+#### Phase 2: validation results & submission
 
 ```mermaid
 sequenceDiagram
@@ -576,40 +592,31 @@ sequenceDiagram
   participant Frontend as EPR Frontend
   participant Backend as EPR Backend
   participant S3
-  participant SQS
 
 
-  SQS->>Backend: receive "summary log uploaded" message
+  Op->>Frontend: GET .../summary-logs/{summaryLogId}/result
+  Note over Frontend: Read session<br>[{ summaryLogStatus }]
+  Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
   Note over Backend: lookup SUMMARY-LOG entity
-  Backend->>S3: GET /s3-uri
-  S3->>Backend: summaryLog.xlsx
-  loop each row
-    Note over Backend: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data
-  end
-  Note over Backend: Update SUMMARY-LOG<br>{ status: ingested }
-
-  Op->>Frontend: GET /summary-log-upload-progress/{GUID}
-  Frontend->>Backend: GET /summary-log/{GUID}
-  Note over Backend: lookup SUMMARY-LOG entity
-  Backend->>Frontend: 200: { status: ingested, data: [] }
-  Frontend->>Op: <html>Summary of changes...<button>Submit</button></html>
+  Backend-->>Frontend: 200: { status: 'ingested', data: [ ... ] }
+  Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
 
   Note over Op: Review changes
 
-  Op->>Frontend: POST /summaryLog/{GUID}/submit
-  Frontend->>Backend: POST /summary-log/{GUID}/submit
+  Op->>Frontend: POST .../summary-logs/{summaryLogId}/submit
+  Note over Frontend: Read session<br>[{ summaryLogStatus }]
+  Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit
   Note over Backend: lookup SUMMARY-LOG entity
   Note over Backend: apply SUMMARY-LOG.data to WASTE-RECORD entities
   Note over Backend: update WASTE-BALANCE
-  Note over Backend: update SUMMARY-LOG<br>{ status: approved }
-  Backend->>Frontend: 200
-  Frontend->>Op: <html>Success</html>
+  Note over Backend: update SUMMARY-LOG<br>{ status: 'approved' }
+  Backend-->>Frontend: 200: { status: 'approved', data: [ ... ] }
+  Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/complete
 ```
 
-To avoid race-conditions / multiple uploads of a summary log to the same site + material before approving a previously uploaded summary log
-
-The epr-backend API should
-
-- fail any attempt to approve a `created` summary log
-- fail any attempt to approve an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
-- fail any attempt to approve an `approved` summary log
+> [!IMPORTANT]
+> To avoid race-conditions / multiple uploads of a summary log to the same site + material before approving a previously uploaded summary log, the epr-backend API should:
+>
+> 1. fail any attempt to submit a `created` summary log
+> 2. fail any attempt to submit an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
+> 3. fail any attempt to submit an `approved` summary log
