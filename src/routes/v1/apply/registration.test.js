@@ -174,6 +174,63 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
+  it('returns 422 if orgId is below minimum value', async () => {
+    const response = await server.inject({
+      method: 'POST',
+      url,
+      payload: {
+        meta: {
+          definition: {
+            pages: [
+              {
+                components: [
+                  {
+                    name: 'orgIdField',
+                    shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.ORG_ID,
+                    title: 'What is your Organisation ID number?',
+                    type: 'TextField'
+                  },
+                  {
+                    name: 'refField',
+                    shortDescription:
+                      FORM_FIELDS_SHORT_DESCRIPTIONS.REFERENCE_NUMBER,
+                    title: 'What is your System Reference number?',
+                    type: 'TextField'
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        data: {
+          main: {
+            orgIdField: '499999',
+            refField: 'abcdef123456fedcba654321'
+          }
+        }
+      }
+    })
+
+    const message = 'Organisation ID must be at least 500000'
+    const body = JSON.parse(response.payload)
+
+    expect(response.statusCode).toEqual(422)
+    expect(body.message).toEqual(message)
+    expect(mockLoggerWarn).toHaveBeenCalledWith({
+      message:
+        'orgId: 499999, referenceNumber: abcdef123456fedcba654321 - Organisation ID must be at least 500000',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      },
+      http: {
+        response: {
+          status_code: 422
+        }
+      }
+    })
+  })
+
   it('returns 500 if error is thrown by insertOne', async () => {
     const statusCode = 500
     const error = new Error('db.collection.insertOne failed')
