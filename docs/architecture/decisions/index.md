@@ -8,3 +8,4 @@
 * [6. Data updates: processing pipeline vs Admin UI](0006-data-updates-processing-pipeline-vs-admin-ui.md)
 * [7. Frontend Projects Structure](0007-frontend-projects-structure.md)
 * [8. File upload](0008-file-upload.md)
+* [9. Use Renovate for Dependency Updates](0009-use-renovate-for-dependency-updates.md)
