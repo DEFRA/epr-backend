@@ -533,7 +533,7 @@ sequenceDiagram
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/progress`
+  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
   CDP-->>Frontend: 200: { uploadId, uploadUrl }
   Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
@@ -562,7 +562,7 @@ sequenceDiagram
 
     loop polling until final state
       Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
-      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Backend: lookup SUMMARY-LOG entity
@@ -575,7 +575,7 @@ sequenceDiagram
         Note over Op: End Journey
       else status: ingested
         Backend-->>Frontend: 200: { status: 'ingested', data }
-        Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/result
+        Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
         Note over Op: End Journey
       end
     end
@@ -586,7 +586,7 @@ sequenceDiagram
 
     loop polling until final state
       Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
-      Op->>Frontend: GET .../summary-logs/{summaryLogId}/progress
+      Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Backend-->>Frontend: 200: { status: 'upload-failed', failureReason }
@@ -608,8 +608,8 @@ sequenceDiagram
   participant S3
 
 
-  Op->>Frontend: GET .../summary-logs/{summaryLogId}/result
-  Note over Frontend: Read session<br>[{ summaryLogStatus }]
+  Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
+  Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId }]
   Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
   Note over Backend: lookup SUMMARY-LOG entity
   Backend-->>Frontend: 200: { status: 'ingested', data: [ ... ] }
@@ -617,15 +617,15 @@ sequenceDiagram
 
   Note over Op: Review changes
 
-  Op->>Frontend: POST .../summary-logs/{summaryLogId}/submit
-  Note over Frontend: Read session<br>[{ summaryLogStatus }]
+  Op->>Frontend: POST /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit
+  Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId }]
   Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit
   Note over Backend: lookup SUMMARY-LOG entity
   Note over Backend: apply SUMMARY-LOG.data to WASTE-RECORD entities
   Note over Backend: update WASTE-BALANCE
   Note over Backend: update SUMMARY-LOG<br>{ status: 'approved' }
   Backend-->>Frontend: 200: { status: 'approved', data: [ ... ] }
-  Frontend-->>Op: 302: /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/complete
+  Frontend-->>Op: <html>Submission complete</html>
 ```
 
 > [!IMPORTANT]
