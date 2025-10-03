@@ -243,9 +243,9 @@ Note that updating an entity _may_ include changing its `status`. See a summary 
 ### Summary Log
 
 1. `created`: summary log has been created (after upload by User) but has not yet been ingested by the service
-2. `upload-failed`: summary log file failed virus scan
+2. `upload_failed`: summary log file failed virus scan
 3. `validating`: summary log is being validated by the backend worker
-4. `validation-failed`: summary log validation failed
+4. `validation_failed`: summary log validation failed
 5. `ingested`: summary log has been ingested by the service and the prospective modifications to waste records can be reviewed by the user
 6. `approved`: summary log has been approved by the user and modifications applied to waste records
 
