@@ -588,13 +588,13 @@ sequenceDiagram
   alt FileStatus: complete
     CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
     Note over Backend: update SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key }
-    Backend->>SQS: send message { summaryLogId, organisationId, registrationId }
+    Backend->>SQS: send ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
     Backend-->>CDP: 200
     Note over BackendWorker: START async file validation
     BackendWorker->>SQS: poll for messages
-    SQS-->>BackendWorker: message { summaryLogId, organisationId, registrationId }
+    SQS-->>BackendWorker: ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
     BackendWorker->>Backend: update SUMMARY-LOG<br>{ status: 'validating' }
-    BackendWorker->>S3: fetch: s3Key/fileId
+    BackendWorker->>S3: fetch: s3Bucket/s3Key
     S3-->>BackendWorker: S3 file
     loop each row
       Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
