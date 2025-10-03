@@ -92,7 +92,25 @@ Used to retrieve the current state and data of a summary log.
 
 Internal endpoint used by CDP to notify the backend when a file upload is complete or has failed virus scan.
 
-TODO: Determine request body schema based on CDP documentation.
+Request body matches CDP's callback payload:
+
+```json
+{
+  "uploadStatus": "ready",
+  "metadata": { /* optional custom metadata */ },
+  "form": {
+    "file": {
+      "fileId": "uuid",
+      "filename": "summary-log.xlsx",
+      "fileStatus": "complete" | "rejected" | "pending",
+      "s3Bucket": "bucket-name",
+      "s3Key": "path/to/file",
+      "contentType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    }
+  },
+  "numberOfRejectedFiles": 0
+}
+```
 
 Creates a SUMMARY-LOG entity with status `created` or `upload-failed`, and if successful, sends a message to SQS to trigger validation.
 
@@ -533,8 +551,8 @@ sequenceDiagram
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>CDP: POST /initiate<br>redirectUrl: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
-  CDP-->>Frontend: 200: { uploadId, uploadUrl }
+  Frontend->>CDP: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
+  CDP-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
   Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDP: POST /upload-and-scan/{uploadId}
@@ -545,8 +563,8 @@ sequenceDiagram
   Note over CDP: END async virus scan
 
   alt FileStatus: complete
-    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>TODO: request body TBC
-    Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created', s3 details }
+    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
+    Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key }
     Backend->>SQS: send message { summaryLogId, organisationId, registrationId }
     Backend-->>CDP: 200
     Note over BackendWorker: START async file validation
@@ -580,8 +598,8 @@ sequenceDiagram
       end
     end
   else FileStatus: rejected
-    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>TODO: request body TBC
-    Note over Backend: create SUMMARY-LOG entity<br>{ status: 'upload-failed', failure details }
+    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'rejected', ... } }, numberOfRejectedFiles: 1 }
+    Note over Backend: create SUMMARY-LOG entity<br>{ status: 'upload-failed', failureReason }
     Backend-->>CDP: 200
 
     loop polling until final state
