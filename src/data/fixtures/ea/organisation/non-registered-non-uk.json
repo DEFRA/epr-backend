@@ -1,5 +1,7 @@
 {
-  "_id": "68dfc5198687d2e196d972c2",
+  "_id": {
+    "$oid": "68dfcbfd8687d2e196d972ca"
+  },
   "schemaVersion": 1,
   "answers": [
     {
@@ -12,80 +14,98 @@
       "shortDescription": "Currently operational?",
       "title": "Are you currently recycling or exporting packaging waste to be recycled?",
       "type": "RadiosField",
-      "value": "Reprocessor and exporter"
+      "value": "Exporter"
     },
     {
       "shortDescription": "Submitter name",
       "title": "What is your full name?",
       "type": "TextField",
-      "value": "James Patterson"
+      "value": "Sarah Mitchell"
     },
     {
       "shortDescription": "Submitter email address",
       "title": "What is your email address?",
       "type": "EmailAddressField",
-      "value": "james.patterson@ecoretail.co.uk"
+      "value": "s.mitchell@greenpacksolutions.co.uk"
     },
     {
       "shortDescription": "Submitter telephone number",
       "title": "What is your telephone number?",
       "type": "TelephoneNumberField",
-      "value": "020 7946 0123"
+      "value": "0161 234 5678"
     },
     {
       "shortDescription": "Submitter job title",
       "title": "What is your job title?",
       "type": "TextField",
-      "value": "Sustainability Director"
-    },
-    {
-      "shortDescription": "Nations with sites",
-      "title": "Which UK nations do you have a reprocessing site based in?",
-      "type": "CheckboxesField",
-      "value": "England,Scotland,Wales"
+      "value": "Environmental Compliance Manager"
     },
     {
       "shortDescription": "On Companies House?",
       "title": "Is your business registered with Companies House?",
       "type": "YesNoField",
-      "value": "true"
+      "value": "false"
+    },
+    {
+      "shortDescription": "Main address in UK?",
+      "title": "Does your business have a main address in the UK?",
+      "type": "YesNoField",
+      "value": "false"
     },
     {
       "shortDescription": "Organisation name",
-      "title": "What is your company name as per Companies House?",
+      "title": "What is the name of your business?",
       "type": "TextField",
-      "value": "EcoRetail Group plc"
+      "value": "EuroPack GmbH"
     },
     {
       "shortDescription": "Trading name",
       "title": "What is your business's trading name?",
       "type": "TextField",
-      "value": "EcoRetail Group plc"
+      "value": "EuroPack GmbH"
     },
     {
-      "shortDescription": "Companies House number",
-      "title": "What is your company registration number?",
+      "shortDescription": "Address line 1",
+      "title": "Address line 1",
       "type": "TextField",
-      "value": "11223344"
+      "value": "125 Avenue des Champs-Élysées"
     },
     {
-      "shortDescription": "Registered office address",
-      "title": "What is your registered office address?",
-      "type": "UkAddressField",
-      "value": "Chester House,London Road,Leeds,West Yorkshire,LS1 3BC"
+      "shortDescription": "Address line 2",
+      "title": "Address line 2",
+      "type": "TextField",
+      "value": ""
     },
     {
-      "shortDescription": "Are you a partnership?",
-      "title": "Is your organisation a partnership?",
-      "type": "RadiosField",
-      "value": "A limited partnership"
+      "shortDescription": "Town or city",
+      "title": "Town or city",
+      "type": "TextField",
+      "value": "Paris"
+    },
+    {
+      "shortDescription": "Country",
+      "title": "Country",
+      "type": "TextField",
+      "value": "France"
+    },
+    {
+      "shortDescription": "State, province or region",
+      "title": "State, province or region",
+      "type": "TextField",
+      "value": "Paris"
+    },
+    {
+      "shortDescription": "Postcode or similar",
+      "title": "Postcode or similar system",
+      "type": "TextField",
+      "value": "75008"
     }
   ],
   "rawSubmissionData": {
     "meta": {
       "schemaVersion": "1",
-      "timestamp": "2025-10-03T12:44:09.471Z",
-      "referenceNumber": "03A-7ED-A7A",
+      "timestamp": "2025-10-03T13:13:33.685Z",
+      "referenceNumber": "D93-4A6-45B",
       "definition": {
         "name": "Demo for pEPR - Extended Producer Responsibilities: provide your organisation details (EA)",
         "engine": "V2",
@@ -1020,37 +1040,31 @@
     "data": {
       "main": {
         "FAxvwq": "false",
-        "WVADkQ": "Reprocessor and exporter",
-        "BYtjnh": "James Patterson",
-        "aSoxDO": "james.patterson@ecoretail.co.uk",
-        "aIFHXo": "020 7946 0123",
-        "LyeSzH": "Sustainability Director",
-        "VcdRNr": "England,Scotland,Wales",
-        "hNTczg": "true",
-        "RUKDyH": "EcoRetail Group plc",
-        "XcvvZV": "EcoRetail Group plc",
-        "VZLTnn": "11223344",
-        "GNVlAd": "Chester House,London Road,Leeds,West Yorkshire,LS1 3BC",
-        "hnwFjT": "A limited partnership"
+        "WVADkQ": "Exporter",
+        "BYtjnh": "Sarah Mitchell",
+        "aSoxDO": "s.mitchell@greenpacksolutions.co.uk",
+        "aIFHXo": "0161 234 5678",
+        "LyeSzH": "Environmental Compliance Manager",
+        "hNTczg": "false",
+        "lEnwLd": "false",
+        "WkWBWB": "EuroPack GmbH",
+        "xsDMEE": "EuroPack GmbH",
+        "yhEOvK": "125 Avenue des Champs-Élysées",
+        "HXsuSR": "",
+        "TUmXzj": "Paris",
+        "PdFoDo": "France",
+        "oyAQgP": "Paris",
+        "pAzIoG": "75008"
       },
-      "repeaters": {
-        "CZFqEV": [
-          {
-            "RXPSft": "DHL Supply Chain UK Ltd",
-            "PEWtSm": "Company partner"
-          },
-          {
-            "RXPSft": "Victor",
-            "PEWtSm": "Individual partner"
-          }
-        ]
-      },
+      "repeaters": {},
       "files": {}
     }
   },
-  "createdAt": "2025-10-03T12:44:09.511Z",
-  "orgId": 503149,
-  "orgName": "EcoRetail Group plc",
-  "email": "james.patterson@ecoretail.co.uk",
+  "createdAt": {
+    "$date": "2025-10-03T13:13:33.707Z"
+  },
+  "orgId": 503153,
+  "orgName": "EuroPack GmbH",
+  "email": "s.mitchell@greenpacksolutions.co.uk",
   "nations": null
 }

@@ -1,0 +1,4013 @@
+{
+  "_id": {
+    "$oid": "68dfe318b62c8085fc05701e"
+  },
+  "schemaVersion": 1,
+  "answers": [
+    {
+      "shortDescription": "Do you have an org ID?",
+      "title": "Do you have an Organisation ID number?",
+      "type": "YesNoField",
+      "value": "true"
+    },
+    {
+      "shortDescription": "Organisation ID",
+      "title": "What is your Organisation ID number?",
+      "type": "TextField",
+      "value": "503149"
+    },
+    {
+      "shortDescription": "System Reference",
+      "title": "What is your System Reference number?",
+      "type": "TextField",
+      "value": "68dfc5198687d2e196d972c2"
+    },
+    {
+      "shortDescription": "App contact name",
+      "title": "What is the full name of the application contact?",
+      "type": "TextField",
+      "value": "James Patterson"
+    },
+    {
+      "shortDescription": "App contact email address",
+      "title": "What is their email address?",
+      "type": "EmailAddressField",
+      "value": "james.patterson@ecoretail.co.uk"
+    },
+    {
+      "shortDescription": "App contact telephone number",
+      "title": "What is their telephone number?",
+      "type": "TelephoneNumberField",
+      "value": "020 7946 0123"
+    },
+    {
+      "shortDescription": "App contact job title",
+      "title": "What is their job title?",
+      "type": "TextField",
+      "value": "Sustainability Director"
+    },
+    {
+      "shortDescription": "Reprocessing site address",
+      "title": "What is the address of the reprocessing site you want to register?",
+      "type": "UkAddressField",
+      "value": "78 Portland Place,London,London,W1B 1NT"
+    },
+    {
+      "shortDescription": "Grid reference",
+      "title": "What is the grid reference for the site?",
+      "type": "TextField",
+      "value": "TQ 295 805"
+    },
+    {
+      "shortDescription": "Serve notices to site?",
+      "title": "Should the regulator serve notices to this address?",
+      "type": "YesNoField",
+      "value": "true"
+    },
+    {
+      "shortDescription": "Permitted waste categories",
+      "title": "Which packaging waste categories does the site have a permit or exemption for?",
+      "type": "CheckboxesField",
+      "value": "Aluminium (R4),Fibre-based composite material (R3),Glass (R5)"
+    },
+    {
+      "shortDescription": "Permit type (Aluminium)",
+      "title": "What permit does the site have for accepting and recycling aluminium?",
+      "type": "RadiosField",
+      "value": "Environmental permit or waste management licence"
+    },
+    {
+      "shortDescription": "Permit or licence number (Aluminium)",
+      "title": "What is your permit or licence number?",
+      "type": "TextField",
+      "value": "EPR/AB1234CD/A001"
+    },
+    {
+      "shortDescription": "Authorised weight (Aluminium)",
+      "title": "What is the maximum tonnage of aluminium the permit or licence authorises the site to accept and recycle?",
+      "type": "NumberField",
+      "value": "50"
+    },
+    {
+      "shortDescription": "Timescale (Aluminium)",
+      "title": "Is this a yearly, monthly or weekly limit?",
+      "type": "RadiosField",
+      "value": "Yearly"
+    },
+    {
+      "shortDescription": "Permit type (Fibre-based composite material)",
+      "title": "What permit does the site have for accepting and recycling fibre-based composite material?",
+      "type": "RadiosField",
+      "value": "Installation permit"
+    },
+    {
+      "shortDescription": "Permit number (Fibre-based composite material)",
+      "title": "What is your permit number?",
+      "type": "TextField",
+      "value": "EPR/AB1234CD/A001"
+    },
+    {
+      "shortDescription": "Authorised weight (Fibre-based composite material)",
+      "title": "What is the maximum tonnage of fibre-based composite material the permit authorises the site to accept and recycle?",
+      "type": "NumberField",
+      "value": "50"
+    },
+    {
+      "shortDescription": "Timescale (Fibre based composite material)",
+      "title": "Is this a yearly, monthly or weekly limit?",
+      "type": "RadiosField",
+      "value": "Monthly"
+    },
+    {
+      "shortDescription": "Permit type (Glass)",
+      "title": "What permit does the site have for accepting and recycling glass?",
+      "type": "RadiosField",
+      "value": "Waste exemption"
+    },
+    {
+      "shortDescription": "Capacity (Aluminium)",
+      "title": "What is the maximum tonnage of aluminium packaging waste the site could recycle?",
+      "type": "NumberField",
+      "value": "10"
+    },
+    {
+      "shortDescription": "Timescale (Aluminium)",
+      "title": "Is this a yearly, monthly or weekly capacity?",
+      "type": "RadiosField",
+      "value": "Weekly"
+    },
+    {
+      "shortDescription": "Capacity (Fibre-based composite material)",
+      "title": "What is the maximum tonnage of fibre-based composite material packaging waste the site could recycle?",
+      "type": "NumberField",
+      "value": "10"
+    },
+    {
+      "shortDescription": "Timescale (Fibre-based composite material)",
+      "title": "Is this a yearly, monthly or weekly capacity?",
+      "type": "RadiosField",
+      "value": "Weekly"
+    },
+    {
+      "shortDescription": "Capacity (Glass)",
+      "title": "What is the maximum tonnage of glass packaging waste the site could recycle?",
+      "type": "NumberField",
+      "value": "10"
+    },
+    {
+      "shortDescription": "Timescale (Glass)",
+      "title": "Is this a yearly, monthly or weekly capacity?",
+      "type": "RadiosField",
+      "value": "Weekly"
+    },
+    {
+      "shortDescription": "Carrier, broker or dealer number",
+      "title": "What is your waste carrier, broker or dealer registration number?",
+      "type": "TextField",
+      "value": "CBDU123456"
+    },
+    {
+      "shortDescription": "Packaging waste category to be registered",
+      "title": "Which packaging waste category are you applying to register?",
+      "type": "RadiosField",
+      "value": "Glass (R5)"
+    },
+    {
+      "shortDescription": "Glass process",
+      "title": "What is the recycling process for the glass?",
+      "type": "RadiosField",
+      "value": "Glass re-melt"
+    },
+    {
+      "shortDescription": "Suppliers",
+      "title": "What type of suppliers do you receive this packaging waste category from?",
+      "type": "MultilineTextField",
+      "value": "We receive cardboard packaging primarily from UK distributors and wholesalers who supply our raw materials. Approximately 60% comes from three main UK distributors, with the remaining 40% sourced directly from manufacturers in the Midlands region."
+    },
+    {
+      "shortDescription": "Input actual or estimated tonnages?",
+      "title": "Are the tonnages for input actual or estimated figures?",
+      "type": "RadiosField",
+      "value": "Actual figures"
+    },
+    {
+      "shortDescription": "UK packaging waste input",
+      "title": "UK packaging waste",
+      "type": "NumberField",
+      "value": "12"
+    },
+    {
+      "shortDescription": "Non-UK packaging waste input",
+      "title": "Non-UK packaging waste",
+      "type": "NumberField",
+      "value": "10"
+    },
+    {
+      "shortDescription": "Non-packaging input",
+      "title": "Non-packaging waste",
+      "type": "NumberField",
+      "value": "10"
+    },
+    {
+      "shortDescription": "Output actual or estimated tonnages?",
+      "title": "Are the output tonnages actual or estimated figures?",
+      "type": "RadiosField",
+      "value": "Estimated figures"
+    },
+    {
+      "shortDescription": "Tonnage sent to another reprocessor",
+      "title": "Total tonnage of the packaging waste category sent to other sites for recycling",
+      "type": "NumberField",
+      "value": "11"
+    },
+    {
+      "shortDescription": "Tonnage of contaminants",
+      "title": "Total contaminants from recycling the packaging waste category",
+      "type": "NumberField",
+      "value": "1"
+    },
+    {
+      "shortDescription": "Total process loss",
+      "title": "Total process loss from recycling the packaging waste category",
+      "type": "NumberField",
+      "value": "11"
+    },
+    {
+      "shortDescription": "Key plant and equipment",
+      "title": "What is the key plant and equipment used to recycle this packaging waste category?",
+      "type": "MultilineTextField",
+      "value": "We use shredding equipment, magnetic separators for ferrous metals, and eddy current separators for non-ferrous materials. Aluminium cans are densified using compactors before melting. Our de-coating line removes lacquers and printing before the material enters the furnace for remelting into ingots."
+    },
+    {
+      "shortDescription": "AP name",
+      "title": "What is the approved person's full name?",
+      "type": "TextField",
+      "value": "James Patterson"
+    },
+    {
+      "shortDescription": "AP email address",
+      "title": "What is their email address?",
+      "type": "EmailAddressField",
+      "value": "james.patterson@ecoretail.co.uk"
+    },
+    {
+      "shortDescription": "AP telephone number",
+      "title": "What is their telephone number?",
+      "type": "TelephoneNumberField",
+      "value": "020 7946 0123"
+    },
+    {
+      "shortDescription": "AP role",
+      "title": "What is their role within the organisation?",
+      "type": "RadiosField",
+      "value": "Company secretary"
+    },
+    {
+      "shortDescription": "Submitter name",
+      "title": "What is your full name?",
+      "type": "TextField",
+      "value": "James Patterson"
+    },
+    {
+      "shortDescription": "Submitter email address",
+      "title": "What is your email address?",
+      "type": "EmailAddressField",
+      "value": "james.patterson@ecoretail.co.uk"
+    },
+    {
+      "shortDescription": "Submitter telephone number",
+      "title": "What is your telephone number?",
+      "type": "TelephoneNumberField",
+      "value": "020 7946 0123"
+    },
+    {
+      "shortDescription": "Submitter job title",
+      "title": "What is your job title?",
+      "type": "TextField",
+      "value": "Sustainability Director"
+    }
+  ],
+  "rawSubmissionData": {
+    "meta": {
+      "schemaVersion": "1",
+      "timestamp": "2025-10-03T14:52:08.183Z",
+      "referenceNumber": "717-57C-2A7",
+      "definition": {
+        "name": "Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste reprocessor (EA)",
+        "engine": "V2",
+        "schema": 2,
+        "startPage": "/summary",
+        "pages": [
+          {
+            "title": "Form guidance",
+            "path": "/form-guidance",
+            "components": [
+              {
+                "id": "f6ec419f-2be0-44ac-aa8c-c8268d43a06a",
+                "type": "Markdown",
+                "content": "This form is used to apply for registration with the Environment Agency (EA) as a reprocessor of packaging waste.\r\n\r\n**You must submit this form once for each packaging waste category you intend to register.**\r\n\r\nThe form will take around 60 minutes to complete. It is recommended to have the following information to hand before starting to fill in the form.\r\n\r\n## What you'll need to complete this form\r\nBelow is a list of the information you'll need in order to submit the form:\r\n\r\n* organisation ID number\r\n* site address details\r\n* grid reference for the site\r\n* address for service of notices\r\n* permit or waste exemption details\r\n* waste carrier, broker or dealer registration number\r\n* maximum capacity for recycling at the site\r\n* a list of the types of supplier you use\r\n* input tonnages for calendar year 2024\r\n* output tonnages for calendar year 2024\r\n* a list of key plant and equipment at the site\r\n* Packaging Exporter Sampling and Inspection Plan – Part 1: Registration - template available on gov.uk [here](https://www.gov.uk/government/publications/extended-producer-responsibility-for-packaging-templates-for-sampling-and-inspection-plans)\r\n\r\n\r\n**You cannot save and return to the form, it must be completed within one sitting.**",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "91da3318-a88c-462e-8fa3-4ef5359854ae"
+          },
+          {
+            "title": "Do you have an Organisation ID number?",
+            "path": "/do-you-have-an-organisation-id-number",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Do you have an Organisation ID number?",
+                "name": "aDpeKT",
+                "shortDescription": "Do you have an org ID?",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "e79ee112-f640-4d65-bb5a-587e4b24e0c2"
+              }
+            ],
+            "next": [],
+            "id": "ed5eee2b-f6ca-491c-aacb-aaf59d092abd"
+          },
+          {
+            "title": "Apply for an Organisation ID",
+            "controller": "TerminalPageController",
+            "path": "/apply-for-an-organisation-id",
+            "components": [
+              {
+                "id": "0cbffdc8-c6a2-4cc8-978f-5c798acf1751",
+                "type": "Markdown",
+                "content": "To be able to register as a reprocessor of packaging waste you must first apply for an Organisation ID (Org ID).\r\n\r\nYou can apply for an Org ID with the Environment Agency by using this form: https://submit-form-to-defra.service.gov.uk/form/preview/draft/extended-producer-responsibilities-provide-your-organisation-details-ea",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "898847c3-61e6-45ba-8477-7d44ad139bec",
+            "condition": "89394c66-d0dc-4473-9cf8-b70c9be5c15a"
+          },
+          {
+            "title": "Organisation details",
+            "path": "/organisation-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your Organisation ID number?",
+                "name": "rJMICz",
+                "shortDescription": "Organisation ID",
+                "hint": "Your Org ID number is a 6 digit number, for example 123456",
+                "options": {
+                  "required": false,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 6,
+                  "max": 6,
+                  "regex": "\\d{6}"
+                },
+                "id": "969a7edc-adf8-4eca-b220-e9c8ea7821ca"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your System Reference number?",
+                "name": "DAcLmf",
+                "shortDescription": "System Reference",
+                "hint": "The System Reference number was provided within the same email as the Org ID - it is 24 characters long, for example  123ab456789cd01e23fghi45",
+                "options": {
+                  "required": false
+                },
+                "schema": {
+                  "min": 24,
+                  "max": 24,
+                  "regex": "^[0-9a-fA-F]{24}$"
+                },
+                "id": "5c119365-e165-4921-8b6c-3adc916e57bf"
+              }
+            ],
+            "next": [],
+            "id": "0be7c1b6-b99e-47ca-83e7-d0f247a10650"
+          },
+          {
+            "title": "Application contact details",
+            "path": "/application-contact-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the full name of the application contact?",
+                "name": "jSlhCJ",
+                "shortDescription": "App contact name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "90b8833a-d148-4795-a98d-6777ab883049"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is their email address?",
+                "name": "WOnymw",
+                "shortDescription": "App contact email address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "c7207b71-f10f-4ba6-8e06-7aeb89977563"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is their telephone number?",
+                "name": "lScMYi",
+                "shortDescription": "App contact telephone number",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "efe01473-ccf4-4b74-bc23-0edec0a9a210"
+              },
+              {
+                "type": "TextField",
+                "title": "What is their job title?",
+                "name": "lnBYQc",
+                "shortDescription": "App contact job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "b1dfe2cd-ef67-4881-beca-3a529200d048"
+              }
+            ],
+            "next": [],
+            "id": "0259f6bd-1a55-4015-946b-2ce57d00a039"
+          },
+          {
+            "title": "Reprocessing site details",
+            "path": "/reprocessing-site-details",
+            "components": [
+              {
+                "type": "UkAddressField",
+                "title": "What is the address of the reprocessing site you want to register?",
+                "name": "Laiblc",
+                "shortDescription": "Reprocessing site address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "33de77db-36da-4b19-8288-7a3e4a91ca33"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the grid reference for the site?",
+                "name": "xinNGX",
+                "shortDescription": "Grid reference",
+                "hint": "You'll find the site grid reference on permits and exemptions.",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "1595a07b-e005-4693-b14f-cd29b67c5308"
+              },
+              {
+                "type": "YesNoField",
+                "title": "Should the regulator serve notices to this address?",
+                "name": "TnXUsJ",
+                "shortDescription": "Serve notices to site?",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "4ca25209-1bfa-4741-bc58-7d6a1c052ec6"
+              }
+            ],
+            "next": [],
+            "id": "3179fdac-50a2-4ccb-83ed-a8eeca140d12"
+          },
+          {
+            "title": "What address should the regulator serve notices to?",
+            "path": "/what-address-should-the-regulator-serve-notices-to",
+            "components": [
+              {
+                "type": "UkAddressField",
+                "title": "What address should the regulator serve notices to?",
+                "name": "VHfukU",
+                "shortDescription": "Address to serve notices",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "3c0295ab-09a8-40ca-a5b2-36037c9480db"
+              }
+            ],
+            "next": [],
+            "id": "9aef681a-5dc0-4436-8058-e15c08292c50",
+            "condition": "2d13f33a-cc77-4de4-b757-ec9599ff03b8"
+          },
+          {
+            "title": "Packaging waste the site has a permit or exemption to accept and recycle",
+            "path": "/packaging-waste-the-site-has-a-permit-or-exemption-to-accept-and-recycle",
+            "components": [
+              {
+                "id": "3b72c34d-600f-4155-b753-85c5c883c9e6",
+                "type": "Markdown",
+                "content": "You need to tell us all the materials the site has authorisation to accept and recycle. \r\n\r\nThe 'R' code is the classification of the reprocessing activity. These are in Annex 2 of the [Waste Framework Directive.](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02008L0098-20240218)",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "CheckboxesField",
+                "title": "Which packaging waste categories does the site have a permit or exemption for?",
+                "name": "JheIje",
+                "shortDescription": "Permitted waste categories",
+                "hint": "Select all that apply",
+                "list": "817a807a-14f0-464b-b5be-ad1a674d31da",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "5d88820e-fdf3-48b0-98d3-4fd658491f29"
+              }
+            ],
+            "next": [],
+            "id": "d8a80f3f-7e91-43f2-bf60-3ce7b84ef9de"
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling aluminium?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-aluminium",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling aluminium?",
+                "name": "AyMrzj",
+                "shortDescription": "Permit type (Aluminium)",
+                "hint": "",
+                "list": "3c08b5ad-a7f4-4faf-b59e-a2b39e2ef2c6",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "b63142c8-8023-4aeb-98d5-1b82c7af7e11"
+              }
+            ],
+            "next": [],
+            "id": "bddd35e3-d114-43d2-a231-d9f179b3e5b9",
+            "condition": "ef64bf63-3772-487e-9918-db4de9ebb789"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for aluminium",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-aluminium",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "xMSsbm",
+                "shortDescription": "Permit or licence number (Aluminium)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "007a87fa-deac-4e72-9528-d262b810ada9"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of aluminium the permit or licence authorises the site to accept and recycle?",
+                "name": "aWLuwp",
+                "shortDescription": "Authorised weight (Aluminium)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "89f9092e-616d-4703-8dc3-830a26bccec3"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "RKxIdd",
+                "shortDescription": "Timescale (Aluminium)",
+                "hint": "",
+                "list": "fdaa58e5-f72e-476f-9118-8576e6dce028",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "957b2a64-2dce-4ec2-bd85-9c939df53526"
+              }
+            ],
+            "next": [],
+            "id": "32470469-2188-4088-bef7-43574d832756",
+            "condition": "930f0493-4b00-4eaa-9d8c-44f7511e06cf"
+          },
+          {
+            "title": "Installation permit details for aluminium",
+            "path": "/installation-permit-details-for-aluminium",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "PUgXbJ",
+                "shortDescription": "Permit number (Aluminium)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "3ebcf517-f077-4da2-a6f1-0d260167a3df"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of aluminium the permit authorises the site to accept and recycle?",
+                "name": "DlgfQn",
+                "shortDescription": "Authorised weight (Aluminium)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "74c62466-f8e9-418c-84c4-bb66e2c95038"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "pbrBNg",
+                "shortDescription": "Timescale (Aluminium)",
+                "hint": "",
+                "list": "64b39ba0-e0f0-442d-949f-8669217488b9",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "406602af-9f57-4091-97cd-ad12df60b690"
+              }
+            ],
+            "next": [],
+            "id": "7af0ac34-c702-4bed-bfb7-545898352e12",
+            "condition": "ae653a4c-81ab-4162-b275-5d6f6c5fd4dc"
+          },
+          {
+            "title": "Waste exemption details for aluminium",
+            "path": "/waste-exemption-details-for-aluminium",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "GgupVD",
+                "shortDescription": "Exemption reference (Aluminium)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "93f22eca-c727-4bd1-8ec4-a77d0b5ee1d3"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "nVsBHG",
+                "shortDescription": "Exemption (Aluminium)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}"
+                },
+                "id": "2a029f03-0c63-434a-9e47-3abc707c8ef9"
+              }
+            ],
+            "next": [],
+            "id": "28ec05c7-77f5-4258-bfa5-8a2ab45b5332",
+            "condition": "153b033b-c2f9-4e7a-b98f-7ca7e621b7ad",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "RezbPA",
+                "title": "Aluminium waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling fibre-based composite material?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-fibre-based-composite-material",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling fibre-based composite material?",
+                "name": "EvOydj",
+                "shortDescription": "Permit type (Fibre-based composite material)",
+                "hint": "",
+                "list": "66513348-a111-4f36-8cc5-34819adef218",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "65401b89-cd36-4efa-b05b-71923791320b"
+              }
+            ],
+            "next": [],
+            "id": "9f6e804a-eca6-4ebd-b490-88b58e1528c1",
+            "condition": "ab66965e-8f95-4524-aa5a-94aedde33961"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for fibre-based composite material",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-fibre-based-composite-material",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "lUTjMP",
+                "shortDescription": "Permit number (Fibre-based composite material)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "f380dfb2-a49c-481c-80d6-557e0f990e7a"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of fibre-based composite material the permit or licence authorises the site to accept and recycle?",
+                "name": "gVPFhw",
+                "shortDescription": "Authorised weight (Fibre-based composite material)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "d62d10d9-d5ca-4f29-9c90-a895811d738a"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "jhAwXO",
+                "shortDescription": "Timescale (Fibre-based composite material)",
+                "hint": "",
+                "list": "3fa312f3-87d6-4ebd-8b8d-85a2c38ccfcd",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "fc2675e8-b376-45f3-bf96-ef1b9bd0f607"
+              }
+            ],
+            "next": [],
+            "id": "bdfec043-30ca-48b4-b3f1-4f3473264424",
+            "condition": "a5939c33-98f2-4f25-b46d-7e0ca0f7b330"
+          },
+          {
+            "title": "Installation permit details for fibre-based composite material",
+            "path": "/installation-permit-details-for-fibre-based-composite-material",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "Oddhfd",
+                "shortDescription": "Permit number (Fibre-based composite material)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "a4868192-058d-4e73-b590-da77e363a2a2"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of fibre-based composite material the permit authorises the site to accept and recycle?",
+                "name": "DfmRfW",
+                "shortDescription": "Authorised weight (Fibre-based composite material)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "b3e49daf-16a3-4b7f-9c20-3b2a298c6e11"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "wrBNlw",
+                "shortDescription": "Timescale (Fibre based composite material)",
+                "hint": "",
+                "list": "c2dc4e98-b29c-45f4-9483-2ed705c4e11e",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "30f0b1e5-65db-4c57-a5c8-199e79cce033"
+              }
+            ],
+            "next": [],
+            "id": "c574b9b8-bf97-4964-a47e-2ea52a092409",
+            "condition": "85dc198d-b6c4-4306-9e91-43dfa5068e33"
+          },
+          {
+            "title": "Waste exemption details for fibre-based composite material",
+            "path": "/waste-exemption-details-for-fibre-based-composite-material",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "dPKkHq",
+                "shortDescription": "Exemption reference (Fibre-based composite material)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "69788c3b-591e-4a8c-837d-744a51bfc8b4"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "kKekLO",
+                "shortDescription": "Exemption (Fibre-based composite material)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}"
+                },
+                "id": "6fe9ef97-9657-4cc9-a297-7b95ff7f48a0"
+              }
+            ],
+            "next": [],
+            "id": "d8bce3e9-992f-4bfb-bd65-15949c22eb4d",
+            "condition": "f90876fb-d95b-404c-bae4-e880aa51ef1d",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "XPGFqI",
+                "title": "Fibre-based composite material waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling glass?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-glass",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling glass?",
+                "name": "ipCOwX",
+                "shortDescription": "Permit type (Glass)",
+                "hint": "",
+                "list": "7900d525-0958-4034-b2c2-7a5577be77a8",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "95bcbf11-1b9f-482c-8307-9c8cf82153af"
+              }
+            ],
+            "next": [],
+            "id": "ea700400-6ed6-4176-b195-53b90bec4251",
+            "condition": "e5f42a59-5976-4a0f-8311-7ee58dc00da4"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for glass",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-glass",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "KTrkQK",
+                "shortDescription": "Permit number (Glass)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "7355254e-0116-4767-a807-f5cd8c5163a4"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of glass the permit or licence authorises the site to accept and recycle?",
+                "name": "ghfyir",
+                "shortDescription": "Authorised weight (Glass)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "6ea14b90-65ab-4f8f-9677-0a410593b8d7"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "CHzniE",
+                "shortDescription": "Timescale (Glass)",
+                "hint": "",
+                "list": "92371a63-fbac-455b-b05f-7aa3019edc8f",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8c2142d0-7201-4826-85a1-bb1345108cd6"
+              }
+            ],
+            "next": [],
+            "id": "8414178b-4ee1-48ee-b8fd-c7d193da396c",
+            "condition": "8a80594f-d838-4e3b-a75e-c046e4ed0fbf"
+          },
+          {
+            "title": "Installation permit details for glass",
+            "path": "/installation-permit-details-for-glass",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "btvRAn",
+                "shortDescription": "Permit number (Glass)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "c5602855-8cf7-4121-a3bc-a9bff7556f93"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of glass the permit authorises the site to accept and recycle?",
+                "name": "rSLVjK",
+                "shortDescription": "Authorised weight (Glass)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "27f9e136-0e74-4596-8c36-18a5b96520d8"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "KjYQpk",
+                "shortDescription": "Timescale (Glass)",
+                "hint": "",
+                "list": "22a59d26-1a1e-40b6-944e-4cd842555726",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "0aac8fd7-e85c-4b46-8be8-518aac85c98d"
+              }
+            ],
+            "next": [],
+            "id": "f0c5953a-18d5-467c-9db0-ec5d27266576",
+            "condition": "44fd97dc-d7c7-481a-a974-9a79cef85c67"
+          },
+          {
+            "title": "Waste exemption details for glass",
+            "path": "/waste-exemption-details-for-glass",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "RwhOyj",
+                "shortDescription": "Exemption reference (Glass)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "04251bdb-24ad-480a-a9c7-da98cf1c726a"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "vZtrFg",
+                "shortDescription": "Exemption (Glass)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}"
+                },
+                "id": "1d492fa0-168a-4c16-881f-ceef50ec414d"
+              }
+            ],
+            "next": [],
+            "id": "879d8cf2-62b4-42fa-8195-96fbe03ead71",
+            "condition": "8b82832d-0717-41a6-8858-1836c7c80f46",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "anXHeW",
+                "title": "Glass waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling paper or board?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-paper-or-board",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling paper or board?",
+                "name": "KiejJH",
+                "shortDescription": "Permit type (Paper or board)",
+                "hint": "",
+                "list": "81b329a5-97a1-49a5-bd09-4f26fdb35d39",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "6a7a07af-0a8a-49a7-b756-293c096575e2"
+              }
+            ],
+            "next": [],
+            "id": "ea41459b-32a0-4b7b-acc1-ee1aa6c76967",
+            "condition": "be9650e5-a7d6-49c3-adfe-3c04248c2a8d"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for paper or board",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-paper-or-board",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "KnJFVc",
+                "shortDescription": "Permit number (Paper or board)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "63d3b631-524c-4e6f-87ce-46830196e651"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of paper or board the permit or licence authorises the site to accept and recycle?",
+                "name": "YHcXFy",
+                "shortDescription": "Authorised weight (Paper or board)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "22712ab6-cdca-47db-ac92-b06244d3fa6e"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "aYxyJv",
+                "shortDescription": "Timescale (Paper or board)",
+                "hint": "",
+                "list": "13aa6a0b-0f64-4136-a432-0f7fd61b9402",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "04e7bef9-6a69-4a4a-8218-5215ed404c12"
+              }
+            ],
+            "next": [],
+            "id": "34825c1a-e6a7-48a1-b0c4-1aab0a798be5",
+            "condition": "fb26aa2f-7b3e-4ade-a35e-f3b75207ca27"
+          },
+          {
+            "title": "Installation permit details for paper or board",
+            "path": "/installation-permit-details-for-paper-or-board",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "yyDdzy",
+                "shortDescription": "Permit number (Paper or board)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "c00c751c-98a8-4a44-afd3-e08bb870aece"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of paper or board the permit authorises the site to accept and recycle?",
+                "name": "Iprmfk",
+                "shortDescription": "Authorised weight (Paper or board)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "fe41bc1d-32ef-48b0-a674-b1450af4cab0"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "CybNBT",
+                "shortDescription": "Timescale (Paper or board)",
+                "hint": "",
+                "list": "51716d88-8e93-4687-931c-823199a58ffe",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "c167eb76-1e1c-483b-a9cc-a6878b1a0698"
+              }
+            ],
+            "next": [],
+            "id": "499f8d11-2028-4841-a023-3433615442a5",
+            "condition": "117b99c7-87f5-4b46-bd90-e607c33e438a"
+          },
+          {
+            "title": "Waste exemption details for paper or board",
+            "path": "/waste-exemption-details-for-paper-or-board",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "bpEKbC",
+                "shortDescription": "Exemption reference (Paper or board)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "3ab188a8-940c-4946-acfc-d0d3f3d4d7b9"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "DcrWHs",
+                "shortDescription": "Exemption (Paper or board)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}"
+                },
+                "id": "a8aa9a62-fa13-4f2f-bb1c-6947b0df651f"
+              }
+            ],
+            "next": [],
+            "id": "98b6f783-f085-40d8-84ce-a727ea3efaa3",
+            "condition": "1801d4a8-7707-4554-85ab-71eeb534b4c7",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "elYnBJ",
+                "title": "Paper or board waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling plastic?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-plastic",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling plastic?",
+                "name": "TgVrOx",
+                "shortDescription": "Permit type (Plastic)",
+                "hint": "",
+                "list": "1e4ab19c-ff36-4fde-8537-a03e53c9e5df",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "b36d7ddd-5d23-46b8-896e-ac48f81413cd"
+              }
+            ],
+            "next": [],
+            "id": "ef13ea50-687c-43ef-971f-f0a97d2b10d4",
+            "condition": "ae12b7ac-c6f8-4329-a5e3-0201056f535c"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for plastic",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-plastic",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "wEBzCx",
+                "shortDescription": "Permit number (Plastic)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "919d33df-7684-4cce-9110-b38c43ae8908"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of plastic the permit or licence authorises the site to accept and recycle?",
+                "name": "NgFqcz",
+                "shortDescription": "Authorised weight (Plastic)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "101e08bf-65e1-429f-87e9-527a0e22d7a3"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "dQoVDq",
+                "shortDescription": "Timescale (Plastic)",
+                "hint": "",
+                "list": "9e5e1abf-cbc8-4fb1-a8c2-29e74adc510e",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "5d6af7be-2b29-482e-85b3-15372a8605b6"
+              }
+            ],
+            "next": [],
+            "id": "86393515-d11d-408c-add1-a8355c1bff78",
+            "condition": "5bbc527c-3e36-4274-bb91-2d1e83cca5ec"
+          },
+          {
+            "title": "Installation permit details for plastic",
+            "path": "/installation-permit-details-for-plastic",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "TcFLHn",
+                "shortDescription": "Permit number (Plastic)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8beeb012-8d2a-4380-8070-131b1671f31d"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of plastic the permit authorises the site to accept and recycle?",
+                "name": "mwpTtm",
+                "shortDescription": "Authorised weight (Plastic)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "b27e41cc-0e1d-41b4-abdb-daa78816b40c"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "oXaouc",
+                "shortDescription": "Timescale (Plastic)",
+                "hint": "",
+                "list": "1b6a6d4d-549b-4e8a-ba49-0c991993206b",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "6785df92-d395-477d-be47-a822a13c943b"
+              }
+            ],
+            "next": [],
+            "id": "49028724-b81b-4a05-9f2c-944abf558ea5",
+            "condition": "3a55cd63-e17f-492f-9528-4b56e52b66c1"
+          },
+          {
+            "title": "Waste exemption details for plastic",
+            "path": "/waste-exemption-details-for-plastic",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "MnTizd",
+                "shortDescription": "Exemption reference (Plastic)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "9f9783ad-ded5-4310-9113-eb735b0392c6"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "veoXWn",
+                "shortDescription": "Exemption (Plastic)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}"
+                },
+                "id": "32fc4937-a78a-4953-99b5-e7cc8d9a71f6"
+              }
+            ],
+            "next": [],
+            "id": "7be875cf-0a43-4c50-ac5b-f1d8255e6eec",
+            "condition": "144d5673-30a6-4ba3-bb8c-05c710024708",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "CVGqJH",
+                "title": "Plastic waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling steel?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-steel",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling steel?",
+                "name": "vlQvkP",
+                "shortDescription": "Permit type (Steel)",
+                "hint": "",
+                "list": "49f0fee2-aecb-42a2-9fc6-0dab9fe6cb26",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "653c7e4e-55db-430f-a97b-cd475f245579"
+              }
+            ],
+            "next": [],
+            "id": "f65f6ba6-2d49-4237-803b-f8591f01cd74",
+            "condition": "9373dcaa-3ad8-4dc0-b8eb-7fa63f9f5c37"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for steel",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-steel",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "RuixDm",
+                "shortDescription": "Permit number (Steel)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8b01a8f2-c7e7-4bf0-a2aa-8bd9f2fa7745"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of steel the permit or licence authorises the site to accept and recycle?",
+                "name": "wBHSPU",
+                "shortDescription": "Authorised weight (Steel)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "6c97af6f-76b6-4f7c-973c-09e7373a29d7"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "PVPQSJ",
+                "shortDescription": "Timescale (Steel)",
+                "hint": "",
+                "list": "e31b9d71-e218-4136-8164-361240b223ae",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "aba7bc4c-dfb9-4bb1-90d6-96c9985151bd"
+              }
+            ],
+            "next": [],
+            "id": "ee86fea1-14b6-4327-84bf-7c610055fa70",
+            "condition": "895a7e63-a58e-4314-a471-7905aed4533b"
+          },
+          {
+            "title": "Installation permit details for steel",
+            "path": "/installation-permit-details-for-steel",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "dlXnfH",
+                "shortDescription": "Permit number (Steel)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "a0e0b12e-40f4-485e-88fe-71b263009ea5"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of steel the permit authorises the site to accept and recycle?",
+                "name": "qXTCpW",
+                "shortDescription": "Authorised weight (Steel)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "0ca91be5-9a7d-475c-a712-73e2b003784d"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "oVyPAn",
+                "shortDescription": "Timescale (Steel)",
+                "hint": "",
+                "list": "1c67d6b8-393c-4982-9eba-a1e57fad7b5d",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "73fd9dc0-408b-4245-9f80-aa8a5f94e7f5"
+              }
+            ],
+            "next": [],
+            "id": "c13902ea-308b-470c-a00e-3df7bb6d7987",
+            "condition": "c62e7334-0322-4776-81bd-565c76d16a98"
+          },
+          {
+            "title": "Waste exemption details for steel",
+            "path": "/waste-exemption-details-for-steel",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "fdMJMT",
+                "shortDescription": "Exemption reference (Steel)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "f66f9db1-0563-44be-a16d-5fc08f84df2f"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "oZsxNv",
+                "shortDescription": "Exemption (Steel)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}\r\n"
+                },
+                "id": "21afa5d1-5df3-48c9-9bd8-d7c32dec86cd"
+              }
+            ],
+            "next": [],
+            "id": "4b2a7bf2-75e2-4483-b696-b268916108ed",
+            "condition": "8438d6dd-9f89-4d78-94f0-b95033c016b0",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "wwYxAy",
+                "title": "Steel waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "What permit does the site have for accepting and recycling wood?",
+            "path": "/what-permit-does-the-site-have-for-accepting-and-recycling-wood",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What permit does the site have for accepting and recycling wood?",
+                "name": "kkpNSo",
+                "shortDescription": "Permit type (Wood)",
+                "hint": "",
+                "list": "a5233ff3-4aa7-45f3-b4d6-6a559b8a351e",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "956151b1-a470-4867-8918-f1f6583b1503"
+              }
+            ],
+            "next": [],
+            "id": "c0a30fee-8e74-4021-8367-45625103ab1c",
+            "condition": "01a1ab21-ad64-4f36-ae90-458d9bf85faa"
+          },
+          {
+            "title": "Environmental permit or waste management licence details for wood",
+            "path": "/environmental-permit-or-waste-management-licence-details-for-wood",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit or licence number?",
+                "name": "YKiwnm",
+                "shortDescription": "Permit number (Wood)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "2e5b4274-eda3-4c6a-b8e5-e9580fc6cbad"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of wood the permit or licence authorises the site to accept and recycle?",
+                "name": "FVPdoa",
+                "shortDescription": "Authorised weight (Wood)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "c1d0c638-3551-4e6d-ad0e-1c0e0425a106"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "gNdqCt",
+                "shortDescription": "Timescale (Wood)",
+                "hint": "",
+                "list": "655d2e4d-8a65-47bb-b1a6-62efc97386c2",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "7af452d9-a9fe-410f-8c86-5713be223a21"
+              }
+            ],
+            "next": [],
+            "id": "0d9e7650-7501-44f9-aad2-195bc1b01068",
+            "condition": "2a8ce555-2c6e-42ab-9e79-f4df9913e17f"
+          },
+          {
+            "title": "Installation permit details for wood",
+            "path": "/installation-permit-details-for-wood",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your permit number?",
+                "name": "TCxAPf",
+                "shortDescription": "Permit number (Wood)",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "53f767df-f339-4f99-90ab-11441b1bf56d"
+              },
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of wood the permit authorises the site to accept and recycle?",
+                "name": "lFGUnH",
+                "shortDescription": "Authorised weight (Wood)",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "2e752bab-35bb-447d-a980-33129d190c48"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly limit?",
+                "name": "SMhqAO",
+                "shortDescription": "Timescale (Wood)",
+                "hint": "",
+                "list": "42aaba01-a830-40f0-bba4-a8a79600e697",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "95c02670-e773-4d1d-8784-0b5291a301c8"
+              }
+            ],
+            "next": [],
+            "id": "2c769a0b-f8b3-4c79-92c3-8811bfdd26d1",
+            "condition": "c5e97f2f-7dce-40b5-b711-c068463e1237"
+          },
+          {
+            "title": "Waste exemption details for wood",
+            "path": "/waste-exemption-details-for-wood",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption reference number?",
+                "name": "CfxNqG",
+                "shortDescription": "Exemption reference (Wood)",
+                "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 9,
+                  "max": 9,
+                  "regex": "[wW][eE][xX][0-9]{6}"
+                },
+                "id": "98fad8a3-ae01-42eb-ab00-eee16ce08983"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the waste exemption?",
+                "name": "gSYWFQ",
+                "shortDescription": "Exemption (Wood)",
+                "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-5"
+                },
+                "schema": {
+                  "min": 2,
+                  "max": 3,
+                  "regex": "^[studSTUD][0-9]{1,2}"
+                },
+                "id": "cf587e03-8769-4af7-9bb2-d93480d2e6fe"
+              }
+            ],
+            "next": [],
+            "id": "0ed97f90-1db6-4189-8b55-1417b84f384c",
+            "condition": "3eacfe3f-19d9-44ee-901e-853e728208c6",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "DEJmZZ",
+                "title": "Wood waste exemption"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "Site capacity for aluminium recycling",
+            "path": "/site-capacity-for-aluminium-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of aluminium packaging waste the site could recycle?",
+                "name": "vNWexi",
+                "shortDescription": "Capacity (Aluminium)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "e7252739-5675-444f-8f05-3f7f21923f7a"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "YuzbTu",
+                "shortDescription": "Timescale (Aluminium)",
+                "hint": "",
+                "list": "3368ab8f-58f6-49fc-aa79-1ccfce6d26f0",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "4759341e-a83c-4d96-98ff-09808ccaff70"
+              }
+            ],
+            "next": [],
+            "id": "fcb838c7-6dd8-453e-bbe7-eae373ba26ff",
+            "condition": "ef64bf63-3772-487e-9918-db4de9ebb789"
+          },
+          {
+            "title": "Site capacity for fibre-based composite material recycling",
+            "path": "/site-capacity-for-fibre-based-composite-material-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of fibre-based composite material packaging waste the site could recycle?",
+                "name": "QhRnWi",
+                "shortDescription": "Capacity (Fibre-based composite material)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "33628700-23c7-4f69-8f0f-e8203bc31cd8"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "fKJptb",
+                "shortDescription": "Timescale (Fibre-based composite material)",
+                "hint": "",
+                "list": "7ba3ee01-627d-4cf8-b36a-3ead18ea3950",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "e622b60b-f2df-49cf-9305-04c1b014040f"
+              }
+            ],
+            "next": [],
+            "id": "97316a3b-0063-485d-821a-618f3f7e4639",
+            "condition": "ab66965e-8f95-4524-aa5a-94aedde33961"
+          },
+          {
+            "title": "Site capacity for glass recycling",
+            "path": "/site-capacity-for-glass-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of glass packaging waste the site could recycle?",
+                "name": "vSToBG",
+                "shortDescription": "Capacity (Glass)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "9e83fc89-c9e4-4f62-bd13-572b272d9b3b"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "DVeeua",
+                "shortDescription": "Timescale (Glass)",
+                "hint": "",
+                "list": "b359bed8-63ee-43f6-b1ae-f0c495feb81e",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "4d1c0d1e-160a-4112-a93a-bb9deddd4e2a"
+              }
+            ],
+            "next": [],
+            "id": "6ff78ba9-1330-4201-992d-010eff549f4a",
+            "condition": "e5f42a59-5976-4a0f-8311-7ee58dc00da4"
+          },
+          {
+            "title": "Site capacity for paper or board recycling",
+            "path": "/site-capacity-for-paper-or-board-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of paper or board packaging waste the site could recycle?",
+                "name": "ZRavIK",
+                "shortDescription": "Capacity (Paper or board)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "a52dd6d1-b40d-4c57-8a68-2a5b5a50b2c9"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "jmderv",
+                "shortDescription": "Timescale (Paper or board)",
+                "hint": "",
+                "list": "40e95c55-43dc-4742-811e-7967debaec72",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "62bde91e-9100-4ed4-99fe-43224340820f"
+              }
+            ],
+            "next": [],
+            "id": "2e770b55-750d-48be-be26-da2c636d0561",
+            "condition": "be9650e5-a7d6-49c3-adfe-3c04248c2a8d"
+          },
+          {
+            "title": "Site capacity for plastic recycling",
+            "path": "/site-capacity-for-plastic-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of plastic packaging waste the site could recycle?",
+                "name": "SmJEoW",
+                "shortDescription": "Capacity (Plastic)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "5423b6a7-1b3a-46cf-af4d-575f5421b36b"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "YNWfOC",
+                "shortDescription": "Timescale (Plastic)",
+                "hint": "",
+                "list": "1efa9a64-f06c-4941-a920-bee8168ce648",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "3b280400-c9af-450f-8954-3e42b11bb732"
+              }
+            ],
+            "next": [],
+            "id": "b51a1985-9a63-4883-bd01-19bb9164b226",
+            "condition": "ae12b7ac-c6f8-4329-a5e3-0201056f535c"
+          },
+          {
+            "title": "Site capacity for steel recycling",
+            "path": "/site-capacity-for-steel-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of steel packaging waste the site could recycle?",
+                "name": "QKRKBz",
+                "shortDescription": "Capacity (Steel)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "7649b916-7a46-447b-a397-b811628b4621"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "EIbauW",
+                "shortDescription": "Timescale (Steel)",
+                "hint": "",
+                "list": "b3a53087-6616-413d-85d2-f4000d113ef1",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8aaee4c4-9b29-4370-8436-9652684b524f"
+              }
+            ],
+            "next": [],
+            "id": "74d80bd6-e5f6-4e0f-a81d-a79f0197f5c7",
+            "condition": "9373dcaa-3ad8-4dc0-b8eb-7fa63f9f5c37"
+          },
+          {
+            "title": "Site capacity for wood recycling",
+            "path": "/site-capacity-for-wood-recycling",
+            "components": [
+              {
+                "type": "NumberField",
+                "title": "What is the maximum tonnage of wood packaging waste the site could recycle?",
+                "name": "NbYOqe",
+                "shortDescription": "Capacity (Wood)",
+                "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 1,
+                  "precision": 0
+                },
+                "id": "b7071d5d-a1ac-461c-831a-bb868c4daf9f"
+              },
+              {
+                "type": "RadiosField",
+                "title": "Is this a yearly, monthly or weekly capacity?",
+                "name": "bOVLpK",
+                "shortDescription": "Timescale (Wood)",
+                "hint": "",
+                "list": "a9ae6689-037d-4dac-b4bc-a1c875e17e94",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "585032cd-c605-438e-8e6d-b3277f177522"
+              }
+            ],
+            "next": [],
+            "id": "bf0e8166-965e-4922-a7a3-be8cea9b4f23",
+            "condition": "01a1ab21-ad64-4f36-ae90-458d9bf85faa"
+          },
+          {
+            "title": "What is your waste carrier, broker or dealer registration number?",
+            "path": "/what-is-your-waste-carrier-broker-or-dealer-registration-number",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your waste carrier, broker or dealer registration number?",
+                "name": "ruHJsg",
+                "shortDescription": "Carrier, broker or dealer number",
+                "hint": "This must be an upper tier waste carrier, broker or dealer registration and is CBDU followed by a 4 to 6 digit number, for example CBDU123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-20"
+                },
+                "schema": {
+                  "min": 8,
+                  "max": 10,
+                  "regex": "^[cC][bB][dD][uU]"
+                },
+                "id": "cd2832ce-3212-4800-a8dc-ed487ad951d5"
+              }
+            ],
+            "next": [],
+            "id": "42d4ac50-351f-4137-8548-ec33999d43d6"
+          },
+          {
+            "title": "Which packaging waste category are you applying to register?",
+            "path": "/which-packaging-waste-category-are-you-applying-to-register",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "Which packaging waste category are you applying to register?",
+                "name": "dFPgaw",
+                "shortDescription": "Packaging waste category to be registered",
+                "hint": "You can apply for another category after you've submitted this application",
+                "list": "c106dec4-bfae-44ca-b5fa-5e5eb5599b23",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "f4ec22b8-8d78-4076-a395-b54ba06992e7"
+              }
+            ],
+            "next": [],
+            "id": "07ca762b-f0fe-443d-befd-6f40edf65db0"
+          },
+          {
+            "title": "What is the recycling process for the glass?",
+            "path": "/what-is-the-recycling-process-for-the-glass",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What is the recycling process for the glass?",
+                "name": "YMRnmp",
+                "shortDescription": "Glass process",
+                "hint": "",
+                "list": "8d1da33b-5947-4d19-bbc3-eba6000d38f5",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "912b4cc4-9484-4166-a6eb-41433f615bf4"
+              }
+            ],
+            "next": [],
+            "id": "fc250120-3da0-4599-a8fe-5891774b4d1d",
+            "condition": "a966a356-cde6-4293-9167-433c141bcab0"
+          },
+          {
+            "title": "What type of suppliers do you receive this packaging waste category from?",
+            "path": "/what-type-of-suppliers-do-you-receive-this-packaging-waste-category-from",
+            "components": [
+              {
+                "type": "MultilineTextField",
+                "title": "What type of suppliers do you receive this packaging waste category from?",
+                "name": "HFOWKa",
+                "shortDescription": "Suppliers",
+                "hint": "For example local council collections, direct from producer, material recovery facility",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "71559a7a-5722-456b-afcb-1834351fbe6f"
+              }
+            ],
+            "next": [],
+            "id": "415a6511-916b-4373-a56d-396125f79c30"
+          },
+          {
+            "title": "Inputs for calendar year 2024",
+            "path": "/inputs-for-calendar-year-2024",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "Are the tonnages for input actual or estimated figures?",
+                "name": "VVwRDD",
+                "shortDescription": "Input actual or estimated tonnages?",
+                "hint": "",
+                "list": "82467cc2-5cff-4144-b977-1b35675ef5ff",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "cf0921c9-2401-4831-8190-d22eba8f3ff3"
+              },
+              {
+                "type": "NumberField",
+                "title": "UK packaging waste",
+                "name": "cyBcMz",
+                "shortDescription": "UK packaging waste input",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "b6414467-e4b1-4fbb-a9ef-cece0b4d6875"
+              },
+              {
+                "type": "NumberField",
+                "title": "Non-UK packaging waste",
+                "name": "gGUQnN",
+                "shortDescription": "Non-UK packaging waste input",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "ca9aa856-3d98-4933-8838-aa81ee8273d4"
+              },
+              {
+                "type": "NumberField",
+                "title": "Non-packaging waste",
+                "name": "VSKoqK",
+                "shortDescription": "Non-packaging input",
+                "hint": "An input to the recycling process, but it's not packaging waste",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "precision": 0
+                },
+                "id": "b277f7a3-0d74-4faa-90cf-c195f4d6a904"
+              },
+              {
+                "id": "b10d8725-28c9-4c0f-a01a-a956a6a3652c",
+                "type": "Markdown",
+                "content": "Regulators need to know the mix of waste types and raw materials used in your recycling process.\r\n\r\nOnly include the tonnage that relates to the packaging waste category you are registering.",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "c152ba51-395d-472b-89e9-8b10f7bc3842"
+          },
+          {
+            "title": "Raw material inputs for calendar year 2024",
+            "path": "/raw-material-inputs-for-calendar-year-2024",
+            "components": [
+              {
+                "id": "7908baf0-28d5-4494-974c-9cf708cdf539",
+                "type": "Markdown",
+                "content": "Only include the tonnage that relates to the recycling process for the packaging waste category you are registering.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "Raw material",
+                "name": "hYwnjo",
+                "shortDescription": "Input raw material",
+                "hint": "Enter the name of the raw material used in your recycling process, for example water or starch",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "484335f2-04af-4939-a22c-3079d85e53a8"
+              },
+              {
+                "type": "NumberField",
+                "title": "Raw material tonnage",
+                "name": "dgypsb",
+                "shortDescription": "Input raw material tonnage",
+                "hint": "Enter whole tonnages",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "dba925a3-68e9-4d05-b8b9-63db119a4c66"
+              }
+            ],
+            "next": [],
+            "id": "15000508-5733-4abd-a154-5f062c7ce931",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "MHEaUi",
+                "title": "Raw material input"
+              },
+              "schema": {
+                "min": 1,
+                "max": 25
+              }
+            }
+          },
+          {
+            "title": "Outputs for calendar year 2024",
+            "path": "/outputs-for-calendar-year-2024",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "Are the output tonnages actual or estimated figures?",
+                "name": "slZDTV",
+                "shortDescription": "Output actual or estimated tonnages?",
+                "hint": "",
+                "list": "e99bacd1-0f9a-4db5-9cb5-f8b23e4aff7e",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "bcc59bc2-2c8a-40c8-9bfe-9ee4cd61ab4e"
+              },
+              {
+                "type": "NumberField",
+                "title": "Total tonnage of the packaging waste category sent to other sites for recycling",
+                "name": "TTBOhH",
+                "shortDescription": "Tonnage sent to another reprocessor",
+                "hint": "Material received but not recycled at your site",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "1c1eb144-f2f4-4e48-b0a8-c37381d2f500"
+              },
+              {
+                "type": "NumberField",
+                "title": "Total contaminants from recycling the packaging waste category",
+                "name": "zWAYkP",
+                "shortDescription": "Tonnage of contaminants",
+                "hint": "Contaminants removed from the material during recycling, including non-recyclable components or impurities",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "06a520cd-2dff-43bf-a9cd-869a667c2758"
+              },
+              {
+                "type": "NumberField",
+                "title": "Total process loss from recycling the packaging waste category",
+                "name": "sfMNQP",
+                "shortDescription": "Total process loss",
+                "hint": "For example, loss through material degradation or waste",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "e797494d-87dc-49ef-b654-cd6930210cc1"
+              },
+              {
+                "id": "6bb1beca-9730-44a2-82ee-b77ddbd4da86",
+                "type": "Markdown",
+                "content": "Only include the tonnage that relates to the packaging waste category you are registering.",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "771794de-63cf-4fd7-816d-9fa5b098681e"
+          },
+          {
+            "title": "Products made from recycling for 2024",
+            "path": "/products-made-from-recycling-for-2024",
+            "components": [
+              {
+                "id": "334cd83b-ba51-474e-9613-bc1209dfdd74",
+                "type": "Markdown",
+                "content": "Only include the tonnage that relates to the recycling process for the packaging waste category you are registering.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "Products made from recycling",
+                "name": "QCBNNY",
+                "shortDescription": "Product name",
+                "hint": "Enter the name of the product, for example milk bottles, food trays or cardboard boxes",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "ac069a3d-3914-45f2-97ea-2cea88ddbeeb"
+              },
+              {
+                "type": "NumberField",
+                "title": "Tonnage of product",
+                "name": "CShkze",
+                "shortDescription": "Product tonnage",
+                "hint": "Enter whole tonnages",
+                "options": {
+                  "required": true,
+                  "suffix": "Tonnes"
+                },
+                "schema": {
+                  "min": 0,
+                  "precision": 0
+                },
+                "id": "dba046f9-5182-403b-b725-dc099f705e19"
+              }
+            ],
+            "next": [],
+            "id": "5ce0e4e0-ccb6-47c6-a45f-eccc284612cb",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "QCTXMF",
+                "title": "Product from recycling"
+              },
+              "schema": {
+                "min": 1,
+                "max": 25
+              }
+            }
+          },
+          {
+            "title": "What is the key plant and equipment used to recycle this packaging waste category?",
+            "path": "/what-is-the-key-plant-and-equipment-used-to-recycle-this-packaging-waste-category",
+            "components": [
+              {
+                "type": "MultilineTextField",
+                "title": "What is the key plant and equipment used to recycle this packaging waste category?",
+                "name": "mVuNew",
+                "shortDescription": "Key plant and equipment",
+                "hint": "You only need to enter the names of the equipment - we'll ask you more detail about how you use the equipment in the sampling and inspection plan",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "413e8014-96b0-45dd-9d1a-c6e084c0a3fb"
+              }
+            ],
+            "next": [],
+            "id": "f805dfd1-6e97-41c8-8931-128051d34010"
+          },
+          {
+            "title": "Sampling and inspection plan",
+            "path": "/sampling-and-inspection-plan",
+            "components": [
+              {
+                "id": "78d470b6-ebc7-45f6-80e7-98fc994c24a5",
+                "type": "Markdown",
+                "content": "You need to supply a plan explaining how you determine the amount of UK packaging waste received for recycling at this site - this is also called a sampling and inspection plan (SIP). \r\n\r\nThe template for the SIP is available on gov.uk here: https://www.gov.uk/government/publications/extended-producer-responsibility-for-packaging-templates-for-sampling-and-inspection-plans\r\n\r\nUse the template called 'Packaging Reprocessor Sampling and Inspection Plan - Part 1: Registration.'",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "FileUploadField",
+                "title": "Upload part 1 of your sampling and inspection plan",
+                "name": "xddzIW",
+                "shortDescription": "Sampling and inspection plan",
+                "hint": "You may also upload supporting documentation",
+                "options": {
+                  "required": true,
+                  "accept": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text,text/plain,image/jpeg,image/png,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/vnd.oasis.opendocument.spreadsheet"
+                },
+                "schema": {},
+                "id": "a9fc92ef-6a74-4d98-993b-5731905ff005"
+              }
+            ],
+            "next": [],
+            "id": "c5ff3988-3231-4585-b058-d70fd3e0a6f6",
+            "controller": "FileUploadPageController"
+          },
+          {
+            "title": "Approved person",
+            "path": "/approved-person",
+            "components": [
+              {
+                "id": "74286a73-6e56-405a-9871-8634d134c4a2",
+                "type": "Markdown",
+                "content": "An 'approved person' is needed to take on tasks on behalf of the organisation. One must be added to:\r\n\r\n* apply for accreditation\r\n* submit and verify data returns\r\n\r\nAn approved person may delegate their function to another person (a delegate) at a later stage - subject to regulator approval. \r\n\r\nContact the regulator if you wish to delegate the functions of the approved person or add an additional approved person. \r\n\r\n##  Approved person details",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "What is the approved person's full name?",
+                "name": "eKdnWs",
+                "shortDescription": "AP name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "5106645a-0977-4f8f-896b-5fd2e69d7719"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is their email address?",
+                "name": "CJvZOT",
+                "shortDescription": "AP email address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "66b3e254-b6ec-41de-ba6a-f866963683a3"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is their telephone number?",
+                "name": "yRKTUh",
+                "shortDescription": "AP telephone number",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "1ca9403e-402b-4fa6-a9b8-1e1df62f3d32"
+              },
+              {
+                "type": "RadiosField",
+                "title": "What is their role within the organisation?",
+                "name": "TwIrTO",
+                "shortDescription": "AP role",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "list": "d0819f83-9680-471c-9eed-1bfa6116af1a",
+                "id": "4cc48a53-1456-4d52-9171-cc01d796b904"
+              }
+            ],
+            "next": [],
+            "id": "1cb21dee-2aab-4d6d-b94d-08d715347044"
+          },
+          {
+            "title": "Your contact details",
+            "path": "/your-contact-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your full name?",
+                "name": "LnSGUi",
+                "shortDescription": "Submitter name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "55002499-1354-4c82-b7ad-2ac5bc82c5ca"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is your email address?",
+                "name": "pPrfJB",
+                "shortDescription": "Submitter email address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "22bf53aa-75a6-4767-b06f-50edbe7ead2c"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is your telephone number?",
+                "name": "aCYymT",
+                "shortDescription": "Submitter telephone number",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "d6f1dc87-c6dd-4b72-957e-4c85d46fed8c"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your job title?",
+                "name": "DxFVqx",
+                "shortDescription": "Submitter job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "fd35cf10-aa10-439b-b4ee-92e9190f21db"
+              }
+            ],
+            "next": [],
+            "id": "23063aa1-06e4-45d5-8fa0-e7f7e6bc4a7e"
+          },
+          {
+            "id": "449a45f6-4541-4a46-91bd-8b8931b07b50",
+            "title": "Summary",
+            "path": "/summary",
+            "controller": "SummaryPageController",
+            "events": {
+              "onSave": {
+                "type": "http",
+                "options": {
+                  "method": "POST",
+                  "url": "https://epr-backend.test.cdp-int.defra.cloud/v1/apply/registration"
+                }
+              }
+            },
+            "next": [],
+            "components": [
+              {
+                "type": "Markdown",
+                "content": "If you want to keep a record of your submitted answers please print this page.\r\n\r\nBy submitting this application you confirm the information you provided is accurate.\r\n\r\n**You may face enforcement action if the data is inaccurate.**",
+                "options": {},
+                "schema": {},
+                "id": "501c41c7-36ca-4c31-9787-84311f6704b2"
+              }
+            ]
+          }
+        ],
+        "conditions": [
+          {
+            "items": [
+              {
+                "id": "fed60572-e8dc-4e8a-ab06-3428d64e33f9",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "b15aeeec-9268-445b-b780-79abadcf736f",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts aluminium",
+            "id": "ef64bf63-3772-487e-9918-db4de9ebb789"
+          },
+          {
+            "items": [
+              {
+                "id": "4cc3a263-f6b4-4a8b-9a16-0c632e5a23a2",
+                "componentId": "b63142c8-8023-4aeb-98d5-1b82c7af7e11",
+                "operator": "is",
+                "value": {
+                  "itemId": "797b9178-9a6f-453f-abd1-4642bbd6dd2f",
+                  "listId": "3c08b5ad-a7f4-4faf-b59e-a2b39e2ef2c6"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (Alu)",
+            "id": "930f0493-4b00-4eaa-9d8c-44f7511e06cf"
+          },
+          {
+            "items": [
+              {
+                "id": "c2066e25-4d1a-4aa9-ad4b-991bc380e91a",
+                "componentId": "b63142c8-8023-4aeb-98d5-1b82c7af7e11",
+                "operator": "is",
+                "value": {
+                  "itemId": "4957f2a3-4b90-496e-bed1-de205b7191c6",
+                  "listId": "3c08b5ad-a7f4-4faf-b59e-a2b39e2ef2c6"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (Alu)",
+            "id": "ae653a4c-81ab-4162-b275-5d6f6c5fd4dc"
+          },
+          {
+            "items": [
+              {
+                "id": "11ebba3c-e58f-459c-a413-2e2bff388b64",
+                "componentId": "b63142c8-8023-4aeb-98d5-1b82c7af7e11",
+                "operator": "is",
+                "value": {
+                  "itemId": "63b162b4-5f19-4973-9b0e-ed1356c48c3e",
+                  "listId": "3c08b5ad-a7f4-4faf-b59e-a2b39e2ef2c6"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (Alu)",
+            "id": "153b033b-c2f9-4e7a-b98f-7ca7e621b7ad"
+          },
+          {
+            "items": [
+              {
+                "id": "4f1ab7dd-8eb8-4da3-837c-054e585f4c40",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "fa6cb2a8-35ed-48cd-8649-545f9942812f",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts glass",
+            "id": "e5f42a59-5976-4a0f-8311-7ee58dc00da4"
+          },
+          {
+            "items": [
+              {
+                "id": "e8ba127a-4a2c-4700-a5e9-4ad6c20708ec",
+                "componentId": "95bcbf11-1b9f-482c-8307-9c8cf82153af",
+                "operator": "is",
+                "value": {
+                  "itemId": "192ec7ae-7935-4f50-8ffa-d8371dc00bcb",
+                  "listId": "7900d525-0958-4034-b2c2-7a5577be77a8"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (Glass)",
+            "id": "8a80594f-d838-4e3b-a75e-c046e4ed0fbf"
+          },
+          {
+            "items": [
+              {
+                "id": "2f8a03bc-80c9-4bf7-bfb4-1048da5931f6",
+                "componentId": "95bcbf11-1b9f-482c-8307-9c8cf82153af",
+                "operator": "is",
+                "value": {
+                  "itemId": "9ade2838-7a0d-4643-b649-e20b803a17ea",
+                  "listId": "7900d525-0958-4034-b2c2-7a5577be77a8"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (Glass)",
+            "id": "44fd97dc-d7c7-481a-a974-9a79cef85c67"
+          },
+          {
+            "items": [
+              {
+                "id": "0ee4a03e-337c-4292-a34d-dbc91c9f80a2",
+                "componentId": "95bcbf11-1b9f-482c-8307-9c8cf82153af",
+                "operator": "is",
+                "value": {
+                  "itemId": "46821eaf-6897-4810-b0c0-9a0f714097b6",
+                  "listId": "7900d525-0958-4034-b2c2-7a5577be77a8"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (Glass)",
+            "id": "8b82832d-0717-41a6-8858-1836c7c80f46"
+          },
+          {
+            "items": [
+              {
+                "id": "f936ad36-3313-4ad9-b073-e6ad6039652c",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "fe45478b-cddd-4fc2-9bac-3abe4ef40fbd",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts paper or board",
+            "id": "be9650e5-a7d6-49c3-adfe-3c04248c2a8d"
+          },
+          {
+            "items": [
+              {
+                "id": "c0afe2cd-58ef-49e4-90bd-a0a2a8cb9f60",
+                "componentId": "6a7a07af-0a8a-49a7-b756-293c096575e2",
+                "operator": "is",
+                "value": {
+                  "itemId": "c3d6fdf2-fc87-4db9-b113-d9b5f92c620f",
+                  "listId": "81b329a5-97a1-49a5-bd09-4f26fdb35d39"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (Paper or board)",
+            "id": "fb26aa2f-7b3e-4ade-a35e-f3b75207ca27"
+          },
+          {
+            "items": [
+              {
+                "id": "be30f7cf-0ce1-4e47-babc-f6f1c84be43b",
+                "componentId": "6a7a07af-0a8a-49a7-b756-293c096575e2",
+                "operator": "is",
+                "value": {
+                  "itemId": "31f95034-fe5f-4d8f-8628-8b8670301f33",
+                  "listId": "81b329a5-97a1-49a5-bd09-4f26fdb35d39"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (Paper or board)",
+            "id": "117b99c7-87f5-4b46-bd90-e607c33e438a"
+          },
+          {
+            "items": [
+              {
+                "id": "604d4e1d-27cd-486e-a56b-5d5e1831a24b",
+                "componentId": "6a7a07af-0a8a-49a7-b756-293c096575e2",
+                "operator": "is",
+                "value": {
+                  "itemId": "aed70388-560b-4d59-8087-a3439be9b9b6",
+                  "listId": "81b329a5-97a1-49a5-bd09-4f26fdb35d39"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (Paper or board)",
+            "id": "1801d4a8-7707-4554-85ab-71eeb534b4c7"
+          },
+          {
+            "items": [
+              {
+                "id": "c90009c2-682d-4148-b5f0-78a0a2ca73de",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "304a480d-59d9-4226-ac65-0e6c5688d992",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts FBC",
+            "id": "ab66965e-8f95-4524-aa5a-94aedde33961"
+          },
+          {
+            "items": [
+              {
+                "id": "49bb58e8-846a-488e-8600-cd7ea592da1b",
+                "componentId": "65401b89-cd36-4efa-b05b-71923791320b",
+                "operator": "is",
+                "value": {
+                  "itemId": "ec5bc0ed-cb4f-4a00-af27-3153c5bdc93f",
+                  "listId": "66513348-a111-4f36-8cc5-34819adef218"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (FBC)",
+            "id": "a5939c33-98f2-4f25-b46d-7e0ca0f7b330"
+          },
+          {
+            "items": [
+              {
+                "id": "7537edda-c1be-4daa-9417-278c51f96ca1",
+                "componentId": "65401b89-cd36-4efa-b05b-71923791320b",
+                "operator": "is",
+                "value": {
+                  "itemId": "334534df-65e4-4222-ad2b-88cf0b9b91c1",
+                  "listId": "66513348-a111-4f36-8cc5-34819adef218"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (FBC)",
+            "id": "85dc198d-b6c4-4306-9e91-43dfa5068e33"
+          },
+          {
+            "items": [
+              {
+                "id": "c40f7708-0556-405e-ae65-521936646b8c",
+                "componentId": "65401b89-cd36-4efa-b05b-71923791320b",
+                "operator": "is",
+                "value": {
+                  "itemId": "0371863e-3f7f-493e-82db-2c3adabf18aa",
+                  "listId": "66513348-a111-4f36-8cc5-34819adef218"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (FBC)",
+            "id": "f90876fb-d95b-404c-bae4-e880aa51ef1d"
+          },
+          {
+            "items": [
+              {
+                "id": "74b1756e-49db-4577-9eef-2686d5cde8cd",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "e4a4b332-713c-4a3e-a5f3-1ac57293dd07",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts plastic",
+            "id": "ae12b7ac-c6f8-4329-a5e3-0201056f535c"
+          },
+          {
+            "items": [
+              {
+                "id": "5045ded3-7576-4245-acaf-91ae74fd5587",
+                "componentId": "b36d7ddd-5d23-46b8-896e-ac48f81413cd",
+                "operator": "is",
+                "value": {
+                  "itemId": "6cd1c9c7-2198-4fcb-8131-1b003b80829f",
+                  "listId": "1e4ab19c-ff36-4fde-8537-a03e53c9e5df"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (Plastic)",
+            "id": "5bbc527c-3e36-4274-bb91-2d1e83cca5ec"
+          },
+          {
+            "items": [
+              {
+                "id": "5278d7cb-0b10-4940-9034-e1df51a55e07",
+                "componentId": "b36d7ddd-5d23-46b8-896e-ac48f81413cd",
+                "operator": "is",
+                "value": {
+                  "itemId": "145a1e4c-0a48-492a-b535-f14d96f22a9d",
+                  "listId": "1e4ab19c-ff36-4fde-8537-a03e53c9e5df"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (Plastic)",
+            "id": "3a55cd63-e17f-492f-9528-4b56e52b66c1"
+          },
+          {
+            "items": [
+              {
+                "id": "e0070a4c-c682-406b-bf93-baaa17787669",
+                "componentId": "b36d7ddd-5d23-46b8-896e-ac48f81413cd",
+                "operator": "is",
+                "value": {
+                  "itemId": "4be82e76-ec7c-4c11-9d88-f721e3a6588b",
+                  "listId": "1e4ab19c-ff36-4fde-8537-a03e53c9e5df"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (Plastic)",
+            "id": "144d5673-30a6-4ba3-bb8c-05c710024708"
+          },
+          {
+            "items": [
+              {
+                "id": "a61cc239-5ffb-40dc-9066-7c3f39f266e0",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "4390ee49-324a-4cf3-8ad0-bdb956e5981e",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts steel",
+            "id": "9373dcaa-3ad8-4dc0-b8eb-7fa63f9f5c37"
+          },
+          {
+            "items": [
+              {
+                "id": "b40daca8-c5ab-44b4-af89-322dd3635424",
+                "componentId": "653c7e4e-55db-430f-a97b-cd475f245579",
+                "operator": "is",
+                "value": {
+                  "itemId": "142f82ce-b944-487f-9d53-fa5be6120054",
+                  "listId": "49f0fee2-aecb-42a2-9fc6-0dab9fe6cb26"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (Steel)",
+            "id": "895a7e63-a58e-4314-a471-7905aed4533b"
+          },
+          {
+            "items": [
+              {
+                "id": "2fc0b73b-3cb0-47a6-9587-f94d4556a41f",
+                "componentId": "653c7e4e-55db-430f-a97b-cd475f245579",
+                "operator": "is",
+                "value": {
+                  "itemId": "1597a570-f2ce-4238-94f2-cc58a4c5e55a",
+                  "listId": "49f0fee2-aecb-42a2-9fc6-0dab9fe6cb26"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (Steel)",
+            "id": "c62e7334-0322-4776-81bd-565c76d16a98"
+          },
+          {
+            "items": [
+              {
+                "id": "a0dae5f3-23d7-420a-8607-3e9bc977d675",
+                "componentId": "653c7e4e-55db-430f-a97b-cd475f245579",
+                "operator": "is",
+                "value": {
+                  "itemId": "7cc2b36a-e511-4026-bdbb-c6b1a34a6389",
+                  "listId": "49f0fee2-aecb-42a2-9fc6-0dab9fe6cb26"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (Steel)",
+            "id": "8438d6dd-9f89-4d78-94f0-b95033c016b0"
+          },
+          {
+            "items": [
+              {
+                "id": "06a19cac-61d5-430a-824a-c38cee8e1fcc",
+                "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+                "operator": "contains",
+                "value": {
+                  "itemId": "11d978c5-9a89-499d-b528-b4ce453a0401",
+                  "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Accepts wood",
+            "id": "01a1ab21-ad64-4f36-ae90-458d9bf85faa"
+          },
+          {
+            "items": [
+              {
+                "id": "6fcf4b9d-658b-4c75-b2f9-a20f766b6630",
+                "componentId": "956151b1-a470-4867-8918-f1f6583b1503",
+                "operator": "is",
+                "value": {
+                  "itemId": "0424ee31-7a5c-4ad0-b84b-6555e9b5350c",
+                  "listId": "a5233ff3-4aa7-45f3-b4d6-6a559b8a351e"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is permit or w/m/l (Wood)",
+            "id": "2a8ce555-2c6e-42ab-9e79-f4df9913e17f"
+          },
+          {
+            "items": [
+              {
+                "id": "7940101a-4c92-4cfd-94e9-5fa2b6c42b5d",
+                "componentId": "956151b1-a470-4867-8918-f1f6583b1503",
+                "operator": "is",
+                "value": {
+                  "itemId": "34d852cc-23c9-4769-9788-66e706680687",
+                  "listId": "a5233ff3-4aa7-45f3-b4d6-6a559b8a351e"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is installation permit (Wood)",
+            "id": "c5e97f2f-7dce-40b5-b711-c068463e1237"
+          },
+          {
+            "items": [
+              {
+                "id": "72d218d6-c48d-48d2-9100-afb2566a2151",
+                "componentId": "956151b1-a470-4867-8918-f1f6583b1503",
+                "operator": "is",
+                "value": {
+                  "itemId": "73b80b4b-9fce-4758-8edb-5f241bb158af",
+                  "listId": "a5233ff3-4aa7-45f3-b4d6-6a559b8a351e"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is exemption (Wood)",
+            "id": "3eacfe3f-19d9-44ee-901e-853e728208c6"
+          },
+          {
+            "items": [
+              {
+                "id": "168f0df6-4260-47c3-92ce-8f872b615a1c",
+                "componentId": "e79ee112-f640-4d65-bb5a-587e4b24e0c2",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "No Org ID",
+            "id": "89394c66-d0dc-4473-9cf8-b70c9be5c15a"
+          },
+          {
+            "items": [
+              {
+                "id": "b8175083-5080-47dd-98b7-db5161c1eb8f",
+                "componentId": "4ca25209-1bfa-4741-bc58-7d6a1c052ec6",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Do not serve notice to site",
+            "id": "2d13f33a-cc77-4de4-b757-ec9599ff03b8"
+          },
+          {
+            "items": [
+              {
+                "id": "a68ed284-256f-45bd-b65a-174748f12ba6",
+                "componentId": "f4ec22b8-8d78-4076-a395-b54ba06992e7",
+                "operator": "is",
+                "value": {
+                  "itemId": "d51ecce0-a59d-4f63-819b-80e0993084b2",
+                  "listId": "c106dec4-bfae-44ca-b5fa-5e5eb5599b23"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Registering glass",
+            "id": "a966a356-cde6-4293-9167-433c141bcab0"
+          }
+        ],
+        "sections": [],
+        "lists": [
+          {
+            "name": "EHDwaD",
+            "title": "List for question JheIje",
+            "type": "string",
+            "items": [
+              {
+                "id": "b15aeeec-9268-445b-b780-79abadcf736f",
+                "text": "Aluminium (R4)",
+                "value": "Aluminium (R4)"
+              },
+              {
+                "id": "304a480d-59d9-4226-ac65-0e6c5688d992",
+                "text": "Fibre-based composite material (R3)",
+                "value": "Fibre-based composite material (R3)"
+              },
+              {
+                "id": "fa6cb2a8-35ed-48cd-8649-545f9942812f",
+                "text": "Glass (R5)",
+                "value": "Glass (R5)"
+              },
+              {
+                "id": "fe45478b-cddd-4fc2-9bac-3abe4ef40fbd",
+                "text": "Paper or board (R3)",
+                "value": "Paper or board (R3)"
+              },
+              {
+                "id": "e4a4b332-713c-4a3e-a5f3-1ac57293dd07",
+                "text": "Plastic (R3)",
+                "value": "Plastic (R3)"
+              },
+              {
+                "id": "4390ee49-324a-4cf3-8ad0-bdb956e5981e",
+                "text": "Steel (R4)",
+                "value": "Steel (R4)"
+              },
+              {
+                "id": "11d978c5-9a89-499d-b528-b4ce453a0401",
+                "text": "Wood (R3)",
+                "value": "Wood (R3)"
+              }
+            ],
+            "id": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          {
+            "name": "aJUuNu",
+            "title": "List for question AyMrzj",
+            "type": "string",
+            "items": [
+              {
+                "id": "797b9178-9a6f-453f-abd1-4642bbd6dd2f",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "4957f2a3-4b90-496e-bed1-de205b7191c6",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "63b162b4-5f19-4973-9b0e-ed1356c48c3e",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "3c08b5ad-a7f4-4faf-b59e-a2b39e2ef2c6"
+          },
+          {
+            "name": "VyeDls",
+            "title": "List for question RKxIdd",
+            "type": "string",
+            "items": [
+              {
+                "id": "a7d6431b-1fd4-41d9-94da-3577d4d5896f",
+                "text": "Yearly",
+                "value": "Yearly"
+              },
+              {
+                "id": "1d90e974-4ff2-4614-8b1c-f2b22fc2251e",
+                "text": "Monthly",
+                "value": "Monthly"
+              },
+              {
+                "id": "285d8d5e-e59a-4e49-ba07-97f5e3bbdbea",
+                "text": "Weekly",
+                "value": "Weekly"
+              }
+            ],
+            "id": "fdaa58e5-f72e-476f-9118-8576e6dce028"
+          },
+          {
+            "name": "zxpTrm",
+            "title": "List for question pbrBNg",
+            "type": "string",
+            "items": [
+              {
+                "id": "90dd09c6-a3aa-4e7c-8d88-1c1cb025cdf3",
+                "text": "Yearly",
+                "value": "Yearly"
+              },
+              {
+                "id": "365323dc-46a4-44fb-b9a4-8f8539513319",
+                "text": "Monthly",
+                "value": "Monthly"
+              },
+              {
+                "id": "14e8d6b3-dd63-4563-bdc9-4c8def5c83b1",
+                "text": "Weekly",
+                "value": "Weekly"
+              }
+            ],
+            "id": "64b39ba0-e0f0-442d-949f-8669217488b9"
+          },
+          {
+            "name": "WpVmUo",
+            "title": "List for question ipCOwX",
+            "type": "string",
+            "items": [
+              {
+                "id": "192ec7ae-7935-4f50-8ffa-d8371dc00bcb",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "9ade2838-7a0d-4643-b649-e20b803a17ea",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "46821eaf-6897-4810-b0c0-9a0f714097b6",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "7900d525-0958-4034-b2c2-7a5577be77a8"
+          },
+          {
+            "name": "mSuZzu",
+            "title": "List for question CHzniE",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "d4043771-dd7f-4a5a-8b92-bae43f9d43e4"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "0331067b-f07d-4a03-81f4-00f45af2fce6"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "e4a9ca09-5171-4d34-a299-6ecc73a91367"
+              }
+            ],
+            "id": "92371a63-fbac-455b-b05f-7aa3019edc8f"
+          },
+          {
+            "name": "CYFWzz",
+            "title": "List for question KjYQpk",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "cdf72e34-0795-4cae-a06d-cfa76ad03dae"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "cc4c3ac4-98eb-45c8-882f-fc17f3318131"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "2302487f-f5f3-4e28-abff-cd5082b073a1"
+              }
+            ],
+            "id": "22a59d26-1a1e-40b6-944e-4cd842555726"
+          },
+          {
+            "name": "GRuRLR",
+            "title": "List for question KiejJH",
+            "type": "string",
+            "items": [
+              {
+                "id": "c3d6fdf2-fc87-4db9-b113-d9b5f92c620f",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "31f95034-fe5f-4d8f-8628-8b8670301f33",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "aed70388-560b-4d59-8087-a3439be9b9b6",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "81b329a5-97a1-49a5-bd09-4f26fdb35d39"
+          },
+          {
+            "name": "gilwyZ",
+            "title": "List for question aYxyJv",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "a23034cd-0df0-40fc-aba6-1f591eeb7b49"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "c1e67b0a-3f5f-48b8-809d-95158d34b421"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "4360ab6a-7dbf-4fb2-8b11-02a1d8f495a8"
+              }
+            ],
+            "id": "13aa6a0b-0f64-4136-a432-0f7fd61b9402"
+          },
+          {
+            "name": "VzRBNn",
+            "title": "List for question CybNBT",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "9eaed392-4f89-4c34-a08a-bbc626c5b9c4"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "6eec6b89-9c19-47e3-bc1e-12bf39a800b9"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "06973310-fbfa-40d7-9380-2e74786bc1e0"
+              }
+            ],
+            "id": "51716d88-8e93-4687-931c-823199a58ffe"
+          },
+          {
+            "name": "IhnQhh",
+            "title": "List for question EvOydj",
+            "type": "string",
+            "items": [
+              {
+                "id": "ec5bc0ed-cb4f-4a00-af27-3153c5bdc93f",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "334534df-65e4-4222-ad2b-88cf0b9b91c1",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "0371863e-3f7f-493e-82db-2c3adabf18aa",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "66513348-a111-4f36-8cc5-34819adef218"
+          },
+          {
+            "name": "ueCQEO",
+            "title": "List for question jhAwXO",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "65975e90-e0fb-429c-9268-c20aa67c7d14"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "a18d0009-9ef3-479d-bc26-48dd99e8a29b"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "a3ee25fb-4458-424e-8565-8ca9c71f67df"
+              }
+            ],
+            "id": "3fa312f3-87d6-4ebd-8b8d-85a2c38ccfcd"
+          },
+          {
+            "name": "vWkbAu",
+            "title": "List for question wrBNlw",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "c385fe72-6188-413c-a2d7-e34b95ea880d"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "7aa05a1b-b7ae-41e2-be39-d6233537b894"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "25720ceb-24cb-45a9-930c-c3e8b12b24a2"
+              }
+            ],
+            "id": "c2dc4e98-b29c-45f4-9483-2ed705c4e11e"
+          },
+          {
+            "name": "wnMQQD",
+            "title": "List for question TgVrOx",
+            "type": "string",
+            "items": [
+              {
+                "id": "6cd1c9c7-2198-4fcb-8131-1b003b80829f",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "145a1e4c-0a48-492a-b535-f14d96f22a9d",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "4be82e76-ec7c-4c11-9d88-f721e3a6588b",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "1e4ab19c-ff36-4fde-8537-a03e53c9e5df"
+          },
+          {
+            "name": "mVirWH",
+            "title": "List for question dQoVDq",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "36228bb2-e7e2-459f-8b06-1860589d4fe8"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "ef62fecb-398b-4006-b069-a7c121fdc3c0"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "6c3b7c11-bd34-4391-bd96-9c176cd54bc0"
+              }
+            ],
+            "id": "9e5e1abf-cbc8-4fb1-a8c2-29e74adc510e"
+          },
+          {
+            "name": "JejgQD",
+            "title": "List for question oXaouc",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "d4dcf3f1-8921-482c-bd0a-f7e64888768a"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "bc677dcb-347b-4c64-815b-0f17e865bfdf"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "68acc495-cdd7-40e3-a604-f53abf857426"
+              }
+            ],
+            "id": "1b6a6d4d-549b-4e8a-ba49-0c991993206b"
+          },
+          {
+            "name": "VeCcTA",
+            "title": "List for question vlQvkP",
+            "type": "string",
+            "items": [
+              {
+                "id": "142f82ce-b944-487f-9d53-fa5be6120054",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "1597a570-f2ce-4238-94f2-cc58a4c5e55a",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "7cc2b36a-e511-4026-bdbb-c6b1a34a6389",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "49f0fee2-aecb-42a2-9fc6-0dab9fe6cb26"
+          },
+          {
+            "name": "wYAPjf",
+            "title": "List for question PVPQSJ",
+            "type": "string",
+            "items": [
+              {
+                "id": "523b73c3-a9c5-45d8-b769-ac55e238e4c3",
+                "text": "Yearly",
+                "value": "Yearly"
+              },
+              {
+                "id": "8b0bea29-478f-40ae-b6a5-1e6508f76b3f",
+                "text": "Monthly",
+                "value": "Monthly"
+              },
+              {
+                "id": "03b0b2dd-f4b4-43d5-9e3a-c19e5b9a286d",
+                "text": "Weekly",
+                "value": "Weekly"
+              }
+            ],
+            "id": "e31b9d71-e218-4136-8164-361240b223ae"
+          },
+          {
+            "name": "HfolbS",
+            "title": "List for question oVyPAn",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "afcead89-8ab2-47b2-882c-1eabdccff86d"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "be55b331-dbf3-48cf-bb74-b9afd28fe652"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "511941bf-bf6f-439d-b107-1f81e5db53f6"
+              }
+            ],
+            "id": "1c67d6b8-393c-4982-9eba-a1e57fad7b5d"
+          },
+          {
+            "name": "nibCwF",
+            "title": "List for question kkpNSo",
+            "type": "string",
+            "items": [
+              {
+                "id": "0424ee31-7a5c-4ad0-b84b-6555e9b5350c",
+                "text": "Environmental permit or waste management licence",
+                "value": "Environmental permit or waste management licence"
+              },
+              {
+                "id": "34d852cc-23c9-4769-9788-66e706680687",
+                "text": "Installation permit",
+                "value": "Installation permit"
+              },
+              {
+                "id": "73b80b4b-9fce-4758-8edb-5f241bb158af",
+                "text": "Waste exemption",
+                "value": "Waste exemption"
+              }
+            ],
+            "id": "a5233ff3-4aa7-45f3-b4d6-6a559b8a351e"
+          },
+          {
+            "name": "ozJZSQ",
+            "title": "List for question gNdqCt",
+            "type": "string",
+            "items": [
+              {
+                "id": "16ff4b80-0207-4016-951c-8b8ce6f08c09",
+                "text": "Yearly",
+                "value": "Yearly"
+              },
+              {
+                "id": "76a74dd2-8d87-4245-bc3b-a22bf844fec1",
+                "text": "Monthly",
+                "value": "Monthly"
+              },
+              {
+                "id": "5f6d0aca-4d17-44d1-b112-13fe0c8a7f88",
+                "text": "Weekly",
+                "value": "Weekly"
+              }
+            ],
+            "id": "655d2e4d-8a65-47bb-b1a6-62efc97386c2"
+          },
+          {
+            "name": "NcbaOU",
+            "title": "List for question SMhqAO",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "6d309799-3e81-4892-8988-6894d548efb8"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "e7e4dc4c-0797-4067-bb6c-f080775bbe6b"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "b8315134-8e2c-47cb-adbd-a073de37c800"
+              }
+            ],
+            "id": "42aaba01-a830-40f0-bba4-a8a79600e697"
+          },
+          {
+            "name": "mfzVIU",
+            "title": "List for question YuzbTu",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "c09371fe-11ce-4d53-b1e1-678b1c28f7a0"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "a0569d8e-e985-4423-9659-96be634ef69f"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "e482bc02-465e-4035-b539-2e4ef84716e4"
+              }
+            ],
+            "id": "3368ab8f-58f6-49fc-aa79-1ccfce6d26f0"
+          },
+          {
+            "name": "aiEQNl",
+            "title": "List for question DVeeua",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "e98619e5-129d-41a3-a8e5-d6ef075b4e3a"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "2713e915-6017-4269-ac55-04c32285d25c"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "907656d5-612e-43e6-aece-36162104508e"
+              }
+            ],
+            "id": "b359bed8-63ee-43f6-b1ae-f0c495feb81e"
+          },
+          {
+            "name": "XalGSd",
+            "title": "List for question jmderv",
+            "type": "string",
+            "items": [
+              {
+                "id": "45c358a9-cf2d-4ad2-aad4-22a561054134",
+                "text": "Yearly",
+                "value": "Yearly"
+              },
+              {
+                "id": "32e0317e-c0d8-4691-9151-ec1b38170b45",
+                "text": "Monthly",
+                "value": "Monthly"
+              },
+              {
+                "id": "73478339-ea99-4c08-afc3-68f391c446b1",
+                "text": "Weekly",
+                "value": "Weekly"
+              }
+            ],
+            "id": "40e95c55-43dc-4742-811e-7967debaec72"
+          },
+          {
+            "name": "ZUmKHv",
+            "title": "List for question fKJptb",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "2ee879db-c99c-4fb0-aebb-54269e988fd2"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "1eb60d9e-297d-4fdc-9469-67baabb1f08a"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "3d07e410-4384-4e00-a835-97f228b128b2"
+              }
+            ],
+            "id": "7ba3ee01-627d-4cf8-b36a-3ead18ea3950"
+          },
+          {
+            "name": "ltgUQM",
+            "title": "List for question YNWfOC",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "762d334f-649b-4427-9cf0-c427b69052ca"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "daa9ca59-de86-409f-a7d1-27900a53efd7"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "1b8ca47e-6334-49dd-801e-5516305ed318"
+              }
+            ],
+            "id": "1efa9a64-f06c-4941-a920-bee8168ce648"
+          },
+          {
+            "name": "EqKJrh",
+            "title": "List for question EIbauW",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "53359ddd-96c1-495c-8f59-6ec4660041be"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "def9f043-7580-4fe5-abf2-e3c7f4fea2be"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "653f2f67-c24b-40e8-a82d-985898bec70f"
+              }
+            ],
+            "id": "b3a53087-6616-413d-85d2-f4000d113ef1"
+          },
+          {
+            "name": "vkgquL",
+            "title": "List for question bOVLpK",
+            "type": "string",
+            "items": [
+              {
+                "text": "Yearly",
+                "value": "Yearly",
+                "id": "aa64e20b-4d58-4412-9b45-e2ae657fa255"
+              },
+              {
+                "text": "Monthly",
+                "value": "Monthly",
+                "id": "2f819818-fa4b-481b-b560-9a960c80c3b0"
+              },
+              {
+                "text": "Weekly",
+                "value": "Weekly",
+                "id": "cf3bfb6c-aca3-4f88-9aba-cfd60246a9d7"
+              }
+            ],
+            "id": "a9ae6689-037d-4dac-b4bc-a1c875e17e94"
+          },
+          {
+            "name": "Wciiok",
+            "title": "List for question dFPgaw",
+            "type": "string",
+            "items": [
+              {
+                "id": "92bdb97a-e275-4f86-b409-ba0570354482",
+                "text": "Aluminium (R4)",
+                "value": "Aluminium (R4)"
+              },
+              {
+                "id": "6cb351cf-62a1-4848-8450-a971db4d19dd",
+                "text": "Fibre-based composite material (R3)",
+                "value": "Fibre-based composite material (R3)"
+              },
+              {
+                "id": "d51ecce0-a59d-4f63-819b-80e0993084b2",
+                "text": "Glass (R5)",
+                "value": "Glass (R5)"
+              },
+              {
+                "id": "02e90022-8258-46ae-bbf8-7bed088f495d",
+                "text": "Paper or board (R3)",
+                "value": "Paper or board (R3)"
+              },
+              {
+                "id": "266c7740-7bb2-4707-9bab-1d2492b87ac3",
+                "text": "Plastic (R3)",
+                "value": "Plastic (R3)"
+              },
+              {
+                "id": "feed04bd-ec97-44a2-b1d0-122b7aa51a05",
+                "text": "Steel (R4)",
+                "value": "Steel (R4)"
+              },
+              {
+                "id": "318766aa-6e62-44c9-a4f6-db86cfb99683",
+                "text": "Wood (R3)",
+                "value": "Wood (R3)"
+              }
+            ],
+            "id": "c106dec4-bfae-44ca-b5fa-5e5eb5599b23"
+          },
+          {
+            "name": "GpwTJl",
+            "title": "List for question VVwRDD",
+            "type": "string",
+            "items": [
+              {
+                "id": "1f2714d1-14a0-4486-89bd-4a91cb088dde",
+                "text": "Actual figures",
+                "value": "Actual figures"
+              },
+              {
+                "id": "5a0c8b6a-34c0-4dcf-bafc-730d1f26a7fc",
+                "text": "Estimated figures",
+                "value": "Estimated figures"
+              }
+            ],
+            "id": "82467cc2-5cff-4144-b977-1b35675ef5ff"
+          },
+          {
+            "name": "lGegTI",
+            "title": "List for question slZDTV",
+            "type": "string",
+            "items": [
+              {
+                "id": "d014fab4-7e73-4dbc-aa29-c671200a023b",
+                "text": "Actual figures",
+                "value": "Actual figures"
+              },
+              {
+                "id": "4725056a-4157-4d16-afec-7d43a4f5983c",
+                "text": "Estimated figures",
+                "value": "Estimated figures"
+              }
+            ],
+            "id": "e99bacd1-0f9a-4db5-9cb5-f8b23e4aff7e"
+          },
+          {
+            "name": "azkvYk",
+            "title": "List for question TwIrTO",
+            "type": "string",
+            "items": [
+              {
+                "id": "7295beb9-90a5-42a5-844e-ee6c589265e8",
+                "text": "Director",
+                "value": "Director"
+              },
+              {
+                "id": "b7f3c71c-0c09-4f49-90d7-2c64dd1acbf6",
+                "text": "Company secretary",
+                "value": "Company secretary"
+              },
+              {
+                "id": "2a504b08-4126-4201-954e-645b28543a8d",
+                "text": "Partner",
+                "value": "Partner"
+              },
+              {
+                "id": "9bcb696f-e7cf-4ca2-ae47-968f34d69587",
+                "text": "Sole trader",
+                "value": "Sole trader"
+              }
+            ],
+            "id": "d0819f83-9680-471c-9eed-1bfa6116af1a"
+          },
+          {
+            "name": "ubMigR",
+            "title": "List for question YMRnmp",
+            "type": "string",
+            "items": [
+              {
+                "id": "ebaf85c9-dca2-452e-b07b-4da5c41ae2be",
+                "text": "Glass re-melt",
+                "value": "Glass re-melt"
+              },
+              {
+                "id": "32dbba7d-23f1-4b7e-8d60-4c973dce9d8f",
+                "text": "Glass other",
+                "value": "Glass other"
+              },
+              {
+                "id": "84e0c838-045e-4b03-a427-e30580c14a68",
+                "text": "Both",
+                "value": "Both"
+              }
+            ],
+            "id": "8d1da33b-5947-4d19-bbc3-eba6000d38f5"
+          },
+          {
+            "id": "3167ecb5-61f9-4918-b7d0-6793b56aa814",
+            "name": "__yesNo",
+            "title": "Yes/No",
+            "type": "boolean",
+            "items": [
+              {
+                "id": "02900d42-83d1-4c72-a719-c4e8228952fa",
+                "text": "Yes",
+                "value": true
+              },
+              {
+                "id": "f39000eb-c51b-4019-8f82-bbda0423f04d",
+                "text": "No",
+                "value": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "data": {
+      "main": {
+        "aDpeKT": "true",
+        "rJMICz": "503149",
+        "DAcLmf": "68dfc5198687d2e196d972c2",
+        "jSlhCJ": "James Patterson",
+        "WOnymw": "james.patterson@ecoretail.co.uk",
+        "lScMYi": "020 7946 0123",
+        "lnBYQc": "Sustainability Director",
+        "Laiblc": "78 Portland Place,London,London,W1B 1NT",
+        "xinNGX": "TQ 295 805",
+        "TnXUsJ": "true",
+        "JheIje": "Aluminium (R4),Fibre-based composite material (R3),Glass (R5)",
+        "AyMrzj": "Environmental permit or waste management licence",
+        "xMSsbm": "EPR/AB1234CD/A001",
+        "aWLuwp": "50",
+        "RKxIdd": "Yearly",
+        "EvOydj": "Installation permit",
+        "Oddhfd": "EPR/AB1234CD/A001",
+        "DfmRfW": "50",
+        "wrBNlw": "Monthly",
+        "ipCOwX": "Waste exemption",
+        "vNWexi": "10",
+        "YuzbTu": "Weekly",
+        "QhRnWi": "10",
+        "fKJptb": "Weekly",
+        "vSToBG": "10",
+        "DVeeua": "Weekly",
+        "ruHJsg": "CBDU123456",
+        "dFPgaw": "Glass (R5)",
+        "YMRnmp": "Glass re-melt",
+        "HFOWKa": "We receive cardboard packaging primarily from UK distributors and wholesalers who supply our raw materials. Approximately 60% comes from three main UK distributors, with the remaining 40% sourced directly from manufacturers in the Midlands region.",
+        "VVwRDD": "Actual figures",
+        "cyBcMz": "12",
+        "gGUQnN": "10",
+        "VSKoqK": "10",
+        "slZDTV": "Estimated figures",
+        "TTBOhH": "11",
+        "zWAYkP": "1",
+        "sfMNQP": "11",
+        "mVuNew": "We use shredding equipment, magnetic separators for ferrous metals, and eddy current separators for non-ferrous materials. Aluminium cans are densified using compactors before melting. Our de-coating line removes lacquers and printing before the material enters the furnace for remelting into ingots.",
+        "eKdnWs": "James Patterson",
+        "CJvZOT": "james.patterson@ecoretail.co.uk",
+        "yRKTUh": "020 7946 0123",
+        "TwIrTO": "Company secretary",
+        "LnSGUi": "James Patterson",
+        "pPrfJB": "james.patterson@ecoretail.co.uk",
+        "aCYymT": "020 7946 0123",
+        "DxFVqx": "Sustainability Director"
+      },
+      "repeaters": {
+        "anXHeW": [
+          {
+            "RwhOyj": "WEX123456",
+            "vZtrFg": "U9"
+          }
+        ],
+        "MHEaUi": [
+          {
+            "hYwnjo": "raw materail1",
+            "dgypsb": "12"
+          },
+          {
+            "hYwnjo": "raw materail 2",
+            "dgypsb": "10"
+          }
+        ],
+        "QCTXMF": [
+          {
+            "QCBNNY": "Utensils",
+            "CShkze": "1"
+          }
+        ]
+      },
+      "files": {
+        "xddzIW": [
+          {
+            "fileId": "44228367-3ed4-4118-bd0d-6515f0275f6e",
+            "userDownloadLink": "https://forms-designer.test.cdp-int.defra.cloud/file-download/44228367-3ed4-4118-bd0d-6515f0275f6e"
+          }
+        ]
+      }
+    }
+  },
+  "createdAt": {
+    "$date": "2025-10-03T14:52:08.214Z"
+  },
+  "referenceNumber": "68dfc5198687d2e196d972c2",
+  "orgId": 503149
+}

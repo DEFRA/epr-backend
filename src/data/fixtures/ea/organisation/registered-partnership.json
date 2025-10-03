@@ -1,5 +1,7 @@
 {
-  "_id": "68dfc5198687d2e196d972c2",
+  "_id": {
+    "$oid": "68dfc5198687d2e196d972c2"
+  },
   "schemaVersion": 1,
   "answers": [
     {
@@ -1048,7 +1050,9 @@
       "files": {}
     }
   },
-  "createdAt": "2025-10-03T12:44:09.511Z",
+  "createdAt": {
+    "$date": "2025-10-03T12:44:09.511Z"
+  },
   "orgId": 503149,
   "orgName": "EcoRetail Group plc",
   "email": "james.patterson@ecoretail.co.uk",

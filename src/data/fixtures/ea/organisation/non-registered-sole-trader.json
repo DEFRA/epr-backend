@@ -1,5 +1,7 @@
 {
-  "_id": "68dfc5198687d2e196d972c2",
+  "_id": {
+    "$oid": "68dfca938687d2e196d972c9"
+  },
   "schemaVersion": 1,
   "answers": [
     {
@@ -12,80 +14,80 @@
       "shortDescription": "Currently operational?",
       "title": "Are you currently recycling or exporting packaging waste to be recycled?",
       "type": "RadiosField",
-      "value": "Reprocessor and exporter"
+      "value": "Reprocessor"
     },
     {
       "shortDescription": "Submitter name",
       "title": "What is your full name?",
       "type": "TextField",
-      "value": "James Patterson"
+      "value": "Emma Roberts"
     },
     {
       "shortDescription": "Submitter email address",
       "title": "What is your email address?",
       "type": "EmailAddressField",
-      "value": "james.patterson@ecoretail.co.uk"
+      "value": "e.roberts@britishbeverage.co.uk"
     },
     {
       "shortDescription": "Submitter telephone number",
       "title": "What is your telephone number?",
       "type": "TelephoneNumberField",
-      "value": "020 7946 0123"
+      "value": "0121 496 8574"
     },
     {
       "shortDescription": "Submitter job title",
       "title": "What is your job title?",
       "type": "TextField",
-      "value": "Sustainability Director"
+      "value": "Packaging Compliance Officer"
     },
     {
       "shortDescription": "Nations with sites",
       "title": "Which UK nations do you have a reprocessing site based in?",
       "type": "CheckboxesField",
-      "value": "England,Scotland,Wales"
+      "value": "Wales"
     },
     {
       "shortDescription": "On Companies House?",
       "title": "Is your business registered with Companies House?",
       "type": "YesNoField",
+      "value": "false"
+    },
+    {
+      "shortDescription": "Main address in UK?",
+      "title": "Does your business have a main address in the UK?",
+      "type": "YesNoField",
       "value": "true"
     },
     {
       "shortDescription": "Organisation name",
-      "title": "What is your company name as per Companies House?",
+      "title": "What is the name of your business?",
       "type": "TextField",
-      "value": "EcoRetail Group plc"
+      "value": "British Beverage Distributors Ltd"
     },
     {
       "shortDescription": "Trading name",
       "title": "What is your business's trading name?",
       "type": "TextField",
-      "value": "EcoRetail Group plc"
+      "value": "British Beverage Distributors Ltd"
     },
     {
-      "shortDescription": "Companies House number",
-      "title": "What is your company registration number?",
-      "type": "TextField",
-      "value": "11223344"
-    },
-    {
-      "shortDescription": "Registered office address",
-      "title": "What is your registered office address?",
+      "shortDescription": "Organisation address",
+      "title": "What is your business's address?",
       "type": "UkAddressField",
-      "value": "Chester House,London Road,Leeds,West Yorkshire,LS1 3BC"
+      "value": "45 High Street,,Birmingham,B2 4AA"
     },
     {
-      "shortDescription": "Are you a partnership?",
-      "title": "Is your organisation a partnership?",
+      "shortDescription": "Organisation type",
+      "title": "What type of business are you registering?",
       "type": "RadiosField",
-      "value": "A limited partnership"
+      "value": "An individual"
     }
   ],
   "rawSubmissionData": {
     "meta": {
       "schemaVersion": "1",
-      "timestamp": "2025-10-03T12:44:09.471Z",
-      "referenceNumber": "03A-7ED-A7A",
+      "timestamp": "2025-10-03T13:07:31.783Z",
+      "referenceNumber": "C4B-AD3-AE2",
       "definition": {
         "name": "Demo for pEPR - Extended Producer Responsibilities: provide your organisation details (EA)",
         "engine": "V2",
@@ -1020,37 +1022,28 @@
     "data": {
       "main": {
         "FAxvwq": "false",
-        "WVADkQ": "Reprocessor and exporter",
-        "BYtjnh": "James Patterson",
-        "aSoxDO": "james.patterson@ecoretail.co.uk",
-        "aIFHXo": "020 7946 0123",
-        "LyeSzH": "Sustainability Director",
-        "VcdRNr": "England,Scotland,Wales",
-        "hNTczg": "true",
-        "RUKDyH": "EcoRetail Group plc",
-        "XcvvZV": "EcoRetail Group plc",
-        "VZLTnn": "11223344",
-        "GNVlAd": "Chester House,London Road,Leeds,West Yorkshire,LS1 3BC",
-        "hnwFjT": "A limited partnership"
+        "WVADkQ": "Reprocessor",
+        "BYtjnh": "Emma Roberts",
+        "aSoxDO": "e.roberts@britishbeverage.co.uk",
+        "aIFHXo": "0121 496 8574",
+        "LyeSzH": "Packaging Compliance Officer",
+        "VcdRNr": "Wales",
+        "hNTczg": "false",
+        "lEnwLd": "true",
+        "JbEBvr": "British Beverage Distributors Ltd",
+        "QdhMJS": "British Beverage Distributors Ltd",
+        "VATjEi": "45 High Street,,Birmingham,B2 4AA",
+        "uNBiGz": "An individual"
       },
-      "repeaters": {
-        "CZFqEV": [
-          {
-            "RXPSft": "DHL Supply Chain UK Ltd",
-            "PEWtSm": "Company partner"
-          },
-          {
-            "RXPSft": "Victor",
-            "PEWtSm": "Individual partner"
-          }
-        ]
-      },
+      "repeaters": {},
       "files": {}
     }
   },
-  "createdAt": "2025-10-03T12:44:09.511Z",
-  "orgId": 503149,
-  "orgName": "EcoRetail Group plc",
-  "email": "james.patterson@ecoretail.co.uk",
+  "createdAt": {
+    "$date": "2025-10-03T13:07:31.820Z"
+  },
+  "orgId": 503152,
+  "orgName": "British Beverage Distributors Ltd",
+  "email": "e.roberts@britishbeverage.co.uk",
   "nations": null
 }
