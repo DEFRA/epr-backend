@@ -252,10 +252,10 @@ stateDiagram-v2
     uploaded --> validating: Validation started
     validating --> validation_failed: Validation errors found
     validating --> validated: Validation completed successfully
-    validated --> submitted: User submitted changes
+    validated --> submitted: Summary log submitted
     upload_failed --> [*]: User must restart
     validation_failed --> [*]: User must restart
-    submitted --> [*]: Changes applied
+    submitted --> [*]
 ```
 
 1. `awaiting_upload`: entity created and upload process started, awaiting file upload from user
