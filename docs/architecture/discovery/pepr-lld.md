@@ -89,7 +89,7 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 
 Initiates the upload process by:
 
-1. Creating a SUMMARY-LOG entity with status `created` (no S3 details yet)
+1. Creating a SUMMARY-LOG entity with status `awaiting_upload` (no S3 details yet)
 2. Calling CDP Uploader's `/initiate` endpoint with redirect and callback URLs
 3. Returning CDP Uploader's response (uploadId, uploadUrl, statusUrl) to the frontend
 
@@ -126,7 +126,7 @@ Request body matches CDP Uploader's callback payload:
 }
 ```
 
-Updates the existing SUMMARY-LOG entity with S3 details and sets status to `created` (if upload succeeded) or `upload_failed` (if virus scan failed). If successful, sends a message to SQS to trigger validation.
+Updates the existing SUMMARY-LOG entity with S3 details and sets status to `uploaded` (if upload succeeded) or `upload_failed` (if virus scan failed). If successful, sends a message to SQS to trigger validation.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`
 
@@ -135,7 +135,7 @@ Used to submit a summary log to a registration, applying the validated changes t
 > [!NOTE]
 > To prevent race conditions and ensure data integrity, this endpoint should validate:
 >
-> - Summary log status must be `validation_succeeded` (reject `created`, `validating`, `validation_failed`, `upload_failed`, or `approved`)
+> - Summary log status must be `validated` (reject `awaiting_upload`, `uploaded`, `validating`, `validation_failed`, `upload_failed`, or `submitted`)
 > - Summary log must be the most recently uploaded for the given site + material (reject if a newer summary log exists)
 
 ### Waste Records
@@ -341,7 +341,7 @@ erDiagram
 
   SUMMARY-LOG {
     ObjectId _id PK
-    enum status "created, upload_failed, validating, validation_failed, validation_succeeded, approved"
+    enum status "awaiting_upload, uploaded, upload_failed, validating, validation_failed, validated, submitted"
     string summaryLogUri UK "S3 object URI"
     ISO8601 createdAt
     USER-SUMMARY createdBy FK
@@ -572,7 +572,7 @@ sequenceDiagram
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
   Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate
-  Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created' }
+  Note over Backend: create SUMMARY-LOG entity<br>{ status: 'awaiting_upload' }
   Backend->>CDPUploader: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
   CDPUploader-->>Backend: 200: { uploadId, uploadUrl, statusUrl }
   Backend-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
@@ -587,7 +587,7 @@ sequenceDiagram
 
   alt FileStatus: complete
     CDPUploader->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
-    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key }
+    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'uploaded', s3Bucket, s3Key }
     Backend->>SQS: send ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
     Backend-->>CDPUploader: 200
     Note over BackendWorker: START async file validation
@@ -599,7 +599,7 @@ sequenceDiagram
     loop each row
       Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
     end
-    BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'validation_succeeded', data }
+    BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'validated', data }
     Note over BackendWorker: END async file validation
 
     loop polling until final state
@@ -608,15 +608,15 @@ sequenceDiagram
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Backend: lookup SUMMARY-LOG entity
-      alt status: created or validating
-        Backend-->>Frontend: 200: { status: 'created' | 'validating' }
+      alt status: awaiting_upload, uploaded or validating
+        Backend-->>Frontend: 200: { status: 'awaiting_upload' | 'uploaded' | 'validating' }
         Frontend-->>Op: <html>Processing...</html>
       else status: validation_failed
         Backend-->>Frontend: 200: { status: 'validation_failed', errors }
         Frontend-->>Op: <html>Validation failed...<form>Upload new file</form></html>
         Note over Op: End Journey
-      else status: validation_succeeded
-        Backend-->>Frontend: 200: { status: 'validation_succeeded', data }
+      else status: validated
+        Backend-->>Frontend: 200: { status: 'validated', data }
         Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
         Note over Op: End Journey
       end
@@ -654,7 +654,7 @@ sequenceDiagram
   Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId }]
   Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
   Note over Backend: lookup SUMMARY-LOG entity
-  Backend-->>Frontend: 200: { status: 'validation_succeeded', data: [ ... ] }
+  Backend-->>Frontend: 200: { status: 'validated', data: [ ... ] }
   Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
 
   Note over Op: Review changes
@@ -665,7 +665,7 @@ sequenceDiagram
   Note over Backend: lookup SUMMARY-LOG entity
   Note over Backend: apply SUMMARY-LOG.data to WASTE-RECORD entities
   Note over Backend: update WASTE-BALANCE
-  Note over Backend: update SUMMARY-LOG<br>{ status: 'approved' }
-  Backend-->>Frontend: 200: { status: 'approved', data: [ ... ] }
+  Note over Backend: update SUMMARY-LOG<br>{ status: 'submitted' }
+  Backend-->>Frontend: 200: { status: 'submitted', data: [ ... ] }
   Frontend-->>Op: <html>Submission complete</html>
 ```

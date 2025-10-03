@@ -242,12 +242,29 @@ Note that updating an entity _may_ include changing its `status`. See a summary 
 
 ### Summary Log
 
-1. `created`: summary log has been created (after upload by User) but has not yet been validated by the service
-2. `upload_failed`: summary log file failed virus scan
-3. `validating`: summary log is being validated by the backend worker
-4. `validation_failed`: summary log validation failed
-5. `validation_succeeded`: summary log has been successfully validated and the prospective modifications to waste records can be reviewed by the user
-6. `approved`: summary log has been approved by the user and modifications applied to waste records
+Summary logs transition through the following states based on what has been accomplished:
+
+```mermaid
+stateDiagram-v2
+    [*] --> awaiting_upload: Upload process started
+    awaiting_upload --> uploaded: File uploaded successfully
+    awaiting_upload --> upload_failed: Virus scan failed
+    uploaded --> validating: Validation started
+    validating --> validation_failed: Validation errors found
+    validating --> validated: Validation completed successfully
+    validated --> submitted: User submitted changes
+    upload_failed --> [*]: User must restart
+    validation_failed --> [*]: User must restart
+    submitted --> [*]: Changes applied
+```
+
+1. `awaiting_upload`: entity created and upload process started, awaiting file upload from user
+2. `uploaded`: file has been successfully uploaded and passed virus scan, awaiting validation
+3. `upload_failed`: file upload or virus scan has failed
+4. `validating`: validation process has started and is in progress
+5. `validation_failed`: validation has completed and found errors
+6. `validated`: validation has completed successfully, prospective modifications are ready for user review
+7. `submitted`: user has submitted the summary log, modifications have been applied to waste records
 
 ### Waste Record Version
 
@@ -459,7 +476,7 @@ sequenceDiagram
     SQS->>Worker: trigger validation
     Worker->>S3: fetch summaryLog.xlsx
     Note over Worker: parse summary log + compare against WASTE-RECORDS
-    Worker->>Backend: update SUMMARY-LOG entity (status: validation_succeeded)
+    Worker->>Backend: update SUMMARY-LOG entity (status: validated)
     User->>Frontend: view progress page
     Frontend->>Backend: GET summary log
     Backend-->>Frontend: status & validation results
