@@ -11,6 +11,7 @@
       * [`GET /v1/organisations`](#get-v1organisations)
       * [`GET /v1/organisations/{id}`](#get-v1organisationsid)
     * [Summary Logs](#summary-logs)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate`](#post-v1organisationsidregistrationsidsummary-logssummarylogidinitiate)
       * [`GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`](#get-v1organisationsidregistrationsidsummary-logssummarylogid)
       * [`PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`](#put-v1organisationsidregistrationsidsummary-logssummarylogidupload-completed)
       * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`](#post-v1organisationsidregistrationsidsummary-logssummarylogidsubmit)
@@ -84,6 +85,19 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 
 ### Summary Logs
 
+#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate`
+
+Initiates the upload process by:
+
+1. Creating a SUMMARY-LOG entity with status `created` (no S3 details yet)
+2. Calling CDP's `/initiate` endpoint with redirect and callback URLs
+3. Returning CDP's response (uploadId, uploadUrl, statusUrl) to the frontend
+
+This ensures the SUMMARY-LOG document exists before the upload starts, allowing the frontend to poll it immediately.
+
+> [!NOTE]
+> **Alternative approach:** Initially, the frontend could call CDP directly and handle 404s gracefully when polling the backend until the SUMMARY-LOG document is created by the callback. This simpler approach avoids the backend needing to proxy the CDP initiate call, but introduces a race condition between upload completion and document creation.
+
 #### `GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
 
 Used to retrieve the current state and data of a summary log.
@@ -112,7 +126,7 @@ Request body matches CDP's callback payload:
 }
 ```
 
-Creates a SUMMARY-LOG entity with status `created` or `upload-failed`, and if successful, sends a message to SQS to trigger validation.
+Updates the existing SUMMARY-LOG entity with S3 details and sets status to `created` (if upload succeeded) or `upload-failed` (if virus scan failed). If successful, sends a message to SQS to trigger validation.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`
 
@@ -551,8 +565,11 @@ sequenceDiagram
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>CDP: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
-  CDP-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
+  Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate
+  Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created' }
+  Backend->>CDP: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
+  CDP-->>Backend: 200: { uploadId, uploadUrl, statusUrl }
+  Backend-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
   Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDP: POST /upload-and-scan/{uploadId}
@@ -564,7 +581,7 @@ sequenceDiagram
 
   alt FileStatus: complete
     CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
-    Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key }
+    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key }
     Backend->>SQS: send message { summaryLogId, organisationId, registrationId }
     Backend-->>CDP: 200
     Note over BackendWorker: START async file validation
@@ -600,7 +617,7 @@ sequenceDiagram
     end
   else FileStatus: rejected
     CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'rejected', ... } }, numberOfRejectedFiles: 1 }
-    Note over Backend: create SUMMARY-LOG entity<br>{ status: 'upload-failed', failureReason }
+    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'upload-failed', failureReason }
     Backend-->>CDP: 200
 
     loop polling until final state
