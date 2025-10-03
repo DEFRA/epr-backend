@@ -33,7 +33,7 @@ ORGANISATION_AUDIT{
 }
 
 CHANGE-DETAILS{
-  string fieldPath "The path to the field that was updated (e.g., 'companyDetails.name')"
+  string fieldPath "The path to the field that was updated (e.g. 'companyDetails.name')"
   string oldValue "Previous value"
   string newValue "New value"
 }

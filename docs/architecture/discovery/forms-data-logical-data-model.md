@@ -48,7 +48,7 @@ erDiagram
     enum[] recyclingProcess "glass_re_melt,glass_other"
     ADDRESS noticeAddress
     string wasteRegistrationNumber "waste carrier, broker or dealer registration number"
-    WASTE-MANAGEMENT-PERMIT[] wasteManagementPermits "permit or waste exemption details"
+    WASTE-MANAGEMENT-PERMIT[] wasteManagementPermits "waste management permit or waste exemption details"
     USER[] approvedPersons "approved persons for this site"
     string suppliers "Waste supplier details. applicable only for exporter"
     string[] exportPorts "List of ports from which waste is exported."
@@ -63,7 +63,8 @@ erDiagram
 
   STATUS-HISTORY{
     enum status "created,approved,rejected,suspended,archived"
-    ISO8601 changedAt "At what time the status changed"
+    ISO8601 updatedAt "At what time the status changed"
+    USER updatedBy FK "who updated the status"
   }
 
   ACCREDITATION {
@@ -160,8 +161,9 @@ erDiagram
   }
 
   USER-LOGIN-DETAILS{
-    string defra_id PK "DEFRA id created for user logins"
-    string email UK "email id submitted through forms"
+    ObjectId _id PK
+    string defra_id "DEFRA id created for user logins"
+    string email FK "email id submitted through forms"
   }
 
   %% ORGANISATION relationships
@@ -196,7 +198,7 @@ erDiagram
   PRN-ISSUANCE ||--o{ USER: contains
   PERN-ISSUANCE ||--o{ USER: contains
   USER ||--o| USER-LOGIN-DETAILS: contains
-
+  STATUS-HISTORY   ||--|{ USER: contains
 ```
 
 ### Example data using LDM
@@ -213,7 +215,10 @@ erDiagram
   "statusHistory": [
     {
       "status": "created",
-      "changedAt": "2025-08-22T19:34:44.944Z"
+      "updatedAt": "2025-08-22T19:34:44.944Z",
+      "updatedBy": {
+        "email": "test@corpo.com"
+      }
     }
   ],
   "registrations": [
@@ -223,7 +228,10 @@ erDiagram
       "statusHistory": [
         {
           "status": "created",
-          "changedAt": "2025-08-22T19:34:44.944Z"
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
         }
       ],
       "formSubmissionTime": "2025-08-20T19:34:44.944Z",
@@ -267,7 +275,10 @@ erDiagram
       "statusHistory": [
         {
           "status": "created",
-          "changedAt": "2025-08-22T19:34:44.944Z"
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
         }
       ],
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
@@ -305,7 +316,10 @@ erDiagram
       "statusHistory": [
         {
           "status": "created",
-          "changedAt": "2025-08-22T19:34:44.944Z"
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
         }
       ],
       "site": {
@@ -346,7 +360,10 @@ erDiagram
       "statusHistory": [
         {
           "status": "created",
-          "changedAt": "2025-08-22T19:34:44.944Z"
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
         }
       ],
       "site": {
@@ -387,11 +404,17 @@ erDiagram
       "statusHistory": [
         {
           "status": "created",
-          "changedAt": "2025-08-22T19:34:44.944Z"
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
         },
         {
           "status": "rejected",
-          "changedAt": "2025-08-25T19:34:44.944Z"
+          "updatedAt": "2025-08-25T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
         }
       ],
       "material": "plastic",
@@ -505,8 +528,8 @@ The `statusHistory` field tracks all status changes for organisations, registrat
 // Check if accreditation was active on a specific date
 const wasActiveOn = (accreditation, targetDate) => {
   const statusAt = accreditation.statusHistory
-    .sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt))
-    .filter((entry) => new Date(entry.changedAt) <= targetDate)
+    .sort((a, b) => new Date(a.updatedAt) - new Date(b.updatedAt))
+    .filter((entry) => new Date(entry.updatedAt) <= targetDate)
     .pop()
 
   return statusAt?.status === 'approved'
