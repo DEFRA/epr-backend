@@ -568,7 +568,8 @@ sequenceDiagram
     Backend->>SQS: send message { summaryLogId, organisationId, registrationId }
     Backend-->>CDP: 200
     Note over BackendWorker: START async file validation
-    SQS->>BackendWorker: poll message
+    BackendWorker->>SQS: poll for messages
+    SQS-->>BackendWorker: message { summaryLogId, organisationId, registrationId }
     BackendWorker->>Backend: update SUMMARY-LOG<br>{ status: 'validating' }
     BackendWorker->>S3: fetch: s3Key/fileId
     S3-->>BackendWorker: S3 file
