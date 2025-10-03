@@ -242,11 +242,11 @@ Note that updating an entity _may_ include changing its `status`. See a summary 
 
 ### Summary Log
 
-1. `created`: summary log has been created (after upload by User) but has not yet been ingested by the service
+1. `created`: summary log has been created (after upload by User) but has not yet been validated by the service
 2. `upload_failed`: summary log file failed virus scan
 3. `validating`: summary log is being validated by the backend worker
 4. `validation_failed`: summary log validation failed
-5. `ingested`: summary log has been ingested by the service and the prospective modifications to waste records can be reviewed by the user
+5. `validation_succeeded`: summary log has been successfully validated and the prospective modifications to waste records can be reviewed by the user
 6. `approved`: summary log has been approved by the user and modifications applied to waste records
 
 ### Waste Record Version
@@ -447,8 +447,10 @@ sequenceDiagram
 
     User->>Frontend: select activity, site & material
     User->>Frontend: initiate upload
-    Frontend->>CDP: request upload URL
-    CDP-->>Frontend: uploadUrl
+    Frontend->>Backend: request upload URL
+    Backend->>CDP: request upload URL
+    CDP-->>Backend: uploadUrl
+    Backend-->>Frontend: uploadUrl
     User->>CDP: upload summaryLog.xlsx
     CDP->>S3: store file
     CDP->>Backend: callback with S3 details
@@ -457,7 +459,7 @@ sequenceDiagram
     SQS->>Worker: trigger validation
     Worker->>S3: fetch summaryLog.xlsx
     Note over Worker: parse summary log + compare against WASTE-RECORDS
-    Worker->>Backend: update SUMMARY-LOG entity (status: ingested)
+    Worker->>Backend: update SUMMARY-LOG entity (status: validation_succeeded)
     User->>Frontend: view progress page
     Frontend->>Backend: GET summary log
     Backend-->>Frontend: status & validation results
