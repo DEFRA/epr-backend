@@ -126,7 +126,7 @@ Request body matches CDP's callback payload:
 }
 ```
 
-Updates the existing SUMMARY-LOG entity with S3 details and sets status to `created` (if upload succeeded) or `upload-failed` (if virus scan failed). If successful, sends a message to SQS to trigger validation.
+Updates the existing SUMMARY-LOG entity with S3 details and sets status to `created` (if upload succeeded) or `upload_failed` (if virus scan failed). If successful, sends a message to SQS to trigger validation.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`
 
@@ -135,7 +135,7 @@ Used to submit a summary log to a registration, applying the validated changes t
 > [!NOTE]
 > To prevent race conditions and ensure data integrity, this endpoint should validate:
 >
-> - Summary log status must be `ingested` (reject `created`, `validating`, `validation-failed`, `upload-failed`, or `approved`)
+> - Summary log status must be `ingested` (reject `created`, `validating`, `validation_failed`, `upload_failed`, or `approved`)
 > - Summary log must be the most recently uploaded for the given site + material (reject if a newer summary log exists)
 
 ### Waste Records
@@ -611,8 +611,8 @@ sequenceDiagram
       alt status: created or validating
         Backend-->>Frontend: 200: { status: 'created' | 'validating' }
         Frontend-->>Op: <html>Processing...</html>
-      else status: validation-failed
-        Backend-->>Frontend: 200: { status: 'validation-failed', errors }
+      else status: validation_failed
+        Backend-->>Frontend: 200: { status: 'validation_failed', errors }
         Frontend-->>Op: <html>Validation failed...</html>
         Note over Op: End Journey
       else status: ingested
@@ -623,7 +623,7 @@ sequenceDiagram
     end
   else FileStatus: rejected
     CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'rejected', ... } }, numberOfRejectedFiles: 1 }
-    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'upload-failed', failureReason }
+    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'upload_failed', failureReason }
     Backend-->>CDP: 200
 
     loop polling until final state
@@ -631,7 +631,7 @@ sequenceDiagram
       Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
-      Backend-->>Frontend: 200: { status: 'upload-failed', failureReason }
+      Backend-->>Frontend: 200: { status: 'upload_failed', failureReason }
       Frontend-->>Op: <html>Upload failed...</html>
       Note over Op: End Journey
     end
