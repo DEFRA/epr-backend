@@ -132,6 +132,12 @@ Updates the existing SUMMARY-LOG entity with S3 details and sets status to `crea
 
 Used to submit a summary log to a registration, applying the validated changes to waste records.
 
+> [!NOTE]
+> To prevent race conditions and ensure data integrity, this endpoint should validate:
+>
+> - Summary log status must be `ingested` (reject `created`, `validating`, `validation-failed`, `upload-failed`, or `approved`)
+> - Summary log must be the most recently uploaded for the given site + material (reject if a newer summary log exists)
+
 ### Waste Records
 
 #### `GET /v1/organisations/{id}/registrations/{id}/waste-records`
@@ -663,10 +669,3 @@ sequenceDiagram
   Backend-->>Frontend: 200: { status: 'approved', data: [ ... ] }
   Frontend-->>Op: <html>Submission complete</html>
 ```
-
-> [!IMPORTANT]
-> To avoid race-conditions / multiple uploads of a summary log to the same site + material before approving a previously uploaded summary log, the epr-backend API should:
->
-> 1. fail any attempt to submit a `created` summary log
-> 2. fail any attempt to submit an `ingested` summary log when that summary log is the not the most recently uploaded for the given site + material
-> 3. fail any attempt to submit an `approved` summary log
