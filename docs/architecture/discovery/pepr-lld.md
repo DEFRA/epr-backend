@@ -90,23 +90,23 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 Initiates the upload process by:
 
 1. Creating a SUMMARY-LOG entity with status `created` (no S3 details yet)
-2. Calling CDP's `/initiate` endpoint with redirect and callback URLs
-3. Returning CDP's response (uploadId, uploadUrl, statusUrl) to the frontend
+2. Calling CDP Uploader's `/initiate` endpoint with redirect and callback URLs
+3. Returning CDP Uploader's response (uploadId, uploadUrl, statusUrl) to the frontend
 
 This ensures the SUMMARY-LOG document exists before the upload starts, allowing the frontend to poll it immediately.
 
 > [!NOTE]
-> **Alternative approach:** Initially, the frontend could call CDP directly and handle 404s gracefully when polling the backend until the SUMMARY-LOG document is created by the callback. This simpler approach avoids the backend needing to proxy the CDP initiate call, but introduces a race condition between upload completion and document creation.
+> **Alternative approach:** Initially, the frontend could call CDP Uploader directly and handle 404s gracefully when polling the backend until the SUMMARY-LOG document is created by the callback. This simpler approach avoids the backend needing to proxy the CDP Uploader initiate call, but introduces a race condition between upload completion and document creation.
 
 #### `GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
 
 Used to retrieve the current state and data of a summary log.
 
-#### `PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
+#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
 
-Internal endpoint used by CDP to notify the backend when a file upload is complete or has failed virus scan.
+Internal endpoint used by CDP Uploader to notify the backend when a file upload is complete or has failed virus scan.
 
-Request body matches CDP's callback payload:
+Request body matches CDP Uploader's callback payload:
 
 ```json
 {
@@ -135,7 +135,7 @@ Used to submit a summary log to a registration, applying the validated changes t
 > [!NOTE]
 > To prevent race conditions and ensure data integrity, this endpoint should validate:
 >
-> - Summary log status must be `ingested` (reject `created`, `validating`, `validation_failed`, `upload_failed`, or `approved`)
+> - Summary log status must be `validation_succeeded` (reject `created`, `validating`, `validation_failed`, `upload_failed`, or `approved`)
 > - Summary log must be the most recently uploaded for the given site + material (reject if a newer summary log exists)
 
 ### Waste Records
@@ -341,7 +341,7 @@ erDiagram
 
   SUMMARY-LOG {
     ObjectId _id PK
-    enum status "created, ingested, approved"
+    enum status "created, upload_failed, validating, validation_failed, validation_succeeded, approved"
     string summaryLogUri UK "S3 object URI"
     ISO8601 createdAt
     USER-SUMMARY createdBy FK
@@ -566,30 +566,30 @@ sequenceDiagram
   participant Backend as EPR Backend
   participant BackendWorker as EPR Backend Worker
   participant SQS as SQS Queue
-  participant CDP as CDP Uploader
+  participant CDPUploader as CDP Uploader
   participant S3
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
   Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate
   Note over Backend: create SUMMARY-LOG entity<br>{ status: 'created' }
-  Backend->>CDP: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
-  CDP-->>Backend: 200: { uploadId, uploadUrl, statusUrl }
+  Backend->>CDPUploader: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
+  CDPUploader-->>Backend: 200: { uploadId, uploadUrl, statusUrl }
   Backend-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
   Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
-  Op->>CDP: POST /upload-and-scan/{uploadId}
-  CDP->>S3: store
-  CDP-->>Op: 302: redirectUrl
+  Op->>CDPUploader: POST /upload-and-scan/{uploadId}
+  CDPUploader->>S3: store
+  CDPUploader-->>Op: 302: redirectUrl
 
-  Note over CDP: START async virus scan
-  Note over CDP: END async virus scan
+  Note over CDPUploader: START async virus scan
+  Note over CDPUploader: END async virus scan
 
   alt FileStatus: complete
-    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
+    CDPUploader->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
     Note over Backend: update SUMMARY-LOG entity<br>{ status: 'created', s3Bucket, s3Key }
     Backend->>SQS: send ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
-    Backend-->>CDP: 200
+    Backend-->>CDPUploader: 200
     Note over BackendWorker: START async file validation
     BackendWorker->>SQS: poll for messages
     SQS-->>BackendWorker: ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
@@ -599,7 +599,7 @@ sequenceDiagram
     loop each row
       Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
     end
-    BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'ingested', data }
+    BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'validation_succeeded', data }
     Note over BackendWorker: END async file validation
 
     loop polling until final state
@@ -613,18 +613,18 @@ sequenceDiagram
         Frontend-->>Op: <html>Processing...</html>
       else status: validation_failed
         Backend-->>Frontend: 200: { status: 'validation_failed', errors }
-        Frontend-->>Op: <html>Validation failed...</html>
+        Frontend-->>Op: <html>Validation failed...<form>Upload new file</form></html>
         Note over Op: End Journey
-      else status: ingested
-        Backend-->>Frontend: 200: { status: 'ingested', data }
+      else status: validation_succeeded
+        Backend-->>Frontend: 200: { status: 'validation_succeeded', data }
         Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
         Note over Op: End Journey
       end
     end
   else FileStatus: rejected
-    CDP->>Backend: PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'rejected', ... } }, numberOfRejectedFiles: 1 }
+    CDPUploader->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'rejected', ... } }, numberOfRejectedFiles: 1 }
     Note over Backend: update SUMMARY-LOG entity<br>{ status: 'upload_failed', failureReason }
-    Backend-->>CDP: 200
+    Backend-->>CDPUploader: 200
 
     loop polling until final state
       Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
@@ -632,7 +632,7 @@ sequenceDiagram
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Backend-->>Frontend: 200: { status: 'upload_failed', failureReason }
-      Frontend-->>Op: <html>Upload failed...</html>
+      Frontend-->>Op: <html>Upload failed...<form>Upload new file</form></html>
       Note over Op: End Journey
     end
   end
@@ -654,7 +654,7 @@ sequenceDiagram
   Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId }]
   Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
   Note over Backend: lookup SUMMARY-LOG entity
-  Backend-->>Frontend: 200: { status: 'ingested', data: [ ... ] }
+  Backend-->>Frontend: 200: { status: 'validation_succeeded', data: [ ... ] }
   Frontend-->>Op: <html>Summary of changes...<button>Submit</button></html>
 
   Note over Op: Review changes
