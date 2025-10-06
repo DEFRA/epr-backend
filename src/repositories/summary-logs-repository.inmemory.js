@@ -1,9 +1,11 @@
+import { randomUUID } from 'node:crypto'
+
 export const createInMemorySummaryLogsRepository = () => {
   const storage = new Map()
 
   return {
     async insert(summaryLog) {
-      const id = `${Date.now()}-${Math.random()}`
+      const id = randomUUID()
       storage.set(id, { ...summaryLog })
       return { insertedId: id }
     },
