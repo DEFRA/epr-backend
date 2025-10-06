@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+
 export const testSummaryLogsRepositoryContract = (createRepository) => {
   describe('summary logs repository contract', () => {
     let repository
@@ -8,7 +10,7 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
 
     describe('insert', () => {
       it('inserts a summary log and returns result with insertedId', async () => {
-        const fileId = `contract-insert-${Date.now()}-${Math.random()}`
+        const fileId = `contract-insert-${randomUUID()}`
         const summaryLog = {
           fileId,
           organisationId: 'org-123',
@@ -25,7 +27,7 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
       })
 
       it('stores the summary log so it can be retrieved', async () => {
-        const fileId = `contract-retrievable-${Date.now()}-${Math.random()}`
+        const fileId = `contract-retrievable-${randomUUID()}`
         const summaryLog = {
           fileId,
           organisationId: 'org-456',
@@ -46,15 +48,15 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
 
     describe('findByFileId', () => {
       it('returns null when file ID not found', async () => {
-        const fileId = `contract-nonexistent-${Date.now()}-${Math.random()}`
+        const fileId = `contract-nonexistent-${randomUUID()}`
         const result = await repository.findByFileId(fileId)
 
         expect(result).toBeNull()
       })
 
       it('does not return logs with different file IDs', async () => {
-        const fileIdA = `contract-file-a-${Date.now()}-${Math.random()}`
-        const fileIdB = `contract-file-b-${Date.now()}-${Math.random()}`
+        const fileIdA = `contract-file-a-${randomUUID()}`
+        const fileIdB = `contract-file-b-${randomUUID()}`
 
         await repository.insert({
           fileId: fileIdA,
