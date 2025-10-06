@@ -3,6 +3,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { summaryLogsValidatePath } from './validate.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -28,8 +29,13 @@ let server
 describe(`${url} route`, () => {
   beforeAll(async () => {
     vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
-    const { createServer } = await import('../../../../../server.js')
-    server = await createServer()
+
+    const { createServer } = await import('#server/server.js')
+    server = await createServer({
+      repositories: {
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
+      }
+    })
     await server.initialize()
   })
 

@@ -5,6 +5,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
+/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+
 export const summaryLogsValidatePath =
   '/v1/organisation/{organisationId}/registration/{registrationId}/summary-logs/validate'
 
@@ -49,11 +51,28 @@ export const summaryLogsValidate = {
       }
     }
   },
-  handler: async ({ payload }, h) => {
+  /**
+   * @param {Object} request
+   * @param {SummaryLogsRepository} request.summaryLogsRepository
+   * @param {Object} request.payload
+   * @param {Object} request.params
+   * @param {Object} h - Hapi response toolkit
+   */
+  handler: async ({ summaryLogsRepository, payload, params }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
+    const { organisationId, registrationId } = params
     const s3Path = `${s3Bucket}/${s3Key}`
 
     try {
+      await summaryLogsRepository.insert({
+        fileId,
+        organisationId,
+        registrationId,
+        filename,
+        s3Bucket,
+        s3Key
+      })
+
       logger.info({
         message: `Initiating file validation for ${s3Path} with fileId: ${fileId} and filename: ${filename}`,
         event: {

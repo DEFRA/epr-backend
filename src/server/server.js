@@ -2,16 +2,17 @@ import Hapi from '@hapi/hapi'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
-import { getConfig } from './config.js'
-import { router } from './plugins/router.js'
-import { requestLogger } from './common/helpers/logging/request-logger.js'
-import { mongoDb } from './common/helpers/mongodb.js'
-import { failAction } from './common/helpers/fail-action.js'
-import { pulse } from './common/helpers/pulse.js'
-import { requestTracing } from './common/helpers/request-tracing.js'
-import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
+import { getConfig } from '../config.js'
+import { router } from '#plugins/router.js'
+import { repositories } from '#plugins/repositories.js'
+import { requestLogger } from '#common/helpers/logging/request-logger.js'
+import { mongoDb } from '#common/helpers/mongodb.js'
+import { failAction } from '#common/helpers/fail-action.js'
+import { pulse } from '#common/helpers/pulse.js'
+import { requestTracing } from '#common/helpers/request-tracing.js'
+import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 
-async function createServer() {
+async function createServer(options = {}) {
   setupProxy()
   const config = getConfig()
   const server = Hapi.server({
@@ -46,6 +47,7 @@ async function createServer() {
   // secureContext  - loads CA certificates from environment config
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
+  // repositories   - sets up repository adapters and attaches to `request` objects
   // router         - routes used in the app
   await server.register([
     requestLogger,
@@ -55,6 +57,10 @@ async function createServer() {
     {
       plugin: mongoDb,
       options: config.get('mongo')
+    },
+    {
+      plugin: repositories,
+      options: options.repositories
     },
     router
   ])

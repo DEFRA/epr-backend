@@ -32,7 +32,7 @@ let server
 
 describe(`${url} route`, () => {
   beforeAll(async () => {
-    const { createServer } = await import('../../../server.js')
+    const { createServer } = await import('#server/server.js')
     server = await createServer()
     await server.initialize()
   })
