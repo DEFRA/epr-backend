@@ -1,9 +1,9 @@
 import Boom from '@hapi/boom'
-import { logger } from '../../../../../common/helpers/logging/logger.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../../../common/enums/index.js'
+} from '#common/enums/index.js'
 
 export const summaryLogsValidatePath =
   '/v1/organisation/{organisationId}/registration/{registrationId}/summary-logs/validate'
