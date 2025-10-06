@@ -5,11 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
-/**
- * @typedef {Object} SummaryLogsRepository
- * @property {(summaryLog: Object) => Promise<{insertedId: string}>} insert
- * @property {(fileId: string) => Promise<Object|null>} findByFileId
- */
+/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 export const summaryLogsValidatePath =
   '/v1/organisation/{organisationId}/registration/{registrationId}/summary-logs/validate'

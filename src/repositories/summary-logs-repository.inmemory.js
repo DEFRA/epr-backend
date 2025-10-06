@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto'
 
+/**
+ * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
+ */
 export const createInMemorySummaryLogsRepository = () => {
   const storage = new Map()
 

@@ -16,7 +16,8 @@ export default defineConfig({
         ...configDefaults.exclude,
         'coverage',
         'src/index.js',
-        'src/config.js'
+        'src/config.js',
+        '**/*.port.js'
       ],
       thresholds: {
         lines: 100,
