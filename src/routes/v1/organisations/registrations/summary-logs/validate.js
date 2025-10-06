@@ -49,11 +49,21 @@ export const summaryLogsValidate = {
       }
     }
   },
-  handler: async ({ summaryLogsRepository, payload }, h) => {
+  handler: async ({ summaryLogsRepository, payload, params }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
+    const { organisationId, registrationId } = params
     const s3Path = `${s3Bucket}/${s3Key}`
 
     try {
+      await summaryLogsRepository.insert({
+        fileId,
+        organisationId,
+        registrationId,
+        filename,
+        s3Bucket,
+        s3Key
+      })
+
       logger.info({
         message: `Initiating file validation for ${s3Path} with fileId: ${fileId} and filename: ${filename}`,
         event: {
