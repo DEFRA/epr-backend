@@ -1,4 +1,4 @@
-export const summaryLogsRepositoryContract = (createRepository) => {
+export const testSummaryLogsRepositoryContract = (createRepository) => {
   describe('summary logs repository contract', () => {
     let repository
 

@@ -1,5 +1,5 @@
 import { createSummaryLogsRepository } from './summary-logs-repository.mongodb.js'
-import { summaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
+import { testSummaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
 
 describe('MongoDB summary logs repository', () => {
   let server
@@ -17,5 +17,5 @@ describe('MongoDB summary logs repository', () => {
     await server.stop()
   })
 
-  summaryLogsRepositoryContract(() => repository)
+  testSummaryLogsRepositoryContract(() => repository)
 })
