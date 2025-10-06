@@ -5,6 +5,12 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
+/**
+ * @typedef {Object} SummaryLogsRepository
+ * @property {(summaryLog: Object) => Promise<{insertedId: string}>} insert
+ * @property {(fileId: string) => Promise<Object|null>} findByFileId
+ */
+
 export const summaryLogsValidatePath =
   '/v1/organisation/{organisationId}/registration/{registrationId}/summary-logs/validate'
 
@@ -49,6 +55,13 @@ export const summaryLogsValidate = {
       }
     }
   },
+  /**
+   * @param {Object} request
+   * @param {SummaryLogsRepository} request.summaryLogsRepository
+   * @param {Object} request.payload
+   * @param {Object} request.params
+   * @param {Object} h - Hapi response toolkit
+   */
   handler: async ({ summaryLogsRepository, payload, params }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
     const { organisationId, registrationId } = params
