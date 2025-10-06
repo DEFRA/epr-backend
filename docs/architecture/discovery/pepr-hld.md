@@ -253,8 +253,8 @@ stateDiagram-v2
     validating --> validation_failed: Validation errors found
     validating --> validated: Validation completed successfully
     validated --> submitted: Summary log submitted
-    upload_failed --> [*]
-    validation_failed --> [*]
+    upload_failed --> [*]: User must restart
+    validation_failed --> [*]: User must restart
     submitted --> [*]
 ```
 
