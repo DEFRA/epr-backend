@@ -1,4 +1,4 @@
-import { createSummaryLogsRepository } from './summary-logs-repository.js'
+import { createSummaryLogsRepository } from './summary-logs-repository.mongodb.js'
 import { summaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
 
 describe('createSummaryLogsRepository with real MongoDB', () => {

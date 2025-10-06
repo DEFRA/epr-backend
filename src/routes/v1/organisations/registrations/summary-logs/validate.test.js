@@ -19,9 +19,12 @@ vi.mock('../../../../../common/helpers/logging/logger.js', () => ({
   }
 }))
 
-vi.mock('../../../../../repositories/summary-logs-repository.js', () => ({
-  createSummaryLogsRepository: () => summaryLogsRepo
-}))
+vi.mock(
+  '../../../../../repositories/summary-logs-repository.mongodb.js',
+  () => ({
+    createSummaryLogsRepository: () => summaryLogsRepo
+  })
+)
 
 const url = summaryLogsValidatePath
 const payload = {
