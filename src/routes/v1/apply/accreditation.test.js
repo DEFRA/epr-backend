@@ -3,9 +3,9 @@ import {
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../common/enums/event.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../../common/enums/index.js'
-import accreditationFixture from '../../../data/fixtures/accreditation.json'
+} from '#common/enums/event.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
+import accreditationFixture from '#data/fixtures/accreditation.json'
 import { accreditationPath } from './accreditation.js'
 
 const mockLoggerInfo = vi.fn()
@@ -15,7 +15,7 @@ const mockAudit = vi.fn()
 
 const mockInsertOne = vi.fn()
 
-vi.mock('../../../common/helpers/logging/logger.js', () => ({
+vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
