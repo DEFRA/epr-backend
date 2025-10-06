@@ -4,7 +4,7 @@ export const createInMemorySummaryLogsRepository = () => {
   return {
     async insert(summaryLog) {
       const id = `${Date.now()}-${Math.random()}`
-      storage.set(id, { ...summaryLog, _id: id })
+      storage.set(id, { ...summaryLog })
       return { insertedId: id }
     },
 

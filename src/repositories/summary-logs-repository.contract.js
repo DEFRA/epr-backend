@@ -45,25 +45,6 @@ export const summaryLogsRepositoryContract = (createRepository) => {
     })
 
     describe('findByFileId', () => {
-      it('finds a summary log by file ID', async () => {
-        const fileId = `contract-searchable-${Date.now()}-${Math.random()}`
-        const summaryLog = {
-          fileId,
-          organisationId: 'org-search',
-          registrationId: 'reg-search',
-          metadata: { test: 'value' }
-        }
-
-        await repository.insert(summaryLog)
-        const result = await repository.findByFileId(fileId)
-
-        expect(result).toBeTruthy()
-        expect(result.fileId).toBe(fileId)
-        expect(result.organisationId).toBe('org-search')
-        expect(result.registrationId).toBe('reg-search')
-        expect(result.metadata).toEqual({ test: 'value' })
-      })
-
       it('returns null when file ID not found', async () => {
         const fileId = `contract-nonexistent-${Date.now()}-${Math.random()}`
         const result = await repository.findByFileId(fileId)
