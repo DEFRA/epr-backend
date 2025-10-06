@@ -7,7 +7,8 @@ export const repositories = {
     dependencies: ['mongodb'],
     register: (server, options) => {
       const summaryLogsRepo =
-        options?.summaryLogsRepository ?? createSummaryLogsRepository(server.db)
+        options?.summaryLogsRepository ?? // Test override
+        createSummaryLogsRepository(server.db) // Production default: MongoDB
 
       server.decorate(
         'request',
