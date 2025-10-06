@@ -1,14 +1,14 @@
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../../../common/enums/event.js'
+} from '#common/enums/event.js'
 import { summaryLogsValidatePath } from './validate.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
 
-vi.mock('../../../../../common/helpers/logging/logger.js', () => ({
+vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),

@@ -4,6 +4,13 @@
   "description": "epr-backend",
   "main": "src/index.js",
   "type": "module",
+  "imports": {
+    "#common/*": "./src/common/*",
+    "#repositories/*": "./src/repositories/*",
+    "#routes/*": "./src/routes/*",
+    "#plugins/*": "./src/plugins/*",
+    "#data/*": "./src/data/*"
+  },
   "engines": {
     "node": ">=22"
   },

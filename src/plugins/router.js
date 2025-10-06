@@ -1,6 +1,6 @@
-import { health } from '../routes/health.js'
-import { apply } from '../routes/v1/apply/index.js'
-import { summaryLogsRoutes } from '../routes/v1/organisations/index.js'
+import { health } from '#routes/health.js'
+import { apply } from '#routes/v1/apply/index.js'
+import { summaryLogsRoutes } from '#routes/v1/organisations/index.js'
 import { config } from '../config.js'
 
 const router = {

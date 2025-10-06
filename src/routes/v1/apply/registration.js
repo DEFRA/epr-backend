@@ -1,6 +1,6 @@
-import { registrationAndAccreditationHandler } from '../../../common/helpers/apply/handler.js'
-import { registrationAndAccreditationPayload } from '../../../common/helpers/apply/payload.js'
-import { registrationFactory } from '../../../common/helpers/collections/factories/index.js'
+import { registrationAndAccreditationHandler } from '#common/helpers/apply/handler.js'
+import { registrationAndAccreditationPayload } from '#common/helpers/apply/payload.js'
+import { registrationFactory } from '#common/helpers/collections/factories/index.js'
 
 const registrationPath = '/v1/apply/registration'
 

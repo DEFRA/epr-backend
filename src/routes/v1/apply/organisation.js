@@ -1,6 +1,6 @@
 import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
-import { logger } from '../../../common/helpers/logging/logger.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
@@ -9,15 +9,15 @@ import {
   ORG_ID_START_NUMBER,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
-} from '../../../common/enums/index.js'
+} from '#common/enums/index.js'
 import {
   extractAnswers,
   extractEmail,
   extractOrgName,
   getRegulatorEmail
-} from '../../../common/helpers/apply/extract-answers.js'
-import { organisationFactory } from '../../../common/helpers/collections/factories/index.js'
-import { sendEmail } from '../../../common/helpers/notify.js'
+} from '#common/helpers/apply/extract-answers.js'
+import { organisationFactory } from '#common/helpers/collections/factories/index.js'
+import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'
 
