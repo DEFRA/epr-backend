@@ -49,7 +49,7 @@ export const summaryLogsValidate = {
       }
     }
   },
-  handler: async ({ payload }, h) => {
+  handler: async ({ summaryLogsRepository, payload }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
     const s3Path = `${s3Bucket}/${s3Key}`
 
