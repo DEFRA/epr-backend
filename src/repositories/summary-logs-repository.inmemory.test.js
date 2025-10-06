@@ -1,4 +1,6 @@
 import { createInMemorySummaryLogsRepository } from './summary-logs-repository.inmemory.js'
 import { summaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
 
-summaryLogsRepositoryContract(() => createInMemorySummaryLogsRepository())
+describe('In-memory summary logs repository', () => {
+  summaryLogsRepositoryContract(createInMemorySummaryLogsRepository)
+})

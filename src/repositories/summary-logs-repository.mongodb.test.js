@@ -1,7 +1,7 @@
 import { createSummaryLogsRepository } from './summary-logs-repository.mongodb.js'
 import { summaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
 
-describe('createSummaryLogsRepository with real MongoDB', () => {
+describe('MongoDB summary logs repository', () => {
   let server
   let repository
 
