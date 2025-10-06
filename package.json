@@ -9,7 +9,8 @@
     "#repositories/*": "./src/repositories/*",
     "#routes/*": "./src/routes/*",
     "#plugins/*": "./src/plugins/*",
-    "#data/*": "./src/data/*"
+    "#data/*": "./src/data/*",
+    "#server/*": "./src/server/*"
   },
   "engines": {
     "node": ">=22"

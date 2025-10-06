@@ -2,15 +2,15 @@ import Hapi from '@hapi/hapi'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
-import { getConfig } from './config.js'
-import { router } from './plugins/router.js'
-import { repositories } from './plugins/repositories.js'
-import { requestLogger } from './common/helpers/logging/request-logger.js'
-import { mongoDb } from './common/helpers/mongodb.js'
-import { failAction } from './common/helpers/fail-action.js'
-import { pulse } from './common/helpers/pulse.js'
-import { requestTracing } from './common/helpers/request-tracing.js'
-import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
+import { getConfig } from '../config.js'
+import { router } from '#plugins/router.js'
+import { repositories } from '#plugins/repositories.js'
+import { requestLogger } from '#common/helpers/logging/request-logger.js'
+import { mongoDb } from '#common/helpers/mongodb.js'
+import { failAction } from '#common/helpers/fail-action.js'
+import { pulse } from '#common/helpers/pulse.js'
+import { requestTracing } from '#common/helpers/request-tracing.js'
+import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 
 async function createServer(options = {}) {
   setupProxy()
