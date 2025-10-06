@@ -13,10 +13,6 @@ export const createInMemorySummaryLogsRepository = () => {
         Array.from(storage.values()).find((log) => log.fileId === fileId) ??
         null
       )
-    },
-
-    clear() {
-      storage.clear()
     }
   }
 }

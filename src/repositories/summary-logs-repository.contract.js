@@ -4,15 +4,13 @@ export const summaryLogsRepositoryContract = (createRepository) => {
 
     beforeEach(async () => {
       repository = await createRepository()
-      if (repository.clear) {
-        await repository.clear()
-      }
     })
 
     describe('insert', () => {
       it('inserts a summary log and returns result with insertedId', async () => {
+        const fileId = `contract-insert-${Date.now()}-${Math.random()}`
         const summaryLog = {
-          fileId: 'test-file-id',
+          fileId,
           organisationId: 'org-123',
           registrationId: 'reg-456',
           filename: 'test.xlsx',
@@ -27,18 +25,19 @@ export const summaryLogsRepositoryContract = (createRepository) => {
       })
 
       it('stores the summary log so it can be retrieved', async () => {
+        const fileId = `contract-retrievable-${Date.now()}-${Math.random()}`
         const summaryLog = {
-          fileId: 'retrievable-file-id',
+          fileId,
           organisationId: 'org-456',
           registrationId: 'reg-789',
           data: 'test-data'
         }
 
         await repository.insert(summaryLog)
-        const found = await repository.findByFileId('retrievable-file-id')
+        const found = await repository.findByFileId(fileId)
 
         expect(found).toBeTruthy()
-        expect(found.fileId).toBe('retrievable-file-id')
+        expect(found.fileId).toBe(fileId)
         expect(found.organisationId).toBe('org-456')
         expect(found.registrationId).toBe('reg-789')
         expect(found.data).toBe('test-data')
@@ -47,44 +46,49 @@ export const summaryLogsRepositoryContract = (createRepository) => {
 
     describe('findByFileId', () => {
       it('finds a summary log by file ID', async () => {
+        const fileId = `contract-searchable-${Date.now()}-${Math.random()}`
         const summaryLog = {
-          fileId: 'searchable-file-id',
+          fileId,
           organisationId: 'org-search',
           registrationId: 'reg-search',
           metadata: { test: 'value' }
         }
 
         await repository.insert(summaryLog)
-        const result = await repository.findByFileId('searchable-file-id')
+        const result = await repository.findByFileId(fileId)
 
         expect(result).toBeTruthy()
-        expect(result.fileId).toBe('searchable-file-id')
+        expect(result.fileId).toBe(fileId)
         expect(result.organisationId).toBe('org-search')
         expect(result.registrationId).toBe('reg-search')
         expect(result.metadata).toEqual({ test: 'value' })
       })
 
       it('returns null when file ID not found', async () => {
-        const result = await repository.findByFileId('non-existent-file-id')
+        const fileId = `contract-nonexistent-${Date.now()}-${Math.random()}`
+        const result = await repository.findByFileId(fileId)
 
         expect(result).toBeNull()
       })
 
       it('does not return logs with different file IDs', async () => {
+        const fileIdA = `contract-file-a-${Date.now()}-${Math.random()}`
+        const fileIdB = `contract-file-b-${Date.now()}-${Math.random()}`
+
         await repository.insert({
-          fileId: 'file-a',
+          fileId: fileIdA,
           organisationId: 'org-1',
           registrationId: 'reg-1'
         })
         await repository.insert({
-          fileId: 'file-b',
+          fileId: fileIdB,
           organisationId: 'org-2',
           registrationId: 'reg-2'
         })
 
-        const result = await repository.findByFileId('file-a')
+        const result = await repository.findByFileId(fileIdA)
 
-        expect(result.fileId).toBe('file-a')
+        expect(result.fileId).toBe(fileIdA)
         expect(result.organisationId).toBe('org-1')
       })
     })

@@ -43,7 +43,6 @@ describe(`${url} route`, () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    summaryLogsRepo.clear()
   })
 
   it('returns 202 and status', async () => {

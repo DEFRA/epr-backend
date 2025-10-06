@@ -17,18 +17,7 @@ describe('createSummaryLogsRepository with real MongoDB', () => {
     await server.stop()
   })
 
-  beforeEach(async () => {
-    await server.db.collection('summary-logs').deleteMany({})
-  })
-
-  summaryLogsRepositoryContract(() => {
-    return {
-      ...repository,
-      clear: async () => {
-        await server.db.collection('summary-logs').deleteMany({})
-      }
-    }
-  })
+  summaryLogsRepositoryContract(() => repository)
 })
 
 describe('createSummaryLogsRepository - MongoDB API calls', () => {
