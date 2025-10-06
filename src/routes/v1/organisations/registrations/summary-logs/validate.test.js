@@ -9,8 +9,6 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
 
-const summaryLogsRepo = createInMemorySummaryLogsRepository()
-
 vi.mock('../../../../../common/helpers/logging/logger.js', () => ({
   logger: {
     info: (...args) => mockLoggerInfo(...args),
@@ -18,13 +16,6 @@ vi.mock('../../../../../common/helpers/logging/logger.js', () => ({
     warn: (...args) => mockLoggerWarn(...args)
   }
 }))
-
-vi.mock(
-  '../../../../../repositories/summary-logs-repository.mongodb.js',
-  () => ({
-    createSummaryLogsRepository: () => summaryLogsRepo
-  })
-)
 
 const url = summaryLogsValidatePath
 const payload = {
@@ -40,7 +31,11 @@ describe(`${url} route`, () => {
     vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
 
     const { createServer } = await import('../../../../../server.js')
-    server = await createServer()
+    server = await createServer({
+      repositories: {
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
+      }
+    })
     await server.initialize()
   })
 

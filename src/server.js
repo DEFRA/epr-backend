@@ -12,7 +12,7 @@ import { pulse } from './common/helpers/pulse.js'
 import { requestTracing } from './common/helpers/request-tracing.js'
 import { setupProxy } from './common/helpers/proxy/setup-proxy.js'
 
-async function createServer() {
+async function createServer(options = {}) {
   setupProxy()
   const config = getConfig()
   const server = Hapi.server({
@@ -58,7 +58,10 @@ async function createServer() {
       plugin: mongoDb,
       options: config.get('mongo')
     },
-    repositories,
+    {
+      plugin: repositories,
+      options: options.repositories
+    },
     router
   ])
 
