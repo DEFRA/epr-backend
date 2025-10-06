@@ -5,15 +5,5 @@ export const createSummaryLogsRepository = (db) => ({
 
   async findByFileId(fileId) {
     return db.collection('summary-logs').findOne({ fileId })
-  },
-
-  async findByOrganisationAndRegistration(organisationId, registrationId) {
-    return db
-      .collection('summary-logs')
-      .find({
-        organisationId,
-        registrationId
-      })
-      .toArray()
   }
 })

@@ -39,10 +39,7 @@ describe('createSummaryLogsRepository - MongoDB API calls', () => {
   beforeEach(() => {
     mockCollection = {
       insertOne: vi.fn(),
-      findOne: vi.fn(),
-      find: vi.fn(() => ({
-        toArray: vi.fn()
-      }))
+      findOne: vi.fn()
     }
 
     mockDb = {
@@ -81,32 +78,6 @@ describe('createSummaryLogsRepository - MongoDB API calls', () => {
       expect(mockDb.collection).toHaveBeenCalledWith('summary-logs')
       expect(mockCollection.findOne).toHaveBeenCalledWith({ fileId })
       expect(result).toEqual(expectedLog)
-    })
-  })
-
-  describe('findByOrganisationAndRegistration', () => {
-    it('calls MongoDB find with organisation and registration query', async () => {
-      const organisationId = 'org-123'
-      const registrationId = 'reg-456'
-      const expectedLogs = [
-        { organisationId, registrationId, fileId: 'file-1' },
-        { organisationId, registrationId, fileId: 'file-2' }
-      ]
-      const mockToArray = vi.fn().mockResolvedValue(expectedLogs)
-      mockCollection.find.mockReturnValue({ toArray: mockToArray })
-
-      const result = await repository.findByOrganisationAndRegistration(
-        organisationId,
-        registrationId
-      )
-
-      expect(mockDb.collection).toHaveBeenCalledWith('summary-logs')
-      expect(mockCollection.find).toHaveBeenCalledWith({
-        organisationId,
-        registrationId
-      })
-      expect(mockToArray).toHaveBeenCalled()
-      expect(result).toEqual(expectedLogs)
     })
   })
 })

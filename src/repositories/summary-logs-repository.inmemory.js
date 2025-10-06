@@ -15,14 +15,6 @@ export const createInMemorySummaryLogsRepository = () => {
       )
     },
 
-    async findByOrganisationAndRegistration(organisationId, registrationId) {
-      return Array.from(storage.values()).filter(
-        (log) =>
-          log.organisationId === organisationId &&
-          log.registrationId === registrationId
-      )
-    },
-
     clear() {
       storage.clear()
     }
