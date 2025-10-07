@@ -60,6 +60,24 @@ describe.todo('Summary logs journey', () => {
     vi.clearAllMocks()
   })
 
+  describe('when file has not been uploaded yet', () => {
+    test('returns preprocessing status', async () => {
+      const server = await createInitializedServer()
+      const summaryLogId = 'summary-999'
+      const getUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+
+      const response = await server.inject({
+        method: 'GET',
+        url: getUrl
+      })
+
+      expect(response.statusCode).toBe(200)
+      expect(JSON.parse(response.payload)).toEqual({
+        status: 'preprocessing'
+      })
+    })
+  })
+
   describe('when file upload is successful', () => {
     test('creates document with validating status after upload', async () => {
       const server = await createInitializedServer()
