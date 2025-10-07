@@ -115,15 +115,9 @@ describe.todo('Summary logs journey', () => {
       })
 
       expect(validatingResponse.statusCode).toBe(200)
-      expect(JSON.parse(validatingResponse.payload)).toEqual(
-        expect.objectContaining({
-          status: 'validating',
-          organisationId,
-          registrationId,
-          s3Bucket: 'test-bucket',
-          s3Key: 'path/to/summary-log.xlsx'
-        })
-      )
+      expect(JSON.parse(validatingResponse.payload)).toEqual({
+        status: 'validating'
+      })
     })
   })
 
