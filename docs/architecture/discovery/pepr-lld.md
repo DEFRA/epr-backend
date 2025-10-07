@@ -87,13 +87,9 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/uploaded`
 
-Called by the Frontend when CDP Uploader successfully redirects after file upload. This endpoint:
+Called by the Frontend when CDP Uploader successfully redirects after file upload.
 
-1. Creates a SUMMARY-LOG entity with status `preprocessing` (file uploaded, CDP Uploader processing in progress)
-2. Returns success to Frontend
-3. Frontend then renders the status page and begins polling
-
-This ensures SUMMARY-LOG entities are only created when a file has been successfully uploaded to CDP Uploader, avoiding abandoned entities.
+Creates a SUMMARY-LOG entity with status `preprocessing`.
 
 #### `GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
 
@@ -123,13 +119,7 @@ Request body matches CDP Uploader's callback payload:
 }
 ```
 
-Updates the SUMMARY-LOG entity with S3 details and sets status based on CDP preprocessing result:
-
-- If `fileStatus: "complete"`: Updates status to `validating` and sends message to SQS to trigger content validation
-- If `fileStatus: "rejected"`: Updates status to `rejected` with failure reason
-
-> [!NOTE]
-> In normal flow, the SUMMARY-LOG entity will already exist with status `preprocessing` (created by `/uploaded` endpoint). However, if the redirect failed (browser closed, network issue), this callback can create the entity as a fallback to ensure robustness.
+Updates the SUMMARY-LOG entity with S3 details and sets status to `validating` (if scan succeeded) or `rejected` (if scan failed). If successful, sends a message to SQS to trigger validation.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`
 
@@ -559,8 +549,6 @@ TBD
 
 > [!NOTE]
 > The frontend only needs a single page to handle the entire upload and validation flow. The page polls the backend state document and updates the UI based on the current status, without requiring redirects between different URLs.
->
-> **Design decision:** The frontend calls CDP Uploader's `/initiate` endpoint directly (no backend proxy needed). The SUMMARY-LOG entity is created only after the file has been successfully uploaded to CDP Uploader (not on page load). This prevents abandoned entities when users navigate away or refresh the page without uploading. The redirect from CDP Uploader back to the frontend triggers the entity creation via the `/uploaded` endpoint, ensuring database records only exist for actual uploads.
 
 #### Phase 1: upload & async processes: preprocessing, file parsing & data validation
 
