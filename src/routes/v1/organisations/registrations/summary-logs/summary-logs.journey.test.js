@@ -1,0 +1,146 @@
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
+import { createServer } from '#server/server.js'
+
+const mockLoggerInfo = vi.fn()
+const mockLoggerError = vi.fn()
+const mockLoggerWarn = vi.fn()
+
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: (...args) => mockLoggerInfo(...args),
+    error: (...args) => mockLoggerError(...args),
+    warn: (...args) => mockLoggerWarn(...args)
+  }
+}))
+
+const organisationId = 'org-123'
+const registrationId = 'reg-456'
+
+const createInitializedServer = async () => {
+  const repository = createInMemorySummaryLogsRepository()
+  const server = await createServer({
+    repositories: {
+      summaryLogsRepository: repository
+    }
+  })
+  await server.initialize()
+  return server
+}
+
+const createUploadPayload = (fileStatus, fileId, filename) => ({
+  uploadStatus: 'ready',
+  metadata: {
+    organisationId,
+    registrationId
+  },
+  form: {
+    file: {
+      fileId,
+      filename,
+      fileStatus,
+      contentType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      contentLength: 12345,
+      checksumSha256: 'abc123def456',
+      detectedContentType:
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      s3Bucket: 'test-bucket',
+      s3Key: `path/to/${filename}`
+    }
+  },
+  numberOfRejectedFiles: fileStatus === 'rejected' ? 1 : 0
+})
+
+describe.todo('Summary logs journey', () => {
+  beforeAll(() => {
+    vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
+  })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('when file upload is successful', () => {
+    test('creates document with validating status after upload', async () => {
+      const server = await createInitializedServer()
+      const summaryLogId = 'summary-789'
+      const getUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+      const postUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+
+      // Step 1: GET before upload returns preprocessing
+      const preprocessingResponse = await server.inject({
+        method: 'GET',
+        url: getUrl
+      })
+
+      expect(preprocessingResponse.statusCode).toBe(200)
+      expect(JSON.parse(preprocessingResponse.payload)).toEqual({
+        status: 'preprocessing'
+      })
+
+      // Step 2: POST upload-completed creates document with validating status
+      const uploadResponse = await server.inject({
+        method: 'POST',
+        url: postUrl,
+        payload: createUploadPayload('complete', 'file-123', 'summary-log.xlsx')
+      })
+
+      expect(uploadResponse.statusCode).toBe(200)
+      expect(JSON.parse(uploadResponse.payload)).toEqual({
+        status: 'validating'
+      })
+
+      // Step 3: GET immediately after returns validating
+      const validatingResponse = await server.inject({
+        method: 'GET',
+        url: getUrl
+      })
+
+      expect(validatingResponse.statusCode).toBe(200)
+      expect(JSON.parse(validatingResponse.payload)).toEqual(
+        expect.objectContaining({
+          status: 'validating',
+          organisationId,
+          registrationId,
+          s3Bucket: 'test-bucket',
+          s3Key: 'path/to/summary-log.xlsx'
+        })
+      )
+    })
+  })
+
+  describe('when file is rejected by virus scan', () => {
+    test('completes journey for rejected file', async () => {
+      const server = await createInitializedServer()
+      const summaryLogId = 'summary-888'
+      const getUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+      const postUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+
+      // Step 1: Upload completed with rejected file
+      const uploadResponse = await server.inject({
+        method: 'POST',
+        url: postUrl,
+        payload: createUploadPayload('rejected', 'file-789', 'virus.xlsx')
+      })
+
+      expect(uploadResponse.statusCode).toBe(200)
+      expect(JSON.parse(uploadResponse.payload)).toEqual({
+        status: 'rejected'
+      })
+
+      // Step 2: GET returns rejected status
+      const rejectedResponse = await server.inject({
+        method: 'GET',
+        url: getUrl
+      })
+
+      expect(rejectedResponse.statusCode).toBe(200)
+      expect(JSON.parse(rejectedResponse.payload)).toEqual(
+        expect.objectContaining({
+          status: 'rejected',
+          failureReason: 'File rejected by virus scan'
+        })
+      )
+    })
+  })
+})
