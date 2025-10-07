@@ -30,9 +30,11 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
         const fileId = `contract-retrievable-${randomUUID()}`
         const summaryLog = {
           fileId,
+          filename: 'test.xlsx',
+          s3Bucket: 'test-bucket',
+          s3Key: 'test-key',
           organisationId: 'org-456',
-          registrationId: 'reg-789',
-          data: 'test-data'
+          registrationId: 'reg-789'
         }
 
         await repository.insert(summaryLog)
@@ -42,7 +44,6 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
         expect(found.fileId).toBe(fileId)
         expect(found.organisationId).toBe('org-456')
         expect(found.registrationId).toBe('reg-789')
-        expect(found.data).toBe('test-data')
       })
     })
 
@@ -60,11 +61,17 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
 
         await repository.insert({
           fileId: fileIdA,
+          filename: 'test-a.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key-a',
           organisationId: 'org-1',
           registrationId: 'reg-1'
         })
         await repository.insert({
           fileId: fileIdB,
+          filename: 'test-b.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key-b',
           organisationId: 'org-2',
           registrationId: 'reg-2'
         })
@@ -91,12 +98,18 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
         await repository.insert({
           summaryLogId: summaryLogIdA,
           fileId: `file-a-${randomUUID()}`,
+          filename: 'test.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key',
           organisationId: 'org-1',
           registrationId: 'reg-1'
         })
         await repository.insert({
           summaryLogId: summaryLogIdB,
           fileId: `file-b-${randomUUID()}`,
+          filename: 'test.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key',
           organisationId: 'org-2',
           registrationId: 'reg-2'
         })
@@ -127,6 +140,126 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
         expect(result.fileId).toBe(fileId)
         expect(result.filename).toBe('test.xlsx')
         expect(result.fileStatus).toBe('complete')
+      })
+    })
+
+    describe('insert validation', () => {
+      it('rejects insert with missing fileId', async () => {
+        const invalidLog = {
+          filename: 'test.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key'
+        }
+
+        await expect(repository.insert(invalidLog)).rejects.toThrow(
+          /Invalid summary log data.*fileId/
+        )
+      })
+
+      it('rejects insert with missing filename', async () => {
+        const invalidLog = {
+          fileId: 'file-123',
+          s3Bucket: 'bucket',
+          s3Key: 'key'
+        }
+
+        await expect(repository.insert(invalidLog)).rejects.toThrow(
+          /Invalid summary log data.*filename/
+        )
+      })
+
+      it('rejects insert with missing s3Bucket', async () => {
+        const invalidLog = {
+          fileId: 'file-123',
+          filename: 'test.xlsx',
+          s3Key: 'key'
+        }
+
+        await expect(repository.insert(invalidLog)).rejects.toThrow(
+          /Invalid summary log data.*s3Bucket/
+        )
+      })
+
+      it('rejects insert with missing s3Key', async () => {
+        const invalidLog = {
+          fileId: 'file-123',
+          filename: 'test.xlsx',
+          s3Bucket: 'bucket'
+        }
+
+        await expect(repository.insert(invalidLog)).rejects.toThrow(
+          /Invalid summary log data.*s3Key/
+        )
+      })
+
+      it('rejects insert with invalid fileStatus', async () => {
+        const invalidLog = {
+          fileId: `contract-invalid-status-${randomUUID()}`,
+          filename: 'test.xlsx',
+          fileStatus: 'completely-shagged',
+          s3Bucket: 'bucket',
+          s3Key: 'key'
+        }
+
+        await expect(repository.insert(invalidLog)).rejects.toThrow(
+          /Invalid summary log data.*fileStatus/
+        )
+      })
+
+      it('strips unknown fields from insert', async () => {
+        const fileId = `contract-strip-${randomUUID()}`
+        const logWithExtra = {
+          fileId,
+          filename: 'test.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key',
+          hackerField: 'DROP TABLE users;',
+          anotherBadField: 'rm -rf /'
+        }
+
+        await repository.insert(logWithExtra)
+        const found = await repository.findByFileId(fileId)
+
+        expect(found.hackerField).toBeUndefined()
+        expect(found.anotherBadField).toBeUndefined()
+      })
+
+      it('allows optional fields to be omitted', async () => {
+        const fileId = `contract-minimal-${randomUUID()}`
+        const minimalLog = {
+          fileId,
+          filename: 'test.xlsx',
+          s3Bucket: 'bucket',
+          s3Key: 'key'
+        }
+
+        const result = await repository.insert(minimalLog)
+        expect(result.insertedId).toBeTruthy()
+      })
+
+      it('accepts valid fileStatus values', async () => {
+        const completeLog = {
+          fileId: `contract-complete-${randomUUID()}`,
+          filename: 'complete.xlsx',
+          fileStatus: 'complete',
+          s3Bucket: 'bucket',
+          s3Key: 'key'
+        }
+
+        const rejectedLog = {
+          fileId: `contract-rejected-${randomUUID()}`,
+          filename: 'rejected.xlsx',
+          fileStatus: 'rejected',
+          s3Bucket: 'bucket',
+          s3Key: 'key'
+        }
+
+        await expect(repository.insert(completeLog)).resolves.toHaveProperty(
+          'insertedId'
+        )
+        await expect(repository.insert(rejectedLog)).resolves.toHaveProperty(
+          'insertedId'
+        )
       })
     })
   })

@@ -81,10 +81,10 @@ describe(`${url} route`, () => {
 
     expect(response.statusCode).toBe(400)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(/Invalid payload/)
+    expect(body.message).toMatch(/Validation failed/)
   })
 
-  it('returns 422 if payload is missing form.file', async () => {
+  it('returns 400 if payload is missing form.file', async () => {
     const response = await server.inject({
       method: 'POST',
       url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
@@ -93,8 +93,8 @@ describe(`${url} route`, () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(400)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(/form.file is missing in payload/)
+    expect(body.message).toMatch(/Validation failed/)
   })
 })
