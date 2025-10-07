@@ -83,10 +83,12 @@ describe(`${url} route`, () => {
     })
 
     expect(response.statusCode).toBe(400)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toMatch(/Invalid payload/)
   })
 
   it.each([['s3Bucket'], ['s3Key'], ['fileId'], ['filename']])(
-    'returns 400 if payload is missing %s',
+    'returns 422 if payload is missing %s',
     async (key) => {
       const response = await server.inject({
         method: 'POST',
@@ -97,7 +99,10 @@ describe(`${url} route`, () => {
         }
       })
 
-      expect(response.statusCode).toBe(400)
+      const body = JSON.parse(response.payload)
+
+      expect(response.statusCode).toBe(422)
+      expect(body.message).toEqual(`${key} is missing in body.data`)
     }
   )
 
