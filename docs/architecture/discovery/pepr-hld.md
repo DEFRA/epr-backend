@@ -462,10 +462,8 @@ sequenceDiagram
 
     User->>Frontend: select activity, site & material
     User->>Frontend: initiate upload
-    Frontend->>Backend: request upload URL
-    Backend->>CDP: request upload URL
-    CDP-->>Backend: uploadUrl
-    Backend-->>Frontend: uploadUrl
+    Frontend->>CDP: request upload URL
+    CDP-->>Frontend: uploadUrl
     User->>CDP: upload summaryLog.xlsx
     CDP->>S3: store file
     CDP-->>User: redirect to Frontend upload-success page

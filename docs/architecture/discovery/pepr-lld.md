@@ -11,9 +11,9 @@
       * [`GET /v1/organisations`](#get-v1organisations)
       * [`GET /v1/organisations/{id}`](#get-v1organisationsid)
     * [Summary Logs](#summary-logs)
-      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate`](#post-v1organisationsidregistrationsidsummary-logssummarylogidinitiate)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/uploaded`](#post-v1organisationsidregistrationsidsummary-logssummarylogiduploaded)
       * [`GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`](#get-v1organisationsidregistrationsidsummary-logssummarylogid)
-      * [`PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`](#put-v1organisationsidregistrationsidsummary-logssummarylogidupload-completed)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`](#post-v1organisationsidregistrationsidsummary-logssummarylogidupload-completed)
       * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`](#post-v1organisationsidregistrationsidsummary-logssummarylogidsubmit)
     * [Waste Records](#waste-records)
       * [`GET /v1/organisations/{id}/registrations/{id}/waste-records`](#get-v1organisationsidregistrationsidwaste-records)
@@ -84,16 +84,6 @@ Cancelled registrations will result in changed permissions for PRNs and no repor
 Cancelled/Suspended accreditations will result in changed permissions for PRNs and different reporting requirements.
 
 ### Summary Logs
-
-#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate`
-
-Initiates the upload process by:
-
-1. Calling CDP Uploader's `/initiate` endpoint with redirect and callback URLs
-2. Setting redirect URL to: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-success`
-3. Returning CDP Uploader's response (uploadId, uploadUrl, statusUrl) to the frontend
-
-The SUMMARY-LOG entity is **not** created at this stage - it will be created only after the file is successfully uploaded to CDP Uploader (see `/uploaded` endpoint below).
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/uploaded`
 
@@ -570,7 +560,7 @@ TBD
 > [!NOTE]
 > The frontend only needs a single page to handle the entire upload and validation flow. The page polls the backend state document and updates the UI based on the current status, without requiring redirects between different URLs.
 >
-> **Design decision:** The SUMMARY-LOG entity is created only after the file has been successfully uploaded to CDP Uploader (not on page load). This prevents abandoned entities in `awaiting_upload` state when users navigate away or refresh the page without uploading. The redirect from CDP Uploader back to the frontend triggers the entity creation, ensuring database records only exist for actual uploads.
+> **Design decision:** The frontend calls CDP Uploader's `/initiate` endpoint directly (no backend proxy needed). The SUMMARY-LOG entity is created only after the file has been successfully uploaded to CDP Uploader (not on page load). This prevents abandoned entities when users navigate away or refresh the page without uploading. The redirect from CDP Uploader back to the frontend triggers the entity creation via the `/uploaded` endpoint, ensuring database records only exist for actual uploads.
 
 #### Phase 1: upload & async processes: preprocessing, file parsing & data validation
 
@@ -586,10 +576,8 @@ sequenceDiagram
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate
-  Backend->>CDPUploader: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-success`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
-  CDPUploader-->>Backend: 200: { uploadId, uploadUrl, statusUrl }
-  Backend-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
+  Frontend->>CDPUploader: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-success`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
+  CDPUploader-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
   Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDPUploader: POST /upload-and-scan/{uploadId}
