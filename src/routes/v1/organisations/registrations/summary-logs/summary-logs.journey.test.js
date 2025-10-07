@@ -1,5 +1,4 @@
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
-import { createServer } from '#server/server.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -46,12 +45,13 @@ const buildGetUrl = (summaryLogId) =>
 const buildPostUrl = (summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
-describe.todo('Summary logs journey', () => {
+describe('Summary logs journey', () => {
   let server
 
   beforeAll(async () => {
     vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
 
+    const { createServer } = await import('#server/server.js')
     const repository = createInMemorySummaryLogsRepository()
     server = await createServer({
       repositories: {

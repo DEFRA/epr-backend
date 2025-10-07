@@ -18,6 +18,14 @@ export const createInMemorySummaryLogsRepository = () => {
         Array.from(storage.values()).find((log) => log.fileId === fileId) ??
         null
       )
+    },
+
+    async findBySummaryLogId(summaryLogId) {
+      return (
+        Array.from(storage.values()).find(
+          (log) => log.summaryLogId === summaryLogId
+        ) ?? null
+      )
     }
   }
 }
