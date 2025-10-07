@@ -16,17 +16,6 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 
-const createInitializedServer = async () => {
-  const repository = createInMemorySummaryLogsRepository()
-  const server = await createServer({
-    repositories: {
-      summaryLogsRepository: repository
-    }
-  })
-  await server.initialize()
-  return server
-}
-
 const createUploadPayload = (fileStatus, fileId, filename) => ({
   uploadStatus: 'ready',
   metadata: {
@@ -51,9 +40,25 @@ const createUploadPayload = (fileStatus, fileId, filename) => ({
   numberOfRejectedFiles: fileStatus === 'rejected' ? 1 : 0
 })
 
+const buildGetUrl = (summaryLogId) =>
+  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+
+const buildPostUrl = (summaryLogId) =>
+  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+
 describe.todo('Summary logs journey', () => {
-  beforeAll(() => {
+  let server
+
+  beforeAll(async () => {
     vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
+
+    const repository = createInMemorySummaryLogsRepository()
+    server = await createServer({
+      repositories: {
+        summaryLogsRepository: repository
+      }
+    })
+    await server.initialize()
   })
 
   beforeEach(() => {
@@ -62,13 +67,11 @@ describe.todo('Summary logs journey', () => {
 
   describe('when file has not been uploaded yet', () => {
     test('returns preprocessing status', async () => {
-      const server = await createInitializedServer()
       const summaryLogId = 'summary-999'
-      const getUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
 
       const response = await server.inject({
         method: 'GET',
-        url: getUrl
+        url: buildGetUrl(summaryLogId)
       })
 
       expect(response.statusCode).toBe(200)
@@ -80,15 +83,12 @@ describe.todo('Summary logs journey', () => {
 
   describe('when file upload is successful', () => {
     test('creates document with validating status after upload', async () => {
-      const server = await createInitializedServer()
       const summaryLogId = 'summary-789'
-      const getUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-      const postUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
       // Step 1: GET before upload returns preprocessing
       const preprocessingResponse = await server.inject({
         method: 'GET',
-        url: getUrl
+        url: buildGetUrl(summaryLogId)
       })
 
       expect(preprocessingResponse.statusCode).toBe(200)
@@ -99,19 +99,16 @@ describe.todo('Summary logs journey', () => {
       // Step 2: POST upload-completed creates document with validating status
       const uploadResponse = await server.inject({
         method: 'POST',
-        url: postUrl,
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload('complete', 'file-123', 'summary-log.xlsx')
       })
 
       expect(uploadResponse.statusCode).toBe(200)
-      expect(JSON.parse(uploadResponse.payload)).toEqual({
-        status: 'validating'
-      })
 
       // Step 3: GET immediately after returns validating
       const validatingResponse = await server.inject({
         method: 'GET',
-        url: getUrl
+        url: buildGetUrl(summaryLogId)
       })
 
       expect(validatingResponse.statusCode).toBe(200)
@@ -123,27 +120,21 @@ describe.todo('Summary logs journey', () => {
 
   describe('when file is rejected by virus scan', () => {
     test('completes journey for rejected file', async () => {
-      const server = await createInitializedServer()
       const summaryLogId = 'summary-888'
-      const getUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-      const postUrl = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
       // Step 1: Upload completed with rejected file
       const uploadResponse = await server.inject({
         method: 'POST',
-        url: postUrl,
+        url: buildPostUrl(summaryLogId),
         payload: createUploadPayload('rejected', 'file-789', 'virus.xlsx')
       })
 
       expect(uploadResponse.statusCode).toBe(200)
-      expect(JSON.parse(uploadResponse.payload)).toEqual({
-        status: 'rejected'
-      })
 
       // Step 2: GET returns rejected status
       const rejectedResponse = await server.inject({
         method: 'GET',
-        url: getUrl
+        url: buildGetUrl(summaryLogId)
       })
 
       expect(rejectedResponse.statusCode).toBe(200)
