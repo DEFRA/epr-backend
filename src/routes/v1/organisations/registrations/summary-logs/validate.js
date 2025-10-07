@@ -34,8 +34,8 @@ export const summaryLogsValidate = {
   options: {
     validate: {
       payload: validateEndpointPayloadSchema,
-      failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message)
+      failAction: (request, h, err) => {
+        throw Boom.badRequest(err.message)
       }
     }
   },
