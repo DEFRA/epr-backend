@@ -11,9 +11,9 @@
       * [`GET /v1/organisations`](#get-v1organisations)
       * [`GET /v1/organisations/{id}`](#get-v1organisationsid)
     * [Summary Logs](#summary-logs)
-      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate`](#post-v1organisationsidregistrationsidsummary-logssummarylogidinitiate)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/uploaded`](#post-v1organisationsidregistrationsidsummary-logssummarylogiduploaded)
       * [`GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`](#get-v1organisationsidregistrationsidsummary-logssummarylogid)
-      * [`PUT /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`](#put-v1organisationsidregistrationsidsummary-logssummarylogidupload-completed)
+      * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`](#post-v1organisationsidregistrationsidsummary-logssummarylogidupload-completed)
       * [`POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`](#post-v1organisationsidregistrationsidsummary-logssummarylogidsubmit)
     * [Waste Records](#waste-records)
       * [`GET /v1/organisations/{id}/registrations/{id}/waste-records`](#get-v1organisationsidregistrationsidwaste-records)
@@ -45,8 +45,8 @@
     * [PRN](#prn)
     * [Report](#report)
     * [Summary Log upload & ingest](#summary-log-upload--ingest)
-      * [Phase 1 - upload, virus scan & creation of SUMMARY-LOG entity](#phase-1---upload-virus-scan--creation-of-summary-log-entity)
-      * [Phase 2 - processing and submission of summary log](#phase-2---processing-and-submission-of-summary-log)
+      * [Phase 1 - upload & async processes: preprocessing, file parsing & data validation](#phase-1---upload--async-processes-preprocessing-file-parsing--data-validation)
+      * [Phase 2 - validation results & submission](#phase-2---validation-results--submission)
 <!-- TOC -->
 
 <!-- prettier-ignore-end -->
@@ -85,18 +85,11 @@ Cancelled/Suspended accreditations will result in changed permissions for PRNs a
 
 ### Summary Logs
 
-#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate`
+#### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/uploaded`
 
-Initiates the upload process by:
+Called by the Frontend when CDP Uploader successfully redirects after file upload.
 
-1. Creating a SUMMARY-LOG entity with status `awaiting_upload` (no S3 details yet)
-2. Calling CDP Uploader's `/initiate` endpoint with redirect and callback URLs
-3. Returning CDP Uploader's response (uploadId, uploadUrl, statusUrl) to the frontend
-
-This ensures the SUMMARY-LOG document exists before the upload starts, allowing the frontend to poll it immediately.
-
-> [!NOTE]
-> **Alternative approach:** Initially, the frontend could call CDP Uploader directly and handle 404s gracefully when polling the backend until the SUMMARY-LOG document is created by the callback. This simpler approach avoids the backend needing to proxy the CDP Uploader initiate call, but introduces a race condition between upload completion and document creation.
+Creates a SUMMARY-LOG entity with status `preprocessing`.
 
 #### `GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`
 
@@ -104,7 +97,7 @@ Used to retrieve the current state and data of a summary log.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
 
-Internal endpoint used by CDP Uploader to notify the backend when a file upload is complete or has failed virus scan.
+Internal endpoint used by CDP Uploader to notify the backend when preprocessing is complete or has failed.
 
 Request body matches CDP Uploader's callback payload:
 
@@ -126,7 +119,7 @@ Request body matches CDP Uploader's callback payload:
 }
 ```
 
-Updates the existing SUMMARY-LOG entity with S3 details and sets status to `uploaded` (if upload succeeded) or `upload_failed` (if virus scan failed). If successful, sends a message to SQS to trigger validation.
+Updates the SUMMARY-LOG entity with S3 details and sets status to `validating` (if scan succeeded) or `rejected` (if scan failed). If successful, sends a message to SQS to trigger validation.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`
 
@@ -135,7 +128,7 @@ Used to submit a summary log to a registration, applying the validated changes t
 > [!NOTE]
 > To prevent race conditions and ensure data integrity, this endpoint should validate:
 >
-> - Summary log status must be `validated` (reject `awaiting_upload`, `uploaded`, `validating`, `validation_failed`, `upload_failed`, or `submitted`)
+> - Summary log status must be `validated` (reject `preprocessing`, `rejected`, `validating`, `invalid`, or `submitted`)
 > - Summary log must be the most recently uploaded for the given site + material (reject if a newer summary log exists)
 
 ### Waste Records
@@ -341,7 +334,7 @@ erDiagram
 
   SUMMARY-LOG {
     ObjectId _id PK
-    enum status "awaiting_upload, uploaded, upload_failed, validating, validation_failed, validated, submitted"
+    enum status "preprocessing, rejected, validating, invalid, validated, submitted"
     string summaryLogUri UK "S3 object URI"
     ISO8601 createdAt
     USER-SUMMARY createdBy FK
@@ -557,7 +550,7 @@ TBD
 > [!NOTE]
 > The frontend only needs a single page to handle the entire upload and validation flow. The page polls the backend state document and updates the UI based on the current status, without requiring redirects between different URLs.
 
-#### Phase 1: upload & async processes: virus scan, file parsing & data validation
+#### Phase 1: upload & async processes: preprocessing, file parsing & data validation
 
 ```mermaid
 sequenceDiagram
@@ -571,36 +564,42 @@ sequenceDiagram
 
   Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/upload
   Note over Frontend: generate summaryLogId
-  Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/initiate
-  Note over Backend: create SUMMARY-LOG entity<br>{ status: 'awaiting_upload' }
-  Backend->>CDPUploader: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
-  CDPUploader-->>Backend: 200: { uploadId, uploadUrl, statusUrl }
-  Backend-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
+  Frontend->>CDPUploader: POST /initiate<br>{ redirect, callback, s3Bucket, s3Path, metadata }<br>redirect: `{eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-success`<br>callback: `{eprBackend}/v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed`
+  CDPUploader-->>Frontend: 200: { uploadId, uploadUrl, statusUrl }
   Note over Frontend: Write session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
   Frontend-->>Op: <html><h2>upload a summary log</h2><form>...</form></html>
   Op->>CDPUploader: POST /upload-and-scan/{uploadId}
   CDPUploader->>S3: store
-  CDPUploader-->>Op: 302: redirectUrl
+  CDPUploader-->>Op: 302: redirect to {eprFrontend}/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-success
 
-  Note over CDPUploader: START async virus scan
-  Note over CDPUploader: END async virus scan
+  Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-success
+  Frontend->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/uploaded
+  Note over Backend: create SUMMARY-LOG entity<br>{ status: 'preprocessing' }
+  Backend-->>Frontend: 200 OK
+  Frontend-->>Op: 302: redirect to status page
+
+  Note over CDPUploader: START async preprocessing<br>(virus scan, file validation, move to S3)
+  Note over CDPUploader: END async preprocessing
 
   alt FileStatus: complete
     CDPUploader->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'complete', s3Bucket, s3Key, ... } } }
-    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'uploaded', s3Bucket, s3Key }
+    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'validating', s3Bucket, s3Key }
     Backend->>SQS: send ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
     Backend-->>CDPUploader: 200
-    Note over BackendWorker: START async file validation
+    Note over BackendWorker: START async content validation
     BackendWorker->>SQS: poll for messages
     SQS-->>BackendWorker: ValidateSummaryLog command<br>{ summaryLogId, organisationId, registrationId, s3Bucket, s3Key }
-    BackendWorker->>Backend: update SUMMARY-LOG<br>{ status: 'validating' }
     BackendWorker->>S3: fetch: s3Bucket/s3Key
     S3-->>BackendWorker: S3 file
     loop each row
       Note over BackendWorker: parse row<br>compare to WASTE-RECORD for ourReference<br>update SUMMARY-LOG.data in batches
     end
-    BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'validated', data }
-    Note over BackendWorker: END async file validation
+    alt validation successful
+      BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'validated', data }
+    else validation failed
+      BackendWorker->>Backend: update SUMMARY-LOG entity<br>{ status: 'invalid', errors }
+    end
+    Note over BackendWorker: END async content validation
 
     loop polling until final state
       Note over Op: Poll using<br> <meta http-equiv="refresh" content="3">
@@ -608,11 +607,11 @@ sequenceDiagram
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Backend: lookup SUMMARY-LOG entity
-      alt status: awaiting_upload, uploaded or validating
-        Backend-->>Frontend: 200: { status: 'awaiting_upload' | 'uploaded' | 'validating' }
+      alt status: preprocessing or validating
+        Backend-->>Frontend: 200: { status: 'preprocessing' | 'validating' }
         Frontend-->>Op: <html>Processing...</html>
-      else status: validation_failed
-        Backend-->>Frontend: 200: { status: 'validation_failed', errors }
+      else status: invalid
+        Backend-->>Frontend: 200: { status: 'invalid', errors }
         Frontend-->>Op: <html>Validation failed...<form>Upload new file</form></html>
         Note over Op: End Journey
       else status: validated
@@ -623,7 +622,7 @@ sequenceDiagram
     end
   else FileStatus: rejected
     CDPUploader->>Backend: POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/upload-completed<br>{ uploadStatus: 'ready', form: { file: { fileStatus: 'rejected', ... } }, numberOfRejectedFiles: 1 }
-    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'upload_failed', failureReason }
+    Note over Backend: update SUMMARY-LOG entity<br>{ status: 'rejected', failureReason }
     Backend-->>CDPUploader: 200
 
     loop polling until final state
@@ -631,8 +630,8 @@ sequenceDiagram
       Op->>Frontend: GET /organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
       Note over Frontend: Read session<br>[{ organisationId, registrationId, summaryLogId, uploadId }]
       Frontend->>Backend: GET /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}
-      Backend-->>Frontend: 200: { status: 'upload_failed', failureReason }
-      Frontend-->>Op: <html>Upload failed...<form>Upload new file</form></html>
+      Backend-->>Frontend: 200: { status: 'rejected', failureReason }
+      Frontend-->>Op: <html>Upload rejected...<form>Upload new file</form></html>
       Note over Op: End Journey
     end
   end

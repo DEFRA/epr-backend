@@ -246,25 +246,23 @@ Summary logs transition through the following states based on what has been acco
 
 ```mermaid
 stateDiagram-v2
-    [*] --> awaiting_upload: Upload process started
-    awaiting_upload --> uploaded: File uploaded successfully
-    awaiting_upload --> upload_failed: Virus scan failed
-    uploaded --> validating: Validation started
-    validating --> validation_failed: Validation errors found
+    [*] --> preprocessing: File uploaded to CDP Uploader
+    preprocessing --> rejected: CDP preprocessing failed
+    preprocessing --> validating: CDP preprocessing passed
+    validating --> invalid: Validation errors found
     validating --> validated: Validation completed successfully
     validated --> submitted: Summary log submitted
-    upload_failed --> [*]: User must restart
-    validation_failed --> [*]: User must restart
+    rejected --> [*]
+    invalid --> [*]
     submitted --> [*]
 ```
 
-1. `awaiting_upload`: entity created and upload process started, awaiting file upload from user
-2. `uploaded`: file has been successfully uploaded and passed virus scan, awaiting validation
-3. `upload_failed`: file upload or virus scan has failed
-4. `validating`: validation process has started and is in progress
-5. `validation_failed`: validation has completed and found errors
-6. `validated`: validation has completed successfully, prospective modifications are ready for user review
-7. `submitted`: user has submitted the summary log, modifications have been applied to waste records
+1. `preprocessing`: file uploaded to CDP Uploader, undergoing virus scan and file validation
+2. `rejected`: CDP Uploader preprocessing failed (malware detected, invalid file type, or size exceeded)
+3. `validating`: CDP preprocessing passed, content validation against business rules in progress
+4. `invalid`: content validation found errors
+5. `validated`: validation completed successfully, prospective modifications ready for user review
+6. `submitted`: user has submitted the summary log, modifications applied to waste records
 
 ### Waste Record Version
 
@@ -464,12 +462,15 @@ sequenceDiagram
 
     User->>Frontend: select activity, site & material
     User->>Frontend: initiate upload
-    Frontend->>Backend: request upload URL
-    Backend->>CDP: request upload URL
-    CDP-->>Backend: uploadUrl
-    Backend-->>Frontend: uploadUrl
+    Frontend->>CDP: request upload URL
+    CDP-->>Frontend: uploadUrl
     User->>CDP: upload summaryLog.xlsx
     CDP->>S3: store file
+    CDP-->>User: redirect to Frontend upload-success page
+    User->>Frontend: GET upload-success page
+    Frontend->>Backend: POST /uploaded (create SUMMARY-LOG)
+    Backend-->>Frontend: 200 OK
+    Frontend-->>User: redirect to status page
     CDP->>Backend: callback with S3 details
     Backend->>SQS: send validation message
     Backend-->>CDP: 200 OK
