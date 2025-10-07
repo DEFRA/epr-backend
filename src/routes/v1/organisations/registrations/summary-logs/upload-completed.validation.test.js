@@ -29,8 +29,8 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain('"form" is required')
   })
 
   it('rejects payload without form.file', async () => {
@@ -44,8 +44,8 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain('"form.file" is required')
   })
 
   it('rejects payload with missing fileId', async () => {
@@ -64,8 +64,8 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain('"form.file.fileId" is required')
   })
 
   it('rejects payload with missing filename', async () => {
@@ -84,8 +84,10 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain(
+      '"form.file.filename" is required'
+    )
   })
 
   it('rejects payload with missing fileStatus', async () => {
@@ -104,8 +106,10 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain(
+      '"form.file.fileStatus" is required'
+    )
   })
 
   it('rejects payload with invalid fileStatus', async () => {
@@ -125,8 +129,10 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain(
+      '"form.file.fileStatus" must be one of [complete, rejected]'
+    )
   })
 
   it('rejects payload with missing s3Bucket', async () => {
@@ -145,8 +151,10 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain(
+      '"form.file.s3Bucket" is required'
+    )
   })
 
   it('rejects payload with missing s3Key', async () => {
@@ -165,8 +173,8 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(400)
-    expect(response.result.message).toContain('Validation failed')
+    expect(response.statusCode).toBe(422)
+    expect(response.result.message).toContain('"form.file.s3Key" is required')
   })
 
   it('accepts valid payload with complete status', async () => {

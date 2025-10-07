@@ -75,20 +75,18 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
 
-  it('returns 400 if payload is null', async () => {
+  it('returns 422 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
       payload: null
     })
 
-    expect(response.statusCode).toBe(400)
-    const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(/Validation failed/)
+    expect(response.statusCode).toBe(422)
   })
 
   it.each([['s3Bucket'], ['s3Key'], ['fileId'], ['filename']])(
-    'returns 400 if payload is missing %s',
+    'returns 422 if payload is missing %s',
     async (key) => {
       const response = await server.inject({
         method: 'POST',
@@ -101,8 +99,8 @@ describe(`${url} route`, () => {
 
       const body = JSON.parse(response.payload)
 
-      expect(response.statusCode).toBe(400)
-      expect(body.message).toMatch(/Validation failed/)
+      expect(response.statusCode).toBe(422)
+      expect(body.message).toContain(`"${key}" is required`)
     }
   )
 
