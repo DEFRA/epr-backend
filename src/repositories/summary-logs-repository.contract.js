@@ -75,5 +75,59 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
         expect(result.organisationId).toBe('org-1')
       })
     })
+
+    describe('findBySummaryLogId', () => {
+      it('returns null when summary log ID not found', async () => {
+        const summaryLogId = `contract-nonexistent-${randomUUID()}`
+        const result = await repository.findBySummaryLogId(summaryLogId)
+
+        expect(result).toBeNull()
+      })
+
+      it('does not return logs with different summary log IDs', async () => {
+        const summaryLogIdA = `contract-summary-a-${randomUUID()}`
+        const summaryLogIdB = `contract-summary-b-${randomUUID()}`
+
+        await repository.insert({
+          summaryLogId: summaryLogIdA,
+          fileId: `file-a-${randomUUID()}`,
+          organisationId: 'org-1',
+          registrationId: 'reg-1'
+        })
+        await repository.insert({
+          summaryLogId: summaryLogIdB,
+          fileId: `file-b-${randomUUID()}`,
+          organisationId: 'org-2',
+          registrationId: 'reg-2'
+        })
+
+        const result = await repository.findBySummaryLogId(summaryLogIdA)
+
+        expect(result.summaryLogId).toBe(summaryLogIdA)
+        expect(result.organisationId).toBe('org-1')
+      })
+
+      it('can retrieve a log by summary log ID after insert', async () => {
+        const summaryLogId = `contract-summary-${randomUUID()}`
+        const fileId = `contract-file-${randomUUID()}`
+
+        await repository.insert({
+          summaryLogId,
+          fileId,
+          filename: 'test.xlsx',
+          fileStatus: 'complete',
+          s3Bucket: 'test-bucket',
+          s3Key: 'test-key'
+        })
+
+        const result = await repository.findBySummaryLogId(summaryLogId)
+
+        expect(result).toBeTruthy()
+        expect(result.summaryLogId).toBe(summaryLogId)
+        expect(result.fileId).toBe(fileId)
+        expect(result.filename).toBe('test.xlsx')
+        expect(result.fileStatus).toBe('complete')
+      })
+    })
   })
 }

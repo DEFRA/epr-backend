@@ -8,5 +8,9 @@ export const createSummaryLogsRepository = (db) => ({
 
   async findByFileId(fileId) {
     return db.collection('summary-logs').findOne({ fileId })
+  },
+
+  async findBySummaryLogId(summaryLogId) {
+    return db.collection('summary-logs').findOne({ summaryLogId })
   }
 })
