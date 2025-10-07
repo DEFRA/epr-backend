@@ -252,8 +252,8 @@ stateDiagram-v2
     validating --> invalid: Validation errors found
     validating --> validated: Validation completed successfully
     validated --> submitted: Summary log submitted
-    rejected --> [*]: User must restart
-    invalid --> [*]: User must restart
+    rejected --> [*]
+    invalid --> [*]
     submitted --> [*]
 ```
 
