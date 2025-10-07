@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
+import { HTTP_STATUS } from '#common/enums/http-status.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -33,7 +34,7 @@ export const summaryLogsUploadCompleted = {
   options: {
     validate: {
       payload: uploadCompletedPayloadSchema,
-      failAction: (request, h, err) => {
+      failAction: (_request, _h, err) => {
         throw Boom.badData(err.message)
       }
     }
@@ -58,6 +59,6 @@ export const summaryLogsUploadCompleted = {
       s3Key: file.s3Key
     })
 
-    return h.response().code(200)
+    return h.response().code(HTTP_STATUS.OK)
   }
 }

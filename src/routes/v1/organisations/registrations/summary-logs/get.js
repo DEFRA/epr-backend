@@ -1,3 +1,5 @@
+import { HTTP_STATUS } from '#common/enums/http-status.js'
+
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 export const summaryLogsGetPath =
@@ -19,7 +21,7 @@ export const summaryLogsGet = {
       await summaryLogsRepository.findBySummaryLogId(summaryLogId)
 
     if (!summaryLog) {
-      return h.response({ status: 'preprocessing' }).code(200)
+      return h.response({ status: 'preprocessing' }).code(HTTP_STATUS.OK)
     }
 
     if (summaryLog.fileStatus === 'rejected') {
@@ -28,9 +30,9 @@ export const summaryLogsGet = {
           status: 'rejected',
           failureReason: 'File rejected by virus scan'
         })
-        .code(200)
+        .code(HTTP_STATUS.OK)
     }
 
-    return h.response({ status: 'validating' }).code(200)
+    return h.response({ status: 'validating' }).code(HTTP_STATUS.OK)
   }
 }

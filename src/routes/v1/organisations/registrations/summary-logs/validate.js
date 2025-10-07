@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { HTTP_STATUS } from '#common/enums/http-status.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -33,7 +34,7 @@ export const summaryLogsValidate = {
   options: {
     validate: {
       payload: validateEndpointPayloadSchema,
-      failAction: (request, h, err) => {
+      failAction: (_request, _h, err) => {
         throw Boom.badData(err.message)
       }
     }
@@ -72,7 +73,7 @@ export const summaryLogsValidate = {
         .response({
           status: 'validating'
         })
-        .code(202)
+        .code(HTTP_STATUS.ACCEPTED)
     } catch (err) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
