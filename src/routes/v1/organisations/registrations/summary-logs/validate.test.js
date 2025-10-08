@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -50,7 +51,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(response.statusCode).toBe(202)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,7 +71,7 @@ describe(`${url} route`, () => {
       payload: 'not-an-object'
     })
 
-    expect(response.statusCode).toBe(400)
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
@@ -82,7 +83,7 @@ describe(`${url} route`, () => {
       payload: null
     })
 
-    expect(response.statusCode).toBe(400)
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
   })
@@ -101,13 +102,13 @@ describe(`${url} route`, () => {
 
       const body = JSON.parse(response.payload)
 
-      expect(response.statusCode).toBe(422)
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       expect(body.message).toEqual(`${key} is missing in body.data`)
     }
   )
 
   it('returns 500 if error is thrown', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('logging failed')
     mockLoggerInfo.mockImplementationOnce(() => {
       throw error

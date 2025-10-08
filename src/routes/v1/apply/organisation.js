@@ -1,5 +1,6 @@
 import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   AUDIT_EVENT_ACTIONS,
@@ -143,7 +144,7 @@ export const organisation = {
         },
         http: {
           response: {
-            status_code: 500
+            status_code: StatusCodes.INTERNAL_SERVER_ERROR
           }
         }
       })

@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
@@ -53,7 +54,7 @@ describe(`${url} route`, () => {
       payload: registrationFixture
     })
 
-    expect(response.statusCode).toEqual(201)
+    expect(response.statusCode).toEqual(StatusCodes.CREATED)
 
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
@@ -84,7 +85,7 @@ describe(`${url} route`, () => {
       payload: 'not-an-object'
     })
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
@@ -96,7 +97,7 @@ describe(`${url} route`, () => {
       payload: null
     })
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
   })
@@ -134,7 +135,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract orgId from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
@@ -170,7 +171,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract referenceNumber from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
@@ -214,7 +215,7 @@ describe(`${url} route`, () => {
     const message = 'Organisation ID must be at least 500000'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
     expect(mockLoggerWarn).toHaveBeenCalledWith({
       message:
@@ -225,14 +226,14 @@ describe(`${url} route`, () => {
       },
       http: {
         response: {
-          status_code: 422
+          status_code: StatusCodes.UNPROCESSABLE_ENTITY
         }
       }
     })
   })
 
   it('returns 500 if error is thrown by insertOne', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
       throw error
@@ -262,7 +263,7 @@ describe(`${url} route`, () => {
   })
 
   it('returns 500 if insertOne fails with mongo validation failures', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = Object.assign(new Error('db.collection.insertOne failed'), {
       errInfo: JSON.parse(
         '{"failingDocumentId":"68da86a39a36abfab162b707","details":{"operatorName":"$jsonSchema","title":"Registration Validation","schemaRulesNotSatisfied":[{"operatorName":"properties","propertiesNotSatisfied":[{"propertyName":"orgId","description":"\'orgId\' must be a positive integer above 500000 and is required","details":[{"operatorName":"minimum","specifiedAs":{"minimum":500000},"reason":"comparison failed","consideredValue":100000}]}]}]}}'

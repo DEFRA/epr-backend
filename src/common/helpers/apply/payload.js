@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -33,7 +34,7 @@ export function registrationAndAccreditationPayload(data, _options) {
       },
       http: {
         response: {
-          status_code: 422
+          status_code: StatusCodes.UNPROCESSABLE_ENTITY
         }
       }
     })
