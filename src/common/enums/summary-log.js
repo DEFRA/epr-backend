@@ -12,16 +12,3 @@ export const UPLOAD_STATUS = Object.freeze({
   REJECTED: 'rejected',
   PENDING: 'pending'
 })
-
-export const determineSummaryLogStatus = (uploadStatus) => {
-  switch (uploadStatus) {
-    case UPLOAD_STATUS.REJECTED:
-      return SUMMARY_LOG_STATUS.REJECTED
-    case UPLOAD_STATUS.PENDING:
-      return SUMMARY_LOG_STATUS.PREPROCESSING
-    case UPLOAD_STATUS.COMPLETE:
-      return SUMMARY_LOG_STATUS.VALIDATING
-    default:
-      throw new Error(`Invalid upload status: ${uploadStatus}`)
-  }
-}

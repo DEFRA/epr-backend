@@ -1,11 +1,11 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
+import { UPLOAD_STATUS } from '#common/enums/index.js'
 import {
-  UPLOAD_STATUS,
-  SUMMARY_LOG_STATUS,
-  determineSummaryLogStatus
-} from '#common/enums/index.js'
+  determineStatusFromUpload,
+  determineFailureReason
+} from '#domain/summary-log.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -80,7 +80,8 @@ export const summaryLogsUploadCompleted = {
       )
     }
 
-    const status = determineSummaryLogStatus(fileStatus)
+    const status = determineStatusFromUpload(fileStatus)
+    const failureReason = determineFailureReason(status)
 
     const fileData = {
       id: fileId,
@@ -95,14 +96,17 @@ export const summaryLogsUploadCompleted = {
       }
     }
 
-    await summaryLogsRepository.insert({
+    const summaryLog = {
       summaryLogId,
       status,
-      ...(status === SUMMARY_LOG_STATUS.REJECTED && {
-        failureReason: 'File rejected by virus scan'
-      }),
       file: fileData
-    })
+    }
+
+    if (failureReason) {
+      summaryLog.failureReason = failureReason
+    }
+
+    await summaryLogsRepository.insert(summaryLog)
 
     return h.response().code(StatusCodes.OK)
   }
