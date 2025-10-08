@@ -66,8 +66,8 @@ const testInsertBehaviour = (getRepository) => {
   })
 }
 
-const testFindBySummaryLogIdBehaviour = (getRepository) => {
-  describe('findBySummaryLogId', () => {
+const testFindBySummaryLogIdNotFound = (getRepository) => {
+  describe('findBySummaryLogId - not found', () => {
     const repository = () => getRepository()
 
     it('returns null when summary log ID not found', async () => {
@@ -113,6 +113,12 @@ const testFindBySummaryLogIdBehaviour = (getRepository) => {
       expect(result.summaryLogId).toBe(summaryLogIdA)
       expect(result.organisationId).toBe('org-1')
     })
+  })
+}
+
+const testFindBySummaryLogIdRetrieval = (getRepository) => {
+  describe('findBySummaryLogId - retrieval', () => {
+    const repository = () => getRepository()
 
     it('can retrieve a log by summary log ID after insert', async () => {
       const summaryLogId = `contract-summary-${randomUUID()}`
@@ -180,8 +186,8 @@ const testInsertValidationRequiredFields = (getRepository) => {
   })
 }
 
-const testInsertValidationFieldRules = (getRepository) => {
-  describe('insert validation - field rules', () => {
+const testInsertValidationFieldHandling = (getRepository) => {
+  describe('insert validation - field handling', () => {
     const repository = () => getRepository()
 
     it('rejects insert with invalid file.status', async () => {
@@ -242,6 +248,12 @@ const testInsertValidationFieldRules = (getRepository) => {
         'insertedId'
       )
     })
+  })
+}
+
+const testInsertValidationStatusBasedS3 = (getRepository) => {
+  describe('insert validation - status-based S3 requirements', () => {
+    const repository = () => getRepository()
 
     it('accepts rejected file without S3 info', async () => {
       const summaryLogId = `contract-rejected-no-s3-${randomUUID()}`
@@ -306,8 +318,10 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     })
 
     testInsertBehaviour(() => repository)
-    testFindBySummaryLogIdBehaviour(() => repository)
+    testFindBySummaryLogIdNotFound(() => repository)
+    testFindBySummaryLogIdRetrieval(() => repository)
     testInsertValidationRequiredFields(() => repository)
-    testInsertValidationFieldRules(() => repository)
+    testInsertValidationFieldHandling(() => repository)
+    testInsertValidationStatusBasedS3(() => repository)
   })
 }
