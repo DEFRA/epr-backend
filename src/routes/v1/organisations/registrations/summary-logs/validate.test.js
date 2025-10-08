@@ -5,11 +5,7 @@ import {
 import { summaryLogsValidatePath } from './validate.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createServer } from '#server/server.js'
-import {
-  setupTestLoggerMocks,
-  clearTestLoggerMocks
-} from '#common/helpers/logging/setup-test-logger-mocks.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
 const url = summaryLogsValidatePath
 const payload = {
@@ -21,20 +17,13 @@ const payload = {
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    server = await createServer({
+  beforeEach(async () => {
+    server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-    await server.initialize()
-
-    setupTestLoggerMocks(server)
-  })
-
-  beforeEach(() => {
-    clearTestLoggerMocks(server)
   })
 
   it('returns 202 and status', async () => {

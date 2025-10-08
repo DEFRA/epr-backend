@@ -6,10 +6,9 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
-import { logger } from '../logging/logger.js'
 
 export function registrationAndAccreditationHandler(name, path, factory) {
-  return async ({ db, payload }, h) => {
+  return async ({ db, payload, logger }, h) => {
     const { answers, orgId, rawSubmissionData, referenceNumber } = payload
 
     try {

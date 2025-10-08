@@ -1,4 +1,9 @@
-export function setupTestLoggerMocks(server) {
+import { createServer } from '#server/server.js'
+
+export async function createTestServer(options = {}) {
+  const server = await createServer(options)
+  await server.initialize()
+
   server.loggerMocks = {
     info: vi.fn(),
     error: vi.fn(),
@@ -13,10 +18,6 @@ export function setupTestLoggerMocks(server) {
     vi.spyOn(request.logger, 'warn').mockImplementation(server.loggerMocks.warn)
     return h.continue
   })
-}
 
-export function clearTestLoggerMocks(server) {
-  server.loggerMocks.info.mockClear()
-  server.loggerMocks.error.mockClear()
-  server.loggerMocks.warn.mockClear()
+  return server
 }

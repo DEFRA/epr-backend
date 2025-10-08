@@ -7,21 +7,10 @@ import {
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import accreditationFixture from '#data/fixtures/accreditation.json'
 import { accreditationPath } from './accreditation.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
 const mockAudit = vi.fn()
-
 const mockInsertOne = vi.fn()
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -31,14 +20,12 @@ const url = accreditationPath
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-  })
+  beforeEach(async () => {
+    server = await createTestServer()
 
-  beforeEach(() => {
-    vi.clearAllMocks()
+    mockAudit.mockClear()
+    mockInsertOne.mockClear()
+
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -66,7 +53,7 @@ describe(`${url} route`, () => {
       }
     })
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
         event: {
@@ -190,7 +177,7 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith(error, {
       message: `Failure on ${accreditationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -225,7 +212,7 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith(error, {
       message: `Failure on ${accreditationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

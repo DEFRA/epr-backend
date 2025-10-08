@@ -12,10 +12,7 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
-import {
-  setupTestLoggerMocks,
-  clearTestLoggerMocks
-} from '#common/helpers/logging/setup-test-logger-mocks.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({
@@ -34,16 +31,9 @@ const url = organisationPath
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
+  beforeEach(async () => {
+    server = await createTestServer()
 
-    setupTestLoggerMocks(server)
-  })
-
-  beforeEach(() => {
-    clearTestLoggerMocks(server)
     mockAudit.mockClear()
     mockInsertOne.mockClear()
     mockCountDocuments.mockClear()
