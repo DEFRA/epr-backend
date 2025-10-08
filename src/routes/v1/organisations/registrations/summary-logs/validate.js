@@ -1,4 +1,5 @@
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -85,7 +86,7 @@ export const summaryLogsValidate = {
         .response({
           status: 'validating'
         })
-        .code(202)
+        .code(StatusCodes.ACCEPTED)
     } catch (err) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
@@ -97,7 +98,7 @@ export const summaryLogsValidate = {
         },
         http: {
           response: {
-            status_code: 500
+            status_code: StatusCodes.INTERNAL_SERVER_ERROR
           }
         }
       })

@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -13,7 +14,7 @@ export function failAction(_request, _h, error) {
     },
     http: {
       response: {
-        status_code: error?.output?.statusCode ?? 400
+        status_code: error?.output?.statusCode ?? StatusCodes.BAD_REQUEST
       }
     }
   })
