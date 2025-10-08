@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -57,7 +58,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('returns 400 if payload is not an object', async () => {
@@ -67,7 +68,7 @@ describe(`${url} route`, () => {
       payload: 'not-an-object'
     })
 
-    expect(response.statusCode).toBe(400)
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
@@ -79,7 +80,7 @@ describe(`${url} route`, () => {
       payload: null
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
   it('returns 422 if payload is missing form.file', async () => {
@@ -91,7 +92,7 @@ describe(`${url} route`, () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('"form" is required')
   })
@@ -119,7 +120,7 @@ describe(`${url} route`, () => {
       payload: rejectedPayload
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('returns 422 when file is complete but missing S3 info', async () => {
@@ -140,7 +141,7 @@ describe(`${url} route`, () => {
       payload: incompletePayload
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('s3Bucket')
   })
@@ -168,6 +169,6 @@ describe(`${url} route`, () => {
       payload: pendingPayload
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 })
