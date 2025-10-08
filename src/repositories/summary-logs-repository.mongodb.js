@@ -11,10 +11,6 @@ export const createSummaryLogsRepository = (db) => ({
     return db.collection(COLLECTION_NAME).insertOne(validated)
   },
 
-  async findByFileId(fileId) {
-    return db.collection(COLLECTION_NAME).findOne({ fileId })
-  },
-
   async findBySummaryLogId(summaryLogId) {
     return db.collection(COLLECTION_NAME).findOne({ summaryLogId })
   }

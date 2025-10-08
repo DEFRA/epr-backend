@@ -32,9 +32,10 @@ const testInsertBehaviour = (getRepository) => {
     })
 
     it('stores the summary log so it can be retrieved', async () => {
-      const fileId = `contract-retrievable-${randomUUID()}`
+      const summaryLogId = `contract-retrievable-${randomUUID()}`
       const summaryLog = {
-        fileId,
+        summaryLogId,
+        fileId: `file-${randomUUID()}`,
         filename: 'test.xlsx',
         s3Bucket: TEST_S3_BUCKET,
         s3Key: 'test-key',
@@ -43,52 +44,12 @@ const testInsertBehaviour = (getRepository) => {
       }
 
       await repository().insert(summaryLog)
-      const found = await repository().findByFileId(fileId)
+      const found = await repository().findBySummaryLogId(summaryLogId)
 
       expect(found).toBeTruthy()
-      expect(found.fileId).toBe(fileId)
+      expect(found.summaryLogId).toBe(summaryLogId)
       expect(found.organisationId).toBe('org-456')
       expect(found.registrationId).toBe('reg-789')
-    })
-  })
-}
-
-const testFindByFileIdBehaviour = (getRepository) => {
-  describe('findByFileId', () => {
-    const repository = () => getRepository()
-
-    it('returns null when file ID not found', async () => {
-      const fileId = `contract-nonexistent-${randomUUID()}`
-      const result = await repository().findByFileId(fileId)
-
-      expect(result).toBeNull()
-    })
-
-    it('does not return logs with different file IDs', async () => {
-      const fileIdA = `contract-file-a-${randomUUID()}`
-      const fileIdB = `contract-file-b-${randomUUID()}`
-
-      await repository().insert({
-        fileId: fileIdA,
-        filename: 'test-a.xlsx',
-        s3Bucket: 'bucket',
-        s3Key: 'key-a',
-        organisationId: 'org-1',
-        registrationId: 'reg-1'
-      })
-      await repository().insert({
-        fileId: fileIdB,
-        filename: 'test-b.xlsx',
-        s3Bucket: 'bucket',
-        s3Key: 'key-b',
-        organisationId: 'org-2',
-        registrationId: 'reg-2'
-      })
-
-      const result = await repository().findByFileId(fileIdA)
-
-      expect(result.fileId).toBe(fileIdA)
-      expect(result.organisationId).toBe('org-1')
     })
   })
 }
@@ -206,15 +167,16 @@ const testInsertValidationFieldRules = (getRepository) => {
     })
 
     it('strips unknown fields from insert', async () => {
-      const fileId = `contract-strip-${randomUUID()}`
+      const summaryLogId = `contract-strip-${randomUUID()}`
       const logWithExtra = buildTestInvalidLog({
-        fileId,
+        summaryLogId,
+        fileId: `file-${randomUUID()}`,
         hackerField: 'DROP TABLE users;',
         anotherBadField: 'rm -rf /'
       })
 
       await repository().insert(logWithExtra)
-      const found = await repository().findByFileId(fileId)
+      const found = await repository().findBySummaryLogId(summaryLogId)
 
       expect(found.hackerField).toBeUndefined()
       expect(found.anotherBadField).toBeUndefined()
@@ -260,7 +222,6 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     })
 
     testInsertBehaviour(() => repository)
-    testFindByFileIdBehaviour(() => repository)
     testFindBySummaryLogIdBehaviour(() => repository)
     testInsertValidationRequiredFields(() => repository)
     testInsertValidationFieldRules(() => repository)

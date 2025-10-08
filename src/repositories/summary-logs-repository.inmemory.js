@@ -15,13 +15,6 @@ export const createInMemorySummaryLogsRepository = () => {
       return { insertedId: id }
     },
 
-    async findByFileId(fileId) {
-      return (
-        Array.from(storage.values()).find((log) => log.fileId === fileId) ??
-        null
-      )
-    },
-
     async findBySummaryLogId(summaryLogId) {
       return (
         Array.from(storage.values()).find(
