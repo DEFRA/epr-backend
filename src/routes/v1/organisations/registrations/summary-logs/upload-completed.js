@@ -1,10 +1,10 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
-import { UPLOAD_STATUS } from '#common/enums/index.js'
 import {
   determineStatusFromUpload,
-  determineFailureReason
+  determineFailureReason,
+  UPLOAD_STATUS
 } from '#domain/summary-log.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */

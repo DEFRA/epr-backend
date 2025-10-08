@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest'
 import {
   determineStatusFromUpload,
   determineFailureReason,
-  getDefaultStatus
+  getDefaultStatus,
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
 } from './summary-log.js'
-import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#common/enums/index.js'
 
 describe('summary-log domain', () => {
   describe('determineStatusFromUpload', () => {

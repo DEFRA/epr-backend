@@ -1,4 +1,17 @@
-import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#common/enums/index.js'
+export const SUMMARY_LOG_STATUS = Object.freeze({
+  PREPROCESSING: 'preprocessing',
+  REJECTED: 'rejected',
+  VALIDATING: 'validating',
+  INVALID: 'invalid',
+  VALIDATED: 'validated',
+  SUBMITTED: 'submitted'
+})
+
+export const UPLOAD_STATUS = Object.freeze({
+  COMPLETE: 'complete',
+  REJECTED: 'rejected',
+  PENDING: 'pending'
+})
 
 export const determineStatusFromUpload = (uploadStatus) => {
   switch (uploadStatus) {

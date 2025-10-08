@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
-import { SUMMARY_LOG_STATUS } from '#common/enums/index.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 const summaryLogInsertSchema = Joi.object({
   summaryLogId: Joi.string().optional(),

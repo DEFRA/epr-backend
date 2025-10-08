@@ -3,9 +3,9 @@ import { StatusCodes } from 'http-status-codes'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES,
-  SUMMARY_LOG_STATUS
+  LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
