@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
-import { HTTP_STATUS } from '#common/enums/http-status.js'
+import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -65,6 +65,6 @@ export const summaryLogsUploadCompleted = {
       }
     })
 
-    return h.response().code(HTTP_STATUS.OK)
+    return h.response().code(StatusCodes.OK)
   }
 }
