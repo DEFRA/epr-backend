@@ -10,7 +10,8 @@
     "#routes/*": "./src/routes/*",
     "#plugins/*": "./src/plugins/*",
     "#data/*": "./src/data/*",
-    "#server/*": "./src/server/*"
+    "#server/*": "./src/server/*",
+    "#feature-flags/*": "./src/feature-flags/*"
   },
   "engines": {
     "node": ">=22"
