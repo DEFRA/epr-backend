@@ -48,17 +48,19 @@ export const summaryLogsUploadCompleted = {
    */
   handler: async ({ summaryLogsRepository, payload, params }, h) => {
     const { summaryLogId } = params
-    const { file } = payload.form
+    const {
+      file: { fileId, filename, fileStatus, s3Bucket, s3Key }
+    } = payload.form
 
     await summaryLogsRepository.insert({
       summaryLogId,
       file: {
-        id: file.fileId,
-        name: file.filename,
-        status: file.fileStatus,
+        id: fileId,
+        name: filename,
+        status: fileStatus,
         s3: {
-          bucket: file.s3Bucket,
-          key: file.s3Key
+          bucket: s3Bucket,
+          key: s3Key
         }
       }
     })
