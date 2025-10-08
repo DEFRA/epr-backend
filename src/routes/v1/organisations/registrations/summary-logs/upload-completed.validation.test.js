@@ -121,7 +121,7 @@ describe('POST upload-completed validation', () => {
           file: {
             fileId: 'file-123',
             filename: 'test.xlsx',
-            fileStatus: 'absolutely-shagged',
+            fileStatus: 'invalid-status',
             s3Bucket: 'bucket',
             s3Key: 'key'
           }

@@ -82,7 +82,7 @@ describe('Summary logs journey', () => {
   })
 
   describe('when file upload is successful', () => {
-    test('creates document with validating status after upload', async () => {
+    test('progresses through preprocessing and validating states after upload', async () => {
       const summaryLogId = 'summary-789'
 
       // Step 1: GET before upload returns preprocessing
