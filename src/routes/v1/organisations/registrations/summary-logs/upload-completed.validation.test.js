@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest'
+import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
@@ -29,7 +30,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain('"form" is required')
   })
 
@@ -44,7 +45,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain('"form.file" is required')
   })
 
@@ -64,7 +65,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain('"form.file.fileId" is required')
   })
 
@@ -84,7 +85,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
       '"form.file.filename" is required'
     )
@@ -106,7 +107,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
       '"form.file.fileStatus" is required'
     )
@@ -129,7 +130,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
       '"form.file.fileStatus" must be one of [complete, rejected, pending]'
     )
@@ -151,7 +152,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
       '"form.file.s3Bucket" is required'
     )
@@ -173,7 +174,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain('"form.file.s3Key" is required')
   })
 
@@ -194,7 +195,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('accepts valid payload with rejected status', async () => {
@@ -214,7 +215,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('accepts payload with extra unknown fields in form.file', async () => {
@@ -237,7 +238,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('accepts payload with extra unknown fields at top level', async () => {
@@ -263,6 +264,6 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 })
