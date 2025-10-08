@@ -1,9 +1,11 @@
 import Boom from '@hapi/boom'
+
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { spawnValidationWorker } from '#workers/summary-logs/worker-pool.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -74,11 +76,26 @@ export const summaryLogsValidate = {
       })
 
       logger.info({
-        message: `Initiating file validation for ${s3Path} with fileId: ${fileId} and filename: ${filename}`,
+        message: `Starting validation for [${fileId}] with name [${filename}] and path [${s3Path}]`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
+      })
+
+      spawnValidationWorker({
+        s3Bucket,
+        s3Key,
+        fileId,
+        filename
+      }).catch((err) => {
+        logger.error(err, {
+          message: `Validation worker failed for [${fileId}] with name [${filename}] and path [${s3Path}]`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE
+          }
+        })
       })
 
       return h

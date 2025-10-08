@@ -6,6 +6,7 @@ import { convictValidateMongoUri } from './common/helpers/convict/validate-mongo
 convict.addFormat(convictValidateMongoUri)
 convict.addFormats(convictFormatWithValidator)
 
+const isDevelopment = process.env.NODE_ENV !== 'production'
 const isProduction = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'
 
@@ -33,6 +34,33 @@ const baseConfig = {
     doc: 'Api Service Name',
     format: String,
     default: 'epr-backend'
+  },
+  awsRegion: {
+    doc: 'AWS region',
+    format: String,
+    default: 'eu-west-2',
+    env: 'AWS_REGION'
+  },
+  s3Endpoint: {
+    doc: 'AWS S3 endpoint',
+    format: String,
+    default: 'http://127.0.0.1:4566',
+    env: 'S3_ENDPOINT'
+  },
+  isProduction: {
+    doc: 'If this application running in the production environment',
+    format: Boolean,
+    default: isProduction
+  },
+  isDevelopment: {
+    doc: 'If this application running in the development environment',
+    format: Boolean,
+    default: isDevelopment
+  },
+  isTest: {
+    doc: 'If this application running in the test environment',
+    format: Boolean,
+    default: isTest
   },
   cdpEnvironment: {
     doc: 'The CDP environment the app is running in. With the addition of "local" for local development',
