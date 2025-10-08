@@ -159,7 +159,7 @@ const testInsertValidationFieldRules = (getRepository) => {
     it('rejects insert with invalid fileStatus', async () => {
       const invalidLog = buildTestInvalidLog({
         fileId: `contract-invalid-status-${randomUUID()}`,
-        fileStatus: 'completely-shagged'
+        fileStatus: 'invalid-status'
       })
       await expect(repository().insert(invalidLog)).rejects.toThrow(
         /Invalid summary log data.*fileStatus/
