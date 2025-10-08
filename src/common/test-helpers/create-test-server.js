@@ -1,4 +1,5 @@
 import { createServer } from '#server/server.js'
+import { vi } from 'vitest'
 
 export async function createTestServer(options = {}) {
   const server = await createServer(options)
