@@ -52,11 +52,15 @@ export const summaryLogsUploadCompleted = {
 
     await summaryLogsRepository.insert({
       summaryLogId,
-      fileId: file.fileId,
-      filename: file.filename,
-      fileStatus: file.fileStatus,
-      s3Bucket: file.s3Bucket,
-      s3Key: file.s3Key
+      file: {
+        id: file.fileId,
+        name: file.filename,
+        status: file.fileStatus,
+        s3: {
+          bucket: file.s3Bucket,
+          key: file.s3Key
+        }
+      }
     })
 
     return h.response().code(HTTP_STATUS.OK)

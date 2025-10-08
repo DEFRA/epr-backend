@@ -65,12 +65,16 @@ export const summaryLogsValidate = {
 
     try {
       await summaryLogsRepository.insert({
-        fileId,
         organisationId,
         registrationId,
-        filename,
-        s3Bucket,
-        s3Key
+        file: {
+          id: fileId,
+          name: filename,
+          s3: {
+            bucket: s3Bucket,
+            key: s3Key
+          }
+        }
       })
 
       logger.info({

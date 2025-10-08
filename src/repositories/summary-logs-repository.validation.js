@@ -3,11 +3,15 @@ import Joi from 'joi'
 
 const summaryLogInsertSchema = Joi.object({
   summaryLogId: Joi.string().optional(),
-  fileId: Joi.string().required(),
-  filename: Joi.string().required(),
-  fileStatus: Joi.string().valid('complete', 'rejected').optional(),
-  s3Bucket: Joi.string().required(),
-  s3Key: Joi.string().required(),
+  file: Joi.object({
+    id: Joi.string().required(),
+    name: Joi.string().required(),
+    status: Joi.string().valid('complete', 'rejected').optional(),
+    s3: Joi.object({
+      bucket: Joi.string().required(),
+      key: Joi.string().required()
+    }).required()
+  }).required(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()
 }).messages({

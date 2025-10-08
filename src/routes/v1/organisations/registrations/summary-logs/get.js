@@ -24,7 +24,7 @@ export const summaryLogsGet = {
       return h.response({ status: 'preprocessing' }).code(HTTP_STATUS.OK)
     }
 
-    if (summaryLog.fileStatus === 'rejected') {
+    if (summaryLog.file.status === 'rejected') {
       return h
         .response({
           status: 'rejected',

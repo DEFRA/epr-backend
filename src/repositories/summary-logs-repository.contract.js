@@ -2,12 +2,16 @@ import { randomUUID } from 'node:crypto'
 
 const TEST_S3_BUCKET = 'test-bucket'
 
-const buildTestInvalidLog = (overrides = {}) => ({
-  fileId: 'file-123',
-  filename: 'test.xlsx',
-  s3Bucket: 'bucket',
-  s3Key: 'key',
-  ...overrides
+const buildMinimalSummaryLog = (fileOverrides = {}) => ({
+  file: {
+    id: 'file-123',
+    name: 'test.xlsx',
+    s3: {
+      bucket: 'bucket',
+      key: 'key'
+    },
+    ...fileOverrides
+  }
 })
 
 const testInsertBehaviour = (getRepository) => {
@@ -17,12 +21,16 @@ const testInsertBehaviour = (getRepository) => {
     it('inserts a summary log and returns result with insertedId', async () => {
       const fileId = `contract-insert-${randomUUID()}`
       const summaryLog = {
-        fileId,
         organisationId: 'org-123',
         registrationId: 'reg-456',
-        filename: 'test.xlsx',
-        s3Bucket: TEST_S3_BUCKET,
-        s3Key: 'test-key'
+        file: {
+          id: fileId,
+          name: 'test.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
       }
 
       const result = await repository().insert(summaryLog)
@@ -35,12 +43,16 @@ const testInsertBehaviour = (getRepository) => {
       const summaryLogId = `contract-retrievable-${randomUUID()}`
       const summaryLog = {
         summaryLogId,
-        fileId: `file-${randomUUID()}`,
-        filename: 'test.xlsx',
-        s3Bucket: TEST_S3_BUCKET,
-        s3Key: 'test-key',
         organisationId: 'org-456',
-        registrationId: 'reg-789'
+        registrationId: 'reg-789',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
       }
 
       await repository().insert(summaryLog)
@@ -71,21 +83,29 @@ const testFindBySummaryLogIdBehaviour = (getRepository) => {
 
       await repository().insert({
         summaryLogId: summaryLogIdA,
-        fileId: `file-a-${randomUUID()}`,
-        filename: 'test.xlsx',
-        s3Bucket: 'bucket',
-        s3Key: 'key',
         organisationId: 'org-1',
-        registrationId: 'reg-1'
+        registrationId: 'reg-1',
+        file: {
+          id: `file-a-${randomUUID()}`,
+          name: 'test.xlsx',
+          s3: {
+            bucket: 'bucket',
+            key: 'key'
+          }
+        }
       })
       await repository().insert({
         summaryLogId: summaryLogIdB,
-        fileId: `file-b-${randomUUID()}`,
-        filename: 'test.xlsx',
-        s3Bucket: 'bucket',
-        s3Key: 'key',
         organisationId: 'org-2',
-        registrationId: 'reg-2'
+        registrationId: 'reg-2',
+        file: {
+          id: `file-b-${randomUUID()}`,
+          name: 'test.xlsx',
+          s3: {
+            bucket: 'bucket',
+            key: 'key'
+          }
+        }
       })
 
       const result = await repository().findBySummaryLogId(summaryLogIdA)
@@ -100,20 +120,24 @@ const testFindBySummaryLogIdBehaviour = (getRepository) => {
 
       await repository().insert({
         summaryLogId,
-        fileId,
-        filename: 'test.xlsx',
-        fileStatus: 'complete',
-        s3Bucket: TEST_S3_BUCKET,
-        s3Key: 'test-key'
+        file: {
+          id: fileId,
+          name: 'test.xlsx',
+          status: 'complete',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
       })
 
       const result = await repository().findBySummaryLogId(summaryLogId)
 
       expect(result).toBeTruthy()
       expect(result.summaryLogId).toBe(summaryLogId)
-      expect(result.fileId).toBe(fileId)
-      expect(result.filename).toBe('test.xlsx')
-      expect(result.fileStatus).toBe('complete')
+      expect(result.file.id).toBe(fileId)
+      expect(result.file.name).toBe('test.xlsx')
+      expect(result.file.status).toBe('complete')
     })
   })
 }
@@ -122,31 +146,35 @@ const testInsertValidationRequiredFields = (getRepository) => {
   describe('insert validation - required fields', () => {
     const repository = () => getRepository()
 
-    it('rejects insert with missing fileId', async () => {
-      const invalidLog = buildTestInvalidLog({ fileId: null })
-      await expect(repository().insert(invalidLog)).rejects.toThrow(
-        /Invalid summary log data.*fileId/
+    it('rejects insert with missing file.id', async () => {
+      const logWithMissingId = buildMinimalSummaryLog({ id: null })
+      await expect(repository().insert(logWithMissingId)).rejects.toThrow(
+        /Invalid summary log data.*id/
       )
     })
 
-    it('rejects insert with missing filename', async () => {
-      const invalidLog = buildTestInvalidLog({ filename: null })
-      await expect(repository().insert(invalidLog)).rejects.toThrow(
-        /Invalid summary log data.*filename/
+    it('rejects insert with missing file.name', async () => {
+      const logWithMissingName = buildMinimalSummaryLog({ name: null })
+      await expect(repository().insert(logWithMissingName)).rejects.toThrow(
+        /Invalid summary log data.*name/
       )
     })
 
-    it('rejects insert with missing s3Bucket', async () => {
-      const invalidLog = buildTestInvalidLog({ s3Bucket: null })
-      await expect(repository().insert(invalidLog)).rejects.toThrow(
-        /Invalid summary log data.*s3Bucket/
+    it('rejects insert with missing file.s3.bucket', async () => {
+      const logWithMissingBucket = buildMinimalSummaryLog({
+        s3: { bucket: null, key: 'key' }
+      })
+      await expect(repository().insert(logWithMissingBucket)).rejects.toThrow(
+        /Invalid summary log data.*bucket/
       )
     })
 
-    it('rejects insert with missing s3Key', async () => {
-      const invalidLog = buildTestInvalidLog({ s3Key: null })
-      await expect(repository().insert(invalidLog)).rejects.toThrow(
-        /Invalid summary log data.*s3Key/
+    it('rejects insert with missing file.s3.key', async () => {
+      const logWithMissingKey = buildMinimalSummaryLog({
+        s3: { bucket: 'bucket', key: null }
+      })
+      await expect(repository().insert(logWithMissingKey)).rejects.toThrow(
+        /Invalid summary log data.*key/
       )
     })
   })
@@ -156,26 +184,28 @@ const testInsertValidationFieldRules = (getRepository) => {
   describe('insert validation - field rules', () => {
     const repository = () => getRepository()
 
-    it('rejects insert with invalid fileStatus', async () => {
-      const invalidLog = buildTestInvalidLog({
-        fileId: `contract-invalid-status-${randomUUID()}`,
-        fileStatus: 'invalid-status'
+    it('rejects insert with invalid file.status', async () => {
+      const logWithInvalidStatus = buildMinimalSummaryLog({
+        id: `contract-invalid-status-${randomUUID()}`,
+        status: 'invalid-status'
       })
-      await expect(repository().insert(invalidLog)).rejects.toThrow(
-        /Invalid summary log data.*fileStatus/
+      await expect(repository().insert(logWithInvalidStatus)).rejects.toThrow(
+        /Invalid summary log data.*status/
       )
     })
 
     it('strips unknown fields from insert', async () => {
       const summaryLogId = `contract-strip-${randomUUID()}`
-      const logWithExtra = buildTestInvalidLog({
+      const logWithUnknownFields = {
         summaryLogId,
-        fileId: `file-${randomUUID()}`,
-        hackerField: 'DROP TABLE users;',
-        anotherBadField: 'rm -rf /'
-      })
+        ...buildMinimalSummaryLog({
+          id: `file-${randomUUID()}`,
+          hackerField: 'DROP TABLE users;',
+          anotherBadField: 'rm -rf /'
+        })
+      }
 
-      await repository().insert(logWithExtra)
+      await repository().insert(logWithUnknownFields)
       const found = await repository().findBySummaryLogId(summaryLogId)
 
       expect(found.hackerField).toBeUndefined()
@@ -184,23 +214,23 @@ const testInsertValidationFieldRules = (getRepository) => {
 
     it('allows optional fields to be omitted', async () => {
       const fileId = `contract-minimal-${randomUUID()}`
-      const minimalLog = buildTestInvalidLog({ fileId })
+      const minimalLog = buildMinimalSummaryLog({ id: fileId })
 
       const result = await repository().insert(minimalLog)
       expect(result.insertedId).toBeTruthy()
     })
 
-    it('accepts valid fileStatus values', async () => {
-      const completeLog = buildTestInvalidLog({
-        fileId: `contract-complete-${randomUUID()}`,
-        filename: 'complete.xlsx',
-        fileStatus: 'complete'
+    it('accepts valid file.status values', async () => {
+      const completeLog = buildMinimalSummaryLog({
+        id: `contract-complete-${randomUUID()}`,
+        name: 'complete.xlsx',
+        status: 'complete'
       })
 
-      const rejectedLog = buildTestInvalidLog({
-        fileId: `contract-rejected-${randomUUID()}`,
-        filename: 'rejected.xlsx',
-        fileStatus: 'rejected'
+      const rejectedLog = buildMinimalSummaryLog({
+        id: `contract-rejected-${randomUUID()}`,
+        name: 'rejected.xlsx',
+        status: 'rejected'
       })
 
       await expect(repository().insert(completeLog)).resolves.toHaveProperty(
