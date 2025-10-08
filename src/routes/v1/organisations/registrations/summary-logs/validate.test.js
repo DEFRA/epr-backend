@@ -6,6 +6,10 @@ import { summaryLogsValidatePath } from './validate.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
+import {
+  setupTestLoggerMocks,
+  clearTestLoggerMocks
+} from '#common/helpers/logging/setup-test-logger-mocks.js'
 
 const url = summaryLogsValidatePath
 const payload = {
@@ -26,30 +30,11 @@ describe(`${url} route`, () => {
     })
     await server.initialize()
 
-    server.loggerMocks = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn()
-    }
-
-    server.ext('onRequest', (request, h) => {
-      vi.spyOn(request.logger, 'info').mockImplementation(
-        server.loggerMocks.info
-      )
-      vi.spyOn(request.logger, 'error').mockImplementation(
-        server.loggerMocks.error
-      )
-      vi.spyOn(request.logger, 'warn').mockImplementation(
-        server.loggerMocks.warn
-      )
-      return h.continue
-    })
+    setupTestLoggerMocks(server)
   })
 
   beforeEach(() => {
-    server.loggerMocks.info.mockClear()
-    server.loggerMocks.error.mockClear()
-    server.loggerMocks.warn.mockClear()
+    clearTestLoggerMocks(server)
   })
 
   it('returns 202 and status', async () => {
