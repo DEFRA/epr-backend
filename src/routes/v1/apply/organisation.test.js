@@ -13,9 +13,6 @@ import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
 
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({
   insertedId: { toString: () => '12345678901234567890abcd' }
@@ -38,16 +35,34 @@ describe(`${url} route`, () => {
     server = await createServer()
     await server.initialize()
 
+    server.loggerMocks = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn()
+    }
+
     server.ext('onRequest', (request, h) => {
-      vi.spyOn(request.logger, 'info').mockImplementation(mockLoggerInfo)
-      vi.spyOn(request.logger, 'error').mockImplementation(mockLoggerError)
-      vi.spyOn(request.logger, 'warn').mockImplementation(mockLoggerWarn)
+      vi.spyOn(request.logger, 'info').mockImplementation(
+        server.loggerMocks.info
+      )
+      vi.spyOn(request.logger, 'error').mockImplementation(
+        server.loggerMocks.error
+      )
+      vi.spyOn(request.logger, 'warn').mockImplementation(
+        server.loggerMocks.warn
+      )
       return h.continue
     })
   })
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    server.loggerMocks.info.mockClear()
+    server.loggerMocks.error.mockClear()
+    server.loggerMocks.warn.mockClear()
+    mockAudit.mockClear()
+    mockInsertOne.mockClear()
+    mockCountDocuments.mockClear()
+
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -97,7 +112,7 @@ describe(`${url} route`, () => {
         referenceNumber: expect.any(String)
       }
     )
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
         event: {
@@ -245,7 +260,7 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith(error, {
       message: `Failure on ${organisationPath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -273,7 +288,7 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith(error, {
       message: `Failure on ${organisationPath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
