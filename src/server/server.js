@@ -5,6 +5,7 @@ import { secureContext } from '@defra/hapi-secure-context'
 import { getConfig } from '../config.js'
 import { router } from '#plugins/router.js'
 import { repositories } from '#plugins/repositories.js'
+import { featureFlags } from '#plugins/feature-flags.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { mongoDb } from '#common/helpers/mongodb.js'
 import { failAction } from '#common/helpers/fail-action.js'
@@ -48,6 +49,7 @@ async function createServer(options = {}) {
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
   // repositories   - sets up repository adapters and attaches to `request` objects
+  // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // router         - routes used in the app
   await server.register([
     requestLogger,
@@ -61,6 +63,13 @@ async function createServer(options = {}) {
     {
       plugin: repositories,
       options: options.repositories
+    },
+    {
+      plugin: featureFlags,
+      options: {
+        config,
+        featureFlags: options.featureFlags
+      }
     },
     router
   ])
