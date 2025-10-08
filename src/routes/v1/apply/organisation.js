@@ -20,6 +20,29 @@ import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'
 
+async function getNextOrgId(collection) {
+  const count = await collection.countDocuments({
+    orgId: {
+      $gte: ORG_ID_START_NUMBER
+    }
+  })
+  return ORG_ID_START_NUMBER + count + 1
+}
+
+async function sendConfirmationEmails(email, regulatorEmail, context) {
+  await sendEmail(
+    ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
+    email,
+    context
+  )
+
+  await sendEmail(
+    ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+    regulatorEmail,
+    context
+  )
+}
+
 /**
  * Apply: Organisation
  * Stores organisation data.
@@ -67,12 +90,7 @@ export const organisation = {
       payload
 
     try {
-      const count = await collection.countDocuments({
-        orgId: {
-          $gte: ORG_ID_START_NUMBER
-        }
-      })
-      const orgId = ORG_ID_START_NUMBER + count + 1
+      const orgId = await getNextOrgId(collection)
 
       const { insertedId } = await collection.insertOne(
         organisationFactory({
@@ -106,25 +124,11 @@ export const organisation = {
         }
       })
 
-      await sendEmail(
-        ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
-        email,
-        {
-          orgId,
-          orgName,
-          referenceNumber
-        }
-      )
-
-      await sendEmail(
-        ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
-        regulatorEmail,
-        {
-          orgId,
-          orgName,
-          referenceNumber
-        }
-      )
+      await sendConfirmationEmails(email, regulatorEmail, {
+        orgId,
+        orgName,
+        referenceNumber
+      })
 
       return h.response({
         orgId,
