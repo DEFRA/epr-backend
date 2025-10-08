@@ -6,7 +6,7 @@ const summaryLogInsertSchema = Joi.object({
   file: Joi.object({
     id: Joi.string().required(),
     name: Joi.string().required(),
-    status: Joi.string().valid('complete', 'rejected').optional(),
+    status: Joi.string().valid('complete', 'pending', 'rejected').optional(),
     s3: Joi.object({
       bucket: Joi.string().required(),
       key: Joi.string().required()

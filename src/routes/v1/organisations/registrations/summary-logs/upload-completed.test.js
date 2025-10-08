@@ -144,4 +144,30 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('s3Bucket')
   })
+
+  it('returns 200 when file is pending without S3 info', async () => {
+    const pendingPayload = {
+      uploadStatus: 'ready',
+      metadata: {
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      },
+      form: {
+        file: {
+          fileId: 'file-pending-123',
+          filename: 'scanning.xlsx',
+          fileStatus: 'pending'
+        }
+      },
+      numberOfRejectedFiles: 0
+    }
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      payload: pendingPayload
+    })
+
+    expect(response.statusCode).toBe(200)
+  })
 })

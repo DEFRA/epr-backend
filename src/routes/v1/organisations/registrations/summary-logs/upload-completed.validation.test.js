@@ -131,7 +131,7 @@ describe('POST upload-completed validation', () => {
 
     expect(response.statusCode).toBe(422)
     expect(response.result.message).toContain(
-      '"form.file.fileStatus" must be one of [complete, rejected]'
+      '"form.file.fileStatus" must be one of [complete, pending, rejected]'
     )
   })
 

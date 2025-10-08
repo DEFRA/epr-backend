@@ -9,7 +9,9 @@ const uploadCompletedPayloadSchema = Joi.object({
     file: Joi.object({
       fileId: Joi.string().required(),
       filename: Joi.string().required(),
-      fileStatus: Joi.string().valid('complete', 'rejected').required(),
+      fileStatus: Joi.string()
+        .valid('complete', 'pending', 'rejected')
+        .required(),
       s3Bucket: Joi.string().when('fileStatus', {
         is: 'complete',
         then: Joi.required(),

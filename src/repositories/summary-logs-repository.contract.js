@@ -275,6 +275,25 @@ const testInsertValidationFieldRules = (getRepository) => {
         /Invalid summary log data.*s3/
       )
     })
+
+    it('accepts pending file without S3 info', async () => {
+      const summaryLogId = `contract-pending-no-s3-${randomUUID()}`
+      const pendingLog = {
+        summaryLogId,
+        file: {
+          id: `file-pending-${randomUUID()}`,
+          name: 'scanning.xlsx',
+          status: 'pending'
+        }
+      }
+
+      const result = await repository().insert(pendingLog)
+      expect(result.insertedId).toBeTruthy()
+
+      const found = await repository().findBySummaryLogId(summaryLogId)
+      expect(found.file.status).toBe('pending')
+      expect(found.file.s3).toBeUndefined()
+    })
   })
 }
 
