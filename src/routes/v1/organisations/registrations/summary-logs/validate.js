@@ -3,7 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
+  LOGGING_EVENT_CATEGORIES,
+  SUMMARY_LOG_STATUS
 } from '#common/enums/index.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
@@ -66,6 +67,7 @@ export const summaryLogsValidate = {
 
     try {
       await summaryLogsRepository.insert({
+        status: SUMMARY_LOG_STATUS.VALIDATING,
         organisationId,
         registrationId,
         file: {

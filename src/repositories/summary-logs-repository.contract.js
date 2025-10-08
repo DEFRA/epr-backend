@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 const TEST_S3_BUCKET = 'test-bucket'
 
 const buildMinimalSummaryLog = (fileOverrides = {}) => ({
+  status: 'validating',
   file: {
     id: 'file-123',
     name: 'test.xlsx',
@@ -21,6 +22,7 @@ const testInsertBehaviour = (getRepository) => {
     it('inserts a summary log and returns result with insertedId', async () => {
       const fileId = `contract-insert-${randomUUID()}`
       const summaryLog = {
+        status: 'validating',
         organisationId: 'org-123',
         registrationId: 'reg-456',
         file: {
@@ -43,6 +45,7 @@ const testInsertBehaviour = (getRepository) => {
       const summaryLogId = `contract-retrievable-${randomUUID()}`
       const summaryLog = {
         summaryLogId,
+        status: 'validating',
         organisationId: 'org-456',
         registrationId: 'reg-789',
         file: {
@@ -83,6 +86,7 @@ const testFindBySummaryLogIdBehaviour = (getRepository) => {
 
       await repository().insert({
         summaryLogId: summaryLogIdA,
+        status: 'validating',
         organisationId: 'org-1',
         registrationId: 'reg-1',
         file: {
@@ -96,6 +100,7 @@ const testFindBySummaryLogIdBehaviour = (getRepository) => {
       })
       await repository().insert({
         summaryLogId: summaryLogIdB,
+        status: 'validating',
         organisationId: 'org-2',
         registrationId: 'reg-2',
         file: {
@@ -120,6 +125,7 @@ const testFindBySummaryLogIdBehaviour = (getRepository) => {
 
       await repository().insert({
         summaryLogId,
+        status: 'validating',
         file: {
           id: fileId,
           name: 'test.xlsx',

@@ -1,6 +1,11 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
+import {
+  UPLOAD_STATUS,
+  SUMMARY_LOG_STATUS,
+  determineSummaryLogStatus
+} from '#common/enums/index.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -9,7 +14,9 @@ const uploadCompletedPayloadSchema = Joi.object({
     file: Joi.object({
       fileId: Joi.string().required(),
       filename: Joi.string().required(),
-      fileStatus: Joi.string().valid('complete', 'rejected').required(),
+      fileStatus: Joi.string()
+        .valid(UPLOAD_STATUS.COMPLETE, UPLOAD_STATUS.REJECTED)
+        .required(),
       s3Bucket: Joi.string().required(),
       s3Key: Joi.string().required()
     })
@@ -52,8 +59,23 @@ export const summaryLogsUploadCompleted = {
       file: { fileId, filename, fileStatus, s3Bucket, s3Key }
     } = payload.form
 
+    const existingSummaryLog =
+      await summaryLogsRepository.findBySummaryLogId(summaryLogId)
+
+    if (existingSummaryLog) {
+      throw Boom.conflict(
+        `Summary log ${summaryLogId} already exists with status ${existingSummaryLog.status}`
+      )
+    }
+
+    const status = determineSummaryLogStatus(fileStatus)
+
     await summaryLogsRepository.insert({
       summaryLogId,
+      status,
+      ...(status === SUMMARY_LOG_STATUS.REJECTED && {
+        failureReason: 'File rejected by virus scan'
+      }),
       file: {
         id: fileId,
         name: filename,

@@ -95,4 +95,26 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('"form" is required')
   })
+
+  it('returns 409 if summary log already exists', async () => {
+    const summaryLogId = 'existing-summary-log'
+
+    const firstResponse = await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(firstResponse.statusCode).toBe(200)
+
+    const secondResponse = await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(secondResponse.statusCode).toBe(409)
+    const body = JSON.parse(secondResponse.payload)
+    expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
+  })
 })
