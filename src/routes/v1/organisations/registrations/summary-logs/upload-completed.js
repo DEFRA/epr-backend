@@ -68,7 +68,7 @@ export const summaryLogsUploadCompleted = {
       status: fileStatus
     }
 
-    if (fileStatus === 'complete' && s3Bucket && s3Key) {
+    if (fileStatus === 'complete') {
       fileData.s3 = {
         bucket: s3Bucket,
         key: s3Key
