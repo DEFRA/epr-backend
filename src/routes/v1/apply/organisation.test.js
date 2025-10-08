@@ -21,14 +21,6 @@ const mockInsertOne = vi.fn().mockResolvedValue({
   insertedId: { toString: () => '12345678901234567890abcd' }
 })
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
-
 const mockCountDocuments = vi.fn(() => 1)
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -45,6 +37,13 @@ describe(`${url} route`, () => {
     const { createServer } = await import('#server/server.js')
     server = await createServer()
     await server.initialize()
+
+    server.ext('onRequest', (request, h) => {
+      vi.spyOn(request.logger, 'info').mockImplementation(mockLoggerInfo)
+      vi.spyOn(request.logger, 'error').mockImplementation(mockLoggerError)
+      vi.spyOn(request.logger, 'warn').mockImplementation(mockLoggerWarn)
+      return h.continue
+    })
   })
 
   beforeEach(() => {

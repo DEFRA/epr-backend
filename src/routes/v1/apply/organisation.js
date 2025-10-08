@@ -1,6 +1,5 @@
 import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
-import { logger } from '#common/helpers/logging/logger.js'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
@@ -62,7 +61,7 @@ export const organisation = {
       }
     }
   },
-  handler: async ({ db, payload }, h) => {
+  handler: async ({ db, payload, logger }, h) => {
     const collection = db.collection('organisation')
     const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
       payload

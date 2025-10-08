@@ -1,5 +1,4 @@
 import Boom from '@hapi/boom'
-import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -58,7 +57,7 @@ export const summaryLogsValidate = {
    * @param {Object} request.params
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params }, h) => {
+  handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
     const { organisationId, registrationId } = params
     const s3Path = `${s3Bucket}/${s3Key}`

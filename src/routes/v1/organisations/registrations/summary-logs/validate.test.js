@@ -11,14 +11,6 @@ const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
 const mockLoggerWarn = vi.fn()
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
-
 const url = summaryLogsValidatePath
 const payload = {
   s3Bucket: 'test-bucket',
@@ -37,6 +29,13 @@ describe(`${url} route`, () => {
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
     await server.initialize()
+
+    server.ext('onRequest', (request, h) => {
+      vi.spyOn(request.logger, 'info').mockImplementation(mockLoggerInfo)
+      vi.spyOn(request.logger, 'error').mockImplementation(mockLoggerError)
+      vi.spyOn(request.logger, 'warn').mockImplementation(mockLoggerWarn)
+      return h.continue
+    })
   })
 
   beforeEach(() => {
