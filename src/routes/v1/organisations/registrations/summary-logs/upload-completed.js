@@ -10,8 +10,16 @@ const uploadCompletedPayloadSchema = Joi.object({
       fileId: Joi.string().required(),
       filename: Joi.string().required(),
       fileStatus: Joi.string().valid('complete', 'rejected').required(),
-      s3Bucket: Joi.string().required(),
-      s3Key: Joi.string().required()
+      s3Bucket: Joi.string().when('fileStatus', {
+        is: 'complete',
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+      s3Key: Joi.string().when('fileStatus', {
+        is: 'complete',
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      })
     })
       .required()
       .unknown(true)
@@ -52,17 +60,22 @@ export const summaryLogsUploadCompleted = {
       file: { fileId, filename, fileStatus, s3Bucket, s3Key }
     } = payload.form
 
+    const fileData = {
+      id: fileId,
+      name: filename,
+      status: fileStatus
+    }
+
+    if (fileStatus === 'complete' && s3Bucket && s3Key) {
+      fileData.s3 = {
+        bucket: s3Bucket,
+        key: s3Key
+      }
+    }
+
     await summaryLogsRepository.insert({
       summaryLogId,
-      file: {
-        id: fileId,
-        name: filename,
-        status: fileStatus,
-        s3: {
-          bucket: s3Bucket,
-          key: s3Key
-        }
-      }
+      file: fileData
     })
 
     return h.response().code(StatusCodes.OK)

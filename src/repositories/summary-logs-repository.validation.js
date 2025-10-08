@@ -10,7 +10,11 @@ const summaryLogInsertSchema = Joi.object({
     s3: Joi.object({
       bucket: Joi.string().required(),
       key: Joi.string().required()
-    }).required()
+    }).when('status', {
+      is: 'complete',
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    })
   }).required(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()

@@ -227,17 +227,52 @@ const testInsertValidationFieldRules = (getRepository) => {
         status: 'complete'
       })
 
-      const rejectedLog = buildMinimalSummaryLog({
-        id: `contract-rejected-${randomUUID()}`,
-        name: 'rejected.xlsx',
-        status: 'rejected'
-      })
+      const rejectedLog = {
+        file: {
+          id: `contract-rejected-${randomUUID()}`,
+          name: 'rejected.xlsx',
+          status: 'rejected'
+        }
+      }
 
       await expect(repository().insert(completeLog)).resolves.toHaveProperty(
         'insertedId'
       )
       await expect(repository().insert(rejectedLog)).resolves.toHaveProperty(
         'insertedId'
+      )
+    })
+
+    it('accepts rejected file without S3 info', async () => {
+      const summaryLogId = `contract-rejected-no-s3-${randomUUID()}`
+      const rejectedLog = {
+        summaryLogId,
+        file: {
+          id: `file-rejected-${randomUUID()}`,
+          name: 'virus.xlsx',
+          status: 'rejected'
+        }
+      }
+
+      const result = await repository().insert(rejectedLog)
+      expect(result.insertedId).toBeTruthy()
+
+      const found = await repository().findBySummaryLogId(summaryLogId)
+      expect(found.file.status).toBe('rejected')
+      expect(found.file.s3).toBeUndefined()
+    })
+
+    it('requires S3 info when file status is complete', async () => {
+      const completeLogWithoutS3 = {
+        file: {
+          id: `contract-complete-no-s3-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'complete'
+        }
+      }
+
+      await expect(repository().insert(completeLogWithoutS3)).rejects.toThrow(
+        /Invalid summary log data.*s3/
       )
     })
   })

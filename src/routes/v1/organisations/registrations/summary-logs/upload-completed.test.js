@@ -95,4 +95,53 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('"form" is required')
   })
+
+  it('returns 200 when file is rejected without S3 info', async () => {
+    const rejectedPayload = {
+      uploadStatus: 'ready',
+      metadata: {
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      },
+      form: {
+        file: {
+          fileId: 'file-rejected-123',
+          filename: 'virus.xlsx',
+          fileStatus: 'rejected'
+        }
+      },
+      numberOfRejectedFiles: 1
+    }
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      payload: rejectedPayload
+    })
+
+    expect(response.statusCode).toBe(200)
+  })
+
+  it('returns 422 when file is complete but missing S3 info', async () => {
+    const incompletePayload = {
+      uploadStatus: 'ready',
+      form: {
+        file: {
+          fileId: 'file-incomplete-123',
+          filename: 'test.xlsx',
+          fileStatus: 'complete'
+        }
+      }
+    }
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      payload: incompletePayload
+    })
+
+    expect(response.statusCode).toBe(422)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toContain('s3Bucket')
+  })
 })
