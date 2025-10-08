@@ -1,5 +1,7 @@
-import { describe, it, expect, beforeAll, vi } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createServer } from '#server/server.js'
 
 const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
@@ -8,14 +10,12 @@ describe('POST upload-completed validation', () => {
   let server
 
   beforeAll(async () => {
-    vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
-
-    const { createServer } = await import('#server/server.js')
     const repository = createInMemorySummaryLogsRepository()
     server = await createServer({
       repositories: {
         summaryLogsRepository: repository
-      }
+      },
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
     await server.initialize()
   })

@@ -1,5 +1,7 @@
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createServer } from '#server/server.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -35,13 +37,11 @@ let server
 
 describe(`${url} route`, () => {
   beforeAll(async () => {
-    vi.stubEnv('FEATURE_FLAG_SUMMARY_LOGS', 'true')
-
-    const { createServer } = await import('#server/server.js')
     server = await createServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
-      }
+      },
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
     await server.initialize()
   })
