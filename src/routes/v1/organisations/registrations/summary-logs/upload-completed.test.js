@@ -106,7 +106,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(firstResponse.statusCode).toBe(200)
+    expect(firstResponse.statusCode).toBe(StatusCodes.OK)
 
     const secondResponse = await server.inject({
       method: 'POST',
@@ -114,7 +114,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(secondResponse.statusCode).toBe(409)
+    expect(secondResponse.statusCode).toBe(StatusCodes.CONFLICT)
     const body = JSON.parse(secondResponse.payload)
     expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
   })
