@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -57,7 +58,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
   it('returns 400 if payload is not an object', async () => {
@@ -67,7 +68,7 @@ describe(`${url} route`, () => {
       payload: 'not-an-object'
     })
 
-    expect(response.statusCode).toBe(400)
+    expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
@@ -79,7 +80,7 @@ describe(`${url} route`, () => {
       payload: null
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
   it('returns 422 if payload is missing form.file', async () => {
@@ -91,7 +92,7 @@ describe(`${url} route`, () => {
       }
     })
 
-    expect(response.statusCode).toBe(422)
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('"form" is required')
   })
@@ -116,5 +117,80 @@ describe(`${url} route`, () => {
     expect(secondResponse.statusCode).toBe(409)
     const body = JSON.parse(secondResponse.payload)
     expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
+  })
+
+  it('returns 200 when file is rejected without S3 info', async () => {
+    const rejectedPayload = {
+      uploadStatus: 'ready',
+      metadata: {
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      },
+      form: {
+        file: {
+          fileId: 'file-rejected-123',
+          filename: 'virus.xlsx',
+          fileStatus: 'rejected'
+        }
+      },
+      numberOfRejectedFiles: 1
+    }
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-rejected/upload-completed',
+      payload: rejectedPayload
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('returns 422 when file is complete but missing S3 info', async () => {
+    const incompletePayload = {
+      uploadStatus: 'ready',
+      form: {
+        file: {
+          fileId: 'file-incomplete-123',
+          filename: 'test.xlsx',
+          fileStatus: 'complete'
+        }
+      }
+    }
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      payload: incompletePayload
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toContain('s3Bucket')
+  })
+
+  it('returns 200 when file is pending without S3 info', async () => {
+    const pendingPayload = {
+      uploadStatus: 'ready',
+      metadata: {
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      },
+      form: {
+        file: {
+          fileId: 'file-pending-123',
+          filename: 'scanning.xlsx',
+          fileStatus: 'pending'
+        }
+      },
+      numberOfRejectedFiles: 0
+    }
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-pending/upload-completed',
+      payload: pendingPayload
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
   })
 })

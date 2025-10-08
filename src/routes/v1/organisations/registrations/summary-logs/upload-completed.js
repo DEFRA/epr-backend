@@ -15,10 +15,22 @@ const uploadCompletedPayloadSchema = Joi.object({
       fileId: Joi.string().required(),
       filename: Joi.string().required(),
       fileStatus: Joi.string()
-        .valid(UPLOAD_STATUS.COMPLETE, UPLOAD_STATUS.REJECTED)
+        .valid(
+          UPLOAD_STATUS.COMPLETE,
+          UPLOAD_STATUS.REJECTED,
+          UPLOAD_STATUS.PENDING
+        )
         .required(),
-      s3Bucket: Joi.string().required(),
-      s3Key: Joi.string().required()
+      s3Bucket: Joi.string().when('fileStatus', {
+        is: UPLOAD_STATUS.COMPLETE,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+      s3Key: Joi.string().when('fileStatus', {
+        is: UPLOAD_STATUS.COMPLETE,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      })
     })
       .required()
       .unknown(true)
@@ -70,21 +82,26 @@ export const summaryLogsUploadCompleted = {
 
     const status = determineSummaryLogStatus(fileStatus)
 
+    const fileData = {
+      id: fileId,
+      name: filename,
+      status: fileStatus
+    }
+
+    if (fileStatus === UPLOAD_STATUS.COMPLETE) {
+      fileData.s3 = {
+        bucket: s3Bucket,
+        key: s3Key
+      }
+    }
+
     await summaryLogsRepository.insert({
       summaryLogId,
       status,
       ...(status === SUMMARY_LOG_STATUS.REJECTED && {
         failureReason: 'File rejected by virus scan'
       }),
-      file: {
-        id: fileId,
-        name: filename,
-        status: fileStatus,
-        s3: {
-          bucket: s3Bucket,
-          key: s3Key
-        }
-      }
+      file: fileData
     })
 
     return h.response().code(StatusCodes.OK)
