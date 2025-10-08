@@ -1,12 +1,17 @@
+import { validateSummaryLogInsert } from './summary-logs-repository.validation.js'
+
+const COLLECTION_NAME = 'summary-logs'
+
 /**
  * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
  */
 export const createSummaryLogsRepository = (db) => ({
   async insert(summaryLog) {
-    return db.collection('summary-logs').insertOne(summaryLog)
+    const validated = validateSummaryLogInsert(summaryLog)
+    return db.collection(COLLECTION_NAME).insertOne(validated)
   },
 
-  async findByFileId(fileId) {
-    return db.collection('summary-logs').findOne({ fileId })
+  async findBySummaryLogId(summaryLogId) {
+    return db.collection(COLLECTION_NAME).findOne({ summaryLogId })
   }
 })

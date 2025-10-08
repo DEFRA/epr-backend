@@ -33,6 +33,7 @@ export async function createIndexes(db) {
   await db.collection('organisation').createIndex({ orgId: 1 })
   await db.collection('registration').createIndex({ referenceNumber: 1 })
   await db.collection('accreditation').createIndex({ referenceNumber: 1 })
+  await db.collection('summary-logs').createIndex({ summaryLogId: 1 })
 }
 
 export async function createSeedData(db) {
