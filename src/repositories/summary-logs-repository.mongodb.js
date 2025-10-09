@@ -8,10 +8,17 @@ const COLLECTION_NAME = 'summary-logs'
 export const createSummaryLogsRepository = (db) => ({
   async insert(summaryLog) {
     const validated = validateSummaryLogInsert(summaryLog)
-    return db.collection(COLLECTION_NAME).insertOne(validated)
+    const { id, ...rest } = validated
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .insertOne({ _id: id, ...rest })
+    return { insertedId: result.insertedId }
   },
 
-  async findBySummaryLogId(summaryLogId) {
-    return db.collection(COLLECTION_NAME).findOne({ summaryLogId })
+  async findById(id) {
+    const doc = await db.collection(COLLECTION_NAME).findOne({ _id: id })
+    if (!doc) return null
+    const { _id, ...rest } = doc
+    return { id: _id, ...rest }
   }
 })

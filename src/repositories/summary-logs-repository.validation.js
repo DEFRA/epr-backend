@@ -3,7 +3,7 @@ import Joi from 'joi'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 const summaryLogInsertSchema = Joi.object({
-  summaryLogId: Joi.string().optional(),
+  id: Joi.string().required(),
   status: Joi.string()
     .valid(
       SUMMARY_LOG_STATUS.PREPROCESSING,

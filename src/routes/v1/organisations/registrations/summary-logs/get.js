@@ -18,8 +18,7 @@ export const summaryLogsGet = {
   handler: async ({ summaryLogsRepository, params }, h) => {
     const { summaryLogId } = params
 
-    const summaryLog =
-      await summaryLogsRepository.findBySummaryLogId(summaryLogId)
+    const summaryLog = await summaryLogsRepository.findById(summaryLogId)
 
     if (!summaryLog) {
       return h.response({ status: getDefaultStatus() }).code(StatusCodes.OK)

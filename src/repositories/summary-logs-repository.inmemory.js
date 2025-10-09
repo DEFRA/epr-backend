@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { validateSummaryLogInsert } from './summary-logs-repository.validation.js'
 
 /**
@@ -10,17 +9,12 @@ export const createInMemorySummaryLogsRepository = () => {
   return {
     async insert(summaryLog) {
       const validated = validateSummaryLogInsert(summaryLog)
-      const id = randomUUID()
-      storage.set(id, { ...validated })
-      return { insertedId: id }
+      storage.set(validated.id, { ...validated })
+      return { insertedId: validated.id }
     },
 
-    async findBySummaryLogId(summaryLogId) {
-      return (
-        Array.from(storage.values()).find(
-          (log) => log.summaryLogId === summaryLogId
-        ) ?? null
-      )
+    async findById(id) {
+      return storage.get(id) ?? null
     }
   }
 }

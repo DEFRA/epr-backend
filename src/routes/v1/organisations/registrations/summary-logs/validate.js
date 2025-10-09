@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -67,6 +68,7 @@ export const summaryLogsValidate = {
 
     try {
       await summaryLogsRepository.insert({
+        id: randomUUID(),
         status: SUMMARY_LOG_STATUS.VALIDATING,
         organisationId,
         registrationId,
