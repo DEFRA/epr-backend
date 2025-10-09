@@ -7,9 +7,12 @@
 
 - [Overview](#overview)
 - [User groups](#user-groups)
-- [AAD interaction](#aad-interaction)
-  - [User sign in journey](#user-sign-in-journey)
-  - [AAD flow](#aad-flow)
+- [Sign in](#sign-in)
+  - [Sign in user journey](#sign-in-user-journey)
+  - [Sign in AAD flow](#sign-in-aad-flow)
+- [Sign out](#sign-out)
+  - [Sign out user journey](#sign-out-user-journey)
+  - [Sign out AAD flow](#sign-out-aad-flow)
   <!-- prettier-ignore-end -->
 
 ## Overview
@@ -34,7 +37,7 @@ The user groups are
 
 See [HLD](./pepr-hld.md#who-is-using-this-service) for a description of the roles/responsibilities of these user groups
 
-## AAD interaction
+## Sign in
 
 To sign in to the service the user is re-directed to AAD to perform single sign on, where
 
@@ -53,7 +56,7 @@ The AAD sign-in URL is
   - A shared value is used across the `local`, `dev` and `test` environments (as configured in the "DefraDev" tenant)
   - Another value is used in the `prod` environment (as configured in the "Defra" tenant)
 
-### User sign in journey
+### Sign in user journey
 
 > [!INFO]
 > This represents the initial (simplest) journey being built - it is expecteded to change in future iterations to provide an improved user experience
@@ -83,7 +86,7 @@ flowchart TD;
   AAD--User signs in<br/>& redirected to landing page-->landing-sign-in
 ```
 
-### AAD flow
+### Sign in AAD flow
 
 The interaction between the service and AAD is orchestrated using `@hapi/bell` and `@hapi/cookie` plugins
 
@@ -128,4 +131,55 @@ else User not signed in
   note over route: generate sessionId<br/>map user details to session data<br/>populate cache with session data<br/>populate "auth cookie" with sessionId
   route->>U: 302: /some-page
 end
+```
+
+## Sign out
+
+To sign out of the service the user is re-directed to AAD to perform single sign on, where
+
+- the user signs in to AAD with their AAD username + password
+- upon sign-out they are re-directed back to the service
+
+The AAD sign-in URL is
+
+`https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/logout?post_logout_redirect_uri={serviceUrl}`
+
+### Sign out user journey
+
+```mermaid
+flowchart TD;
+  User([User])
+  SignOut[Click sign out button]
+  AAD(AAD)
+  landing([Show landing page content])
+
+
+  User-->SignOut
+  SignOut-->AAD
+  AAD--User signs out<br/>& redirected to service-->landing
+```
+
+### Sign out AAD flow
+
+Pressing the sign out button takes the user to `/auth/sign-out` which orchestrates the sign-out flow (and clears data setup and read by the `@hapi/bell` and `@hapi/cookie` plugins during sign in).
+
+```mermaid
+sequenceDiagram
+
+Actor U as User Browser
+box Frontend
+  participant router as Router
+  participant route as Route handler<br/>code
+end
+participant AAD as Azure AD
+
+U->>router: GET /auth/sign-out
+router->>route:
+note over route: evict session data from cache<br/>clear "auth cookie"
+route->>U: 302
+U->>AAD: GET /{tenantId}/oauth2/v2.0/logout<br/>?post_logout_redirect_uri={redirectUrl}
+AAD->>U: <html>Logouot form</html>
+U->>AAD: Submit form
+AAD->>U: 302
+U->>router: GET /{redirectUrl}
 ```
