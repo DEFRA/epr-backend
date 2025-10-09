@@ -103,7 +103,7 @@ participant AAD as Azure AD
 U->>router: GET /some-page
 note over router: route protected with 'session' strategy
 router->>cookie:
-note over cookie: check for sessionCookie<br/>check for sessionId in cookie<br/>check for session data in cache
+note over cookie: check for "auth cookie"<br/>check for sessionId in "auth cookie"<br/>check for session data in cache
 alt User signed in
   cookie->>route:
   route->>U: <html>Page content</html>
@@ -125,7 +125,7 @@ else User not signed in
   AAD->>bell: User token
   Note over bell: validate user token<br/>extract user details<br/>add user details to request object
   bell->>route:
-  note over route: generate sessionId<br/>map user details to session data<br/>populate cache with session data<br/>populate auth cookie with sessionId
+  note over route: generate sessionId<br/>map user details to session data<br/>populate cache with session data<br/>populate "auth cookie" with sessionId
   route->>U: 302: /some-page
 end
 ```
