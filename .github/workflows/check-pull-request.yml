@@ -102,4 +102,4 @@ jobs:
       - uses: DEFRA/epr-backend-journey-tests/run-journey-tests@main
         with:
           epr-backend: ${{github.sha}}
-          branch: main
+          branch: PAE-310-fix-project-name
