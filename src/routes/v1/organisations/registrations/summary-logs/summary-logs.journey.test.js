@@ -17,7 +17,12 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 
-const createUploadPayload = (fileStatus, fileId, filename, includeS3 = true) => ({
+const createUploadPayload = (
+  fileStatus,
+  fileId,
+  filename,
+  includeS3 = true
+) => ({
   uploadStatus: 'ready',
   metadata: {
     organisationId,
@@ -52,7 +57,7 @@ const buildPostUrl = (summaryLogId) =>
 describe('Summary logs journey', () => {
   let server
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const repository = createInMemorySummaryLogsRepository()
     server = await createServer({
       repositories: {
@@ -61,9 +66,6 @@ describe('Summary logs journey', () => {
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
     await server.initialize()
-  })
-
-  beforeEach(() => {
     vi.clearAllMocks()
   })
 

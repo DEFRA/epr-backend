@@ -66,12 +66,19 @@ describe(`${url} route`, () => {
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.any(String),
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        }
-      })
+        event: { category: 'summary-logs', action: 'request_success' },
+        context: expect.objectContaining({
+          summaryLogId: 'summary-log-123',
+          fileId: 'file-123',
+          filename: 'test.xlsx',
+          fileStatus: 'complete',
+          s3Bucket: 'test-bucket',
+          s3Key: 'test-key'
+        })
+      }),
+      expect.stringContaining(
+        'File upload completed for summaryLogId: summary-log-123'
+      )
     )
   })
 
