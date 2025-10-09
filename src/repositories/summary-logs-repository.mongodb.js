@@ -17,7 +17,9 @@ export const createSummaryLogsRepository = (db) => ({
 
   async findById(id) {
     const doc = await db.collection(COLLECTION_NAME).findOne({ _id: id })
-    if (!doc) return null
+    if (!doc) {
+      return null
+    }
     const { _id, ...rest } = doc
     return { id: _id, ...rest }
   }
