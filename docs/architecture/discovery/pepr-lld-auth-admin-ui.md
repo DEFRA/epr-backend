@@ -8,6 +8,7 @@
 - [Overview](#overview)
 - [User groups](#user-groups)
 - [AAD interaction](#aad-interaction)
+  - [User sign in journey](#user-sign-in-journey)
   - [AAD flow](#aad-flow)
   <!-- prettier-ignore-end -->
 
@@ -51,6 +52,36 @@ The AAD sign-in URL is
 - `clientId` = an identifier for "our app" - this is known to AAD, ie has been created in Entra ID within the specific tenant
   - A shared value is used across the `local`, `dev` and `test` environments (as configured in the "DefraDev" tenant)
   - Another value is used in the `prod` environment (as configured in the "Defra" tenant)
+
+### User sign in journey
+
+> [!INFO]
+> This represents the initial (simplest) journey being built - it is expecteded to change in future iterations to provide an improved user experience
+
+```mermaid
+flowchart TD;
+  User([User])
+
+  landing([Show landing page content])
+  landing-sign-in{is user logged in?}
+
+  protected([Show protected page content])
+  protected-unauthorised(Show not authorised content<br/>Present Sign In button)
+  protected-sign-in{is user logged in?}
+
+  AAD
+
+  User--Access landing page-->landing-sign-in
+  landing-sign-in--N-->landing
+  landing-sign-in--Y-->landing
+
+  User--Access protected page-->protected-sign-in
+  protected-sign-in--N-->protected-unauthorised
+  protected-sign-in--Y-->protected
+
+  protected-unauthorised--Click Sign-In button-->AAD
+  AAD--User signs in<br/>& redirected to landing page-->landing-sign-in
+```
 
 ### AAD flow
 
