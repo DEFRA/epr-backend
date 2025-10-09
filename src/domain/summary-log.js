@@ -13,17 +13,18 @@ export const UPLOAD_STATUS = Object.freeze({
   PENDING: 'pending'
 })
 
+const UploadStatusToSummaryLogStatusMap = {
+  [UPLOAD_STATUS.REJECTED]: SUMMARY_LOG_STATUS.REJECTED,
+  [UPLOAD_STATUS.PENDING]: SUMMARY_LOG_STATUS.PREPROCESSING,
+  [UPLOAD_STATUS.COMPLETE]: SUMMARY_LOG_STATUS.VALIDATING
+}
+
 export const determineStatusFromUpload = (uploadStatus) => {
-  switch (uploadStatus) {
-    case UPLOAD_STATUS.REJECTED:
-      return SUMMARY_LOG_STATUS.REJECTED
-    case UPLOAD_STATUS.PENDING:
-      return SUMMARY_LOG_STATUS.PREPROCESSING
-    case UPLOAD_STATUS.COMPLETE:
-      return SUMMARY_LOG_STATUS.VALIDATING
-    default:
-      throw new Error(`Invalid upload status: ${uploadStatus}`)
+  const status = UploadStatusToSummaryLogStatusMap[uploadStatus]
+  if (!status) {
+    throw new Error(`Invalid upload status: ${uploadStatus}`)
   }
+  return status
 }
 
 export const determineFailureReason = (status) => {
