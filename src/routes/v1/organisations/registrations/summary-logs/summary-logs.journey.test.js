@@ -146,4 +146,107 @@ describe('Summary logs journey', () => {
       )
     })
   })
+
+  describe('upload-completed logging', () => {
+    test('logs successful upload completion with s3 details', async () => {
+      const summaryLogId = 'summary-777'
+      const fileId = 'file-456'
+      const filename = 'test-file.xlsx'
+
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload('complete', fileId, filename)
+      })
+
+      expect(mockLoggerInfo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: { category: 'summary-logs', action: 'request_success' },
+          context: expect.objectContaining({
+            summaryLogId,
+            fileId,
+            filename,
+            fileStatus: 'complete',
+            s3Bucket: 'test-bucket',
+            s3Key: `path/to/${filename}`
+          })
+        }),
+        expect.stringContaining(
+          `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: complete, s3`
+        )
+      )
+    })
+
+    test('logs upload completion for pending status without s3 details', async () => {
+      const summaryLogId = 'summary-666'
+      const fileId = 'file-555'
+      const filename = 'pending-file.xlsx'
+
+      const payload = createUploadPayload('pending', fileId, filename)
+      delete payload.form.file.s3Bucket
+      delete payload.form.file.s3Key
+
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload
+      })
+
+      expect(mockLoggerInfo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: { category: 'summary-logs', action: 'request_success' },
+          context: expect.objectContaining({
+            summaryLogId,
+            fileId,
+            filename,
+            fileStatus: 'pending'
+          })
+        }),
+        expect.stringContaining(
+          `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: pending`
+        )
+      )
+
+      expect(mockLoggerInfo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.not.objectContaining({
+            s3Bucket: expect.anything(),
+            s3Key: expect.anything()
+          })
+        }),
+        expect.any(String)
+      )
+    })
+
+    test('logs upload completion for rejected status without s3 details', async () => {
+      const summaryLogId = 'summary-555'
+      const fileId = 'file-444'
+      const filename = 'rejected-file.xlsx'
+
+      const payload = createUploadPayload('rejected', fileId, filename)
+      delete payload.form.file.s3Bucket
+      delete payload.form.file.s3Key
+
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload
+      })
+
+      expect(mockLoggerInfo).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: { category: 'summary-logs', action: 'request_success' },
+          context: expect.objectContaining({
+            summaryLogId,
+            fileId,
+            filename,
+            fileStatus: 'rejected'
+          })
+        }),
+        expect.stringContaining(
+          `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: rejected`
+        )
+      )
+    })
+  })
 })
