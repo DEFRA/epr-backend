@@ -70,13 +70,40 @@ const testInsertBehaviour = (getRepository) => {
   })
 }
 
-const testFindByIdNotFound = (getRepository) => {
-  describe('findById - not found', () => {
-    it('returns null when summary log ID not found', async () => {
+const testFindById = (getRepository) => {
+  describe('findById', () => {
+    it('returns null when ID not found', async () => {
       const id = `contract-nonexistent-${randomUUID()}`
       const result = await getRepository().findById(id)
 
       expect(result).toBeNull()
+    })
+
+    it('retrieves a log by ID after insert', async () => {
+      const id = `contract-summary-${randomUUID()}`
+      const fileId = `contract-file-${randomUUID()}`
+
+      await getRepository().insert({
+        id,
+        status: 'validating',
+        file: {
+          id: fileId,
+          name: 'test.xlsx',
+          status: 'complete',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      })
+
+      const result = await getRepository().findById(id)
+
+      expect(result).toBeTruthy()
+      expect(result.id).toBe(id)
+      expect(result.file.id).toBe(fileId)
+      expect(result.file.name).toBe('test.xlsx')
+      expect(result.file.status).toBe('complete')
     })
 
     it('does not return logs with different IDs', async () => {
@@ -116,37 +143,6 @@ const testFindByIdNotFound = (getRepository) => {
 
       expect(result.id).toBe(idA)
       expect(result.organisationId).toBe('org-1')
-    })
-  })
-}
-
-const testFindByIdRetrieval = (getRepository) => {
-  describe('findById - retrieval', () => {
-    it('can retrieve a log by ID after insert', async () => {
-      const id = `contract-summary-${randomUUID()}`
-      const fileId = `contract-file-${randomUUID()}`
-
-      await getRepository().insert({
-        id,
-        status: 'validating',
-        file: {
-          id: fileId,
-          name: 'test.xlsx',
-          status: 'complete',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
-      })
-
-      const result = await getRepository().findById(id)
-
-      expect(result).toBeTruthy()
-      expect(result.id).toBe(id)
-      expect(result.file.id).toBe(fileId)
-      expect(result.file.name).toBe('test.xlsx')
-      expect(result.file.status).toBe('complete')
     })
   })
 }
@@ -329,8 +325,7 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     })
 
     testInsertBehaviour(() => repository)
-    testFindByIdNotFound(() => repository)
-    testFindByIdRetrieval(() => repository)
+    testFindById(() => repository)
     testInsertValidationRequiredFields(() => repository)
     testInsertValidationFieldHandling(() => repository)
     testInsertValidationStatusBasedS3(() => repository)
