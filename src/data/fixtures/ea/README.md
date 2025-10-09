@@ -17,17 +17,22 @@ They are meant to be used for developing and testing parsing of data submitted t
 - [Exporter accreditation](https://forms-runner.test.cdp-int.defra.cloud/form/preview/draft/demo-for-pepr-extended-producer-responsibilities-apply-for-accreditation-as-a-packaging-waste-exporter-ea/form-guidance)
 - [Reprocessor accreditation](https://forms-runner.test.cdp-int.defra.cloud/form/preview/draft/demo-for-pepr-extended-producer-responsibilities-apply-for-accreditation-as-a-packaging-waste-reprocessor-ea/form-guidance)
 
-## Syncing with production forms
+## Syncing test env with production form definitions
 
-Based on manually browsing through all questions across 20 forms in PROD, haven't noticed any difference between regional versions of the forms.
+Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users can submit data through these forms. Test data fixtures in this directory are actual submissions from these forms.
 
-Only there were differences between TEST and PROD EA forms.
+**Key findings:**
 
-TEST env forms were synced with production on `2025-10-08`.
+- No differences found between regional versions (EA/NRW/SEPA/NIEA) in production
+- Differences existed between TEST and PROD EA forms (fixed on 2025-10-08)
 
-### Sync process
+**Last synced:** TEST env form definitions were synced with production on `2025-10-08`
 
-1. Download JSON files from production defra forms designer for EA forms
+### How to sync form definitions from production to test
+
+**Note:** Form definitions are JSON files that define form structure/questions, NOT the test fixture data (user submissions).
+
+1. Download form definition JSON files from [production DEFRA Forms Designer](https://forms-designer.prod.cdp-int.defra.cloud/library?sort=updatedDesc&title=PEPR&author=all) for EA forms
 2. Create directory: `mkdir -p prod_forms_download`
 3. Place downloaded JSON files in `prod_forms_download/`
 4. Run the script: `./update-defra-prod-forms.sh prod_forms_download`
@@ -36,17 +41,17 @@ TEST env forms were synced with production on `2025-10-08`.
 > [!WARNING]
 > Never upload production JSON files directly to test without URL replacement. They will submit data to the production epr-backend API.
 
-### Test data files
+### Test data fixtures
 
 ### Organisation
 
-| Test data                                                       | description                                                                              |
-| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
-| [503176](./organisation/registered-ltd-liability.json)          | UK registered ltd liability company                                                      |
-| [503177](./organisation/registered-ltd-partnership.json)        | UK registered ltd partnership company                                                    |
-| [503179](./organisation/registered-no-partnership.json)         | UK registered non partnership company                                                    |
-| [503180](./organisation/non-registered-uk-sole-trader.json)     | UK non registered sole trader company with person applying not in control of the company |
-| [503180](./organisation/non-registered-outside-uk-address.json) | UK non registered, non UK main address organisation                                      |
+| Test data                                                       | description                                                              |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| [503176](./organisation/registered-ltd-liability.json)          | UK registered ltd liability company                                      |
+| [503177](./organisation/registered-ltd-partnership.json)        | UK registered ltd partnership company                                    |
+| [503179](./organisation/registered-no-partnership.json)         | UK registered non partnership company                                    |
+| [503180](./organisation/non-registered-uk-sole-trader.json)     | UK non-registered sole trader, person applying not in control of company |
+| [503181](./organisation/non-registered-outside-uk-address.json) | UK non-registered organisation with non-UK main address                  |
 
 ### Registration
 
