@@ -4,6 +4,10 @@ There is a set of forms provided to users as part of a contingency solution to a
 
 This describes logical data model for storing data collected through forms for `organisation`, `registration`, `accreditation`
 
+### Glossary
+
+[DEFRA Glossary](https://docs.google.com/spreadsheets/d/1FOO7RV0L889tHqFnt2IEAg2kmXe-0B0s/edit?gid=1417342689#gid=1417342689).
+
 ### Test env form urls
 
 - [Organisation details](https://forms-runner.test.cdp-int.defra.cloud/form/preview/draft/demo-for-pepr-extended-producer-responsibilities-provide-your-organisation-details-ea/form-guidance)
@@ -32,14 +36,14 @@ erDiagram
     REGISTRATION[] registrations
     ACCREDITATION[] accreditations
     ISO8601 formSubmissionTime
-    enum submittedToRegulator "ea,nrw,sepa,niea"
+    enum submittedToRegulator "ea,nrw,sepa,niea - see glossary"
   }
 
 
   REGISTRATION {
     ObjectId id  PK "_id from registration collection"
     ISO8601 formSubmissionTime
-    enum submittedToRegulator "ea,nrw,sepa,niea"
+    enum submittedToRegulator "ea,nrw,sepa,niea - see glossary"
     enum status "created,approved,rejected,suspended,archived"
     string orgName "Name of organisation"
     STATUS-HISTORY[] statusHistory "Status change history"
@@ -72,7 +76,7 @@ erDiagram
 
   ACCREDITATION {
     ObjectId id PK "_id from accreditation collection"
-    enum submittedToRegulator "ea,nrw,sepa,niea"
+    enum submittedToRegulator "ea,nrw,sepa,niea - see glossary"
     string orgName "Name of organisation"
     ISO8601 formSubmissionTime
     SITE site "applicable only for reprocessor"

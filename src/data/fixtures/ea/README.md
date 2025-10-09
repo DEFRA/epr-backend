@@ -23,17 +23,18 @@ Based on manually browsing through all questions across 20 forms in PROD, haven'
 
 Only there were differences between TEST and PROD EA forms.
 
-TEST env forms were synced with production on `2025-10-08` following below process
+TEST env forms were synced with production on `2025-10-08`.
 
-1. Download JSON files from production defra forms designer for EA forms.
-2. Update epr-backend URLs in downloaded JSON files:
+### Sync process
 
-   > [!WARNING]
-   > **SEARCH AND REPLACE `epr-backend.prod.cdp-int.defra.cloud` to `epr-backend.test.cdp-int.defra.cloud` IN THE PRODUCTION JSON FILES**
-   >
-   > If you don't do this, the forms will submit data to the production epr-backend API instead of test.
+1. Download JSON files from production defra forms designer for EA forms
+2. Create directory: `mkdir -p prod_forms_download`
+3. Place downloaded JSON files in `prod_forms_download/`
+4. Run the script: `./update-defra-prod-forms.sh prod_forms_download`
+5. If successful, [upload the updated files to TEST env](https://forms-designer.test.cdp-int.defra.cloud/library?sort=updatedDesc&title=PEPR&author=all)
 
-3. [Upload the **updated** PROD JSON for all EA forms one by one in TEST env](https://forms-designer.test.cdp-int.defra.cloud/library?sort=updatedDesc&title=PEPR&author=all)
+> [!WARNING]
+> Never upload production JSON files directly to test without URL replacement. They will submit data to the production epr-backend API.
 
 ### Test data files
 
