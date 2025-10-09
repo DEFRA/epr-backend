@@ -1,4 +1,8 @@
 import { StatusCodes } from 'http-status-codes'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -59,6 +63,16 @@ describe(`${url} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+
+    expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.any(String),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+        }
+      })
+    )
   })
 
   it('returns 400 if payload is not an object', async () => {
@@ -192,5 +206,35 @@ describe(`${url} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('returns 500 if error is thrown', async () => {
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
+    const error = new Error('logging failed')
+    mockLoggerInfo.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/error-summary-log-123/upload-completed',
+      payload
+    })
+
+    expect(response.statusCode).toBe(statusCode)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toMatch(`An internal server error occurred`)
+    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+      message: `Failure on ${summaryLogsUploadCompletedPath}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      },
+      http: {
+        response: {
+          status_code: statusCode
+        }
+      }
+    })
   })
 })
