@@ -54,7 +54,7 @@ describe(`${url} route`, () => {
   it('returns 200 when valid payload', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
       payload
     })
 
@@ -64,7 +64,7 @@ describe(`${url} route`, () => {
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
       payload: 'not-an-object'
     })
 
@@ -76,7 +76,7 @@ describe(`${url} route`, () => {
   it('returns 422 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
       payload: null
     })
 
@@ -86,7 +86,7 @@ describe(`${url} route`, () => {
   it('returns 422 if payload is missing form.file', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
       payload: {
         uploadStatus: 'ready'
       }
@@ -95,6 +95,28 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
     expect(body.message).toContain('"form" is required')
+  })
+
+  it('returns 409 if summary log already exists', async () => {
+    const summaryLogId = 'existing-summary-log-123'
+
+    const firstResponse = await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(firstResponse.statusCode).toBe(StatusCodes.OK)
+
+    const secondResponse = await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(secondResponse.statusCode).toBe(StatusCodes.CONFLICT)
+    const body = JSON.parse(secondResponse.payload)
+    expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
   })
 
   it('returns 200 when file is rejected without S3 info', async () => {
@@ -116,7 +138,7 @@ describe(`${url} route`, () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/rejected-summary-log-123/upload-completed',
       payload: rejectedPayload
     })
 
@@ -137,7 +159,7 @@ describe(`${url} route`, () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/incomplete-summary-log-123/upload-completed',
       payload: incompletePayload
     })
 
@@ -165,7 +187,7 @@ describe(`${url} route`, () => {
 
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-123/upload-completed',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/pending-summary-log-123/upload-completed',
       payload: pendingPayload
     })
 

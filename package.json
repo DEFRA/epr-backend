@@ -6,6 +6,7 @@
   "type": "module",
   "imports": {
     "#common/*": "./src/common/*",
+    "#domain/*": "./src/domain/*",
     "#repositories/*": "./src/repositories/*",
     "#routes/*": "./src/routes/*",
     "#plugins/*": "./src/plugins/*",

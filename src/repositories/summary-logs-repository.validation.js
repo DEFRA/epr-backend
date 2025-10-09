@@ -1,8 +1,17 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 const summaryLogInsertSchema = Joi.object({
   summaryLogId: Joi.string().optional(),
+  status: Joi.string()
+    .valid(
+      SUMMARY_LOG_STATUS.PREPROCESSING,
+      SUMMARY_LOG_STATUS.VALIDATING,
+      SUMMARY_LOG_STATUS.REJECTED
+    )
+    .required(),
+  failureReason: Joi.string().optional(),
   file: Joi.object({
     id: Joi.string().required(),
     name: Joi.string().required(),

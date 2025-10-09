@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 const TEST_S3_BUCKET = 'test-bucket'
 
 const buildMinimalSummaryLog = (fileOverrides = {}) => ({
+  status: 'validating',
   file: {
     id: 'file-123',
     name: 'test.xlsx',
@@ -19,6 +20,7 @@ const testInsertBehaviour = (getRepository) => {
     it('inserts a summary log and returns result with insertedId', async () => {
       const fileId = `contract-insert-${randomUUID()}`
       const summaryLog = {
+        status: 'validating',
         organisationId: 'org-123',
         registrationId: 'reg-456',
         file: {
@@ -41,6 +43,7 @@ const testInsertBehaviour = (getRepository) => {
       const summaryLogId = `contract-retrievable-${randomUUID()}`
       const summaryLog = {
         summaryLogId,
+        status: 'validating',
         organisationId: 'org-456',
         registrationId: 'reg-789',
         file: {
@@ -79,6 +82,7 @@ const testFindBySummaryLogIdNotFound = (getRepository) => {
 
       await getRepository().insert({
         summaryLogId: summaryLogIdA,
+        status: 'validating',
         organisationId: 'org-1',
         registrationId: 'reg-1',
         file: {
@@ -92,6 +96,7 @@ const testFindBySummaryLogIdNotFound = (getRepository) => {
       })
       await getRepository().insert({
         summaryLogId: summaryLogIdB,
+        status: 'validating',
         organisationId: 'org-2',
         registrationId: 'reg-2',
         file: {
@@ -120,6 +125,7 @@ const testFindBySummaryLogIdRetrieval = (getRepository) => {
 
       await getRepository().insert({
         summaryLogId,
+        status: 'validating',
         file: {
           id: fileId,
           name: 'test.xlsx',
@@ -224,6 +230,7 @@ const testInsertValidationFieldHandling = (getRepository) => {
       })
 
       const rejectedLog = {
+        status: 'rejected',
         file: {
           id: `contract-rejected-${randomUUID()}`,
           name: 'rejected.xlsx',
@@ -247,6 +254,7 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
       const summaryLogId = `contract-rejected-no-s3-${randomUUID()}`
       const rejectedLog = {
         summaryLogId,
+        status: 'rejected',
         file: {
           id: `file-rejected-${randomUUID()}`,
           name: 'virus.xlsx',
@@ -280,6 +288,7 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
       const summaryLogId = `contract-pending-no-s3-${randomUUID()}`
       const pendingLog = {
         summaryLogId,
+        status: 'preprocessing',
         file: {
           id: `file-pending-${randomUUID()}`,
           name: 'scanning.xlsx',
