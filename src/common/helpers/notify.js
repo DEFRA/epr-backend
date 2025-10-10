@@ -2,7 +2,7 @@ import obfuscateEmail from 'obfuscate-mail'
 
 import { NotifyClient } from 'notifications-node-client'
 import { audit } from '@defra/cdp-auditing'
-import { logger } from './logging/logger.js'
+import { logger, formatError } from './logging/logger.js'
 import { getLocalSecret } from './get-local-secret.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -54,7 +54,8 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
       }
     })
   } catch (err) {
-    logger.error(err, {
+    logger.error({
+      ...formatError(err),
       message: 'Could not send email',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

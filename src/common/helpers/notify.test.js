@@ -18,13 +18,17 @@ vi.mock('notifications-node-client', () => ({
   NotifyClient: vi.fn(() => ({ sendEmail: mockSendEmail }))
 }))
 
-vi.mock('./logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
+vi.mock('./logging/logger.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    logger: {
+      info: (...args) => mockLoggerInfo(...args),
+      error: (...args) => mockLoggerError(...args),
+      warn: (...args) => mockLoggerWarn(...args)
+    }
   }
-}))
+})
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -107,7 +111,12 @@ describe('sendEmail', () => {
     await expect(
       sendEmail(templateId, emailAddress, personalisation)
     ).rejects.toThrow('fail')
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(mockLoggerError).toHaveBeenCalledWith({
+      error: {
+        message: error.message,
+        stack_trace: error.stack,
+        type: error.name
+      },
       message: expect.any(String),
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,
