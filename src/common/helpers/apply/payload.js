@@ -12,7 +12,7 @@ import {
 } from './extract-answers.js'
 import { logger as globalLogger } from '../logging/logger.js'
 
-export function registrationAndAccreditationPayload(data, options) {
+export function registrationAndAccreditationPayload(data, _options) {
   if (!data || typeof data !== 'object') {
     throw Boom.badRequest('Invalid payload')
   }
