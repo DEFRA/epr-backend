@@ -18,7 +18,6 @@ export const createInMemorySummaryLogsRepository = () => {
       }
 
       storage.set(validated.id, { ...validated })
-      return { insertedId: validated.id }
     },
 
     async findById(id) {

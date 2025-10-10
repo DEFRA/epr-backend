@@ -12,10 +12,7 @@ export const createSummaryLogsRepository = (db) => ({
     const { id, ...rest } = validated
 
     try {
-      const result = await db
-        .collection(COLLECTION_NAME)
-        .insertOne({ _id: id, ...rest })
-      return { insertedId: result.insertedId }
+      await db.collection(COLLECTION_NAME).insertOne({ _id: id, ...rest })
     } catch (error) {
       if (error.code === 11000) {
         throw Boom.conflict(`Summary log with id ${id} already exists`)

@@ -18,7 +18,7 @@ const buildMinimalSummaryLog = (id, fileOverrides = {}) => ({
 
 const testInsertBehaviour = (getRepository) => {
   describe('insert', () => {
-    it('inserts a summary log and returns result with insertedId', async () => {
+    it('inserts a summary log without error', async () => {
       const id = `contract-insert-${randomUUID()}`
       const fileId = `file-${randomUUID()}`
       const summaryLog = {
@@ -36,10 +36,7 @@ const testInsertBehaviour = (getRepository) => {
         }
       }
 
-      const result = await getRepository().insert(summaryLog)
-
-      expect(result).toHaveProperty('insertedId')
-      expect(result.insertedId).toBeTruthy()
+      await getRepository().insert(summaryLog)
     })
 
     it('stores the summary log so it can be retrieved', async () => {
@@ -245,8 +242,7 @@ const testInsertValidationFieldHandling = (getRepository) => {
       const fileId = `file-${randomUUID()}`
       const minimalLog = buildMinimalSummaryLog(id, { id: fileId })
 
-      const result = await getRepository().insert(minimalLog)
-      expect(result.insertedId).toBeTruthy()
+      await getRepository().insert(minimalLog)
     })
 
     it('accepts valid file.status values', async () => {
@@ -268,12 +264,8 @@ const testInsertValidationFieldHandling = (getRepository) => {
         }
       }
 
-      await expect(getRepository().insert(completeLog)).resolves.toHaveProperty(
-        'insertedId'
-      )
-      await expect(getRepository().insert(rejectedLog)).resolves.toHaveProperty(
-        'insertedId'
-      )
+      await getRepository().insert(completeLog)
+      await getRepository().insert(rejectedLog)
     })
   })
 }
@@ -292,8 +284,7 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
         }
       }
 
-      const result = await getRepository().insert(rejectedLog)
-      expect(result.insertedId).toBeTruthy()
+      await getRepository().insert(rejectedLog)
 
       const found = await getRepository().findById(id)
       expect(found.file.status).toBe('rejected')
@@ -329,8 +320,7 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
         }
       }
 
-      const result = await getRepository().insert(pendingLog)
-      expect(result.insertedId).toBeTruthy()
+      await getRepository().insert(pendingLog)
 
       const found = await getRepository().findById(id)
       expect(found.file.status).toBe('pending')
