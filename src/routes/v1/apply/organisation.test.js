@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
@@ -56,7 +57,7 @@ describe(`${url} route`, () => {
     const orgId = 500002
     const orgName = 'ACME ltd'
 
-    expect(response.statusCode).toEqual(200)
+    expect(response.statusCode).toEqual(StatusCodes.OK)
 
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
@@ -105,7 +106,7 @@ describe(`${url} route`, () => {
       payload: 'not-an-object'
     })
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
@@ -117,7 +118,7 @@ describe(`${url} route`, () => {
       payload: null
     })
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
   })
@@ -155,7 +156,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract email from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
@@ -192,7 +193,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract organisation name from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
@@ -215,12 +216,12 @@ describe(`${url} route`, () => {
     const message = 'Could not get regulator name from data'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
   it('returns 500 if error is thrown by insertOne', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
       throw error
@@ -255,7 +256,7 @@ describe(`${url} route`, () => {
   })
 
   it('returns 500 if error is thrown by sendEmail', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('Notify API failed')
     sendEmail.mockRejectedValueOnce(error)
 

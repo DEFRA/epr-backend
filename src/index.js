@@ -1,4 +1,5 @@
 import process from 'node:process'
+import { StatusCodes } from 'http-status-codes'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -18,7 +19,8 @@ process.on('unhandledRejection', (error) => {
     },
     http: {
       response: {
-        status_code: error?.output?.status_code ?? 500
+        status_code:
+          error?.output?.status_code ?? StatusCodes.INTERNAL_SERVER_ERROR
       }
     }
   })

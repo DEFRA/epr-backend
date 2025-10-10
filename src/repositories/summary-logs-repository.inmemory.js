@@ -1,4 +1,8 @@
-import { randomUUID } from 'node:crypto'
+import Boom from '@hapi/boom'
+import {
+  validateId,
+  validateSummaryLogInsert
+} from './summary-logs-repository.validation.js'
 
 /**
  * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
@@ -8,16 +12,20 @@ export const createInMemorySummaryLogsRepository = () => {
 
   return {
     async insert(summaryLog) {
-      const id = randomUUID()
-      storage.set(id, { ...summaryLog })
-      return { insertedId: id }
+      const validated = validateSummaryLogInsert(summaryLog)
+
+      if (storage.has(validated.id)) {
+        throw Boom.conflict(
+          `Summary log with id ${validated.id} already exists`
+        )
+      }
+
+      storage.set(validated.id, { ...validated })
     },
 
-    async findByFileId(fileId) {
-      return (
-        Array.from(storage.values()).find((log) => log.fileId === fileId) ??
-        null
-      )
+    async findById(id) {
+      const validatedId = validateId(id)
+      return storage.get(validatedId) ?? null
     }
   }
 }

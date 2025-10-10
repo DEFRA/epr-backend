@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { createSummaryLogsRepository } from './summary-logs-repository.mongodb.js'
 import { testSummaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
 
@@ -18,4 +19,32 @@ describe('MongoDB summary logs repository', () => {
   })
 
   testSummaryLogsRepositoryContract(() => repository)
+
+  describe('MongoDB-specific error handling', () => {
+    it('re-throws non-duplicate key errors from MongoDB', async () => {
+      const mockDb = {
+        collection: () => ({
+          insertOne: async () => {
+            const error = new Error('Connection timeout')
+            error.code = 'ETIMEOUT'
+            throw error
+          }
+        })
+      }
+
+      const testRepo = createSummaryLogsRepository(mockDb)
+
+      await expect(
+        testRepo.insert({
+          id: `test-${randomUUID()}`,
+          status: 'validating',
+          file: {
+            id: `file-${randomUUID()}`,
+            name: 'test.xlsx',
+            s3: { bucket: 'bucket', key: 'key' }
+          }
+        })
+      ).rejects.toThrow('Connection timeout')
+    })
+  })
 })

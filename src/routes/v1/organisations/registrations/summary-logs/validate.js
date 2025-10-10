@@ -1,9 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { formatError } from '#common/helpers/logging/format-error.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -65,12 +68,18 @@ export const summaryLogsValidate = {
 
     try {
       await summaryLogsRepository.insert({
-        fileId,
+        id: randomUUID(),
+        status: SUMMARY_LOG_STATUS.VALIDATING,
         organisationId,
         registrationId,
-        filename,
-        s3Bucket,
-        s3Key
+        file: {
+          id: fileId,
+          name: filename,
+          s3: {
+            bucket: s3Bucket,
+            key: s3Key
+          }
+        }
       })
 
       logger.info({
@@ -85,7 +94,7 @@ export const summaryLogsValidate = {
         .response({
           status: 'validating'
         })
-        .code(202)
+        .code(StatusCodes.ACCEPTED)
     } catch (err) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
@@ -98,7 +107,7 @@ export const summaryLogsValidate = {
         },
         http: {
           response: {
-            status_code: 500
+            status_code: StatusCodes.INTERNAL_SERVER_ERROR
           }
         }
       })
