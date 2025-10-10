@@ -10,6 +10,7 @@ import { startServer } from './start-server.js'
 
 await startServer()
 
+/* c8 ignore start - Global error handler, difficult to test meaningfully */
 process.on('unhandledRejection', (error) => {
   logger.error({
     ...formatError(error),
@@ -27,3 +28,4 @@ process.on('unhandledRejection', (error) => {
   })
   process.exitCode = 1
 })
+/* c8 ignore stop */
