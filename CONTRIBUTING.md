@@ -417,30 +417,9 @@ logger.info({
 
 #### Handling errors
 
-A little extra care needs to be taken with error objects. We provide a `formatError` helper that converts a JavaScript error object to an ECS-compatible structured logging error object.
+Use the `formatError` helper to convert Error objects to ECS-compatible structured logs:
 
 ```javascript
-// In a route handler (use request.logger)
-import { formatError } from '#common/helpers/logging/logger.js'
-
-handler: async ({ logger }, h) => {
-  try {
-    // ...
-  } catch (err) {
-    logger.error({
-      ...formatError(err),
-      message: 'Could not send email',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.HTTP,
-        action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
-      }
-    })
-    throw err
-  }
-}
-
-// In non-request context (use global logger)
-import { logger } from './common/helpers/logging/logger.js'
 import { formatError } from '#common/helpers/logging/logger.js'
 
 try {
@@ -448,31 +427,14 @@ try {
 } catch (err) {
   logger.error({
     ...formatError(err),
-    message: 'Database connection failed',
+    message: 'Could not send email',
     event: {
-      category: LOGGING_EVENT_CATEGORIES.DB,
-      action: LOGGING_EVENT_ACTIONS.CONNECTION_FAILED
+      category: LOGGING_EVENT_CATEGORIES.HTTP,
+      action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
     }
   })
+  throw err
 }
-```
-
-**There may be cases when you want to log an error but aren't catching an error that's been thrown.**
-
-In this instance simply create an error object and pass it to `logger.error`:
-
-```javascript
-// ...
-
-const err = new Error('Could not map data')
-
-logger.error(err, {
-  message: `Failed to map data for ...`,
-  event: {
-    category: LOGGING_EVENT_CATEGORIES.FUNCTION,
-    action: LOGGING_EVENT_ACTIONS.MAPPING_FAILED
-  }
-})
 ```
 
 #### Logging Events
