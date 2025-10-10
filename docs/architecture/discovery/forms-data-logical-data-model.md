@@ -32,13 +32,16 @@ erDiagram
     REGISTRATION[] registrations
     ACCREDITATION[] accreditations
     ISO8601 formSubmissionTime
+    enum submittedToRegulator "ea,nrw,sepa,niea"
   }
 
 
   REGISTRATION {
     ObjectId id  PK "_id from registration collection"
     ISO8601 formSubmissionTime
+    enum submittedToRegulator "ea,nrw,sepa,niea"
     enum status "created,approved,rejected,suspended,archived"
+    string orgName "Name of organisation"
     STATUS-HISTORY[] statusHistory "Status change history"
     SITE site "applicable only for reprocessor"
     enum material "aluminium,fibre,glass,paper,plastic,steel,wood"
@@ -69,6 +72,8 @@ erDiagram
 
   ACCREDITATION {
     ObjectId id PK "_id from accreditation collection"
+    enum submittedToRegulator "ea,nrw,sepa,niea"
+    string orgName "Name of organisation"
     ISO8601 formSubmissionTime
     SITE site "applicable only for reprocessor"
     enum material "aluminium,fibre,glass,paper,plastic,steel,wood"
@@ -110,8 +115,16 @@ erDiagram
     enum type "wml,ppc,waste_exemption"
     string permitNumber
     WASTE_EXEMPTION[] exemptions "Waste exemptions obtained for the site"
-    string authorisedWeight "in tonnes"
+    enum[] permittedMaterials "aluminium,fibre,glass,paper,plastic,steel,wood"
     enum permitWindow "weekly, monthly, yearly"
+  }
+
+  SITE-CAPACITY{
+   enum material "aluminium,fibre,glass,paper,plastic,steel,wood"
+   string authorisedWeight "in tonnes"
+   enum authorisedTimeScale "weekly, monthly, yearly"
+   string siteCapacityWeight "in tonnes"
+   enum siteCapacityTimescale "weekly, monthly, yearly"
   }
 
   WASTE_EXEMPTION {
@@ -138,6 +151,7 @@ erDiagram
 
   SITE {
     ADDRESS address
+    SITE-CAPACITY[] siteCapacity "How much particular material site is authorised to process, how much it can process"
   }
 
   ADDRESS {
@@ -194,6 +208,7 @@ erDiagram
   COMPANY-DETAILS ||--o| ADDRESS: contains
   PARTNERSHIP ||--o{ PARTNER: contains
   SITE ||--|| ADDRESS: contains
+  SITE ||--o{ SITE-CAPACITY: contains
   WASTE-MANAGEMENT-PERMIT ||--o{ WASTE_EXEMPTION: contains
   PRN-ISSUANCE ||--o{ USER: contains
   PERN-ISSUANCE ||--o{ USER: contains
@@ -212,6 +227,7 @@ erDiagram
   "wasteProcessingTypes": ["reprocessor", "exporter"],
   "reprocessingNations": ["england", "wales"],
   "businessType": "partnership",
+  "submittedToRegulator": "ea",
   "statusHistory": [
     {
       "status": "created",
@@ -225,6 +241,8 @@ erDiagram
     {
       "id": "6507f1f77bcf86cd79943902",
       "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",
@@ -240,7 +258,16 @@ erDiagram
           "line1": "7 Glass processing site",
           "town": "London",
           "postcode": "SW2A 0AA"
-        }
+        },
+        "siteCapacity": [
+          {
+            "material": "glass",
+            "authorisedWeight": "10",
+            "authorisedTimeScale": "yearly",
+            "siteCapacityWeight": "15",
+            "siteCapacityTimescale": "yearly"
+          }
+        ]
       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
@@ -251,7 +278,7 @@ erDiagram
         {
           "type": "wml",
           "permitNumber": "WML123456",
-          "authorisedWeight": "10",
+          "permittedMaterials": ["glass"],
           "permitWindow": "yearly"
         }
       ],
@@ -272,6 +299,8 @@ erDiagram
     {
       "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
       "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",
@@ -289,7 +318,7 @@ erDiagram
         {
           "type": "wml",
           "permitNumber": "WML123456",
-          "authorisedWeight": "10",
+          "permittedMaterials": ["plastic"],
           "permitWindow": "yearly"
         }
       ],
@@ -313,6 +342,8 @@ erDiagram
       "id": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
       "formSubmissionTime": "2025-08-20T21:34:44.944Z",
       "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",
@@ -357,6 +388,8 @@ erDiagram
     {
       "id": "26673c70-5f03-4865-a796-585ef4ddca30",
       "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",
@@ -401,6 +434,8 @@ erDiagram
     {
       "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
       "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",

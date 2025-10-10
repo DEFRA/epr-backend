@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Check branch name
         uses: actions/github-script@v8
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -31,7 +31,7 @@ jobs:
             }
       - name: Add ticket link to PR description
         uses: actions/github-script@v8
-        if: ${{ github.actor != 'dependabot[bot]' }}
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -58,6 +58,17 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+
+      - name: Check for ADR numbering conflicts
+        run: |
+          cd docs/architecture/decisions
+          duplicates=$(ls -1 *.md | grep -E '^[0-9]{4}-' | sed 's/^\([0-9]\{4\}\)-.*/\1/' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "Error: Duplicate ADR numbers found:"
+            echo "$duplicates"
+            exit 1
+          fi
+          echo "No ADR numbering conflicts found"
 
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-node@v5

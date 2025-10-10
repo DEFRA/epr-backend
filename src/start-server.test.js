@@ -84,7 +84,7 @@ describe('#startServer', () => {
   let server
 
   beforeAll(async () => {
-    createServerImport = await import('./server.js')
+    createServerImport = await import('#server/server.js')
     startServerImport = await import('./start-server.js')
 
     createServerSpy = vi.spyOn(createServerImport, 'createServer')

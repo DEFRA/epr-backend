@@ -1,9 +1,14 @@
+import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
-import { logger } from '../../../../../common/helpers/logging/logger.js'
+import { StatusCodes } from 'http-status-codes'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../../../common/enums/index.js'
+} from '#common/enums/index.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
+
+/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 export const summaryLogsValidatePath =
   '/v1/organisation/{organisationId}/registration/{registrationId}/summary-logs/validate'
@@ -49,11 +54,34 @@ export const summaryLogsValidate = {
       }
     }
   },
-  handler: async ({ payload }, h) => {
+  /**
+   * @param {Object} request
+   * @param {SummaryLogsRepository} request.summaryLogsRepository
+   * @param {Object} request.payload
+   * @param {Object} request.params
+   * @param {Object} h - Hapi response toolkit
+   */
+  handler: async ({ summaryLogsRepository, payload, params }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
+    const { organisationId, registrationId } = params
     const s3Path = `${s3Bucket}/${s3Key}`
 
     try {
+      await summaryLogsRepository.insert({
+        id: randomUUID(),
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        organisationId,
+        registrationId,
+        file: {
+          id: fileId,
+          name: filename,
+          s3: {
+            bucket: s3Bucket,
+            key: s3Key
+          }
+        }
+      })
+
       logger.info({
         message: `Initiating file validation for ${s3Path} with fileId: ${fileId} and filename: ${filename}`,
         event: {
@@ -66,7 +94,7 @@ export const summaryLogsValidate = {
         .response({
           status: 'validating'
         })
-        .code(202)
+        .code(StatusCodes.ACCEPTED)
     } catch (err) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
@@ -78,7 +106,7 @@ export const summaryLogsValidate = {
         },
         http: {
           response: {
-            status_code: 500
+            status_code: StatusCodes.INTERNAL_SERVER_ERROR
           }
         }
       })

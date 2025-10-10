@@ -1,0 +1,1041 @@
+{
+  "_id": {
+    "$oid": "68e6a97723d5d5454a9a193b"
+  },
+  "schemaVersion": 1,
+  "answers": [
+    {
+      "shortDescription": "Have an Org ID?",
+      "title": "Do you have an Organisation ID number?",
+      "type": "YesNoField",
+      "value": "true"
+    },
+    {
+      "shortDescription": "Org name",
+      "title": "What is the name of your organisation?",
+      "type": "TextField",
+      "value": "Green Recycling Solutions Ltd"
+    },
+    {
+      "shortDescription": "Organisation ID",
+      "title": "What is your Organisation ID (Org ID) number?",
+      "type": "TextField",
+      "value": "503177"
+    },
+    {
+      "shortDescription": "System Reference",
+      "title": "What is your System Reference number?",
+      "type": "TextField",
+      "value": "68e68dd778f83083f0f17a77"
+    },
+    {
+      "shortDescription": "Packaging waste category to accredit",
+      "title": "Which packaging waste category do you want to accredit for 2026?",
+      "type": "RadiosField",
+      "value": "Glass (R5)"
+    },
+    {
+      "shortDescription": "Glass process",
+      "title": "What process is intended for recycling the glass?",
+      "type": "RadiosField",
+      "value": "Both"
+    },
+    {
+      "shortDescription": "Tonnage band",
+      "title": "How many tonnes of this material will you be issuing packaging waste export recycling notes (PERNs) for?",
+      "type": "RadiosField",
+      "value": "Up to 10,000 tonnes"
+    },
+    {
+      "shortDescription": "New and maintaining infrastructure",
+      "title": "New reprocessing infrastructure and maintaining existing infrastructure",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for new and maintaining infrastructure",
+      "title": "More detail for spend on new reprocessing infrastructure",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "Price support",
+      "title": "Price support for buying packaging waste or selling recycled packaging waste",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for price support",
+      "title": "More detail for spend on price support",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "Support for business collections",
+      "title": "Support for business collections",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for support for business collections",
+      "title": "More detail for spend on support for business collections",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "Communications",
+      "title": "Communications, including information campaigns",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for communications",
+      "title": "More detail for spend on communications",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "Developing new markets",
+      "title": "Developing new markets for products made from recycled packaging waste",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for developing new markets",
+      "title": "More detail for spend on developing new markets",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "New uses for recycled packaging waste",
+      "title": "Developing new uses for recycled packaging waste",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for new uses for recycled packaging waste",
+      "title": "More detail for spend on developing new uses for recycled packaging waste",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "Activities or investment not already covered",
+      "title": "Activities or investment not covered by the other categories",
+      "type": "NumberField",
+      "value": "0"
+    },
+    {
+      "shortDescription": "More detail for activities or investment not already covered",
+      "title": "More detail for spend on activities not covered by the other categories",
+      "type": "MultilineTextField",
+      "value": "More detail for spend on new reprocessing infrastructure"
+    },
+    {
+      "shortDescription": "Submitter name",
+      "title": "What is your full name?",
+      "type": "TextField",
+      "value": "Emma Roberts"
+    },
+    {
+      "shortDescription": "Submitter email address",
+      "title": "What is your email address?",
+      "type": "EmailAddressField",
+      "value": "e.roberts@britishbeverage.co.uk"
+    },
+    {
+      "shortDescription": "Submitter telephone number",
+      "title": "What is your telephone number?",
+      "type": "TelephoneNumberField",
+      "value": "1234567890"
+    },
+    {
+      "shortDescription": "Submitter job title",
+      "title": "What is your job title?",
+      "type": "TextField",
+      "value": "Director"
+    }
+  ],
+  "rawSubmissionData": {
+    "meta": {
+      "schemaVersion": "1",
+      "timestamp": "2025-10-08T18:12:07.326Z",
+      "referenceNumber": "061-F7A-C43",
+      "definition": {
+        "name": "Demo for pEPR - Extended Producer Responsibilities: apply for accreditation as a packaging waste exporter (EA)",
+        "engine": "V2",
+        "schema": 2,
+        "startPage": "/summary",
+        "pages": [
+          {
+            "title": "Form guidance",
+            "path": "/form-guidance",
+            "components": [
+              {
+                "id": "c5ab3bf5-cd1e-4464-857c-1426b4d453a6",
+                "type": "Markdown",
+                "content": "Use this form to apply for accreditation with the Environment Agency (EA) as an exporter of packaging waste. You must be an approved person for your organisation to submit an application for accreditation.\r\n\r\nBefore applying for accreditation you must either:\r\n* be registered as an exporter of this packaging waste category\r\n* have applied for registration for this category\r\n\r\n**You must complete and submit a separate form for each packaging waste category you intend to apply for accreditation for.**\r\n\r\nThe form may take around 30 minutes to complete. [Read what information you should have ready before you start.](https://www.gov.uk/guidance/packaging-waste-2026-registration-and-accreditation-process-for-reprocessors-and-exporters#before-you-start:~:text=by%201%20September.-,Apply%20for%20registration%20as%20an%20exporter,-Complete%20one%20form)\r\n\r\nFor information on how Defra and the environmental regulators (EA, NRW, DAERA, SEPA) process your personal data, please visit the [privacy notice on GOV.UK](https://www.gov.uk/guidance/extended-producer-responsibility-for-packaging-privacy-policy).",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "08299279-2204-4d7f-8b03-ca79a9a98212"
+          },
+          {
+            "title": "Do you have an Organisation ID number?",
+            "path": "/do-you-have-an-organisation-id-number",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Do you have an Organisation ID number?",
+                "name": "NPFtSF",
+                "shortDescription": "Have an Org ID?",
+                "hint": "You should have received the Organisation ID number (Org ID) by email when submitting your organisation details",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "6c52c374-9b0b-47b6-a47e-831751ac2700"
+              }
+            ],
+            "next": [],
+            "id": "76ad3f06-0067-440a-a52f-4bce5717a331"
+          },
+          {
+            "title": "Apply for an Organisation ID",
+            "path": "/apply-for-an-organisation-id",
+            "components": [
+              {
+                "id": "6f808a31-fb2f-4e2d-b30b-c82640188a5a",
+                "type": "Markdown",
+                "content": "To be able to apply for accreditation as an exporter of packaging waste you must first apply for an Organisation ID (Org ID). \r\n\r\nYou can [apply for an Org ID with the Environment Agency](https://www.gov.uk/guidance/packaging-waste-2026-registration-and-accreditation-process-for-reprocessors-and-exporters#submit-your-organisation-details).\r\n\r\nYou must also first [apply to register the packaging waste category](https://www.gov.uk/guidance/packaging-waste-2026-registration-and-accreditation-process-for-reprocessors-and-exporters#apply-for-registration-as-an-exporter) before applying for accreditation.",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "f72883d9-baa0-4e83-bc98-c50ece855011",
+            "controller": "TerminalPageController",
+            "condition": "1955dca5-f2df-4ed3-82e0-c0c6b6112e53"
+          },
+          {
+            "title": "Organisation details",
+            "path": "/organisation-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the name of your organisation?",
+                "name": "wuyzpq",
+                "shortDescription": "Org name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "a1fd723f-8ac4-434a-8e60-9666c031619f"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your Organisation ID (Org ID) number?",
+                "name": "Ooierc",
+                "shortDescription": "Organisation ID",
+                "hint": "Your Org ID number is a 6 digit number, for example 123456",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 6,
+                  "max": 6,
+                  "regex": "\\d{6}"
+                },
+                "id": "adfc1077-4877-4447-a756-0e1fb375bfb3"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your System Reference number?",
+                "name": "MyWHms",
+                "shortDescription": "System Reference",
+                "hint": "The system reference number was provided within the same email as the Org ID",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "min": 24,
+                  "max": 24,
+                  "regex": "^[0-9a-fA-F]{24}$"
+                },
+                "id": "1650a709-7951-4857-87ce-a8d52fe35f1a"
+              }
+            ],
+            "next": [],
+            "id": "2eb369ab-8573-461a-90cb-e8f97921a755"
+          },
+          {
+            "title": "Packaging waste category",
+            "path": "/packaging-waste-category",
+            "components": [
+              {
+                "id": "d626cdf4-f41b-4a4c-b8c1-b4f9f027aab1",
+                "type": "Markdown",
+                "content": "To apply for accreditation you must either: \r\n\r\n* be registered as an exporter of this packaging waste category \r\n* have applied for registration for this category \r\n\r\nApply for one category at a time. You can apply for another category after you've submitted this application.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "RadiosField",
+                "title": "Which packaging waste category do you want to accredit for 2026?",
+                "name": "qkCaCh",
+                "shortDescription": "Packaging waste category to accredit",
+                "hint": "",
+                "list": "ac77b007-7d2a-461b-a7af-96af5e4cb5b2",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "a56d42a2-6e0b-4d3b-93f0-b739bb6bbc7a"
+              }
+            ],
+            "next": [],
+            "id": "7fb624ec-a73a-45c7-ac24-0c115cde5fc9"
+          },
+          {
+            "title": "What process is intended for recycling the glass?",
+            "path": "/what-process-is-intended-for-recycling-the-glass",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What process is intended for recycling the glass?",
+                "name": "WNTLmM",
+                "shortDescription": "Glass process",
+                "hint": "",
+                "list": "5b4baf6d-25ed-431c-8024-9428a8d191ce",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "ac40a60d-87fa-416d-9796-87251527eb0c"
+              }
+            ],
+            "next": [],
+            "id": "2e1563d3-54ff-4400-b7bf-71d341ac1f2f",
+            "condition": "a1539d54-fa00-453f-8836-e257be54f96e"
+          },
+          {
+            "title": "How many tonnes of this material will you be issuing packaging waste export recycling notes (PERNs) for?",
+            "path": "/how-many-tonnes-of-this-material-will-you-be-issuing-packaging-waste-export-recycling-notes-perns-for",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "How many tonnes of this material will you be issuing packaging waste export recycling notes (PERNs) for?",
+                "name": "XKWebf",
+                "shortDescription": "Tonnage band",
+                "hint": "",
+                "list": "9e1c7abd-7d44-49af-9909-0a248553d512",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "1c62ad30-2578-4093-b85f-28aa40d12181"
+              }
+            ],
+            "next": [],
+            "id": "e1e8bddd-f470-4008-9560-94f60de7b079"
+          },
+          {
+            "title": "Authority to issue PERNs for this packaging waste category",
+            "path": "/authority-to-issue-perns-for-this-packaging-waste-category",
+            "components": [
+              {
+                "id": "085dd273-88f7-41c1-ba5b-f051c92a5023",
+                "type": "Markdown",
+                "content": "Choose who you want to have authority to issue PERNs for this exported material. This person is known as a PERN signatory. \r\n\r\nYou can have more than one PERN signatory for one material and site. Add the details of one signatory on this page, then choose 'Add another signatory' on the next page to add another.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "What is the full name of the PERN signatory?",
+                "name": "jiMeVj",
+                "shortDescription": "PERN signatory name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8e7f014d-ca17-4f68-93ed-9bf3d553a271"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is their email address?",
+                "name": "eWxRYL",
+                "shortDescription": "PERN signatory email address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "2648d0ef-af06-4aee-aace-05c41661a362"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is their telephone number?",
+                "name": "NRkpFI",
+                "shortDescription": "PERN signatory phone number",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "bbad7b7e-cae4-4639-bf99-3efc33736612"
+              },
+              {
+                "type": "TextField",
+                "title": "What is their job title?",
+                "name": "LUGryB",
+                "shortDescription": "PERN signatory job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "98fc73ae-422d-477c-8b15-58b384766d13"
+              }
+            ],
+            "next": [],
+            "id": "5fc3d043-4848-4455-9c93-3eed3e389421",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "QkZUNV",
+                "title": "Signatory"
+              },
+              "schema": {
+                "min": 1,
+                "max": 10
+              }
+            }
+          },
+          {
+            "title": "Business plan",
+            "path": "/business-plan",
+            "components": [
+              {
+                "id": "5081f6ca-b485-45a9-92a3-3c75a56891ce",
+                "type": "Markdown",
+                "content": "For the packaging waste category you are applying for, enter the percentage of PERN income that you’ll spend on each category. Your total PERN income must equal 100%.\r\n\r\nYou must enter a whole percentage for each category, for example 20% not 20.5%.\r\n\r\nIf a category is not applicable, enter 0% and 'not applicable' in the more details box. \r\n\r\nThe regulator will expect you to follow this plan. If you later need to change how you spend the income you must explain this in your annual report.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "NumberField",
+                "title": "New reprocessing infrastructure and maintaining existing infrastructure",
+                "name": "yzvIcu",
+                "shortDescription": "New and maintaining infrastructure",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "ec3f5ecc-bbf4-4445-a36c-31b70eca45bd"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on new reprocessing infrastructure",
+                "name": "EJZCFh",
+                "shortDescription": "More detail for new and maintaining infrastructure",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "d542acba-85d3-45db-b81e-159519156893"
+              },
+              {
+                "type": "NumberField",
+                "title": "Price support for buying packaging waste or selling recycled packaging waste",
+                "name": "vjegvC",
+                "shortDescription": "Price support",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "0d0fe743-5310-42be-bb22-6a26f8dd8dad"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on price support",
+                "name": "kFuujS",
+                "shortDescription": "More detail for price support",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "fb660410-e4d6-4560-900a-43ee34f22c0c"
+              },
+              {
+                "type": "NumberField",
+                "title": "Support for business collections",
+                "name": "gGuncQ",
+                "shortDescription": "Support for business collections",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "ea7b25eb-f115-4f51-a4c5-163b4e8bfcb0"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on support for business collections",
+                "name": "FLctZj",
+                "shortDescription": "More detail for support for business collections",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "8988247a-d4cc-4026-b2bf-144bbcdc2ebd"
+              },
+              {
+                "type": "NumberField",
+                "title": "Communications, including information campaigns",
+                "name": "jqvpTT",
+                "shortDescription": "Communications",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "bbe34bc9-ad1b-4ca3-ab4d-c69185ff0e02"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on communications",
+                "name": "rLHNGq",
+                "shortDescription": "More detail for communications",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "3fa8c15c-3ac5-4275-b388-1f5fdf92a989"
+              },
+              {
+                "type": "NumberField",
+                "title": "Developing new markets for products made from recycled packaging waste",
+                "name": "lACgrU",
+                "shortDescription": "Developing new markets",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "d5446a06-983c-4854-bbdd-e504e458a2c8"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on developing new markets",
+                "name": "xoLHwv",
+                "shortDescription": "More detail for developing new markets",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "d77f15a8-286a-4e30-b644-189c03e164af"
+              },
+              {
+                "type": "NumberField",
+                "title": "Developing new uses for recycled packaging waste",
+                "name": "gBpCMU",
+                "shortDescription": "New uses for recycled packaging waste",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "d6d42403-a5b4-442f-80c5-78b7af0387fd"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on developing new uses for recycled packaging waste",
+                "name": "BuSamv",
+                "shortDescription": "More detail for new uses for recycled packaging waste",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "ab078782-5f77-42e9-b55c-fc00a088d803"
+              },
+              {
+                "type": "NumberField",
+                "title": "Activities or investment not covered by the other categories",
+                "name": "czCOzR",
+                "shortDescription": "Activities or investment not already covered",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "suffix": "%"
+                },
+                "schema": {
+                  "min": 0,
+                  "max": 100,
+                  "precision": 0
+                },
+                "id": "5448e7dc-8822-463c-95c4-719be160d745"
+              },
+              {
+                "type": "MultilineTextField",
+                "title": "More detail for spend on activities not covered by the other categories",
+                "name": "bxGgkj",
+                "shortDescription": "More detail for activities or investment not already covered",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {
+                  "max": 500
+                },
+                "id": "664103a9-0f7e-4316-80ab-7e1b6a17402e"
+              }
+            ],
+            "next": [],
+            "id": "ac5c8669-df07-48dc-9418-2e4cf822c63e"
+          },
+          {
+            "title": "Sampling and inspection plan",
+            "path": "/sampling-and-inspection-plan",
+            "components": [
+              {
+                "id": "a6923dce-5de9-476d-8657-390b5e782eae",
+                "type": "Markdown",
+                "content": "You need to provide a plan explaining how you determine the amount of UK packaging waste received for export. This is called a sampling and inspection plan (SIP). \r\n\r\nComplete the [Packaging Exporter Sampling and Inspection Plan - Part 2: Accreditation template](https://assets.publishing.service.gov.uk/media/686cf42910d550c668de3c35/25_07_01_Doc__Exporter_Accreditation_SIP_.odt) then upload it on this page.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "FileUploadField",
+                "title": "Upload part 2 of your sampling and inspection plan",
+                "name": "TJTMtQ",
+                "shortDescription": "Sampling and inspection plan",
+                "hint": "You may also upload supporting documentation",
+                "options": {
+                  "required": true,
+                  "accept": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text,text/plain,image/jpeg,image/png,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/vnd.oasis.opendocument.spreadsheet"
+                },
+                "schema": {},
+                "id": "27bfeeae-6a50-4ea9-9799-900bb94bcf18"
+              }
+            ],
+            "next": [],
+            "id": "6d4a1005-2d7b-47f6-9ca9-3babeb8b543b",
+            "controller": "FileUploadPageController"
+          },
+          {
+            "title": "Overseas reprocessing sites and interim sites",
+            "path": "/overseas-reprocessing-sites-and-interim-sites",
+            "components": [
+              {
+                "id": "0b6542d5-ecf9-4aa1-84fa-93b71f4195b2",
+                "type": "Markdown",
+                "content": "Provide the details of the overseas reprocessing sites to be included within your accreditation application. \r\n\r\nComplete the [Overseas reprocessing and interim sites log (ORS log) template](https://assets.publishing.service.gov.uk/media/689f4b471fedc616bb133a99/overseas_reprocessing_interim_sites_log_15_08_25.xlsx) then upload it on this page.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "FileUploadField",
+                "title": "Upload your ORS Log",
+                "name": "zYxOlv",
+                "shortDescription": "Overseas reprocessing and interim sites",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "accept": "application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/vnd.oasis.opendocument.spreadsheet"
+                },
+                "schema": {
+                  "length": 1
+                },
+                "id": "8f90f4de-93d7-4711-9b20-5a023ac91999"
+              }
+            ],
+            "next": [],
+            "id": "92e4d3b1-1abc-4f23-bf41-87ce1ae3c829",
+            "controller": "FileUploadPageController"
+          },
+          {
+            "title": "Broadly Equivalent Standards",
+            "path": "/broadly-equivalent-standards",
+            "components": [
+              {
+                "id": "f7648dd5-4c57-4f59-8816-53929679e72b",
+                "type": "Markdown",
+                "content": "Check the [broadly equivalent standards for packaging](https://www.gov.uk/government/publications/receiving-exported-waste-meeting-eu-equivalent-standards/examples-of-equivalent-environmental-standards-for-packaging-batteries-and-weee) for information on what evidence you will need to provide, both in general and for specific countries.\r\n\r\n## How to provide BES\r\n\r\nAfter submitting this application you will be sent a link to your own folder on Quatrix, a secure file sharing service. Upload your BES evidence there. If you are applying for more than one material you will be sent a link for each.\r\n\r\nYou should save the file with the naming convention: ORS full name, issuing competent authority, original or translated, expiry date.",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "cac713ec-d6e2-4f2e-8fff-78a7ce02d713"
+          },
+          {
+            "title": "Your contact details",
+            "path": "/your-contact-details",
+            "components": [
+              {
+                "id": "22ddaf38-4930-4694-8050-09d863dc51aa",
+                "type": "Markdown",
+                "content": "In order to submit this application for accreditation you should be an approved person for your organisation.\r\n\r\nIf you are not the approved person for this organisation, the approved person must email the appropriate regulator to confirm the information is accurate. Your application cannot legally be processed without the approved person confirming the figures are correct to the best of their knowledge.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "What is your full name?",
+                "name": "WGGxRc",
+                "shortDescription": "Submitter name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "140818cd-d1b7-4a0c-9938-47ec65e9cc8d"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is your email address?",
+                "name": "qeJOQY",
+                "shortDescription": "Submitter email address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "1bf418aa-1d1e-414f-a142-ea72dbedb773"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is your telephone number?",
+                "name": "xyQDVo",
+                "shortDescription": "Submitter telephone number",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "8b2cc211-710a-4e1f-9a84-bf872862dad2"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your job title?",
+                "name": "NQtVfy",
+                "shortDescription": "Submitter job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "70405be6-4e68-46d9-b79b-4eb36ad6d4c8"
+              }
+            ],
+            "next": [],
+            "id": "a42f861b-68a6-4422-b4be-b00582731204"
+          },
+          {
+            "id": "449a45f6-4541-4a46-91bd-8b8931b07b50",
+            "title": "Summary",
+            "path": "/summary",
+            "controller": "SummaryPageController",
+            "next": [],
+            "components": [
+              {
+                "id": "1abd1420-f7a2-4409-9839-e4134eb5340e",
+                "type": "Markdown",
+                "content": "If you want to keep a record of your submitted answers please print this page.\r\n\r\nBy submitting this application you confirm the information you provided is accurate.\r\n\r\n**You may face enforcement action if the data is inaccurate.**",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "events": {
+              "onSave": {
+                "type": "http",
+                "options": {
+                  "method": "POST",
+                  "url": "https://epr-backend.test.cdp-int.defra.cloud/v1/apply/accreditation"
+                }
+              }
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "items": [
+              {
+                "id": "c4ff554b-19e5-48a9-b180-56f8d6f37eb4",
+                "componentId": "6c52c374-9b0b-47b6-a47e-831751ac2700",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "No Org ID",
+            "id": "1955dca5-f2df-4ed3-82e0-c0c6b6112e53"
+          },
+          {
+            "items": [
+              {
+                "id": "ca421949-a743-4391-ba97-4222185c398f",
+                "componentId": "a56d42a2-6e0b-4d3b-93f0-b739bb6bbc7a",
+                "operator": "is",
+                "value": {
+                  "itemId": "b9059362-ba1d-4475-a633-9bd58692d90e",
+                  "listId": "ac77b007-7d2a-461b-a7af-96af5e4cb5b2"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is Glass",
+            "id": "a1539d54-fa00-453f-8836-e257be54f96e"
+          }
+        ],
+        "sections": [],
+        "lists": [
+          {
+            "name": "EoJzhZ",
+            "title": "List for question qkCaCh",
+            "type": "string",
+            "items": [
+              {
+                "id": "5dbf3f5e-323b-4df8-9462-a915607c3ed0",
+                "text": "Aluminium (R4)",
+                "value": "Aluminium (R4)"
+              },
+              {
+                "id": "dcc2d994-babd-4f5f-9e13-0351ccbacf68",
+                "text": "Fibre-based composite material (R3)",
+                "value": "Fibre-based composite material (R3)"
+              },
+              {
+                "id": "b9059362-ba1d-4475-a633-9bd58692d90e",
+                "text": "Glass (R5)",
+                "value": "Glass (R5)"
+              },
+              {
+                "id": "bc24b0be-dd6e-405a-bc62-948de189d7da",
+                "text": "Paper or board (R3)",
+                "value": "Paper or board (R3)"
+              },
+              {
+                "id": "c5f486cd-a300-4ba6-960d-39105c059761",
+                "text": "Plastic (R3)",
+                "value": "Plastic (R3)"
+              },
+              {
+                "id": "32489f58-c81c-4685-9147-3a92be1053c1",
+                "text": "Steel (R4)",
+                "value": "Steel (R4)"
+              },
+              {
+                "id": "98a02ff9-75af-4344-a7a4-be74c1f06ce1",
+                "text": "Wood (R3)",
+                "value": "Wood (R3)"
+              }
+            ],
+            "id": "ac77b007-7d2a-461b-a7af-96af5e4cb5b2"
+          },
+          {
+            "name": "KEqkxJ",
+            "title": "List for question XKWebf",
+            "type": "string",
+            "items": [
+              {
+                "id": "e3cdff02-f3a2-4062-ba8a-4b33a0167124",
+                "text": "Up to 500 tonnes",
+                "value": "Up to 500 tonnes",
+                "hint": {
+                  "text": "Application charge of £500",
+                  "id": "ba466ce0-15ca-4303-b6b1-3152d395b216"
+                }
+              },
+              {
+                "id": "73ce1db3-676b-4217-a5e5-fcc347de83fb",
+                "text": "Up to 5,000 tonnes",
+                "value": "Up to 5,000 tonnes",
+                "hint": {
+                  "text": "Application charge of £2,000",
+                  "id": "654eeabb-1215-40da-99d9-e1f7a98e85df"
+                }
+              },
+              {
+                "id": "c49b08cb-f155-47c5-a783-476197e821e7",
+                "text": "Up to 10,000 tonnes",
+                "value": "Up to 10,000 tonnes",
+                "hint": {
+                  "text": "Application charge of £3,000",
+                  "id": "62d1d192-5ba6-4189-bf91-8445f106b6da"
+                }
+              },
+              {
+                "id": "c3f877d8-b542-4f14-a867-ef1f3e361afc",
+                "text": "Over 10,000 tonnes",
+                "value": "Over 10,000 tonnes",
+                "hint": {
+                  "text": "Application charge of £3,631",
+                  "id": "723378d1-75fd-4efb-ae99-2ff7c4e7eb6a"
+                }
+              }
+            ],
+            "id": "9e1c7abd-7d44-49af-9909-0a248553d512"
+          },
+          {
+            "name": "DxaliR",
+            "title": "List for question WNTLmM",
+            "type": "string",
+            "items": [
+              {
+                "id": "ee1c430f-1dbc-458a-9698-38505eab8e62",
+                "text": "Glass re-melt",
+                "value": "Glass re-melt"
+              },
+              {
+                "id": "6f3b933b-6751-4ef7-bf33-2564cfba610d",
+                "text": "Glass other",
+                "value": "Glass other"
+              },
+              {
+                "id": "96287c0f-17e5-48cb-9e14-20a390d5603a",
+                "text": "Both",
+                "value": "Both"
+              }
+            ],
+            "id": "5b4baf6d-25ed-431c-8024-9428a8d191ce"
+          },
+          {
+            "id": "3167ecb5-61f9-4918-b7d0-6793b56aa814",
+            "name": "__yesNo",
+            "title": "Yes/No",
+            "type": "boolean",
+            "items": [
+              {
+                "id": "02900d42-83d1-4c72-a719-c4e8228952fa",
+                "text": "Yes",
+                "value": true
+              },
+              {
+                "id": "f39000eb-c51b-4019-8f82-bbda0423f04d",
+                "text": "No",
+                "value": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "data": {
+      "main": {
+        "NPFtSF": "true",
+        "wuyzpq": "Green Recycling Solutions Ltd",
+        "Ooierc": "503177",
+        "MyWHms": "68e68dd778f83083f0f17a77",
+        "qkCaCh": "Glass (R5)",
+        "WNTLmM": "Both",
+        "XKWebf": "Up to 10,000 tonnes",
+        "yzvIcu": "0",
+        "EJZCFh": "More detail for spend on new reprocessing infrastructure",
+        "vjegvC": "0",
+        "kFuujS": "More detail for spend on new reprocessing infrastructure",
+        "gGuncQ": "0",
+        "FLctZj": "More detail for spend on new reprocessing infrastructure",
+        "jqvpTT": "0",
+        "rLHNGq": "More detail for spend on new reprocessing infrastructure",
+        "lACgrU": "0",
+        "xoLHwv": "More detail for spend on new reprocessing infrastructure",
+        "gBpCMU": "0",
+        "BuSamv": "More detail for spend on new reprocessing infrastructure",
+        "czCOzR": "0",
+        "bxGgkj": "More detail for spend on new reprocessing infrastructure",
+        "WGGxRc": "Emma Roberts",
+        "qeJOQY": "e.roberts@britishbeverage.co.uk",
+        "xyQDVo": "1234567890",
+        "NQtVfy": "Director"
+      },
+      "repeaters": {
+        "QkZUNV": [
+          {
+            "jiMeVj": "Emma Roberts",
+            "eWxRYL": "test@gmail.com",
+            "NRkpFI": "12345678",
+            "LUGryB": "Director"
+          }
+        ]
+      },
+      "files": {
+        "TJTMtQ": [
+          {
+            "fileId": "2573151b-8ca2-4699-bbe1-e8970d80ac99",
+            "userDownloadLink": "https://forms-designer.test.cdp-int.defra.cloud/file-download/2573151b-8ca2-4699-bbe1-e8970d80ac99"
+          }
+        ],
+        "zYxOlv": [
+          {
+            "fileId": "1e7cba15-9387-4872-b694-917e4546fc9c",
+            "userDownloadLink": "https://forms-designer.test.cdp-int.defra.cloud/file-download/1e7cba15-9387-4872-b694-917e4546fc9c"
+          }
+        ]
+      }
+    }
+  },
+  "createdAt": {
+    "$date": "2025-10-08T18:12:07.343Z"
+  },
+  "orgId": 503177,
+  "referenceNumber": "68e68dd778f83083f0f17a77"
+}

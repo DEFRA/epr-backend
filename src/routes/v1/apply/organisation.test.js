@@ -1,17 +1,18 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../../../common/enums/event.js'
+} from '#common/enums/event.js'
 import {
   FORM_FIELDS_SHORT_DESCRIPTIONS,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
-} from '../../../common/enums/index.js'
+} from '#common/enums/index.js'
 import { organisationPath } from './organisation.js'
-import { sendEmail } from '../../../common/helpers/notify.js'
-import organisationFixture from '../../../data/fixtures/organisation.json'
+import { sendEmail } from '#common/helpers/notify.js'
+import organisationFixture from '#data/fixtures/organisation.json'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
@@ -21,7 +22,7 @@ const mockInsertOne = vi.fn().mockResolvedValue({
   insertedId: { toString: () => '12345678901234567890abcd' }
 })
 
-vi.mock('../../../common/helpers/logging/logger.js', () => ({
+vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     info: (...args) => mockLoggerInfo(...args),
     error: (...args) => mockLoggerError(...args),
@@ -35,14 +36,14 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
-vi.mock('../../../common/helpers/notify.js')
+vi.mock('#common/helpers/notify.js')
 
 const url = organisationPath
 let server
 
 describe(`${url} route`, () => {
   beforeAll(async () => {
-    const { createServer } = await import('../../../server.js')
+    const { createServer } = await import('#server/server.js')
     server = await createServer()
     await server.initialize()
   })
@@ -67,7 +68,7 @@ describe(`${url} route`, () => {
     const orgId = 500002
     const orgName = 'ACME ltd'
 
-    expect(response.statusCode).toEqual(200)
+    expect(response.statusCode).toEqual(StatusCodes.OK)
 
     expect(mockAudit).toHaveBeenCalledWith({
       event: {
@@ -116,7 +117,7 @@ describe(`${url} route`, () => {
       payload: 'not-an-object'
     })
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
@@ -128,7 +129,7 @@ describe(`${url} route`, () => {
       payload: null
     })
 
-    expect(response.statusCode).toEqual(400)
+    expect(response.statusCode).toEqual(StatusCodes.BAD_REQUEST)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(/Invalid payload/)
   })
@@ -166,7 +167,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract email from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
@@ -203,7 +204,7 @@ describe(`${url} route`, () => {
     const message = 'Could not extract organisation name from answers'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
@@ -226,12 +227,12 @@ describe(`${url} route`, () => {
     const message = 'Could not get regulator name from data'
     const body = JSON.parse(response.payload)
 
-    expect(response.statusCode).toEqual(422)
+    expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
   })
 
   it('returns 500 if error is thrown by insertOne', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
       throw error
@@ -261,7 +262,7 @@ describe(`${url} route`, () => {
   })
 
   it('returns 500 if error is thrown by sendEmail', async () => {
-    const statusCode = 500
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('Notify API failed')
     sendEmail.mockRejectedValueOnce(error)
 

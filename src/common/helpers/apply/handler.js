@@ -1,5 +1,6 @@
 import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
@@ -40,7 +41,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
         }
       })
-      return h.response().code(201)
+      return h.response().code(StatusCodes.CREATED)
     } catch (err) {
       const validationFailedForFields = getValidationFailedFields(err)
       const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
@@ -52,7 +53,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
         },
         http: {
           response: {
-            status_code: 500
+            status_code: StatusCodes.INTERNAL_SERVER_ERROR
           }
         }
       })

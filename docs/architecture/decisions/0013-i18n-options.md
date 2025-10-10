@@ -1,4 +1,4 @@
-# 10. i18n options
+# 13. i18n options
 
 Date: 2025-10-06
 

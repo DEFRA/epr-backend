@@ -1,6 +1,6 @@
 import { getConfig } from './config.js'
 
-import { createServer } from './server.js'
+import { createServer } from '#server/server.js'
 import { logger } from './common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,

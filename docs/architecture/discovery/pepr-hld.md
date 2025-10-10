@@ -242,9 +242,27 @@ Note that updating an entity _may_ include changing its `status`. See a summary 
 
 ### Summary Log
 
-1. `created`: summary log has been created (after upload by User) but has not yet been ingested by the service
-2. `ingested`: summary log has been ingested by the service and the prospective modifications to waste records can be reviewed by the user
-3. `approved`: summary log has been approved by the user and modifications applied to waste records
+Summary logs transition through the following states based on what has been accomplished:
+
+```mermaid
+stateDiagram-v2
+    [*] --> preprocessing: File uploaded to CDP Uploader
+    preprocessing --> rejected: CDP preprocessing failed
+    preprocessing --> validating: CDP preprocessing passed
+    validating --> invalid: Validation errors found
+    validating --> validated: Validation completed successfully
+    validated --> submitted: Summary log submitted
+    rejected --> [*]
+    invalid --> [*]
+    submitted --> [*]
+```
+
+1. `preprocessing`: file uploaded to CDP Uploader, undergoing virus scan and file validation
+2. `rejected`: CDP Uploader preprocessing failed (malware detected, invalid file type, or size exceeded)
+3. `validating`: CDP preprocessing passed, content validation against business rules in progress
+4. `invalid`: content validation found errors
+5. `validated`: validation completed successfully, prospective modifications ready for user review
+6. `submitted`: user has submitted the summary log, modifications applied to waste records
 
 ### Waste Record Version
 
@@ -435,18 +453,41 @@ Use case: As a User, I want to upload a summary log with open month waste adjust
 ```mermaid
 sequenceDiagram
     actor User
-    participant Service
-    participant Database
+    participant Frontend
+    participant Backend
+    participant CDP
+    participant SQS
+    participant Worker
+    participant S3
 
-    User->>Service: select activity, site & material
-    User->>Service: upload summaryLog.xlsx
-    Note over Service: parse summary log + compare against WASTE-RECORDS
-    Service->>Database: create new SUMMARY-LOG
-    Service->>User: displays how uploaded summaryLog.xlsx<br> will affect WASTE-RECORDS when submitted
-    User->>Service: submit SUMMARY-LOG
-    Service->>Database: create new WASTE-RECORDS
-    Service->>Database: update existing WASTE-RECORDS
-    Service->>Database: update WASTE-BALANCE
+    User->>Frontend: select activity, site & material
+    User->>Frontend: initiate upload
+    Frontend->>CDP: request upload URL
+    CDP-->>Frontend: uploadUrl
+    User->>CDP: upload summaryLog.xlsx
+    CDP->>S3: store file
+    CDP-->>User: redirect to Frontend upload-success page
+    User->>Frontend: GET upload-success page
+    Frontend->>Backend: POST /uploaded (create SUMMARY-LOG)
+    Backend-->>Frontend: 200 OK
+    Frontend-->>User: redirect to status page
+    CDP->>Backend: callback with S3 details
+    Backend->>SQS: send validation message
+    Backend-->>CDP: 200 OK
+    SQS->>Worker: trigger validation
+    Worker->>S3: fetch summaryLog.xlsx
+    Note over Worker: parse summary log + compare against WASTE-RECORDS
+    Worker->>Backend: update SUMMARY-LOG entity (status: validated)
+    User->>Frontend: view progress page
+    Frontend->>Backend: GET summary log
+    Backend-->>Frontend: status & validation results
+    Frontend-->>User: displays how uploaded summaryLog.xlsx<br> will affect WASTE-RECORDS when submitted
+    User->>Frontend: submit SUMMARY-LOG
+    Frontend->>Backend: submit
+    Backend->>Backend: create new WASTE-RECORDS
+    Backend->>Backend: update existing WASTE-RECORDS
+    Backend->>Backend: update WASTE-BALANCE
+    Backend-->>Frontend: 200 OK
 ```
 
 #### User makes closed month waste adjustments

@@ -15,9 +15,9 @@ import {
 } from '../apply/extract-answers.js'
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 
-import organisationFixture from '../../../data/fixtures/organisation.json' with { type: 'json' }
-import registrationFixture from '../../../data/fixtures/registration.json' with { type: 'json' }
-import accreditationFixture from '../../../data/fixtures/accreditation.json' with { type: 'json' }
+import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
+import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }
+import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 
 export async function createOrUpdateCollections(db) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
