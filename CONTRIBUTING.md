@@ -417,37 +417,37 @@ logger.info({
 
 #### Handling errors
 
-A little extra care needs to be taken with error objects, we provide a custom handler around the default `logger.error`
-that converts a javascript error object to an ECS compatible structured logging error object. The pattern is the same
-whether using `request.logger` in a route handler or the global `logger`:
+A little extra care needs to be taken with error objects. We provide a `formatError` helper that converts a JavaScript error object to an ECS-compatible structured logging error object.
 
 ```javascript
 // In a route handler (use request.logger)
+import { formatError } from '#common/helpers/logging/format-error.js'
+
 handler: async ({ logger }, h) => {
   try {
     // ...
   } catch (err) {
-    logger.error(
-      err, // The javascript error must be passed as the first argument
-      {
-        message: 'Could not send email',
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.HTTP,
-          action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
-        }
+    logger.error({
+      ...formatError(err),
+      message: 'Could not send email',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.HTTP,
+        action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
       }
-    )
+    })
     throw err
   }
 }
 
 // In non-request context (use global logger)
 import { logger } from './common/helpers/logging/logger.js'
+import { formatError } from '#common/helpers/logging/format-error.js'
 
 try {
   // ...
 } catch (err) {
-  logger.error(err, {
+  logger.error({
+    ...formatError(err),
     message: 'Database connection failed',
     event: {
       category: LOGGING_EVENT_CATEGORIES.DB,

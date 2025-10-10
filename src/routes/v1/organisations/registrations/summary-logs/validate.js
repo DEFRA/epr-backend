@@ -3,6 +3,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { formatError } from '#common/helpers/logging/format-error.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -88,7 +89,8 @@ export const summaryLogsValidate = {
     } catch (err) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
-      logger.error(err, {
+      logger.error({
+        ...formatError(err),
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
