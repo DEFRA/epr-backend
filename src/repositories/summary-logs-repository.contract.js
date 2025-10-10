@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 
 const TEST_S3_BUCKET = 'test-bucket'
-const TEST_INVALID_NUMBER_ID = 123
 
 const buildMinimalSummaryLog = (id, fileOverrides = {}) => ({
   id,
@@ -183,9 +182,10 @@ const testFindByIdValidation = (getRepository) => {
     })
 
     it('rejects number id', async () => {
-      await expect(
-        getRepository().findById(TEST_INVALID_NUMBER_ID)
-      ).rejects.toThrow(/id/)
+      const invalidNumberId = 123
+      await expect(getRepository().findById(invalidNumberId)).rejects.toThrow(
+        /id/
+      )
     })
 
     it('rejects object id', async () => {
