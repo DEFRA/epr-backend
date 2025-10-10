@@ -28,7 +28,7 @@ export function extractRepeaters(
   const componentMap = new Map(
     repeaterPage.components.flatMap((component) => {
       const outputName = fieldMapping[component.shortDescription]
-      return outputName != null ? [[component.name, outputName]] : []
+      return outputName == null ? [] : [[component.name, outputName]]
     })
   )
 
