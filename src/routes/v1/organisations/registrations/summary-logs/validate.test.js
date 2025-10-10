@@ -6,19 +6,7 @@ import {
 import { summaryLogsValidatePath } from './validate.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createServer } from '#server/server.js'
-
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
 const url = summaryLogsValidatePath
 const payload = {
@@ -30,18 +18,13 @@ const payload = {
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    server = await createServer({
+  beforeEach(async () => {
+    server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-    await server.initialize()
-  })
-
-  beforeEach(() => {
-    vi.clearAllMocks()
   })
 
   it('returns 202 and status', async () => {
@@ -53,7 +36,7 @@ describe(`${url} route`, () => {
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
         event: {
@@ -110,7 +93,7 @@ describe(`${url} route`, () => {
   it('returns 500 if error is thrown', async () => {
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('logging failed')
-    mockLoggerInfo.mockImplementationOnce(() => {
+    server.loggerMocks.info.mockImplementationOnce(() => {
       throw error
     })
 
@@ -123,7 +106,8 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toBe(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error,
       message: `Failure on ${summaryLogsValidatePath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

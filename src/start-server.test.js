@@ -60,13 +60,17 @@ vi.mock('hapi-pino', () => ({
   }
 }))
 
-vi.mock('./common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
+vi.mock('./common/helpers/logging/logger.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    logger: {
+      info: (...args) => mockLoggerInfo(...args),
+      error: (...args) => mockLoggerError(...args),
+      warn: (...args) => mockLoggerWarn(...args)
+    }
   }
-}))
+})
 
 vi.mock('./common/helpers/mongodb.js')
 
@@ -165,16 +169,14 @@ describe('#startServer', () => {
     })
 
     test('Should log failed startup message', async () => {
-      expect(mockLoggerError).toHaveBeenCalledWith(
-        Error('Server failed to start'),
-        {
-          message: 'Server failed to start',
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.START_FAILURE
-          }
+      expect(mockLoggerError).toHaveBeenCalledWith({
+        error: expect.any(Error),
+        message: 'Server failed to start',
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.START_FAILURE
         }
-      )
+      })
     })
   })
 })

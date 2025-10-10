@@ -10,7 +10,7 @@ import {
   extractOrgId,
   extractReferenceNumber
 } from './extract-answers.js'
-import { logger } from '../logging/logger.js'
+import { logger as globalLogger } from '../logging/logger.js'
 
 export function registrationAndAccreditationPayload(data, _options) {
   if (!data || typeof data !== 'object') {
@@ -26,7 +26,7 @@ export function registrationAndAccreditationPayload(data, _options) {
   }
 
   if (orgId < ORG_ID_START_NUMBER) {
-    logger.warn({
+    globalLogger.warn({
       message: `orgId: ${orgId}, referenceNumber: ${referenceNumber} - Organisation ID must be at least ${ORG_ID_START_NUMBER}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

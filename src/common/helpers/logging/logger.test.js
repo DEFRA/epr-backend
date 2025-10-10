@@ -1,71 +1,52 @@
-import { vi } from 'vitest'
+import { describe, test, expect } from 'vitest'
+import { loggerOptions } from './logger-options.js'
 
-let logger
-beforeAll(async () => {
-  ;({ logger } = await import('./logger.js'))
-})
+describe('loggerOptions.serializers.error', () => {
+  const { error: errorSerializer } = loggerOptions.serializers
 
-const mockPinoDebug = vi.fn()
-const mockPinoError = vi.fn()
-const mockPinoFatal = vi.fn()
-const mockPinoInfo = vi.fn()
-const mockPinoTrace = vi.fn()
-const mockPinoWarn = vi.fn()
+  test('formats Error instance correctly', () => {
+    const error = new Error('Something went wrong')
+    const result = errorSerializer(error)
 
-const mockPino = {
-  debug: mockPinoDebug,
-  error: mockPinoError,
-  fatal: mockPinoFatal,
-  info: mockPinoInfo,
-  trace: mockPinoTrace,
-  warn: mockPinoWarn
-}
-
-vi.mock('pino', () => ({
-  pino: vi.fn(() => mockPino)
-}))
-
-describe('Logger', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
+    expect(result).toEqual({
+      message: 'Something went wrong',
+      stack_trace: expect.stringContaining('Error: Something went wrong'),
+      type: 'Error'
+    })
   })
 
-  it('overloads pino error with error object mapping', () => {
-    const errorMessage = 'something went wrong'
-    const error = new Error(errorMessage)
-    const message = 'log message'
-
-    logger.error(error, { message })
-
-    expect(mockPinoError).toHaveBeenCalledExactlyOnceWith(
-      expect.objectContaining({
-        error: {
-          type: 'Error',
-          message: errorMessage,
-          stack_trace: error.stack
-        },
-        message
-      })
-    )
-  })
-
-  it('calls pino error directly if first argument is not an Error', () => {
-    const message = 'plain error message'
-    const log = { foo: 'bar' }
-
-    logger.error(message, log)
-
-    expect(mockPinoError).toHaveBeenCalledWith(message, log)
-  })
-
-  test.each(['debug', 'fatal', 'info', 'trace', 'warn'])(
-    'calls pino method',
-    (method) => {
-      const message = 'log message'
-
-      logger[method](message)
-
-      expect(mockPino[method]).toHaveBeenCalledExactlyOnceWith(message)
+  test('formats custom Error subclass correctly', () => {
+    class CustomError extends Error {
+      constructor(message) {
+        super(message)
+        this.name = 'CustomError'
+      }
     }
-  )
+
+    const error = new CustomError('Custom error message')
+    const result = errorSerializer(error)
+
+    expect(result).toEqual({
+      message: 'Custom error message',
+      stack_trace: expect.stringContaining('CustomError: Custom error message'),
+      type: 'CustomError'
+    })
+  })
+
+  test('returns value as-is for non-Error values', () => {
+    expect(errorSerializer('string error')).toEqual('string error')
+    expect(errorSerializer(123)).toEqual(123)
+    expect(errorSerializer(null)).toEqual(null)
+    expect(errorSerializer(undefined)).toEqual(undefined)
+    expect(errorSerializer({ message: 'not an error' })).toEqual({
+      message: 'not an error'
+    })
+  })
+
+  test('preserves stack trace', () => {
+    const error = new Error('Test error')
+    const result = errorSerializer(error)
+
+    expect(result.stack_trace).toBe(error.stack)
+  })
 })

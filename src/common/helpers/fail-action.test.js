@@ -2,7 +2,11 @@ import { failAction } from './fail-action.js'
 
 describe('#fail-action', () => {
   test('Should throw expected error object', () => {
-    const mockRequest = {}
+    const mockRequest = {
+      logger: {
+        warn: vi.fn()
+      }
+    }
     const mockToolkit = {}
     const mockError = Error('Something terrible has happened!')
 
@@ -12,7 +16,11 @@ describe('#fail-action', () => {
   })
 
   test('Should throw expected error string', () => {
-    const mockRequest = {}
+    const mockRequest = {
+      logger: {
+        warn: vi.fn()
+      }
+    }
     const mockToolkit = {}
     const mockError = 'Something terrible has happened!'
 
