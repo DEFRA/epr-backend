@@ -18,11 +18,15 @@ vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    warn: (...args) => mockGlobalLoggerWarn(...args)
+vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    logger: {
+      warn: (...args) => mockGlobalLoggerWarn(...args)
+    }
   }
-}))
+})
 
 const url = registrationPath
 let server
@@ -243,7 +247,12 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error: {
+        message: error.message,
+        stack_trace: error.stack,
+        type: error.name
+      },
       message: `Failure on ${registrationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -277,7 +286,12 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error: {
+        message: error.message,
+        stack_trace: error.stack,
+        type: error.name
+      },
       message: `Failure on /v1/apply/registration for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

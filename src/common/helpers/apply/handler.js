@@ -7,6 +7,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
+import { formatError } from '../logging/logger.js'
 
 export function registrationAndAccreditationHandler(name, path, factory) {
   return async ({ db, payload, logger }, h) => {
@@ -44,7 +45,8 @@ export function registrationAndAccreditationHandler(name, path, factory) {
     } catch (err) {
       const validationFailedForFields = getValidationFailedFields(err)
       const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
-      logger.error(err, {
+      logger.error({
+        ...formatError(err),
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
