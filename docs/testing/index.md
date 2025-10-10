@@ -7,3 +7,4 @@ Documentation related to testing of `epr-backend`
 3. [Running Tests](0003-running-tests.md)
 4. [Data Generator](0004-data-generator.md)
 5. [Proxy Mode](0005-proxy-mode.md)
+6. [Performance Testing](0006-performance-tests.md)
