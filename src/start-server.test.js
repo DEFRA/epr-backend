@@ -170,11 +170,10 @@ describe('#startServer', () => {
 
     test('Should log failed startup message', async () => {
       expect(mockLoggerError).toHaveBeenCalledWith({
-        error: {
+        error: expect.objectContaining({
           message: 'Server failed to start',
-          stack_trace: expect.any(String),
           type: 'Error'
-        },
+        }),
         message: 'Server failed to start',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

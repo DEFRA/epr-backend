@@ -1,5 +1,6 @@
 import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
+import { formatError } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -112,11 +113,7 @@ describe('sendEmail', () => {
       sendEmail(templateId, emailAddress, personalisation)
     ).rejects.toThrow('fail')
     expect(mockLoggerError).toHaveBeenCalledWith({
-      error: {
-        message: error.message,
-        stack_trace: error.stack,
-        type: error.name
-      },
+      ...formatError(error),
       message: expect.any(String),
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

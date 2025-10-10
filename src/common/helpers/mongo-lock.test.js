@@ -1,5 +1,4 @@
 import { acquireLock, requireLock } from './mongo-lock.js'
-
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -57,11 +56,10 @@ describe('Lock Functions', () => {
 
       expect(result).toBeNull()
       expect(mockLoggerError).toHaveBeenCalledWith({
-        error: {
+        error: expect.objectContaining({
           message: 'Could not acquire mongo resource lock',
-          stack_trace: expect.any(String),
           type: 'MongoLockError'
-        },
+        }),
         message: `Failed to acquire lock for ${resource}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,

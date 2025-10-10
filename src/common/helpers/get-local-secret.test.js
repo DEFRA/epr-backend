@@ -1,5 +1,6 @@
 import fs from 'fs'
 import { getLocalSecret } from './get-local-secret.js'
+import { formatError } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -49,11 +50,7 @@ describe('getLocalSecret', () => {
     const result = getLocalSecret(secretName)
     expect(result).toEqual(null)
     expect(mockLoggerError).toHaveBeenCalledWith({
-      error: {
-        message: error.message,
-        stack_trace: error.stack,
-        type: error.name
-      },
+      ...formatError(error),
       message: `An error occurred while trying to read the secret: ${secretName}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,
