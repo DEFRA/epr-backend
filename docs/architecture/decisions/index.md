@@ -9,3 +9,5 @@
 * [7. Frontend Projects Structure](0007-frontend-projects-structure.md)
 * [8. File upload](0008-file-upload.md)
 * [9. Admin-UI: Approach for authenticating with Azure AD](0009-admin-ui-approach-for-authenticating-with-azure-ad.md)
+* [10. Worker threads](0010-worker-threads.md)
+* [11. File parsing](0011-file-parsing.md)
