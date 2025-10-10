@@ -72,7 +72,7 @@ export const summaryLogsUploadCompleted = {
     } = payload.form
 
     const existingSummaryLog =
-      await summaryLogsRepository.findBySummaryLogId(summaryLogId)
+      await summaryLogsRepository.findById(summaryLogId)
 
     if (existingSummaryLog) {
       throw Boom.conflict(
@@ -97,7 +97,7 @@ export const summaryLogsUploadCompleted = {
     }
 
     const summaryLog = {
-      summaryLogId,
+      id: summaryLogId,
       status,
       file: fileData
     }
