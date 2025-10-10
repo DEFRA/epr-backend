@@ -12,3 +12,4 @@
 * [10. Worker threads](0010-worker-threads.md)
 * [11. File parsing](0011-file-parsing.md)
 * [12. Forms data physical data model](0012-forms-physical-data-model.md)
+* [13. i18n options](0013-i18n-options.md)
