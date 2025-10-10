@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { validateSummaryLogInsert } from './summary-logs-repository.validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
@@ -9,10 +10,18 @@ export const createSummaryLogsRepository = (db) => ({
   async insert(summaryLog) {
     const validated = validateSummaryLogInsert(summaryLog)
     const { id, ...rest } = validated
-    const result = await db
-      .collection(COLLECTION_NAME)
-      .insertOne({ _id: id, ...rest })
-    return { insertedId: result.insertedId }
+
+    try {
+      const result = await db
+        .collection(COLLECTION_NAME)
+        .insertOne({ _id: id, ...rest })
+      return { insertedId: result.insertedId }
+    } catch (error) {
+      if (error.code === 11000) {
+        throw Boom.conflict(`Summary log with id ${id} already exists`)
+      }
+      throw error
+    }
   },
 
   async findById(id) {

@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { validateSummaryLogInsert } from './summary-logs-repository.validation.js'
 
 /**
@@ -9,6 +10,13 @@ export const createInMemorySummaryLogsRepository = () => {
   return {
     async insert(summaryLog) {
       const validated = validateSummaryLogInsert(summaryLog)
+
+      if (storage.has(validated.id)) {
+        throw Boom.conflict(
+          `Summary log with id ${validated.id} already exists`
+        )
+      }
+
       storage.set(validated.id, { ...validated })
       return { insertedId: validated.id }
     },

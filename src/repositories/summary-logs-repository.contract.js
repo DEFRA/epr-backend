@@ -67,6 +67,29 @@ const testInsertBehaviour = (getRepository) => {
       expect(found.organisationId).toBe('org-456')
       expect(found.registrationId).toBe('reg-789')
     })
+
+    it('throws conflict error when inserting duplicate ID', async () => {
+      const id = `contract-duplicate-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'validating',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+
+      await expect(getRepository().insert(summaryLog)).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 }
+      })
+    })
   })
 }
 
