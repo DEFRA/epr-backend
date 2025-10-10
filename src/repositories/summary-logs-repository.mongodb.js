@@ -1,5 +1,8 @@
 import Boom from '@hapi/boom'
-import { validateSummaryLogInsert } from './summary-logs-repository.validation.js'
+import {
+  validateId,
+  validateSummaryLogInsert
+} from './summary-logs-repository.validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
 
@@ -22,7 +25,10 @@ export const createSummaryLogsRepository = (db) => ({
   },
 
   async findById(id) {
-    const doc = await db.collection(COLLECTION_NAME).findOne({ _id: id })
+    const validatedId = validateId(id)
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne({ _id: validatedId })
     if (!doc) {
       return null
     }

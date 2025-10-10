@@ -167,6 +167,30 @@ const testFindById = (getRepository) => {
   })
 }
 
+const testFindByIdValidation = (getRepository) => {
+  describe('findById validation', () => {
+    it('rejects null id', async () => {
+      await expect(getRepository().findById(null)).rejects.toThrow(/id/)
+    })
+
+    it('rejects undefined id', async () => {
+      await expect(getRepository().findById(undefined)).rejects.toThrow(/id/)
+    })
+
+    it('rejects empty string id', async () => {
+      await expect(getRepository().findById('')).rejects.toThrow(/id/)
+    })
+
+    it('rejects number id', async () => {
+      await expect(getRepository().findById(123)).rejects.toThrow(/id/)
+    })
+
+    it('rejects object id', async () => {
+      await expect(getRepository().findById({})).rejects.toThrow(/id/)
+    })
+  })
+}
+
 const testInsertValidationRequiredFields = (getRepository) => {
   describe('insert validation - required fields', () => {
     it('rejects insert with missing file.id', async () => {
@@ -339,6 +363,7 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
 
     testInsertBehaviour(() => repository)
     testFindById(() => repository)
+    testFindByIdValidation(() => repository)
     testInsertValidationRequiredFields(() => repository)
     testInsertValidationFieldHandling(() => repository)
     testInsertValidationStatusBasedS3(() => repository)

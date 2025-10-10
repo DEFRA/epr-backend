@@ -1,5 +1,8 @@
 import Boom from '@hapi/boom'
-import { validateSummaryLogInsert } from './summary-logs-repository.validation.js'
+import {
+  validateId,
+  validateSummaryLogInsert
+} from './summary-logs-repository.validation.js'
 
 /**
  * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
@@ -21,7 +24,8 @@ export const createInMemorySummaryLogsRepository = () => {
     },
 
     async findById(id) {
-      return storage.get(id) ?? null
+      const validatedId = validateId(id)
+      return storage.get(validatedId) ?? null
     }
   }
 }
