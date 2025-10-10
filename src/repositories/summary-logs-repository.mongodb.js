@@ -5,6 +5,7 @@ import {
 } from './summary-logs-repository.validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
+const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
  * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
@@ -17,7 +18,7 @@ export const createSummaryLogsRepository = (db) => ({
     try {
       await db.collection(COLLECTION_NAME).insertOne({ _id: id, ...rest })
     } catch (error) {
-      if (error.code === 11000) {
+      if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
         throw Boom.conflict(`Summary log with id ${id} already exists`)
       }
       throw error
