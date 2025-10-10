@@ -6,6 +6,11 @@ import {
   determineFailureReason,
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
+import { logger } from '#common/helpers/logging/logger.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -71,43 +76,91 @@ export const summaryLogsUploadCompleted = {
       file: { fileId, filename, fileStatus, s3Bucket, s3Key }
     } = payload.form
 
-    const existingSummaryLog =
-      await summaryLogsRepository.findById(summaryLogId)
+    try {
+      const existingSummaryLog =
+        await summaryLogsRepository.findById(summaryLogId)
 
-    if (existingSummaryLog) {
-      throw Boom.conflict(
-        `Summary log ${summaryLogId} already exists with status ${existingSummaryLog.status}`
-      )
-    }
-
-    const status = determineStatusFromUpload(fileStatus)
-    const failureReason = determineFailureReason(status)
-
-    const fileData = {
-      id: fileId,
-      name: filename,
-      status: fileStatus
-    }
-
-    if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-      fileData.s3 = {
-        bucket: s3Bucket,
-        key: s3Key
+      if (existingSummaryLog) {
+        throw Boom.conflict(
+          `Summary log ${summaryLogId} already exists with status ${existingSummaryLog.status}`
+        )
       }
+
+      const status = determineStatusFromUpload(fileStatus)
+      const failureReason = determineFailureReason(status)
+
+      const fileData = {
+        id: fileId,
+        name: filename,
+        status: fileStatus
+      }
+
+      if (fileStatus === UPLOAD_STATUS.COMPLETE) {
+        fileData.s3 = {
+          bucket: s3Bucket,
+          key: s3Key
+        }
+      }
+
+      const summaryLog = {
+        summaryLogId,
+        status,
+        file: fileData
+      }
+
+      if (failureReason) {
+        summaryLog.failureReason = failureReason
+      }
+
+      await summaryLogsRepository.insert(summaryLog)
+
+      const logContext = {
+        summaryLogId,
+        fileId,
+        filename,
+        fileStatus
+      }
+
+      if (fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key) {
+        logContext.s3Bucket = s3Bucket
+        logContext.s3Key = s3Key
+      }
+
+      const s3Info =
+        fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key
+          ? `, s3: bucket ${s3Bucket}, key ${s3Key}`
+          : ''
+
+      logger.info(
+        {
+          event: { category: 'summary-logs', action: 'request_success' },
+          context: logContext
+        },
+        `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: ${fileStatus}${s3Info}`
+      )
+
+      return h.response().code(StatusCodes.OK)
+    } catch (err) {
+      if (err.isBoom) {
+        throw err
+      }
+
+      const message = `Failure on ${summaryLogsUploadCompletedPath}`
+
+      logger.error(err, {
+        message,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+        },
+        http: {
+          response: {
+            status_code: StatusCodes.INTERNAL_SERVER_ERROR
+          }
+        }
+      })
+
+      throw Boom.badImplementation(message)
     }
-
-    const summaryLog = {
-      id: summaryLogId,
-      status,
-      file: fileData
-    }
-
-    if (failureReason) {
-      summaryLog.failureReason = failureReason
-    }
-
-    await summaryLogsRepository.insert(summaryLog)
-
-    return h.response().code(StatusCodes.OK)
   }
 }
