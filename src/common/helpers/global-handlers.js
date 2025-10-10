@@ -1,6 +1,5 @@
 import process from 'node:process'
 import { StatusCodes } from 'http-status-codes'
-import { formatError } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -9,7 +8,7 @@ import {
 export function setupGlobalErrorHandler(logger) {
   process.on('unhandledRejection', (error) => {
     logger.error({
-      ...formatError(error),
+      error,
       message: 'Unhandled rejection',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

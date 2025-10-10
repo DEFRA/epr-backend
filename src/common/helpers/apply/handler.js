@@ -7,7 +7,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
-import { formatError } from '../logging/logger.js'
 
 export function registrationAndAccreditationHandler(name, path, factory) {
   return async ({ db, payload, logger }, h) => {
@@ -42,11 +41,11 @@ export function registrationAndAccreditationHandler(name, path, factory) {
         }
       })
       return h.response().code(StatusCodes.CREATED)
-    } catch (err) {
-      const validationFailedForFields = getValidationFailedFields(err)
+    } catch (error) {
+      const validationFailedForFields = getValidationFailedFields(error)
       const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
       logger.error({
-        ...formatError(err),
+        error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -64,9 +63,9 @@ export function registrationAndAccreditationHandler(name, path, factory) {
   }
 }
 
-function getValidationFailedFields(err) {
+function getValidationFailedFields(error) {
   return (
-    err?.errInfo?.details?.schemaRulesNotSatisfied
+    error?.errInfo?.details?.schemaRulesNotSatisfied
       ?.filter((rule) => rule.propertiesNotSatisfied)
       ?.flatMap((rule) => rule.propertiesNotSatisfied)
       .map((prop) => `${prop.propertyName} - ${prop.description}`) ?? []

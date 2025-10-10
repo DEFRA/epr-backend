@@ -107,11 +107,7 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
-      error: {
-        message: error.message,
-        stack_trace: error.stack,
-        type: error.name
-      },
+      error,
       message: `Failure on ${summaryLogsValidatePath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

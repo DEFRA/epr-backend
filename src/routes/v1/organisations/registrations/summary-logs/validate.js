@@ -5,7 +5,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { formatError } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
@@ -95,11 +94,11 @@ export const summaryLogsValidate = {
           status: 'validating'
         })
         .code(StatusCodes.ACCEPTED)
-    } catch (err) {
+    } catch (error) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
       logger.error({
-        ...formatError(err),
+        error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

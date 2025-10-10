@@ -1,5 +1,5 @@
 import fs from 'fs'
-import { logger, formatError } from './logging/logger.js'
+import { logger } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -8,10 +8,10 @@ import {
 export function getLocalSecret(name) {
   try {
     return fs.readFileSync(process.env[name], 'utf8').toString().trim()
-  } catch (err) {
+  } catch (error) {
     logger.error({
-      ...formatError(err),
-      message: `An error occurred while trying to read the secret: ${name}.\n${err}`,
+      error,
+      message: `An error occurred while trying to read the secret: ${name}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,
         action: LOGGING_EVENT_ACTIONS.READ_ERROR

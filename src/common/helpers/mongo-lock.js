@@ -1,4 +1,4 @@
-import { logger, formatError } from './logging/logger.js'
+import { logger } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -23,10 +23,10 @@ async function acquireLock(locker, resource) {
   const lock = await locker.lock(resource)
 
   if (!lock) {
-    const err = new MongoLockError('Could not acquire mongo resource lock')
+    const error = new MongoLockError('Could not acquire mongo resource lock')
 
     logger.error({
-      ...formatError(err),
+      error,
       message: `Failed to acquire lock for ${resource}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.DB,

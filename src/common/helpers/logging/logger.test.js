@@ -1,17 +1,17 @@
 import { describe, test, expect } from 'vitest'
-import { formatError } from './logger.js'
+import { loggerOptions } from './logger-options.js'
 
-describe('formatError', () => {
+describe('loggerOptions.serializers.error', () => {
+  const { error: errorSerializer } = loggerOptions.serializers
+
   test('formats Error instance correctly', () => {
     const error = new Error('Something went wrong')
-    const result = formatError(error)
+    const result = errorSerializer(error)
 
     expect(result).toEqual({
-      error: {
-        message: 'Something went wrong',
-        stack_trace: expect.stringContaining('Error: Something went wrong'),
-        type: 'Error'
-      }
+      message: 'Something went wrong',
+      stack_trace: expect.stringContaining('Error: Something went wrong'),
+      type: 'Error'
     })
   })
 
@@ -24,31 +24,29 @@ describe('formatError', () => {
     }
 
     const error = new CustomError('Custom error message')
-    const result = formatError(error)
+    const result = errorSerializer(error)
 
     expect(result).toEqual({
-      error: {
-        message: 'Custom error message',
-        stack_trace: expect.stringContaining(
-          'CustomError: Custom error message'
-        ),
-        type: 'CustomError'
-      }
+      message: 'Custom error message',
+      stack_trace: expect.stringContaining('CustomError: Custom error message'),
+      type: 'CustomError'
     })
   })
 
-  test('returns empty object for non-Error values', () => {
-    expect(formatError('string error')).toEqual({})
-    expect(formatError(123)).toEqual({})
-    expect(formatError(null)).toEqual({})
-    expect(formatError(undefined)).toEqual({})
-    expect(formatError({ message: 'not an error' })).toEqual({})
+  test('returns value as-is for non-Error values', () => {
+    expect(errorSerializer('string error')).toEqual('string error')
+    expect(errorSerializer(123)).toEqual(123)
+    expect(errorSerializer(null)).toEqual(null)
+    expect(errorSerializer(undefined)).toEqual(undefined)
+    expect(errorSerializer({ message: 'not an error' })).toEqual({
+      message: 'not an error'
+    })
   })
 
   test('preserves stack trace', () => {
     const error = new Error('Test error')
-    const result = formatError(error)
+    const result = errorSerializer(error)
 
-    expect(result.error.stack_trace).toBe(error.stack)
+    expect(result.stack_trace).toBe(error.stack)
   })
 })

@@ -18,7 +18,6 @@ import {
 } from '#common/helpers/apply/extract-answers.js'
 import { organisationFactory } from '#common/helpers/collections/factories/index.js'
 import { sendEmail } from '#common/helpers/notify.js'
-import { formatError } from '#common/helpers/logging/logger.js'
 
 export const organisationPath = '/v1/apply/organisation'
 
@@ -137,11 +136,11 @@ export const organisation = {
         orgName,
         referenceNumber
       })
-    } catch (err) {
+    } catch (error) {
       const message = `Failure on ${organisationPath}`
 
       logger.error({
-        ...formatError(err),
+        error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

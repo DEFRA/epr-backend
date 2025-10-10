@@ -417,25 +417,25 @@ logger.info({
 
 #### Handling errors
 
-Use the `formatError` helper to convert Error objects to ECS-compatible structured logs:
+Error objects are automatically formatted to ECS-compatible structured logs via Pino serializers. Simply pass the error as the `error` property:
 
 ```javascript
-import { formatError } from '#common/helpers/logging/logger.js'
-
 try {
   // ...
-} catch (err) {
+} catch (error) {
   logger.error({
-    ...formatError(err),
+    error,
     message: 'Could not send email',
     event: {
       category: LOGGING_EVENT_CATEGORIES.HTTP,
       action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
     }
   })
-  throw err
+  throw error
 }
 ```
+
+The error serializer automatically extracts `message`, `stack_trace`, and `type` fields in the correct format.
 
 #### Logging Events
 
