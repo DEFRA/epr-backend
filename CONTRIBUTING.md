@@ -421,7 +421,7 @@ A little extra care needs to be taken with error objects. We provide a `formatEr
 
 ```javascript
 // In a route handler (use request.logger)
-import { formatError } from '#common/helpers/logging/format-error.js'
+import { formatError } from '#common/helpers/logging/logger.js'
 
 handler: async ({ logger }, h) => {
   try {
@@ -441,7 +441,7 @@ handler: async ({ logger }, h) => {
 
 // In non-request context (use global logger)
 import { logger } from './common/helpers/logging/logger.js'
-import { formatError } from '#common/helpers/logging/format-error.js'
+import { formatError } from '#common/helpers/logging/logger.js'
 
 try {
   // ...
