@@ -5,28 +5,27 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
+import { setupGlobalErrorHandler } from './global-handlers.js'
 
 describe('setupGlobalErrorHandler', () => {
   let originalExitCode
-  let loggerErrorSpy
+  let mockLogger
 
-  beforeEach(async () => {
-    vi.clearAllMocks()
+  beforeEach(() => {
     originalExitCode = process.exitCode
     process.exitCode = undefined
     process.removeAllListeners('unhandledRejection')
 
-    const { logger } = await import('./logging/logger.js')
-    loggerErrorSpy = vi.spyOn(logger, 'error')
+    mockLogger = {
+      error: vi.fn()
+    }
 
-    const { setupGlobalErrorHandler } = await import('./global-handlers.js')
-    setupGlobalErrorHandler()
+    setupGlobalErrorHandler(mockLogger)
   })
 
   afterEach(() => {
     process.exitCode = originalExitCode
     process.removeAllListeners('unhandledRejection')
-    vi.restoreAllMocks()
   })
 
   test('registers unhandledRejection handler that logs Error objects', () => {
@@ -36,7 +35,7 @@ describe('setupGlobalErrorHandler', () => {
 
     listeners[listeners.length - 1](error)
 
-    expect(loggerErrorSpy).toHaveBeenCalledWith({
+    expect(mockLogger.error).toHaveBeenCalledWith({
       error: {
         message: 'Test unhandled rejection',
         stack_trace: expect.stringContaining('Error: Test unhandled rejection'),
@@ -67,7 +66,7 @@ describe('setupGlobalErrorHandler', () => {
 
     listeners[listeners.length - 1](boomError)
 
-    expect(loggerErrorSpy).toHaveBeenCalledWith({
+    expect(mockLogger.error).toHaveBeenCalledWith({
       message: 'Unhandled rejection',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

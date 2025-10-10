@@ -1,12 +1,12 @@
 import process from 'node:process'
 import { StatusCodes } from 'http-status-codes'
-import { logger, formatError } from './logging/logger.js'
+import { formatError } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
 
-export function setupGlobalErrorHandler() {
+export function setupGlobalErrorHandler(logger) {
   process.on('unhandledRejection', (error) => {
     logger.error({
       ...formatError(error),
