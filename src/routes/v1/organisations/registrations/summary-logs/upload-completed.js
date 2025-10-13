@@ -6,7 +6,6 @@ import {
   determineFailureReason,
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
-import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -68,9 +67,10 @@ export const summaryLogsUploadCompleted = {
    * @param {SummaryLogsRepository} request.summaryLogsRepository
    * @param {Object} request.payload
    * @param {Object} request.params
+   * @param {Object} request.logger
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params }, h) => {
+  handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
     const { summaryLogId } = params
     const {
       file: { fileId, filename, fileStatus, s3Bucket, s3Key }
@@ -131,23 +131,25 @@ export const summaryLogsUploadCompleted = {
           ? `, s3: bucket ${s3Bucket}, key ${s3Key}`
           : ''
 
-      logger.info(
-        {
-          event: { category: 'summary-logs', action: 'request_success' },
-          context: logContext
+      logger.info({
+        message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: ${fileStatus}${s3Info}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
         },
-        `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: ${fileStatus}${s3Info}`
-      )
+        context: logContext
+      })
 
       return h.response().code(StatusCodes.OK)
-    } catch (err) {
-      if (err.isBoom) {
-        throw err
+    } catch (error) {
+      if (error.isBoom) {
+        throw error
       }
 
       const message = `Failure on ${summaryLogsUploadCompletedPath}`
 
-      logger.error(err, {
+      logger.error({
+        error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

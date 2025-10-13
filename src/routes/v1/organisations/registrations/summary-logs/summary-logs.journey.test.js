@@ -1,6 +1,10 @@
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createServer } from '#server/server.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -47,14 +51,12 @@ describe('Summary logs journey', () => {
 
   beforeEach(async () => {
     const repository = createInMemorySummaryLogsRepository()
-    server = await createServer({
+    server = await createTestServer({
       repositories: {
         summaryLogsRepository: repository
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-    await server.initialize()
-    vi.clearAllMocks()
   })
 
   describe('retrieving summary log that has not been uploaded', () => {
@@ -99,9 +101,13 @@ describe('Summary logs journey', () => {
     })
 
     test('logs completion with file location', () => {
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: { category: 'summary-logs', action: 'request_success' },
+          message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: complete, s3: bucket test-bucket, key path/to/${filename}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          },
           context: expect.objectContaining({
             summaryLogId,
             fileId,
@@ -110,8 +116,7 @@ describe('Summary logs journey', () => {
             s3Bucket: 'test-bucket',
             s3Key: `path/to/${filename}`
           })
-        }),
-        `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: complete, s3: bucket test-bucket, key path/to/${filename}`
+        })
       )
     })
 
@@ -156,17 +161,20 @@ describe('Summary logs journey', () => {
     })
 
     test('logs completion', () => {
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: { category: 'summary-logs', action: 'request_success' },
+          message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: rejected`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          },
           context: expect.objectContaining({
             summaryLogId,
             fileId,
             filename,
             fileStatus: 'rejected'
           })
-        }),
-        `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: rejected`
+        })
       )
     })
 
@@ -214,17 +222,20 @@ describe('Summary logs journey', () => {
     })
 
     test('logs completion', () => {
-      expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          event: { category: 'summary-logs', action: 'request_success' },
+          message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: pending`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+          },
           context: expect.objectContaining({
             summaryLogId,
             fileId,
             filename,
             fileStatus: 'pending'
           })
-        }),
-        `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: pending`
+        })
       )
     })
   })
