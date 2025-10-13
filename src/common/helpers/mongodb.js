@@ -69,7 +69,7 @@ export const mongoDb = {
           /* c8 ignore start */
         } catch (err) {
           server.logger.error({
-            err,
+            error: err,
             message: 'Failed to close mongo client',
             event: {
               category: LOGGING_EVENT_CATEGORIES.DB,
