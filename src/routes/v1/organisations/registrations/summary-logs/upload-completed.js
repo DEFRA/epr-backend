@@ -114,30 +114,18 @@ export const summaryLogsUploadCompleted = {
 
       await summaryLogsRepository.insert(summaryLog)
 
-      const logContext = {
-        summaryLogId,
-        fileId,
-        filename,
-        fileStatus
-      }
-
-      if (fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key) {
-        logContext.s3Bucket = s3Bucket
-        logContext.s3Key = s3Key
-      }
-
       const s3Info =
         fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key
-          ? `, s3: bucket ${s3Bucket}, key ${s3Key}`
+          ? `, s3Bucket=${s3Bucket}, s3Key=${s3Key}`
           : ''
 
       logger.info({
-        message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: ${fileStatus}${s3Info}`,
+        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=${fileStatus}${s3Info}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        },
-        context: logContext
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: summaryLogId
+        }
       })
 
       return h.response().code(StatusCodes.OK)

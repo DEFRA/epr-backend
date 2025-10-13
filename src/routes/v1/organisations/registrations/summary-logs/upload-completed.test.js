@@ -50,20 +50,13 @@ describe(`${url} route`, () => {
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.stringContaining(
-          'File upload completed for summaryLogId: summary-log-123'
+          'File upload completed: summaryLogId=summary-log-123'
         ),
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-        },
-        context: expect.objectContaining({
-          summaryLogId: 'summary-log-123',
-          fileId: 'file-123',
-          filename: 'test.xlsx',
-          fileStatus: 'complete',
-          s3Bucket: 'test-bucket',
-          s3Key: 'test-key'
-        })
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: 'summary-log-123'
+        }
       })
     )
   })

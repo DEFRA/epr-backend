@@ -103,19 +103,12 @@ describe('Summary logs journey', () => {
     test('logs completion with file location', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: complete, s3: bucket test-bucket, key path/to/${filename}`,
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=test-bucket, s3Key=path/to/${filename}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-          },
-          context: expect.objectContaining({
-            summaryLogId,
-            fileId,
-            filename,
-            fileStatus: 'complete',
-            s3Bucket: 'test-bucket',
-            s3Key: `path/to/${filename}`
-          })
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
         })
       )
     })
@@ -163,17 +156,12 @@ describe('Summary logs journey', () => {
     test('logs completion', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: rejected`,
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=rejected`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-          },
-          context: expect.objectContaining({
-            summaryLogId,
-            fileId,
-            filename,
-            fileStatus: 'rejected'
-          })
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
         })
       )
     })
@@ -224,17 +212,12 @@ describe('Summary logs journey', () => {
     test('logs completion', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed for summaryLogId: ${summaryLogId} with fileId: ${fileId}, filename: ${filename}, status: pending`,
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=pending`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
-          },
-          context: expect.objectContaining({
-            summaryLogId,
-            fileId,
-            filename,
-            fileStatus: 'pending'
-          })
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
         })
       )
     })
