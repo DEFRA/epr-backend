@@ -98,6 +98,7 @@ export const organisation = {
           orgId,
           orgName,
           email,
+          nations: null,
           answers,
           rawSubmissionData
         })

@@ -4,6 +4,9 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
 
+/**
+ * @returns {never}
+ */
 export function failAction(request, _h, error) {
   request.logger.warn({
     message: error?.message ?? error.toString(),
