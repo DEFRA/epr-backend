@@ -103,7 +103,7 @@ export const summaryLogsUploadCompleted = {
       }
 
       const summaryLog = {
-        summaryLogId,
+        id: summaryLogId,
         status,
         file: fileData
       }
