@@ -49,9 +49,8 @@ describe(`${url} route`, () => {
 
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: expect.stringContaining(
-          'File upload completed: summaryLogId=summary-log-123'
-        ),
+        message:
+          'File upload completed: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx, status=complete, s3Bucket=test-bucket, s3Key=test-key',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -143,6 +142,24 @@ describe(`${url} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringMatching(
+          /^File upload completed:.*status=rejected$/
+        ),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: 'rejected-summary-log-123'
+        }
+      })
+    )
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.not.stringContaining('s3Bucket')
+      })
+    )
   })
 
   it('returns 422 when file is complete but missing S3 info', async () => {
@@ -192,6 +209,24 @@ describe(`${url} route`, () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
+
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringMatching(
+          /^File upload completed:.*status=pending$/
+        ),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: 'pending-summary-log-123'
+        }
+      })
+    )
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.not.stringContaining('s3Bucket')
+      })
+    )
   })
 
   it('returns 500 if error is thrown', async () => {
