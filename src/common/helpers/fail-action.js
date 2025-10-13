@@ -1,3 +1,4 @@
+import { StatusCodes } from 'http-status-codes'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -13,6 +14,11 @@ export function failAction(request, _h, error) {
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+    },
+    http: {
+      response: {
+        status_code: error?.output?.statusCode ?? StatusCodes.BAD_REQUEST
+      }
     }
   })
   throw error
