@@ -7,6 +7,8 @@ import {
 
 export function setupGlobalErrorHandler(logger) {
   process.on('unhandledRejection', (error) => {
+    const statusCode = /** @type {any} */ (error)?.output?.status_code
+
     logger.error({
       error,
       message: 'Unhandled rejection',
@@ -17,7 +19,9 @@ export function setupGlobalErrorHandler(logger) {
       http: {
         response: {
           status_code:
-            error?.output?.status_code ?? StatusCodes.INTERNAL_SERVER_ERROR
+            typeof statusCode === 'number'
+              ? statusCode
+              : StatusCodes.INTERNAL_SERVER_ERROR
         }
       }
     })
