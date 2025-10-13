@@ -11,7 +11,7 @@ export function organisationFactory({
   orgId,
   orgName,
   email,
-  nations,
+  nations = null,
   answers,
   rawSubmissionData
 }) {

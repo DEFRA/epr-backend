@@ -8,18 +8,6 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
 
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
-
 const url = summaryLogsUploadCompletedPath
 const payload = {
   uploadStatus: 'ready',

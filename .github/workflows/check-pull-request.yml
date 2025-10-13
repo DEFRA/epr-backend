@@ -59,6 +59,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Check for ADR numbering conflicts
+        run: |
+          cd docs/architecture/decisions
+          duplicates=$(ls -1 *.md | grep -E '^[0-9]{4}-' | sed 's/^\([0-9]\{4\}\)-.*/\1/' | sort | uniq -d)
+          if [ -n "$duplicates" ]; then
+            echo "Error: Duplicate ADR numbers found:"
+            echo "$duplicates"
+            exit 1
+          fi
+          echo "No ADR numbering conflicts found"
+
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-node@v5
         with:
