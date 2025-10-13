@@ -5,6 +5,9 @@ import {
 } from '../enums/index.js'
 import { logger } from './logging/logger.js'
 
+/**
+ * @returns {never}
+ */
 export function failAction(_request, _h, error) {
   logger.warn({
     message: error?.message ?? error.toString(),

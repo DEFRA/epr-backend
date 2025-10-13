@@ -11,7 +11,8 @@ import {
 import {
   extractAnswers,
   extractEmail,
-  extractOrgName
+  extractOrgName,
+  extractNations
 } from '../apply/extract-answers.js'
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 
@@ -46,6 +47,7 @@ export async function createSeedData(db) {
         orgId: ORG_ID_START_NUMBER,
         orgName: extractOrgName(organisationAnswers),
         email: extractEmail(organisationAnswers),
+        nations: extractNations(organisationAnswers),
         answers: organisationAnswers,
         rawSubmissionData: organisationFixture
       })

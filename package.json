@@ -31,6 +31,7 @@
     "postversion": "git add package.json package-lock.json && git commit -m $npm_package_version",
     "test": "TZ=UTC vitest run --coverage",
     "test:watch": "TZ=UTC vitest --coverage",
+    "type-check": "tsc",
     "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch ./src",
     "server:debug": "nodemon --inspect-brk=0.0.0.0 --ext js,json --legacy-watch ./src",
     "start": "NODE_ENV=production node --use-strict .",
@@ -78,6 +79,7 @@
     "nodemon": "3.1.10",
     "npm-run-all": "4.1.5",
     "prettier": "3.6.2",
+    "typescript": "5.9.3",
     "vitest": "3.2.4",
     "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.2"

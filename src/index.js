@@ -11,6 +11,8 @@ import { startServer } from './start-server.js'
 await startServer()
 
 process.on('unhandledRejection', (error) => {
+  const statusCode = /** @type {any} */ (error)?.output?.status_code
+
   logger.error(error, {
     message: 'Unhandled rejection',
     event: {
@@ -20,7 +22,9 @@ process.on('unhandledRejection', (error) => {
     http: {
       response: {
         status_code:
-          error?.output?.status_code ?? StatusCodes.INTERNAL_SERVER_ERROR
+          typeof statusCode === 'number'
+            ? statusCode
+            : StatusCodes.INTERNAL_SERVER_ERROR
       }
     }
   })
