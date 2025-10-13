@@ -54,13 +54,6 @@ export function extractOrgName(answers) {
   )?.value
 }
 
-export function extractNations(answers) {
-  return answers.find(
-    ({ shortDescription }) =>
-      shortDescription === FORM_FIELDS_SHORT_DESCRIPTIONS.NATIONS
-  )?.value
-}
-
 export function extractReferenceNumber(answers) {
   return answers.find(
     ({ shortDescription }) =>

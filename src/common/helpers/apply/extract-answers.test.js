@@ -3,7 +3,6 @@ import {
   extractEmail,
   extractOrgId,
   extractOrgName,
-  extractNations,
   extractReferenceNumber,
   getRegulatorEmail
 } from './extract-answers.js'
@@ -108,22 +107,6 @@ describe('extractOrgName', () => {
 
   it('should return undefined if organisation name not found', () => {
     expect(extractOrgName([])).toBeUndefined()
-  })
-})
-
-describe('extractNations', () => {
-  it('should extract nations from answers', () => {
-    const answers = [
-      {
-        shortDescription: FORM_FIELDS_SHORT_DESCRIPTIONS.NATIONS,
-        value: ['England', 'Scotland', 'Wales']
-      }
-    ]
-    expect(extractNations(answers)).toEqual(['England', 'Scotland', 'Wales'])
-  })
-
-  it('should return undefined if nations not found', () => {
-    expect(extractNations([])).toBeUndefined()
   })
 })
 

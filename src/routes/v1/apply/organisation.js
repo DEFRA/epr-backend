@@ -14,7 +14,6 @@ import {
   extractAnswers,
   extractEmail,
   extractOrgName,
-  extractNations,
   getRegulatorEmail
 } from '#common/helpers/apply/extract-answers.js'
 import { organisationFactory } from '#common/helpers/collections/factories/index.js'
@@ -62,7 +61,6 @@ export const organisation = {
         const answers = extractAnswers(data)
         const email = extractEmail(answers)
         const orgName = extractOrgName(answers)
-        const nations = extractNations(answers)
         const regulatorEmail = getRegulatorEmail(data)
 
         if (!regulatorEmail) {
@@ -81,7 +79,6 @@ export const organisation = {
           answers,
           email,
           orgName,
-          nations,
           rawSubmissionData: data,
           regulatorEmail
         }
@@ -90,14 +87,8 @@ export const organisation = {
   },
   handler: async ({ db, payload, logger }, h) => {
     const collection = db.collection('organisation')
-    const {
-      answers,
-      email,
-      orgName,
-      nations,
-      rawSubmissionData,
-      regulatorEmail
-    } = payload
+    const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
+      payload
 
     try {
       const orgId = await getNextOrgId(collection)
@@ -107,7 +98,7 @@ export const organisation = {
           orgId,
           orgName,
           email,
-          nations,
+          nations: null,
           answers,
           rawSubmissionData
         })
