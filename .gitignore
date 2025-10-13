@@ -9,4 +9,3 @@ coverage
 .cache
 .eslintcache
 mongodb-backups
-tsconfig.json
