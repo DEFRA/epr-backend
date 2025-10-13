@@ -105,16 +105,16 @@ participant AAD as Azure AD
 
 U->>router: GET /some-page
 note over router: route protected with 'session' strategy
-router->>cookie:
+router->>cookie: (forward to)
 note over cookie: check for "auth cookie"<br/>check for sessionId in "auth cookie"<br/>check for session data in cache
 alt User signed in
-  cookie->>route:
+  cookie->>route: (forward to)
   route->>U: <html>Page content</html>
 else User not signed in
   cookie->>U: 302
   U->>router: GET /auth/sign-in
   note over router: route protected with 'entra-id' strategy
-  router->>bell:
+  router->>bell: (forward to)
   bell->>U: 302
   U->>AAD: GET /{tenantId}/oauth2/v2.0/authorize<br/>?client_id={client-id}<br/>&redirect_uri=/auth/callback<br/>&...
   AAD->>U: <html>Login form</html>
@@ -123,11 +123,11 @@ else User not signed in
   AAD->>U: 302
   U->>router: GET /auth/callback<br/>?code={one-time-usage-code}<br/>&...
   note over router: route protected with 'entra-id' strategy
-  router->>bell:
+  router->>bell: (forward to)
   bell->>AAD: POST /{tenantId}/oauth2/v2.0/token<br/>?client_id={client-id}<br/>&client_secret={client-secret}<br/>&code={one-time-usage-code}<br/>&...
   AAD->>bell: User token
   Note over bell: validate user token<br/>extract user details<br/>add user details to request object
-  bell->>route:
+  bell->>route: (forward to)
   note over route: generate sessionId<br/>map user details to session data<br/>populate cache with session data<br/>populate "auth cookie" with sessionId
   route->>U: 302: /some-page
 end
@@ -174,7 +174,7 @@ end
 participant AAD as Azure AD
 
 U->>router: GET /auth/sign-out
-router->>route:
+router->>route: (forward to)
 note over route: evict session data from cache<br/>clear "auth cookie"
 route->>U: 302
 U->>AAD: GET /{tenantId}/oauth2/v2.0/logout<br/>?post_logout_redirect_uri={redirectUrl}
