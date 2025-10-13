@@ -7,7 +7,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
 
-/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/summary-logs-repository/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 const uploadCompletedPayloadSchema = Joi.object({
   form: Joi.object({

@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { getDefaultStatus } from '#domain/summary-log.js'
 
-/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/summary-logs-repository/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 export const summaryLogsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}'

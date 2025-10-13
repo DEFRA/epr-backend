@@ -7,7 +7,7 @@ import {
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
-/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/summary-logs-repository/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 export const summaryLogsValidatePath =
   '/v1/organisation/{organisationId}/registration/{registrationId}/summary-logs/validate'
