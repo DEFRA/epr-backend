@@ -8,9 +8,10 @@ import {
 export function getLocalSecret(name) {
   try {
     return fs.readFileSync(process.env[name], 'utf8').toString().trim()
-  } catch (err) {
-    logger.error(err, {
-      message: `An error occurred while trying to read the secret: ${name}.\n${err}`,
+  } catch (error) {
+    logger.error({
+      error,
+      message: `An error occurred while trying to read the secret: ${name}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,
         action: LOGGING_EVENT_ACTIONS.READ_ERROR

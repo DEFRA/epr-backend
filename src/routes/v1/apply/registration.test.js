@@ -8,38 +8,37 @@ import {
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import registrationFixture from '#data/fixtures/registration.json'
 import { registrationPath } from './registration.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
 const mockAudit = vi.fn()
-
 const mockInsertOne = vi.fn()
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
+const mockGlobalLoggerWarn = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
 }))
 
+vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    logger: {
+      warn: (...args) => mockGlobalLoggerWarn(...args)
+    }
+  }
+})
+
 const url = registrationPath
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-  })
+  beforeEach(async () => {
+    server = await createTestServer()
 
-  beforeEach(() => {
-    vi.clearAllMocks()
+    mockAudit.mockClear()
+    mockInsertOne.mockClear()
+    mockGlobalLoggerWarn.mockClear()
+
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -67,7 +66,7 @@ describe(`${url} route`, () => {
       }
     })
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
         event: {
@@ -217,7 +216,7 @@ describe(`${url} route`, () => {
 
     expect(response.statusCode).toEqual(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(body.message).toEqual(message)
-    expect(mockLoggerWarn).toHaveBeenCalledWith({
+    expect(mockGlobalLoggerWarn).toHaveBeenCalledWith({
       message:
         'orgId: 499999, referenceNumber: abcdef123456fedcba654321 - Organisation ID must be at least 500000',
       event: {
@@ -248,7 +247,8 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error,
       message: `Failure on ${registrationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -282,7 +282,8 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error,
       message: `Failure on /v1/apply/registration for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

@@ -11,13 +11,17 @@ const mockLoggerWarn = vi.fn()
 const secretFixture = 'secret'
 
 vi.mock('fs')
-vi.mock('./logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
+vi.mock('./logging/logger.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    logger: {
+      info: (...args) => mockLoggerInfo(...args),
+      error: (...args) => mockLoggerError(...args),
+      warn: (...args) => mockLoggerWarn(...args)
+    }
   }
-}))
+})
 
 describe('getLocalSecret', () => {
   const secretName = 'SECRET_NAME'
@@ -44,7 +48,8 @@ describe('getLocalSecret', () => {
     })
     const result = getLocalSecret(secretName)
     expect(result).toEqual(null)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(mockLoggerError).toHaveBeenCalledWith({
+      error,
       message: `An error occurred while trying to read the secret: ${secretName}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,

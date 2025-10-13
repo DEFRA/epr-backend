@@ -363,7 +363,41 @@ We use [structured logging in ECS format](https://github.com/DEFRA/cdp-documenta
 [See the logging standards](https://defra.github.io/software-development-standards/standards/logging_standards/) for more details.
 
 CDP implements most of the fields suggested by the Defra standards but omits the `event.category` & `event.action` fields,
-to ensure these are provided in logging calls you write, please follow the example below:
+to ensure these are provided in logging calls you write, please follow the examples below.
+
+#### Request-scoped vs Global Logger
+
+**When to use which logger:**
+
+- **In route handlers** (request-scoped contexts): Use `request.logger` from the request object. This automatically includes request correlation IDs for distributed tracing.
+- **In startup, helpers, and non-request contexts**: Use the global `logger` import.
+
+**Example: Route handler (use `request.logger`)**
+
+```javascript
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from './common/enums/event.js'
+
+export const myRoute = {
+  method: 'POST',
+  path: '/my-endpoint',
+  handler: async ({ payload, logger }, h) => {
+    logger.info({
+      message: 'Processing request',
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
+      }
+    })
+
+    return h.response().code(200)
+  }
+}
+```
+
+**Example: Non-request context (use global `logger`)**
 
 ```javascript
 import { logger } from './common/helpers/logging/logger.js'
@@ -383,45 +417,25 @@ logger.info({
 
 #### Handling errors
 
-A little extra care needs to be taken with error objects, we provide a custom handler around the default `logger.error`
-that converts a javascript error object to an ECS compatible structured logging error object, please follow the example below:
+Error objects are automatically formatted to ECS-compatible structured logs via Pino serializers. Simply pass the error as the `error` property:
 
 ```javascript
-// ...
-
 try {
   // ...
-} catch (err) {
-  logger.error(
-    err, // The javascript error must be passed as the first argument
-    {
-      message: 'Could not send email',
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.HTTP,
-        action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
-      }
+} catch (error) {
+  logger.error({
+    error,
+    message: 'Could not send email',
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.HTTP,
+      action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
     }
-  )
+  })
+  throw error
 }
 ```
 
-**There may be cases when you want to log an error but aren't catching an error that's been thrown.**
-
-In this instance simply create an error object and pass it to `logger.error`:
-
-```javascript
-// ...
-
-const err = new Error('Could not map data')
-
-logger.error(err, {
-  message: `Failed to map data for ...`,
-  event: {
-    category: LOGGING_EVENT_CATEGORIES.FUNCTION,
-    action: LOGGING_EVENT_ACTIONS.MAPPING_FAILED
-  }
-})
-```
+The error serializer automatically extracts `message`, `stack_trace`, and `type` fields in the correct format.
 
 #### Logging Events
 
