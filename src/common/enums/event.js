@@ -4,7 +4,8 @@ export const LOGGING_EVENT_CATEGORIES = {
   HTTP: 'http',
   PROXY: 'proxy',
   SECRET: 'secret',
-  SERVER: 'server'
+  SERVER: 'server',
+  FORMS: 'forms'
 }
 
 export const LOGGING_EVENT_ACTIONS = {
@@ -21,7 +22,8 @@ export const LOGGING_EVENT_ACTIONS = {
   RESPONSE_FAILURE: 'response_failure',
   SEND_EMAIL_FAILURE: 'send_email_failure',
   START_FAILURE: 'start_failure',
-  START_SUCCESS: 'start_success'
+  START_SUCCESS: 'start_success',
+  UNEXPECTED_DATA: 'unexpected_data'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {
