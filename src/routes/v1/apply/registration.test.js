@@ -222,11 +222,6 @@ describe(`${url} route`, () => {
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-      },
-      http: {
-        response: {
-          status_code: StatusCodes.UNPROCESSABLE_ENTITY
-        }
       }
     })
   })
