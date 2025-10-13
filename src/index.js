@@ -1,32 +1,6 @@
-import process from 'node:process'
-import { StatusCodes } from 'http-status-codes'
-import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from './common/enums/index.js'
-
+import { setupGlobalErrorHandler } from './common/helpers/global-handlers.js'
 import { logger } from './common/helpers/logging/logger.js'
 import { startServer } from './start-server.js'
 
+setupGlobalErrorHandler(logger)
 await startServer()
-
-process.on('unhandledRejection', (error) => {
-  const statusCode = /** @type {any} */ (error)?.output?.status_code
-
-  logger.error(error, {
-    message: 'Unhandled rejection',
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.HTTP,
-      action: LOGGING_EVENT_ACTIONS.REQUEST_FAILURE
-    },
-    http: {
-      response: {
-        status_code:
-          typeof statusCode === 'number'
-            ? statusCode
-            : StatusCodes.INTERNAL_SERVER_ERROR
-      }
-    }
-  })
-  process.exitCode = 1
-})

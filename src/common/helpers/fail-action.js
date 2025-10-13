@@ -3,13 +3,12 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/index.js'
-import { logger } from './logging/logger.js'
 
 /**
  * @returns {never}
  */
-export function failAction(_request, _h, error) {
-  logger.warn({
+export function failAction(request, _h, error) {
+  request.logger.warn({
     message: error?.message ?? error.toString(),
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,

@@ -26,6 +26,18 @@ export const loggerOptions = {
   level: logConfig.level,
   ...formatters[logConfig.format],
   nesting: true,
+  serializers: {
+    error: (err) => {
+      if (err instanceof Error) {
+        return {
+          message: err.message,
+          stack_trace: err.stack,
+          type: err.name
+        }
+      }
+      return err
+    }
+  },
   // @fixme: add coverage
   /* c8 ignore start */
   mixin() {

@@ -28,5 +28,10 @@
     }
   },
   "include": ["src/**/*.js"],
-  "exclude": ["node_modules", "**/*.test.js", "**/*.contract.js"]
+  "exclude": [
+    "node_modules",
+    "**/*.test.js",
+    "**/*.contract.js",
+    "**/test-helpers/**"
+  ]
 }
