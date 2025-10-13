@@ -31,5 +31,3 @@
  * @property {Function} [inject] - Inject a request for testing
  * @property {Function} [ext] - Register extension points
  */
-
-export {}
