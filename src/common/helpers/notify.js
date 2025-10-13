@@ -53,15 +53,16 @@ async function sendEmail(templateId, emailAddress, personalisation = {}) {
         personalisation
       }
     })
-  } catch (err) {
-    logger.error(err, {
+  } catch (error) {
+    logger.error({
+      error,
       message: 'Could not send email',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,
         action: LOGGING_EVENT_ACTIONS.SEND_EMAIL_FAILURE
       }
     })
-    throw err
+    throw error
   }
 }
 

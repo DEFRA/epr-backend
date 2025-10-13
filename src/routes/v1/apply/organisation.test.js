@@ -13,22 +13,12 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
-const mockLoggerInfo = vi.fn()
-const mockLoggerError = vi.fn()
-const mockLoggerWarn = vi.fn()
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({
   insertedId: { toString: () => '12345678901234567890abcd' }
 })
-
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args),
-    warn: (...args) => mockLoggerWarn(...args)
-  }
-}))
 
 const mockCountDocuments = vi.fn(() => 1)
 
@@ -42,14 +32,13 @@ const url = organisationPath
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-  })
+  beforeEach(async () => {
+    server = await createTestServer()
 
-  beforeEach(() => {
-    vi.clearAllMocks()
+    mockAudit.mockClear()
+    mockInsertOne.mockClear()
+    mockCountDocuments.mockClear()
+
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -99,7 +88,7 @@ describe(`${url} route`, () => {
         referenceNumber: expect.any(String)
       }
     )
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
         event: {
@@ -247,7 +236,8 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error,
       message: `Failure on ${organisationPath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -275,7 +265,8 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(mockLoggerError).toHaveBeenCalledWith(error, {
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error,
       message: `Failure on ${organisationPath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

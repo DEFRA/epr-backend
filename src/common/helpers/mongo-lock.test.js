@@ -1,5 +1,4 @@
 import { acquireLock, requireLock, MongoLockError } from './mongo-lock.js'
-
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -7,11 +6,15 @@ import {
 
 const mockLoggerError = vi.fn()
 
-vi.mock('./logging/logger.js', () => ({
-  logger: {
-    error: (...args) => mockLoggerError(...args)
+vi.mock('./logging/logger.js', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    logger: {
+      error: (...args) => mockLoggerError(...args)
+    }
   }
-}))
+})
 
 describe('Lock Functions', () => {
   let locker
@@ -52,16 +55,14 @@ describe('Lock Functions', () => {
       const result = await acquireLock(locker, resource)
 
       expect(result).toBeNull()
-      expect(mockLoggerError).toHaveBeenCalledWith(
-        new MongoLockError('Could not acquire mongo resource lock'),
-        {
-          message: `Failed to acquire lock for ${resource}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.DB,
-            action: LOGGING_EVENT_ACTIONS.LOCK_ACQUISITION_FAILED
-          }
+      expect(mockLoggerError).toHaveBeenCalledWith({
+        error: expect.any(MongoLockError),
+        message: `Failed to acquire lock for ${resource}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.LOCK_ACQUISITION_FAILED
         }
-      )
+      })
       expect(locker.lock).toHaveBeenCalledWith(resource)
     })
   })
