@@ -128,7 +128,7 @@ export const summaryLogsUploadCompleted = {
         }
       })
 
-      return h.response().code(StatusCodes.OK)
+      return h.response().code(StatusCodes.ACCEPTED)
     } catch (error) {
       if (error.isBoom) {
         throw error

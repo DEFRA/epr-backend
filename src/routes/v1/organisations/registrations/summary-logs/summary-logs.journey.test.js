@@ -96,8 +96,8 @@ describe('Summary logs journey', () => {
       })
     })
 
-    test('returns OK', () => {
-      expect(uploadResponse.statusCode).toBe(200)
+    test('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
     })
 
     test('logs completion with file location', () => {
@@ -149,8 +149,8 @@ describe('Summary logs journey', () => {
       })
     })
 
-    test('returns OK', () => {
-      expect(uploadResponse.statusCode).toBe(200)
+    test('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
     })
 
     test('logs completion', () => {
@@ -205,8 +205,8 @@ describe('Summary logs journey', () => {
       })
     })
 
-    test('returns OK', () => {
-      expect(uploadResponse.statusCode).toBe(200)
+    test('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
     })
 
     test('logs completion', () => {

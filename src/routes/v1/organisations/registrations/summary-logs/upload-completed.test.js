@@ -38,14 +38,14 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 200 when valid payload', async () => {
+  it('returns 202 when valid payload', async () => {
     const response = await server.inject({
       method: 'POST',
       url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
       payload
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
 
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -105,7 +105,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(firstResponse.statusCode).toBe(StatusCodes.OK)
+    expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
 
     const secondResponse = await server.inject({
       method: 'POST',
@@ -118,7 +118,7 @@ describe(`${url} route`, () => {
     expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
   })
 
-  it('returns 200 when file is rejected without S3 info', async () => {
+  it('returns 202 when file is rejected without S3 info', async () => {
     const rejectedPayload = {
       uploadStatus: 'ready',
       metadata: {
@@ -141,7 +141,7 @@ describe(`${url} route`, () => {
       payload: rejectedPayload
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
 
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -185,7 +185,7 @@ describe(`${url} route`, () => {
     expect(body.message).toContain('s3Bucket')
   })
 
-  it('returns 200 when file is pending without S3 info', async () => {
+  it('returns 202 when file is pending without S3 info', async () => {
     const pendingPayload = {
       uploadStatus: 'ready',
       metadata: {
@@ -208,7 +208,7 @@ describe(`${url} route`, () => {
       payload: pendingPayload
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
 
     expect(server.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
