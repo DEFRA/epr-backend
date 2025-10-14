@@ -10,9 +10,7 @@ export const summaryLogsGet = {
   method: 'GET',
   path: summaryLogsGetPath,
   /**
-   * @param {Object} request
-   * @param {SummaryLogsRepository} request.summaryLogsRepository
-   * @param {Object} request.params
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async ({ summaryLogsRepository, params }, h) => {

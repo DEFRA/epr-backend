@@ -9,6 +9,9 @@ import {
 } from '../../enums/index.js'
 
 export function registrationAndAccreditationHandler(name, path, factory) {
+  /**
+   * @param {import('../../hapi-types.js').HapiRequest} request
+   */
   return async ({ db, payload, logger }, h) => {
     const { answers, orgId, rawSubmissionData, referenceNumber } = payload
 

@@ -85,6 +85,9 @@ export const organisation = {
       }
     }
   },
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest} request
+   */
   handler: async ({ db, payload, logger }, h) => {
     const collection = db.collection('organisation')
     const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
