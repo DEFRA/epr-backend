@@ -54,11 +54,7 @@ export const summaryLogsValidate = {
     }
   },
   /**
-   * @param {Object} request
-   * @param {SummaryLogsRepository} request.summaryLogsRepository
-   * @param {Object} request.payload
-   * @param {Object} request.params
-   * @param {Object} request.logger
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {

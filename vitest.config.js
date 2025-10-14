@@ -17,7 +17,8 @@ export default defineConfig({
         'coverage',
         'src/index.js',
         'src/config.js',
-        '**/*.port.js'
+        '**/*.port.js',
+        'src/common/hapi-types.js'
       ],
       thresholds: {
         lines: 100,

@@ -11,6 +11,7 @@ import { enableAuditing } from '@defra/cdp-auditing'
 async function startServer() {
   const config = getConfig()
   const auditConfig = config.get('audit')
+  /** @type {import('./common/hapi-types.js').HapiServer} */
   let server
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)

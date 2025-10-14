@@ -5,6 +5,7 @@ import {
 } from '../enums/index.js'
 
 /**
+ * @param {import('../hapi-types.js').HapiRequest} request
  * @returns {never}
  */
 export function failAction(request, _h, error) {

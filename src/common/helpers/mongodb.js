@@ -14,6 +14,9 @@ export const mongoDb = {
   plugin: {
     name: 'mongodb',
     version: '1.0.0',
+    /**
+     * @param {import('../hapi-types.js').HapiServer} server
+     */
     register: async function (server, options) {
       server.logger.info({
         message: 'Setting up MongoDb',
@@ -66,7 +69,7 @@ export const mongoDb = {
           /* c8 ignore start */
         } catch (err) {
           server.logger.error({
-            err,
+            error: err,
             message: 'Failed to close mongo client',
             event: {
               category: LOGGING_EVENT_CATEGORIES.DB,
