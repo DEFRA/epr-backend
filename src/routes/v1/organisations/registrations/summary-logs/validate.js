@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -55,13 +54,10 @@ export const summaryLogsValidate = {
     }
   },
   /**
-   * @param {Object} request
-   * @param {SummaryLogsRepository} request.summaryLogsRepository
-   * @param {Object} request.payload
-   * @param {Object} request.params
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params }, h) => {
+  handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
     const { s3Bucket, s3Key, fileId, filename } = payload
     const { organisationId, registrationId } = params
     const s3Path = `${s3Bucket}/${s3Key}`
@@ -95,10 +91,11 @@ export const summaryLogsValidate = {
           status: 'validating'
         })
         .code(StatusCodes.ACCEPTED)
-    } catch (err) {
+    } catch (error) {
       const message = `Failure on ${summaryLogsValidatePath}`
 
-      logger.error(err, {
+      logger.error({
+        error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

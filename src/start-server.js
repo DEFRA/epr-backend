@@ -11,6 +11,7 @@ import { enableAuditing } from '@defra/cdp-auditing'
 async function startServer() {
   const config = getConfig()
   const auditConfig = config.get('audit')
+  /** @type {import('./common/hapi-types.js').HapiServer} */
   let server
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)
@@ -26,8 +27,9 @@ async function startServer() {
         action: LOGGING_EVENT_ACTIONS.START_SUCCESS
       }
     })
-  } catch (err) {
-    logger.error(err, {
+  } catch (error) {
+    logger.error({
+      error,
       message: 'Server failed to start',
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

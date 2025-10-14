@@ -46,6 +46,7 @@ export async function createSeedData(db) {
         orgId: ORG_ID_START_NUMBER,
         orgName: extractOrgName(organisationAnswers),
         email: extractEmail(organisationAnswers),
+        nations: null,
         answers: organisationAnswers,
         rawSubmissionData: organisationFixture
       })

@@ -1,7 +1,6 @@
 import { audit } from '@defra/cdp-auditing'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { logger } from '#common/helpers/logging/logger.js'
 import {
   AUDIT_EVENT_ACTIONS,
   AUDIT_EVENT_CATEGORIES,
@@ -21,6 +20,29 @@ import { organisationFactory } from '#common/helpers/collections/factories/index
 import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'
+
+async function getNextOrgId(collection) {
+  const count = await collection.countDocuments({
+    orgId: {
+      $gte: ORG_ID_START_NUMBER
+    }
+  })
+  return ORG_ID_START_NUMBER + count + 1
+}
+
+async function sendConfirmationEmails(email, regulatorEmail, context) {
+  await sendEmail(
+    ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
+    email,
+    context
+  )
+
+  await sendEmail(
+    ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
+    regulatorEmail,
+    context
+  )
+}
 
 /**
  * Apply: Organisation
@@ -63,24 +85,23 @@ export const organisation = {
       }
     }
   },
-  handler: async ({ db, payload }, h) => {
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest} request
+   */
+  handler: async ({ db, payload, logger }, h) => {
     const collection = db.collection('organisation')
     const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
       payload
 
     try {
-      const count = await collection.countDocuments({
-        orgId: {
-          $gte: ORG_ID_START_NUMBER
-        }
-      })
-      const orgId = ORG_ID_START_NUMBER + count + 1
+      const orgId = await getNextOrgId(collection)
 
       const { insertedId } = await collection.insertOne(
         organisationFactory({
           orgId,
           orgName,
           email,
+          nations: null,
           answers,
           rawSubmissionData
         })
@@ -108,35 +129,22 @@ export const organisation = {
         }
       })
 
-      await sendEmail(
-        ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID,
-        email,
-        {
-          orgId,
-          orgName,
-          referenceNumber
-        }
-      )
-
-      await sendEmail(
-        ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
-        regulatorEmail,
-        {
-          orgId,
-          orgName,
-          referenceNumber
-        }
-      )
+      await sendConfirmationEmails(email, regulatorEmail, {
+        orgId,
+        orgName,
+        referenceNumber
+      })
 
       return h.response({
         orgId,
         orgName,
         referenceNumber
       })
-    } catch (err) {
+    } catch (error) {
       const message = `Failure on ${organisationPath}`
 
-      logger.error(err, {
+      logger.error({
+        error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
