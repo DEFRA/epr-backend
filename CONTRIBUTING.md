@@ -400,11 +400,11 @@ export const myRoute = {
 **Example: Non-request context (use global `logger`)**
 
 ```javascript
-import { logger } from './common/helpers/logging/logger.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from './common/enums/event.js'
+} from '#common/enums/event.js'
 
 logger.info({
   message: 'Setting up database',

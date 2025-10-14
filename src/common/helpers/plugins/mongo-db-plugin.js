@@ -1,16 +1,18 @@
-import { MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
+
+import { createMongoClient } from '#common/helpers/mongo-client.js'
+
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from '../enums/index.js'
+} from '../../enums/index.js'
 import {
-  createOrUpdateCollections,
   createIndexes,
+  createOrUpdateCollections,
   createSeedData
-} from './collections/create-update.js'
+} from '../collections/create-update.js'
 
-export const mongoDb = {
+export const mongoDbPlugin = {
   plugin: {
     name: 'mongodb',
     version: '1.0.0',
@@ -26,12 +28,13 @@ export const mongoDb = {
         }
       })
 
-      const client = await MongoClient.connect(options.mongoUrl, {
-        ...options.mongoOptions
+      const client = await createMongoClient({
+        url: options.mongoUrl,
+        options: options.mongoOptions
       })
 
-      const databaseName = options.databaseName
-      const db = client.db(databaseName)
+      const db = client.db(options.databaseName)
+
       const locker = new LockManager(db.collection('mongo-locks'))
 
       await createOrUpdateCollections(db)
@@ -39,7 +42,7 @@ export const mongoDb = {
       await createSeedData(db)
 
       server.logger.info({
-        message: `MongoDb connected to ${databaseName}`,
+        message: `MongoDb connected to ${options.databaseName}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,
           action: LOGGING_EVENT_ACTIONS.CONNECTION_SUCCESS
@@ -49,7 +52,7 @@ export const mongoDb = {
       server.decorate('server', 'mongoClient', client)
       server.decorate('server', 'db', db)
       server.decorate('server', 'locker', locker)
-      // @fixme: add coverage
+      // add coverage
       /* c8 ignore start */
       server.decorate('request', 'db', () => db, { apply: true })
       server.decorate('request', 'locker', () => locker, { apply: true })
@@ -65,7 +68,7 @@ export const mongoDb = {
         })
         try {
           await client.close()
-          // @fixme: add coverage
+          // add coverage
           /* c8 ignore start */
         } catch (err) {
           server.logger.error({
@@ -73,7 +76,7 @@ export const mongoDb = {
             message: 'Failed to close mongo client',
             event: {
               category: LOGGING_EVENT_CATEGORIES.DB,
-              action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING
+              action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING_FAILURE
             }
           })
         }

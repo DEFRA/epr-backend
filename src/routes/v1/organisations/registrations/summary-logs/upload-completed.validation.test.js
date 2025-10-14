@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
@@ -34,7 +34,7 @@ describe('POST upload-completed validation', () => {
     expect(response.result.message).toContain('"form" is required')
   })
 
-  it('rejects payload without form.file', async () => {
+  it('rejects payload without form.summaryLogUpload', async () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
@@ -46,7 +46,9 @@ describe('POST upload-completed validation', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(response.result.message).toContain('"form.file" is required')
+    expect(response.result.message).toContain(
+      '"form.summaryLogUpload" is required'
+    )
   })
 
   it('rejects payload with missing fileId', async () => {
@@ -55,7 +57,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             filename: 'test.xlsx',
             fileStatus: 'complete',
             s3Bucket: 'bucket',
@@ -66,7 +68,9 @@ describe('POST upload-completed validation', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(response.result.message).toContain('"form.file.fileId" is required')
+    expect(response.result.message).toContain(
+      '"form.summaryLogUpload.fileId" is required'
+    )
   })
 
   it('rejects payload with missing filename', async () => {
@@ -75,7 +79,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-123',
             fileStatus: 'complete',
             s3Bucket: 'bucket',
@@ -87,7 +91,7 @@ describe('POST upload-completed validation', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
-      '"form.file.filename" is required'
+      '"form.summaryLogUpload.filename" is required'
     )
   })
 
@@ -97,7 +101,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-123',
             filename: 'test.xlsx',
             s3Bucket: 'bucket',
@@ -109,7 +113,7 @@ describe('POST upload-completed validation', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
-      '"form.file.fileStatus" is required'
+      '"form.summaryLogUpload.fileStatus" is required'
     )
   })
 
@@ -119,7 +123,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'invalid-status',
@@ -132,7 +136,7 @@ describe('POST upload-completed validation', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
-      '"form.file.fileStatus" must be one of [complete, rejected, pending]'
+      '"form.summaryLogUpload.fileStatus" must be one of [complete, rejected, pending]'
     )
   })
 
@@ -142,7 +146,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'complete',
@@ -154,7 +158,7 @@ describe('POST upload-completed validation', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     expect(response.result.message).toContain(
-      '"form.file.s3Bucket" is required'
+      '"form.summaryLogUpload.s3Bucket" is required'
     )
   })
 
@@ -164,7 +168,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'complete',
@@ -175,7 +179,9 @@ describe('POST upload-completed validation', () => {
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    expect(response.result.message).toContain('"form.file.s3Key" is required')
+    expect(response.result.message).toContain(
+      '"form.summaryLogUpload.s3Key" is required'
+    )
   })
 
   it('accepts valid payload with complete status', async () => {
@@ -184,7 +190,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-123',
             filename: 'test.xlsx',
             fileStatus: 'complete',
@@ -204,7 +210,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-999'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-999',
             filename: 'virus.xlsx',
             fileStatus: 'rejected',
@@ -218,13 +224,13 @@ describe('POST upload-completed validation', () => {
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
   })
 
-  it('accepts payload with extra unknown fields in form.file', async () => {
+  it('accepts payload with extra unknown fields in form.summaryLogUpload', async () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('org-123', 'reg-456', 'sum-888'),
       payload: {
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-888',
             filename: 'test.xlsx',
             fileStatus: 'complete',
@@ -252,7 +258,7 @@ describe('POST upload-completed validation', () => {
           registrationId: 'reg-456'
         },
         form: {
-          file: {
+          summaryLogUpload: {
             fileId: 'file-777',
             filename: 'test.xlsx',
             fileStatus: 'complete',

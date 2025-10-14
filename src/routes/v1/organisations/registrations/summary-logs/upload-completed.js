@@ -1,57 +1,58 @@
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
-import {
-  determineStatusFromUpload,
-  determineFailureReason,
-  UPLOAD_STATUS
-} from '#domain/summary-log.js'
+
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import {
+  determineFailureReason,
+  determineStatusFromUpload,
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-log.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 
-const uploadCompletedPayloadSchema = Joi.object({
-  form: Joi.object({
-    file: Joi.object({
-      fileId: Joi.string().required(),
-      filename: Joi.string().required(),
-      fileStatus: Joi.string()
-        .valid(
-          UPLOAD_STATUS.COMPLETE,
-          UPLOAD_STATUS.REJECTED,
-          UPLOAD_STATUS.PENDING
-        )
-        .required(),
-      s3Bucket: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      s3Key: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      hasError: Joi.boolean().optional(),
-      errorMessage: Joi.string().optional()
-    })
-      .required()
-      .unknown(true)
-  })
-    .required()
-    .unknown(true)
-})
-  .unknown(true)
-  .messages({
-    'any.required': '{#label} is required',
-    'string.empty': '{#label} cannot be empty'
-  })
+/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#workers/summary-logs/validator/summary-logs-validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
+
+const createSummaryLog = (
+  summaryLogId,
+  summaryLogUpload,
+  status,
+  failureReason
+) => {
+  const { fileId, filename, fileStatus, s3Bucket, s3Key } = summaryLogUpload
+
+  const fileData = {
+    id: fileId,
+    name: filename,
+    status: fileStatus
+  }
+
+  if (fileStatus === UPLOAD_STATUS.COMPLETE) {
+    fileData.s3 = {
+      bucket: s3Bucket,
+      key: s3Key
+    }
+  }
+
+  const summaryLog = {
+    id: summaryLogId,
+    status,
+    file: fileData
+  }
+
+  if (failureReason) {
+    summaryLog.failureReason = failureReason
+  }
+
+  return summaryLog
+}
 
 export const summaryLogsUploadCompleted = {
   method: 'POST',
@@ -65,14 +66,26 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsValidator}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
-    const { summaryLogId } = params
+  handler: async (request, h) => {
     const {
-      file: { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage }
-    } = payload.form
+      summaryLogsRepository,
+      summaryLogsValidator,
+      payload,
+      params,
+      logger
+    } = request
+
+    const { summaryLogId } = params
+
+    const {
+      form: { summaryLogUpload }
+    } = payload
+
+    const { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage } =
+      summaryLogUpload
 
     try {
       const existingSummaryLog =
@@ -87,30 +100,18 @@ export const summaryLogsUploadCompleted = {
       const status = determineStatusFromUpload(fileStatus)
       const failureReason = determineFailureReason(status, errorMessage)
 
-      const fileData = {
-        id: fileId,
-        name: filename,
-        status: fileStatus
-      }
-
-      if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-        fileData.s3 = {
-          bucket: s3Bucket,
-          key: s3Key
-        }
-      }
-
-      const summaryLog = {
-        id: summaryLogId,
+      const summaryLog = createSummaryLog(
+        summaryLogId,
+        summaryLogUpload,
         status,
-        file: fileData
-      }
-
-      if (failureReason) {
-        summaryLog.failureReason = failureReason
-      }
+        failureReason
+      )
 
       await summaryLogsRepository.insert(summaryLog)
+
+      if (status === SUMMARY_LOG_STATUS.VALIDATING) {
+        await summaryLogsValidator.validate(summaryLog)
+      }
 
       const s3Info =
         fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key
