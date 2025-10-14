@@ -1,48 +1,17 @@
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
+
 import {
-  determineStatusFromUpload,
   determineFailureReason,
+  determineStatusFromUpload,
+  SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
 
-/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 
-const uploadCompletedPayloadSchema = Joi.object({
-  form: Joi.object({
-    file: Joi.object({
-      fileId: Joi.string().required(),
-      filename: Joi.string().required(),
-      fileStatus: Joi.string()
-        .valid(
-          UPLOAD_STATUS.COMPLETE,
-          UPLOAD_STATUS.REJECTED,
-          UPLOAD_STATUS.PENDING
-        )
-        .required(),
-      s3Bucket: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      s3Key: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      })
-    })
-      .required()
-      .unknown(true)
-  })
-    .required()
-    .unknown(true)
-})
-  .unknown(true)
-  .messages({
-    'any.required': '{#label} is required',
-    'string.empty': '{#label} cannot be empty'
-  })
+/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#workers/summary-logs/validator/summary-logs-validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
@@ -62,10 +31,12 @@ export const summaryLogsUploadCompleted = {
    * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params }, h) => {
+  handler: async (request, h) => {
+    const { summaryLogsRepository, summaryLogsValidator, payload, params } =
+      request
     const { summaryLogId } = params
     const {
-      file: { fileId, filename, fileStatus, s3Bucket, s3Key }
+      summaryLogUpload: { fileId, filename, fileStatus, s3Bucket, s3Key }
     } = payload.form
 
     const existingSummaryLog =
@@ -104,6 +75,10 @@ export const summaryLogsUploadCompleted = {
     }
 
     await summaryLogsRepository.insert(summaryLog)
+
+    if (status === SUMMARY_LOG_STATUS.VALIDATING) {
+      await summaryLogsValidator.validate(summaryLog)
+    }
 
     return h.response().code(StatusCodes.OK)
   }

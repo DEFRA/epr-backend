@@ -3,7 +3,8 @@ import hapi from '@hapi/hapi'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from './common/enums/event.js'
+} from '#common/enums/event.js'
+
 import { getConfig } from './config.js'
 
 const mockLoggerInfo = vi.fn()
@@ -60,7 +61,7 @@ vi.mock('hapi-pino', () => ({
   }
 }))
 
-vi.mock('./common/helpers/logging/logger.js', async (importOriginal) => {
+vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
   const actual = await importOriginal()
   return {
     ...actual,
@@ -72,7 +73,7 @@ vi.mock('./common/helpers/logging/logger.js', async (importOriginal) => {
   }
 })
 
-vi.mock('./common/helpers/mongodb.js')
+vi.mock('#common/helpers/plugins/mongo-db-plugin.js')
 
 vi.mock('@defra/hapi-secure-context')
 

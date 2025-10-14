@@ -1,58 +1,165 @@
 import { StatusCodes } from 'http-status-codes'
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
+import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
 
-const url = summaryLogsUploadCompletedPath
-const payload = {
-  uploadStatus: 'ready',
-  metadata: {
-    organisationId: 'org-123',
-    registrationId: 'reg-456'
-  },
-  form: {
-    file: {
-      fileId: 'file-123',
-      filename: 'test.xlsx',
-      fileStatus: 'complete',
-      s3Bucket: 'test-bucket',
-      s3Key: 'test-key'
-    }
-  },
-  numberOfRejectedFiles: 0
-}
-let server
+const summaryLogId = 'summary-log-123'
 
-describe(`${url} route`, () => {
+const organisationId = 'org-123'
+const registrationId = 'reg-456'
+
+const fileId = 'file-123'
+const filename = 'test.xlsx'
+const fileStatus = 'complete'
+const s3Bucket = 'test-bucket'
+const s3Key = 'test-key'
+
+describe(`${summaryLogsUploadCompletedPath} route`, () => {
+  let server
+  let payload
+  let summaryLog
+
+  let summaryLogsRepository
+  let summaryLogsValidator
+
   beforeAll(async () => {
+    summaryLogsRepository = {
+      insert: vi.fn().mockResolvedValue(undefined),
+      findById: vi.fn().mockResolvedValue(null),
+      updateStatus: vi.fn().mockResolvedValue(undefined)
+    }
+
+    summaryLogsValidator = {
+      validate: vi.fn()
+    }
+
+    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
     server = await createServer({
       repositories: {
-        summaryLogsRepository: createInMemorySummaryLogsRepository()
+        summaryLogsRepository
       },
-      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      workers: {
+        summaryLogsValidator
+      },
+      featureFlags
     })
+
     await server.initialize()
   })
 
   beforeEach(() => {
-    vi.clearAllMocks()
+    payload = {
+      uploadStatus: 'ready',
+      metadata: {
+        organisationId,
+        registrationId
+      },
+      form: {
+        summaryLogUpload: {
+          fileId,
+          filename,
+          fileStatus,
+          s3Bucket,
+          s3Key
+        }
+      },
+      numberOfRejectedFiles: 0
+    }
+
+    summaryLog = {
+      id: summaryLogId,
+      status: SUMMARY_LOG_STATUS.VALIDATING,
+      file: {
+        id: fileId,
+        name: filename,
+        status: fileStatus,
+        s3: {
+          bucket: s3Bucket,
+          key: s3Key
+        }
+      }
+    }
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
   })
 
   it('returns 200 when valid payload', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
       payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
   })
 
+  it('should add summary log to repository when file has been accepted', async () => {
+    await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLog)
+  })
+
+  it('should add summary log to repository with failure reason when file has been rejected', async () => {
+    payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.REJECTED
+    delete payload.form.summaryLogUpload.s3Bucket
+    delete payload.form.summaryLogUpload.s3Key
+    payload.numberOfRejectedFiles = 1
+
+    await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(summaryLogsRepository.insert).toHaveBeenCalledWith({
+      id: summaryLogId,
+      status: SUMMARY_LOG_STATUS.REJECTED,
+      file: {
+        id: fileId,
+        name: filename,
+        status: UPLOAD_STATUS.REJECTED
+      },
+      failureReason: 'File rejected by virus scan'
+    })
+  })
+
+  it('should invoke validation as expected when file has been accepted', async () => {
+    await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(summaryLogsValidator.validate).toHaveBeenCalledWith(summaryLog)
+  })
+
+  it('should not invoke validation when file has been rejected', async () => {
+    payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.REJECTED
+    delete payload.form.summaryLogUpload.s3Bucket
+    delete payload.form.summaryLogUpload.s3Key
+    payload.numberOfRejectedFiles = 1
+
+    await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(summaryLogsValidator.validate).not.toHaveBeenCalled()
+  })
+
   it('returns 400 if payload is not an object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
       payload: 'not-an-object'
     })
 
@@ -64,17 +171,17 @@ describe(`${url} route`, () => {
   it('returns 422 if payload is null', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
       payload: null
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
   })
 
-  it('returns 422 if payload is missing form.file', async () => {
+  it('returns 422 if payload is missing form.summaryLogUpload', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
       payload: {
         uploadStatus: 'ready'
       }
@@ -85,70 +192,14 @@ describe(`${url} route`, () => {
     expect(body.message).toContain('"form" is required')
   })
 
-  it('returns 409 if summary log already exists', async () => {
-    const summaryLogId = 'existing-summary-log-123'
-
-    const firstResponse = await server.inject({
-      method: 'POST',
-      url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-      payload
-    })
-
-    expect(firstResponse.statusCode).toBe(StatusCodes.OK)
-
-    const secondResponse = await server.inject({
-      method: 'POST',
-      url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-      payload
-    })
-
-    expect(secondResponse.statusCode).toBe(StatusCodes.CONFLICT)
-    const body = JSON.parse(secondResponse.payload)
-    expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
-  })
-
-  it('returns 200 when file is rejected without S3 info', async () => {
-    const rejectedPayload = {
-      uploadStatus: 'ready',
-      metadata: {
-        organisationId: 'org-123',
-        registrationId: 'reg-456'
-      },
-      form: {
-        file: {
-          fileId: 'file-rejected-123',
-          filename: 'virus.xlsx',
-          fileStatus: 'rejected'
-        }
-      },
-      numberOfRejectedFiles: 1
-    }
-
-    const response = await server.inject({
-      method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/rejected-summary-log-123/upload-completed',
-      payload: rejectedPayload
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.OK)
-  })
-
   it('returns 422 when file is complete but missing S3 info', async () => {
-    const incompletePayload = {
-      uploadStatus: 'ready',
-      form: {
-        file: {
-          fileId: 'file-incomplete-123',
-          filename: 'test.xlsx',
-          fileStatus: 'complete'
-        }
-      }
-    }
+    delete payload.form.summaryLogUpload.s3Bucket
+    delete payload.form.summaryLogUpload.s3Key
 
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/incomplete-summary-log-123/upload-completed',
-      payload: incompletePayload
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -156,27 +207,44 @@ describe(`${url} route`, () => {
     expect(body.message).toContain('s3Bucket')
   })
 
-  it('returns 200 when file is pending without S3 info', async () => {
-    const pendingPayload = {
-      uploadStatus: 'ready',
-      metadata: {
-        organisationId: 'org-123',
-        registrationId: 'reg-456'
-      },
-      form: {
-        file: {
-          fileId: 'file-pending-123',
-          filename: 'scanning.xlsx',
-          fileStatus: 'pending'
-        }
-      },
-      numberOfRejectedFiles: 0
-    }
+  it('returns 409 if summary log already exists', async () => {
+    summaryLogsRepository.findById.mockResolvedValue(summaryLog)
 
     const response = await server.inject({
       method: 'POST',
-      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/pending-summary-log-123/upload-completed',
-      payload: pendingPayload
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
+  })
+
+  it('returns 200 when file is rejected without S3 info', async () => {
+    payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.REJECTED
+    delete payload.form.summaryLogUpload.s3Bucket
+    delete payload.form.summaryLogUpload.s3Key
+    payload.numberOfRejectedFiles = 1
+
+    const response = await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+      payload
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+  })
+
+  it('returns 200 when file is pending without S3 info', async () => {
+    payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.PENDING
+    delete payload.form.summaryLogUpload.s3Bucket
+    delete payload.form.summaryLogUpload.s3Key
+
+    const response = await server.inject({
+      method: 'POST',
+      url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/pending-${summaryLogId}/upload-completed`,
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
