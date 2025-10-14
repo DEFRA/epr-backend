@@ -89,6 +89,18 @@ export function extractAnswers(rawFormSubmission) {
   }, {})
 }
 
+const KNOWN_DUPLICATE_PREFIXES = [
+  'Authorised packaging waste categories',
+  'Authorised weight',
+  'Timescale'
+]
+
+function isKnownDuplicateShortDescription(shortDescription) {
+  return KNOWN_DUPLICATE_PREFIXES.some((prefix) =>
+    shortDescription.startsWith(prefix)
+  )
+}
+
 /**
  * Flatten nested answers by shortDescription from nested page structure
  * @param {Object} answers - Nested object grouped by page title
@@ -97,28 +109,22 @@ export function extractAnswers(rawFormSubmission) {
 
  */
 export function flattenAnswersByShortDesc(answers) {
-  const knownDuplicatePrefixes = [
-    'Authorised packaging waste categories',
-    'Authorised weight',
-    'Timescale'
-  ]
-
-  const isAllowedDuplicate = (shortDescription) =>
-    knownDuplicatePrefixes.some((prefix) => shortDescription.startsWith(prefix))
-
   const flattened = {}
   const seen = new Set()
   const duplicates = []
 
-  Object.values(answers).forEach((fields) => {
-    Object.entries(fields).forEach(([shortDescription, value]) => {
-      if (seen.has(shortDescription) && !isAllowedDuplicate(shortDescription)) {
-        duplicates.push(shortDescription)
-      }
-      seen.add(shortDescription)
-      flattened[shortDescription] = value
-    })
-  })
+  for (const [shortDescription, value] of Object.values(answers).flatMap(
+    (answersForSinglePage) => Object.entries(answersForSinglePage)
+  )) {
+    if (
+      seen.has(shortDescription) &&
+      !isKnownDuplicateShortDescription(shortDescription)
+    ) {
+      duplicates.push(shortDescription)
+    }
+    seen.add(shortDescription)
+    flattened[shortDescription] = value
+  }
 
   if (duplicates.length > 0) {
     throw new Error(`Duplicate fields found: ${duplicates.join(', ')}`)

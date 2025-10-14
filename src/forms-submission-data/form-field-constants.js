@@ -1,7 +1,4 @@
-/**
- * Constants for form page titles and their associated short descriptions
- * Used for form data extraction and validation
- */
+const TIMESCALE_ALUMINIUM = 'Timescale (Aluminium)'
 
 export const FORM_PAGES = {
   ORGANISATION: {
@@ -43,19 +40,19 @@ export const FORM_PAGES = {
       title:
         'Aluminium - environmental permit or waste management licence details',
       fields: {
-        TIMESCALE: 'Timescale (Aluminium)'
+        TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
     ALUMINIUM_INSTALLATION_PERMIT: {
       title: 'Aluminium - installation permit details',
       fields: {
-        TIMESCALE: 'Timescale (Aluminium)'
+        TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
     ALUMINIUM_SITE_CAPACITY: {
       title: 'Site capacity for aluminium recycling',
       fields: {
-        TIMESCALE: 'Timescale (Aluminium)'
+        TIMESCALE: TIMESCALE_ALUMINIUM
       }
     }
   }

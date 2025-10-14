@@ -123,9 +123,7 @@ describe('parseUkAddress', () => {
     it('should return fullAddress when not enough parts', () => {
       const result = parseUkAddress('Only two parts,B2 4AA')
 
-      expect(result).toEqual({
-        fullAddress: 'Only two parts,B2 4AA'
-      })
+      expect(result).toEqual({ fullAddress: 'Only two parts,B2 4AA' })
     })
 
     it('should return fullAddress when no commas', () => {
@@ -165,25 +163,19 @@ describe('parseUkAddress', () => {
     it('should return fullAddress when input is empty', () => {
       const result = parseUkAddress('')
 
-      expect(result).toEqual({
-        fullAddress: ''
-      })
+      expect(result).toEqual({ fullAddress: '' })
     })
 
     it('should return fullAddress when input is null', () => {
       const result = parseUkAddress(null)
 
-      expect(result).toEqual({
-        fullAddress: ''
-      })
+      expect(result).toEqual({ fullAddress: '' })
     })
 
     it('should return fullAddress when input is undefined', () => {
       const result = parseUkAddress(undefined)
 
-      expect(result).toEqual({
-        fullAddress: ''
-      })
+      expect(result).toEqual({ fullAddress: '' })
     })
   })
 })
