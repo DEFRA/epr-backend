@@ -276,7 +276,7 @@ describe(`${url} route`, () => {
   })
 
   describe('state transitions', () => {
-    describe('valid transitions', () => {
+    describe('valid transitions (representative samples - exhaustive tests in domain layer)', () => {
       it('allows preprocessing -> preprocessing when receiving multiple pending callbacks', async () => {
         const summaryLogId = 'multi-pending-log-123'
 
@@ -338,7 +338,7 @@ describe(`${url} route`, () => {
       })
     })
 
-    describe('invalid transitions', () => {
+    describe('invalid transitions (representative samples - exhaustive tests in domain layer)', () => {
       it('rejects validating -> preprocessing transition', async () => {
         const summaryLogId = 'validating-to-preprocessing-123'
 
