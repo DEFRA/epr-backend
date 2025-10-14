@@ -1,3 +1,5 @@
+import { vi } from 'vitest'
+
 /**
  * Creates a mock config object that can be used with vi.mock() to override the config module.
  * This mock satisfies both convict's API requirements and downstream dependencies like pino.

@@ -9,14 +9,14 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+const filename = fileURLToPath(import.meta.url)
+const dirname = path.dirname(filename)
 
 const ONE_MINUTE = 60_000
 
 const pool = new Piscina({
   filename: path.join(
-    __dirname,
+    dirname,
     'worker/summary-logs-validator-worker-thread.js'
   ),
   maxThreads: 1, // Match vCPU count on AWS instance
@@ -54,6 +54,8 @@ export const createSummaryLogsValidator = () => {
               action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
             }
           })
+
+          // Intentionally not re-throwing as this is the result of a worker thread and the request has already completed...
         })
     }
   }

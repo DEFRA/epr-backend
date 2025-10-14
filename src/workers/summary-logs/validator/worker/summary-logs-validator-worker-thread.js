@@ -5,7 +5,7 @@ import { config } from '../../../../config.js'
 
 import { summaryLogsValidatorWorker } from './summary-logs-validator-worker.js'
 
-export default async function ({ summaryLog }) {
+export default async function summaryLogsValidatorWorkerThread({ summaryLog }) {
   const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
 
   const mongoClient = await createMongoClient({

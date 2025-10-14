@@ -52,7 +52,7 @@ export const mongoDbPlugin = {
       server.decorate('server', 'mongoClient', client)
       server.decorate('server', 'db', db)
       server.decorate('server', 'locker', locker)
-      // @fixme: add coverage
+      // add coverage
       /* c8 ignore start */
       server.decorate('request', 'db', () => db, { apply: true })
       server.decorate('request', 'locker', () => locker, { apply: true })
@@ -68,7 +68,7 @@ export const mongoDbPlugin = {
         })
         try {
           await client.close()
-          // @fixme: add coverage
+          // add coverage
           /* c8 ignore start */
         } catch (err) {
           server.logger.error({

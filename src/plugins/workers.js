@@ -45,7 +45,7 @@ export const workers = {
           })
           /* c8 ignore start */
         } catch (err) {
-          server.logger.info({
+          server.logger.error({
             message: 'Failed to close worker pool',
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,
