@@ -25,6 +25,18 @@ export const createSummaryLogsRepository = (db) => ({
     }
   },
 
+  async update(id, updates) {
+    const validatedId = validateId(id)
+
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .updateOne({ _id: validatedId }, { $set: updates })
+
+    if (result.matchedCount === 0) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+  },
+
   async findById(id) {
     const validatedId = validateId(id)
     const doc = await db

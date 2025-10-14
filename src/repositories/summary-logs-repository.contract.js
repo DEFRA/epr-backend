@@ -356,6 +356,78 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
   })
 }
 
+const testUpdateBehaviour = (getRepository) => {
+  describe('update', () => {
+    it('updates an existing summary log', async () => {
+      const id = `contract-update-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'scanning.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+
+      await getRepository().update(id, {
+        status: 'validating',
+        file: {
+          id: summaryLog.file.id,
+          name: summaryLog.file.name,
+          status: 'complete',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      })
+
+      const found = await getRepository().findById(id)
+      expect(found.status).toBe('validating')
+      expect(found.file.status).toBe('complete')
+      expect(found.file.s3.bucket).toBe(TEST_S3_BUCKET)
+    })
+
+    it('throws not found error when updating non-existent ID', async () => {
+      const id = `contract-nonexistent-${randomUUID()}`
+
+      await expect(
+        getRepository().update(id, { status: 'validating' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+
+    it('preserves existing fields not included in update', async () => {
+      const id = `contract-preserve-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        organisationId: 'org-123',
+        registrationId: 'reg-456',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+
+      await getRepository().update(id, { status: 'rejected' })
+
+      const found = await getRepository().findById(id)
+      expect(found.status).toBe('rejected')
+      expect(found.organisationId).toBe('org-123')
+      expect(found.registrationId).toBe('reg-456')
+    })
+  })
+}
+
 export const testSummaryLogsRepositoryContract = (createRepository) => {
   describe('summary logs repository contract', () => {
     let repository
@@ -365,6 +437,7 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     })
 
     testInsertBehaviour(() => repository)
+    testUpdateBehaviour(() => repository)
     testFindById(() => repository)
     testFindByIdValidation(() => repository)
     testInsertValidationRequiredFields(() => repository)

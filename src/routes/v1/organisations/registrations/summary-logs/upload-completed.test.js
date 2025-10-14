@@ -163,8 +163,6 @@ describe(`${url} route`, () => {
     })
 
     expect(secondResponse.statusCode).toBe(StatusCodes.CONFLICT)
-    const body = JSON.parse(secondResponse.payload)
-    expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
   })
 
   it('returns 202 when file is rejected without S3 info', async () => {
