@@ -23,7 +23,9 @@ export const uploadCompletedPayloadSchema = Joi.object({
         is: UPLOAD_STATUS.COMPLETE,
         then: Joi.required(),
         otherwise: Joi.optional()
-      })
+      }),
+      hasError: Joi.boolean().optional(),
+      errorMessage: Joi.string().optional()
     })
       .required()
       .unknown(true)

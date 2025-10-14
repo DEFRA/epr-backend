@@ -1,13 +1,22 @@
 import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
-import { createServer } from '#server/server.js'
 import { createInlineSummaryLogsValidator } from '#workers/summary-logs/validator/summary-logs-validator.inline.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 
-const createUploadPayload = (fileStatus, fileId, filename) => ({
+const createUploadPayload = (
+  fileStatus,
+  fileId,
+  filename,
+  includeS3 = true
+) => ({
   uploadStatus: 'ready',
   metadata: {
     organisationId,
@@ -24,12 +33,10 @@ const createUploadPayload = (fileStatus, fileId, filename) => ({
       checksumSha256: 'abc123def456',
       detectedContentType:
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      s3Bucket:
-        fileStatus === UPLOAD_STATUS.COMPLETE ? 'test-bucket' : undefined,
-      s3Key:
-        fileStatus === UPLOAD_STATUS.COMPLETE
-          ? `path/to/${filename}`
-          : undefined
+      ...(includeS3 && {
+        s3Bucket: 'test-bucket',
+        s3Key: `path/to/${filename}`
+      })
     }
   },
   numberOfRejectedFiles: fileStatus === UPLOAD_STATUS.REJECTED ? 1 : 0
@@ -44,124 +51,193 @@ const buildPostUrl = (summaryLogId) =>
 describe('Summary logs integration', () => {
   let server
 
-  beforeAll(async () => {
+  beforeEach(async () => {
     const summaryLogsRepository = createInMemorySummaryLogsRepository()
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       summaryLogsRepository
     )
-    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
-    server = await createServer({
+    server = await createTestServer({
       repositories: {
         summaryLogsRepository
       },
       workers: {
         summaryLogsValidator
       },
-      featureFlags
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-
-    await server.initialize()
   })
 
-  describe('when file has not been uploaded yet', () => {
-    it('returns preprocessing status', async () => {
+  describe('retrieving summary log that has not been uploaded', () => {
+    let response
+
+    beforeEach(async () => {
       const summaryLogId = 'summary-999'
 
-      const response = await server.inject({
+      response = await server.inject({
         method: 'GET',
         url: buildGetUrl(summaryLogId)
       })
+    })
 
+    test('returns OK', () => {
       expect(response.statusCode).toBe(200)
+    })
+
+    test('returns preprocessing status', () => {
       expect(JSON.parse(response.payload)).toEqual({
         status: SUMMARY_LOG_STATUS.PREPROCESSING
       })
     })
   })
 
-  describe('when file upload is successful', () => {
-    it('progresses through expected states after upload', async () => {
-      const summaryLogId = 'summary-789'
+  describe('marking upload as completed with valid file', () => {
+    const summaryLogId = 'summary-789'
+    const fileId = 'file-123'
+    const filename = 'summary-log.xlsx'
+    let uploadResponse
 
-      // Step 1: GET before upload returns preprocessing
-      const preprocessingResponse = await server.inject({
-        method: 'GET',
-        url: buildGetUrl(summaryLogId)
-      })
-
-      expect(preprocessingResponse.statusCode).toBe(200)
-      expect(JSON.parse(preprocessingResponse.payload)).toEqual({
-        status: SUMMARY_LOG_STATUS.PREPROCESSING
-      })
-
-      // Step 2: POST upload-completed creates document with validating status
-      const uploadResponse = await server.inject({
+    beforeEach(async () => {
+      uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(
-          UPLOAD_STATUS.COMPLETE,
-          'file-123',
-          'summary-log.xlsx'
-        )
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+    })
+
+    test('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    test('logs completion with file location', () => {
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=test-bucket, s3Key=path/to/${filename}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
+        })
+      )
+    })
+
+    describe('retrieving summary log', () => {
+      let response
+
+      beforeEach(async () => {
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
       })
 
-      expect(uploadResponse.statusCode).toBe(200)
-
-      // Step 3: GET immediately after returns validating
-      const validatingResponse = await server.inject({
-        method: 'GET',
-        url: buildGetUrl(summaryLogId)
+      test('returns OK', () => {
+        expect(response.statusCode).toBe(200)
       })
 
-      expect(validatingResponse.statusCode).toBe(200)
-      expect(JSON.parse(validatingResponse.payload)).toEqual({
-        status: SUMMARY_LOG_STATUS.VALIDATING
-      })
-
-      // Step 4: GET once validation has had time to complete
-      await new Promise((resolve) => setTimeout(resolve, 2000)) // This is temporary to emulate the delay until we implement parsing...
-
-      const finalResponse = await server.inject({
-        method: 'GET',
-        url: buildGetUrl(summaryLogId)
-      })
-
-      expect(finalResponse.statusCode).toBe(200)
-      expect(JSON.parse(finalResponse.payload)).toEqual({
-        status: SUMMARY_LOG_STATUS.INVALID
+      test('returns validating status', () => {
+        expect(JSON.parse(response.payload)).toEqual({
+          status: SUMMARY_LOG_STATUS.VALIDATING
+        })
       })
     })
   })
 
-  describe('when file is rejected by virus scan', () => {
-    it('completes journey for rejected file', async () => {
-      const summaryLogId = 'summary-888'
+  describe('marking upload as completed with rejected file', () => {
+    const summaryLogId = 'summary-888'
+    const fileId = 'file-789'
+    const filename = 'virus.xlsx'
+    let uploadResponse
 
-      // Step 1: Upload completed with rejected file
-      const uploadResponse = await server.inject({
+    beforeEach(async () => {
+      uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
         payload: createUploadPayload(
           UPLOAD_STATUS.REJECTED,
-          'file-789',
-          'virus.xlsx'
+          fileId,
+          filename,
+          false
         )
       })
+    })
 
-      expect(uploadResponse.statusCode).toBe(200)
+    test('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
 
-      // Step 2: GET returns rejected status
-      const rejectedResponse = await server.inject({
-        method: 'GET',
-        url: buildGetUrl(summaryLogId)
+    test('logs completion', () => {
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=rejected`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
+        })
+      )
+    })
+
+    describe('retrieving summary log', () => {
+      let response
+
+      beforeEach(async () => {
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
       })
 
-      expect(rejectedResponse.statusCode).toBe(200)
-      expect(JSON.parse(rejectedResponse.payload)).toEqual(
+      test('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      test('returns rejected status with reason', () => {
+        expect(JSON.parse(response.payload)).toEqual(
+          expect.objectContaining({
+            status: SUMMARY_LOG_STATUS.REJECTED,
+            failureReason:
+              'Something went wrong with your file upload. Please try again.'
+          })
+        )
+      })
+    })
+  })
+
+  describe('marking upload as completed with pending file', () => {
+    const summaryLogId = 'summary-666'
+    const fileId = 'file-555'
+    const filename = 'pending-file.xlsx'
+    let uploadResponse
+
+    beforeEach(async () => {
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(
+          UPLOAD_STATUS.PENDING,
+          fileId,
+          filename,
+          false
+        )
+      })
+    })
+
+    test('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    test('logs completion', () => {
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          status: UPLOAD_STATUS.REJECTED,
-          failureReason: 'File rejected by virus scan'
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=pending`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+            reference: summaryLogId
+          }
         })
       )
     })
