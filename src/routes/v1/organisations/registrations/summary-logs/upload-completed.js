@@ -68,7 +68,7 @@ const buildFileData = (fileDetails, existingFile = null) => {
   return fileData
 }
 
-const buildSummaryLogData = (summaryLogId, newStatus, fileDetails) => {
+const buildSummaryLogData = (newStatus, fileDetails) => {
   const failureReason = determineFailureReason(
     newStatus,
     fileDetails.errorMessage
@@ -100,7 +100,7 @@ const updateExistingSummaryLog = async (
   }
 
   const updates = {
-    ...buildSummaryLogData(summaryLogId, newStatus, fileDetails),
+    ...buildSummaryLogData(newStatus, fileDetails),
     file: buildFileData(fileDetails, existingSummaryLog.file)
   }
 
@@ -115,7 +115,7 @@ const insertNewSummaryLog = async (
 ) => {
   const summaryLog = {
     id: summaryLogId,
-    ...buildSummaryLogData(summaryLogId, newStatus, fileDetails)
+    ...buildSummaryLogData(newStatus, fileDetails)
   }
 
   await summaryLogsRepository.insert(summaryLog)
