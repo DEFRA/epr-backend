@@ -1,8 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createServer } from '#server/server.js'
+import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
 const url = summaryLogsUploadCompletedPath
 const payload = {
@@ -25,28 +29,35 @@ const payload = {
 let server
 
 describe(`${url} route`, () => {
-  beforeAll(async () => {
-    server = await createServer({
+  beforeEach(async () => {
+    server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-    await server.initialize()
   })
 
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('returns 200 when valid payload', async () => {
+  it('returns 202 when valid payload', async () => {
     const response = await server.inject({
       method: 'POST',
       url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/summary-log-123/upload-completed',
       payload
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'File upload completed: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx, status=complete, s3Bucket=test-bucket, s3Key=test-key',
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: 'summary-log-123'
+        }
+      })
+    )
   })
 
   it('returns 400 if payload is not an object', async () => {
@@ -94,7 +105,7 @@ describe(`${url} route`, () => {
       payload
     })
 
-    expect(firstResponse.statusCode).toBe(StatusCodes.OK)
+    expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
 
     const secondResponse = await server.inject({
       method: 'POST',
@@ -107,7 +118,7 @@ describe(`${url} route`, () => {
     expect(body.message).toContain(`Summary log ${summaryLogId} already exists`)
   })
 
-  it('returns 200 when file is rejected without S3 info', async () => {
+  it('returns 202 when file is rejected without S3 info', async () => {
     const rejectedPayload = {
       uploadStatus: 'ready',
       metadata: {
@@ -118,7 +129,9 @@ describe(`${url} route`, () => {
         file: {
           fileId: 'file-rejected-123',
           filename: 'virus.xlsx',
-          fileStatus: 'rejected'
+          fileStatus: 'rejected',
+          hasError: true,
+          errorMessage: 'The selected file contains a virus'
         }
       },
       numberOfRejectedFiles: 1
@@ -130,7 +143,25 @@ describe(`${url} route`, () => {
       payload: rejectedPayload
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringMatching(
+          /^File upload completed:.*status=rejected$/
+        ),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: 'rejected-summary-log-123'
+        }
+      })
+    )
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.not.stringContaining('s3Bucket')
+      })
+    )
   })
 
   it('returns 422 when file is complete but missing S3 info', async () => {
@@ -156,7 +187,7 @@ describe(`${url} route`, () => {
     expect(body.message).toContain('s3Bucket')
   })
 
-  it('returns 200 when file is pending without S3 info', async () => {
+  it('returns 202 when file is pending without S3 info', async () => {
     const pendingPayload = {
       uploadStatus: 'ready',
       metadata: {
@@ -179,6 +210,55 @@ describe(`${url} route`, () => {
       payload: pendingPayload
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringMatching(
+          /^File upload completed:.*status=pending$/
+        ),
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
+          reference: 'pending-summary-log-123'
+        }
+      })
+    )
+    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.not.stringContaining('s3Bucket')
+      })
+    )
+  })
+
+  it('returns 500 if error is thrown', async () => {
+    const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
+    const error = new Error('logging failed')
+    server.loggerMocks.info.mockImplementationOnce(() => {
+      throw error
+    })
+
+    const response = await server.inject({
+      method: 'POST',
+      url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/error-summary-log-123/upload-completed',
+      payload
+    })
+
+    expect(response.statusCode).toBe(statusCode)
+    const body = JSON.parse(response.payload)
+    expect(body.message).toMatch(`An internal server error occurred`)
+    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+      error,
+      message: `Failure on ${summaryLogsUploadCompletedPath}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+      },
+      http: {
+        response: {
+          status_code: statusCode
+        }
+      }
+    })
   })
 })
