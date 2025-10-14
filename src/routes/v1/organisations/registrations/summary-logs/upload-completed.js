@@ -17,32 +17,28 @@ import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#workers/summary-logs/validator/summary-logs-validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
 
-const buildFileData = (fileDetails, existingFile = null) => {
-  const { fileId, filename, fileStatus, s3Bucket, s3Key } = fileDetails
+const buildFileData = (upload, existingFile = null) => {
+  const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
 
   const fileData = existingFile
     ? { ...existingFile, id: fileId, name: filename, status: fileStatus }
     : { id: fileId, name: filename, status: fileStatus }
 
   if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-    fileData.s3 = {
-      bucket: s3Bucket,
-      key: s3Key
-    }
+    fileData.s3 = { bucket: s3Bucket, key: s3Key }
   }
 
   return fileData
 }
 
-const buildSummaryLogData = (newStatus, fileDetails) => {
-  const failureReason = determineFailureReason(
-    newStatus,
-    fileDetails.errorMessage
-  )
+const buildSummaryLogData = (summaryLogId, upload, existingFile = null) => {
+  const status = determineStatusFromUpload(upload.fileStatus)
+  const failureReason = determineFailureReason(status, upload.errorMessage)
 
   const data = {
-    status: newStatus,
-    file: buildFileData(fileDetails)
+    id: summaryLogId,
+    status,
+    file: buildFileData(upload, existingFile)
   }
 
   if (failureReason) {
@@ -52,47 +48,41 @@ const buildSummaryLogData = (newStatus, fileDetails) => {
   return data
 }
 
-const updateExistingSummaryLog = async (
+const upsertSummaryLog = async (
   summaryLogsRepository,
   summaryLogId,
-  existingSummaryLog,
-  newStatus,
-  fileDetails
+  upload
 ) => {
-  if (!isValidTransition(existingSummaryLog.status, newStatus)) {
-    throw Boom.conflict(
-      `Cannot transition summary log ${summaryLogId} from ${existingSummaryLog.status} to ${newStatus}`
+  const existingSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+  const newStatus = determineStatusFromUpload(upload.fileStatus)
+
+  if (existingSummaryLog) {
+    if (!isValidTransition(existingSummaryLog.status, newStatus)) {
+      throw Boom.conflict(
+        `Cannot transition summary log ${summaryLogId} from ${existingSummaryLog.status} to ${newStatus}`
+      )
+    }
+
+    const updates = buildSummaryLogData(
+      summaryLogId,
+      upload,
+      existingSummaryLog.file
     )
+    await summaryLogsRepository.update(summaryLogId, updates)
+  } else {
+    const summaryLog = buildSummaryLogData(summaryLogId, upload)
+    await summaryLogsRepository.insert(summaryLog)
   }
 
-  const updates = {
-    ...buildSummaryLogData(newStatus, fileDetails),
-    file: buildFileData(fileDetails, existingSummaryLog.file)
-  }
-
-  await summaryLogsRepository.update(summaryLogId, updates)
+  return newStatus
 }
 
-const insertNewSummaryLog = async (
-  summaryLogsRepository,
-  summaryLogId,
-  newStatus,
-  fileDetails
-) => {
-  const summaryLog = {
-    id: summaryLogId,
-    ...buildSummaryLogData(newStatus, fileDetails)
-  }
-
-  await summaryLogsRepository.insert(summaryLog)
-}
-
-const formatS3Info = (fileDetails) => {
-  const { fileStatus, s3Bucket, s3Key } = fileDetails
-  return fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key
-    ? `, s3Bucket=${s3Bucket}, s3Key=${s3Key}`
+const formatS3Info = (upload) =>
+  upload.fileStatus === UPLOAD_STATUS.COMPLETE &&
+  upload.s3Bucket &&
+  upload.s3Key
+    ? `, s3Bucket=${upload.s3Bucket}, s3Key=${upload.s3Key}`
     : ''
-}
 
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
@@ -122,54 +112,24 @@ export const summaryLogsUploadCompleted = {
     } = request
 
     const { summaryLogId } = params
-
-    const {
-      form: { summaryLogUpload }
-    } = payload
-
-    const { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage } =
-      summaryLogUpload
-
-    const fileDetails = {
-      fileId,
-      filename,
-      fileStatus,
-      s3Bucket,
-      s3Key,
-      errorMessage
-    }
+    const { summaryLogUpload } = payload.form
 
     try {
-      const existingSummaryLog =
-        await summaryLogsRepository.findById(summaryLogId)
-      const newStatus = determineStatusFromUpload(fileStatus)
+      const status = await upsertSummaryLog(
+        summaryLogsRepository,
+        summaryLogId,
+        summaryLogUpload
+      )
 
-      if (existingSummaryLog) {
-        await updateExistingSummaryLog(
-          summaryLogsRepository,
-          summaryLogId,
-          existingSummaryLog,
-          newStatus,
-          fileDetails
-        )
-      } else {
-        await insertNewSummaryLog(
-          summaryLogsRepository,
-          summaryLogId,
-          newStatus,
-          fileDetails
-        )
-      }
-
-      if (newStatus === SUMMARY_LOG_STATUS.VALIDATING) {
+      if (status === SUMMARY_LOG_STATUS.VALIDATING) {
         const summaryLog = await summaryLogsRepository.findById(summaryLogId)
         await summaryLogsValidator.validate(summaryLog)
       }
 
-      const s3Info = formatS3Info(fileDetails)
+      const s3Info = formatS3Info(summaryLogUpload)
 
       logger.info({
-        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=${fileStatus}${s3Info}`,
+        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${summaryLogUpload.fileId}, filename=${summaryLogUpload.filename}, status=${summaryLogUpload.fileStatus}${s3Info}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -183,11 +143,9 @@ export const summaryLogsUploadCompleted = {
         throw error
       }
 
-      const message = `Failure on ${summaryLogsUploadCompletedPath}`
-
       logger.error({
         error,
-        message,
+        message: `Failure on ${summaryLogsUploadCompletedPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -199,7 +157,9 @@ export const summaryLogsUploadCompleted = {
         }
       })
 
-      throw Boom.badImplementation(message)
+      throw Boom.badImplementation(
+        `Failure on ${summaryLogsUploadCompletedPath}`
+      )
     }
   }
 }
