@@ -1,0 +1,38 @@
+import Joi from 'joi'
+
+import { UPLOAD_STATUS } from '#domain/summary-log.js'
+
+export const uploadCompletedPayloadSchema = Joi.object({
+  form: Joi.object({
+    summaryLogUpload: Joi.object({
+      fileId: Joi.string().required(),
+      filename: Joi.string().required(),
+      fileStatus: Joi.string()
+        .valid(
+          UPLOAD_STATUS.COMPLETE,
+          UPLOAD_STATUS.REJECTED,
+          UPLOAD_STATUS.PENDING
+        )
+        .required(),
+      s3Bucket: Joi.string().when('fileStatus', {
+        is: UPLOAD_STATUS.COMPLETE,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+      s3Key: Joi.string().when('fileStatus', {
+        is: UPLOAD_STATUS.COMPLETE,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      })
+    })
+      .required()
+      .unknown(true)
+  })
+    .required()
+    .unknown(true)
+})
+  .unknown(true)
+  .messages({
+    'any.required': '{#label} is required',
+    'string.empty': '{#label} cannot be empty'
+  })

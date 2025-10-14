@@ -4,7 +4,8 @@ export const LOGGING_EVENT_CATEGORIES = {
   HTTP: 'http',
   PROXY: 'proxy',
   SECRET: 'secret',
-  SERVER: 'server'
+  SERVER: 'server',
+  WORKER: 'worker'
 }
 
 export const LOGGING_EVENT_ACTIONS = {
@@ -12,16 +13,21 @@ export const LOGGING_EVENT_ACTIONS = {
   CONNECTION_FAILURE: 'connection_failure',
   CONNECTION_INITIALISING: 'connection_initialising',
   CONNECTION_CLOSING: 'connection_closing',
+  CONNECTION_CLOSING_FAILURE: 'connection_closing_failure',
+  CONNECTION_CLOSING_SUCCESS: 'connection_closing_success',
   CONNECTION_SUCCESS: 'connection_success',
   NOT_FOUND: 'env_var_not_found',
   READ_ERROR: 'read_error',
   PROXY_INITIALISING: 'proxy_initialising',
   REQUEST_SUCCESS: 'request_success',
-  REQUEST_FAILURE: 'response_failure',
+  REQUEST_FAILURE: 'request_failure',
+  RESPONSE_SUCCESS: 'response_success',
   RESPONSE_FAILURE: 'response_failure',
   SEND_EMAIL_FAILURE: 'send_email_failure',
   START_FAILURE: 'start_failure',
-  START_SUCCESS: 'start_success'
+  START_SUCCESS: 'start_success',
+  PROCESS_FAILURE: 'process_failure',
+  PROCESS_SUCCESS: 'process_success'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {
