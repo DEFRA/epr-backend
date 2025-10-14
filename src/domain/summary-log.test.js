@@ -32,9 +32,20 @@ describe('summary-log domain', () => {
   })
 
   describe('determineFailureReason', () => {
-    it('returns failure reason for rejected status', () => {
+    it('returns error message when provided for rejected status', () => {
+      const errorMessage = 'The selected file contains a virus'
+      const result = determineFailureReason(
+        SUMMARY_LOG_STATUS.REJECTED,
+        errorMessage
+      )
+      expect(result).toBe(errorMessage)
+    })
+
+    it('returns fallback message for rejected status when error message not provided', () => {
       const result = determineFailureReason(SUMMARY_LOG_STATUS.REJECTED)
-      expect(result).toBe('File rejected by virus scan')
+      expect(result).toBe(
+        'Something went wrong with your file upload. Please try again.'
+      )
     })
 
     it('returns undefined for validating status', () => {
@@ -44,6 +55,15 @@ describe('summary-log domain', () => {
 
     it('returns undefined for preprocessing status', () => {
       const result = determineFailureReason(SUMMARY_LOG_STATUS.PREPROCESSING)
+      expect(result).toBeUndefined()
+    })
+
+    it('returns undefined when error message provided but status is not rejected', () => {
+      const errorMessage = 'The selected file contains a virus'
+      const result = determineFailureReason(
+        SUMMARY_LOG_STATUS.VALIDATING,
+        errorMessage
+      )
       expect(result).toBeUndefined()
     })
   })
