@@ -1,55 +1,21 @@
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
-import {
-  determineStatusFromUpload,
-  determineFailureReason,
-  isValidTransition,
-  UPLOAD_STATUS
-} from '#domain/summary-log.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import {
+  determineFailureReason,
+  determineStatusFromUpload,
+  isValidTransition,
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-log.js'
+
+import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 
 /** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
-
-const uploadCompletedPayloadSchema = Joi.object({
-  form: Joi.object({
-    summaryLogUpload: Joi.object({
-      fileId: Joi.string().required(),
-      filename: Joi.string().required(),
-      fileStatus: Joi.string()
-        .valid(
-          UPLOAD_STATUS.COMPLETE,
-          UPLOAD_STATUS.REJECTED,
-          UPLOAD_STATUS.PENDING
-        )
-        .required(),
-      s3Bucket: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      s3Key: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      hasError: Joi.boolean().optional(),
-      errorMessage: Joi.string().optional()
-    })
-      .required()
-      .unknown(true)
-  })
-    .required()
-    .unknown(true)
-})
-  .unknown(true)
-  .messages({
-    'any.required': '{#label} is required',
-    'string.empty': '{#label} cannot be empty'
-  })
+/** @typedef {import('#workers/summary-logs/validator/summary-logs-validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 const buildFileData = (fileDetails, existingFile = null) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = fileDetails
@@ -143,17 +109,40 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsValidator}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
+  handler: async (request, h) => {
+    const {
+      summaryLogsRepository,
+      summaryLogsValidator,
+      payload,
+      params,
+      logger
+    } = request
+
     const { summaryLogId } = params
-    const fileDetails = payload.form.summaryLogUpload
+
+    const {
+      form: { summaryLogUpload }
+    } = payload
+
+    const { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage } =
+      summaryLogUpload
+
+    const fileDetails = {
+      fileId,
+      filename,
+      fileStatus,
+      s3Bucket,
+      s3Key,
+      errorMessage
+    }
 
     try {
       const existingSummaryLog =
         await summaryLogsRepository.findById(summaryLogId)
-      const newStatus = determineStatusFromUpload(fileDetails.fileStatus)
+      const newStatus = determineStatusFromUpload(fileStatus)
 
       if (existingSummaryLog) {
         await updateExistingSummaryLog(
@@ -172,10 +161,15 @@ export const summaryLogsUploadCompleted = {
         )
       }
 
+      if (newStatus === SUMMARY_LOG_STATUS.VALIDATING) {
+        const summaryLog = await summaryLogsRepository.findById(summaryLogId)
+        await summaryLogsValidator.validate(summaryLog)
+      }
+
       const s3Info = formatS3Info(fileDetails)
 
       logger.info({
-        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileDetails.fileId}, filename=${fileDetails.filename}, status=${fileDetails.fileStatus}${s3Info}`,
+        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=${fileStatus}${s3Info}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,

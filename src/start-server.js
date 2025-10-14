@@ -1,12 +1,14 @@
-import { getConfig } from './config.js'
+import { enableAuditing } from '@defra/cdp-auditing'
 
 import { createServer } from '#server/server.js'
-import { logger } from './common/helpers/logging/logger.js'
+
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from './common/enums/event.js'
-import { enableAuditing } from '@defra/cdp-auditing'
+} from '#common/enums/event.js'
+
+import { getConfig } from './config.js'
 
 async function startServer() {
   const config = getConfig()

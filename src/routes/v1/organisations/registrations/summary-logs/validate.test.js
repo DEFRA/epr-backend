@@ -6,7 +6,7 @@ import {
 import { summaryLogsValidatePath } from './validate.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createTestServer } from '#common/test-helpers/create-test-server.js'
+import { createTestServer } from '#test/create-test-server.js'
 
 const url = summaryLogsValidatePath
 const payload = {
