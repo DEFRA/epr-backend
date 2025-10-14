@@ -444,7 +444,8 @@ const testUpdateStatusValidation = (getRepository) => {
     })
 
     it('rejects number id', async () => {
-      await expect(getRepository().updateStatus(123, 'valid')).rejects.toThrow(
+      const ID = 123
+      await expect(getRepository().updateStatus(ID, 'valid')).rejects.toThrow(
         /id/
       )
     })
