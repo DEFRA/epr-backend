@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
-import Piscina from 'piscina'
+import { Piscina } from 'piscina'
 
 import {
   LOGGING_EVENT_ACTIONS,
