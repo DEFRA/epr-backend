@@ -4,111 +4,137 @@ Date: 2025-10-06
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
-We need to add bilingual support (English and Welsh) to `epr-frontend`.
-Reviewing GOV.UK guidance on multilingual services and how existing GOV.UK apps handle translations, GOV.UK generally uses locale files (JSON/YAML) managed in repos, with simple helpers for rendering. More complex setups (like i18next) are common outside GOV.UK, but are not usually applied in GOV.UK services.
+We needed to add bilingual support (English and Welsh) to `epr-frontend`, following GOV.UK accessibility and localisation guidance.  
+Initially, GOV.UK services were reviewed, most of which use static JSON/YAML locale files managed in-repo and injected into templates. However, to meet requirements like pluralisation, variable interpolation, and inline markup, we required a slightly more capable setup.
 
 ## Options considered
 
 ### 1. Nunjucks i18n filters/plugins
 
-- Minimal change, works directly in templates
-- Limited features, not widely used in GOV.UK services
+- Minimal change, integrates directly in templates
+- Lacks pluralisation, interpolation, or markup control
+- Not widely used in GOV.UK Node apps
 
-### 2. i18next
+### 2. JSON/YAML files + simple helper
 
-- Full-featured, mature i18n library
-- Handles plurals and fallbacks automatically
-- More setup and dependency overhead
-- Overkill for English/Welsh only
+- Simple and GOV.UK-aligned
+- Limited flexibility for dynamic values or complex plural rules
+- Would require custom logic for Welsh plural forms
 
-### 3. JSON/YAML files + simple helper
+### 3. i18next
 
-- Same pattern GOV.UK services use
-- Easy to keep in repo, review in PRs
-- Works fine for English/Welsh (plural rules can be handled with separate keys if needed)
-- Use native \*_Intl API_- for dates/numbers/currency formatting
-- Simple to wire into Hapi + Nunjucks
+- Mature, full-featured i18n library
+- Built-in pluralisation, interpolation, HTML support, and fallbacks
+- Works seamlessly with Hapi via `i18next-hapi-middleware`
+- Slightly more setup and dependency overhead
 
-**Decision**: Go with **JSON/YAML locale files + helper**, and use Intl API for formatting. i18next was considered but not required for English/Welsh only.
+**Decision:** Use **i18next** with JSON locale files.  
+This gives us GOV.UK-style maintainability (flat JSON files in `locales/`) with the power to handle pluralisation, variables, and HTML markup consistently.
 
-## Language state
+## Implementation
 
-We looked at GOV.UK examples like driving licence renewal.
+- Locale files are stored under `src/locales/{en,cy}/`  
+  Organised by namespace, e.g. `common.json`, `home.json`.
+- i18next is configured with:
+  - `i18next-fs-backend` for file loading
+  - `i18next-hapi-middleware` for per-request language handling
+  - `{{lng}}/{{ns}}.json` load path
+- The active language is determined by the URL prefix (`/en` or `/cy`).
+- `request.t` is injected into all route handlers and views.
 
-- GOV.UK uses fully translated slugs (e.g. `/renew-driving-licence` vs `/adnewyddu-trwydded-yrru`).
-- That gives natural URLs but adds complexity (mapping between routes in both languages).
+Example usage:
 
-For our app:
+`const message = request.t('home:item', { count: 3 })`
 
-- \*_Use URL prefix_- (`/en/...`, `/cy/...`)
-  - Easier to implement and reason about
-  - Provides a fallback path if a page is missing in one language
-  - Clear separation in routing
+```json
+// en/home.json
+{
+  "item_one": "{{count}} item",
+  "item_other": "{{count}} items"
+}
 
-- We may revisit translated slugs later if required for consistency with GOV.UK publishing.
+// cy/home.json
+{
+  "item_one": "{{count}} eitem",
+  "item_other": "{{count}} eitemau"
+}
+```
 
-Cookies and headers were considered but will not be the main way of storing language state (can be fallback only).
+### Markup and variables
 
-## Picker
+- Inline HTML is allowed in translation strings (e.g. for bilingual notice links).
+- Variables are interpolated automatically:
 
-We reviewed GOV.UK practice for language pickers:
+```json
+"greeting": "Hello there, {{name}}!"
+```
 
-- The most common pattern is an **inline notice at the top of the page**, e.g.:
+```js
+request.t('home:greeting', { name: 'John Doe' })
+```
 
-  ```html
-  <div
-    role="note"
-    aria-label="Information"
-    class="application-notice info-notice"
-  >
-    <p>
-      This service is also available
-      <a href="/cy/some-page">in Welsh (Cymraeg)</a>.
-    </p>
-  </div>
-  ```
+## Language state and URL structure
 
-- This is the recommended approach for our app as it matches GOV.UK standards.
+There are two main approaches to handling language state used in GOV.UK URLs:
 
-Alternative:
+1. **Translated slugs** (e.g. `/renew-driving-licence` vs `/adnewyddu-trwydded-yrru`)
+   - Natural, user-friendly URLs
+   - Requires a mapping layer between pages in different languages
+   - Higher maintenance overhead
 
-- A \*_header toggle link_- between `/en/...` and `/cy/...`.
-- Not a GOV.UK standard, but could improve visibility if bilingual switching becomes a primary feature.
+2. **Language prefixing** (e.g. `/en/summary-log` or .`/summary-log` for default english and `/cy/summary-log` for welsh)
+   - Simple and clear implementation
+   - Consistent structure for all pages
+   - Easier to manage fallbacks if a translation is missing
+   - URLs are less “pretty” but fully acceptable under GOV.UK patterns
 
-We recommend starting with the \*_inline notice pattern_- for compliance with GOV.UK practice.
+**Decision:** Use language prefixes (`/en` and `/cy`) for routing.  
+We may revisit translated slugs in the future if alignment with DEFRA standards requires it.
 
-## Network responses and error messages
+Example bilingual notice pattern (recommended by GOV.UK):
 
-All user-facing error messages — whether from our own services or external systems (e.g. CDP uploader) — should go through the same translation layer where possible.
+```html
+<p>
+  This service is also available
+  <a href="/cy{{ currentPath }}">in Welsh (Cymraeg)</a>.
+</p>
+```
 
-- The backend determines language preference from the URL prefix (fallback to `Accept-Language` if needed).
-- Known error codes or validation issues should be mapped to translation keys in locale files before being sent to the frontend.
-- Frontend components and validation logic should use the same translation keys for consistency.
-- For errors from third parties, we only translate known or expected cases (for example, invalid file type or file too large).
-- Unknown or unclassified errors are displayed in English only to avoid incorrect translations, prefixed by a short bilingual message such as:  
-  \*“Sorry, there was a problem / Mae’n ddrwg gennym, bu anhawster.”-
-- Technical details and stack traces are logged in English and not shown to users.
+The alternate link is generated dynamically based on the active language and current path.
+
+## Error messages and API responses
+
+- All user-facing strings, including validation and upload errors, are translated using i18next.
+- Known error codes are mapped to translation keys.
+- Unknown or generic errors are shown in English with a short bilingual preface:
+
+  “Sorry, there was a problem / Mae’n ddrwg gennym, bu anhawster.”
 
 ## Workflow
 
-- Locale files in repo under `locales/`
-- Organised per feature if needed (e.g. `summary-log.en.json`, `summary-log.cy.json`)
-- Managed manually through PRs
-- No centralised translation system at this stage (too heavy for our scope)
+- Locale files are committed in-repo and reviewed via PRs.
+- Developers add new translation keys per feature or namespace.
+- No external translation service integration at this stage.
+- Future migration to a translation platform (e.g. POEditor, Lokalise) would be straightforward.
 
 ## Consequences
 
-- Developers need to add/change text via translation files
-- Routing and toggle must handle URL prefix
-- Straightforward to extend later if more languages are needed
+- Developers must update translation files when adding or changing user-facing text.
+- All routes must be nested under a language prefix.
+- The i18n setup now supports:
+  - Welsh pluralisation
+  - Variable interpolation
+  - Inline HTML
+  - Automatic fallback to English
 
 ## References
 
 - GOV.UK manual: [Add support for a new language](https://docs.publishing.service.gov.uk/manual/add-support-new-language.html)
 - GOV.UK bilingual pages: [Driving licence renewal (EN)](https://www.gov.uk/renew-driving-licence) / [Driving licence renewal (CY)](https://www.gov.uk/adnewyddu-trwydded-yrru)
 - GOV.UK bilingual notice example: [Register to vote](https://www.gov.uk/register-to-vote)
-- Intl API: [https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl)
+- i18next Documentation: [https://www.i18next.com/](https://www.i18next.com/)
+- MDN Intl API: [https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl)
