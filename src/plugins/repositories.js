@@ -1,4 +1,4 @@
-import { createSummaryLogsRepository } from '#repositories/summary-logs-repository/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
 export const repositories = {
   plugin: {
