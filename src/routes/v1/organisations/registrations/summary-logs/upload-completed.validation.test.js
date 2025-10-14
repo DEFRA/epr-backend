@@ -195,7 +195,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
   })
 
   it('accepts valid payload with rejected status', async () => {
@@ -215,7 +215,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
   })
 
   it('accepts payload with extra unknown fields in form.file', async () => {
@@ -238,7 +238,7 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
   })
 
   it('accepts payload with extra unknown fields at top level', async () => {
@@ -264,6 +264,6 @@ describe('POST upload-completed validation', () => {
       }
     })
 
-    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
   })
 })
