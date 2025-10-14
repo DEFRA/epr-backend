@@ -1,0 +1,22 @@
+/** @typedef {import('#repositories/organistions-repository/port.js').OrganisationsRepository} OrganisationsRepository */
+import { StatusCodes } from 'http-status-codes'
+
+export const organisationsGetPath = '/v1/organisations/{organisationId}'
+
+export const organisationsGet = {
+  method: 'GET',
+  path: organisationsGetPath,
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+   * @param {Object} h - Hapi response toolkit
+   */
+  handler: async ({ organisationsRepository, params }, h) => {
+    const organisations = await organisationsRepository.findAll()
+
+    if (!organisations) {
+      return h.response({ message: 'No organisations found' }).code(404)
+    }
+
+    return h.response(organisations).code(StatusCodes.OK)
+  }
+}

@@ -1,0 +1,171 @@
+{
+  "_id": "6507f1f77bcf86cd79943931",
+  "orgId": "50005",
+  "schemaVersion": 1,
+  "version": 1,
+  "wasteProcessingTypes": ["reprocessor", "exporter"],
+  "reprocessingNations": ["northern ireland", "england"],
+  "businessType": "charity",
+  "submittedToRegulator": "niea",
+  "statusHistory": [
+    {
+      "status": "created",
+      "updatedAt": "2025-11-01T12:00:00.000Z",
+      "updatedBy": { "email": "eve@charity.org" }
+    }
+  ],
+  "registrations": [
+    {
+      "id": "6507f1f77bcf86cd79943932",
+      "status": "created",
+      "submittedToRegulator": "niea",
+      "orgName": "Green Future Trust",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-11-01T12:00:00.000Z",
+          "updatedBy": { "email": "eve@charity.org" }
+        }
+      ],
+      "formSubmissionTime": "2025-11-01T11:00:00.000Z",
+      "site": {
+        "address": {
+          "line1": "100 Trust Road",
+          "town": "Belfast",
+          "postcode": "BT1 1AA"
+        },
+        "siteCapacity": [
+          {
+            "material": "metal",
+            "authorisedWeight": "15",
+            "authorisedTimeScale": "yearly",
+            "siteCapacityWeight": "18",
+            "siteCapacityTimescale": "yearly"
+          }
+        ]
+      },
+      "material": "metal",
+      "wasteProcessingType": "reprocessor",
+      "accreditationId": "c3d4e5f6-7890-abcd-ef12-34567890abcd",
+      "gridReference": "456789",
+      "wasteRegistrationNumber": "CBDU345678",
+      "wasteManagementPermits": [
+        {
+          "type": "wml",
+          "permitNumber": "WML345678",
+          "permittedMaterials": ["metal"],
+          "permitWindow": "yearly"
+        }
+      ],
+      "approvedPersons": [
+        {
+          "fullName": "Eve Black",
+          "email": "eve.black@charity.org",
+          "title": "Director",
+          "phone": "3334445555"
+        }
+      ],
+      "noticeAddress": {
+        "line1": "100 Trust Road",
+        "town": "Belfast",
+        "postcode": "BT1 1AA"
+      }
+    },
+    {
+      "id": "6507f1f77bcf86cd79943933",
+      "status": "created",
+      "submittedToRegulator": "niea",
+      "orgName": "Green Future Trust",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-11-01T12:00:00.000Z",
+          "updatedBy": { "email": "eve@charity.org" }
+        }
+      ],
+      "formSubmissionTime": "2025-11-01T11:30:00.000Z",
+      "material": "aluminium",
+      "wasteProcessingType": "exporter",
+      "wasteRegistrationNumber": "CBDU345679",
+      "wasteManagementPermits": [
+        {
+          "type": "wml",
+          "permitNumber": "WML345679",
+          "permittedMaterials": ["aluminium"],
+          "permitWindow": "yearly"
+        }
+      ],
+      "approvedPersons": [
+        {
+          "fullName": "John Doe",
+          "email": "john.doe@charity.org",
+          "title": "Export Manager",
+          "phone": "4445556666"
+        }
+      ],
+      "noticeAddress": {
+        "line1": "100 Trust Road",
+        "town": "Belfast",
+        "postcode": "BT1 1AA"
+      }
+    }
+  ],
+  "accreditations": [
+    {
+      "id": "c3d4e5f6-7890-abcd-ef12-34567890abcd",
+      "formSubmissionTime": "2025-11-01T13:00:00.000Z",
+      "status": "created",
+      "submittedToRegulator": "niea",
+      "orgName": "Green Future Trust",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-11-01T12:00:00.000Z",
+          "updatedBy": { "email": "eve@charity.org" }
+        }
+      ],
+      "site": {
+        "address": {
+          "line1": "100 Trust Road",
+          "postcode": "BT1 1AA"
+        }
+      },
+      "material": "metal",
+      "wasteProcessingType": "reprocessor",
+      "prnIssuance": {
+        "plannedIssuance": "8000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Sam Green",
+            "email": "sam.green@charity.org",
+            "title": "PRN signatory",
+            "phone": "7778889999"
+          }
+        ],
+        "prnIncomeBusinessPlan": [
+          {
+            "description": "Expand charity operations",
+            "detailedDescription": "Open new recycling centers",
+            "percentSpent": 50
+          }
+        ]
+      },
+      "noticeAddress": {
+        "line1": "100 Trust Road",
+        "town": "Belfast",
+        "postcode": "BT1 1AA"
+      }
+    }
+  ],
+  "companyDetails": {
+    "name": "Green Future Trust",
+    "tradingName": "Green Future",
+    "registrationNumber": "GF345678",
+    "registeredAddress": {
+      "line1": "101 Trust Road",
+      "town": "Belfast",
+      "postcode": "BT1 1AB"
+    }
+  }
+}
+

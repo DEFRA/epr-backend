@@ -1,0 +1,215 @@
+{
+  "_id": "6507f1f77bcf86cd79943911",
+  "orgId": "50003",
+  "schemaVersion": 1,
+  "version": 1,
+  "wasteProcessingTypes": ["reprocessor", "exporter"],
+  "reprocessingNations": ["scotland", "northern ireland"],
+  "businessType": "limited company",
+  "submittedToRegulator": "sepa",
+  "statusHistory": [
+    {
+      "status": "created",
+      "updatedAt": "2025-09-10T10:00:00.000Z",
+      "updatedBy": { "email": "alice@ecorecycle.com" }
+    }
+  ],
+  "registrations": [
+    {
+      "id": "6507f1f77bcf86cd79943912",
+      "status": "created",
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-09-10T10:00:00.000Z",
+          "updatedBy": { "email": "alice@ecorecycle.com" }
+        }
+      ],
+      "formSubmissionTime": "2025-09-09T09:00:00.000Z",
+      "site": {
+        "address": {
+          "line1": "1 Green Park",
+          "town": "Edinburgh",
+          "postcode": "EH1 1AA"
+        },
+        "siteCapacity": [
+          {
+            "material": "paper",
+            "authorisedWeight": "20",
+            "authorisedTimeScale": "yearly",
+            "siteCapacityWeight": "25",
+            "siteCapacityTimescale": "yearly"
+          }
+        ]
+      },
+      "material": "paper",
+      "wasteProcessingType": "reprocessor",
+      "accreditationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "gridReference": "234567",
+      "wasteRegistrationNumber": "CBDU654321",
+      "wasteManagementPermits": [
+        {
+          "type": "wml",
+          "permitNumber": "WML654321",
+          "permittedMaterials": ["paper"],
+          "permitWindow": "yearly"
+        }
+      ],
+      "approvedPersons": [
+        {
+          "fullName": "Alice Smith",
+          "email": "alice.smith@ecorecycle.com",
+          "title": "Manager",
+          "phone": "1112223333"
+        }
+      ],
+      "noticeAddress": {
+        "line1": "1 Green Park",
+        "town": "Edinburgh",
+        "postcode": "EH1 1AA"
+      }
+    },
+    {
+      "id": "6507f1f77bcf86cd79943913",
+      "status": "created",
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-09-10T10:00:00.000Z",
+          "updatedBy": { "email": "alice@ecorecycle.com" }
+        }
+      ],
+      "formSubmissionTime": "2025-09-09T10:00:00.000Z",
+      "material": "cardboard",
+      "wasteProcessingType": "exporter",
+      "wasteRegistrationNumber": "CBDU654322",
+      "wasteManagementPermits": [
+        {
+          "type": "wml",
+          "permitNumber": "WML654322",
+          "permittedMaterials": ["cardboard"],
+          "permitWindow": "yearly"
+        }
+      ],
+      "approvedPersons": [
+        {
+          "fullName": "Bob Brown",
+          "email": "bob.brown@ecorecycle.com",
+          "title": "Export Manager",
+          "phone": "2223334444"
+        }
+      ],
+      "noticeAddress": {
+        "line1": "1 Green Park",
+        "town": "Edinburgh",
+        "postcode": "EH1 1AA"
+      }
+    }
+  ],
+  "accreditations": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "formSubmissionTime": "2025-09-09T11:00:00.000Z",
+      "status": "created",
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-09-10T10:00:00.000Z",
+          "updatedBy": { "email": "alice@ecorecycle.com" }
+        }
+      ],
+      "site": {
+        "address": {
+          "line1": "1 Green Park",
+          "postcode": "EH1 1AA"
+        }
+      },
+      "material": "paper",
+      "wasteProcessingType": "reprocessor",
+      "prnIssuance": {
+        "plannedIssuance": "5000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Carol White",
+            "email": "carol.white@ecorecycle.com",
+            "title": "PRN signatory",
+            "phone": "3334445555"
+          }
+        ],
+        "prnIncomeBusinessPlan": [
+          {
+            "description": "Upgrade recycling plant",
+            "detailedDescription": "Install new sorting machines",
+            "percentSpent": 30
+          }
+        ]
+      },
+      "noticeAddress": {
+        "line1": "1 Green Park",
+        "town": "Edinburgh",
+        "postcode": "EH1 1AA"
+      }
+    },
+    {
+      "id": "b1c2d3e4-f5a6-7890-bcde-f12345678901",
+      "status": "created",
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-09-10T10:00:00.000Z",
+          "updatedBy": { "email": "alice@ecorecycle.com" }
+        }
+      ],
+      "site": {
+        "address": {
+          "line1": "1 Green Park",
+          "postcode": "EH1 1AA"
+        }
+      },
+      "material": "cardboard",
+      "wasteProcessingType": "exporter",
+      "prnIssuance": {
+        "plannedIssuance": "2000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Dan Black",
+            "email": "dan.black@ecorecycle.com",
+            "title": "PRN signatory",
+            "phone": "4445556666"
+          }
+        ],
+        "prnIncomeBusinessPlan": [
+          {
+            "description": "Expand export fleet",
+            "detailedDescription": "Purchase new trucks",
+            "percentSpent": 40
+          }
+        ]
+      },
+      "noticeAddress": {
+        "line1": "1 Green Park",
+        "town": "Edinburgh",
+        "postcode": "EH1 1AA"
+      }
+    }
+  ],
+  "companyDetails": {
+    "name": "Eco Recycle Ltd",
+    "tradingName": "Eco Recycle",
+    "registrationNumber": "ER123456",
+    "registeredAddress": {
+      "line1": "2 Green Park",
+      "town": "Edinburgh",
+      "postcode": "EH1 1AB"
+    }
+  }
+}
+
