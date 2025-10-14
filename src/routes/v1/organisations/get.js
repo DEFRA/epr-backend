@@ -1,4 +1,4 @@
-/** @typedef {import('#repositories/organistions-repository/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/organistions/port.js').OrganisationsRepository} OrganisationsRepository */
 import { StatusCodes } from 'http-status-codes'
 
 export const organisationsGetPath = '/v1/organisations/{organisationId}'
