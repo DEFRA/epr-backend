@@ -13,7 +13,7 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
-import { createTestServer } from '#common/test-helpers/create-test-server.js'
+import { createTestServer } from '#test/create-test-server.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({
