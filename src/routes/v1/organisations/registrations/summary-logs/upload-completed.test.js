@@ -26,7 +26,7 @@ const createUploadCompletedPayload = (overrides) => ({
     registrationId: 'reg-456'
   },
   form: {
-    file: createFileDetails()
+    summaryLogUpload: createFileDetails()
   },
   numberOfRejectedFiles: 0,
   ...overrides
@@ -35,7 +35,7 @@ const createUploadCompletedPayload = (overrides) => ({
 const createPendingPayload = (fileId = 'file-pending-123') =>
   createUploadCompletedPayload({
     form: {
-      file: createFileDetails({
+      summaryLogUpload: createFileDetails({
         fileId,
         filename: 'scanning.xlsx',
         fileStatus: 'pending',
@@ -48,7 +48,7 @@ const createPendingPayload = (fileId = 'file-pending-123') =>
 const createRejectedPayload = (fileId = 'file-rejected-123') =>
   createUploadCompletedPayload({
     form: {
-      file: createFileDetails({
+      summaryLogUpload: createFileDetails({
         fileId,
         filename: 'virus.xlsx',
         fileStatus: 'rejected',
@@ -64,7 +64,7 @@ const createRejectedPayload = (fileId = 'file-rejected-123') =>
 const createCompletePayload = (fileId = 'file-complete-123') =>
   createUploadCompletedPayload({
     form: {
-      file: createFileDetails({
+      summaryLogUpload: createFileDetails({
         fileId,
         filename: 'test.xlsx',
         fileStatus: 'complete',
@@ -197,7 +197,7 @@ describe(`${url} route`, () => {
     const incompletePayload = {
       uploadStatus: 'ready',
       form: {
-        file: {
+        summaryLogUpload: {
           fileId: 'file-incomplete-123',
           filename: 'test.xlsx',
           fileStatus: 'complete'

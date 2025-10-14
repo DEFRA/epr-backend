@@ -16,7 +16,7 @@ import {
 
 const uploadCompletedPayloadSchema = Joi.object({
   form: Joi.object({
-    file: Joi.object({
+    summaryLogUpload: Joi.object({
       fileId: Joi.string().required(),
       filename: Joi.string().required(),
       fileStatus: Joi.string()
@@ -148,7 +148,7 @@ export const summaryLogsUploadCompleted = {
    */
   handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
     const { summaryLogId } = params
-    const fileDetails = payload.form.file
+    const fileDetails = payload.form.summaryLogUpload
 
     try {
       const existingSummaryLog =

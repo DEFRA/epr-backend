@@ -21,7 +21,7 @@ const createUploadPayload = (
     registrationId
   },
   form: {
-    file: {
+    summaryLogUpload: {
       fileId,
       filename,
       fileStatus,
