@@ -85,12 +85,12 @@ sequenceDiagram
   end
 ```
 
-Intially, the user to roles mapping will be embedded in the `backend` application by supplying CDP config/secrets
+Intially, the user to roles mapping will be supplied to the `backend` application via CDP config
 
-- details of the config/secrets will be worked out (and documented) at implementation time
+- details of the config (specifics of env var name and value) will be worked out (and documented) at implementation time
 - we expect this to be a short-lived implementation
 
-The supplied config/secret will list email addresses (from Entra Id accounts) against the `service_maintainer` role for team members who need admin access to `epr-re-ex-admin-frontend`.
+The supplied config will list email addresses (from Entra Id accounts) against the `service_maintainer` role for team members who need access to `epr-re-ex-admin-frontend`.
 
 ## Consequences
 
