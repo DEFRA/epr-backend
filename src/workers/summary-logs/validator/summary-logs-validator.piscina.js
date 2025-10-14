@@ -47,7 +47,8 @@ export const createSummaryLogsValidator = () => {
           })
         })
         .catch((err) => {
-          logger.error(err, {
+          logger.error({
+            error: err,
             message: `Summary log validation worker failed [${summaryLog.id}]`,
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,

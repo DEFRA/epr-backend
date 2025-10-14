@@ -91,16 +91,14 @@ describe('createSummaryLogsValidator', () => {
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(mockLoggerError).toHaveBeenCalledWith(
+    expect(mockLoggerError).toHaveBeenCalledWith({
       error,
-      expect.objectContaining({
-        message: 'Summary log validation worker failed [summary-log-123]',
-        event: {
-          category: 'server',
-          action: 'process_failure'
-        }
-      })
-    )
+      message: 'Summary log validation worker failed [summary-log-123]',
+      event: {
+        category: 'server',
+        action: 'process_failure'
+      }
+    })
   })
 
   it('does not throw when worker succeeds', async () => {

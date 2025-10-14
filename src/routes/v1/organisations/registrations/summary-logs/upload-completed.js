@@ -20,6 +20,40 @@ import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
 
+const createSummaryLog = (
+  summaryLogId,
+  summaryLogUpload,
+  status,
+  failureReason
+) => {
+  const { fileId, filename, fileStatus, s3Bucket, s3Key } = summaryLogUpload
+
+  const fileData = {
+    id: fileId,
+    name: filename,
+    status: fileStatus
+  }
+
+  if (fileStatus === UPLOAD_STATUS.COMPLETE) {
+    fileData.s3 = {
+      bucket: s3Bucket,
+      key: s3Key
+    }
+  }
+
+  const summaryLog = {
+    id: summaryLogId,
+    status,
+    file: fileData
+  }
+
+  if (failureReason) {
+    summaryLog.failureReason = failureReason
+  }
+
+  return summaryLog
+}
+
 export const summaryLogsUploadCompleted = {
   method: 'POST',
   path: summaryLogsUploadCompletedPath,
@@ -47,17 +81,11 @@ export const summaryLogsUploadCompleted = {
     const { summaryLogId } = params
 
     const {
-      form: {
-        summaryLogUpload: {
-          fileId,
-          filename,
-          fileStatus,
-          s3Bucket,
-          s3Key,
-          errorMessage
-        }
-      }
+      form: { summaryLogUpload }
     } = payload
+
+    const { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage } =
+      summaryLogUpload
 
     try {
       const existingSummaryLog =
@@ -72,28 +100,12 @@ export const summaryLogsUploadCompleted = {
       const status = determineStatusFromUpload(fileStatus)
       const failureReason = determineFailureReason(status, errorMessage)
 
-      const fileData = {
-        id: fileId,
-        name: filename,
-        status: fileStatus
-      }
-
-      if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-        fileData.s3 = {
-          bucket: s3Bucket,
-          key: s3Key
-        }
-      }
-
-      const summaryLog = {
-        id: summaryLogId,
+      const summaryLog = createSummaryLog(
+        summaryLogId,
+        summaryLogUpload,
         status,
-        file: fileData
-      }
-
-      if (failureReason) {
-        summaryLog.failureReason = failureReason
-      }
+        failureReason
+      )
 
       await summaryLogsRepository.insert(summaryLog)
 
