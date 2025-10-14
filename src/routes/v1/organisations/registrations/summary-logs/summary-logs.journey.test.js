@@ -184,7 +184,8 @@ describe('Summary logs journey', () => {
         expect(JSON.parse(response.payload)).toEqual(
           expect.objectContaining({
             status: 'rejected',
-            failureReason: 'File rejected by virus scan'
+            failureReason:
+              'Something went wrong with your file upload. Please try again.'
           })
         )
       })

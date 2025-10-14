@@ -34,7 +34,9 @@ const uploadCompletedPayloadSchema = Joi.object({
         is: UPLOAD_STATUS.COMPLETE,
         then: Joi.required(),
         otherwise: Joi.optional()
-      })
+      }),
+      hasError: Joi.boolean().optional(),
+      errorMessage: Joi.string().optional()
     })
       .required()
       .unknown(true)
@@ -69,7 +71,7 @@ export const summaryLogsUploadCompleted = {
   handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
     const { summaryLogId } = params
     const {
-      file: { fileId, filename, fileStatus, s3Bucket, s3Key }
+      file: { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage }
     } = payload.form
 
     try {
@@ -83,7 +85,7 @@ export const summaryLogsUploadCompleted = {
       }
 
       const status = determineStatusFromUpload(fileStatus)
-      const failureReason = determineFailureReason(status)
+      const failureReason = determineFailureReason(status, errorMessage)
 
       const fileData = {
         id: fileId,

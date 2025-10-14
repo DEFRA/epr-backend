@@ -129,7 +129,9 @@ describe(`${url} route`, () => {
         file: {
           fileId: 'file-rejected-123',
           filename: 'virus.xlsx',
-          fileStatus: 'rejected'
+          fileStatus: 'rejected',
+          hasError: true,
+          errorMessage: 'The selected file contains a virus'
         }
       },
       numberOfRejectedFiles: 1
