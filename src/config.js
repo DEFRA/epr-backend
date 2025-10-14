@@ -177,6 +177,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOGS'
+    },
+    organisations: {
+      doc: 'Feature Flag: Organisations',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_ORGANISATIONS'
     }
   }
 }

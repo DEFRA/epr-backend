@@ -5,6 +5,6 @@ const COLLECTION_NAME = 'organisations'
  */
 export const createOrganisationsRepository = (db) => ({
   async findAll() {
-    return db.collection(COLLECTION_NAME).find().toArray();
-  },
+    return db.collection(COLLECTION_NAME).find().toArray()
+  }
 })
