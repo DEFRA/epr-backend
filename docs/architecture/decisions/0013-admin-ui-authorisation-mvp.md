@@ -4,7 +4,7 @@ Date: 2025-10-13
 
 ## Status
 
-Acce
+Accepted
 
 ## Context
 
@@ -53,22 +53,44 @@ Page access protection in the `frontend` will be _inferred_ - when rendering a p
 
 We will implement **option 3** (infer protection of pages from API responses) for the MVP.
 
-To embed the `backend` application with user to roles mapping a hardcoded a list will be injected via a CDP secret.
+```mermaid
+sequenceDiagram
 
-The structure of the of secret will look like this:
+  Actor user
+  box EPR Frontend
+    participant router as Router
+    participant hapi as @hapi/cookie<br/>'cookie'<br/>auth strategy
+    participant route as Route handler<br/>code
+  end
+  participant backend as EPR backend
 
-```json
-{
-  "serviceMaintainers": [
-    "user1@defra.gov.uk",
-    "user2@defra.gov.uk",
-    "user3@defra.gov.uk",
-    "user4@defra.gov.uk"
-  ]
-}
+  user->>router: GET /a-page<br/>Session cookie: <session ID>
+  note over router: route protected with<br/>auth strategy: 'cookie'
+  router->>hapi: (forwards)
+  note over hapi: check user is signed-in
+  hapi->>route: (forwards)
+
+  note over route: pull {accessToken} from session data
+  route->>backend: GET /a-resource<br/>Authorization: Bearer {accessToken}
+
+  note over backend: endpoint protected with<br/>scope: ['role-x']
+  backend->>backend: Authenticate user<br/> and lookup roles
+
+  alt user has 'role-x'
+    backend->>route: 200 {data}
+    route->>user: 200 <html>Rendered {data}</html>
+  else user does not have 'role-x'
+    backend->>route: 403 { error: not authorized }
+    route->>user: 403 <html>Not authorized</html>
+  end
 ```
 
-The email addresses in the `serviceMaintainers` array will be filled in with the email addresses of the team members' Entra Id accounts who need admin access to `epr-re-ex-admin-frontend`.
+Intially, the user to roles mapping will be embedded in the `backend` application by supplying CDP config/secrets
+
+- details of the config/secrets will be worked out (and documented) at implementation time
+- we expect this to be a short-lived implementation
+
+The supplied config/secret will list email addresses (from Entra Id accounts) against the `service_maintainer` role for team members who need admin access to `epr-re-ex-admin-frontend`.
 
 ## Consequences
 
@@ -82,3 +104,8 @@ Further the implementation
 - allows us to defer solving problems like
   - what is the performance impact (on page load time) of the `frontend` requesting roles from the `backend` on serving every page? Is performance optimisation (eg. caching) required?
   - assuming caching of roles in the `frontend` is employed, how are role changes (embedded in the `backend`) kept in sync across the service? How should the system handle the scenario where a role change occurs during a user session?
+  - speccing out an endpoint on the `backend` for exposing roles that meets the needs of both `epr-re-ex-admin-frontend` **and** `epr-frontend`
+
+Limitations imposed on `frontend` application
+
+- can not optionally render parts/components within a page based on users role (eg render page for all users but only render `delete` button if user has `role-x`)
