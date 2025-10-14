@@ -8,15 +8,15 @@ TEST_URL="epr-backend.test.cdp-int.defra.cloud"
 DIR="${1:-./prod_forms_download}"
 
 # Check directory exists
-if [ ! -d "$DIR" ]; then
-    echo " Error: Directory $DIR does not exist"
+if [[ ! -d "$DIR" ]]; then
+    echo " Error: Directory $DIR does not exist" >&2
     exit 1
 fi
 
 # Find JSON files
 json_files=$(find "$DIR" -name "*.json" -type f)
-if [ -z "$json_files" ]; then
-    echo "Error: No JSON files found in $DIR"
+if [[ -z "$json_files" ]]; then
+    echo "Error: No JSON files found in $DIR" >&2
     exit 1
 fi
 
@@ -38,7 +38,7 @@ echo "Checking for remaining production URLs..."
 # Check for remaining prod URLs
 files_with_prod_urls=$(grep -l "$PROD_URL" "$DIR"/*.json 2>/dev/null || true)
 
-if [ -n "$files_with_prod_urls" ]; then
+if [[ -n "$files_with_prod_urls" ]]; then
     echo ""
     echo " FAILURE: Production URLs still found in:"
     for file in $files_with_prod_urls; do
