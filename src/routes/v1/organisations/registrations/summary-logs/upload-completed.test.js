@@ -9,24 +9,73 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createTestServer } from '#common/test-helpers/create-test-server.js'
 
 const url = summaryLogsUploadCompletedPath
-const payload = {
+
+const createFileDetails = (overrides) => ({
+  fileId: 'file-123',
+  filename: 'test.xlsx',
+  fileStatus: 'complete',
+  s3Bucket: 'test-bucket',
+  s3Key: 'test-key',
+  ...overrides
+})
+
+const createUploadCompletedPayload = (overrides) => ({
   uploadStatus: 'ready',
   metadata: {
     organisationId: 'org-123',
     registrationId: 'reg-456'
   },
   form: {
-    file: {
-      fileId: 'file-123',
-      filename: 'test.xlsx',
-      fileStatus: 'complete',
-      s3Bucket: 'test-bucket',
-      s3Key: 'test-key'
-    }
+    file: createFileDetails()
   },
-  numberOfRejectedFiles: 0
-}
+  numberOfRejectedFiles: 0,
+  ...overrides
+})
+
+const createPendingPayload = (fileId = 'file-pending-123') =>
+  createUploadCompletedPayload({
+    form: {
+      file: createFileDetails({
+        fileId,
+        filename: 'scanning.xlsx',
+        fileStatus: 'pending',
+        s3Bucket: undefined,
+        s3Key: undefined
+      })
+    }
+  })
+
+const createRejectedPayload = (fileId = 'file-rejected-123') =>
+  createUploadCompletedPayload({
+    form: {
+      file: createFileDetails({
+        fileId,
+        filename: 'virus.xlsx',
+        fileStatus: 'rejected',
+        hasError: true,
+        errorMessage: 'The selected file contains a virus',
+        s3Bucket: undefined,
+        s3Key: undefined
+      })
+    },
+    numberOfRejectedFiles: 1
+  })
+
+const createCompletePayload = (fileId = 'file-complete-123') =>
+  createUploadCompletedPayload({
+    form: {
+      file: createFileDetails({
+        fileId,
+        filename: 'test.xlsx',
+        fileStatus: 'complete',
+        s3Bucket: 'test-bucket',
+        s3Key: 'test-key'
+      })
+    }
+  })
+
 let server
+const payload = createUploadCompletedPayload()
 
 describe(`${url} route`, () => {
   beforeEach(async () => {
@@ -119,28 +168,10 @@ describe(`${url} route`, () => {
   })
 
   it('returns 202 when file is rejected without S3 info', async () => {
-    const rejectedPayload = {
-      uploadStatus: 'ready',
-      metadata: {
-        organisationId: 'org-123',
-        registrationId: 'reg-456'
-      },
-      form: {
-        file: {
-          fileId: 'file-rejected-123',
-          filename: 'virus.xlsx',
-          fileStatus: 'rejected',
-          hasError: true,
-          errorMessage: 'The selected file contains a virus'
-        }
-      },
-      numberOfRejectedFiles: 1
-    }
-
     const response = await server.inject({
       method: 'POST',
       url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/rejected-summary-log-123/upload-completed',
-      payload: rejectedPayload
+      payload: createRejectedPayload()
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -188,26 +219,10 @@ describe(`${url} route`, () => {
   })
 
   it('returns 202 when file is pending without S3 info', async () => {
-    const pendingPayload = {
-      uploadStatus: 'ready',
-      metadata: {
-        organisationId: 'org-123',
-        registrationId: 'reg-456'
-      },
-      form: {
-        file: {
-          fileId: 'file-pending-123',
-          filename: 'scanning.xlsx',
-          fileStatus: 'pending'
-        }
-      },
-      numberOfRejectedFiles: 0
-    }
-
     const response = await server.inject({
       method: 'POST',
       url: '/v1/organisations/org-123/registrations/reg-456/summary-logs/pending-summary-log-123/upload-completed',
-      payload: pendingPayload
+      payload: createPendingPayload()
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -259,6 +274,180 @@ describe(`${url} route`, () => {
           status_code: statusCode
         }
       }
+    })
+  })
+
+  describe('state transitions', () => {
+    describe('valid transitions', () => {
+      it('allows preprocessing -> preprocessing when receiving multiple pending callbacks', async () => {
+        const summaryLogId = 'multi-pending-log-123'
+
+        const firstResponse = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-456')
+        })
+
+        expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
+
+        const secondResponse = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-456')
+        })
+
+        expect(secondResponse.statusCode).toBe(StatusCodes.ACCEPTED)
+      })
+
+      it('allows preprocessing -> rejected transition', async () => {
+        const summaryLogId = 'preprocessing-to-rejected-123'
+
+        const firstResponse = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-789')
+        })
+
+        expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
+
+        const secondResponse = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-789')
+        })
+
+        expect(secondResponse.statusCode).toBe(StatusCodes.ACCEPTED)
+      })
+
+      it('allows preprocessing -> validating transition', async () => {
+        const summaryLogId = 'preprocessing-to-validating-123'
+
+        const firstResponse = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-101')
+        })
+
+        expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
+
+        const secondResponse = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-101')
+        })
+
+        expect(secondResponse.statusCode).toBe(StatusCodes.ACCEPTED)
+      })
+    })
+
+    describe('invalid transitions', () => {
+      it('rejects validating -> preprocessing transition', async () => {
+        const summaryLogId = 'validating-to-preprocessing-123'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-202')
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-202')
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('rejects validating -> rejected transition', async () => {
+        const summaryLogId = 'validating-to-rejected-123'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-303')
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-303')
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('rejects rejected -> preprocessing transition', async () => {
+        const summaryLogId = 'rejected-to-preprocessing-123'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-404')
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-404')
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('rejects rejected -> validating transition', async () => {
+        const summaryLogId = 'rejected-to-validating-123'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-505')
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-505')
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('rejects validating -> validating transition (duplicate complete callbacks)', async () => {
+        const summaryLogId = 'duplicate-complete-123'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-606')
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-606')
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
+
+      it('rejects rejected -> rejected transition (duplicate rejected callbacks)', async () => {
+        const summaryLogId = 'duplicate-rejected-123'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-707')
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-707')
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      })
     })
   })
 })
