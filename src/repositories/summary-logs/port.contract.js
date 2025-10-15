@@ -1,22 +1,7 @@
-import {
-  testInsertBehaviour,
-  testInsertRaceConditions,
-  testInsertValidationRequiredFields,
-  testInsertValidationFieldHandling,
-  testInsertValidationStatusBasedS3
-} from './contract/insert.contract.js'
-import {
-  testFindById,
-  testFindByIdValidation
-} from './contract/find.contract.js'
-import {
-  testUpdateBehaviour,
-  testUpdateValidation
-} from './contract/update.contract.js'
-import {
-  testOptimisticConcurrency,
-  testOptimisticConcurrencyRaceConditions
-} from './contract/optimistic-concurrency.contract.js'
+import { testFindBehaviour } from './contract/find.contract.js'
+import { testInsertBehaviour } from './contract/insert.contract.js'
+import { testUpdateBehaviour } from './contract/update.contract.js'
+import { testOptimisticConcurrency } from './contract/optimistic-concurrency.contract.js'
 
 export const testSummaryLogsRepositoryContract = (createRepository) => {
   describe('summary logs repository contract', () => {
@@ -26,16 +11,9 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
       repository = await createRepository()
     })
 
+    testFindBehaviour(() => repository)
     testInsertBehaviour(() => repository)
-    testInsertRaceConditions(() => repository)
-    testInsertValidationRequiredFields(() => repository)
-    testInsertValidationFieldHandling(() => repository)
-    testInsertValidationStatusBasedS3(() => repository)
-    testFindById(() => repository)
-    testFindByIdValidation(() => repository)
     testUpdateBehaviour(() => repository)
-    testUpdateValidation(() => repository)
     testOptimisticConcurrency(() => repository)
-    testOptimisticConcurrencyRaceConditions(() => repository)
   })
 }
