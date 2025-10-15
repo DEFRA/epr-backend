@@ -17,7 +17,7 @@ export const createInMemorySummaryLogsRepository = () => {
         )
       }
 
-      storage.set(validated.id, { ...validated, version: 1 })
+      storage.set(validated.id, structuredClone({ ...validated, version: 1 }))
     },
 
     async update(id, version, updates) {
@@ -35,16 +35,20 @@ export const createInMemorySummaryLogsRepository = () => {
         )
       }
 
-      storage.set(validatedId, {
-        ...existing,
-        ...updates,
-        version: existing.version + 1
-      })
+      storage.set(
+        validatedId,
+        structuredClone({
+          ...existing,
+          ...updates,
+          version: existing.version + 1
+        })
+      )
     },
 
     async findById(id) {
       const validatedId = validateId(id)
-      return storage.get(validatedId) ?? null
+      const result = storage.get(validatedId)
+      return result ? structuredClone(result) : null
     }
   }
 }
