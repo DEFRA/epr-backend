@@ -87,6 +87,68 @@ const testInsertBehaviour = (getRepository) => {
         output: { statusCode: 409 }
       })
     })
+
+    // This test fires two concurrent inserts with the same ID to validate that
+    // implementations correctly handle concurrent duplicate inserts. While test
+    // environments may not guarantee true concurrency, this validates the contract
+    // requirement that implementations must safely handle racing inserts.
+    //
+    // Required behaviour:
+    // - Exactly one insert succeeds, one fails with 409 conflict
+    // - The successful insert's data is persisted correctly
+    // - No data corruption occurs
+    //
+    // Implementations may use any mechanism (unique constraints, locks, etc.) to
+    // ensure this behaviour, but must guarantee it regardless of timing.
+    it('rejects one of two concurrent inserts with same ID (best-effort race condition test)', async () => {
+      const id = `contract-concurrent-insert-${randomUUID()}`
+      const summaryLogA = {
+        id,
+        status: 'validating',
+        organisationId: 'org-A',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'testA.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key-A'
+          }
+        }
+      }
+      const summaryLogB = {
+        id,
+        status: 'validating',
+        organisationId: 'org-B',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'testB.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key-B'
+          }
+        }
+      }
+
+      const results = await Promise.allSettled([
+        getRepository().insert(summaryLogA),
+        getRepository().insert(summaryLogB)
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect(rejected[0].reason).toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 }
+      })
+
+      const final = await getRepository().findById(id)
+      expect(final).toBeTruthy()
+      expect(final.id).toBe(id)
+      expect(['org-A', 'org-B']).toContain(final.organisationId)
+    })
   })
 }
 
