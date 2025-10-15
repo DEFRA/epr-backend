@@ -8,7 +8,7 @@ import {
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import accreditationFixture from '#data/fixtures/accreditation.json'
 import { accreditationPath } from './accreditation.js'
-import { createTestServer } from '#common/test-helpers/create-test-server.js'
+import { createTestServer } from '#test/create-test-server.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn()

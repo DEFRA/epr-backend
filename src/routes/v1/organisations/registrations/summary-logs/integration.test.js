@@ -1,10 +1,12 @@
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createTestServer } from '#common/test-helpers/create-test-server.js'
+import { createTestServer } from '#test/create-test-server.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
+import { createInlineSummaryLogsValidator } from '#workers/summary-logs/inline.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -21,7 +23,7 @@ const createUploadPayload = (
     registrationId
   },
   form: {
-    file: {
+    summaryLogUpload: {
       fileId,
       filename,
       fileStatus,
@@ -37,7 +39,7 @@ const createUploadPayload = (
       })
     }
   },
-  numberOfRejectedFiles: fileStatus === 'rejected' ? 1 : 0
+  numberOfRejectedFiles: fileStatus === UPLOAD_STATUS.REJECTED ? 1 : 0
 })
 
 const buildGetUrl = (summaryLogId) =>
@@ -46,16 +48,24 @@ const buildGetUrl = (summaryLogId) =>
 const buildPostUrl = (summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
-describe('Summary logs journey', () => {
+describe('Summary logs integration', () => {
   let server
 
   beforeEach(async () => {
-    const repository = createInMemorySummaryLogsRepository()
+    const summaryLogsRepository = createInMemorySummaryLogsRepository()
+    const summaryLogsValidator = createInlineSummaryLogsValidator(
+      summaryLogsRepository
+    )
+    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: repository
+        summaryLogsRepository
       },
-      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      workers: {
+        summaryLogsValidator
+      },
+      featureFlags
     })
   })
 
@@ -71,13 +81,13 @@ describe('Summary logs journey', () => {
       })
     })
 
-    test('returns OK', () => {
+    it('returns OK', () => {
       expect(response.statusCode).toBe(200)
     })
 
-    test('returns preprocessing status', () => {
+    it('returns preprocessing status', () => {
       expect(JSON.parse(response.payload)).toEqual({
-        status: 'preprocessing'
+        status: SUMMARY_LOG_STATUS.PREPROCESSING
       })
     })
   })
@@ -92,15 +102,15 @@ describe('Summary logs journey', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload('complete', fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
       })
     })
 
-    test('returns ACCEPTED', () => {
+    it('returns ACCEPTED', () => {
       expect(uploadResponse.statusCode).toBe(202)
     })
 
-    test('logs completion with file location', () => {
+    it('logs completion with file location', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
           message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=test-bucket, s3Key=path/to/${filename}`,
@@ -123,13 +133,13 @@ describe('Summary logs journey', () => {
         })
       })
 
-      test('returns OK', () => {
+      it('returns OK', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      test('returns validating status', () => {
+      it('returns validating status', () => {
         expect(JSON.parse(response.payload)).toEqual({
-          status: 'validating'
+          status: SUMMARY_LOG_STATUS.VALIDATING
         })
       })
     })
@@ -145,15 +155,20 @@ describe('Summary logs journey', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload('rejected', fileId, filename, false)
+        payload: createUploadPayload(
+          UPLOAD_STATUS.REJECTED,
+          fileId,
+          filename,
+          false
+        )
       })
     })
 
-    test('returns ACCEPTED', () => {
+    it('returns ACCEPTED', () => {
       expect(uploadResponse.statusCode).toBe(202)
     })
 
-    test('logs completion', () => {
+    it('logs completion', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
           message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=rejected`,
@@ -176,14 +191,14 @@ describe('Summary logs journey', () => {
         })
       })
 
-      test('returns OK', () => {
+      it('returns OK', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      test('returns rejected status with reason', () => {
+      it('returns rejected status with reason', () => {
         expect(JSON.parse(response.payload)).toEqual(
           expect.objectContaining({
-            status: 'rejected',
+            status: UPLOAD_STATUS.REJECTED,
             failureReason:
               'Something went wrong with your file upload. Please try again.'
           })
@@ -202,15 +217,20 @@ describe('Summary logs journey', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload('pending', fileId, filename, false)
+        payload: createUploadPayload(
+          UPLOAD_STATUS.PENDING,
+          fileId,
+          filename,
+          false
+        )
       })
     })
 
-    test('returns ACCEPTED', () => {
+    it('returns ACCEPTED', () => {
       expect(uploadResponse.statusCode).toBe(202)
     })
 
-    test('logs completion', () => {
+    it('logs completion', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
           message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=pending`,

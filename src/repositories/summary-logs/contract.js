@@ -356,6 +356,180 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
   })
 }
 
+const testUpdateBehaviour = (getRepository) => {
+  describe('update', () => {
+    it('updates an existing summary log', async () => {
+      const id = `contract-update-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'scanning.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+
+      await getRepository().update(id, {
+        status: 'validating',
+        file: {
+          id: summaryLog.file.id,
+          name: summaryLog.file.name,
+          status: 'complete',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      })
+
+      const found = await getRepository().findById(id)
+      expect(found.status).toBe('validating')
+      expect(found.file.status).toBe('complete')
+      expect(found.file.s3.bucket).toBe(TEST_S3_BUCKET)
+    })
+
+    it('throws not found error when updating non-existent ID', async () => {
+      const id = `contract-nonexistent-${randomUUID()}`
+
+      await expect(
+        getRepository().update(id, { status: 'validating' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+
+    it('preserves existing fields not included in update', async () => {
+      const id = `contract-preserve-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        organisationId: 'org-123',
+        registrationId: 'reg-456',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+
+      await getRepository().update(id, { status: 'rejected' })
+
+      const found = await getRepository().findById(id)
+      expect(found.status).toBe('rejected')
+      expect(found.organisationId).toBe('org-123')
+      expect(found.registrationId).toBe('reg-456')
+    })
+  })
+}
+
+const testUpdateStatus = (getRepository) => {
+  describe('updateStatus', () => {
+    it('updates the status of an existing summary log', async () => {
+      const id = `contract-update-status-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'validating',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      await getRepository().updateStatus(id, 'valid')
+
+      const found = await getRepository().findById(id)
+      expect(found.status).toBe('valid')
+    })
+
+    it('preserves other fields when updating status', async () => {
+      const id = `contract-preserve-fields-${randomUUID()}`
+      const fileId = `file-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'validating',
+        organisationId: 'org-123',
+        registrationId: 'reg-456',
+        file: {
+          id: fileId,
+          name: 'test.xlsx',
+          status: 'complete',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      await getRepository().updateStatus(id, 'invalid')
+
+      const found = await getRepository().findById(id)
+      expect(found.status).toBe('invalid')
+      expect(found.organisationId).toBe('org-123')
+      expect(found.registrationId).toBe('reg-456')
+      expect(found.file.id).toBe(fileId)
+      expect(found.file.name).toBe('test.xlsx')
+    })
+
+    it('throws not found error when updating non-existent summary log', async () => {
+      const id = `contract-nonexistent-${randomUUID()}`
+
+      await expect(
+        getRepository().updateStatus(id, 'valid')
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+  })
+}
+
+const testUpdateStatusValidation = (getRepository) => {
+  describe('updateStatus validation', () => {
+    it('rejects null id', async () => {
+      await expect(getRepository().updateStatus(null, 'valid')).rejects.toThrow(
+        /id/
+      )
+    })
+
+    it('rejects undefined id', async () => {
+      await expect(
+        getRepository().updateStatus(undefined, 'valid')
+      ).rejects.toThrow(/id/)
+    })
+
+    it('rejects empty string id', async () => {
+      await expect(getRepository().updateStatus('', 'valid')).rejects.toThrow(
+        /id/
+      )
+    })
+
+    it('rejects number id', async () => {
+      const ID = 123
+      await expect(getRepository().updateStatus(ID, 'valid')).rejects.toThrow(
+        /id/
+      )
+    })
+
+    it('rejects object id', async () => {
+      await expect(getRepository().updateStatus({}, 'valid')).rejects.toThrow(
+        /id/
+      )
+    })
+  })
+}
+
 export const testSummaryLogsRepositoryContract = (createRepository) => {
   describe('summary logs repository contract', () => {
     let repository
@@ -365,10 +539,13 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     })
 
     testInsertBehaviour(() => repository)
+    testUpdateBehaviour(() => repository)
     testFindById(() => repository)
     testFindByIdValidation(() => repository)
     testInsertValidationRequiredFields(() => repository)
     testInsertValidationFieldHandling(() => repository)
     testInsertValidationStatusBasedS3(() => repository)
+    testUpdateStatus(() => repository)
+    testUpdateStatusValidation(() => repository)
   })
 }
