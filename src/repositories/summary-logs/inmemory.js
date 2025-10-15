@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
-import { validateId, validateSummaryLogInsert } from './validation.js'
+import {
+  validateId,
+  validateSummaryLogInsert,
+  validateSummaryLogUpdate
+} from './validation.js'
 
 /**
  * @returns {import('./port.js').SummaryLogsRepository}
@@ -17,35 +21,39 @@ export const createInMemorySummaryLogsRepository = () => {
         )
       }
 
-      storage.set(validated.id, { ...validated })
+      storage.set(validated.id, structuredClone({ ...validated, version: 1 }))
     },
 
-    async update(id, updates) {
+    async update(id, version, updates) {
       const validatedId = validateId(id)
+      const validatedUpdates = validateSummaryLogUpdate(updates)
 
-      if (!storage.has(validatedId)) {
-        throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-      }
-
-      const existing = storage.get(validatedId)
-      storage.set(validatedId, { ...existing, ...updates })
-    },
-
-    async findById(id) {
-      const validatedId = validateId(id)
-      return storage.get(validatedId) ?? null
-    },
-
-    async updateStatus(id, status) {
-      const validatedId = validateId(id)
       const existing = storage.get(validatedId)
 
       if (!existing) {
         throw Boom.notFound(`Summary log with id ${validatedId} not found`)
       }
 
-      const updated = { ...existing, status }
-      storage.set(validatedId, updated)
+      if (existing.version !== version) {
+        throw Boom.conflict(
+          `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+        )
+      }
+
+      storage.set(
+        validatedId,
+        structuredClone({
+          ...existing,
+          ...validatedUpdates,
+          version: existing.version + 1
+        })
+      )
+    },
+
+    async findById(id) {
+      const validatedId = validateId(id)
+      const result = storage.get(validatedId)
+      return result ? structuredClone(result) : null
     }
   }
 }

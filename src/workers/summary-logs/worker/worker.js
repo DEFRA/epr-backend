@@ -22,7 +22,9 @@ export const summaryLogsValidatorWorker = async ({
 
   const status = SUMMARY_LOG_STATUS.INVALID
 
-  await summaryLogsRepository.updateStatus(summaryLog.id, status)
+  await summaryLogsRepository.update(summaryLog.id, summaryLog.version, {
+    status
+  })
 
   logger.info({
     message: `Summary log validation status updated [${summaryLog.id}] to [${status}]`,

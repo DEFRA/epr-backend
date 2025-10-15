@@ -15,7 +15,7 @@ import {
 import { uploadCompletedPayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#workers/summary-logs/validator/summary-logs/validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 const buildFileData = (upload, existingFile = null) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
@@ -68,7 +68,11 @@ const upsertSummaryLog = async (
       upload,
       existingSummaryLog.file
     )
-    await summaryLogsRepository.update(summaryLogId, updates)
+    await summaryLogsRepository.update(
+      summaryLogId,
+      existingSummaryLog.version,
+      updates
+    )
   } else {
     const summaryLog = buildSummaryLogData(summaryLogId, upload)
     await summaryLogsRepository.insert(summaryLog)

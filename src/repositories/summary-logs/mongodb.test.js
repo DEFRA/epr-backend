@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { createSummaryLogsRepository } from './mongodb.js'
-import { testSummaryLogsRepositoryContract } from './contract.js'
+import { testSummaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
 
 describe('MongoDB summary logs repository', () => {
   let server
