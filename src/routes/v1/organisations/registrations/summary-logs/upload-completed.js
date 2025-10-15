@@ -14,7 +14,7 @@ import {
 
 import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 
-/** @typedef {import('#repositories/summary-logs/repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#workers/summary-logs/validator/summary-logs/validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 const buildFileData = (upload, existingFile = null) => {
