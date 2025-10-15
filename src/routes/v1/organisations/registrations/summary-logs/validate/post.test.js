@@ -21,8 +21,7 @@ describe(`${url} route`, () => {
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: (logger) =>
-          createInMemorySummaryLogsRepository(logger)
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })

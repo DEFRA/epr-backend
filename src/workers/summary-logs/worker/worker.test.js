@@ -29,7 +29,8 @@ describe('summaryLogsValidatorWorker', () => {
   beforeEach(async () => {
     vi.useFakeTimers()
 
-    summaryLogsRepository = createInMemorySummaryLogsRepository(mockLogger)
+    const factory = createInMemorySummaryLogsRepository()
+    summaryLogsRepository = factory(mockLogger)
 
     const summaryLogData = buildSummaryLog('summary-log-123', {
       status: SUMMARY_LOG_STATUS.VALIDATING,

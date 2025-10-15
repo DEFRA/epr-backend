@@ -6,13 +6,12 @@ import {
 } from './validation.js'
 
 /**
- * @param {import('#common/helpers/logging/logger.js').TypedLogger} logger
- * @returns {import('./port.js').SummaryLogsRepository}
+ * @returns {(logger: import('#common/helpers/logging/logger.js').TypedLogger) => import('./port.js').SummaryLogsRepository}
  */
-export const createInMemorySummaryLogsRepository = (logger) => {
+export const createInMemorySummaryLogsRepository = () => {
   const storage = new Map()
 
-  return {
+  return (logger) => ({
     async insert(summaryLog) {
       const validated = validateSummaryLogInsert(summaryLog)
 
@@ -56,5 +55,5 @@ export const createInMemorySummaryLogsRepository = (logger) => {
       const result = storage.get(validatedId)
       return result ? structuredClone(result) : null
     }
-  }
+  })
 }

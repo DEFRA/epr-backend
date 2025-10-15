@@ -470,13 +470,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
   describe('state transitions', () => {
     let transitionServer
 
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
-
     beforeAll(async () => {
       const transitionValidator = {
         validate: vi.fn()
@@ -484,12 +477,9 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
-      // Create shared repository that persists across requests
-      const sharedRepository = createInMemorySummaryLogsRepository(mockLogger)
-
       transitionServer = await createTestServer({
         repositories: {
-          summaryLogsRepository: (logger) => sharedRepository
+          summaryLogsRepository: createInMemorySummaryLogsRepository()
         },
         workers: {
           summaryLogsValidator: transitionValidator

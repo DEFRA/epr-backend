@@ -51,15 +51,10 @@ const buildPostUrl = (summaryLogId) =>
 describe('Summary logs integration', () => {
   let server
 
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn()
-  }
-
   beforeEach(async () => {
-    const summaryLogsRepository = createInMemorySummaryLogsRepository(mockLogger)
+    const summaryLogsRepoFactory = createInMemorySummaryLogsRepository()
+    const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
+    const summaryLogsRepository = summaryLogsRepoFactory(mockLogger)
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       summaryLogsRepository
     )
@@ -67,7 +62,7 @@ describe('Summary logs integration', () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: (logger) => summaryLogsRepository
+        summaryLogsRepository: summaryLogsRepoFactory
       },
       workers: {
         summaryLogsValidator

@@ -11,13 +11,15 @@ describe('In-memory summary logs repository', () => {
     debug: vi.fn()
   }
 
-  testSummaryLogsRepositoryContract(() =>
-    createInMemorySummaryLogsRepository(mockLogger)
-  )
+  testSummaryLogsRepositoryContract(() => {
+    const factory = createInMemorySummaryLogsRepository()
+    return factory(mockLogger)
+  })
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
-      const repo = createInMemorySummaryLogsRepository(mockLogger)
+      const factory = createInMemorySummaryLogsRepository()
+      const repo = factory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
       const summaryLog = buildSummaryLog(id, {
         file: buildFile({ name: 'original.xlsx' })
@@ -35,7 +37,8 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
-      const repo = createInMemorySummaryLogsRepository(mockLogger)
+      const factory = createInMemorySummaryLogsRepository()
+      const repo = factory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
       const summaryLog = buildSummaryLog(id, {
         file: buildFile({ name: 'original.xlsx' })
@@ -52,7 +55,8 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies on update', async () => {
-      const repo = createInMemorySummaryLogsRepository(mockLogger)
+      const factory = createInMemorySummaryLogsRepository()
+      const repo = factory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
       const summaryLog = buildSummaryLog(id)
 
