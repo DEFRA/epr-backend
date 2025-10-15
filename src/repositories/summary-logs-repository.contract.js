@@ -703,6 +703,58 @@ const testOptimisticConcurrency = (getRepository) => {
         }
       })
     })
+
+    // This test fires two concurrent updates with the same version number.
+    // It validates core optimistic locking behavior regardless of whether the updates
+    // run truly concurrently or sequentially:
+    //
+    // - Exactly one update succeeds, one fails with 409 conflict
+    // - Version increments exactly once (to 2)
+    // - The winning update's changes are persisted
+    //
+    // Failure modes that would prove the implementation is broken:
+    // - Both updates succeed (optimistic locking not working)
+    // - Both updates fail (basic update broken)
+    // - Failed update returns wrong error code (conflict detection broken)
+    // - Version is not 2 (version increment broken)
+    // - Final status is unexpected (data corruption)
+    //
+    // The test trusts MongoDB's atomic operations ({ _id, version } query + $inc)
+    // to prevent both updates from succeeding when they truly race.
+    it('rejects one of two concurrent updates (best-effort race condition test)', async () => {
+      const id = `contract-concurrent-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      const current = await getRepository().findById(id)
+
+      const results = await Promise.allSettled([
+        getRepository().update(id, current.version, { status: 'validating' }),
+        getRepository().update(id, current.version, { status: 'rejected' })
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect(rejected[0].reason).toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 }
+      })
+
+      const final = await getRepository().findById(id)
+      expect(final.version).toBe(2)
+      expect(['validating', 'rejected']).toContain(final.status)
+    })
   })
 }
 
