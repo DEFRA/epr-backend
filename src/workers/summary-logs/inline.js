@@ -1,11 +1,12 @@
-import { logger } from '#common/helpers/logging/logger.js'
-import { summaryLogsValidatorWorker } from '#workers/summary-logs/validator/worker/summary-logs-validator-worker.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
-/** @typedef {import('./summary-logs-validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
+import { summaryLogsValidatorWorker } from '#workers/summary-logs/worker/worker.js'
+
+/** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 /**
  * @returns {SummaryLogsValidator}

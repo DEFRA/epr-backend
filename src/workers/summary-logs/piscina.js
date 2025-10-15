@@ -15,15 +15,12 @@ const dirname = path.dirname(filename)
 const ONE_MINUTE = 60_000
 
 const pool = new Piscina({
-  filename: path.join(
-    dirname,
-    'worker/summary-logs-validator-worker-thread.js'
-  ),
+  filename: path.join(dirname, 'worker/worker-thread.js'),
   maxThreads: 1, // Match vCPU count on AWS instance
   idleTimeout: ONE_MINUTE
 })
 
-/** @typedef {import('./summary-logs-validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 /**
  * @returns {SummaryLogsValidator}

@@ -1,10 +1,8 @@
-import { summaryLogsValidatorWorker } from '#workers/summary-logs/validator/worker/summary-logs-validator-worker.js'
+import { summaryLogsValidatorWorker } from '#workers/summary-logs/worker/worker.js'
 
-import { createInlineSummaryLogsValidator } from './summary-logs-validator.inline.js'
+import { createInlineSummaryLogsValidator } from './inline.js'
 
-vi.mock(
-  '#workers/summary-logs/validator/worker/summary-logs-validator-worker.js'
-)
+vi.mock('#workers/summary-logs/worker/worker.js')
 
 describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsRepository

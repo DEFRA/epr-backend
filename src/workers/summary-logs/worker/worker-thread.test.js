@@ -1,14 +1,14 @@
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createMockConfig } from '#test/helpers/mock-config.js'
-import { summaryLogsValidatorWorker } from './summary-logs-validator-worker.js'
 
-import summaryLogsValidatorWorkerThread from './summary-logs-validator-worker-thread.js'
+import { summaryLogsValidatorWorker } from './worker.js'
+import summaryLogsValidatorWorkerThread from './worker-thread.js'
 
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
-vi.mock('./summary-logs-validator-worker.js')
-vi.mock('../../../../config.js', () => createMockConfig())
+vi.mock('../../../config.js', () => createMockConfig())
+vi.mock('./worker.js')
 
 describe('summaryLogsValidatorWorkerThread', () => {
   let mockDb

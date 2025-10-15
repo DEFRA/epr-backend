@@ -1,4 +1,4 @@
-import { defineConfig, configDefaults } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig({
   test: {
@@ -19,6 +19,7 @@ export default defineConfig({
         'src/config.js',
         '**/*.port.js',
         'src/repositories/**/port.js',
+        'src/workers/**/port.js',
         'src/common/hapi-types.js'
       ],
       thresholds: {
