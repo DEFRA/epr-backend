@@ -9,7 +9,8 @@ const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
- * @returns {(logger: import('#common/helpers/logging/logger.js').TypedLogger) => import('./port.js').SummaryLogsRepository}
+ * @param {import('mongodb').Db} db - MongoDB database instance
+ * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
 export const createSummaryLogsRepository = (db) => (logger) => ({
   async insert(summaryLog) {
