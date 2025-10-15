@@ -1,6 +1,9 @@
 import {
-  extractRepeaters,
+  extractAgencyFromDefinitionName,
   extractAnswers,
+  extractRepeaters,
+  extractTimestamp,
+  findFirstValue,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from './parse-forms-data.js'
@@ -11,17 +14,19 @@ import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' 
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
+import { REGULATOR } from '#domain/organisations.js'
 
 describe('extractRepeaters', () => {
-  const partnershipPage = FORM_PAGES.ORGANISATION.PARTNERSHIP_DETAILS
+  const ltdPartnershipPage = FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS
 
   it('should extract partner names and types from limited partnership', () => {
     const result = extractRepeaters(
       registeredLtdPartnership.rawSubmissionData,
-      partnershipPage.title,
+      ltdPartnershipPage.title,
       {
-        [partnershipPage.fields.PARTNER_NAMES]: 'name',
-        [partnershipPage.fields.PARTNER_TYPE]: 'type'
+        [FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS.fields.PARTNER_NAMES]:
+          'name',
+        [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
       }
     )
 
@@ -42,8 +47,8 @@ describe('extractRepeaters', () => {
       registeredLtdPartnership.rawSubmissionData,
       'Non-existent page title',
       {
-        [partnershipPage.fields.PARTNER_NAMES]: 'name',
-        [partnershipPage.fields.PARTNER_TYPE]: 'type'
+        [ltdPartnershipPage.fields.PARTNER_NAMES]: 'name',
+        [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
       }
     )
 
@@ -51,10 +56,14 @@ describe('extractRepeaters', () => {
   })
 
   it('should return empty array when rawFormSubmissionObject is undefined', () => {
-    const result = extractRepeaters(undefined, partnershipPage.title, {
-      [partnershipPage.fields.PARTNER_NAMES]: 'name',
-      [partnershipPage.fields.PARTNER_TYPE]: 'type'
-    })
+    const result = extractRepeaters(
+      undefined,
+      ltdPartnershipPage.NAME_OF_PARTNERS,
+      {
+        [ltdPartnershipPage.fields.PARTNER_NAMES]: 'name',
+        [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
+      }
+    )
 
     expect(result).toEqual([])
   })
@@ -70,22 +79,60 @@ describe('extractRepeaters', () => {
 
     const result = extractRepeaters(
       dataWithoutRepeaters,
-      partnershipPage.title,
+      ltdPartnershipPage.NAME_OF_PARTNERS,
       {
-        [partnershipPage.fields.PARTNER_NAMES]: 'name',
-        [partnershipPage.fields.PARTNER_TYPE]: 'type'
+        [ltdPartnershipPage.fields.PARTNER_NAMES]: 'name',
+        [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
       }
     )
 
     expect(result).toEqual([])
   })
 
+  it('should throw error when repeater data is not an array', () => {
+    const dataWithInvalidRepeaters = {
+      ...registeredLtdPartnership.rawSubmissionData,
+      data: {
+        ...registeredLtdPartnership.rawSubmissionData.data,
+        repeaters: {
+          CZFqEV: {}
+        }
+      }
+    }
+
+    expect(() =>
+      extractRepeaters(dataWithInvalidRepeaters, ltdPartnershipPage.title, {
+        [ltdPartnershipPage.fields.PARTNER_NAMES]: 'name',
+        [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
+      })
+    ).toThrow(
+      'Invalid repeater data for "Names of partners in your limited partnership": expected array but got object'
+    )
+  })
+
+  it('should return [] when repeater data is not not present', () => {
+    const dataWithInvalidRepeaters = {
+      ...registeredLtdPartnership.rawSubmissionData,
+      data: {
+        ...registeredLtdPartnership.rawSubmissionData.data,
+        repeaters: {}
+      }
+    }
+
+    expect(
+      extractRepeaters(dataWithInvalidRepeaters, ltdPartnershipPage.title, {
+        [ltdPartnershipPage.fields.PARTNER_NAMES]: 'name',
+        [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
+      })
+    ).toEqual([])
+  })
+
   it('should only extract specified fields from fieldMapping', () => {
     const result = extractRepeaters(
       registeredLtdPartnership.rawSubmissionData,
-      partnershipPage.title,
+      ltdPartnershipPage.title,
       {
-        [partnershipPage.fields.PARTNER_NAMES]: 'name'
+        [ltdPartnershipPage.fields.PARTNER_NAMES]: 'name'
       }
     )
 
@@ -126,7 +173,7 @@ describe('extractRepeaters', () => {
 
 describe('extractAnswers', () => {
   it('should extract answers in nested structure by page', () => {
-    const result = extractAnswers(exporterRegistration)
+    const result = extractAnswers(exporterRegistration.rawSubmissionData)
     const orgDetails = FORM_PAGES.REPROCESSOR_REGISTRATION.ORGANISATION_DETAILS
 
     const haveOrgId = FORM_PAGES.REPROCESSOR_REGISTRATION.HAVE_ORGANISATION_ID
@@ -146,7 +193,7 @@ describe('extractAnswers', () => {
   })
 
   it('should handle duplicate field names across different pages', () => {
-    const result = extractAnswers(reprocessorAllMaterials)
+    const result = extractAnswers(reprocessorAllMaterials.rawSubmissionData)
     const envPermit =
       FORM_PAGES.REPROCESSOR_REGISTRATION.ALUMINIUM_ENVIRONMENTAL_PERMIT
     const siteCapacity =
@@ -163,17 +210,15 @@ describe('extractAnswers', () => {
 
   it('should throw error when rawFormSubmission is undefined', () => {
     expect(() => extractAnswers(undefined)).toThrow(
-      'extractAnswers: Missing or invalid pages definition'
+      'extractAnswers: Missing pages definition'
     )
   })
 
   it('should throw error when data.main is missing', () => {
     const mockData = {
-      rawSubmissionData: {
-        meta: {
-          definition: {
-            pages: []
-          }
+      meta: {
+        definition: {
+          pages: []
         }
       }
     }
@@ -182,41 +227,70 @@ describe('extractAnswers', () => {
     )
   })
 
+  it('should throw error when rawSubmissionData is null', () => {
+    expect(() => extractAnswers(null)).toThrow(
+      'extractAnswers: Missing pages definition'
+    )
+  })
+
+  it('should throw error when meta.definition is null', () => {
+    const mockData = {
+      meta: {
+        definition: null
+      }
+    }
+    expect(() => extractAnswers(mockData)).toThrow(
+      'extractAnswers: Missing pages definition'
+    )
+  })
+
+  it('should throw error when data is null', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          pages: []
+        }
+      },
+      data: null
+    }
+    expect(() => extractAnswers(mockData)).toThrow(
+      'extractAnswers: Missing or invalid data.main'
+    )
+  })
+
   it('should skip components without shortDescription or name', () => {
     const mockData = {
-      rawSubmissionData: {
-        meta: {
-          definition: {
-            pages: [
-              {
-                title: 'Test Page',
-                components: [
-                  {
-                    type: 'TextField',
-                    title: 'Question without shortDescription',
-                    name: 'skipMe1'
-                  },
-                  // Valid component (should be included)
-                  {
-                    type: 'TextField',
-                    shortDescription: 'Valid field',
-                    name: 'validField'
-                  },
-                  // Component without name (should be skipped)
-                  {
-                    shortDescription: 'Field without name',
-                    title: 'Another question'
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        data: {
-          main: {
-            skipMe1: 'Should be skipped',
-            validField: 'Test value'
-          }
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: 'Test Page',
+              components: [
+                {
+                  type: 'TextField',
+                  title: 'Question without shortDescription',
+                  name: 'skipMe1'
+                },
+                // Valid component (should be included)
+                {
+                  type: 'TextField',
+                  shortDescription: 'Valid field',
+                  name: 'validField'
+                },
+                // Component without name (should be skipped)
+                {
+                  shortDescription: 'Field without name',
+                  title: 'Another question'
+                }
+              ]
+            }
+          ]
+        }
+      },
+      data: {
+        main: {
+          skipMe1: 'Should be skipped',
+          validField: 'Test value'
         }
       }
     }
@@ -232,25 +306,23 @@ describe('extractAnswers', () => {
 
   it('should handle pages without components property', () => {
     const mockData = {
-      rawSubmissionData: {
-        meta: {
-          definition: {
-            pages: [
-              {
-                title: 'Empty Page'
-                // No components property
-              },
-              {
-                title: 'Page with Data',
-                components: [{ shortDescription: 'Field 1', name: 'field1' }]
-              }
-            ]
-          }
-        },
-        data: {
-          main: {
-            field1: 'value1'
-          }
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: 'Empty Page'
+              // No components property
+            },
+            {
+              title: 'Page with Data',
+              components: [{ shortDescription: 'Field 1', name: 'field1' }]
+            }
+          ]
+        }
+      },
+      data: {
+        main: {
+          field1: 'value1'
         }
       }
     }
@@ -267,41 +339,57 @@ describe('extractAnswers', () => {
 
   it('should throw error when pages definition is missing', () => {
     const mockData = {
-      rawSubmissionData: {
-        data: {
-          main: {
-            abc123: 'test value'
-          }
+      data: {
+        main: {
+          abc123: 'test value'
         }
       }
     }
 
     expect(() => extractAnswers(mockData)).toThrow(
-      'extractAnswers: Missing or invalid pages definition'
+      'extractAnswers: Missing pages definition'
+    )
+  })
+
+  it('should throw TypeError when pages is not an array', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          pages: { invalidType: 'should be array' }
+        }
+      },
+      data: {
+        main: {
+          field1: 'value1'
+        }
+      }
+    }
+
+    expect(() => extractAnswers(mockData)).toThrow(TypeError)
+    expect(() => extractAnswers(mockData)).toThrow(
+      'extractAnswers: pages must be an array, got object'
     )
   })
 
   it('should throw error for duplicate fields within the same page', () => {
     const mockData = {
-      rawSubmissionData: {
-        meta: {
-          definition: {
-            pages: [
-              {
-                title: 'Organisation details',
-                components: [
-                  { shortDescription: 'Org name', name: 'field1' },
-                  { shortDescription: 'Org name', name: 'field2' }
-                ]
-              }
-            ]
-          }
-        },
-        data: {
-          main: {
-            field1: 'Company A',
-            field2: 'Company B'
-          }
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: 'Organisation details',
+              components: [
+                { shortDescription: 'Org name', name: 'field1' },
+                { shortDescription: 'Org name', name: 'field2' }
+              ]
+            }
+          ]
+        }
+      },
+      data: {
+        main: {
+          field1: 'Company A',
+          field2: 'Company B'
         }
       }
     }
@@ -313,28 +401,24 @@ describe('extractAnswers', () => {
 
   it('should throw error for duplicate page titles', () => {
     const mockData = {
-      rawSubmissionData: {
-        meta: {
-          definition: {
-            pages: [
-              {
-                title: 'Organisation details',
-                components: [{ shortDescription: 'Org name', name: 'field1' }]
-              },
-              {
-                title: 'Organisation details',
-                components: [
-                  { shortDescription: 'Contact name', name: 'field2' }
-                ]
-              }
-            ]
-          }
-        },
-        data: {
-          main: {
-            field1: 'Company A',
-            field2: 'John Doe'
-          }
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: 'Organisation details',
+              components: [{ shortDescription: 'Org name', name: 'field1' }]
+            },
+            {
+              title: 'Organisation details',
+              components: [{ shortDescription: 'Contact name', name: 'field2' }]
+            }
+          ]
+        }
+      },
+      data: {
+        main: {
+          field1: 'Company A',
+          field2: 'John Doe'
         }
       }
     }
@@ -389,7 +473,7 @@ describe('flattenAnswersByShortDesc', () => {
   })
 
   it('should work with real fixture data', () => {
-    const answers = extractAnswers(exporterRegistration)
+    const answers = extractAnswers(exporterRegistration.rawSubmissionData)
     const flattened = flattenAnswersByShortDesc(answers)
 
     const orgDetails = FORM_PAGES.REPROCESSOR_REGISTRATION.ORGANISATION_DETAILS
@@ -426,7 +510,7 @@ describe('extractAnswers - validate all EA fixtures for duplicates', () => {
       const data = JSON.parse(content)
 
       // Should extract answers without duplicate page titles or shortDescriptions within same page
-      const answers = extractAnswers(data)
+      const answers = extractAnswers(data.rawSubmissionData)
       expect(answers).toBeDefined()
 
       // Should flatten answers without unexpected duplicate shortDescriptions
@@ -543,5 +627,134 @@ describe('retrieveFileUploadDetails', () => {
         defraFormUserDownloadLink: 'http://test.com/file'
       }
     ])
+  })
+})
+
+describe('extractTimestamp', () => {
+  it('should extract timestamp from raw form submission as Date object', () => {
+    const result = extractTimestamp(registeredLtdPartnership.rawSubmissionData)
+
+    expect(result).toBeInstanceOf(Date)
+    expect(result.toISOString()).toBe('2025-10-08T16:14:15.390Z')
+  })
+
+  it('should return undefined when timestamp is missing', () => {
+    const mockData = {
+      meta: {
+        definition: {}
+      }
+    }
+
+    expect(extractTimestamp(mockData)).toBeUndefined()
+  })
+
+  it('should return null  when timestamp is invalid', () => {
+    const mockData = {
+      meta: {
+        timestamp: 'invalid-date-string'
+      }
+    }
+
+    expect(extractTimestamp(mockData)).toBeNull()
+  })
+
+  it('should parse valid ISO 8601 timestamps correctly', () => {
+    const mockData = {
+      meta: {
+        timestamp: '2025-10-08T16:19:54.601Z'
+      }
+    }
+
+    const result = extractTimestamp(mockData)
+
+    expect(result).toBeInstanceOf(Date)
+    expect(result.getFullYear()).toBe(2025)
+    expect(result.getMonth()).toBe(9) // October (0-indexed)
+    expect(result.getDate()).toBe(8)
+  })
+})
+
+describe('extractAgencyFromDefinitionName', () => {
+  it('should extract EA from definition name', () => {
+    const result = extractAgencyFromDefinitionName(
+      registeredLtdPartnership.rawSubmissionData
+    )
+
+    expect(result).toBe(REGULATOR.EA)
+  })
+
+  it('should return undefined when definition name is missing', () => {
+    const mockData = {
+      meta: {}
+    }
+
+    expect(extractAgencyFromDefinitionName(mockData)).toBeUndefined()
+  })
+
+  it('should return undefined when no agency code pattern found', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          name: 'Demo form without agency code'
+        }
+      }
+    }
+
+    expect(extractAgencyFromDefinitionName(mockData)).toBeUndefined()
+  })
+
+  it('should extract EA from org definition name', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          name: 'Demo for pEPR - Extended Producer Responsibilities: provide your organisation details (EA)'
+        }
+      }
+    }
+
+    expect(extractAgencyFromDefinitionName(mockData)).toBe(REGULATOR.EA)
+  })
+
+  it('should extract NRW from accreditation form definition name', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          name: 'Demo for pEPR - Extended Producer Responsibilities: apply for accreditation as a packaging waste exporter (NRW)'
+        }
+      }
+    }
+
+    expect(extractAgencyFromDefinitionName(mockData)).toBe(REGULATOR.NRW)
+  })
+
+  it('should extract NIEA from registration form definition name', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          name: 'Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste reprocessor (NIEA)'
+        }
+      }
+    }
+
+    expect(extractAgencyFromDefinitionName(mockData)).toBe(REGULATOR.NIEA)
+  })
+})
+
+describe('findFirstValue', () => {
+  it('should return first existing field value', () => {
+    const answers = { field2: 'value2', field3: 'value3' }
+    expect(findFirstValue(answers, ['field1', 'field2', 'field3'])).toBe(
+      'value2'
+    )
+  })
+
+  it('should return undefined when no field exists', () => {
+    const answers = { field4: 'value4' }
+    expect(findFirstValue(answers, ['field1', 'field2'])).toBeUndefined()
+  })
+
+  it('should return undefined for empty field list', () => {
+    const answers = { field1: 'value1' }
+    expect(findFirstValue(answers, [])).toBeUndefined()
   })
 })
