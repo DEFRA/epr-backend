@@ -1,6 +1,6 @@
 import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
-import { summaryLogsValidatorWorker } from './summary-logs-validator-worker.js'
+import { summaryLogsValidatorWorker } from './worker.js'
 
 const mockLoggerInfo = vi.fn()
 

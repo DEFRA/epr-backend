@@ -1,9 +1,9 @@
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
-import { config } from '../../../../config.js'
+import { config } from '../../../config.js'
 
-import { summaryLogsValidatorWorker } from './summary-logs-validator-worker.js'
+import { summaryLogsValidatorWorker } from './worker.js'
 
 export default async function summaryLogsValidatorWorkerThread({ summaryLog }) {
   const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')

@@ -1,7 +1,4 @@
-import {
-  closeWorkerPool,
-  createSummaryLogsValidator
-} from './summary-logs-validator.piscina.js'
+import { closeWorkerPool, createSummaryLogsValidator } from './piscina.js'
 
 const { mockRun, mockDestroy, mockLoggerInfo, mockLoggerError } = vi.hoisted(
   () => ({
