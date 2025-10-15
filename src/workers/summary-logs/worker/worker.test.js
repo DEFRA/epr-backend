@@ -1,6 +1,11 @@
 import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 import { summaryLogsValidatorWorker } from './worker.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import {
+  buildSummaryLog,
+  buildFile
+} from '#repositories/summary-logs/contract/test-data.js'
 
 const mockLoggerInfo = vi.fn()
 
@@ -14,18 +19,14 @@ describe('summaryLogsValidatorWorker', () => {
   let summaryLogsRepository
   let summaryLog
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.useFakeTimers()
 
-    summaryLogsRepository = {
-      update: vi.fn().mockResolvedValue(undefined)
-    }
+    summaryLogsRepository = createInMemorySummaryLogsRepository()
 
-    summaryLog = {
-      id: 'summary-log-123',
-      version: 1,
+    const summaryLogData = buildSummaryLog('summary-log-123', {
       status: SUMMARY_LOG_STATUS.VALIDATING,
-      file: {
+      file: buildFile({
         id: 'file-123',
         name: 'test.xlsx',
         status: 'complete',
@@ -33,8 +34,11 @@ describe('summaryLogsValidatorWorker', () => {
           bucket: 'test-bucket',
           key: 'test-key'
         }
-      }
-    }
+      })
+    })
+
+    await summaryLogsRepository.insert(summaryLogData)
+    summaryLog = await summaryLogsRepository.findById('summary-log-123')
   })
 
   afterEach(() => {
@@ -69,11 +73,8 @@ describe('summaryLogsValidatorWorker', () => {
     await vi.runAllTimersAsync()
     await workerPromise
 
-    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
-      'summary-log-123',
-      1,
-      { status: SUMMARY_LOG_STATUS.INVALID }
-    )
+    const updated = await summaryLogsRepository.findById('summary-log-123')
+    expect(updated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
   })
 
   it('should log validation status updated', async () => {
@@ -96,11 +97,14 @@ describe('summaryLogsValidatorWorker', () => {
     )
   })
 
-  it('should throw error if status update fails', async () => {
-    summaryLogsRepository.update.mockRejectedValue(new Error('Database error'))
+  it('should throw error if repository update fails', async () => {
+    const brokenRepository = {
+      ...summaryLogsRepository,
+      update: vi.fn().mockRejectedValue(new Error('Database error'))
+    }
 
     const workerPromise = summaryLogsValidatorWorker({
-      summaryLogsRepository,
+      summaryLogsRepository: brokenRepository,
       summaryLog
     }).catch((err) => err)
 
