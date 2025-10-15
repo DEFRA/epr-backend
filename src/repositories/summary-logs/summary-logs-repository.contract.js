@@ -2,59 +2,67 @@ import { randomUUID } from 'node:crypto'
 
 const TEST_S3_BUCKET = 'test-bucket'
 
-const buildMinimalSummaryLog = (id, fileOverrides = {}) => ({
-  id,
-  status: 'validating',
-  file: {
-    id: 'file-123',
-    name: 'test.xlsx',
-    s3: {
-      bucket: 'bucket',
-      key: 'key'
-    },
-    ...fileOverrides
-  }
+const generateFileId = () => `file-${randomUUID()}`
+
+const buildFile = (overrides = {}) => ({
+  id: generateFileId(),
+  name: 'test.xlsx',
+  status: 'complete',
+  s3: {
+    bucket: TEST_S3_BUCKET,
+    key: 'test-key'
+  },
+  ...overrides
 })
+
+const buildPendingFile = (overrides = {}) => {
+  const { s3, status, ...rest } = overrides
+  return {
+    id: generateFileId(),
+    name: 'test.xlsx',
+    status: 'pending',
+    ...rest
+  }
+}
+
+const buildRejectedFile = (overrides = {}) => {
+  const { s3, status, ...rest } = overrides
+  return {
+    id: generateFileId(),
+    name: 'test.xlsx',
+    status: 'rejected',
+    ...rest
+  }
+}
+
+const buildSummaryLog = (id, overrides = {}) => {
+  const { file, ...logOverrides } = overrides
+  return {
+    id,
+    status: 'validating',
+    file: file !== undefined ? file : buildFile(),
+    ...logOverrides
+  }
+}
 
 const testInsertBehaviour = (getRepository) => {
   describe('insert', () => {
     it('inserts a summary log without error', async () => {
       const id = `contract-insert-${randomUUID()}`
-      const fileId = `file-${randomUUID()}`
-      const summaryLog = {
-        id,
-        status: 'validating',
+      const summaryLog = buildSummaryLog(id, {
         organisationId: 'org-123',
-        registrationId: 'reg-456',
-        file: {
-          id: fileId,
-          name: 'test.xlsx',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
-      }
+        registrationId: 'reg-456'
+      })
 
       await getRepository().insert(summaryLog)
     })
 
     it('stores the summary log so it can be retrieved', async () => {
       const id = `contract-retrievable-${randomUUID()}`
-      const summaryLog = {
-        id,
-        status: 'validating',
+      const summaryLog = buildSummaryLog(id, {
         organisationId: 'org-456',
-        registrationId: 'reg-789',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
-      }
+        registrationId: 'reg-789'
+      })
 
       await getRepository().insert(summaryLog)
       const found = await getRepository().findById(id)
@@ -67,18 +75,7 @@ const testInsertBehaviour = (getRepository) => {
 
     it('throws conflict error when inserting duplicate ID', async () => {
       const id = `contract-duplicate-${randomUUID()}`
-      const summaryLog = {
-        id,
-        status: 'validating',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
-      }
+      const summaryLog = buildSummaryLog(id)
 
       await getRepository().insert(summaryLog)
 
@@ -94,32 +91,20 @@ const testInsertBehaviour = (getRepository) => {
       // but not sufficient proof of correctness.
       it('rejects one of two concurrent inserts with same ID', async () => {
         const id = `contract-concurrent-insert-${randomUUID()}`
-        const summaryLogA = {
-          id,
-          status: 'validating',
+        const summaryLogA = buildSummaryLog(id, {
           organisationId: 'org-A',
-          file: {
-            id: `file-${randomUUID()}`,
+          file: buildFile({
             name: 'testA.xlsx',
-            s3: {
-              bucket: TEST_S3_BUCKET,
-              key: 'test-key-A'
-            }
-          }
-        }
-        const summaryLogB = {
-          id,
-          status: 'validating',
+            s3: { bucket: TEST_S3_BUCKET, key: 'test-key-A' }
+          })
+        })
+        const summaryLogB = buildSummaryLog(id, {
           organisationId: 'org-B',
-          file: {
-            id: `file-${randomUUID()}`,
+          file: buildFile({
             name: 'testB.xlsx',
-            s3: {
-              bucket: TEST_S3_BUCKET,
-              key: 'test-key-B'
-            }
-          }
-        }
+            s3: { bucket: TEST_S3_BUCKET, key: 'test-key-B' }
+          })
+        })
 
         const results = await Promise.allSettled([
           getRepository().insert(summaryLogA),
@@ -157,20 +142,11 @@ const testFindById = (getRepository) => {
     it('retrieves a log by ID after insert', async () => {
       const id = `contract-summary-${randomUUID()}`
       const fileId = `contract-file-${randomUUID()}`
-
-      await getRepository().insert({
-        id,
-        status: 'validating',
-        file: {
-          id: fileId,
-          name: 'test.xlsx',
-          status: 'complete',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
+      const summaryLog = buildSummaryLog(id, {
+        file: buildFile({ id: fileId })
       })
+
+      await getRepository().insert(summaryLog)
 
       const result = await getRepository().findById(id)
 
@@ -185,34 +161,18 @@ const testFindById = (getRepository) => {
       const idA = `contract-summary-a-${randomUUID()}`
       const idB = `contract-summary-b-${randomUUID()}`
 
-      await getRepository().insert({
-        id: idA,
-        status: 'validating',
-        organisationId: 'org-1',
-        registrationId: 'reg-1',
-        file: {
-          id: `file-a-${randomUUID()}`,
-          name: 'test.xlsx',
-          s3: {
-            bucket: 'bucket',
-            key: 'key'
-          }
-        }
-      })
-      await getRepository().insert({
-        id: idB,
-        status: 'validating',
-        organisationId: 'org-2',
-        registrationId: 'reg-2',
-        file: {
-          id: `file-b-${randomUUID()}`,
-          name: 'test.xlsx',
-          s3: {
-            bucket: 'bucket',
-            key: 'key'
-          }
-        }
-      })
+      await getRepository().insert(
+        buildSummaryLog(idA, {
+          organisationId: 'org-1',
+          registrationId: 'reg-1'
+        })
+      )
+      await getRepository().insert(
+        buildSummaryLog(idB, {
+          organisationId: 'org-2',
+          registrationId: 'reg-2'
+        })
+      )
 
       const result = await getRepository().findById(idA)
 
@@ -253,7 +213,9 @@ const testInsertValidationRequiredFields = (getRepository) => {
   describe('insert validation - required fields', () => {
     it('rejects insert with missing file.id', async () => {
       const id = `contract-validation-${randomUUID()}`
-      const logWithMissingId = buildMinimalSummaryLog(id, { id: null })
+      const logWithMissingId = buildSummaryLog(id, {
+        file: buildFile({ id: null })
+      })
       await expect(getRepository().insert(logWithMissingId)).rejects.toThrow(
         /Invalid summary log data.*id/
       )
@@ -261,7 +223,9 @@ const testInsertValidationRequiredFields = (getRepository) => {
 
     it('rejects insert with missing file.name', async () => {
       const id = `contract-validation-${randomUUID()}`
-      const logWithMissingName = buildMinimalSummaryLog(id, { name: null })
+      const logWithMissingName = buildSummaryLog(id, {
+        file: buildFile({ name: null })
+      })
       await expect(getRepository().insert(logWithMissingName)).rejects.toThrow(
         /Invalid summary log data.*name/
       )
@@ -269,8 +233,8 @@ const testInsertValidationRequiredFields = (getRepository) => {
 
     it('rejects insert with missing file.s3.bucket', async () => {
       const id = `contract-validation-${randomUUID()}`
-      const logWithMissingBucket = buildMinimalSummaryLog(id, {
-        s3: { bucket: null, key: 'key' }
+      const logWithMissingBucket = buildSummaryLog(id, {
+        file: buildFile({ s3: { bucket: null, key: 'key' } })
       })
       await expect(
         getRepository().insert(logWithMissingBucket)
@@ -279,8 +243,8 @@ const testInsertValidationRequiredFields = (getRepository) => {
 
     it('rejects insert with missing file.s3.key', async () => {
       const id = `contract-validation-${randomUUID()}`
-      const logWithMissingKey = buildMinimalSummaryLog(id, {
-        s3: { bucket: 'bucket', key: null }
+      const logWithMissingKey = buildSummaryLog(id, {
+        file: buildFile({ s3: { bucket: TEST_S3_BUCKET, key: null } })
       })
       await expect(getRepository().insert(logWithMissingKey)).rejects.toThrow(
         /Invalid summary log data.*key/
@@ -293,9 +257,8 @@ const testInsertValidationFieldHandling = (getRepository) => {
   describe('insert validation - field handling', () => {
     it('rejects insert with invalid file.status', async () => {
       const id = `contract-invalid-status-${randomUUID()}`
-      const logWithInvalidStatus = buildMinimalSummaryLog(id, {
-        id: `file-${randomUUID()}`,
-        status: 'invalid-status'
+      const logWithInvalidStatus = buildSummaryLog(id, {
+        file: buildFile({ status: 'invalid-status' })
       })
       await expect(
         getRepository().insert(logWithInvalidStatus)
@@ -304,13 +267,12 @@ const testInsertValidationFieldHandling = (getRepository) => {
 
     it('strips unknown fields from insert', async () => {
       const id = `contract-strip-${randomUUID()}`
-      const logWithUnknownFields = {
-        ...buildMinimalSummaryLog(id, {
-          id: `file-${randomUUID()}`,
+      const logWithUnknownFields = buildSummaryLog(id, {
+        file: buildFile({
           hackerField: 'DROP TABLE users;',
           anotherBadField: 'rm -rf /'
         })
-      }
+      })
 
       await getRepository().insert(logWithUnknownFields)
       const found = await getRepository().findById(id)
@@ -321,8 +283,7 @@ const testInsertValidationFieldHandling = (getRepository) => {
 
     it('allows optional fields to be omitted', async () => {
       const id = `contract-minimal-${randomUUID()}`
-      const fileId = `file-${randomUUID()}`
-      const minimalLog = buildMinimalSummaryLog(id, { id: fileId })
+      const minimalLog = buildSummaryLog(id)
 
       await getRepository().insert(minimalLog)
     })
@@ -330,21 +291,13 @@ const testInsertValidationFieldHandling = (getRepository) => {
     it('accepts valid file.status values', async () => {
       const id1 = `contract-complete-${randomUUID()}`
       const id2 = `contract-rejected-${randomUUID()}`
-      const completeLog = buildMinimalSummaryLog(id1, {
-        id: `file-${randomUUID()}`,
-        name: 'complete.xlsx',
-        status: 'complete'
+      const completeLog = buildSummaryLog(id1, {
+        file: buildFile({ name: 'complete.xlsx' })
       })
-
-      const rejectedLog = {
-        id: id2,
+      const rejectedLog = buildSummaryLog(id2, {
         status: 'rejected',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'rejected.xlsx',
-          status: 'rejected'
-        }
-      }
+        file: buildRejectedFile({ name: 'rejected.xlsx' })
+      })
 
       await getRepository().insert(completeLog)
       await getRepository().insert(rejectedLog)
@@ -356,15 +309,10 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
   describe('insert validation - status-based S3 requirements', () => {
     it('accepts rejected file without S3 info', async () => {
       const id = `contract-rejected-no-s3-${randomUUID()}`
-      const rejectedLog = {
-        id,
+      const rejectedLog = buildSummaryLog(id, {
         status: 'rejected',
-        file: {
-          id: `file-rejected-${randomUUID()}`,
-          name: 'virus.xlsx',
-          status: 'rejected'
-        }
-      }
+        file: buildRejectedFile({ name: 'virus.xlsx' })
+      })
 
       await getRepository().insert(rejectedLog)
 
@@ -375,15 +323,13 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
 
     it('requires S3 info when file status is complete', async () => {
       const id = `contract-complete-no-s3-${randomUUID()}`
-      const completeLogWithoutS3 = {
-        id,
-        status: 'validating',
+      const completeLogWithoutS3 = buildSummaryLog(id, {
         file: {
-          id: `file-${randomUUID()}`,
+          id: generateFileId(),
           name: 'test.xlsx',
           status: 'complete'
         }
-      }
+      })
 
       await expect(
         getRepository().insert(completeLogWithoutS3)
@@ -392,15 +338,10 @@ const testInsertValidationStatusBasedS3 = (getRepository) => {
 
     it('accepts pending file without S3 info', async () => {
       const id = `contract-pending-no-s3-${randomUUID()}`
-      const pendingLog = {
-        id,
+      const pendingLog = buildSummaryLog(id, {
         status: 'preprocessing',
-        file: {
-          id: `file-pending-${randomUUID()}`,
-          name: 'scanning.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile({ name: 'scanning.xlsx' })
+      })
 
       await getRepository().insert(pendingLog)
 
@@ -415,30 +356,20 @@ const testUpdateBehaviour = (getRepository) => {
   describe('update', () => {
     it('updates an existing summary log', async () => {
       const id = `contract-update-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'scanning.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile({ name: 'scanning.xlsx' })
+      })
 
       await getRepository().insert(summaryLog)
       const current = await getRepository().findById(id)
 
       await getRepository().update(id, current.version, {
         status: 'validating',
-        file: {
+        file: buildFile({
           id: summaryLog.file.id,
-          name: summaryLog.file.name,
-          status: 'complete',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
+          name: summaryLog.file.name
+        })
       })
 
       const found = await getRepository().findById(id)
@@ -460,17 +391,12 @@ const testUpdateBehaviour = (getRepository) => {
 
     it('preserves existing fields not included in update', async () => {
       const id = `contract-preserve-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
         organisationId: 'org-123',
         registrationId: 'reg-456',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile()
+      })
 
       await getRepository().insert(summaryLog)
       const current = await getRepository().findById(id)
@@ -489,18 +415,7 @@ const testOptimisticConcurrency = (getRepository) => {
   describe('optimistic concurrency control', () => {
     it('initializes version to 1 on insert', async () => {
       const id = `contract-version-init-${randomUUID()}`
-      const summaryLog = {
-        id,
-        status: 'validating',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
-      }
+      const summaryLog = buildSummaryLog(id)
 
       await getRepository().insert(summaryLog)
       const found = await getRepository().findById(id)
@@ -510,15 +425,10 @@ const testOptimisticConcurrency = (getRepository) => {
 
     it('increments version on successful update', async () => {
       const id = `contract-version-increment-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile()
+      })
 
       await getRepository().insert(summaryLog)
       const initial = await getRepository().findById(id)
@@ -534,15 +444,10 @@ const testOptimisticConcurrency = (getRepository) => {
 
     it('throws conflict error when updating with stale version', async () => {
       const id = `contract-stale-version-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile()
+      })
 
       await getRepository().insert(summaryLog)
       const initial = await getRepository().findById(id)
@@ -561,15 +466,10 @@ const testOptimisticConcurrency = (getRepository) => {
 
     it('allows sequential updates with correct versions', async () => {
       const id = `contract-sequential-updates-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile()
+      })
 
       await getRepository().insert(summaryLog)
 
@@ -590,31 +490,22 @@ const testOptimisticConcurrency = (getRepository) => {
 
     it('preserves version field integrity across updates', async () => {
       const id = `contract-version-integrity-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
         organisationId: 'org-123',
         registrationId: 'reg-456',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile()
+      })
 
       await getRepository().insert(summaryLog)
       const initial = await getRepository().findById(id)
 
       await getRepository().update(id, initial.version, {
         status: 'validating',
-        file: {
-          ...initial.file,
-          status: 'complete',
-          s3: {
-            bucket: TEST_S3_BUCKET,
-            key: 'test-key'
-          }
-        }
+        file: buildFile({
+          id: initial.file.id,
+          name: initial.file.name
+        })
       })
 
       const updated = await getRepository().findById(id)
@@ -625,15 +516,10 @@ const testOptimisticConcurrency = (getRepository) => {
 
     it('throws conflict with descriptive message for version mismatch', async () => {
       const id = `contract-conflict-message-${randomUUID()}`
-      const summaryLog = {
-        id,
+      const summaryLog = buildSummaryLog(id, {
         status: 'preprocessing',
-        file: {
-          id: `file-${randomUUID()}`,
-          name: 'test.xlsx',
-          status: 'pending'
-        }
-      }
+        file: buildPendingFile()
+      })
 
       await getRepository().insert(summaryLog)
       const initial = await getRepository().findById(id)
@@ -663,15 +549,10 @@ const testOptimisticConcurrency = (getRepository) => {
       // but not sufficient proof of correctness.
       it('rejects one of two concurrent updates with same version', async () => {
         const id = `contract-concurrent-${randomUUID()}`
-        const summaryLog = {
-          id,
+        const summaryLog = buildSummaryLog(id, {
           status: 'preprocessing',
-          file: {
-            id: `file-${randomUUID()}`,
-            name: 'test.xlsx',
-            status: 'pending'
-          }
-        }
+          file: buildPendingFile()
+        })
 
         await getRepository().insert(summaryLog)
         const current = await getRepository().findById(id)
