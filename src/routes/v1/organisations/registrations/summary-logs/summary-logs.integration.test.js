@@ -6,7 +6,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
-import { createInlineSummaryLogsValidator } from '#workers/summary-logs/validator/summary-logs-validator.inline.js'
+import { createInlineSummaryLogsValidator } from '#workers/summary-logs/inline.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
