@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
-import { testSummaryLogsRepositoryContract } from './summary-logs-repository.contract.js'
+import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
 
 describe('In-memory summary logs repository', () => {
