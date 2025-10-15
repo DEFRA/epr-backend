@@ -35,12 +35,12 @@ export const repositories = {
       }
 
       if (options?.summaryLogsRepository) {
-        // Test override - expect a factory function
         decorateRepository(options.summaryLogsRepository)
       } else {
-        // Production - require MongoDB plugin
         server.dependency('mongodb', () => {
-          const summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
+          const summaryLogsRepositoryFactory = createSummaryLogsRepository(
+            server.db
+          )
           decorateRepository(summaryLogsRepositoryFactory)
         })
       }
