@@ -5,13 +5,19 @@ import { testSummaryLogsRepositoryContract } from './port.contract.js'
 describe('MongoDB summary logs repository', () => {
   let server
   let repository
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
 
   beforeAll(async () => {
     const { createServer } = await import('#server/server.js')
     server = await createServer()
     await server.initialize()
 
-    repository = createSummaryLogsRepository(server.db)
+    repository = createSummaryLogsRepository(server.db)(mockLogger)
   })
 
   afterAll(async () => {
@@ -32,7 +38,7 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const testRepo = createSummaryLogsRepository(mockDb)
+      const testRepo = createSummaryLogsRepository(mockDb)(mockLogger)
 
       await expect(
         testRepo.insert({
