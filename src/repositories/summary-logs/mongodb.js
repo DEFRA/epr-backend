@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
-import { validateId, validateSummaryLogInsert } from './validation.js'
+import {
+  validateId,
+  validateSummaryLogInsert,
+  validateSummaryLogUpdate
+} from './validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -13,7 +17,9 @@ export const createSummaryLogsRepository = (db) => ({
     const { id, ...rest } = validated
 
     try {
-      await db.collection(COLLECTION_NAME).insertOne({ _id: id, ...rest })
+      await db
+        .collection(COLLECTION_NAME)
+        .insertOne({ _id: id, version: 1, ...rest })
     } catch (error) {
       if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
         throw Boom.conflict(`Summary log with id ${id} already exists`)
@@ -22,15 +28,29 @@ export const createSummaryLogsRepository = (db) => ({
     }
   },
 
-  async update(id, updates) {
+  async update(id, version, updates) {
     const validatedId = validateId(id)
+    const validatedUpdates = validateSummaryLogUpdate(updates)
 
     const result = await db
       .collection(COLLECTION_NAME)
-      .updateOne({ _id: validatedId }, { $set: updates })
+      .updateOne(
+        { _id: validatedId, version },
+        { $set: validatedUpdates, $inc: { version: 1 } }
+      )
 
     if (result.matchedCount === 0) {
-      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+      const existing = await db
+        .collection(COLLECTION_NAME)
+        .findOne({ _id: validatedId })
+
+      if (!existing) {
+        throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+      }
+
+      throw Boom.conflict(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
     }
   },
 
@@ -44,16 +64,5 @@ export const createSummaryLogsRepository = (db) => ({
     }
     const { _id, ...rest } = doc
     return { id: _id, ...rest }
-  },
-
-  async updateStatus(id, status) {
-    const validatedId = validateId(id)
-    const result = await db
-      .collection(COLLECTION_NAME)
-      .updateOne({ _id: validatedId }, { $set: { status } })
-
-    if (result.matchedCount === 0) {
-      throw Boom.notFound(`Summary log with id ${id} not found`)
-    }
   }
 })

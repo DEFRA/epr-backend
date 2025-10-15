@@ -18,11 +18,12 @@ describe('summaryLogsValidatorWorker', () => {
     vi.useFakeTimers()
 
     summaryLogsRepository = {
-      updateStatus: vi.fn().mockResolvedValue(undefined)
+      update: vi.fn().mockResolvedValue(undefined)
     }
 
     summaryLog = {
       id: 'summary-log-123',
+      version: 1,
       status: SUMMARY_LOG_STATUS.VALIDATING,
       file: {
         id: 'file-123',
@@ -68,9 +69,10 @@ describe('summaryLogsValidatorWorker', () => {
     await vi.runAllTimersAsync()
     await workerPromise
 
-    expect(summaryLogsRepository.updateStatus).toHaveBeenCalledWith(
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
-      SUMMARY_LOG_STATUS.INVALID
+      1,
+      { status: SUMMARY_LOG_STATUS.INVALID }
     )
   })
 
@@ -95,9 +97,7 @@ describe('summaryLogsValidatorWorker', () => {
   })
 
   it('should throw error if status update fails', async () => {
-    summaryLogsRepository.updateStatus.mockRejectedValue(
-      new Error('Database error')
-    )
+    summaryLogsRepository.update.mockRejectedValue(new Error('Database error'))
 
     const workerPromise = summaryLogsValidatorWorker({
       summaryLogsRepository,
