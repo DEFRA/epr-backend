@@ -17,7 +17,7 @@ export const mongoDbPlugin = {
     name: 'mongodb',
     version: '1.0.0',
     /**
-     * @param {import('../hapi-types.js').HapiServer} server
+     * @param {import('../../hapi-types.js').HapiServer} server
      */
     register: async function (server, options) {
       server.logger.info({

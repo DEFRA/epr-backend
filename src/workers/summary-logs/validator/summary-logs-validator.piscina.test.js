@@ -13,7 +13,7 @@ const { mockRun, mockDestroy, mockLoggerInfo, mockLoggerError } = vi.hoisted(
 )
 
 vi.mock('piscina', () => ({
-  default: vi.fn(() => ({
+  Piscina: vi.fn(() => ({
     run: mockRun,
     destroy: mockDestroy
   }))
