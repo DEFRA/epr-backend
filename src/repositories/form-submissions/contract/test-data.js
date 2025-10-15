@@ -21,3 +21,6 @@ export const buildAccreditation = (overrides = {}) =>
 
 export const buildRegistration = (overrides = {}) =>
   buildFormSubmission(overrides)
+
+export const buildOrganisation = (overrides = {}) =>
+  buildFormSubmission(overrides)

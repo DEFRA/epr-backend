@@ -1,7 +1,11 @@
 import { describe, beforeEach, expect, it as base } from 'vitest'
 import { createFormSubmissionsRepository } from './inmemory.js'
-import { testFindBehaviour } from './contract/find.contract.js'
-import { buildAccreditation, buildRegistration } from './contract/test-data.js'
+import { testFormSubmissionsRepositoryContract } from './port.contract.js'
+import {
+  buildAccreditation,
+  buildRegistration,
+  buildOrganisation
+} from './contract/test-data.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -16,10 +20,23 @@ const it = base.extend({
     await use(data)
   },
 
-  formSubmissionsRepository: async ({ accreditations, registrations }, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  organisations: async ({}, use) => {
+    const data = []
+    await use(data)
+  },
+
+  formSubmissionsRepository: async (
+    { accreditations, registrations, organisations },
+    use
+  ) => {
     // Return a factory-like function that creates a fresh repository with current state
     const factory = () =>
-      createFormSubmissionsRepository(accreditations, registrations)()
+      createFormSubmissionsRepository(
+        accreditations,
+        registrations,
+        organisations
+      )()
     await use(factory)
   },
 
@@ -43,13 +60,25 @@ const it = base.extend({
       registrations.push(...testData)
       return testData
     })
+  },
+
+  seedOrganisations: async ({ organisations }, use) => {
+    await use(async () => {
+      const org1 = buildOrganisation()
+      const org2 = buildOrganisation()
+      const org3 = buildOrganisation()
+      const testData = [org1, org2, org3]
+      organisations.push(...testData)
+      return testData
+    })
   }
 })
 
 describe('In-memory form submissions repository', () => {
-  beforeEach(async ({ accreditations, registrations }) => {
+  beforeEach(async ({ accreditations, registrations, organisations }) => {
     accreditations.length = 0
     registrations.length = 0
+    organisations.length = 0
   })
 
   it('should create repository instance', async ({
@@ -59,7 +88,8 @@ describe('In-memory form submissions repository', () => {
     expect(repository).toBeDefined()
     expect(repository.findAllRegistrations).toBeDefined()
     expect(repository.findAllAccreditations).toBeDefined()
+    expect(repository.findAllOrganisations).toBeDefined()
   })
 
-  testFindBehaviour(it)
+  testFormSubmissionsRepositoryContract(it)
 })

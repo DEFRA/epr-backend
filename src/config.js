@@ -243,6 +243,12 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_ORGANISATIONS'
     },
+    formsDataMigration: {
+      doc: 'Feature Flag: Runs forms data migration on startup',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_FORMS_DATA_MIGRATION'
+    },
     logFileUploadsFromForms: {
       doc: 'Feature Flag: To enable logging of file ids uploaded from defra-forms on startup',
       format: Boolean,

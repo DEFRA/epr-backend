@@ -1,4 +1,5 @@
 import { validateStatusHistory } from './validation.js'
+import equal from 'fast-deep-equal'
 
 export const SCHEMA_VERSION = 1
 
@@ -62,3 +63,52 @@ export const mergeSubcollection = (existingItems, updateItems) =>
   updateItems
     ? mergeItemsWithUpdates(existingItems, updateItems)
     : existingItems
+
+const removeNullUndefined = (obj) => {
+  if (Array.isArray(obj)) {
+    return obj.map(removeNullUndefined)
+  }
+
+  if (typeof obj === 'object' && obj !== null) {
+    const cleaned = {}
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== null && value !== undefined) {
+        cleaned[key] = removeNullUndefined(value)
+      }
+    }
+    return cleaned
+  }
+
+  return obj
+}
+
+const normalizeItem = (item) => {
+  if (!item) {
+    return item
+  }
+  const { status, statusHistory, ...rest } = item
+  return rest
+}
+
+export const normalizeForComparison = (org) => {
+  if (!org) {
+    return org
+  }
+
+  const { version, schemaVersion, status, statusHistory, ...rest } = org
+
+  const normalized = {
+    ...rest,
+    registrations: org.registrations?.map(normalizeItem) ?? [],
+    accreditations: org.accreditations?.map(normalizeItem) ?? []
+  }
+
+  return removeNullUndefined(normalized)
+}
+
+export const hasChanges = (existing, incoming) => {
+  const normalizedExisting = normalizeForComparison(existing)
+  const normalizedIncoming = normalizeForComparison(incoming)
+
+  return !equal(normalizedExisting, normalizedIncoming)
+}

@@ -8,7 +8,8 @@ import {
   createInitialStatusHistory,
   getCurrentStatus,
   statusHistoryWithChanges,
-  mergeSubcollection
+  mergeSubcollection,
+  hasChanges
 } from './helpers.js'
 import Boom from '@hapi/boom'
 
@@ -127,6 +128,28 @@ const performUpdate =
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
   }
 
+const performUpsert =
+  (storage, staleCache, pendingSyncRef, insertFn, updateFn) =>
+  async (organisation) => {
+    const validated = validateOrganisationInsert(organisation)
+    const { id, version, schemaVersion, ...updateData } = validated
+
+    const existing = storage.find((o) => o.id === id)
+
+    if (!existing) {
+      await insertFn(organisation)
+      return { action: 'inserted', id }
+    }
+
+    if (!hasChanges(existing, validated)) {
+      return { action: 'unchanged', id }
+    }
+
+    await updateFn(id, existing.version, updateData)
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+    return { action: 'updated', id }
+  }
+
 const performFindById = (staleCache) => (id) => {
   try {
     validateId(id)
@@ -195,9 +218,19 @@ export const createInMemoryOrganisationsRepository = (
       throw Boom.internal('Consistency timeout waiting for minimum version')
     }
 
+    const insertFn = performInsert(storage, staleCache)
+    const updateFn = performUpdate(storage, staleCache, pendingSyncRef)
+
     return {
-      insert: performInsert(storage, staleCache),
-      update: performUpdate(storage, staleCache, pendingSyncRef),
+      insert: insertFn,
+      update: updateFn,
+      upsert: performUpsert(
+        storage,
+        staleCache,
+        pendingSyncRef,
+        insertFn,
+        updateFn
+      ),
 
       async findAll() {
         return structuredClone(staleCache).map((org) =>
