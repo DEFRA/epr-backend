@@ -52,9 +52,9 @@ describe('Summary logs integration', () => {
   let server
 
   beforeEach(async () => {
-    const summaryLogsRepoFactory = createInMemorySummaryLogsRepository()
+    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
     const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
-    const summaryLogsRepository = summaryLogsRepoFactory(mockLogger)
+    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       summaryLogsRepository
     )
@@ -62,7 +62,7 @@ describe('Summary logs integration', () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: summaryLogsRepoFactory
+        summaryLogsRepository: summaryLogsRepositoryFactory
       },
       workers: {
         summaryLogsValidator

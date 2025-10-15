@@ -28,8 +28,8 @@ export const repositories = {
       } else {
         // Production - require MongoDB plugin
         server.dependency('mongodb', () => {
-          const summaryLogsRepoFactory = createSummaryLogsRepository(server.db)
-          decorateRepository(summaryLogsRepoFactory)
+          const summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
+          decorateRepository(summaryLogsRepositoryFactory)
         })
       }
     }
