@@ -20,18 +20,29 @@ export const createInMemorySummaryLogsRepository = () => {
         )
       }
 
-      storage.set(validated.id, { ...validated })
+      storage.set(validated.id, { ...validated, version: 1 })
     },
 
-    async update(id, updates) {
+    async update(id, version, updates) {
       const validatedId = validateId(id)
 
-      if (!storage.has(validatedId)) {
+      const existing = storage.get(validatedId)
+
+      if (!existing) {
         throw Boom.notFound(`Summary log with id ${validatedId} not found`)
       }
 
-      const existing = storage.get(validatedId)
-      storage.set(validatedId, { ...existing, ...updates })
+      if (existing.version !== version) {
+        throw Boom.conflict(
+          `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+        )
+      }
+
+      storage.set(validatedId, {
+        ...existing,
+        ...updates,
+        version: existing.version + 1
+      })
     },
 
     async findById(id) {

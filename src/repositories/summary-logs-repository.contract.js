@@ -371,8 +371,9 @@ const testUpdateBehaviour = (getRepository) => {
       }
 
       await getRepository().insert(summaryLog)
+      const current = await getRepository().findById(id)
 
-      await getRepository().update(id, {
+      await getRepository().update(id, current.version, {
         status: 'validating',
         file: {
           id: summaryLog.file.id,
@@ -395,7 +396,7 @@ const testUpdateBehaviour = (getRepository) => {
       const id = `contract-nonexistent-${randomUUID()}`
 
       await expect(
-        getRepository().update(id, { status: 'validating' })
+        getRepository().update(id, 1, { status: 'validating' })
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 404 }
@@ -417,8 +418,9 @@ const testUpdateBehaviour = (getRepository) => {
       }
 
       await getRepository().insert(summaryLog)
+      const current = await getRepository().findById(id)
 
-      await getRepository().update(id, { status: 'rejected' })
+      await getRepository().update(id, current.version, { status: 'rejected' })
 
       const found = await getRepository().findById(id)
       expect(found.status).toBe('rejected')
@@ -530,6 +532,180 @@ const testUpdateStatusValidation = (getRepository) => {
   })
 }
 
+const testOptimisticConcurrency = (getRepository) => {
+  describe('optimistic concurrency control', () => {
+    it('initializes version to 1 on insert', async () => {
+      const id = `contract-version-init-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'validating',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      const found = await getRepository().findById(id)
+
+      expect(found.version).toBe(1)
+    })
+
+    it('increments version on successful update', async () => {
+      const id = `contract-version-increment-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      const initial = await getRepository().findById(id)
+
+      await getRepository().update(id, initial.version, {
+        status: 'validating'
+      })
+
+      const updated = await getRepository().findById(id)
+      expect(updated.version).toBe(2)
+      expect(updated.status).toBe('validating')
+    })
+
+    it('throws conflict error when updating with stale version', async () => {
+      const id = `contract-stale-version-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      const initial = await getRepository().findById(id)
+
+      await getRepository().update(id, initial.version, {
+        status: 'validating'
+      })
+
+      await expect(
+        getRepository().update(id, initial.version, { status: 'rejected' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 }
+      })
+    })
+
+    it('allows sequential updates with correct versions', async () => {
+      const id = `contract-sequential-updates-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+
+      let current = await getRepository().findById(id)
+      expect(current.version).toBe(1)
+
+      await getRepository().update(id, current.version, {
+        status: 'validating'
+      })
+      current = await getRepository().findById(id)
+      expect(current.version).toBe(2)
+
+      await getRepository().update(id, current.version, { status: 'validated' })
+      current = await getRepository().findById(id)
+      expect(current.version).toBe(3)
+      expect(current.status).toBe('validated')
+    })
+
+    it('preserves version field integrity across updates', async () => {
+      const id = `contract-version-integrity-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        organisationId: 'org-123',
+        registrationId: 'reg-456',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      const initial = await getRepository().findById(id)
+
+      await getRepository().update(id, initial.version, {
+        status: 'validating',
+        file: {
+          ...initial.file,
+          status: 'complete',
+          s3: {
+            bucket: TEST_S3_BUCKET,
+            key: 'test-key'
+          }
+        }
+      })
+
+      const updated = await getRepository().findById(id)
+      expect(updated.version).toBe(2)
+      expect(updated.organisationId).toBe('org-123')
+      expect(updated.registrationId).toBe('reg-456')
+    })
+
+    it('throws conflict with descriptive message for version mismatch', async () => {
+      const id = `contract-conflict-message-${randomUUID()}`
+      const summaryLog = {
+        id,
+        status: 'preprocessing',
+        file: {
+          id: `file-${randomUUID()}`,
+          name: 'test.xlsx',
+          status: 'pending'
+        }
+      }
+
+      await getRepository().insert(summaryLog)
+      const initial = await getRepository().findById(id)
+
+      await getRepository().update(id, initial.version, {
+        status: 'validating'
+      })
+
+      await expect(
+        getRepository().update(id, initial.version, { status: 'rejected' })
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: {
+          statusCode: 409,
+          payload: {
+            message: expect.stringMatching(
+              /version.*conflict|concurrent.*update|stale.*version/i
+            )
+          }
+        }
+      })
+    })
+  })
+}
+
 export const testSummaryLogsRepositoryContract = (createRepository) => {
   describe('summary logs repository contract', () => {
     let repository
@@ -547,5 +723,6 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     testInsertValidationStatusBasedS3(() => repository)
     testUpdateStatus(() => repository)
     testUpdateStatusValidation(() => repository)
+    testOptimisticConcurrency(() => repository)
   })
 }

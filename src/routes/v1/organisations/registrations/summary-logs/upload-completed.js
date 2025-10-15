@@ -68,7 +68,11 @@ const upsertSummaryLog = async (
       upload,
       existingSummaryLog.file
     )
-    await summaryLogsRepository.update(summaryLogId, updates)
+    await summaryLogsRepository.update(
+      summaryLogId,
+      existingSummaryLog.version,
+      updates
+    )
   } else {
     const summaryLog = buildSummaryLogData(summaryLogId, upload)
     await summaryLogsRepository.insert(summaryLog)
