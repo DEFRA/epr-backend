@@ -48,18 +48,6 @@ export const createInMemorySummaryLogsRepository = () => {
     async findById(id) {
       const validatedId = validateId(id)
       return storage.get(validatedId) ?? null
-    },
-
-    async updateStatus(id, status) {
-      const validatedId = validateId(id)
-      const existing = storage.get(validatedId)
-
-      if (!existing) {
-        throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-      }
-
-      const updated = { ...existing, status }
-      storage.set(validatedId, updated)
     }
   }
 }
