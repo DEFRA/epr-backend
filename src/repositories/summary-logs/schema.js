@@ -17,7 +17,8 @@ export const idSchema = Joi.string().required().messages({
 const statusSchema = Joi.string().valid(
   SUMMARY_LOG_STATUS.PREPROCESSING,
   SUMMARY_LOG_STATUS.VALIDATING,
-  SUMMARY_LOG_STATUS.REJECTED
+  SUMMARY_LOG_STATUS.REJECTED,
+  SUMMARY_LOG_STATUS.INVALID
 )
 
 const fileSchema = Joi.object({
