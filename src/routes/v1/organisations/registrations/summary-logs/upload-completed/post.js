@@ -12,7 +12,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
 
-import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
+import { uploadCompletedPayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#workers/summary-logs/validator/summary-logs/validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
