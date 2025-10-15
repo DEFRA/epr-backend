@@ -1,14 +1,11 @@
 import Boom from '@hapi/boom'
-import {
-  validateId,
-  validateSummaryLogInsert
-} from './summary-logs-repository.validation.js'
+import { validateId, validateSummaryLogInsert } from './validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
- * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
+ * @returns {import('./port.js').SummaryLogsRepository}
  */
 export const createSummaryLogsRepository = (db) => ({
   async insert(summaryLog) {
