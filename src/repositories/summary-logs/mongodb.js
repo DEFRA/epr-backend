@@ -1,14 +1,11 @@
 import Boom from '@hapi/boom'
-import {
-  validateId,
-  validateSummaryLogInsert
-} from './summary-logs-repository.validation.js'
+import { validateId, validateSummaryLogInsert } from './validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
- * @returns {import('./summary-logs-repository.port.js').SummaryLogsRepository}
+ * @returns {import('./port.js').SummaryLogsRepository}
  */
 export const createSummaryLogsRepository = (db) => ({
   async insert(summaryLog) {
@@ -25,6 +22,18 @@ export const createSummaryLogsRepository = (db) => ({
     }
   },
 
+  async update(id, updates) {
+    const validatedId = validateId(id)
+
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .updateOne({ _id: validatedId }, { $set: updates })
+
+    if (result.matchedCount === 0) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+  },
+
   async findById(id) {
     const validatedId = validateId(id)
     const doc = await db
@@ -35,5 +44,16 @@ export const createSummaryLogsRepository = (db) => ({
     }
     const { _id, ...rest } = doc
     return { id: _id, ...rest }
+  },
+
+  async updateStatus(id, status) {
+    const validatedId = validateId(id)
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .updateOne({ _id: validatedId }, { $set: { status } })
+
+    if (result.matchedCount === 0) {
+      throw Boom.notFound(`Summary log with id ${id} not found`)
+    }
   }
 })

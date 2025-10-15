@@ -18,6 +18,7 @@ export default defineConfig({
         'src/index.js',
         'src/config.js',
         '**/*.port.js',
+        'src/repositories/**/port.js',
         'src/common/hapi-types.js'
       ],
       thresholds: {

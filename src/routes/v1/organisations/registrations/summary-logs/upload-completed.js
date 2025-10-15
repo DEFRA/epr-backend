@@ -1,54 +1,88 @@
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
-import {
-  determineStatusFromUpload,
-  determineFailureReason,
-  UPLOAD_STATUS
-} from '#domain/summary-log.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import {
+  determineFailureReason,
+  determineStatusFromUpload,
+  isValidTransition,
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-log.js'
 
-/** @typedef {import('#repositories/summary-logs-repository.port.js').SummaryLogsRepository} SummaryLogsRepository */
+import { uploadCompletedPayloadSchema } from './upload-completed.schema.js'
 
-const uploadCompletedPayloadSchema = Joi.object({
-  form: Joi.object({
-    file: Joi.object({
-      fileId: Joi.string().required(),
-      filename: Joi.string().required(),
-      fileStatus: Joi.string()
-        .valid(
-          UPLOAD_STATUS.COMPLETE,
-          UPLOAD_STATUS.REJECTED,
-          UPLOAD_STATUS.PENDING
-        )
-        .required(),
-      s3Bucket: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      s3Key: Joi.string().when('fileStatus', {
-        is: UPLOAD_STATUS.COMPLETE,
-        then: Joi.required(),
-        otherwise: Joi.optional()
-      }),
-      hasError: Joi.boolean().optional(),
-      errorMessage: Joi.string().optional()
-    })
-      .required()
-      .unknown(true)
-  })
-    .required()
-    .unknown(true)
-})
-  .unknown(true)
-  .messages({
-    'any.required': '{#label} is required',
-    'string.empty': '{#label} cannot be empty'
-  })
+/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#workers/summary-logs/validator/summary-logs/validator.port.js').SummaryLogsValidator} SummaryLogsValidator */
+
+const buildFileData = (upload, existingFile = null) => {
+  const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
+
+  const fileData = existingFile
+    ? { ...existingFile, id: fileId, name: filename, status: fileStatus }
+    : { id: fileId, name: filename, status: fileStatus }
+
+  if (fileStatus === UPLOAD_STATUS.COMPLETE) {
+    fileData.s3 = { bucket: s3Bucket, key: s3Key }
+  }
+
+  return fileData
+}
+
+const buildSummaryLogData = (summaryLogId, upload, existingFile = null) => {
+  const status = determineStatusFromUpload(upload.fileStatus)
+  const failureReason = determineFailureReason(status, upload.errorMessage)
+
+  const data = {
+    id: summaryLogId,
+    status,
+    file: buildFileData(upload, existingFile)
+  }
+
+  if (failureReason) {
+    data.failureReason = failureReason
+  }
+
+  return data
+}
+
+const upsertSummaryLog = async (
+  summaryLogsRepository,
+  summaryLogId,
+  upload
+) => {
+  const existingSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+  const newStatus = determineStatusFromUpload(upload.fileStatus)
+
+  if (existingSummaryLog) {
+    if (!isValidTransition(existingSummaryLog.status, newStatus)) {
+      throw Boom.conflict(
+        `Cannot transition summary log ${summaryLogId} from ${existingSummaryLog.status} to ${newStatus}`
+      )
+    }
+
+    const updates = buildSummaryLogData(
+      summaryLogId,
+      upload,
+      existingSummaryLog.file
+    )
+    await summaryLogsRepository.update(summaryLogId, updates)
+  } else {
+    const summaryLog = buildSummaryLogData(summaryLogId, upload)
+    await summaryLogsRepository.insert(summaryLog)
+  }
+
+  return newStatus
+}
+
+const formatS3Info = (upload) =>
+  upload.fileStatus === UPLOAD_STATUS.COMPLETE &&
+  upload.s3Bucket &&
+  upload.s3Key
+    ? `, s3Bucket=${upload.s3Bucket}, s3Key=${upload.s3Key}`
+    : ''
 
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
@@ -65,60 +99,37 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsValidator}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ summaryLogsRepository, payload, params, logger }, h) => {
-    const { summaryLogId } = params
+  handler: async (request, h) => {
     const {
-      file: { fileId, filename, fileStatus, s3Bucket, s3Key, errorMessage }
-    } = payload.form
+      summaryLogsRepository,
+      summaryLogsValidator,
+      payload,
+      params,
+      logger
+    } = request
+
+    const { summaryLogId } = params
+    const { summaryLogUpload } = payload.form
 
     try {
-      const existingSummaryLog =
-        await summaryLogsRepository.findById(summaryLogId)
+      const status = await upsertSummaryLog(
+        summaryLogsRepository,
+        summaryLogId,
+        summaryLogUpload
+      )
 
-      if (existingSummaryLog) {
-        throw Boom.conflict(
-          `Summary log ${summaryLogId} already exists with status ${existingSummaryLog.status}`
-        )
+      if (status === SUMMARY_LOG_STATUS.VALIDATING) {
+        const summaryLog = await summaryLogsRepository.findById(summaryLogId)
+        await summaryLogsValidator.validate(summaryLog)
       }
 
-      const status = determineStatusFromUpload(fileStatus)
-      const failureReason = determineFailureReason(status, errorMessage)
-
-      const fileData = {
-        id: fileId,
-        name: filename,
-        status: fileStatus
-      }
-
-      if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-        fileData.s3 = {
-          bucket: s3Bucket,
-          key: s3Key
-        }
-      }
-
-      const summaryLog = {
-        id: summaryLogId,
-        status,
-        file: fileData
-      }
-
-      if (failureReason) {
-        summaryLog.failureReason = failureReason
-      }
-
-      await summaryLogsRepository.insert(summaryLog)
-
-      const s3Info =
-        fileStatus === UPLOAD_STATUS.COMPLETE && s3Bucket && s3Key
-          ? `, s3Bucket=${s3Bucket}, s3Key=${s3Key}`
-          : ''
+      const s3Info = formatS3Info(summaryLogUpload)
 
       logger.info({
-        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=${fileStatus}${s3Info}`,
+        message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${summaryLogUpload.fileId}, filename=${summaryLogUpload.filename}, status=${summaryLogUpload.fileStatus}${s3Info}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -132,11 +143,9 @@ export const summaryLogsUploadCompleted = {
         throw error
       }
 
-      const message = `Failure on ${summaryLogsUploadCompletedPath}`
-
       logger.error({
         error,
-        message,
+        message: `Failure on ${summaryLogsUploadCompletedPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -148,7 +157,9 @@ export const summaryLogsUploadCompleted = {
         }
       })
 
-      throw Boom.badImplementation(message)
+      throw Boom.badImplementation(
+        `Failure on ${summaryLogsUploadCompletedPath}`
+      )
     }
   }
 }

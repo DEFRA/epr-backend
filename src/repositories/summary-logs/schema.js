@@ -1,14 +1,14 @@
-import Boom from '@hapi/boom'
 import Joi from 'joi'
+
 import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
-const idSchema = Joi.string().required().messages({
+export const idSchema = Joi.string().required().messages({
   'any.required': 'id is required',
   'string.empty': 'id cannot be empty',
   'string.base': 'id must be a string'
 })
 
-const summaryLogInsertSchema = Joi.object({
+export const summaryLogInsertSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
     .valid(
@@ -38,27 +38,3 @@ const summaryLogInsertSchema = Joi.object({
   'string.empty': '{#label} cannot be empty',
   'any.only': '{#label} must be one of {#valids}'
 })
-
-export const validateId = (id) => {
-  const { error, value } = idSchema.validate(id)
-
-  if (error) {
-    throw Boom.badData(error.message)
-  }
-
-  return value
-}
-
-export const validateSummaryLogInsert = (data) => {
-  const { error, value } = summaryLogInsertSchema.validate(data, {
-    abortEarly: false,
-    stripUnknown: true
-  })
-
-  if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
-    throw Boom.badData(`Invalid summary log data: ${details}`)
-  }
-
-  return value
-}

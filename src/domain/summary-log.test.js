@@ -3,6 +3,7 @@ import {
   determineStatusFromUpload,
   determineFailureReason,
   getDefaultStatus,
+  isValidTransition,
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from './summary-log.js'
@@ -72,6 +73,85 @@ describe('summary-log domain', () => {
     it('returns preprocessing status', () => {
       const result = getDefaultStatus()
       expect(result).toBe(SUMMARY_LOG_STATUS.PREPROCESSING)
+    })
+  })
+
+  describe('isValidTransition', () => {
+    it('returns true when fromStatus is null (initial insert)', () => {
+      const result = isValidTransition(null, SUMMARY_LOG_STATUS.PREPROCESSING)
+      expect(result).toBe(true)
+    })
+
+    it('returns true when fromStatus is undefined (initial insert)', () => {
+      const result = isValidTransition(
+        undefined,
+        SUMMARY_LOG_STATUS.PREPROCESSING
+      )
+      expect(result).toBe(true)
+    })
+
+    it('returns true for preprocessing -> preprocessing transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.PREPROCESSING,
+        SUMMARY_LOG_STATUS.PREPROCESSING
+      )
+      expect(result).toBe(true)
+    })
+
+    it('returns true for preprocessing -> rejected transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.PREPROCESSING,
+        SUMMARY_LOG_STATUS.REJECTED
+      )
+      expect(result).toBe(true)
+    })
+
+    it('returns true for preprocessing -> validating transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.PREPROCESSING,
+        SUMMARY_LOG_STATUS.VALIDATING
+      )
+      expect(result).toBe(true)
+    })
+
+    it('returns false for validating -> preprocessing transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.VALIDATING,
+        SUMMARY_LOG_STATUS.PREPROCESSING
+      )
+      expect(result).toBe(false)
+    })
+
+    it('returns false for validating -> rejected transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.VALIDATING,
+        SUMMARY_LOG_STATUS.REJECTED
+      )
+      expect(result).toBe(false)
+    })
+
+    it('returns false for rejected -> preprocessing transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.REJECTED,
+        SUMMARY_LOG_STATUS.PREPROCESSING
+      )
+      expect(result).toBe(false)
+    })
+
+    it('returns false for rejected -> validating transition', () => {
+      const result = isValidTransition(
+        SUMMARY_LOG_STATUS.REJECTED,
+        SUMMARY_LOG_STATUS.VALIDATING
+      )
+      expect(result).toBe(false)
+    })
+
+    it('returns false for unknown fromStatus', () => {
+      const result = isValidTransition(
+        'unknown-status',
+        SUMMARY_LOG_STATUS.PREPROCESSING
+      )
+      expect(result).toBe(false)
     })
   })
 })
