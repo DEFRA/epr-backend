@@ -5,7 +5,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 
-import { summaryLogsUploadCompletedPath } from './upload-completed.js'
+import { summaryLogsUploadCompletedPath } from './post.js'
 
 const summaryLogId = 'summary-log-123'
 
