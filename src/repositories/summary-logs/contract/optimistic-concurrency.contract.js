@@ -1,34 +1,51 @@
 import { randomUUID } from 'node:crypto'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 
+const createAndInsertSummaryLog = async (
+  getRepository,
+  idPrefix,
+  overrides = {}
+) => {
+  const id = `${idPrefix}-${randomUUID()}`
+  const summaryLog = buildSummaryLog(id, overrides)
+  await getRepository().insert(summaryLog)
+  return { id, initial: await getRepository().findById(id) }
+}
+
+const updateAndFetch = async (getRepository, id, version, updates) => {
+  await getRepository().update(id, version, updates)
+  return getRepository().findById(id)
+}
+
+const expectConflictError = (promise) =>
+  expect(promise).rejects.toMatchObject({
+    isBoom: true,
+    output: { statusCode: 409 }
+  })
+
 const testVersionInitialization = (getRepository) => {
   it('initializes version to 1 on insert', async () => {
-    const id = `contract-version-init-${randomUUID()}`
-    const summaryLog = buildSummaryLog(id)
+    const { initial } = await createAndInsertSummaryLog(
+      getRepository,
+      'contract-version-init'
+    )
 
-    await getRepository().insert(summaryLog)
-    const found = await getRepository().findById(id)
-
-    expect(found.version).toBe(1)
+    expect(initial.version).toBe(1)
   })
 }
 
 const testVersionIncrement = (getRepository) => {
   it('increments version on successful update', async () => {
-    const id = `contract-version-increment-${randomUUID()}`
-    const summaryLog = buildSummaryLog(id, {
-      status: 'preprocessing',
-      file: buildPendingFile()
-    })
+    const { id, initial } = await createAndInsertSummaryLog(
+      getRepository,
+      'contract-version-increment',
+      { status: 'preprocessing', file: buildPendingFile() }
+    )
 
-    await getRepository().insert(summaryLog)
-    const initial = await getRepository().findById(id)
-
-    await getRepository().update(id, initial.version, {
+    const updated = await updateAndFetch(getRepository, id, initial.version, {
       status: 'validating'
     })
 
-    const updated = await getRepository().findById(id)
     expect(updated.version).toBe(2)
     expect(updated.status).toBe('validating')
   })
@@ -36,49 +53,38 @@ const testVersionIncrement = (getRepository) => {
 
 const testStaleVersionConflict = (getRepository) => {
   it('throws conflict error when updating with stale version', async () => {
-    const id = `contract-stale-version-${randomUUID()}`
-    const summaryLog = buildSummaryLog(id, {
-      status: 'preprocessing',
-      file: buildPendingFile()
-    })
+    const { id, initial } = await createAndInsertSummaryLog(
+      getRepository,
+      'contract-stale-version',
+      { status: 'preprocessing', file: buildPendingFile() }
+    )
 
-    await getRepository().insert(summaryLog)
-    const initial = await getRepository().findById(id)
+    await getRepository().update(id, initial.version, { status: 'validating' })
 
-    await getRepository().update(id, initial.version, {
-      status: 'validating'
-    })
-
-    await expect(
+    await expectConflictError(
       getRepository().update(id, initial.version, { status: 'rejected' })
-    ).rejects.toMatchObject({
-      isBoom: true,
-      output: { statusCode: 409 }
-    })
+    )
   })
 }
 
 const testSequentialUpdates = (getRepository) => {
   it('allows sequential updates with correct versions', async () => {
-    const id = `contract-sequential-updates-${randomUUID()}`
-    const summaryLog = buildSummaryLog(id, {
-      status: 'preprocessing',
-      file: buildPendingFile()
-    })
+    const { id, initial } = await createAndInsertSummaryLog(
+      getRepository,
+      'contract-sequential-updates',
+      { status: 'preprocessing', file: buildPendingFile() }
+    )
 
-    await getRepository().insert(summaryLog)
+    expect(initial.version).toBe(1)
 
-    let current = await getRepository().findById(id)
-    expect(current.version).toBe(1)
-
-    await getRepository().update(id, current.version, {
+    let current = await updateAndFetch(getRepository, id, initial.version, {
       status: 'validating'
     })
-    current = await getRepository().findById(id)
     expect(current.version).toBe(2)
 
-    await getRepository().update(id, current.version, { status: 'validated' })
-    current = await getRepository().findById(id)
+    current = await updateAndFetch(getRepository, id, current.version, {
+      status: 'validated'
+    })
     const expectedVersionAfterTwoUpdates = 3
     expect(current.version).toBe(expectedVersionAfterTwoUpdates)
     expect(current.status).toBe('validated')
@@ -87,18 +93,18 @@ const testSequentialUpdates = (getRepository) => {
 
 const testVersionIntegrity = (getRepository) => {
   it('preserves version field integrity across updates', async () => {
-    const id = `contract-version-integrity-${randomUUID()}`
-    const summaryLog = buildSummaryLog(id, {
-      status: 'preprocessing',
-      organisationId: 'org-123',
-      registrationId: 'reg-456',
-      file: buildPendingFile()
-    })
+    const { id, initial } = await createAndInsertSummaryLog(
+      getRepository,
+      'contract-version-integrity',
+      {
+        status: 'preprocessing',
+        organisationId: 'org-123',
+        registrationId: 'reg-456',
+        file: buildPendingFile()
+      }
+    )
 
-    await getRepository().insert(summaryLog)
-    const initial = await getRepository().findById(id)
-
-    await getRepository().update(id, initial.version, {
+    const updated = await updateAndFetch(getRepository, id, initial.version, {
       status: 'validating',
       file: buildFile({
         id: initial.file.id,
@@ -106,7 +112,6 @@ const testVersionIntegrity = (getRepository) => {
       })
     })
 
-    const updated = await getRepository().findById(id)
     expect(updated.version).toBe(2)
     expect(updated.organisationId).toBe('org-123')
     expect(updated.registrationId).toBe('reg-456')
@@ -115,18 +120,13 @@ const testVersionIntegrity = (getRepository) => {
 
 const testConflictMessage = (getRepository) => {
   it('throws conflict with descriptive message for version mismatch', async () => {
-    const id = `contract-conflict-message-${randomUUID()}`
-    const summaryLog = buildSummaryLog(id, {
-      status: 'preprocessing',
-      file: buildPendingFile()
-    })
+    const { id, initial } = await createAndInsertSummaryLog(
+      getRepository,
+      'contract-conflict-message',
+      { status: 'preprocessing', file: buildPendingFile() }
+    )
 
-    await getRepository().insert(summaryLog)
-    const initial = await getRepository().findById(id)
-
-    await getRepository().update(id, initial.version, {
-      status: 'validating'
-    })
+    await getRepository().update(id, initial.version, { status: 'validating' })
 
     await expect(
       getRepository().update(id, initial.version, { status: 'rejected' })
@@ -158,18 +158,15 @@ export const testOptimisticConcurrency = (getRepository) => {
 export const testOptimisticConcurrencyRaceConditions = (getRepository) => {
   describe('concurrent update race conditions', () => {
     it('rejects one of two concurrent updates with same version', async () => {
-      const id = `contract-concurrent-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id, {
-        status: 'preprocessing',
-        file: buildPendingFile()
-      })
-
-      await getRepository().insert(summaryLog)
-      const current = await getRepository().findById(id)
+      const { id, initial } = await createAndInsertSummaryLog(
+        getRepository,
+        'contract-concurrent',
+        { status: 'preprocessing', file: buildPendingFile() }
+      )
 
       const results = await Promise.allSettled([
-        getRepository().update(id, current.version, { status: 'validating' }),
-        getRepository().update(id, current.version, { status: 'rejected' })
+        getRepository().update(id, initial.version, { status: 'validating' }),
+        getRepository().update(id, initial.version, { status: 'rejected' })
       ])
 
       const fulfilled = results.filter((r) => r.status === 'fulfilled')
