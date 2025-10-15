@@ -6,9 +6,10 @@ import {
 } from './validation.js'
 
 /**
+ * @param {import('#common/helpers/logging/logger.js').TypedLogger} logger
  * @returns {import('./port.js').SummaryLogsRepository}
  */
-export const createInMemorySummaryLogsRepository = () => {
+export const createInMemorySummaryLogsRepository = (logger) => {
   const storage = new Map()
 
   return {

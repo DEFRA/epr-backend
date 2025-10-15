@@ -4,11 +4,20 @@ import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
 
 describe('In-memory summary logs repository', () => {
-  testSummaryLogsRepositoryContract(createInMemorySummaryLogsRepository)
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+
+  testSummaryLogsRepositoryContract(() =>
+    createInMemorySummaryLogsRepository(mockLogger)
+  )
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
-      const repo = createInMemorySummaryLogsRepository()
+      const repo = createInMemorySummaryLogsRepository(mockLogger)
       const id = `isolation-test-${randomUUID()}`
       const summaryLog = buildSummaryLog(id, {
         file: buildFile({ name: 'original.xlsx' })
@@ -26,7 +35,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
-      const repo = createInMemorySummaryLogsRepository()
+      const repo = createInMemorySummaryLogsRepository(mockLogger)
       const id = `isolation-test-${randomUUID()}`
       const summaryLog = buildSummaryLog(id, {
         file: buildFile({ name: 'original.xlsx' })
@@ -43,7 +52,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies on update', async () => {
-      const repo = createInMemorySummaryLogsRepository()
+      const repo = createInMemorySummaryLogsRepository(mockLogger)
       const id = `isolation-test-${randomUUID()}`
       const summaryLog = buildSummaryLog(id)
 

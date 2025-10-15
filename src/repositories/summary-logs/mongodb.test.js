@@ -17,7 +17,8 @@ describe('MongoDB summary logs repository', () => {
     server = await createServer()
     await server.initialize()
 
-    repository = createSummaryLogsRepository(server.db)(mockLogger)
+    const repositoryFactory = createSummaryLogsRepository(server.db)
+    repository = repositoryFactory(mockLogger)
   })
 
   afterAll(async () => {
@@ -38,7 +39,8 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const testRepo = createSummaryLogsRepository(mockDb)(mockLogger)
+      const testRepoFactory = createSummaryLogsRepository(mockDb)
+      const testRepo = testRepoFactory(mockLogger)
 
       await expect(
         testRepo.insert({

@@ -6,28 +6,25 @@ export const repositories = {
     version: '1.0.0',
     register: (server, options) => {
       const decorateRepository = (repoFactory) => {
-        server.decorate(
-          'request',
-          'summaryLogsRepository',
-          function () {
-            const logger = this?.logger ?? {
-              info: () => {},
-              error: () => {},
-              warn: () => {},
-              debug: () => {}
-            }
-            return repoFactory(logger)
-          },
-          {
-            apply: true
-          }
-        )
+        server.ext('onRequest', (request, h) => {
+          // Lazily create repository on first access
+          Object.defineProperty(request, 'summaryLogsRepository', {
+            get() {
+              if (!this.app.summaryLogsRepository) {
+                this.app.summaryLogsRepository = repoFactory(this.logger)
+              }
+              return this.app.summaryLogsRepository
+            },
+            enumerable: true,
+            configurable: true
+          })
+          return h.continue
+        })
       }
 
       if (options?.summaryLogsRepository) {
-        // Test override - wrap the repository in a factory that ignores the logger
-        const testRepo = options.summaryLogsRepository
-        decorateRepository(() => testRepo)
+        // Test override - expect a factory function
+        decorateRepository(options.summaryLogsRepository)
       } else {
         // Production - require MongoDB plugin
         server.dependency('mongodb', () => {
