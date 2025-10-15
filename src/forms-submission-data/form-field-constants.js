@@ -1,4 +1,6 @@
 const TIMESCALE_ALUMINIUM = 'Timescale (Aluminium)'
+const WASTE_PROCESSING_OPERATIONS =
+  'Are you currently reprocessing or exporting packaging waste to be recycled?'
 
 export const FORM_PAGES = {
   ORGANISATION: {
@@ -7,6 +9,17 @@ export const FORM_PAGES = {
       fields: {
         PARTNER_NAMES: 'Partner names',
         PARTNER_TYPE: 'Partner type'
+      }
+    },
+    WASTE_PROCESSING_DETAILS: {
+      title: WASTE_PROCESSING_OPERATIONS,
+      fields: {
+        TYPES: WASTE_PROCESSING_OPERATIONS
+      }
+    },
+    REPROCESSING_NATIONS: {
+      fields: {
+        NATIONS: 'Nations with sites'
       }
     }
   },

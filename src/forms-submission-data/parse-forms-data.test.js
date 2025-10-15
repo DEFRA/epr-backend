@@ -1,6 +1,6 @@
 import {
-  extractRepeaters,
   extractAnswers,
+  extractRepeaters,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from './parse-forms-data.js'
