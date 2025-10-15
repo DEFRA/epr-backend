@@ -83,11 +83,11 @@ const testSequentialUpdates = (getRepository) => {
     expect(current.version).toBe(2)
 
     current = await updateAndFetch(getRepository, id, current.version, {
-      status: 'validated'
+      status: 'preprocessing'
     })
     const expectedVersionAfterTwoUpdates = 3
     expect(current.version).toBe(expectedVersionAfterTwoUpdates)
-    expect(current.status).toBe('validated')
+    expect(current.status).toBe('preprocessing')
   })
 }
 
