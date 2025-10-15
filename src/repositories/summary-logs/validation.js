@@ -1,9 +1,6 @@
 import Boom from '@hapi/boom'
 
-import {
-  idSchema,
-  summaryLogInsertSchema
-} from './summary-logs-repository.schema.js'
+import { idSchema, summaryLogInsertSchema } from './schema.js'
 
 export const validateId = (id) => {
   const { error, value } = idSchema.validate(id)

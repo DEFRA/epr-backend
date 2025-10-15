@@ -1,4 +1,4 @@
-import { createSummaryLogsRepository } from '#repositories/summary-logs-repository.mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 
 import { config } from '../../../../config.js'

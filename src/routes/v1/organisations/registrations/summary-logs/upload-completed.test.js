@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 
 import { summaryLogsUploadCompletedPath } from './upload-completed.js'
 

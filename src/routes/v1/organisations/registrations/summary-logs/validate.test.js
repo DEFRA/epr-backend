@@ -4,7 +4,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 import { summaryLogsValidatePath } from './validate.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs-repository.inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 
