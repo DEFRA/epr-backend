@@ -47,45 +47,47 @@ export const testInsertBehaviour = (getRepository) => {
         output: { statusCode: 409 }
       })
     })
+  })
+}
 
-    describe('concurrent insert race conditions', () => {
-      it('rejects one of two concurrent inserts with same ID', async () => {
-        const id = `contract-concurrent-insert-${randomUUID()}`
-        const summaryLogA = buildSummaryLog(id, {
-          organisationId: 'org-A',
-          file: buildFile({
-            name: 'testA.xlsx',
-            s3: { bucket: TEST_S3_BUCKET, key: 'test-key-A' }
-          })
+export const testInsertRaceConditions = (getRepository) => {
+  describe('concurrent insert race conditions', () => {
+    it('rejects one of two concurrent inserts with same ID', async () => {
+      const id = `contract-concurrent-insert-${randomUUID()}`
+      const summaryLogA = buildSummaryLog(id, {
+        organisationId: 'org-A',
+        file: buildFile({
+          name: 'testA.xlsx',
+          s3: { bucket: TEST_S3_BUCKET, key: 'test-key-A' }
         })
-        const summaryLogB = buildSummaryLog(id, {
-          organisationId: 'org-B',
-          file: buildFile({
-            name: 'testB.xlsx',
-            s3: { bucket: TEST_S3_BUCKET, key: 'test-key-B' }
-          })
-        })
-
-        const results = await Promise.allSettled([
-          getRepository().insert(summaryLogA),
-          getRepository().insert(summaryLogB)
-        ])
-
-        const fulfilled = results.filter((r) => r.status === 'fulfilled')
-        const rejected = results.filter((r) => r.status === 'rejected')
-
-        expect(fulfilled).toHaveLength(1)
-        expect(rejected).toHaveLength(1)
-        expect(rejected[0].reason).toMatchObject({
-          isBoom: true,
-          output: { statusCode: 409 }
-        })
-
-        const final = await getRepository().findById(id)
-        expect(final).toBeTruthy()
-        expect(final.id).toBe(id)
-        expect(['org-A', 'org-B']).toContain(final.organisationId)
       })
+      const summaryLogB = buildSummaryLog(id, {
+        organisationId: 'org-B',
+        file: buildFile({
+          name: 'testB.xlsx',
+          s3: { bucket: TEST_S3_BUCKET, key: 'test-key-B' }
+        })
+      })
+
+      const results = await Promise.allSettled([
+        getRepository().insert(summaryLogA),
+        getRepository().insert(summaryLogB)
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect(rejected[0].reason).toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 }
+      })
+
+      const final = await getRepository().findById(id)
+      expect(final).toBeTruthy()
+      expect(final.id).toBe(id)
+      expect(['org-A', 'org-B']).toContain(final.organisationId)
     })
   })
 }

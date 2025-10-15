@@ -40,7 +40,7 @@ export const buildSummaryLog = (id, overrides = {}) => {
   return {
     id,
     status: 'validating',
-    file: file !== undefined ? file : buildFile(),
+    file: file === undefined ? buildFile() : file,
     ...logOverrides
   }
 }

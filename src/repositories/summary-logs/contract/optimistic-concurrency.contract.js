@@ -74,7 +74,8 @@ export const testOptimisticConcurrency = (getRepository) => {
 
       await getRepository().update(id, current.version, { status: 'validated' })
       current = await getRepository().findById(id)
-      expect(current.version).toBe(3)
+      const expectedVersionAfterTwoUpdates = 3
+      expect(current.version).toBe(expectedVersionAfterTwoUpdates)
       expect(current.status).toBe('validated')
     })
 
@@ -132,37 +133,39 @@ export const testOptimisticConcurrency = (getRepository) => {
         }
       })
     })
+  })
+}
 
-    describe('concurrent update race conditions', () => {
-      it('rejects one of two concurrent updates with same version', async () => {
-        const id = `contract-concurrent-${randomUUID()}`
-        const summaryLog = buildSummaryLog(id, {
-          status: 'preprocessing',
-          file: buildPendingFile()
-        })
-
-        await getRepository().insert(summaryLog)
-        const current = await getRepository().findById(id)
-
-        const results = await Promise.allSettled([
-          getRepository().update(id, current.version, { status: 'validating' }),
-          getRepository().update(id, current.version, { status: 'rejected' })
-        ])
-
-        const fulfilled = results.filter((r) => r.status === 'fulfilled')
-        const rejected = results.filter((r) => r.status === 'rejected')
-
-        expect(fulfilled).toHaveLength(1)
-        expect(rejected).toHaveLength(1)
-        expect(rejected[0].reason).toMatchObject({
-          isBoom: true,
-          output: { statusCode: 409 }
-        })
-
-        const final = await getRepository().findById(id)
-        expect(final.version).toBe(2)
-        expect(['validating', 'rejected']).toContain(final.status)
+export const testOptimisticConcurrencyRaceConditions = (getRepository) => {
+  describe('concurrent update race conditions', () => {
+    it('rejects one of two concurrent updates with same version', async () => {
+      const id = `contract-concurrent-${randomUUID()}`
+      const summaryLog = buildSummaryLog(id, {
+        status: 'preprocessing',
+        file: buildPendingFile()
       })
+
+      await getRepository().insert(summaryLog)
+      const current = await getRepository().findById(id)
+
+      const results = await Promise.allSettled([
+        getRepository().update(id, current.version, { status: 'validating' }),
+        getRepository().update(id, current.version, { status: 'rejected' })
+      ])
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled')
+      const rejected = results.filter((r) => r.status === 'rejected')
+
+      expect(fulfilled).toHaveLength(1)
+      expect(rejected).toHaveLength(1)
+      expect(rejected[0].reason).toMatchObject({
+        isBoom: true,
+        output: { statusCode: 409 }
+      })
+
+      const final = await getRepository().findById(id)
+      expect(final.version).toBe(2)
+      expect(['validating', 'rejected']).toContain(final.status)
     })
   })
 }
