@@ -64,3 +64,101 @@ export const testUpdateBehaviour = (getRepository) => {
     })
   })
 }
+
+export const testUpdateValidation = (getRepository) => {
+  describe('update validation', () => {
+    describe('id parameter validation', () => {
+      it('rejects null id', async () => {
+        await expect(
+          getRepository().update(null, 1, { status: 'validating' })
+        ).rejects.toThrow(/id/)
+      })
+
+      it('rejects undefined id', async () => {
+        await expect(
+          getRepository().update(undefined, 1, { status: 'validating' })
+        ).rejects.toThrow(/id/)
+      })
+
+      it('rejects empty string id', async () => {
+        await expect(
+          getRepository().update('', 1, { status: 'validating' })
+        ).rejects.toThrow(/id/)
+      })
+
+      it('rejects number id', async () => {
+        const invalidNumberId = 123
+        await expect(
+          getRepository().update(invalidNumberId, 1, { status: 'validating' })
+        ).rejects.toThrow(/id/)
+      })
+
+      it('rejects object id', async () => {
+        await expect(
+          getRepository().update({}, 1, { status: 'validating' })
+        ).rejects.toThrow(/id/)
+      })
+    })
+
+    describe('updates parameter validation', () => {
+      it('strips unknown fields from updates', async () => {
+        const id = `contract-strip-update-${randomUUID()}`
+        const summaryLog = buildSummaryLog(id)
+        await getRepository().insert(summaryLog)
+
+        await getRepository().update(id, 1, {
+          status: 'validating',
+          hackerField: 'DROP TABLE users;',
+          evilField: 'rm -rf /'
+        })
+
+        const found = await getRepository().findById(id)
+        expect(found.hackerField).toBeUndefined()
+        expect(found.evilField).toBeUndefined()
+        expect(found.status).toBe('validating')
+      })
+
+      it('rejects update with invalid status', async () => {
+        const id = `contract-invalid-update-status-${randomUUID()}`
+        const summaryLog = buildSummaryLog(id)
+        await getRepository().insert(summaryLog)
+
+        await expect(
+          getRepository().update(id, 1, { status: 'invalid-status' })
+        ).rejects.toThrow(/status/)
+      })
+
+      it('rejects update with null status', async () => {
+        const id = `contract-null-status-${randomUUID()}`
+        const summaryLog = buildSummaryLog(id)
+        await getRepository().insert(summaryLog)
+
+        await expect(
+          getRepository().update(id, 1, { status: null })
+        ).rejects.toThrow(/status/)
+      })
+
+      it('rejects update with empty file object', async () => {
+        const id = `contract-empty-file-${randomUUID()}`
+        const summaryLog = buildSummaryLog(id)
+        await getRepository().insert(summaryLog)
+
+        await expect(
+          getRepository().update(id, 1, { file: {} })
+        ).rejects.toThrow(/file/)
+      })
+
+      it('rejects update with file missing required fields', async () => {
+        const id = `contract-file-missing-fields-${randomUUID()}`
+        const summaryLog = buildSummaryLog(id)
+        await getRepository().insert(summaryLog)
+
+        await expect(
+          getRepository().update(id, 1, {
+            file: { name: 'test.xlsx' }
+          })
+        ).rejects.toThrow(/id/)
+      })
+    })
+  })
+}

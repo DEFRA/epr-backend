@@ -9,7 +9,10 @@ import {
   testFindById,
   testFindByIdValidation
 } from './contract/find.contract.js'
-import { testUpdateBehaviour } from './contract/update.contract.js'
+import {
+  testUpdateBehaviour,
+  testUpdateValidation
+} from './contract/update.contract.js'
 import {
   testOptimisticConcurrency,
   testOptimisticConcurrencyRaceConditions
@@ -31,6 +34,7 @@ export const testSummaryLogsRepositoryContract = (createRepository) => {
     testFindById(() => repository)
     testFindByIdValidation(() => repository)
     testUpdateBehaviour(() => repository)
+    testUpdateValidation(() => repository)
     testOptimisticConcurrency(() => repository)
     testOptimisticConcurrencyRaceConditions(() => repository)
   })

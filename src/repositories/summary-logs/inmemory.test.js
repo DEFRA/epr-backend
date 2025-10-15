@@ -50,7 +50,7 @@ describe('In-memory summary logs repository', () => {
       await repo.insert(summaryLog)
 
       const updates = {
-        status: 'complete',
+        status: 'validating',
         file: buildFile({ name: 'updated.xlsx' })
       }
       await repo.update(id, 1, updates)

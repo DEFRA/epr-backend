@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
-import { validateId, validateSummaryLogInsert } from './validation.js'
+import {
+  validateId,
+  validateSummaryLogInsert,
+  validateSummaryLogUpdate
+} from './validation.js'
 
 /**
  * @returns {import('./port.js').SummaryLogsRepository}
@@ -22,6 +26,7 @@ export const createInMemorySummaryLogsRepository = () => {
 
     async update(id, version, updates) {
       const validatedId = validateId(id)
+      const validatedUpdates = validateSummaryLogUpdate(updates)
 
       const existing = storage.get(validatedId)
 
@@ -39,7 +44,7 @@ export const createInMemorySummaryLogsRepository = () => {
         validatedId,
         structuredClone({
           ...existing,
-          ...updates,
+          ...validatedUpdates,
           version: existing.version + 1
         })
       )

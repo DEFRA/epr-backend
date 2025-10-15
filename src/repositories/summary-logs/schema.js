@@ -14,7 +14,10 @@ export const summaryLogInsertSchema = Joi.object({
     .valid(
       SUMMARY_LOG_STATUS.PREPROCESSING,
       SUMMARY_LOG_STATUS.VALIDATING,
-      SUMMARY_LOG_STATUS.REJECTED
+      SUMMARY_LOG_STATUS.REJECTED,
+      SUMMARY_LOG_STATUS.INVALID,
+      SUMMARY_LOG_STATUS.VALIDATED,
+      SUMMARY_LOG_STATUS.SUBMITTED
     )
     .required(),
   failureReason: Joi.string().optional(),
@@ -38,3 +41,39 @@ export const summaryLogInsertSchema = Joi.object({
   'string.empty': '{#label} cannot be empty',
   'any.only': '{#label} must be one of {#valids}'
 })
+
+export const summaryLogUpdateSchema = Joi.object({
+  status: Joi.string()
+    .valid(
+      SUMMARY_LOG_STATUS.PREPROCESSING,
+      SUMMARY_LOG_STATUS.VALIDATING,
+      SUMMARY_LOG_STATUS.REJECTED,
+      SUMMARY_LOG_STATUS.INVALID,
+      SUMMARY_LOG_STATUS.VALIDATED,
+      SUMMARY_LOG_STATUS.SUBMITTED
+    )
+    .optional(),
+  failureReason: Joi.string().optional(),
+  file: Joi.object({
+    id: Joi.string().required(),
+    name: Joi.string().required(),
+    status: Joi.string().valid('complete', 'pending', 'rejected').optional(),
+    s3: Joi.object({
+      bucket: Joi.string().required(),
+      key: Joi.string().required()
+    }).when('status', {
+      is: 'complete',
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    })
+  }).optional(),
+  organisationId: Joi.string().optional(),
+  registrationId: Joi.string().optional()
+})
+  .min(1)
+  .messages({
+    'any.required': '{#label} is required',
+    'string.empty': '{#label} cannot be empty',
+    'any.only': '{#label} must be one of {#valids}',
+    'object.min': 'updates must contain at least one field'
+  })

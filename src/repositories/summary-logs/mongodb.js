@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
-import { validateId, validateSummaryLogInsert } from './validation.js'
+import {
+  validateId,
+  validateSummaryLogInsert,
+  validateSummaryLogUpdate
+} from './validation.js'
 
 const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -26,12 +30,13 @@ export const createSummaryLogsRepository = (db) => ({
 
   async update(id, version, updates) {
     const validatedId = validateId(id)
+    const validatedUpdates = validateSummaryLogUpdate(updates)
 
     const result = await db
       .collection(COLLECTION_NAME)
       .updateOne(
         { _id: validatedId, version },
-        { $set: updates, $inc: { version: 1 } }
+        { $set: validatedUpdates, $inc: { version: 1 } }
       )
 
     if (result.matchedCount === 0) {
