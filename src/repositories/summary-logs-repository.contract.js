@@ -89,6 +89,9 @@ const testInsertBehaviour = (getRepository) => {
     })
 
     describe('concurrent insert race conditions', () => {
+      // Test environments may not guarantee true concurrency. Implementations must
+      // handle real concurrent operations correctly. Passing these tests is necessary
+      // but not sufficient proof of correctness.
       it('rejects one of two concurrent inserts with same ID', async () => {
         const id = `contract-concurrent-insert-${randomUUID()}`
         const summaryLogA = {
@@ -655,6 +658,9 @@ const testOptimisticConcurrency = (getRepository) => {
     })
 
     describe('concurrent update race conditions', () => {
+      // Test environments may not guarantee true concurrency. Implementations must
+      // handle real concurrent operations correctly. Passing these tests is necessary
+      // but not sufficient proof of correctness.
       it('rejects one of two concurrent updates with same version', async () => {
         const id = `contract-concurrent-${randomUUID()}`
         const summaryLog = {
