@@ -74,6 +74,10 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
           isBoom: true,
           output: { statusCode: 409 }
         })
+
+        const final = await repository.findById(id)
+        expect(final.status).toBe('validating')
+        expect(final.version).toBe(2)
       })
 
       it('allows sequential updates with correct versions', async () => {
@@ -147,6 +151,10 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
             }
           }
         })
+
+        const final = await repository.findById(id)
+        expect(final.status).toBe('validating')
+        expect(final.version).toBe(2)
       })
     })
 
