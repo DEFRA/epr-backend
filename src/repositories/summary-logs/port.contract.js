@@ -3,20 +3,11 @@ import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testUpdateBehaviour } from './contract/update.contract.js'
 import { testOptimisticConcurrency } from './contract/optimistic-concurrency.contract.js'
 
-export const testSummaryLogsRepositoryContract = (
-  createRepository,
-  getLogger
-) => {
+export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
-    let repository
-
-    beforeEach(async () => {
-      repository = await createRepository()
-    })
-
-    testFindBehaviour(() => repository)
-    testInsertBehaviour(() => repository)
-    testUpdateBehaviour(() => repository)
-    testOptimisticConcurrency(() => repository, getLogger)
+    testFindBehaviour(repositoryFactory)
+    testInsertBehaviour(repositoryFactory)
+    testUpdateBehaviour(repositoryFactory)
+    testOptimisticConcurrency(repositoryFactory)
   })
 }

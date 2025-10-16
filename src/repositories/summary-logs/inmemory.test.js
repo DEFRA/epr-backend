@@ -4,23 +4,11 @@ import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
 
 describe('In-memory summary logs repository', () => {
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn()
-  }
-
-  testSummaryLogsRepositoryContract(
-    () => {
-      const repositoryFactory = createInMemorySummaryLogsRepository()
-      return repositoryFactory(mockLogger)
-    },
-    () => mockLogger
-  )
+  testSummaryLogsRepositoryContract(createInMemorySummaryLogsRepository())
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
@@ -40,6 +28,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
@@ -58,6 +47,7 @@ describe('In-memory summary logs repository', () => {
     })
 
     it('stores independent copies on update', async () => {
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`

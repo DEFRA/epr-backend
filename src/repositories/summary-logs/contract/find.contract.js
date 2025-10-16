@@ -1,8 +1,22 @@
 import { randomUUID } from 'node:crypto'
 import { buildFile, buildSummaryLog } from './test-data.js'
 
-export const testFindBehaviour = (getRepository) => {
+export const testFindBehaviour = (repositoryFactory) => {
   describe('find', () => {
+    let repository
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    const getRepository = () => repository
+
+    beforeEach(async () => {
+      repository = await repositoryFactory(logger)
+    })
+
     describe('findById', () => {
       it('returns null when ID not found', async () => {
         const id = `contract-nonexistent-${randomUUID()}`

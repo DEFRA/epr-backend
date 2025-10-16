@@ -4,30 +4,22 @@ import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
 describe('MongoDB summary logs repository', () => {
   let server
-  let repository
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn()
-  }
+  let summaryLogsRepositoryFactory
 
   beforeAll(async () => {
     const { createServer } = await import('#server/server.js')
     server = await createServer()
     await server.initialize()
 
-    const summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
-    repository = summaryLogsRepositoryFactory(mockLogger)
+    summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
   })
 
   afterAll(async () => {
     await server.stop()
   })
 
-  testSummaryLogsRepositoryContract(
-    () => repository,
-    () => mockLogger
+  testSummaryLogsRepositoryContract((logger) =>
+    summaryLogsRepositoryFactory(logger)
   )
 
   describe('MongoDB-specific error handling', () => {
@@ -42,6 +34,7 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
       const repositoryFactory = createSummaryLogsRepository(mockDb)
       const repository = repositoryFactory(mockLogger)
 

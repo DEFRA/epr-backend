@@ -6,8 +6,22 @@ import {
   buildSummaryLog
 } from './test-data.js'
 
-export const testUpdateBehaviour = (getRepository) => {
+export const testUpdateBehaviour = (repositoryFactory) => {
   describe('update', () => {
+    let repository
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    const getRepository = () => repository
+
+    beforeEach(async () => {
+      repository = await repositoryFactory(logger)
+    })
+
     describe('basic behaviour', () => {
       it('updates an existing summary log', async () => {
         const id = `contract-update-${randomUUID()}`

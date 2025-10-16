@@ -8,8 +8,22 @@ import {
   buildSummaryLog
 } from './test-data.js'
 
-export const testInsertBehaviour = (getRepository) => {
+export const testInsertBehaviour = (repositoryFactory) => {
   describe('insert', () => {
+    let repository
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    const getRepository = () => repository
+
+    beforeEach(async () => {
+      repository = await repositoryFactory(logger)
+    })
+
     describe('basic behaviour', () => {
       it('inserts a summary log without error', async () => {
         const id = `contract-insert-${randomUUID()}`

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { vi } from 'vitest'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 
 const createAndInsertSummaryLog = async (
@@ -23,8 +24,22 @@ const expectConflictError = (promise) =>
     output: { statusCode: 409 }
   })
 
-export const testOptimisticConcurrency = (getRepository, getLogger) => {
+export const testOptimisticConcurrency = (repositoryFactory) => {
   describe('optimistic concurrency', () => {
+    let repository
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    const getRepository = () => repository
+
+    beforeEach(async () => {
+      repository = await repositoryFactory(logger)
+    })
+
     describe('version control', () => {
       it('initializes version to 1 on insert', async () => {
         const { initial } = await createAndInsertSummaryLog(
@@ -181,21 +196,26 @@ export const testOptimisticConcurrency = (getRepository, getLogger) => {
 
     describe('conflict logging', () => {
       it('logs version conflict with appropriate event metadata', async () => {
-        const logger = getLogger()
-        logger.error.mockClear()
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
+        const repository = repositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          () => repository,
           'contract-logging',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
-        await getRepository().update(id, initial.version, {
+        await repository.update(id, initial.version, {
           status: 'validating'
         })
 
         await expect(
-          getRepository().update(id, initial.version, {
+          repository.update(id, initial.version, {
             status: 'rejected'
           })
         ).rejects.toMatchObject({
@@ -219,21 +239,26 @@ export const testOptimisticConcurrency = (getRepository, getLogger) => {
       })
 
       it('includes error details in log when version conflict occurs', async () => {
-        const logger = getLogger()
-        logger.error.mockClear()
+        const logger = {
+          info: vi.fn(),
+          error: vi.fn(),
+          warn: vi.fn(),
+          debug: vi.fn()
+        }
+        const repository = repositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          () => repository,
           'contract-logging-details',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
-        await getRepository().update(id, initial.version, {
+        await repository.update(id, initial.version, {
           status: 'validating'
         })
 
         await expect(
-          getRepository().update(id, initial.version, {
+          repository.update(id, initial.version, {
             status: 'rejected'
           })
         ).rejects.toMatchObject({
