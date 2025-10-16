@@ -23,7 +23,7 @@ const expectConflictError = (promise) =>
     output: { statusCode: 409 }
   })
 
-export const testOptimisticConcurrency = (getRepository) => {
+export const testOptimisticConcurrency = (getRepository, getLogger) => {
   describe('optimistic concurrency', () => {
     describe('version control', () => {
       it('initializes version to 1 on insert', async () => {
@@ -176,6 +176,76 @@ export const testOptimisticConcurrency = (getRepository) => {
         const final = await getRepository().findById(id)
         expect(final.version).toBe(2)
         expect(['validating', 'rejected']).toContain(final.status)
+      })
+    })
+
+    describe('conflict logging', () => {
+      it('logs version conflict with appropriate event metadata', async () => {
+        const logger = getLogger()
+        logger.error.mockClear()
+
+        const { id, initial } = await createAndInsertSummaryLog(
+          getRepository,
+          'contract-logging',
+          { status: 'preprocessing', file: buildPendingFile() }
+        )
+
+        await getRepository().update(id, initial.version, {
+          status: 'validating'
+        })
+
+        await expect(
+          getRepository().update(id, initial.version, {
+            status: 'rejected'
+          })
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
+        })
+
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: expect.any(Error),
+            message: expect.stringMatching(
+              /version.*conflict|concurrent.*update/i
+            ),
+            event: {
+              category: 'database',
+              action: 'version_conflict_detected',
+              reference: id
+            }
+          })
+        )
+      })
+
+      it('includes error details in log when version conflict occurs', async () => {
+        const logger = getLogger()
+        logger.error.mockClear()
+
+        const { id, initial } = await createAndInsertSummaryLog(
+          getRepository,
+          'contract-logging-details',
+          { status: 'preprocessing', file: buildPendingFile() }
+        )
+
+        await getRepository().update(id, initial.version, {
+          status: 'validating'
+        })
+
+        await expect(
+          getRepository().update(id, initial.version, {
+            status: 'rejected'
+          })
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
+        })
+
+        const logCall = logger.error.mock.calls[0][0]
+        expect(logCall.error).toBeInstanceOf(Error)
+        expect(logCall.error.message).toMatch(
+          /version.*conflict|concurrent.*update/i
+        )
       })
     })
   })

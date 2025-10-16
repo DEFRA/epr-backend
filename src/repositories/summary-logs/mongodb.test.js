@@ -25,7 +25,10 @@ describe('MongoDB summary logs repository', () => {
     await server.stop()
   })
 
-  testSummaryLogsRepositoryContract(() => repository)
+  testSummaryLogsRepositoryContract(
+    () => repository,
+    () => mockLogger
+  )
 
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {

@@ -11,10 +11,13 @@ describe('In-memory summary logs repository', () => {
     debug: vi.fn()
   }
 
-  testSummaryLogsRepositoryContract(() => {
-    const repositoryFactory = createInMemorySummaryLogsRepository()
-    return repositoryFactory(mockLogger)
-  })
+  testSummaryLogsRepositoryContract(
+    () => {
+      const repositoryFactory = createInMemorySummaryLogsRepository()
+      return repositoryFactory(mockLogger)
+    },
+    () => mockLogger
+  )
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {

@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
 import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
+import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogUpdate
@@ -35,9 +39,21 @@ export const createInMemorySummaryLogsRepository = () => {
       }
 
       if (existing.version !== version) {
-        throw Boom.conflict(
+        const conflictError = new Error(
           `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
         )
+
+        logger.error({
+          error: conflictError,
+          message: `Version conflict detected for summary log ${validatedId}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.DB,
+            action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+            reference: validatedId
+          }
+        })
+
+        throw Boom.conflict(conflictError.message)
       }
 
       storage.set(
