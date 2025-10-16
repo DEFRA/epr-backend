@@ -1,4 +1,4 @@
-const COLLECTION_NAME = 'organisations'
+const COLLECTION_NAME = 'epr_organisations'
 
 /**
  * @returns {import('./port.js').OrganisationsRepository}
