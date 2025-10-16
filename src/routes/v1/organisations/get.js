@@ -1,6 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 
-/** @typedef {import('#repositories/organistions/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const organisationsGetPath = '/v1/organisations'
 
