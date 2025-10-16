@@ -1,9 +1,10 @@
 const COLLECTION_NAME = 'epr-organisations'
 
 /**
- * @returns {import('./port.js').OrganisationsRepository}
+ * @param {import('mongodb').Db} db - MongoDB database instance
+ * @returns {import('./port.js').OrganisationsRepositoryFactory}
  */
-export const createOrganisationsRepository = (db) => ({
+export const createOrganisationsRepository = (db) => (logger) => ({
   async findAll() {
     return db.collection(COLLECTION_NAME).find().toArray()
   }

@@ -1,42 +1,85 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
+/**
+ * @typedef {Object} RepositoriesPluginOptions
+ * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
+ * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
+ */
+
 export const repositories = {
   plugin: {
     name: 'repositories',
     version: '1.0.0',
-    register: (server, options = {}) => {
-      // Define all repositories here for easy extension
-      const definitions = [
-        {
-          key: 'summaryLogsRepository',
-          factory: (db) => createSummaryLogsRepository(db)
-        },
-        {
-          key: 'organisationsRepository',
-          factory: (db) => createOrganisationsRepository(db)
-        }
-      ]
-
-      const decorate = (key, repo) => {
-        server.decorate('request', key, () => repo, { apply: true })
+    /**
+     * @param {import('#common/hapi-types.js').HapiServer} server
+     * @param {RepositoriesPluginOptions} [options]
+     */
+    register: (server, options) => {
+      /**
+       * Enables automatic per-request repository creation with logger injection.
+       * Uses lazy initialization to defer creation until first access, and caches
+       * the instance in request.app to ensure the same repository is used throughout
+       * the request lifecycle. This allows repositories to log using the request's
+       * logger without handlers needing to pass it through the dependency chain.
+       *
+       * @param {string} repositoryName
+       * @param {Function} repositoryFactory
+       */
+      const enablePerRequestRepositoryWithLogger = (
+        repositoryName,
+        repositoryFactory
+      ) => {
+        server.ext('onRequest', (request, h) => {
+          Object.defineProperty(request, repositoryName, {
+            get() {
+              if (!this.app[repositoryName]) {
+                this.app[repositoryName] = repositoryFactory(this.logger)
+              }
+              return this.app[repositoryName]
+            },
+            enumerable: true,
+            configurable: true
+          })
+          return h.continue
+        })
       }
 
-      // Apply test overrides first (no MongoDB dependency)
-      for (const { key } of definitions) {
-        if (options?.[key]) {
-          decorate(key, options[key])
-        }
-      }
+      const summaryLogsRepositoryFactory = options?.summaryLogsRepository
+        ? options.summaryLogsRepository
+        : null
 
-      // For any repositories without overrides, require MongoDB and create them
-      const missing = definitions.filter(({ key }) => !options?.[key])
-      if (missing.length > 0) {
+      if (summaryLogsRepositoryFactory) {
+        enablePerRequestRepositoryWithLogger(
+          'summaryLogsRepository',
+          summaryLogsRepositoryFactory
+        )
+      } else {
         server.dependency('mongodb', () => {
-          for (const { key, factory } of missing) {
-            const repo = factory(server.db)
-            decorate(key, repo)
-          }
+          const productionFactory = createSummaryLogsRepository(server.db)
+          enablePerRequestRepositoryWithLogger(
+            'summaryLogsRepository',
+            productionFactory
+          )
+        })
+      }
+
+      const organisationsRepositoryFactory = options?.organisationsRepository
+        ? options.organisationsRepository
+        : null
+
+      if (organisationsRepositoryFactory) {
+        enablePerRequestRepositoryWithLogger(
+          'organisationsRepository',
+          organisationsRepositoryFactory
+        )
+      } else {
+        server.dependency('mongodb', () => {
+          const productionFactory = createOrganisationsRepository(server.db)
+          enablePerRequestRepositoryWithLogger(
+            'organisationsRepository',
+            productionFactory
+          )
         })
       }
     }

@@ -27,7 +27,8 @@ export const LOGGING_EVENT_ACTIONS = {
   START_FAILURE: 'start_failure',
   START_SUCCESS: 'start_success',
   PROCESS_FAILURE: 'process_failure',
-  PROCESS_SUCCESS: 'process_success'
+  PROCESS_SUCCESS: 'process_success',
+  VERSION_CONFLICT_DETECTED: 'version_conflict_detected'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {

@@ -10,12 +10,11 @@ describe('/v1/organisations route', () => {
     let server
 
     beforeAll(async () => {
-      /** @type {OrganisationsRepository} */
-      const organisationsRepository = {
+      const organisationsRepository = () => ({
         async findAll() {
           return [{ id: 'org-1', name: 'Org One' }]
         }
-      }
+      })
 
       server = await createServer({
         repositories: { organisationsRepository },
@@ -44,12 +43,11 @@ describe('/v1/organisations route', () => {
     let server
 
     beforeAll(async () => {
-      /** @type {OrganisationsRepository} */
-      const organisationsRepository = {
+      const organisationsRepository = () => ({
         async findAll() {
           return null
         }
-      }
+      })
 
       server = await createServer({
         repositories: { organisationsRepository },

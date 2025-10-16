@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 
 describe('In-memory organisations repository', () => {
@@ -8,7 +8,9 @@ describe('In-memory organisations repository', () => {
       { _id: 'org-2', name: 'Org Two' }
     ]
 
-    const repo = createInMemoryOrganisationsRepository(initial)
+    const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+    const repositoryFactory = createInMemoryOrganisationsRepository(initial)
+    const repo = repositoryFactory(mockLogger)
 
     const result = await repo.findAll()
     expect(result).toEqual(initial)
@@ -21,7 +23,9 @@ describe('In-memory organisations repository', () => {
         { _id: 'org-2', name: 'Second' }
       ]
 
-      const repo = createInMemoryOrganisationsRepository(initial)
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const repositoryFactory = createInMemoryOrganisationsRepository(initial)
+      const repo = repositoryFactory(mockLogger)
 
       const firstRead = await repo.findAll()
       // mutate returned array and objects
@@ -38,7 +42,9 @@ describe('In-memory organisations repository', () => {
     it('stores independent copies so input mutations do not affect storage', async () => {
       const initial = [{ _id: 'org-1', name: 'Original' }]
 
-      const repo = createInMemoryOrganisationsRepository(initial)
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const repositoryFactory = createInMemoryOrganisationsRepository(initial)
+      const repo = repositoryFactory(mockLogger)
 
       // mutate input after repo creation
       initial[0].name = 'Changed'
