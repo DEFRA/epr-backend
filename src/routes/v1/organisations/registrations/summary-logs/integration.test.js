@@ -53,7 +53,12 @@ describe('Summary logs integration', () => {
 
   beforeEach(async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn() }
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       summaryLogsRepository
