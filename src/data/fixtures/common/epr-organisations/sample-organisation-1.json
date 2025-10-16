@@ -1,0 +1,270 @@
+{
+  "_id": "6507f1f77bcf86cd79943901",
+  "orgId": "50002",
+  "schemaVersion": 1,
+  "version": 1,
+  "wasteProcessingTypes": ["reprocessor", "exporter"],
+  "reprocessingNations": ["england", "wales"],
+  "businessType": "partnership",
+  "submittedToRegulator": "ea",
+  "statusHistory": [
+    {
+      "status": "created",
+      "updatedAt": "2025-08-22T19:34:44.944Z",
+      "updatedBy": {
+        "email": "test@corpo.com"
+      }
+    }
+  ],
+  "registrations": [
+    {
+      "id": "6507f1f77bcf86cd79943902",
+      "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
+        }
+      ],
+      "formSubmissionTime": "2025-08-20T19:34:44.944Z",
+      "site": {
+        "address": {
+          "line1": "7 Glass processing site",
+          "town": "London",
+          "postcode": "SW2A 0AA"
+        },
+        "siteCapacity": [
+          {
+            "material": "glass",
+            "authorisedWeight": "10",
+            "authorisedTimeScale": "yearly",
+            "siteCapacityWeight": "15",
+            "siteCapacityTimescale": "yearly"
+          }
+        ]
+      },
+      "material": "glass",
+      "wasteProcessingType": "reprocessor",
+      "accreditationId": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
+      "gridReference": "123455",
+      "wasteRegistrationNumber": "CBDU123456",
+      "wasteManagementPermits": [
+        {
+          "type": "wml",
+          "permitNumber": "WML123456",
+          "permittedMaterials": ["glass"],
+          "permitWindow": "yearly"
+        }
+      ],
+      "approvedPersons": [
+        {
+          "fullName": "Luke Skywalker",
+          "email": "luke.skywalker@starwars.com",
+          "title": "Director",
+          "phone": "1234567890"
+        }
+      ],
+      "noticeAddress": {
+        "line1": "7 Glass processing site",
+        "town": "London",
+        "postcode": "SW2A 0AA"
+      }
+    },
+    {
+      "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
+      "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
+        }
+      ],
+      "formSubmissionTime": "2025-08-21T19:34:44.944Z",
+      "material": "plastic",
+      "wasteProcessingType": "exporter",
+      "wasteRegistrationNumber": "CBDU123456",
+      "wasteManagementPermits": [
+        {
+          "type": "wml",
+          "permitNumber": "WML123456",
+          "permittedMaterials": ["plastic"],
+          "permitWindow": "yearly"
+        }
+      ],
+      "approvedPersons": [
+        {
+          "fullName": "Luke Skywalker",
+          "email": "anakin.skywalker@starwars.com",
+          "title": "Partner",
+          "phone": "823456789"
+        }
+      ],
+      "noticeAddress": {
+        "line1": "7 Glass processing site",
+        "town": "London",
+        "postcode": "SW2A 0AA"
+      }
+    }
+  ],
+  "accreditations": [
+    {
+      "id": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
+      "formSubmissionTime": "2025-08-20T21:34:44.944Z",
+      "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
+        }
+      ],
+      "site": {
+        "address": {
+          "line1": "7 Glass processing site",
+          "postcode": "SW2A 0AA"
+        }
+      },
+      "material": "glass",
+      "wasteProcessingType": "reprocessor",
+      "prnIssuance": {
+        "plannedIssuance": "10000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Yoda",
+            "email": "yoda@starwars.com",
+            "title": "PRN signatory",
+            "phone": "1234567890"
+          }
+        ],
+        "prnIncomeBusinessPlan": [
+          {
+            "description": "New reprocessing infrastructure and maintaining existing infrastructure",
+            "detailedDescription": "Investing on buying to machine to separate glass from waste",
+            "percentSpent": 20
+          }
+        ]
+      },
+      "noticeAddress": {
+        "line1": "7 Glass processing site",
+        "town": "London",
+        "postcode": "SW2A 0AA"
+      }
+    },
+    {
+      "id": "26673c70-5f03-4865-a796-585ef4ddca30",
+      "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
+        }
+      ],
+      "site": {
+        "address": {
+          "line1": "7",
+          "postcode": "SW2A 0AA"
+        }
+      },
+      "material": "glass",
+      "wasteProcessingType": "reprocessor",
+      "prnIssuance": {
+        "plannedIssuance": "10000 tonnes",
+        "signatories": [
+          {
+            "fullName": "Yoda",
+            "email": "yoda@starwars.com",
+            "title": "PRN signatory",
+            "phone": "1234567890"
+          }
+        ],
+        "prnIncomeBusinessPlan": [
+          {
+            "description": "New reprocessing infrastructure and maintaining existing infrastructure",
+            "detailedDescription": "Investing on buying to machine to separate glass from waste",
+            "percentSpent": 20
+          }
+        ]
+      },
+      "noticeAddress": {
+        "line1": "7a",
+        "town": "London",
+        "postcode": "SW2A 0AA"
+      }
+    },
+    {
+      "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
+      "status": "created",
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
+      "statusHistory": [
+        {
+          "status": "created",
+          "updatedAt": "2025-08-22T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
+        },
+        {
+          "status": "rejected",
+          "updatedAt": "2025-08-25T19:34:44.944Z",
+          "updatedBy": {
+            "email": "test@corpo.com"
+          }
+        }
+      ],
+      "material": "plastic",
+      "wasteProcessingType": "exporter",
+      "prnIssuance": {
+        "plannedIssuance": "300 tonnes",
+        "signatories": [
+          {
+            "fullName": "Princess Leia",
+            "email": "princess.leia@starwars.com",
+            "title": "PRN signatory",
+            "phone": "7234567890"
+          }
+        ],
+        "prnIncomeBusinessPlan": [
+          {
+            "description": "New vehicle to transport",
+            "percentSpent": 10
+          }
+        ]
+      },
+      "noticeAddress": {
+        "line1": "7a",
+        "town": "London",
+        "postcode": "SW2A 0AA"
+      }
+    }
+  ],
+  "companyDetails": {
+    "name": "ACME ltd",
+    "tradingName": "ACME ltd",
+    "registrationNumber": "AC012345",
+    "registeredAddress": {
+      "line1": "Palace of Westminster",
+      "town": "London",
+      "postcode": "SW1A 0AA"
+    }
+  }
+}
