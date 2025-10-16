@@ -3,19 +3,19 @@ import { vi } from 'vitest'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 
 const createAndInsertSummaryLog = async (
-  getRepository,
+  repository,
   idPrefix,
   overrides = {}
 ) => {
   const id = `${idPrefix}-${randomUUID()}`
   const summaryLog = buildSummaryLog(id, overrides)
-  await getRepository().insert(summaryLog)
-  return { id, initial: await getRepository().findById(id) }
+  await repository.insert(summaryLog)
+  return { id, initial: await repository.findById(id) }
 }
 
-const updateAndFetch = async (getRepository, id, version, updates) => {
-  await getRepository().update(id, version, updates)
-  return getRepository().findById(id)
+const updateAndFetch = async (repository, id, version, updates) => {
+  await repository.update(id, version, updates)
+  return repository.findById(id)
 }
 
 const expectConflictError = (promise) =>
@@ -34,8 +34,6 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
       debug: vi.fn()
     }
 
-    const getRepository = () => repository
-
     beforeEach(async () => {
       repository = await repositoryFactory(logger)
     })
@@ -43,7 +41,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
     describe('version control', () => {
       it('initializes version to 1 on insert', async () => {
         const { initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-version-init'
         )
 
@@ -52,19 +50,14 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
 
       it('increments version on successful update', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-version-increment',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
-        const updated = await updateAndFetch(
-          getRepository,
-          id,
-          initial.version,
-          {
-            status: 'validating'
-          }
-        )
+        const updated = await updateAndFetch(repository, id, initial.version, {
+          status: 'validating'
+        })
 
         expect(updated.version).toBe(2)
         expect(updated.status).toBe('validating')
@@ -72,35 +65,35 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
 
       it('throws conflict error when updating with stale version', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-stale-version',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
-        await getRepository().update(id, initial.version, {
+        await repository.update(id, initial.version, {
           status: 'validating'
         })
 
         await expectConflictError(
-          getRepository().update(id, initial.version, { status: 'rejected' })
+          repository.update(id, initial.version, { status: 'rejected' })
         )
       })
 
       it('allows sequential updates with correct versions', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-sequential-updates',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
         expect(initial.version).toBe(1)
 
-        let current = await updateAndFetch(getRepository, id, initial.version, {
+        let current = await updateAndFetch(repository, id, initial.version, {
           status: 'validating'
         })
         expect(current.version).toBe(2)
 
-        current = await updateAndFetch(getRepository, id, current.version, {
+        current = await updateAndFetch(repository, id, current.version, {
           status: 'preprocessing'
         })
         const expectedVersionAfterTwoUpdates = 3
@@ -110,7 +103,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
 
       it('preserves version field integrity across updates', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-version-integrity',
           {
             status: 'preprocessing',
@@ -120,18 +113,13 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
           }
         )
 
-        const updated = await updateAndFetch(
-          getRepository,
-          id,
-          initial.version,
-          {
-            status: 'validating',
-            file: buildFile({
-              id: initial.file.id,
-              name: initial.file.name
-            })
-          }
-        )
+        const updated = await updateAndFetch(repository, id, initial.version, {
+          status: 'validating',
+          file: buildFile({
+            id: initial.file.id,
+            name: initial.file.name
+          })
+        })
 
         expect(updated.version).toBe(2)
         expect(updated.organisationId).toBe('org-123')
@@ -140,17 +128,17 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
 
       it('throws conflict with descriptive message for version mismatch', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-conflict-message',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
-        await getRepository().update(id, initial.version, {
+        await repository.update(id, initial.version, {
           status: 'validating'
         })
 
         await expect(
-          getRepository().update(id, initial.version, { status: 'rejected' })
+          repository.update(id, initial.version, { status: 'rejected' })
         ).rejects.toMatchObject({
           isBoom: true,
           output: {
@@ -168,14 +156,14 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
     describe('concurrent update race conditions', () => {
       it('rejects one of two concurrent updates with same version', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
-          getRepository,
+          repository,
           'contract-concurrent',
           { status: 'preprocessing', file: buildPendingFile() }
         )
 
         const results = await Promise.allSettled([
-          getRepository().update(id, initial.version, { status: 'validating' }),
-          getRepository().update(id, initial.version, { status: 'rejected' })
+          repository.update(id, initial.version, { status: 'validating' }),
+          repository.update(id, initial.version, { status: 'rejected' })
         ])
 
         const fulfilled = results.filter((r) => r.status === 'fulfilled')
@@ -188,7 +176,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
           output: { statusCode: 409 }
         })
 
-        const final = await getRepository().findById(id)
+        const final = await repository.findById(id)
         expect(final.version).toBe(2)
         expect(['validating', 'rejected']).toContain(final.status)
       })
@@ -205,7 +193,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         const repository = repositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
-          () => repository,
+          repository,
           'contract-logging',
           { status: 'preprocessing', file: buildPendingFile() }
         )
@@ -248,7 +236,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         const repository = repositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
-          () => repository,
+          repository,
           'contract-logging-details',
           { status: 'preprocessing', file: buildPendingFile() }
         )

@@ -18,8 +18,6 @@ export const testInsertBehaviour = (repositoryFactory) => {
       debug: vi.fn()
     }
 
-    const getRepository = () => repository
-
     beforeEach(async () => {
       repository = await repositoryFactory(logger)
     })
@@ -32,7 +30,7 @@ export const testInsertBehaviour = (repositoryFactory) => {
           registrationId: 'reg-456'
         })
 
-        await getRepository().insert(summaryLog)
+        await repository.insert(summaryLog)
       })
 
       it('stores the summary log so it can be retrieved', async () => {
@@ -42,8 +40,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
           registrationId: 'reg-789'
         })
 
-        await getRepository().insert(summaryLog)
-        const found = await getRepository().findById(id)
+        await repository.insert(summaryLog)
+        const found = await repository.findById(id)
 
         expect(found).toBeTruthy()
         expect(found.id).toBe(id)
@@ -55,9 +53,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
         const id = `contract-duplicate-${randomUUID()}`
         const summaryLog = buildSummaryLog(id)
 
-        await getRepository().insert(summaryLog)
+        await repository.insert(summaryLog)
 
-        await expect(getRepository().insert(summaryLog)).rejects.toMatchObject({
+        await expect(repository.insert(summaryLog)).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 409 }
         })
@@ -83,8 +81,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
         })
 
         const results = await Promise.allSettled([
-          getRepository().insert(summaryLogA),
-          getRepository().insert(summaryLogB)
+          repository.insert(summaryLogA),
+          repository.insert(summaryLogB)
         ])
 
         const fulfilled = results.filter((r) => r.status === 'fulfilled')
@@ -97,7 +95,7 @@ export const testInsertBehaviour = (repositoryFactory) => {
           output: { statusCode: 409 }
         })
 
-        const final = await getRepository().findById(id)
+        const final = await repository.findById(id)
         expect(final).toBeTruthy()
         expect(final.id).toBe(id)
         expect(['org-A', 'org-B']).toContain(final.organisationId)
@@ -111,9 +109,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const logWithMissingId = buildSummaryLog(id, {
             file: buildFile({ id: null })
           })
-          await expect(
-            getRepository().insert(logWithMissingId)
-          ).rejects.toThrow(/Invalid summary log data.*id/)
+          await expect(repository.insert(logWithMissingId)).rejects.toThrow(
+            /Invalid summary log data.*id/
+          )
         })
 
         it('rejects insert with missing file.name', async () => {
@@ -121,9 +119,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const logWithMissingName = buildSummaryLog(id, {
             file: buildFile({ name: null })
           })
-          await expect(
-            getRepository().insert(logWithMissingName)
-          ).rejects.toThrow(/Invalid summary log data.*name/)
+          await expect(repository.insert(logWithMissingName)).rejects.toThrow(
+            /Invalid summary log data.*name/
+          )
         })
 
         it('rejects insert with missing file.s3.bucket', async () => {
@@ -131,9 +129,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const logWithMissingBucket = buildSummaryLog(id, {
             file: buildFile({ s3: { bucket: null, key: 'key' } })
           })
-          await expect(
-            getRepository().insert(logWithMissingBucket)
-          ).rejects.toThrow(/Invalid summary log data.*bucket/)
+          await expect(repository.insert(logWithMissingBucket)).rejects.toThrow(
+            /Invalid summary log data.*bucket/
+          )
         })
 
         it('rejects insert with missing file.s3.key', async () => {
@@ -141,9 +139,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const logWithMissingKey = buildSummaryLog(id, {
             file: buildFile({ s3: { bucket: TEST_S3_BUCKET, key: null } })
           })
-          await expect(
-            getRepository().insert(logWithMissingKey)
-          ).rejects.toThrow(/Invalid summary log data.*key/)
+          await expect(repository.insert(logWithMissingKey)).rejects.toThrow(
+            /Invalid summary log data.*key/
+          )
         })
       })
 
@@ -153,9 +151,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const logWithInvalidStatus = buildSummaryLog(id, {
             file: buildFile({ status: 'invalid-status' })
           })
-          await expect(
-            getRepository().insert(logWithInvalidStatus)
-          ).rejects.toThrow(/Invalid summary log data.*status/)
+          await expect(repository.insert(logWithInvalidStatus)).rejects.toThrow(
+            /Invalid summary log data.*status/
+          )
         })
 
         it('strips unknown fields from insert', async () => {
@@ -167,8 +165,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
             })
           })
 
-          await getRepository().insert(logWithUnknownFields)
-          const found = await getRepository().findById(id)
+          await repository.insert(logWithUnknownFields)
+          const found = await repository.findById(id)
 
           expect(found.hackerField).toBeUndefined()
           expect(found.anotherBadField).toBeUndefined()
@@ -178,7 +176,7 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const id = `contract-minimal-${randomUUID()}`
           const minimalLog = buildSummaryLog(id)
 
-          await getRepository().insert(minimalLog)
+          await repository.insert(minimalLog)
         })
 
         it('accepts valid file.status values', async () => {
@@ -192,8 +190,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
             file: buildRejectedFile({ name: 'rejected.xlsx' })
           })
 
-          await getRepository().insert(completeLog)
-          await getRepository().insert(rejectedLog)
+          await repository.insert(completeLog)
+          await repository.insert(rejectedLog)
         })
       })
 
@@ -205,9 +203,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
             file: buildRejectedFile({ name: 'virus.xlsx' })
           })
 
-          await getRepository().insert(rejectedLog)
+          await repository.insert(rejectedLog)
 
-          const found = await getRepository().findById(id)
+          const found = await repository.findById(id)
           expect(found.file.status).toBe('rejected')
           expect(found.file.s3).toBeUndefined()
         })
@@ -222,9 +220,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
             }
           })
 
-          await expect(
-            getRepository().insert(completeLogWithoutS3)
-          ).rejects.toThrow(/Invalid summary log data.*s3/)
+          await expect(repository.insert(completeLogWithoutS3)).rejects.toThrow(
+            /Invalid summary log data.*s3/
+          )
         })
 
         it('accepts pending file without S3 info', async () => {
@@ -234,9 +232,9 @@ export const testInsertBehaviour = (repositoryFactory) => {
             file: buildPendingFile({ name: 'scanning.xlsx' })
           })
 
-          await getRepository().insert(pendingLog)
+          await repository.insert(pendingLog)
 
-          const found = await getRepository().findById(id)
+          const found = await repository.findById(id)
           expect(found.file.status).toBe('pending')
           expect(found.file.s3).toBeUndefined()
         })
