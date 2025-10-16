@@ -4,10 +4,11 @@ import { secureContext } from '@defra/hapi-secure-context'
 
 import { getConfig } from '../config.js'
 import { router } from '#plugins/router.js'
+import { workers } from '#plugins/workers.js'
 import { repositories } from '#plugins/repositories.js'
 import { featureFlags } from '#plugins/feature-flags.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
-import { mongoDb } from '#common/helpers/mongodb.js'
+import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
@@ -19,6 +20,7 @@ async function createServer(options = {}) {
   const server = Hapi.server({
     host: config.get('host'),
     port: config.get('port'),
+    debug: config.get('debug'),
     routes: {
       validate: {
         options: {
@@ -50,6 +52,7 @@ async function createServer(options = {}) {
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
   // repositories   - sets up repository adapters and attaches to `request` objects
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
+  // workers        - sets up worker thread pools and attaches to `request` objects
   // router         - routes used in the app
   await server.register([
     requestLogger,
@@ -57,7 +60,7 @@ async function createServer(options = {}) {
     secureContext,
     pulse,
     {
-      plugin: mongoDb,
+      plugin: mongoDbPlugin,
       options: config.get('mongo')
     },
     {
@@ -70,6 +73,10 @@ async function createServer(options = {}) {
         config,
         featureFlags: options.featureFlags
       }
+    },
+    {
+      plugin: workers,
+      options: options.workers
     },
     router
   ])

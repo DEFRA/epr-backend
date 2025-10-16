@@ -19,6 +19,16 @@ const UploadStatusToSummaryLogStatusMap = {
   [UPLOAD_STATUS.COMPLETE]: SUMMARY_LOG_STATUS.VALIDATING
 }
 
+const VALID_TRANSITIONS = {
+  [SUMMARY_LOG_STATUS.PREPROCESSING]: [
+    SUMMARY_LOG_STATUS.PREPROCESSING,
+    SUMMARY_LOG_STATUS.REJECTED,
+    SUMMARY_LOG_STATUS.VALIDATING
+  ],
+  [SUMMARY_LOG_STATUS.REJECTED]: [],
+  [SUMMARY_LOG_STATUS.VALIDATING]: []
+}
+
 export const determineStatusFromUpload = (uploadStatus) => {
   const status = UploadStatusToSummaryLogStatusMap[uploadStatus]
   if (!status) {
@@ -27,9 +37,21 @@ export const determineStatusFromUpload = (uploadStatus) => {
   return status
 }
 
-export const determineFailureReason = (status) => {
+export const isValidTransition = (fromStatus, toStatus) => {
+  if (!fromStatus) {
+    return true
+  }
+
+  const allowedTransitions = VALID_TRANSITIONS[fromStatus]
+  return allowedTransitions ? allowedTransitions.includes(toStatus) : false
+}
+
+export const determineFailureReason = (status, errorMessage) => {
   if (status === SUMMARY_LOG_STATUS.REJECTED) {
-    return 'File rejected by virus scan'
+    return (
+      errorMessage ||
+      'Something went wrong with your file upload. Please try again.'
+    )
   }
   return undefined
 }

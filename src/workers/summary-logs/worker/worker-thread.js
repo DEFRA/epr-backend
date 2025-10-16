@@ -1,0 +1,25 @@
+import { createMongoClient } from '#common/helpers/mongo-client.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+
+import { config } from '../../../config.js'
+
+import { summaryLogsValidatorWorker } from './worker.js'
+
+export default async function summaryLogsValidatorWorkerThread({ summaryLog }) {
+  const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
+
+  const mongoClient = await createMongoClient({
+    url: mongoUrl,
+    options: mongoOptions
+  })
+
+  try {
+    const db = mongoClient.db(databaseName)
+
+    const summaryLogsRepository = createSummaryLogsRepository(db)
+
+    await summaryLogsValidatorWorker({ summaryLogsRepository, summaryLog })
+  } finally {
+    await mongoClient.close()
+  }
+}

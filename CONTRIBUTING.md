@@ -119,7 +119,7 @@ For basic development and manual testing purposes:
 1. Call the endpoints you want to test via Postman
 
 > [!NOTE]
-> Postman should only be used to call the API of the service running on your local machine. To call the the API on `dev|test` use the Terminal in CDP Portal
+> Restrictions apply when calling the API on a lower environment via your local machine. You will need to generate a `x-api-key` and set the value in the environment variables in Postman. Documentation on how to do so can be found [here](https://portal.cdp-int.defra.cloud/documentation/how-to/developer-api-key.md)
 
 ### Development
 
@@ -400,11 +400,11 @@ export const myRoute = {
 **Example: Non-request context (use global `logger`)**
 
 ```javascript
-import { logger } from './common/helpers/logging/logger.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
-} from './common/enums/event.js'
+} from '#common/enums/event.js'
 
 logger.info({
   message: 'Setting up database',

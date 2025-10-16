@@ -8,7 +8,13 @@
       "name": "/health",
       "request": {
         "method": "GET",
-        "header": [],
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{x-api-key}}",
+            "type": "text"
+          }
+        ],
         "url": {
           "raw": "{{host}}/health",
           "host": ["{{host}}"],
@@ -25,6 +31,11 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{x-api-key}}",
+            "type": "text"
           }
         ],
         "body": {
@@ -47,6 +58,11 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{x-api-key}}",
+            "type": "text"
           }
         ],
         "body": {
@@ -69,6 +85,11 @@
           {
             "key": "Content-Type",
             "value": "application/json"
+          },
+          {
+            "key": "x-api-key",
+            "value": "{{x-api-key}}",
+            "type": "text"
           }
         ],
         "body": {

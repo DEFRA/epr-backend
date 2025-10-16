@@ -1,7 +1,7 @@
 import convict from 'convict'
 import convictFormatWithValidator from 'convict-format-with-validator'
 
-import { convictValidateMongoUri } from './common/helpers/convict/validate-mongo-uri.js'
+import { convictValidateMongoUri } from '#common/helpers/convict/validate-mongo-uri.js'
 
 convict.addFormat(convictValidateMongoUri)
 convict.addFormats(convictFormatWithValidator)
@@ -33,6 +33,11 @@ const baseConfig = {
     doc: 'Api Service Name',
     format: String,
     default: 'epr-backend'
+  },
+  debug: {
+    doc: 'Determines which logged events are sent to the console. See: https://github.com/hapijs/hapi/blob/master/API.md#-serveroptionsdebug',
+    format: '*',
+    default: isTest ? false : { request: ['implementation'] }
   },
   cdpEnvironment: {
     doc: 'The CDP environment the app is running in. With the addition of "local" for local development',

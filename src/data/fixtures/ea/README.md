@@ -33,9 +33,9 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 **Note:** Form definitions are JSON files that define form structure/questions, NOT the test fixture data (user submissions).
 
 1. Download form definition JSON files from [production DEFRA Forms Designer](https://forms-designer.prod.cdp-int.defra.cloud/library?sort=updatedDesc&title=PEPR&author=all) for EA forms
-2. Create directory: `mkdir -p prod_forms_download`
-3. Place downloaded JSON files in `prod_forms_download/`
-4. Run the script: `./update-defra-prod-forms.sh prod_forms_download`
+2. `cd src/data/prod-form-definitions/`
+3. Copy downloaded JSON files in `src/data/prod-form-definitions/ea`
+4. Run the script: `./update-defra-prod-forms.sh ea`
 5. If successful, [upload the updated files to TEST env](https://forms-designer.test.cdp-int.defra.cloud/library?sort=updatedDesc&title=PEPR&author=all)
 
 > [!WARNING]
