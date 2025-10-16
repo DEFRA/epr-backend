@@ -20,11 +20,12 @@
 /**
  * @typedef {Object} HapiServer
  * @property {TypedLogger} logger - CDP-compliant typed logger
+ * @property {import('mongodb').Db} [db] - MongoDB database (added by mongoDb plugin)
  * @property {*} [mongoClient] - MongoDB client (added by mongoDb plugin)
- * @property {*} [db] - MongoDB database (added by mongoDb plugin)
  * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
  * @property {*} [events] - Server events emitter
  * @property {Function} [decorate] - Decorate server/request with additional properties
+ * @property {Function} [dependency] - Declare plugin dependencies
  * @property {Function} [start] - Start the server
  * @property {Function} [stop] - Stop the server
  * @property {Function} [initialize] - Initialize the server without starting

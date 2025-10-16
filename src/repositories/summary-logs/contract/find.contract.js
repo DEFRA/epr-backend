@@ -1,12 +1,24 @@
 import { randomUUID } from 'node:crypto'
 import { buildFile, buildSummaryLog } from './test-data.js'
 
-export const testFindBehaviour = (getRepository) => {
+export const testFindBehaviour = (repositoryFactory) => {
   describe('find', () => {
+    let repository
+    const logger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    beforeEach(async () => {
+      repository = await repositoryFactory(logger)
+    })
+
     describe('findById', () => {
       it('returns null when ID not found', async () => {
         const id = `contract-nonexistent-${randomUUID()}`
-        const result = await getRepository().findById(id)
+        const result = await repository.findById(id)
 
         expect(result).toBeNull()
       })
@@ -18,9 +30,9 @@ export const testFindBehaviour = (getRepository) => {
           file: buildFile({ id: fileId })
         })
 
-        await getRepository().insert(summaryLog)
+        await repository.insert(summaryLog)
 
-        const result = await getRepository().findById(id)
+        const result = await repository.findById(id)
 
         expect(result).toBeTruthy()
         expect(result.id).toBe(id)
@@ -33,20 +45,20 @@ export const testFindBehaviour = (getRepository) => {
         const idA = `contract-summary-a-${randomUUID()}`
         const idB = `contract-summary-b-${randomUUID()}`
 
-        await getRepository().insert(
+        await repository.insert(
           buildSummaryLog(idA, {
             organisationId: 'org-1',
             registrationId: 'reg-1'
           })
         )
-        await getRepository().insert(
+        await repository.insert(
           buildSummaryLog(idB, {
             organisationId: 'org-2',
             registrationId: 'reg-2'
           })
         )
 
-        const result = await getRepository().findById(idA)
+        const result = await repository.findById(idA)
 
         expect(result.id).toBe(idA)
         expect(result.organisationId).toBe('org-1')
@@ -55,26 +67,24 @@ export const testFindBehaviour = (getRepository) => {
 
     describe('findById validation', () => {
       it('rejects null id', async () => {
-        await expect(getRepository().findById(null)).rejects.toThrow(/id/)
+        await expect(repository.findById(null)).rejects.toThrow(/id/)
       })
 
       it('rejects undefined id', async () => {
-        await expect(getRepository().findById(undefined)).rejects.toThrow(/id/)
+        await expect(repository.findById(undefined)).rejects.toThrow(/id/)
       })
 
       it('rejects empty string id', async () => {
-        await expect(getRepository().findById('')).rejects.toThrow(/id/)
+        await expect(repository.findById('')).rejects.toThrow(/id/)
       })
 
       it('rejects number id', async () => {
         const invalidNumberId = 123
-        await expect(getRepository().findById(invalidNumberId)).rejects.toThrow(
-          /id/
-        )
+        await expect(repository.findById(invalidNumberId)).rejects.toThrow(/id/)
       })
 
       it('rejects object id', async () => {
-        await expect(getRepository().findById({})).rejects.toThrow(/id/)
+        await expect(repository.findById({})).rejects.toThrow(/id/)
       })
     })
   })

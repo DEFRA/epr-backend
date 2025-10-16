@@ -1,24 +1,54 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
+/**
+ * @typedef {Object} RepositoriesPluginOptions
+ * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
+ */
+
 export const repositories = {
   plugin: {
     name: 'repositories',
     version: '1.0.0',
+    /**
+     * @param {import('#common/hapi-types.js').HapiServer} server
+     * @param {RepositoriesPluginOptions} [options]
+     */
     register: (server, options) => {
-      const decorateRepository = (repo) => {
-        server.decorate('request', 'summaryLogsRepository', () => repo, {
-          apply: true
+      /**
+       * Enables automatic per-request repository creation with logger injection.
+       * Uses lazy initialization to defer creation until first access, and caches
+       * the instance in request.app to ensure the same repository is used throughout
+       * the request lifecycle. This allows repositories to log using the request's
+       * logger without handlers needing to pass it through the dependency chain.
+       *
+       * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} repositoryFactory
+       */
+      const enablePerRequestRepositoryWithLogger = (repositoryFactory) => {
+        server.ext('onRequest', (request, h) => {
+          Object.defineProperty(request, 'summaryLogsRepository', {
+            get() {
+              if (!this.app.summaryLogsRepository) {
+                this.app.summaryLogsRepository = repositoryFactory(this.logger)
+              }
+              return this.app.summaryLogsRepository
+            },
+            enumerable: true,
+            configurable: true
+          })
+          return h.continue
         })
       }
 
-      if (options?.summaryLogsRepository) {
-        // Test override - no MongoDB dependency needed
-        decorateRepository(options.summaryLogsRepository)
+      const summaryLogsRepositoryFactory = options?.summaryLogsRepository
+        ? options.summaryLogsRepository
+        : null
+
+      if (summaryLogsRepositoryFactory) {
+        enablePerRequestRepositoryWithLogger(summaryLogsRepositoryFactory)
       } else {
-        // Production - require MongoDB plugin
         server.dependency('mongodb', () => {
-          const summaryLogsRepo = createSummaryLogsRepository(server.db)
-          decorateRepository(summaryLogsRepo)
+          const productionFactory = createSummaryLogsRepository(server.db)
+          enablePerRequestRepositoryWithLogger(productionFactory)
         })
       }
     }
