@@ -437,7 +437,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       )
     })
 
-    it('should not log an error when a conflict is detected', async () => {
+    it('should log an error when a state transition conflict is detected', async () => {
       const existingSummaryLog = {
         id: summaryLogId,
         status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -463,7 +463,21 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      expect(server.loggerMocks.error).not.toHaveBeenCalled()
+      expect(server.loggerMocks.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `Cannot transition summary log ${summaryLogId} from ${SUMMARY_LOG_STATUS.VALIDATING} to ${SUMMARY_LOG_STATUS.PREPROCESSING}`,
+          event: {
+            category: 'server',
+            action: 'response_failure',
+            reference: summaryLogId
+          },
+          http: {
+            response: {
+              status_code: StatusCodes.CONFLICT
+            }
+          }
+        })
+      )
     })
   })
 

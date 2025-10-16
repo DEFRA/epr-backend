@@ -2,6 +2,17 @@ import Joi from 'joi'
 
 import { UPLOAD_STATUS } from '#domain/summary-log.js'
 
+/**
+ * @typedef {Object} SummaryLogUpload
+ * @property {string} fileId
+ * @property {string} filename
+ * @property {string} fileStatus
+ * @property {string} [s3Bucket]
+ * @property {string} [s3Key]
+ * @property {boolean} [hasError]
+ * @property {string} [errorMessage]
+ */
+
 export const uploadCompletedPayloadSchema = Joi.object({
   form: Joi.object({
     summaryLogUpload: Joi.object({
