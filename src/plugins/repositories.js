@@ -15,11 +15,16 @@ export const repositories = {
      */
     register: (server, options) => {
       /**
+       * Enables automatic per-request repository creation with logger injection.
+       * Uses lazy initialization to defer creation until first access, and caches
+       * the instance in request.app to ensure the same repository is used throughout
+       * the request lifecycle. This allows repositories to log using the request's
+       * logger without handlers needing to pass it through the dependency chain.
+       *
        * @param {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} repositoryFactory
        */
-      const decorateRepository = (repositoryFactory) => {
+      const enablePerRequestRepositoryWithLogger = (repositoryFactory) => {
         server.ext('onRequest', (request, h) => {
-          // Lazily create repository on first access
           Object.defineProperty(request, 'summaryLogsRepository', {
             get() {
               if (!this.app.summaryLogsRepository) {
@@ -34,14 +39,16 @@ export const repositories = {
         })
       }
 
-      if (options?.summaryLogsRepository) {
-        decorateRepository(options.summaryLogsRepository)
+      const summaryLogsRepositoryFactory = options?.summaryLogsRepository
+        ? options.summaryLogsRepository
+        : null
+
+      if (summaryLogsRepositoryFactory) {
+        enablePerRequestRepositoryWithLogger(summaryLogsRepositoryFactory)
       } else {
         server.dependency('mongodb', () => {
-          const summaryLogsRepositoryFactory = createSummaryLogsRepository(
-            server.db
-          )
-          decorateRepository(summaryLogsRepositoryFactory)
+          const productionFactory = createSummaryLogsRepository(server.db)
+          enablePerRequestRepositoryWithLogger(productionFactory)
         })
       }
     }
