@@ -154,78 +154,53 @@ describe('summary-log domain', () => {
     })
 
     it('throws error for validating -> preprocessing transition', () => {
-      const summaryLog = {
-        id: 'log-303',
-        status: SUMMARY_LOG_STATUS.VALIDATING,
-        file: { id: 'file-6' }
-      }
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATING }
 
       expect(() =>
         transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
       ).toThrow(
-        'Cannot transition summary log log-303 from validating to preprocessing'
+        'Cannot transition summary log from validating to preprocessing'
       )
     })
 
     it('throws error with properties for validating -> rejected transition', () => {
-      const summaryLog = {
-        id: 'log-404',
-        status: SUMMARY_LOG_STATUS.VALIDATING,
-        file: { id: 'file-7' }
-      }
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATING }
 
       try {
         transitionStatus(summaryLog, SUMMARY_LOG_STATUS.REJECTED)
         expect.fail('Should have thrown')
       } catch (error) {
         expect(error.message).toBe(
-          'Cannot transition summary log log-404 from validating to rejected'
+          'Cannot transition summary log from validating to rejected'
         )
-        expect(error.summaryLogId).toBe('log-404')
         expect(error.fromStatus).toBe(SUMMARY_LOG_STATUS.VALIDATING)
         expect(error.toStatus).toBe(SUMMARY_LOG_STATUS.REJECTED)
       }
     })
 
     it('throws error for rejected -> preprocessing transition', () => {
-      const summaryLog = {
-        id: 'log-505',
-        status: SUMMARY_LOG_STATUS.REJECTED,
-        file: { id: 'file-8' }
-      }
+      const summaryLog = { status: SUMMARY_LOG_STATUS.REJECTED }
 
       expect(() =>
         transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
-      ).toThrow(
-        'Cannot transition summary log log-505 from rejected to preprocessing'
-      )
+      ).toThrow('Cannot transition summary log from rejected to preprocessing')
     })
 
     it('throws error for rejected -> validating transition', () => {
-      const summaryLog = {
-        id: 'log-606',
-        status: SUMMARY_LOG_STATUS.REJECTED,
-        file: { id: 'file-9' }
-      }
+      const summaryLog = { status: SUMMARY_LOG_STATUS.REJECTED }
 
       expect(() =>
         transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
-      ).toThrow(
-        'Cannot transition summary log log-606 from rejected to validating'
-      )
+      ).toThrow('Cannot transition summary log from rejected to validating')
     })
 
     it('throws error for unknown fromStatus', () => {
-      const summaryLog = {
-        id: 'log-707',
-        status: 'unknown-status',
-        file: { id: 'file-10' }
-      }
+      const summaryLog = { status: 'unknown-status' }
 
       expect(() =>
         transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
       ).toThrow(
-        'Cannot transition summary log log-707 from unknown-status to preprocessing'
+        'Cannot transition summary log from unknown-status to preprocessing'
       )
     })
   })

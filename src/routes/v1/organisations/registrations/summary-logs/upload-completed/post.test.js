@@ -465,7 +465,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       expect(server.loggerMocks.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `Cannot transition summary log ${summaryLogId} from ${SUMMARY_LOG_STATUS.VALIDATING} to ${SUMMARY_LOG_STATUS.PREPROCESSING}`,
+          message: `Cannot transition summary log from ${SUMMARY_LOG_STATUS.VALIDATING} to ${SUMMARY_LOG_STATUS.PREPROCESSING}`,
           event: {
             category: 'server',
             action: 'response_failure',
