@@ -4,5 +4,5 @@
  */
 
 /**
- * @typedef {(logger: import('#common/helpers/logging/logger.js').TypedLogger) => OrganisationsRepository} OrganisationsRepositoryFactory
+ * @typedef {() => OrganisationsRepository} OrganisationsRepositoryFactory
  */

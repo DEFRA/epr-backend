@@ -15,7 +15,7 @@ export const createInMemoryOrganisationsRepository = (
   // Store a deep-cloned snapshot of initial data to avoid external mutation.
   const storage = structuredClone(initialOrganisations)
 
-  return (logger) => ({
+  return () => ({
     async findAll() {
       // Return a deep clone to prevent consumers mutating internal state.
       return structuredClone(storage)
