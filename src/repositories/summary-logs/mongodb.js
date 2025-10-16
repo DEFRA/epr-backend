@@ -1,5 +1,9 @@
 import Boom from '@hapi/boom'
 import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/event.js'
+import {
   validateId,
   validateSummaryLogInsert,
   validateSummaryLogUpdate
@@ -9,9 +13,10 @@ const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
- * @returns {import('./port.js').SummaryLogsRepository}
+ * @param {import('mongodb').Db} db - MongoDB database instance
+ * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
-export const createSummaryLogsRepository = (db) => ({
+export const createSummaryLogsRepository = (db) => (logger) => ({
   async insert(summaryLog) {
     const validated = validateSummaryLogInsert(summaryLog)
     const { id, ...rest } = validated
@@ -48,9 +53,21 @@ export const createSummaryLogsRepository = (db) => ({
         throw Boom.notFound(`Summary log with id ${validatedId} not found`)
       }
 
-      throw Boom.conflict(
+      const conflictError = new Error(
         `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
       )
+
+      logger.error({
+        error: conflictError,
+        message: `Version conflict detected for summary log ${validatedId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: validatedId
+        }
+      })
+
+      throw Boom.conflict(conflictError.message)
     }
   },
 

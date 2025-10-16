@@ -7,7 +7,7 @@ import {
 import {
   determineFailureReason,
   determineStatusFromUpload,
-  isValidTransition,
+  transitionStatus,
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
@@ -16,6 +16,8 @@ import { uploadCompletedPayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
+/** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
 
 const buildFileData = (upload, existingFile = null) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
@@ -48,19 +50,41 @@ const buildSummaryLogData = (summaryLogId, upload, existingFile = null) => {
   return data
 }
 
+/**
+ * @param {SummaryLogsRepository} summaryLogsRepository
+ * @param {string} summaryLogId
+ * @param {SummaryLogUpload} upload
+ * @param {TypedLogger} logger
+ * @returns {Promise<string>} The new status
+ */
 const upsertSummaryLog = async (
   summaryLogsRepository,
   summaryLogId,
-  upload
+  upload,
+  logger
 ) => {
   const existingSummaryLog = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
   if (existingSummaryLog) {
-    if (!isValidTransition(existingSummaryLog.status, newStatus)) {
-      throw Boom.conflict(
-        `Cannot transition summary log ${summaryLogId} from ${existingSummaryLog.status} to ${newStatus}`
-      )
+    try {
+      transitionStatus(existingSummaryLog, newStatus)
+    } catch (error) {
+      logger.error({
+        message: error.message,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
+          reference: summaryLogId
+        },
+        http: {
+          response: {
+            status_code: StatusCodes.CONFLICT
+          }
+        }
+      })
+
+      throw Boom.conflict(error.message)
     }
 
     const updates = buildSummaryLogData(
@@ -122,7 +146,8 @@ export const summaryLogsUploadCompleted = {
       const status = await upsertSummaryLog(
         summaryLogsRepository,
         summaryLogId,
-        summaryLogUpload
+        summaryLogUpload,
+        logger
       )
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
