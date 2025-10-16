@@ -29,6 +29,19 @@ const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.VALIDATING]: []
 }
 
+class InvalidTransitionError extends Error {
+  constructor(fromStatus, toStatus) {
+    super(`Cannot transition summary log from ${fromStatus} to ${toStatus}`)
+    this.name = 'InvalidTransitionError'
+    this.fromStatus = fromStatus
+    this.toStatus = toStatus
+  }
+}
+
+/**
+ * @param {string} uploadStatus
+ * @returns {string}
+ */
 export const determineStatusFromUpload = (uploadStatus) => {
   const status = UploadStatusToSummaryLogStatusMap[uploadStatus]
   if (!status) {
@@ -37,15 +50,37 @@ export const determineStatusFromUpload = (uploadStatus) => {
   return status
 }
 
-export const isValidTransition = (fromStatus, toStatus) => {
+/**
+ * @template {{status?: string}} T
+ * @param {T} summaryLog
+ * @param {string} newStatus
+ * @returns {T & {status: string}}
+ * @throws {InvalidTransitionError}
+ */
+export const transitionStatus = (summaryLog, newStatus) => {
+  const fromStatus = summaryLog?.status
+
   if (!fromStatus) {
-    return true
+    return { ...summaryLog, status: newStatus }
   }
 
   const allowedTransitions = VALID_TRANSITIONS[fromStatus]
-  return allowedTransitions ? allowedTransitions.includes(toStatus) : false
+  const isValid = allowedTransitions
+    ? allowedTransitions.includes(newStatus)
+    : false
+
+  if (!isValid) {
+    throw new InvalidTransitionError(fromStatus, newStatus)
+  }
+
+  return { ...summaryLog, status: newStatus }
 }
 
+/**
+ * @param {string} status
+ * @param {string} [errorMessage]
+ * @returns {string | undefined}
+ */
 export const determineFailureReason = (status, errorMessage) => {
   if (status === SUMMARY_LOG_STATUS.REJECTED) {
     return (
@@ -56,4 +91,7 @@ export const determineFailureReason = (status, errorMessage) => {
   return undefined
 }
 
+/**
+ * @returns {string}
+ */
 export const getDefaultStatus = () => SUMMARY_LOG_STATUS.PREPROCESSING
