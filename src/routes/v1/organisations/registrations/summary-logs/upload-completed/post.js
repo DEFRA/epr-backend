@@ -7,7 +7,7 @@ import {
 import {
   determineFailureReason,
   determineStatusFromUpload,
-  isValidTransition,
+  transitionStatus,
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-log.js'
@@ -67,15 +67,15 @@ const upsertSummaryLog = async (
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
   if (existingSummaryLog) {
-    if (!isValidTransition(existingSummaryLog.status, newStatus)) {
-      const errorMessage = `Cannot transition summary log ${summaryLogId} from ${existingSummaryLog.status} to ${newStatus}`
-
+    try {
+      transitionStatus(existingSummaryLog, newStatus)
+    } catch (error) {
       logger.error({
-        message: errorMessage,
+        message: error.message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE,
-          reference: summaryLogId
+          reference: error.summaryLogId
         },
         http: {
           response: {
@@ -84,7 +84,7 @@ const upsertSummaryLog = async (
         }
       })
 
-      throw Boom.conflict(errorMessage)
+      throw Boom.conflict(error.message)
     }
 
     const updates = buildSummaryLogData(

@@ -29,6 +29,18 @@ const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.VALIDATING]: []
 }
 
+class InvalidTransitionError extends Error {
+  constructor(summaryLogId, fromStatus, toStatus) {
+    super(
+      `Cannot transition summary log ${summaryLogId} from ${fromStatus} to ${toStatus}`
+    )
+    this.name = 'InvalidTransitionError'
+    this.summaryLogId = summaryLogId
+    this.fromStatus = fromStatus
+    this.toStatus = toStatus
+  }
+}
+
 export const determineStatusFromUpload = (uploadStatus) => {
   const status = UploadStatusToSummaryLogStatusMap[uploadStatus]
   if (!status) {
@@ -37,13 +49,23 @@ export const determineStatusFromUpload = (uploadStatus) => {
   return status
 }
 
-export const isValidTransition = (fromStatus, toStatus) => {
+export const transitionStatus = (summaryLog, newStatus) => {
+  const fromStatus = summaryLog?.status
+
   if (!fromStatus) {
-    return true
+    return { ...summaryLog, status: newStatus }
   }
 
   const allowedTransitions = VALID_TRANSITIONS[fromStatus]
-  return allowedTransitions ? allowedTransitions.includes(toStatus) : false
+  const isValid = allowedTransitions
+    ? allowedTransitions.includes(newStatus)
+    : false
+
+  if (!isValid) {
+    throw new InvalidTransitionError(summaryLog.id, fromStatus, newStatus)
+  }
+
+  return { ...summaryLog, status: newStatus }
 }
 
 export const determineFailureReason = (status, errorMessage) => {
