@@ -1,4 +1,3 @@
-// filepath: \wsl.localhost\Ubuntu-22.04\home\tom\Projects\defra\epr-backend\src\repositories\organistions\mongodb.test.js
 import { describe, it, expect, vi } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
 
@@ -14,7 +13,7 @@ describe('organisations mongodb repository', () => {
     const repo = createOrganisationsRepository(db)
     const result = await repo.findAll()
 
-    expect(collection).toHaveBeenCalledWith('organisations')
+    expect(collection).toHaveBeenCalledWith('epr-organisations')
     expect(find).toHaveBeenCalled()
     expect(toArray).toHaveBeenCalled()
     expect(result).toEqual([{ _id: 'org-1', name: 'Org One' }])

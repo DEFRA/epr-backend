@@ -1,5 +1,5 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organistions/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
 export const repositories = {
   plugin: {

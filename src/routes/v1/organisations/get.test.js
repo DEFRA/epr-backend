@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createServer } from '#server/server.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 
-/** @typedef {import('#repositories/organistions/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 describe('/v1/organisations route', () => {
   describe('success path', () => {
