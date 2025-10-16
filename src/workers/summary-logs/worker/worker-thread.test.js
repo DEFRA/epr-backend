@@ -5,9 +5,9 @@ import { createMockConfig } from '#test/helpers/mock-config.js'
 import { summaryLogsValidatorWorker } from './worker.js'
 import summaryLogsValidatorWorkerThread from './worker-thread.js'
 
+vi.mock('../../../config.js', () => createMockConfig())
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
-vi.mock('../../../config.js', () => createMockConfig())
 vi.mock('./worker.js')
 
 describe('summaryLogsValidatorWorkerThread', () => {
@@ -36,7 +36,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
 
     vi.mocked(createMongoClient).mockResolvedValue(mockMongoClient)
     vi.mocked(createSummaryLogsRepository).mockReturnValue(
-      mockSummaryLogsRepository
+      () => mockSummaryLogsRepository
     )
     vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
   })
@@ -60,7 +60,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     expect(mockMongoClient.db).toHaveBeenCalledWith('test-db')
   })
 
-  it('should create summary logs repository', async () => {
+  it('should create summary logs repository with db', async () => {
     await summaryLogsValidatorWorkerThread({ summaryLog })
 
     expect(createSummaryLogsRepository).toHaveBeenCalledWith(mockDb)

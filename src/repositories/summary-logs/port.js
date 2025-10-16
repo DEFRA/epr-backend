@@ -4,3 +4,7 @@
  * @property {(id: string, version: number, updates: Object) => Promise<void>} update
  * @property {(id: string) => Promise<Object|null>} findById
  */
+
+/**
+ * @typedef {(logger: import('#common/helpers/logging/logger.js').TypedLogger) => SummaryLogsRepository} SummaryLogsRepositoryFactory
+ */

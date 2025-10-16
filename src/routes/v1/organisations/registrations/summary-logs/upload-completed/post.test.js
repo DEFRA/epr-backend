@@ -120,7 +120,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository
+        summaryLogsRepository: (logger) => summaryLogsRepository
       },
       workers: {
         summaryLogsValidator
@@ -469,11 +469,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
   describe('state transitions', () => {
     let transitionServer
-    let inMemoryRepository
 
     beforeAll(async () => {
-      inMemoryRepository = createInMemorySummaryLogsRepository()
-
       const transitionValidator = {
         validate: vi.fn()
       }
@@ -482,7 +479,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
       transitionServer = await createTestServer({
         repositories: {
-          summaryLogsRepository: inMemoryRepository
+          summaryLogsRepository: createInMemorySummaryLogsRepository()
         },
         workers: {
           summaryLogsValidator: transitionValidator

@@ -4,21 +4,23 @@ import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
 describe('MongoDB summary logs repository', () => {
   let server
-  let repository
+  let summaryLogsRepositoryFactory
 
   beforeAll(async () => {
     const { createServer } = await import('#server/server.js')
     server = await createServer()
     await server.initialize()
 
-    repository = createSummaryLogsRepository(server.db)
+    summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
   })
 
   afterAll(async () => {
     await server.stop()
   })
 
-  testSummaryLogsRepositoryContract(() => repository)
+  testSummaryLogsRepositoryContract((logger) =>
+    summaryLogsRepositoryFactory(logger)
+  )
 
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
@@ -32,10 +34,12 @@ describe('MongoDB summary logs repository', () => {
         })
       }
 
-      const testRepo = createSummaryLogsRepository(mockDb)
+      const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+      const repositoryFactory = createSummaryLogsRepository(mockDb)
+      const repository = repositoryFactory(mockLogger)
 
       await expect(
-        testRepo.insert({
+        repository.insert({
           id: `test-${randomUUID()}`,
           status: 'validating',
           file: {

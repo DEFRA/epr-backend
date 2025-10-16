@@ -11,10 +11,9 @@ describe('POST upload-completed validation', () => {
   let server
 
   beforeAll(async () => {
-    const repository = createInMemorySummaryLogsRepository()
     server = await createServer({
       repositories: {
-        summaryLogsRepository: repository
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
