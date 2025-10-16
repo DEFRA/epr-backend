@@ -18,12 +18,6 @@ const updateAndFetch = async (repository, id, version, updates) => {
   return repository.findById(id)
 }
 
-const expectConflictError = (promise) =>
-  expect(promise).rejects.toMatchObject({
-    isBoom: true,
-    output: { statusCode: 409 }
-  })
-
 export const testOptimisticConcurrency = (repositoryFactory) => {
   describe('optimistic concurrency', () => {
     let repository
@@ -74,9 +68,12 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
           status: 'validating'
         })
 
-        await expectConflictError(
+        await expect(
           repository.update(id, initial.version, { status: 'rejected' })
-        )
+        ).rejects.toMatchObject({
+          isBoom: true,
+          output: { statusCode: 409 }
+        })
       })
 
       it('allows sequential updates with correct versions', async () => {
