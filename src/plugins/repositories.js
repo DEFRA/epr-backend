@@ -17,26 +17,23 @@ export const repositories = {
      */
     register: (server, options) => {
       /**
-       * Enables automatic per-request repository creation with logger injection.
+       * Registers a per-request dependency with logger injection.
        * Uses lazy initialization to defer creation until first access, and caches
-       * the instance in request.app to ensure the same repository is used throughout
-       * the request lifecycle. This allows repositories to log using the request's
+       * the instance in request.app to ensure the same instance is used throughout
+       * the request lifecycle. This allows dependencies to log using the request's
        * logger without handlers needing to pass it through the dependency chain.
        *
-       * @param {string} repositoryName
-       * @param {Function} repositoryFactory
+       * @param {string} name - Property name to add to the request object
+       * @param {Function} factory - Factory function that accepts a logger and returns the dependency
        */
-      const enablePerRequestRepositoryWithLogger = (
-        repositoryName,
-        repositoryFactory
-      ) => {
+      const registerPerRequest = (name, factory) => {
         server.ext('onRequest', (request, h) => {
-          Object.defineProperty(request, repositoryName, {
+          Object.defineProperty(request, name, {
             get() {
-              if (!this.app[repositoryName]) {
-                this.app[repositoryName] = repositoryFactory(this.logger)
+              if (!this.app[name]) {
+                this.app[name] = factory(this.logger)
               }
-              return this.app[repositoryName]
+              return this.app[name]
             },
             enumerable: true,
             configurable: true
@@ -50,17 +47,14 @@ export const repositories = {
         : null
 
       if (summaryLogsRepositoryFactory) {
-        enablePerRequestRepositoryWithLogger(
+        registerPerRequest(
           'summaryLogsRepository',
           summaryLogsRepositoryFactory
         )
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createSummaryLogsRepository(server.db)
-          enablePerRequestRepositoryWithLogger(
-            'summaryLogsRepository',
-            productionFactory
-          )
+          registerPerRequest('summaryLogsRepository', productionFactory)
         })
       }
 
@@ -69,17 +63,14 @@ export const repositories = {
         : null
 
       if (organisationsRepositoryFactory) {
-        enablePerRequestRepositoryWithLogger(
+        registerPerRequest(
           'organisationsRepository',
           organisationsRepositoryFactory
         )
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createOrganisationsRepository(server.db)
-          enablePerRequestRepositoryWithLogger(
-            'organisationsRepository',
-            productionFactory
-          )
+          registerPerRequest('organisationsRepository', productionFactory)
         })
       }
     }
