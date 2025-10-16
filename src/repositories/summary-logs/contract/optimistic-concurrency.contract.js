@@ -138,6 +138,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
           status: 'validating'
         })
 
+        const expectedCurrentVersion = 2
         await expect(
           repository.update(id, initial.version, { status: 'rejected' })
         ).rejects.toMatchObject({
@@ -145,9 +146,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
           output: {
             statusCode: 409,
             payload: {
-              message: expect.stringMatching(
-                /version.*conflict|concurrent.*update|stale.*version/i
-              )
+              message: `Version conflict: attempted to update with version ${initial.version} but current version is ${expectedCurrentVersion}`
             }
           }
         })
@@ -219,9 +218,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             error: expect.any(Error),
-            message: expect.stringMatching(
-              /version.*conflict|concurrent.*update/i
-            ),
+            message: `Version conflict detected for summary log ${id}`,
             event: {
               category: 'database',
               action: 'version_conflict_detected',
@@ -261,8 +258,9 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
 
         const logCall = logger.error.mock.calls[0][0]
         expect(logCall.error).toBeInstanceOf(Error)
-        expect(logCall.error.message).toMatch(
-          /version.*conflict|concurrent.*update/i
+        const expectedVersion = 2
+        expect(logCall.error.message).toBe(
+          `Version conflict: attempted to update with version ${initial.version} but current version is ${expectedVersion}`
         )
       })
     })
