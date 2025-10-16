@@ -25,6 +25,22 @@ Backend APIs for: Packaging Extended Producer Responsibilities
 
 _The application runs at `https://epr-backend.{env}.cdp-int.defra.cloud`, where `{env}` is one of `dev|test|prod`_
 
+## Docker
+
+Run locally with docker
+
+```sh
+docker compose up
+```
+
+Run the frontend with the backend
+
+```sh
+docker compose --profile all up
+```
+
+Note: this requires `GOVUK_NOTIFY_API_KEY` envvar
+
 ## Contributing
 
 If you intend to contribute to this repository and/or run the application locally, please [see the contributing guidance](./CONTRIBUTING.md).

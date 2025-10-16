@@ -22,20 +22,12 @@ services:
     networks:
       - cdp-tenant
 
-  redis:
-    image: redis:7.2.3-alpine3.18
-    ports:
-      - '6379:6379'
-    restart: always
-    networks:
-      - cdp-tenant
-
   mongodb:
     image: mongo:6.0.13
     networks:
       - cdp-tenant
     ports:
-      - '27017:27017'
+      - "27017:27017"
     volumes:
       - mongodb-data:/data
       - ./mongodb-backups:/backups
@@ -43,28 +35,39 @@ services:
 
   ################################################################################
 
-  # frontend:
-  #   image: defradigital/frontend:${FRONTEND_VERSION:-latest}
-  #   ports:
-  #     - '3000:3000'
-  #   links:
-  #     - 'localstack:localstack'
-  #     - 'redis:redis'
-  #   depends_on:
-  #     localstack:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_started
-  #   env_file:
-  #     - 'compose/aws.env'
-  #   environment:
-  #     PORT: 3000
-  #     NODE_ENV: development
-  #     REDIS_HOST: redis
-  #     LOCALSTACK_ENDPOINT: http://localstack:4566
-  #     USE_SINGLE_INSTANCE_CACHE: true
-  #   networks:
-  #     - cdp-tenant
+  redis:
+    profiles: ['all']
+    image: redis:8.2.2-alpine3.22
+    ports:
+      - "6379:6379"
+    restart: always
+    networks:
+      - cdp-tenant
+
+  frontend:
+    profiles: ['all']
+    image: defradigital/epr-frontend:${FRONTEND_VERSION:-latest}
+    ports:
+      - '3000:3000'
+    links:
+      - 'localstack:localstack'
+      - 'redis:redis'
+    depends_on:
+      localstack:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - 'compose/aws.env'
+    environment:
+      PORT: 3000
+      NODE_ENV: development
+      EPR_BACKEND_URL: http://epr-backend:3001
+      LOCALSTACK_ENDPOINT: http://localstack:4566
+      REDIS_HOST: redis
+      USE_SINGLE_INSTANCE_CACHE: true
+    networks:
+      - cdp-tenant
 
   epr-backend:
     build:
