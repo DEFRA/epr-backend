@@ -1,4 +1,5 @@
 import { createMongoClient } from '#common/helpers/mongo-client.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
 import { config } from '../../../config.js'
@@ -16,7 +17,7 @@ export default async function summaryLogsValidatorWorkerThread({ summaryLog }) {
   try {
     const db = mongoClient.db(databaseName)
 
-    const summaryLogsRepository = createSummaryLogsRepository(db)
+    const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
 
     await summaryLogsValidatorWorker({ summaryLogsRepository, summaryLog })
   } finally {

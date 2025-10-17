@@ -120,7 +120,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository
+        summaryLogsRepository: (logger) => summaryLogsRepository
       },
       workers: {
         summaryLogsValidator
@@ -437,7 +437,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       )
     })
 
-    it('should not log an error when a conflict is detected', async () => {
+    it('should log an error when a state transition conflict is detected', async () => {
       const existingSummaryLog = {
         id: summaryLogId,
         status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -463,17 +463,28 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      expect(server.loggerMocks.error).not.toHaveBeenCalled()
+      expect(server.loggerMocks.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: `Cannot transition summary log from ${SUMMARY_LOG_STATUS.VALIDATING} to ${SUMMARY_LOG_STATUS.PREPROCESSING}`,
+          event: {
+            category: 'server',
+            action: 'response_failure',
+            reference: summaryLogId
+          },
+          http: {
+            response: {
+              status_code: StatusCodes.CONFLICT
+            }
+          }
+        })
+      )
     })
   })
 
   describe('state transitions', () => {
     let transitionServer
-    let inMemoryRepository
 
     beforeAll(async () => {
-      inMemoryRepository = createInMemorySummaryLogsRepository()
-
       const transitionValidator = {
         validate: vi.fn()
       }
@@ -482,7 +493,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
       transitionServer = await createTestServer({
         repositories: {
-          summaryLogsRepository: inMemoryRepository
+          summaryLogsRepository: createInMemorySummaryLogsRepository()
         },
         workers: {
           summaryLogsValidator: transitionValidator

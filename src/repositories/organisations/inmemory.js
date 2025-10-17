@@ -7,7 +7,7 @@
  * Ensures data isolation by deep-cloning on store and on read.
  *
  * @param {Organisation[]} [initialOrganisations=[]]
- * @returns {import('./port.js').OrganisationsRepository}
+ * @returns {import('./port.js').OrganisationsRepositoryFactory}
  */
 export const createInMemoryOrganisationsRepository = (
   initialOrganisations = []
@@ -15,10 +15,10 @@ export const createInMemoryOrganisationsRepository = (
   // Store a deep-cloned snapshot of initial data to avoid external mutation.
   const storage = structuredClone(initialOrganisations)
 
-  return {
+  return () => ({
     async findAll() {
       // Return a deep clone to prevent consumers mutating internal state.
       return structuredClone(storage)
     }
-  }
+  })
 }

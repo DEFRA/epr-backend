@@ -8,7 +8,8 @@ describe('In-memory organisations repository', () => {
       { _id: 'org-2', name: 'Org Two' }
     ]
 
-    const repo = createInMemoryOrganisationsRepository(initial)
+    const repositoryFactory = createInMemoryOrganisationsRepository(initial)
+    const repo = repositoryFactory()
 
     const result = await repo.findAll()
     expect(result).toEqual(initial)
@@ -21,7 +22,8 @@ describe('In-memory organisations repository', () => {
         { _id: 'org-2', name: 'Second' }
       ]
 
-      const repo = createInMemoryOrganisationsRepository(initial)
+      const repositoryFactory = createInMemoryOrganisationsRepository(initial)
+      const repo = repositoryFactory()
 
       const firstRead = await repo.findAll()
       // mutate returned array and objects
@@ -38,7 +40,8 @@ describe('In-memory organisations repository', () => {
     it('stores independent copies so input mutations do not affect storage', async () => {
       const initial = [{ _id: 'org-1', name: 'Original' }]
 
-      const repo = createInMemoryOrganisationsRepository(initial)
+      const repositoryFactory = createInMemoryOrganisationsRepository(initial)
+      const repo = repositoryFactory()
 
       // mutate input after repo creation
       initial[0].name = 'Changed'

@@ -10,7 +10,8 @@ describe('organisations mongodb repository', () => {
     const collection = vi.fn(() => ({ find }))
     const db = { collection }
 
-    const repo = createOrganisationsRepository(db)
+    const repositoryFactory = createOrganisationsRepository(db)
+    const repo = repositoryFactory()
     const result = await repo.findAll()
 
     expect(collection).toHaveBeenCalledWith('epr-organisations')
