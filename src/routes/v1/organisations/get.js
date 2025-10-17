@@ -11,7 +11,7 @@ export const organisationsGet = {
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ organisationsRepository, params }, h) => {
+  handler: async ({ organisationsRepository }, h) => {
     const organisations = await organisationsRepository.findAll()
 
     if (!organisations) {
