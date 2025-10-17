@@ -7,7 +7,7 @@ vi.mock('#workers/summary-logs/worker/worker.js')
 describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsRepository
   let summaryLogsValidator
-  let summaryLog
+  let validationRequest
 
   beforeEach(() => {
     summaryLogsRepository = {
@@ -18,9 +18,12 @@ describe('createInlineSummaryLogsValidator', () => {
       summaryLogsRepository
     )
 
-    summaryLog = {
+    validationRequest = {
       id: 'summary-log-123',
-      status: 'validating'
+      version: 1,
+      summaryLog: {
+        status: 'validating'
+      }
     }
 
     vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
@@ -31,17 +34,19 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should call worker with repository and summary log', async () => {
-    await summaryLogsValidator.validate(summaryLog)
+    await summaryLogsValidator.validate(validationRequest)
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
       summaryLogsRepository,
-      summaryLog
+      id: validationRequest.id,
+      version: validationRequest.version,
+      summaryLog: validationRequest.summaryLog
     })
   })
 
   it('should not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(summaryLog)
+      summaryLogsValidator.validate(validationRequest)
     ).resolves.toBeUndefined()
   })
 
@@ -51,7 +56,7 @@ describe('createInlineSummaryLogsValidator', () => {
     )
 
     await expect(
-      summaryLogsValidator.validate(summaryLog)
+      summaryLogsValidator.validate(validationRequest)
     ).resolves.toBeUndefined()
   })
 })

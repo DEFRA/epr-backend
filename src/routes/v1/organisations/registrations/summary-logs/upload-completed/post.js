@@ -56,7 +56,7 @@ const buildSummaryLogData = (upload, existingFile = null) => {
  * @param {TypedLogger} logger
  * @returns {Promise<string>} The new status
  */
-const upsertSummaryLog = async (
+const updateStatusBasedOnUpload = async (
   summaryLogsRepository,
   summaryLogId,
   upload,
@@ -135,7 +135,7 @@ export const summaryLogsUploadCompleted = {
     const { summaryLogUpload } = payload.form
 
     try {
-      const status = await upsertSummaryLog(
+      const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,
         summaryLogUpload,
