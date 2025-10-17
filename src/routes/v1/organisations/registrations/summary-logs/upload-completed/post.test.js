@@ -182,7 +182,18 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       payload
     })
 
-    expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLog)
+    expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
+      status: SUMMARY_LOG_STATUS.VALIDATING,
+      file: {
+        id: fileId,
+        name: filename,
+        status: fileStatus,
+        s3: {
+          bucket: s3Bucket,
+          key: s3Key
+        }
+      }
+    })
   })
 
   it('should add expected summary log to repository with failure reason when uploaded file was rejected', async () => {
@@ -197,8 +208,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       payload
     })
 
-    expect(summaryLogsRepository.insert).toHaveBeenCalledWith({
-      id: summaryLogId,
+    expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
       status: SUMMARY_LOG_STATUS.REJECTED,
       file: {
         id: fileId,
@@ -390,8 +400,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         payload
       })
 
-      expect(summaryLogsRepository.insert).toHaveBeenCalledWith({
-        id: summaryLogId,
+      expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
         status: SUMMARY_LOG_STATUS.REJECTED,
         file: {
           id: fileId,

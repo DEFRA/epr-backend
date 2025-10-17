@@ -32,7 +32,7 @@ describe('summaryLogsValidatorWorker', () => {
     const repositoryFactory = createInMemorySummaryLogsRepository()
     summaryLogsRepository = repositoryFactory(mockLogger)
 
-    const summaryLogData = buildSummaryLog('summary-log-123', {
+    const summaryLogData = buildSummaryLog({
       status: SUMMARY_LOG_STATUS.VALIDATING,
       file: buildFile({
         id: 'file-123',
@@ -45,7 +45,7 @@ describe('summaryLogsValidatorWorker', () => {
       })
     })
 
-    await summaryLogsRepository.insert(summaryLogData)
+    await summaryLogsRepository.insert('summary-log-123', summaryLogData)
     summaryLog = await summaryLogsRepository.findById('summary-log-123')
   })
 

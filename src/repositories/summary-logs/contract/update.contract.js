@@ -23,12 +23,12 @@ export const testUpdateBehaviour = (repositoryFactory) => {
     describe('basic behaviour', () => {
       it('updates an existing summary log', async () => {
         const id = `contract-update-${randomUUID()}`
-        const summaryLog = buildSummaryLog(id, {
+        const summaryLog = buildSummaryLog({
           status: 'preprocessing',
           file: buildPendingFile({ name: 'scanning.xlsx' })
         })
 
-        await repository.insert(summaryLog)
+        await repository.insert(id, summaryLog)
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
@@ -58,14 +58,14 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
       it('preserves existing fields not included in update', async () => {
         const id = `contract-preserve-${randomUUID()}`
-        const summaryLog = buildSummaryLog(id, {
+        const summaryLog = buildSummaryLog({
           status: 'preprocessing',
           organisationId: 'org-123',
           registrationId: 'reg-456',
           file: buildPendingFile()
         })
 
-        await repository.insert(summaryLog)
+        await repository.insert(id, summaryLog)
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
@@ -116,8 +116,8 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       describe('updates parameter', () => {
         it('strips unknown fields from updates', async () => {
           const id = `contract-strip-update-${randomUUID()}`
-          const summaryLog = buildSummaryLog(id)
-          await repository.insert(summaryLog)
+          const summaryLog = buildSummaryLog()
+          await repository.insert(id, summaryLog)
 
           await repository.update(id, 1, {
             status: 'validating',
@@ -133,8 +133,8 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
         it('rejects update with invalid status', async () => {
           const id = `contract-invalid-update-status-${randomUUID()}`
-          const summaryLog = buildSummaryLog(id)
-          await repository.insert(summaryLog)
+          const summaryLog = buildSummaryLog()
+          await repository.insert(id, summaryLog)
 
           await expect(
             repository.update(id, 1, { status: 'invalid-status' })
@@ -143,8 +143,8 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
         it('rejects update with null status', async () => {
           const id = `contract-null-status-${randomUUID()}`
-          const summaryLog = buildSummaryLog(id)
-          await repository.insert(summaryLog)
+          const summaryLog = buildSummaryLog()
+          await repository.insert(id, summaryLog)
 
           await expect(
             repository.update(id, 1, { status: null })
@@ -153,8 +153,8 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
         it('rejects update with empty file object', async () => {
           const id = `contract-empty-file-${randomUUID()}`
-          const summaryLog = buildSummaryLog(id)
-          await repository.insert(summaryLog)
+          const summaryLog = buildSummaryLog()
+          await repository.insert(id, summaryLog)
 
           await expect(repository.update(id, 1, { file: {} })).rejects.toThrow(
             /file/
@@ -163,8 +163,8 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
         it('rejects update with file missing required fields', async () => {
           const id = `contract-file-missing-fields-${randomUUID()}`
-          const summaryLog = buildSummaryLog(id)
-          await repository.insert(summaryLog)
+          const summaryLog = buildSummaryLog()
+          await repository.insert(id, summaryLog)
 
           await expect(
             repository.update(id, 1, {

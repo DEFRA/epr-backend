@@ -17,17 +17,17 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
  */
 export const createSummaryLogsRepository = (db) => (logger) => ({
-  async insert(summaryLog) {
-    const validated = validateSummaryLogInsert(summaryLog)
-    const { id, ...rest } = validated
+  async insert(id, summaryLog) {
+    const validatedId = validateId(id)
+    const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
 
     try {
       await db
         .collection(COLLECTION_NAME)
-        .insertOne({ _id: id, version: 1, ...rest })
+        .insertOne({ _id: validatedId, version: 1, ...validatedSummaryLog })
     } catch (error) {
       if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-        throw Boom.conflict(`Summary log with id ${id} already exists`)
+        throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
       }
       throw error
     }

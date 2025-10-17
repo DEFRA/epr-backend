@@ -12,11 +12,11 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id, {
+      const summaryLog = buildSummaryLog({
         file: buildFile({ name: 'original.xlsx' })
       })
 
-      await repository.insert(summaryLog)
+      await repository.insert(id, summaryLog)
 
       const retrieved = await repository.findById(id)
       retrieved.file.name = 'modified.xlsx'
@@ -32,11 +32,11 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id, {
+      const summaryLog = buildSummaryLog({
         file: buildFile({ name: 'original.xlsx' })
       })
 
-      await repository.insert(summaryLog)
+      await repository.insert(id, summaryLog)
 
       summaryLog.file.name = 'mutated.xlsx'
       summaryLog.file.s3.key = 'mutated-key'
@@ -51,9 +51,9 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id)
+      const summaryLog = buildSummaryLog()
 
-      await repository.insert(summaryLog)
+      await repository.insert(id, summaryLog)
 
       const updates = {
         status: 'validating',

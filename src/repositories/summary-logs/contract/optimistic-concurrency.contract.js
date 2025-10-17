@@ -8,8 +8,8 @@ const createAndInsertSummaryLog = async (
   overrides = {}
 ) => {
   const id = `${idPrefix}-${randomUUID()}`
-  const summaryLog = buildSummaryLog(id, overrides)
-  await repository.insert(summaryLog)
+  const summaryLog = buildSummaryLog(overrides)
+  await repository.insert(id, summaryLog)
   return { id, initial: await repository.findById(id) }
 }
 

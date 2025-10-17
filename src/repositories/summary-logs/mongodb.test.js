@@ -39,8 +39,7 @@ describe('MongoDB summary logs repository', () => {
       const repository = repositoryFactory(mockLogger)
 
       await expect(
-        repository.insert({
-          id: `test-${randomUUID()}`,
+        repository.insert(`test-${randomUUID()}`, {
           status: 'validating',
           file: {
             id: `file-${randomUUID()}`,

@@ -26,11 +26,11 @@ export const testFindBehaviour = (repositoryFactory) => {
       it('retrieves a log by ID after insert', async () => {
         const id = `contract-summary-${randomUUID()}`
         const fileId = `contract-file-${randomUUID()}`
-        const summaryLog = buildSummaryLog(id, {
+        const summaryLog = buildSummaryLog({
           file: buildFile({ id: fileId })
         })
 
-        await repository.insert(summaryLog)
+        await repository.insert(id, summaryLog)
 
         const result = await repository.findById(id)
 
@@ -46,13 +46,15 @@ export const testFindBehaviour = (repositoryFactory) => {
         const idB = `contract-summary-b-${randomUUID()}`
 
         await repository.insert(
-          buildSummaryLog(idA, {
+          idA,
+          buildSummaryLog({
             organisationId: 'org-1',
             registrationId: 'reg-1'
           })
         )
         await repository.insert(
-          buildSummaryLog(idB, {
+          idB,
+          buildSummaryLog({
             organisationId: 'org-2',
             registrationId: 'reg-2'
           })

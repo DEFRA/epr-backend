@@ -16,16 +16,18 @@ export const createInMemorySummaryLogsRepository = () => {
   const storage = new Map()
 
   return (logger) => ({
-    async insert(summaryLog) {
-      const validated = validateSummaryLogInsert(summaryLog)
+    async insert(id, summaryLog) {
+      const validatedId = validateId(id)
+      const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
 
-      if (storage.has(validated.id)) {
-        throw Boom.conflict(
-          `Summary log with id ${validated.id} already exists`
-        )
+      if (storage.has(validatedId)) {
+        throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
       }
 
-      storage.set(validated.id, structuredClone({ ...validated, version: 1 }))
+      storage.set(
+        validatedId,
+        structuredClone({ id: validatedId, version: 1, ...validatedSummaryLog })
+      )
     },
 
     async update(id, version, updates) {

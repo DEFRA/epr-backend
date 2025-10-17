@@ -36,7 +36,6 @@ const fileSchema = Joi.object({
 })
 
 export const summaryLogInsertSchema = Joi.object({
-  id: idSchema,
   status: statusSchema.required(),
   failureReason: Joi.string().optional(),
   file: fileSchema.required(),

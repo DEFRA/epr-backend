@@ -33,12 +33,11 @@ const buildFileData = (upload, existingFile = null) => {
   return fileData
 }
 
-const buildSummaryLogData = (summaryLogId, upload, existingFile = null) => {
+const buildSummaryLogData = (upload, existingFile = null) => {
   const status = determineStatusFromUpload(upload.fileStatus)
   const failureReason = determineFailureReason(status, upload.errorMessage)
 
   const data = {
-    id: summaryLogId,
     status,
     file: buildFileData(upload, existingFile)
   }
@@ -87,19 +86,15 @@ const upsertSummaryLog = async (
       throw Boom.conflict(error.message)
     }
 
-    const updates = buildSummaryLogData(
-      summaryLogId,
-      upload,
-      existingSummaryLog.file
-    )
+    const updates = buildSummaryLogData(upload, existingSummaryLog.file)
     await summaryLogsRepository.update(
       summaryLogId,
       existingSummaryLog.version,
       updates
     )
   } else {
-    const summaryLog = buildSummaryLogData(summaryLogId, upload)
-    await summaryLogsRepository.insert(summaryLog)
+    const summaryLog = buildSummaryLogData(upload)
+    await summaryLogsRepository.insert(summaryLogId, summaryLog)
   }
 
   return newStatus
