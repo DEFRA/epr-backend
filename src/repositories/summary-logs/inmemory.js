@@ -24,10 +24,10 @@ export const createInMemorySummaryLogsRepository = () => {
         throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
       }
 
-      storage.set(
-        validatedId,
-        structuredClone({ id: validatedId, version: 1, ...validatedSummaryLog })
-      )
+      storage.set(validatedId, {
+        version: 1,
+        summaryLog: structuredClone(validatedSummaryLog)
+      })
     },
 
     async update(id, version, updates) {
@@ -58,14 +58,13 @@ export const createInMemorySummaryLogsRepository = () => {
         throw Boom.conflict(conflictError.message)
       }
 
-      storage.set(
-        validatedId,
-        structuredClone({
-          ...existing,
-          ...validatedUpdates,
-          version: existing.version + 1
+      storage.set(validatedId, {
+        version: existing.version + 1,
+        summaryLog: structuredClone({
+          ...existing.summaryLog,
+          ...validatedUpdates
         })
-      )
+      })
     },
 
     async findById(id) {
@@ -74,8 +73,10 @@ export const createInMemorySummaryLogsRepository = () => {
       if (!doc) {
         return null
       }
-      const { version, ...summaryLog } = doc
-      return { version, summaryLog: structuredClone(summaryLog) }
+      return {
+        version: doc.version,
+        summaryLog: structuredClone(doc.summaryLog)
+      }
     }
   })
 }
