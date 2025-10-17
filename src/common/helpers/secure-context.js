@@ -21,24 +21,26 @@ export const patchTlsSecureContext = () => {
   const customCaCertsObj = getTrustStoreCerts(process.env)
   const customCaCerts = Object.values(customCaCertsObj)
 
-  if (customCaCerts.length > 0) {
-    const originalTlsCreateSecureContext = tls.createSecureContext
-    const defaultCAs = tls.rootCertificates
+  if (customCaCerts.length === 0) {
+    return
+  }
 
-    tls.createSecureContext = function (options = {}) {
-      let existingCa = []
-      if (Array.isArray(options.ca)) {
-        existingCa = options.ca
-      } else if (options.ca) {
-        existingCa = [options.ca]
-      }
+  const originalTlsCreateSecureContext = tls.createSecureContext
+  const defaultCAs = tls.rootCertificates
 
-      const mergedCa = [...existingCa, ...defaultCAs, ...customCaCerts]
-
-      const newOptions = { ...options, ca: mergedCa }
-      return originalTlsCreateSecureContext(newOptions)
+  tls.createSecureContext = function (options = {}) {
+    let existingCa = []
+    if (Array.isArray(options.ca)) {
+      existingCa = options.ca
+    } else if (options.ca) {
+      existingCa = [options.ca]
     }
 
-    isPatched = true
+    const mergedCa = [...existingCa, ...defaultCAs, ...customCaCerts]
+
+    const newOptions = { ...options, ca: mergedCa }
+    return originalTlsCreateSecureContext(newOptions)
   }
+
+  isPatched = true
 }
