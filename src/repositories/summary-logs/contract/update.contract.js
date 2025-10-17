@@ -40,9 +40,9 @@ export const testUpdateBehaviour = (repositoryFactory) => {
         })
 
         const found = await repository.findById(id)
-        expect(found.status).toBe('validating')
-        expect(found.file.status).toBe('complete')
-        expect(found.file.s3.bucket).toBe(TEST_S3_BUCKET)
+        expect(found.summaryLog.status).toBe('validating')
+        expect(found.summaryLog.file.status).toBe('complete')
+        expect(found.summaryLog.file.s3.bucket).toBe(TEST_S3_BUCKET)
       })
 
       it('throws not found error when updating non-existent ID', async () => {
@@ -73,9 +73,9 @@ export const testUpdateBehaviour = (repositoryFactory) => {
         })
 
         const found = await repository.findById(id)
-        expect(found.status).toBe('rejected')
-        expect(found.organisationId).toBe('org-123')
-        expect(found.registrationId).toBe('reg-456')
+        expect(found.summaryLog.status).toBe('rejected')
+        expect(found.summaryLog.organisationId).toBe('org-123')
+        expect(found.summaryLog.registrationId).toBe('reg-456')
       })
     })
 
@@ -126,9 +126,9 @@ export const testUpdateBehaviour = (repositoryFactory) => {
           })
 
           const found = await repository.findById(id)
-          expect(found.hackerField).toBeUndefined()
-          expect(found.evilField).toBeUndefined()
-          expect(found.status).toBe('validating')
+          expect(found.summaryLog.hackerField).toBeUndefined()
+          expect(found.summaryLog.evilField).toBeUndefined()
+          expect(found.summaryLog.status).toBe('validating')
         })
 
         it('rejects update with invalid status', async () => {

@@ -54,7 +54,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         })
 
         expect(updated.version).toBe(2)
-        expect(updated.status).toBe('validating')
+        expect(updated.summaryLog.status).toBe('validating')
       })
 
       it('throws conflict error when updating with stale version', async () => {
@@ -76,7 +76,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         })
 
         const final = await repository.findById(id)
-        expect(final.status).toBe('validating')
+        expect(final.summaryLog.status).toBe('validating')
         expect(final.version).toBe(2)
       })
 
@@ -99,7 +99,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         })
         const expectedVersionAfterTwoUpdates = 3
         expect(current.version).toBe(expectedVersionAfterTwoUpdates)
-        expect(current.status).toBe('preprocessing')
+        expect(current.summaryLog.status).toBe('preprocessing')
       })
 
       it('preserves version field integrity across updates', async () => {
@@ -117,14 +117,14 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         const updated = await updateAndFetch(repository, id, initial.version, {
           status: 'validating',
           file: buildFile({
-            id: initial.file.id,
-            name: initial.file.name
+            id: initial.summaryLog.file.id,
+            name: initial.summaryLog.file.name
           })
         })
 
         expect(updated.version).toBe(2)
-        expect(updated.organisationId).toBe('org-123')
-        expect(updated.registrationId).toBe('reg-456')
+        expect(updated.summaryLog.organisationId).toBe('org-123')
+        expect(updated.summaryLog.registrationId).toBe('reg-456')
       })
 
       it('throws conflict with descriptive message for version mismatch', async () => {
@@ -152,7 +152,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         })
 
         const final = await repository.findById(id)
-        expect(final.status).toBe('validating')
+        expect(final.summaryLog.status).toBe('validating')
         expect(final.version).toBe(2)
       })
     })
@@ -182,7 +182,7 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
 
         const final = await repository.findById(id)
         expect(final.version).toBe(2)
-        expect(['validating', 'rejected']).toContain(final.status)
+        expect(['validating', 'rejected']).toContain(final.summaryLog.status)
       })
     })
 

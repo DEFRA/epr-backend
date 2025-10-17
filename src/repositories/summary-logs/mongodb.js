@@ -79,7 +79,7 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
     if (!doc) {
       return null
     }
-    const { _id, ...rest } = doc
-    return { id: _id, ...rest }
+    const { _id, version, ...summaryLog } = doc
+    return { version, summaryLog }
   }
 })

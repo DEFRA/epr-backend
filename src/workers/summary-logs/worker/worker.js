@@ -7,10 +7,12 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
 
 export const summaryLogsValidatorWorker = async ({
   summaryLogsRepository,
+  id,
+  version,
   summaryLog
 }) => {
   logger.info({
-    message: `Summary log validation worker started [${summaryLog.id}]`,
+    message: `Summary log validation worker started [${id}]`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.WORKER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -22,12 +24,12 @@ export const summaryLogsValidatorWorker = async ({
 
   const status = SUMMARY_LOG_STATUS.INVALID
 
-  await summaryLogsRepository.update(summaryLog.id, summaryLog.version, {
+  await summaryLogsRepository.update(id, version, {
     status
   })
 
   logger.info({
-    message: `Summary log validation status updated [${summaryLog.id}] to [${status}]`,
+    message: `Summary log validation status updated [${id}] to [${status}]`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.WORKER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS

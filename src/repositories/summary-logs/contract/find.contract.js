@@ -35,10 +35,10 @@ export const testFindBehaviour = (repositoryFactory) => {
         const result = await repository.findById(id)
 
         expect(result).toBeTruthy()
-        expect(result.id).toBe(id)
-        expect(result.file.id).toBe(fileId)
-        expect(result.file.name).toBe('test.xlsx')
-        expect(result.file.status).toBe('complete')
+        expect(result.version).toBe(1)
+        expect(result.summaryLog.file.id).toBe(fileId)
+        expect(result.summaryLog.file.name).toBe('test.xlsx')
+        expect(result.summaryLog.file.status).toBe('complete')
       })
 
       it('does not return logs with different IDs', async () => {
@@ -62,8 +62,7 @@ export const testFindBehaviour = (repositoryFactory) => {
 
         const result = await repository.findById(idA)
 
-        expect(result.id).toBe(idA)
-        expect(result.organisationId).toBe('org-1')
+        expect(result.summaryLog.organisationId).toBe('org-1')
       })
     })
 

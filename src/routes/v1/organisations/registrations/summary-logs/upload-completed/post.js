@@ -62,12 +62,13 @@ const upsertSummaryLog = async (
   upload,
   logger
 ) => {
-  const existingSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+  const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
-  if (existingSummaryLog) {
+  if (existing) {
+    const { version, summaryLog } = existing
     try {
-      transitionStatus(existingSummaryLog, newStatus)
+      transitionStatus(summaryLog, newStatus)
     } catch (error) {
       logger.error({
         message: error.message,
@@ -86,12 +87,8 @@ const upsertSummaryLog = async (
       throw Boom.conflict(error.message)
     }
 
-    const updates = buildSummaryLogData(upload, existingSummaryLog.file)
-    await summaryLogsRepository.update(
-      summaryLogId,
-      existingSummaryLog.version,
-      updates
-    )
+    const updates = buildSummaryLogData(upload, summaryLog.file)
+    await summaryLogsRepository.update(summaryLogId, version, updates)
   } else {
     const summaryLog = buildSummaryLogData(upload)
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
@@ -146,8 +143,13 @@ export const summaryLogsUploadCompleted = {
       )
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
-        const summaryLog = await summaryLogsRepository.findById(summaryLogId)
-        await summaryLogsValidator.validate(summaryLog)
+        const { version, summaryLog } =
+          await summaryLogsRepository.findById(summaryLogId)
+        await summaryLogsValidator.validate({
+          id: summaryLogId,
+          version,
+          summaryLog
+        })
       }
 
       const s3Info = formatS3Info(summaryLogUpload)

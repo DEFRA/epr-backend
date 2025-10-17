@@ -44,9 +44,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
         const found = await repository.findById(id)
 
         expect(found).toBeTruthy()
-        expect(found.id).toBe(id)
-        expect(found.organisationId).toBe('org-456')
-        expect(found.registrationId).toBe('reg-789')
+        expect(found.summaryLog.organisationId).toBe('org-456')
+        expect(found.summaryLog.registrationId).toBe('reg-789')
       })
 
       it('throws conflict error when inserting duplicate ID', async () => {
@@ -97,8 +96,7 @@ export const testInsertBehaviour = (repositoryFactory) => {
 
         const final = await repository.findById(id)
         expect(final).toBeTruthy()
-        expect(final.id).toBe(id)
-        expect(['org-A', 'org-B']).toContain(final.organisationId)
+        expect(['org-A', 'org-B']).toContain(final.summaryLog.organisationId)
       })
     })
 
@@ -168,8 +166,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
           await repository.insert(id, logWithUnknownFields)
           const found = await repository.findById(id)
 
-          expect(found.hackerField).toBeUndefined()
-          expect(found.anotherBadField).toBeUndefined()
+          expect(found.summaryLog.hackerField).toBeUndefined()
+          expect(found.summaryLog.anotherBadField).toBeUndefined()
         })
 
         it('allows optional fields to be omitted', async () => {
@@ -206,8 +204,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
           await repository.insert(id, rejectedLog)
 
           const found = await repository.findById(id)
-          expect(found.file.status).toBe('rejected')
-          expect(found.file.s3).toBeUndefined()
+          expect(found.summaryLog.file.status).toBe('rejected')
+          expect(found.summaryLog.file.s3).toBeUndefined()
         })
 
         it('requires S3 info when file status is complete', async () => {
@@ -235,8 +233,8 @@ export const testInsertBehaviour = (repositoryFactory) => {
           await repository.insert(id, pendingLog)
 
           const found = await repository.findById(id)
-          expect(found.file.status).toBe('pending')
-          expect(found.file.s3).toBeUndefined()
+          expect(found.summaryLog.file.status).toBe('pending')
+          expect(found.summaryLog.file.s3).toBeUndefined()
         })
       })
     })

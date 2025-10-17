@@ -17,6 +17,8 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 
 describe('summaryLogsValidatorWorker', () => {
   let summaryLogsRepository
+  let id
+  let version
   let summaryLog
 
   const mockLogger = {
@@ -45,8 +47,11 @@ describe('summaryLogsValidatorWorker', () => {
       })
     })
 
-    await summaryLogsRepository.insert('summary-log-123', summaryLogData)
-    summaryLog = await summaryLogsRepository.findById('summary-log-123')
+    id = 'summary-log-123'
+    await summaryLogsRepository.insert(id, summaryLogData)
+    const result = await summaryLogsRepository.findById(id)
+    version = result.version
+    summaryLog = result.summaryLog
   })
 
   afterEach(() => {
@@ -57,6 +62,8 @@ describe('summaryLogsValidatorWorker', () => {
   it('should log validation worker started', async () => {
     const workerPromise = summaryLogsValidatorWorker({
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
     await vi.runAllTimersAsync()
@@ -76,18 +83,22 @@ describe('summaryLogsValidatorWorker', () => {
   it('should update status to invalid', async () => {
     const workerPromise = summaryLogsValidatorWorker({
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
     await vi.runAllTimersAsync()
     await workerPromise
 
     const updated = await summaryLogsRepository.findById('summary-log-123')
-    expect(updated.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
   })
 
   it('should log validation status updated', async () => {
     const workerPromise = summaryLogsValidatorWorker({
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
     await vi.runAllTimersAsync()
@@ -113,6 +124,8 @@ describe('summaryLogsValidatorWorker', () => {
 
     const workerPromise = summaryLogsValidatorWorker({
       summaryLogsRepository: brokenRepository,
+      id,
+      version,
       summaryLog
     }).catch((err) => err)
 

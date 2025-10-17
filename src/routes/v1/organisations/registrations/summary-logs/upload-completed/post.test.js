@@ -88,7 +88,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
   let summaryLogsRepository
   let summaryLogsValidator
-  let summaryLog
 
   beforeAll(async () => {
     summaryLogsRepository = {
@@ -100,20 +99,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     summaryLogsValidator = {
       validate: vi.fn()
-    }
-
-    summaryLog = {
-      id: summaryLogId,
-      status: SUMMARY_LOG_STATUS.VALIDATING,
-      file: {
-        id: fileId,
-        name: filename,
-        status: fileStatus,
-        s3: {
-          bucket: s3Bucket,
-          key: s3Key
-        }
-      }
     }
 
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -166,6 +151,23 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
   })
 
   it('should return expected response when uploaded file was accepted', async () => {
+    summaryLogsRepository.findById.mockResolvedValueOnce(null)
+    summaryLogsRepository.findById.mockResolvedValueOnce({
+      version: 1,
+      summaryLog: {
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        file: {
+          id: fileId,
+          name: filename,
+          status: fileStatus,
+          s3: {
+            bucket: s3Bucket,
+            key: s3Key
+          }
+        }
+      }
+    })
+
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
@@ -222,7 +224,21 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
   it('should invoke validation as expected when uploaded file was accepted', async () => {
     summaryLogsRepository.findById.mockResolvedValueOnce(null)
-    summaryLogsRepository.findById.mockResolvedValueOnce(summaryLog)
+    summaryLogsRepository.findById.mockResolvedValueOnce({
+      version: 1,
+      summaryLog: {
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        file: {
+          id: fileId,
+          name: filename,
+          status: fileStatus,
+          s3: {
+            bucket: s3Bucket,
+            key: s3Key
+          }
+        }
+      }
+    })
 
     await server.inject({
       method: 'POST',
@@ -230,7 +246,22 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       payload
     })
 
-    expect(summaryLogsValidator.validate).toHaveBeenCalledWith(summaryLog)
+    expect(summaryLogsValidator.validate).toHaveBeenCalledWith({
+      id: summaryLogId,
+      version: 1,
+      summaryLog: {
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        file: {
+          id: fileId,
+          name: filename,
+          status: fileStatus,
+          s3: {
+            bucket: s3Bucket,
+            key: s3Key
+          }
+        }
+      }
+    })
   })
 
   it('should not invoke validation when uploaded file is still pending', async () => {
@@ -344,6 +375,23 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
   describe('logging', () => {
     it('should log as expected when uploaded file was accepted', async () => {
+      summaryLogsRepository.findById.mockResolvedValueOnce(null)
+      summaryLogsRepository.findById.mockResolvedValueOnce({
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.VALIDATING,
+          file: {
+            id: fileId,
+            name: filename,
+            status: fileStatus,
+            s3: {
+              bucket: s3Bucket,
+              key: s3Key
+            }
+          }
+        }
+      })
+
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
@@ -447,21 +495,21 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
 
     it('should log an error when a state transition conflict is detected', async () => {
-      const existingSummaryLog = {
-        id: summaryLogId,
-        status: SUMMARY_LOG_STATUS.VALIDATING,
-        file: {
-          id: 'existing-file-123',
-          name: 'existing.xlsx',
-          status: 'complete',
-          s3: {
-            bucket: 'existing-bucket',
-            key: 'existing-key'
+      summaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.VALIDATING,
+          file: {
+            id: 'existing-file-123',
+            name: 'existing.xlsx',
+            status: 'complete',
+            s3: {
+              bucket: 'existing-bucket',
+              key: 'existing-key'
+            }
           }
         }
-      }
-
-      summaryLogsRepository.findById.mockResolvedValue(existingSummaryLog)
+      })
 
       payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.PENDING
 

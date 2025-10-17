@@ -1,8 +1,14 @@
 /**
+ * @typedef {Object} SummaryLogWithVersion
+ * @property {number} version
+ * @property {Object} summaryLog
+ */
+
+/**
  * @typedef {Object} SummaryLogsRepository
  * @property {(id: string, summaryLog: Object) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
- * @property {(id: string) => Promise<Object|null>} findById
+ * @property {(id: string) => Promise<SummaryLogWithVersion|null>} findById
  */
 
 /**

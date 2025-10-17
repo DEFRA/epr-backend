@@ -70,8 +70,12 @@ export const createInMemorySummaryLogsRepository = () => {
 
     async findById(id) {
       const validatedId = validateId(id)
-      const result = storage.get(validatedId)
-      return result ? structuredClone(result) : null
+      const doc = storage.get(validatedId)
+      if (!doc) {
+        return null
+      }
+      const { id: docId, version, ...summaryLog } = doc
+      return { version, summaryLog: structuredClone(summaryLog) }
     }
   })
 }
