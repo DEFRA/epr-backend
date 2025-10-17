@@ -34,6 +34,8 @@ export const patchTlsSecureContext = () => {
       existingCa = options.ca
     } else if (options.ca) {
       existingCa = [options.ca]
+    } else {
+      existingCa = []
     }
 
     const mergedCa = [...existingCa, ...defaultCAs, ...customCaCerts]
