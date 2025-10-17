@@ -1,4 +1,7 @@
 import tls from 'node:tls'
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+import { Piscina } from 'piscina'
 import { patchTlsSecureContext } from './secure-context.js'
 
 const MOCK_CERT =
@@ -34,29 +37,35 @@ describe('patchTlsSecureContext', () => {
 
     patchTlsSecureContext()
 
-    const context = tls.createSecureContext()
-    expect(context).toBeDefined()
+    // Test different ca option scenarios to hit all branches
+    expect(tls.createSecureContext()).toBeDefined()
+    expect(tls.createSecureContext({ ca: 'single-ca' })).toBeDefined()
+    expect(tls.createSecureContext({ ca: ['ca1', 'ca2'] })).toBeDefined()
   })
 
-  test('Should handle array of CAs in options', () => {
-    process.env.TRUSTSTORE_TEST_CERT = VALID_CERT_BASE64
-
-    patchTlsSecureContext()
-
-    const context = tls.createSecureContext({ ca: ['ca1', 'ca2'] })
-    expect(context).toBeDefined()
-  })
-
-  test('Should handle single CA string in options', () => {
-    process.env.TRUSTSTORE_TEST_CERT = VALID_CERT_BASE64
-
-    patchTlsSecureContext()
-
-    const context = tls.createSecureContext({ ca: 'single-ca' })
-    expect(context).toBeDefined()
-  })
-
-  test('Should execute without error when no TRUSTSTORE_ env vars exist', () => {
+  test('Should not patch when no TRUSTSTORE_ env vars exist', () => {
     expect(() => patchTlsSecureContext()).not.toThrow()
+  })
+
+  test('Should patch tls.createSecureContext in worker thread context', async () => {
+    process.env.TRUSTSTORE_TEST_CERT = VALID_CERT_BASE64
+
+    const filename = fileURLToPath(import.meta.url)
+    const dirname = path.dirname(filename)
+    const workerPath = path.join(dirname, 'test-worker.js')
+
+    const pool = new Piscina({
+      filename: workerPath,
+      maxThreads: 1
+    })
+
+    try {
+      const result = await pool.run()
+
+      expect(result.isPatched).toBe(true)
+      expect(result.canCreateContext).toBe(true)
+    } finally {
+      await pool.destroy()
+    }
   })
 })

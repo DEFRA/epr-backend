@@ -16,15 +16,14 @@ export const patchTlsSecureContext = () => {
     const defaultCAs = tls.rootCertificates
 
     tls.createSecureContext = function (options = {}) {
-      const mergedCa = [
-        ...(Array.isArray(options.ca)
-          ? options.ca
-          : options.ca
-            ? [options.ca]
-            : []),
-        ...defaultCAs,
-        ...customCaCerts
-      ]
+      let existingCa = []
+      if (Array.isArray(options.ca)) {
+        existingCa = options.ca
+      } else if (options.ca) {
+        existingCa = [options.ca]
+      }
+
+      const mergedCa = [...existingCa, ...defaultCAs, ...customCaCerts]
 
       const newOptions = { ...options, ca: mergedCa }
       return originalTlsCreateSecureContext(newOptions)
