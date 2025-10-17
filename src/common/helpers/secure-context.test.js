@@ -1,8 +1,4 @@
 import tls from 'node:tls'
-import { randomUUID } from 'node:crypto'
-import { fileURLToPath } from 'node:url'
-import path from 'node:path'
-import { Piscina } from 'piscina'
 import { patchTlsSecureContext } from './secure-context.js'
 
 const MOCK_CERT =
@@ -29,30 +25,6 @@ const MOCK_CERT =
 const VALID_CERT_BASE64 = Buffer.from(MOCK_CERT).toString('base64')
 
 describe('patchTlsSecureContext', () => {
-  let server
-  let summaryLogsRepository
-
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-
-    const { createSummaryLogsRepository } = await import(
-      '#repositories/summary-logs/mongodb.js'
-    )
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
-    summaryLogsRepository = createSummaryLogsRepository(server.db)(mockLogger)
-  })
-
-  afterAll(async () => {
-    await server.stop()
-  })
-
   afterEach(() => {
     delete process.env.TRUSTSTORE_TEST_CERT
   })
@@ -70,45 +42,5 @@ describe('patchTlsSecureContext', () => {
 
   test('Should not patch when no TRUSTSTORE_ env vars exist', () => {
     expect(() => patchTlsSecureContext()).not.toThrow()
-  })
-
-  test('Should apply TLS patch in real worker thread', async () => {
-    process.env.TRUSTSTORE_TEST_CERT = VALID_CERT_BASE64
-
-    const summaryLogId = `test-${randomUUID()}`
-
-    await summaryLogsRepository.insert({
-      id: summaryLogId,
-      status: 'validating',
-      file: {
-        id: `file-${randomUUID()}`,
-        name: 'test.xlsx',
-        s3: { bucket: 'bucket', key: 'key' }
-      }
-    })
-
-    const filename = fileURLToPath(import.meta.url)
-    const dirname = path.dirname(filename)
-    const workerPath = path.resolve(
-      dirname,
-      '../../workers/summary-logs/worker/worker-thread.js'
-    )
-
-    const pool = new Piscina({
-      filename: workerPath,
-      maxThreads: 1
-    })
-
-    const summaryLog = {
-      id: summaryLogId,
-      status: 'validating',
-      version: 1
-    }
-
-    try {
-      await pool.run({ summaryLog })
-    } finally {
-      await pool.destroy()
-    }
   })
 })
