@@ -20,6 +20,7 @@ async function createServer(options = {}) {
   const server = Hapi.server({
     host: config.get('host'),
     port: config.get('port'),
+    debug: config.get('debug'),
     routes: {
       validate: {
         options: {

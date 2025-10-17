@@ -246,9 +246,10 @@ Summary logs transition through the following states based on what has been acco
 
 ```mermaid
 stateDiagram-v2
-    [*] --> preprocessing: File uploaded to CDP Uploader
-    preprocessing --> rejected: CDP preprocessing failed
-    preprocessing --> validating: CDP preprocessing passed
+    [*] --> preprocessing
+    preprocessing --> preprocessing: CDP Uploader callback "pending"
+    preprocessing --> rejected: CDP Uploader callback "rejected"
+    preprocessing --> validating: CDP Uploader callback "complete"
     validating --> invalid: Validation errors found
     validating --> validated: Validation completed successfully
     validated --> submitted: Summary log submitted

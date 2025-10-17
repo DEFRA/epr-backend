@@ -1,24 +1,76 @@
-import { createSummaryLogsRepository } from '#repositories/summary-logs-repository.mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+
+/**
+ * @typedef {Object} RepositoriesPluginOptions
+ * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
+ * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
+ */
 
 export const repositories = {
   plugin: {
     name: 'repositories',
     version: '1.0.0',
+    /**
+     * @param {import('#common/hapi-types.js').HapiServer} server
+     * @param {RepositoriesPluginOptions} [options]
+     */
     register: (server, options) => {
-      const decorateRepository = (repo) => {
-        server.decorate('request', 'summaryLogsRepository', () => repo, {
-          apply: true
+      /**
+       * Registers a per-request dependency with logger injection.
+       * Uses lazy initialization to defer creation until first access, and caches
+       * the instance in request.app to ensure the same instance is used throughout
+       * the request lifecycle. This allows dependencies to log using the request's
+       * logger without handlers needing to pass it through the dependency chain.
+       *
+       * @param {string} name - Property name to add to the request object
+       * @param {Function} factory - Factory function that accepts a logger and returns the dependency
+       */
+      const registerPerRequest = (name, factory) => {
+        server.ext('onRequest', (request, h) => {
+          Object.defineProperty(request, name, {
+            get() {
+              if (!this.app[name]) {
+                this.app[name] = factory(this.logger)
+              }
+              return this.app[name]
+            },
+            enumerable: true,
+            configurable: true
+          })
+          return h.continue
         })
       }
 
-      if (options?.summaryLogsRepository) {
-        // Test override - no MongoDB dependency needed
-        decorateRepository(options.summaryLogsRepository)
+      const summaryLogsRepositoryFactory = options?.summaryLogsRepository
+        ? options.summaryLogsRepository
+        : null
+
+      if (summaryLogsRepositoryFactory) {
+        registerPerRequest(
+          'summaryLogsRepository',
+          summaryLogsRepositoryFactory
+        )
       } else {
-        // Production - require MongoDB plugin
         server.dependency('mongodb', () => {
-          const summaryLogsRepo = createSummaryLogsRepository(server.db)
-          decorateRepository(summaryLogsRepo)
+          const productionFactory = createSummaryLogsRepository(server.db)
+          registerPerRequest('summaryLogsRepository', productionFactory)
+        })
+      }
+
+      const organisationsRepositoryFactory = options?.organisationsRepository
+        ? options.organisationsRepository
+        : null
+
+      if (organisationsRepositoryFactory) {
+        registerPerRequest(
+          'organisationsRepository',
+          organisationsRepositoryFactory
+        )
+      } else {
+        server.dependency('mongodb', () => {
+          const productionFactory = createOrganisationsRepository(server.db)
+          registerPerRequest('organisationsRepository', productionFactory)
         })
       }
     }

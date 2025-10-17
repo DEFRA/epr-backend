@@ -1,0 +1,3046 @@
+{
+  "name": "Extended Producer Responsibilities: register as a packaging waste reprocessor (EA)",
+  "engine": "V2",
+  "schema": 2,
+  "startPage": "/summary",
+  "pages": [
+    {
+      "title": "Form guidance",
+      "path": "/form-guidance",
+      "components": [
+        {
+          "id": "f6ec419f-2be0-44ac-aa8c-c8268d43a06a",
+          "type": "Markdown",
+          "content": "Use this form to apply for registration with the Environment Agency (EA) as a reprocessor of packaging waste.\r\n\r\n**You must submit this form once for each packaging waste category you intend to register.**\r\n\r\nThe form will take around 60 minutes to complete. [Read what information you should have ready before you start.](https://www.gov.uk/guidance/packaging-waste-2026-registration-and-accreditation-process-for-reprocessors-and-exporters#apply-for-registration-as-a-reprocessor)\r\n\r\nFor information on how Defra and the environmental regulators (EA, NRW, DAERA, SEPA) process your personal data, please visit the [privacy notice on GOV.UK](https://www.gov.uk/guidance/extended-producer-responsibility-for-packaging-privacy-policy).",
+          "options": {},
+          "schema": {}
+        }
+      ],
+      "next": [],
+      "id": "91da3318-a88c-462e-8fa3-4ef5359854ae"
+    },
+    {
+      "title": "",
+      "path": "/do-you-have-an-organisation-id-number",
+      "components": [
+        {
+          "type": "YesNoField",
+          "title": "Do you have an Organisation ID number?",
+          "name": "aDpeKT",
+          "shortDescription": "Do you have an org ID?",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "e79ee112-f640-4d65-bb5a-587e4b24e0c2"
+        }
+      ],
+      "next": [],
+      "id": "ed5eee2b-f6ca-491c-aacb-aaf59d092abd"
+    },
+    {
+      "title": "Apply for an Organisation ID",
+      "controller": "TerminalPageController",
+      "path": "/apply-for-an-organisation-id",
+      "components": [
+        {
+          "id": "0cbffdc8-c6a2-4cc8-978f-5c798acf1751",
+          "type": "Markdown",
+          "content": "To be able to register as a reprocessor of packaging waste you must first apply for an Organisation ID (Org ID). \r\n\r\nYou can [apply for an Org ID with the Environment Agency](https://www.gov.uk/guidance/packaging-waste-2026-registration-and-accreditation-process-for-reprocessors-and-exporters#submit-your-organisation-details).",
+          "options": {},
+          "schema": {}
+        }
+      ],
+      "next": [],
+      "id": "898847c3-61e6-45ba-8477-7d44ad139bec",
+      "condition": "89394c66-d0dc-4473-9cf8-b70c9be5c15a"
+    },
+    {
+      "title": "Organisation details",
+      "path": "/organisation-details",
+      "components": [
+        {
+          "type": "TextField",
+          "title": "What is the name of your organisation?",
+          "name": "DDVUrr",
+          "shortDescription": "Org name",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "9755bca8-98dc-446c-ba5d-43fa73da10b9"
+        },
+        {
+          "type": "TextField",
+          "title": "What is your Organisation ID (Org ID) number?",
+          "name": "rJMICz",
+          "shortDescription": "Organisation ID",
+          "hint": "Your Org ID number is a 6 digit number, for example 123456",
+          "options": {
+            "required": true,
+            "classes": "govuk-input govuk-input--width-10"
+          },
+          "schema": {
+            "min": 6,
+            "max": 6,
+            "regex": "\\d{6}"
+          },
+          "id": "969a7edc-adf8-4eca-b220-e9c8ea7821ca"
+        },
+        {
+          "type": "TextField",
+          "title": "What is your System Reference number?",
+          "name": "DAcLmf",
+          "shortDescription": "System Reference",
+          "hint": "The System Reference number was provided within the same email as the Org ID - it is 24 characters long",
+          "options": {
+            "required": true
+          },
+          "schema": {
+            "min": 24,
+            "max": 24,
+            "regex": "^[0-9a-fA-F]{24}$"
+          },
+          "id": "5c119365-e165-4921-8b6c-3adc916e57bf"
+        }
+      ],
+      "next": [],
+      "id": "0be7c1b6-b99e-47ca-83e7-d0f247a10650"
+    },
+    {
+      "title": "Application contact details",
+      "path": "/application-contact-details",
+      "components": [
+        {
+          "type": "Markdown",
+          "content": "This is the person who the regulator can contact if they have any questions or queries regarding this application",
+          "options": {},
+          "schema": {},
+          "id": "a4df6a1b-35c7-42ac-9dc5-74d2e271c77a"
+        },
+        {
+          "type": "TextField",
+          "title": "What is the full name of the application contact?",
+          "name": "jSlhCJ",
+          "shortDescription": "App contact name",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "90b8833a-d148-4795-a98d-6777ab883049"
+        },
+        {
+          "type": "EmailAddressField",
+          "title": "What is their email address?",
+          "name": "WOnymw",
+          "shortDescription": "App contact email address",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "c7207b71-f10f-4ba6-8e06-7aeb89977563"
+        },
+        {
+          "type": "TelephoneNumberField",
+          "title": "What is their telephone number?",
+          "name": "lScMYi",
+          "shortDescription": "App contact telephone number",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "efe01473-ccf4-4b74-bc23-0edec0a9a210"
+        },
+        {
+          "type": "TextField",
+          "title": "What is their job title?",
+          "name": "lnBYQc",
+          "shortDescription": "App contact job title",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "b1dfe2cd-ef67-4881-beca-3a529200d048"
+        }
+      ],
+      "next": [],
+      "id": "0259f6bd-1a55-4015-946b-2ce57d00a039"
+    },
+    {
+      "title": "Reprocessing site details",
+      "path": "/reprocessing-site-details",
+      "components": [
+        {
+          "type": "UkAddressField",
+          "title": "What is the address of the reprocessing site you want to register?",
+          "name": "Laiblc",
+          "shortDescription": "Reprocessing site address",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "33de77db-36da-4b19-8288-7a3e4a91ca33"
+        },
+        {
+          "type": "TextField",
+          "title": "What is the Ordnance Survey National Grid Reference (OSNGR) for the site?",
+          "name": "xinNGX",
+          "shortDescription": "Grid reference",
+          "hint": "You'll find the site grid reference on permits and exemptions, for example AB 1234 5678",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "1595a07b-e005-4693-b14f-cd29b67c5308"
+        },
+        {
+          "type": "YesNoField",
+          "title": "Should the regulator serve notices to this address?",
+          "name": "TnXUsJ",
+          "shortDescription": "Serve notices to site?",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "4ca25209-1bfa-4741-bc58-7d6a1c052ec6"
+        }
+      ],
+      "next": [],
+      "id": "3179fdac-50a2-4ccb-83ed-a8eeca140d12"
+    },
+    {
+      "title": "",
+      "path": "/what-address-should-the-regulator-serve-notices-to",
+      "components": [
+        {
+          "type": "UkAddressField",
+          "title": "What address should the regulator serve notices to?",
+          "name": "VHfukU",
+          "shortDescription": "Address to serve notices",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "3c0295ab-09a8-40ca-a5b2-36037c9480db"
+        }
+      ],
+      "next": [],
+      "id": "9aef681a-5dc0-4436-8058-e15c08292c50",
+      "condition": "2d13f33a-cc77-4de4-b757-ec9599ff03b8"
+    },
+    {
+      "title": "Packaging waste the site is authorised to accept and recycle",
+      "path": "/packaging-waste-the-site-is-authorised-to-accept-and-recycle",
+      "components": [
+        {
+          "id": "3b72c34d-600f-4155-b753-85c5c883c9e6",
+          "type": "Markdown",
+          "content": "You need to tell us all the materials the site has a permit or waste exemption to accept and recycle. \r\n\r\nThe 'R' code is the classification of the reprocessing activity. These are in Annex 2 of the [Waste Framework Directive.](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A02008L0098-20240218)",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "CheckboxesField",
+          "title": "Which packaging waste categories does the site have a permit or exemption for?",
+          "name": "JheIje",
+          "shortDescription": "Permitted waste categories",
+          "hint": "Select all that apply",
+          "list": "817a807a-14f0-464b-b5be-ad1a674d31da",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "5d88820e-fdf3-48b0-98d3-4fd658491f29"
+        }
+      ],
+      "next": [],
+      "id": "d8a80f3f-7e91-43f2-bf60-3ce7b84ef9de"
+    },
+    {
+      "title": "",
+      "path": "/what-authorisation-does-the-site-have-to-accept-and-recycle-packaging-waste",
+      "components": [
+        {
+          "type": "CheckboxesField",
+          "title": "What authorisation does the site have to accept and recycle packaging waste?",
+          "name": "SoGzFb",
+          "shortDescription": "Authorisation type",
+          "hint": "Select all that apply",
+          "list": "42072681-503c-495b-a8ce-8a437b9349c0",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "f76851fb-1bcc-4eb0-9513-4e5553efb829"
+        }
+      ],
+      "next": [],
+      "id": "dfbf5c6f-952d-4354-b8f1-5e4f0a674312"
+    },
+    {
+      "title": "Environmental permit or waste management licence details",
+      "path": "/environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "TextField",
+          "title": "What is your permit or licence number?",
+          "name": "xMSsbm",
+          "shortDescription": "Environmental permit or Waste management licence number",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "007a87fa-deac-4e72-9528-d262b810ada9"
+        },
+        {
+          "type": "CheckboxesField",
+          "title": "Which packaging waste categories does this permit or licence authorise?",
+          "name": "NbsDhs",
+          "shortDescription": "Authorised packaging waste categories",
+          "hint": "Select all that apply",
+          "list": "30e306af-25c5-4a6f-a52b-29a8483c7e85",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "dcad4859-37fe-44f1-8a67-fed0cd478926"
+        }
+      ],
+      "next": [],
+      "id": "32470469-2188-4088-bef7-43574d832756",
+      "condition": "7235f35a-12cc-42d4-8f99-5d0c30950c63"
+    },
+    {
+      "title": "Aluminium - environmental permit or waste management licence details",
+      "path": "/aluminium-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of aluminium the permit or licence authorises the site to accept and recycle?",
+          "name": "CKMnne",
+          "shortDescription": "Authorised weight (Aluminium)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "6bb1e978-696a-48db-bdd3-c26294066bf8"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "XaXFWf",
+          "shortDescription": "Timescale (Aluminium)",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "list": "171eff96-a07c-4e41-b5aa-ac982efdb6da",
+          "id": "d62b2177-5a18-4e57-8198-eb75f5f6366b"
+        }
+      ],
+      "next": [],
+      "id": "98586a46-d991-4749-9668-abba4f90c495",
+      "condition": "ebb32d72-fb65-476d-8229-01d85f9a72eb"
+    },
+    {
+      "title": "Fibre-based composite material - environmental permit or waste management licence details",
+      "path": "/fibre-based-composite-material-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of fibre-based composite material the permit or licence authorises the site to accept and recycle?",
+          "name": "gVPFhw",
+          "shortDescription": "Authorised weight (Fibre-based composite material)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "d62d10d9-d5ca-4f29-9c90-a895811d738a"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "jhAwXO",
+          "shortDescription": "Timescale (Fibre-based composite material)",
+          "hint": "",
+          "list": "3fa312f3-87d6-4ebd-8b8d-85a2c38ccfcd",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "fc2675e8-b376-45f3-bf96-ef1b9bd0f607"
+        }
+      ],
+      "next": [],
+      "id": "bdfec043-30ca-48b4-b3f1-4f3473264424",
+      "condition": "43ffb99a-bc9b-41ad-b202-adf8a7ee5102"
+    },
+    {
+      "title": "Glass - environmental permit or waste management licence details",
+      "path": "/glass-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of glass the permit or licence authorises the site to accept and recycle?",
+          "name": "ghfyir",
+          "shortDescription": "Authorised weight (Glass)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "6ea14b90-65ab-4f8f-9677-0a410593b8d7"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "CHzniE",
+          "shortDescription": "Timescale (Glass)",
+          "hint": "",
+          "list": "92371a63-fbac-455b-b05f-7aa3019edc8f",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "8c2142d0-7201-4826-85a1-bb1345108cd6"
+        }
+      ],
+      "next": [],
+      "id": "8414178b-4ee1-48ee-b8fd-c7d193da396c",
+      "condition": "b0956f05-7437-41c7-b6d8-7ec4b96f26eb"
+    },
+    {
+      "title": "Paper or board - environmental permit or waste management licence details",
+      "path": "/paper-or-board-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of paper or board the permit or licence authorises the site to accept and recycle?",
+          "name": "YHcXFy",
+          "shortDescription": "Authorised weight (Paper or board)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "22712ab6-cdca-47db-ac92-b06244d3fa6e"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "aYxyJv",
+          "shortDescription": "Timescale (Paper or board)",
+          "hint": "",
+          "list": "13aa6a0b-0f64-4136-a432-0f7fd61b9402",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "04e7bef9-6a69-4a4a-8218-5215ed404c12"
+        }
+      ],
+      "next": [],
+      "id": "34825c1a-e6a7-48a1-b0c4-1aab0a798be5",
+      "condition": "dbe9c772-84d0-40e8-bb1f-81afb7ecfe33"
+    },
+    {
+      "title": "Plastic - environmental permit or waste management licence details",
+      "path": "/plastic-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of plastic the permit or licence authorises the site to accept and recycle?",
+          "name": "NgFqcz",
+          "shortDescription": "Authorised weight (Plastic)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "101e08bf-65e1-429f-87e9-527a0e22d7a3"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "dQoVDq",
+          "shortDescription": "Timescale (Plastic)",
+          "hint": "",
+          "list": "9e5e1abf-cbc8-4fb1-a8c2-29e74adc510e",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "5d6af7be-2b29-482e-85b3-15372a8605b6"
+        }
+      ],
+      "next": [],
+      "id": "86393515-d11d-408c-add1-a8355c1bff78",
+      "condition": "2a6e93a6-4c43-45aa-b3ec-34e25c2e0df2"
+    },
+    {
+      "title": "Steel - environmental permit or waste management licence details",
+      "path": "/steel-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of steel the permit or licence authorises the site to accept and recycle?",
+          "name": "wBHSPU",
+          "shortDescription": "Authorised weight (Steel)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "6c97af6f-76b6-4f7c-973c-09e7373a29d7"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "PVPQSJ",
+          "shortDescription": "Timescale (Steel)",
+          "hint": "",
+          "list": "e31b9d71-e218-4136-8164-361240b223ae",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "aba7bc4c-dfb9-4bb1-90d6-96c9985151bd"
+        }
+      ],
+      "next": [],
+      "id": "ee86fea1-14b6-4327-84bf-7c610055fa70",
+      "condition": "7f493f0d-e187-43d5-9d9d-3cc00d5be7dc"
+    },
+    {
+      "title": "Wood - environmental permit or waste management licence details",
+      "path": "/wood-environmental-permit-or-waste-management-licence-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of wood the permit or licence authorises the site to accept and recycle?",
+          "name": "FVPdoa",
+          "shortDescription": "Authorised weight (Wood)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "c1d0c638-3551-4e6d-ad0e-1c0e0425a106"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "gNdqCt",
+          "shortDescription": "Timescale (Wood)",
+          "hint": "",
+          "list": "655d2e4d-8a65-47bb-b1a6-62efc97386c2",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "7af452d9-a9fe-410f-8c86-5713be223a21"
+        }
+      ],
+      "next": [],
+      "id": "0d9e7650-7501-44f9-aad2-195bc1b01068",
+      "condition": "63c3affc-8eb1-4b57-80b0-2be5c92895e7"
+    },
+    {
+      "title": "Installation permit details",
+      "path": "/installation-permit-details",
+      "components": [
+        {
+          "type": "TextField",
+          "title": "What is your permit number?",
+          "name": "PUgXbJ",
+          "shortDescription": "Installation or PPC permit number",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "3ebcf517-f077-4da2-a6f1-0d260167a3df"
+        },
+        {
+          "type": "CheckboxesField",
+          "title": "Which packaging waste categories does this permit authorise?",
+          "name": "ngAxFC",
+          "shortDescription": "Authorised packaging waste categories",
+          "hint": "Select all that apply",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "list": "db63ba95-107d-4663-84a4-01f90e2cab4d",
+          "id": "efaf7946-680d-4dfe-97d0-4f52ad5adf73"
+        }
+      ],
+      "next": [],
+      "id": "7af0ac34-c702-4bed-bfb7-545898352e12",
+      "condition": "c4c68a6e-b0df-4cad-bab4-8ea82b27698c"
+    },
+    {
+      "title": "Aluminium - installation permit details",
+      "path": "/aluminium-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of aluminium the permit authorises the site to accept and recycle?",
+          "name": "XWhDxm",
+          "shortDescription": "Authorised weight (Aluminium)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "84a2416f-25de-4267-9faa-7f83a3757185"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "JbuRDs",
+          "shortDescription": "Timescale (Aluminium)",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "list": "7a32423e-c12a-44d6-911e-b9c5c3e9e859",
+          "id": "ffa382cd-4d3f-42d8-b14d-801ea2dc4ca8"
+        }
+      ],
+      "next": [],
+      "id": "40923045-7f17-40a2-9ecf-0598cc6ea986",
+      "condition": "3a99802c-7516-4ce9-b843-479cca631f5a"
+    },
+    {
+      "title": "Fibre-based composite material - installation permit details",
+      "path": "/fibre-based-composite-material-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of fibre-based composite material the permit authorises the site to accept and recycle?",
+          "name": "DfmRfW",
+          "shortDescription": "Authorised weight (Fibre-based composite material)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "b3e49daf-16a3-4b7f-9c20-3b2a298c6e11"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "wrBNlw",
+          "shortDescription": "Timescale (Fibre based composite material)",
+          "hint": "",
+          "list": "c2dc4e98-b29c-45f4-9483-2ed705c4e11e",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "30f0b1e5-65db-4c57-a5c8-199e79cce033"
+        }
+      ],
+      "next": [],
+      "id": "c574b9b8-bf97-4964-a47e-2ea52a092409",
+      "condition": "143e6bd9-2427-4a5a-b43c-3070e5932b19"
+    },
+    {
+      "title": "Glass - installation permit details",
+      "path": "/glass-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of glass the permit authorises the site to accept and recycle?",
+          "name": "rSLVjK",
+          "shortDescription": "Authorised weight (Glass)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "27f9e136-0e74-4596-8c36-18a5b96520d8"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "KjYQpk",
+          "shortDescription": "Timescale (Glass)",
+          "hint": "",
+          "list": "22a59d26-1a1e-40b6-944e-4cd842555726",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "0aac8fd7-e85c-4b46-8be8-518aac85c98d"
+        }
+      ],
+      "next": [],
+      "id": "f0c5953a-18d5-467c-9db0-ec5d27266576",
+      "condition": "4d3b7a11-898d-4448-a0bd-2fba5d3b0ff7"
+    },
+    {
+      "title": "Paper or board - installation permit details",
+      "path": "/paper-or-board-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of paper or board the permit authorises the site to accept and recycle?",
+          "name": "Iprmfk",
+          "shortDescription": "Authorised weight (Paper or board)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "fe41bc1d-32ef-48b0-a674-b1450af4cab0"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "CybNBT",
+          "shortDescription": "Timescale (Paper or board)",
+          "hint": "",
+          "list": "51716d88-8e93-4687-931c-823199a58ffe",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "c167eb76-1e1c-483b-a9cc-a6878b1a0698"
+        }
+      ],
+      "next": [],
+      "id": "499f8d11-2028-4841-a023-3433615442a5",
+      "condition": "75103e7d-a6c5-4fde-938e-ba8b2248d0da"
+    },
+    {
+      "title": "Plastic - installation permit details",
+      "path": "/plastic-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of plastic the permit authorises the site to accept and recycle?",
+          "name": "mwpTtm",
+          "shortDescription": "Authorised weight (Plastic)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "b27e41cc-0e1d-41b4-abdb-daa78816b40c"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "oXaouc",
+          "shortDescription": "Timescale (Plastic)",
+          "hint": "",
+          "list": "1b6a6d4d-549b-4e8a-ba49-0c991993206b",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "6785df92-d395-477d-be47-a822a13c943b"
+        }
+      ],
+      "next": [],
+      "id": "49028724-b81b-4a05-9f2c-944abf558ea5",
+      "condition": "0779b8b4-cb8d-4c57-9f40-b79f279b2f03"
+    },
+    {
+      "title": "Steel - installation permit details",
+      "path": "/steel-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of steel the permit authorises the site to accept and recycle?",
+          "name": "qXTCpW",
+          "shortDescription": "Authorised weight (Steel)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "0ca91be5-9a7d-475c-a712-73e2b003784d"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "oVyPAn",
+          "shortDescription": "Timescale (Steel)",
+          "hint": "",
+          "list": "1c67d6b8-393c-4982-9eba-a1e57fad7b5d",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "73fd9dc0-408b-4245-9f80-aa8a5f94e7f5"
+        }
+      ],
+      "next": [],
+      "id": "c13902ea-308b-470c-a00e-3df7bb6d7987",
+      "condition": "8af47b3d-7bdc-4292-95a3-8db49a2ed999"
+    },
+    {
+      "title": "Wood - installation permit details",
+      "path": "/wood-installation-permit-details",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of wood the permit authorises the site to accept and recycle?",
+          "name": "lFGUnH",
+          "shortDescription": "Authorised weight (Wood)",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "2e752bab-35bb-447d-a980-33129d190c48"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly limit?",
+          "name": "SMhqAO",
+          "shortDescription": "Timescale (Wood)",
+          "hint": "",
+          "list": "42aaba01-a830-40f0-bba4-a8a79600e697",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "95c02670-e773-4d1d-8784-0b5291a301c8"
+        }
+      ],
+      "next": [],
+      "id": "2c769a0b-f8b3-4c79-92c3-8811bfdd26d1",
+      "condition": "246b39d0-959e-4af3-9f01-92c1a1099b81"
+    },
+    {
+      "title": "Waste exemption details",
+      "path": "/waste-exemption-details",
+      "components": [
+        {
+          "id": "d5a80789-a336-4940-b836-a41af792d3bb",
+          "type": "Markdown",
+          "content": "You may have more than one waste exemption number. Add the details of one of them on this page and choose 'Continue'. On the next page choose 'Add another waste exemption' to add the next.",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "TextField",
+          "title": "What is the waste exemption reference number?",
+          "name": "GgupVD",
+          "shortDescription": "Exemption reference",
+          "hint": "This is WEX followed by a 6 digit number, for example WEX123456",
+          "options": {
+            "required": true,
+            "classes": "govuk-input govuk-input--width-10"
+          },
+          "schema": {
+            "min": 9,
+            "max": 9,
+            "regex": "[wW][eE][xX][0-9]{6}"
+          },
+          "id": "93f22eca-c727-4bd1-8ec4-a77d0b5ee1d3"
+        },
+        {
+          "type": "TextField",
+          "title": "What is the waste exemption?",
+          "name": "nVsBHG",
+          "shortDescription": "Exemption",
+          "hint": "This is a letter followed by 1 or 2 digits, for example U9 or S2",
+          "list": "2d7519fe-ac7e-42a6-85ce-0b1af2a6d55c",
+          "options": {
+            "required": true,
+            "classes": "govuk-input govuk-input--width-5"
+          },
+          "schema": {
+            "min": 2,
+            "max": 3,
+            "regex": "^[a-zA-Z][0-9]{1,2}"
+          },
+          "id": "2a029f03-0c63-434a-9e47-3abc707c8ef9"
+        },
+        {
+          "type": "CheckboxesField",
+          "title": "Which packaging waste categories does this waste exemption authorise?",
+          "name": "nJkCtT",
+          "shortDescription": "Waste exemption packaging category",
+          "hint": "Select all that apply",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "list": "6856f0c4-9a95-4b05-91d5-277091e18936",
+          "id": "c94146c3-2a82-45fc-8c9f-1653a2ea2f57"
+        }
+      ],
+      "next": [],
+      "id": "28ec05c7-77f5-4258-bfa5-8a2ab45b5332",
+      "condition": "440128be-4068-47e9-9c91-61e0d7374751",
+      "controller": "RepeatPageController",
+      "repeat": {
+        "options": {
+          "name": "IVymzQ",
+          "title": "Waste exemption"
+        },
+        "schema": {
+          "min": 1,
+          "max": 25
+        }
+      }
+    },
+    {
+      "title": "Site capacity for aluminium recycling",
+      "path": "/site-capacity-for-aluminium-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of aluminium packaging waste the site could recycle?",
+          "name": "vNWexi",
+          "shortDescription": "Capacity (Aluminium)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "e7252739-5675-444f-8f05-3f7f21923f7a"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "YuzbTu",
+          "shortDescription": "Timescale (Aluminium)",
+          "hint": "",
+          "list": "3368ab8f-58f6-49fc-aa79-1ccfce6d26f0",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "4759341e-a83c-4d96-98ff-09808ccaff70"
+        }
+      ],
+      "next": [],
+      "id": "fcb838c7-6dd8-453e-bbe7-eae373ba26ff",
+      "condition": "ef64bf63-3772-487e-9918-db4de9ebb789"
+    },
+    {
+      "title": "Site capacity for fibre-based composite material recycling",
+      "path": "/site-capacity-for-fibre-based-composite-material-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of fibre-based composite material packaging waste the site could recycle?",
+          "name": "QhRnWi",
+          "shortDescription": "Capacity (Fibre-based composite material)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "33628700-23c7-4f69-8f0f-e8203bc31cd8"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "fKJptb",
+          "shortDescription": "Timescale (Fibre-based composite material)",
+          "hint": "",
+          "list": "7ba3ee01-627d-4cf8-b36a-3ead18ea3950",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "e622b60b-f2df-49cf-9305-04c1b014040f"
+        }
+      ],
+      "next": [],
+      "id": "97316a3b-0063-485d-821a-618f3f7e4639",
+      "condition": "ab66965e-8f95-4524-aa5a-94aedde33961"
+    },
+    {
+      "title": "Site capacity for glass recycling",
+      "path": "/site-capacity-for-glass-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of glass packaging waste the site could recycle?",
+          "name": "vSToBG",
+          "shortDescription": "Capacity (Glass)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "9e83fc89-c9e4-4f62-bd13-572b272d9b3b"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "DVeeua",
+          "shortDescription": "Timescale (Glass)",
+          "hint": "",
+          "list": "b359bed8-63ee-43f6-b1ae-f0c495feb81e",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "4d1c0d1e-160a-4112-a93a-bb9deddd4e2a"
+        }
+      ],
+      "next": [],
+      "id": "6ff78ba9-1330-4201-992d-010eff549f4a",
+      "condition": "e5f42a59-5976-4a0f-8311-7ee58dc00da4"
+    },
+    {
+      "title": "Site capacity for paper or board recycling",
+      "path": "/site-capacity-for-paper-or-board-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of paper or board packaging waste the site could recycle?",
+          "name": "ZRavIK",
+          "shortDescription": "Capacity (Paper or board)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "a52dd6d1-b40d-4c57-8a68-2a5b5a50b2c9"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "jmderv",
+          "shortDescription": "Timescale (Paper or board)",
+          "hint": "",
+          "list": "40e95c55-43dc-4742-811e-7967debaec72",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "62bde91e-9100-4ed4-99fe-43224340820f"
+        }
+      ],
+      "next": [],
+      "id": "2e770b55-750d-48be-be26-da2c636d0561",
+      "condition": "be9650e5-a7d6-49c3-adfe-3c04248c2a8d"
+    },
+    {
+      "title": "Site capacity for plastic recycling",
+      "path": "/site-capacity-for-plastic-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of plastic packaging waste the site could recycle?",
+          "name": "SmJEoW",
+          "shortDescription": "Capacity (Plastic)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "5423b6a7-1b3a-46cf-af4d-575f5421b36b"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "YNWfOC",
+          "shortDescription": "Timescale (Plastic)",
+          "hint": "",
+          "list": "1efa9a64-f06c-4941-a920-bee8168ce648",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "3b280400-c9af-450f-8954-3e42b11bb732"
+        }
+      ],
+      "next": [],
+      "id": "b51a1985-9a63-4883-bd01-19bb9164b226",
+      "condition": "ae12b7ac-c6f8-4329-a5e3-0201056f535c"
+    },
+    {
+      "title": "Site capacity for steel recycling",
+      "path": "/site-capacity-for-steel-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of steel packaging waste the site could recycle?",
+          "name": "QKRKBz",
+          "shortDescription": "Capacity (Steel)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "7649b916-7a46-447b-a397-b811628b4621"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "EIbauW",
+          "shortDescription": "Timescale (Steel)",
+          "hint": "",
+          "list": "b3a53087-6616-413d-85d2-f4000d113ef1",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "8aaee4c4-9b29-4370-8436-9652684b524f"
+        }
+      ],
+      "next": [],
+      "id": "74d80bd6-e5f6-4e0f-a81d-a79f0197f5c7",
+      "condition": "9373dcaa-3ad8-4dc0-b8eb-7fa63f9f5c37"
+    },
+    {
+      "title": "Site capacity for wood recycling",
+      "path": "/site-capacity-for-wood-recycling",
+      "components": [
+        {
+          "type": "NumberField",
+          "title": "What is the maximum tonnage of wood packaging waste the site could recycle?",
+          "name": "NbYOqe",
+          "shortDescription": "Capacity (Wood)",
+          "hint": "This is the amount of packaging waste the site could recycle when operating to full capacity using the existing plant and equipment",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 1,
+            "precision": 0
+          },
+          "id": "b7071d5d-a1ac-461c-831a-bb868c4daf9f"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Is this a yearly, monthly or weekly capacity?",
+          "name": "bOVLpK",
+          "shortDescription": "Timescale (Wood)",
+          "hint": "",
+          "list": "a9ae6689-037d-4dac-b4bc-a1c875e17e94",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "585032cd-c605-438e-8e6d-b3277f177522"
+        }
+      ],
+      "next": [],
+      "id": "bf0e8166-965e-4922-a7a3-be8cea9b4f23",
+      "condition": "01a1ab21-ad64-4f36-ae90-458d9bf85faa"
+    },
+    {
+      "title": "",
+      "path": "/what-is-your-waste-carrier-broker-or-dealer-registration-number",
+      "components": [
+        {
+          "type": "TextField",
+          "title": "What is your waste carrier, broker or dealer registration number?",
+          "name": "ruHJsg",
+          "shortDescription": "Carrier, broker or dealer number",
+          "hint": "This must be an upper tier waste carrier, broker or dealer registration and is CBDU followed by a 4 to 6 digit number, for example CBDU123456",
+          "options": {
+            "required": true,
+            "classes": "govuk-input govuk-input--width-20"
+          },
+          "schema": {
+            "min": 8,
+            "max": 10,
+            "regex": "^[cC][bB][dD][uU]"
+          },
+          "id": "cd2832ce-3212-4800-a8dc-ed487ad951d5"
+        }
+      ],
+      "next": [],
+      "id": "42d4ac50-351f-4137-8548-ec33999d43d6"
+    },
+    {
+      "title": "",
+      "path": "/which-packaging-waste-category-are-you-registering",
+      "components": [
+        {
+          "type": "RadiosField",
+          "title": "Which packaging waste category are you registering?",
+          "name": "dFPgaw",
+          "shortDescription": "Packaging waste category to be registered",
+          "hint": "You can only apply to register one material on each application – you can apply for another material category after you’ve submitted this application",
+          "list": "c106dec4-bfae-44ca-b5fa-5e5eb5599b23",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "f4ec22b8-8d78-4076-a395-b54ba06992e7"
+        }
+      ],
+      "next": [],
+      "id": "07ca762b-f0fe-443d-befd-6f40edf65db0"
+    },
+    {
+      "title": "",
+      "path": "/what-process-is-used-for-recycling-glass",
+      "components": [
+        {
+          "type": "RadiosField",
+          "title": "What process is used for recycling glass?",
+          "name": "YMRnmp",
+          "shortDescription": "Glass process",
+          "hint": "",
+          "list": "8d1da33b-5947-4d19-bbc3-eba6000d38f5",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "912b4cc4-9484-4166-a6eb-41433f615bf4"
+        }
+      ],
+      "next": [],
+      "id": "fc250120-3da0-4599-a8fe-5891774b4d1d",
+      "condition": "a966a356-cde6-4293-9167-433c141bcab0"
+    },
+    {
+      "title": "",
+      "path": "/what-type-of-suppliers-do-you-receive-this-packaging-waste-category-from",
+      "components": [
+        {
+          "type": "MultilineTextField",
+          "title": "What type of suppliers do you receive this packaging waste category from?",
+          "name": "HFOWKa",
+          "shortDescription": "Suppliers",
+          "hint": "For example local council collections, direct from producer, material recovery facility",
+          "options": {
+            "required": true
+          },
+          "schema": {
+            "max": 500
+          },
+          "id": "71559a7a-5722-456b-afcb-1834351fbe6f"
+        }
+      ],
+      "next": [],
+      "id": "415a6511-916b-4373-a56d-396125f79c30"
+    },
+    {
+      "title": "Inputs for calendar year 2024",
+      "path": "/inputs-for-calendar-year-2024",
+      "components": [
+        {
+          "id": "b10d8725-28c9-4c0f-a01a-a956a6a3652c",
+          "type": "Markdown",
+          "content": "Regulators need to know the mix of waste types and raw materials used in your recycling process.\r\n\r\nOnly include the tonnage that relates to the packaging waste category you are registering.",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "RadiosField",
+          "title": "Are the tonnages for input actual or estimated figures?",
+          "name": "VVwRDD",
+          "shortDescription": "Input actual or estimated tonnages?",
+          "hint": "",
+          "list": "82467cc2-5cff-4144-b977-1b35675ef5ff",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "cf0921c9-2401-4831-8190-d22eba8f3ff3"
+        },
+        {
+          "type": "NumberField",
+          "title": "UK packaging waste",
+          "name": "cyBcMz",
+          "shortDescription": "UK packaging waste input",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "b6414467-e4b1-4fbb-a9ef-cece0b4d6875"
+        },
+        {
+          "type": "NumberField",
+          "title": "Non-UK packaging waste",
+          "name": "gGUQnN",
+          "shortDescription": "Non-UK packaging waste input",
+          "hint": "",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "ca9aa856-3d98-4933-8838-aa81ee8273d4"
+        },
+        {
+          "type": "NumberField",
+          "title": "Non-packaging waste",
+          "name": "VSKoqK",
+          "shortDescription": "Non-packaging input",
+          "hint": "An input to the recycling process, but it's not packaging waste",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "precision": 0
+          },
+          "id": "b277f7a3-0d74-4faa-90cf-c195f4d6a904"
+        }
+      ],
+      "next": [],
+      "id": "c152ba51-395d-472b-89e9-8b10f7bc3842"
+    },
+    {
+      "title": "Raw material inputs for calendar year 2024",
+      "path": "/raw-material-inputs-for-calendar-year-2024",
+      "components": [
+        {
+          "id": "7908baf0-28d5-4494-974c-9cf708cdf539",
+          "type": "Markdown",
+          "content": "Only include the tonnage that relates to the recycling process for the packaging waste category you are registering.\r\n\r\nIf you need to give details about more than one raw material, complete these questions for the first, choose 'Continue' then 'Add another raw material input' on the next page.",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "TextField",
+          "title": "Raw material",
+          "name": "hYwnjo",
+          "shortDescription": "Input raw material",
+          "hint": "Enter the name of the raw material used in your recycling process, for example water or starch",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "484335f2-04af-4939-a22c-3079d85e53a8"
+        },
+        {
+          "type": "NumberField",
+          "title": "Raw material tonnage",
+          "name": "dgypsb",
+          "shortDescription": "Input raw material tonnage",
+          "hint": "Enter whole tonnages",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "dba925a3-68e9-4d05-b8b9-63db119a4c66"
+        }
+      ],
+      "next": [],
+      "id": "15000508-5733-4abd-a154-5f062c7ce931",
+      "controller": "RepeatPageController",
+      "repeat": {
+        "options": {
+          "name": "MHEaUi",
+          "title": "Raw material input"
+        },
+        "schema": {
+          "min": 1,
+          "max": 25
+        }
+      }
+    },
+    {
+      "title": "Outputs for calendar year 2024",
+      "path": "/outputs-for-calendar-year-2024",
+      "components": [
+        {
+          "type": "Markdown",
+          "content": "Only include the tonnage that relates to the packaging waste category you are registering.",
+          "options": {},
+          "schema": {},
+          "id": "e38a6e5f-06b2-4fb1-9def-f6e8204a8dae"
+        },
+        {
+          "type": "RadiosField",
+          "title": "Are the output tonnages actual or estimated figures?",
+          "name": "slZDTV",
+          "shortDescription": "Output actual or estimated tonnages?",
+          "hint": "",
+          "list": "e99bacd1-0f9a-4db5-9cb5-f8b23e4aff7e",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "bcc59bc2-2c8a-40c8-9bfe-9ee4cd61ab4e"
+        },
+        {
+          "type": "NumberField",
+          "title": "Total tonnage of the packaging waste category sent to other sites for recycling",
+          "name": "TTBOhH",
+          "shortDescription": "Tonnage sent to another reprocessor",
+          "hint": "Material received but not recycled at your site",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "1c1eb144-f2f4-4e48-b0a8-c37381d2f500"
+        },
+        {
+          "type": "NumberField",
+          "title": "Total contaminants from recycling the packaging waste category",
+          "name": "zWAYkP",
+          "shortDescription": "Tonnage of contaminants",
+          "hint": "Contaminants removed from the material during recycling, including non-recyclable components or impurities",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "06a520cd-2dff-43bf-a9cd-869a667c2758"
+        },
+        {
+          "type": "NumberField",
+          "title": "Total process loss from recycling the packaging waste category",
+          "name": "sfMNQP",
+          "shortDescription": "Total process loss",
+          "hint": "For example, loss through material degradation or waste",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "e797494d-87dc-49ef-b654-cd6930210cc1"
+        }
+      ],
+      "next": [],
+      "id": "771794de-63cf-4fd7-816d-9fa5b098681e"
+    },
+    {
+      "title": "Products made from recycling for 2024",
+      "path": "/products-made-from-recycling-for-2024",
+      "components": [
+        {
+          "id": "334cd83b-ba51-474e-9613-bc1209dfdd74",
+          "type": "Markdown",
+          "content": "Only include the tonnage that relates to the recycling process for the packaging waste category you are registering.\r\n\r\nIf you need to give details about more than one product, complete these questions for the first, choose 'Continue' then 'Add another product from recycling' on the next page.",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "TextField",
+          "title": "Products made from recycling",
+          "name": "QCBNNY",
+          "shortDescription": "Product name",
+          "hint": "Enter the name of the product, for example milk bottles, food trays or cardboard boxes",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "ac069a3d-3914-45f2-97ea-2cea88ddbeeb"
+        },
+        {
+          "type": "NumberField",
+          "title": "Tonnage of product",
+          "name": "CShkze",
+          "shortDescription": "Product tonnage",
+          "hint": "Enter whole tonnages",
+          "options": {
+            "required": true,
+            "suffix": "Tonnes"
+          },
+          "schema": {
+            "min": 0,
+            "precision": 0
+          },
+          "id": "dba046f9-5182-403b-b725-dc099f705e19"
+        }
+      ],
+      "next": [],
+      "id": "5ce0e4e0-ccb6-47c6-a45f-eccc284612cb",
+      "controller": "RepeatPageController",
+      "repeat": {
+        "options": {
+          "name": "QCTXMF",
+          "title": "Product from recycling"
+        },
+        "schema": {
+          "min": 1,
+          "max": 25
+        }
+      }
+    },
+    {
+      "title": "",
+      "path": "/what-is-the-plant-and-equipment-used-to-recycle-this-packaging-waste-category",
+      "components": [
+        {
+          "type": "MultilineTextField",
+          "title": "What is the plant and equipment used to recycle this packaging waste category?",
+          "name": "mVuNew",
+          "shortDescription": "Plant and equipment",
+          "hint": "You only need to enter the name of the equipment - we'll ask you more detail about how you use it in the sampling and inspection plan",
+          "options": {
+            "required": true
+          },
+          "schema": {
+            "max": 500
+          },
+          "id": "413e8014-96b0-45dd-9d1a-c6e084c0a3fb"
+        }
+      ],
+      "next": [],
+      "id": "f805dfd1-6e97-41c8-8931-128051d34010"
+    },
+    {
+      "title": "Sampling and inspection plan",
+      "path": "/sampling-and-inspection-plan",
+      "components": [
+        {
+          "id": "78d470b6-ebc7-45f6-80e7-98fc994c24a5",
+          "type": "Markdown",
+          "content": "You need to provide a plan explaining how you determine the amount of UK packaging waste received for recycling at this site. This is called a sampling and inspection plan (SIP). \r\n\r\nComplete the [Packaging Reprocessor Sampling and Inspection Plan - Part 1: Registration](https://assets.publishing.service.gov.uk/media/686cf3922557debd867cbddd/25_07_01_Doc__Reprocessor_Registration_SIP_.odt) template then upload it on this page.",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "FileUploadField",
+          "title": "Upload part 1 of your sampling and inspection plan",
+          "name": "xddzIW",
+          "shortDescription": "Sampling and inspection plan",
+          "hint": "You may also upload supporting documentation",
+          "options": {
+            "required": true,
+            "accept": "application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.oasis.opendocument.text,text/plain,image/jpeg,image/png,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv,application/vnd.oasis.opendocument.spreadsheet"
+          },
+          "schema": {},
+          "id": "a9fc92ef-6a74-4d98-993b-5731905ff005"
+        }
+      ],
+      "next": [],
+      "id": "c5ff3988-3231-4585-b058-d70fd3e0a6f6",
+      "controller": "FileUploadPageController"
+    },
+    {
+      "title": "Approved person",
+      "path": "/approved-person",
+      "components": [
+        {
+          "id": "74286a73-6e56-405a-9871-8634d134c4a2",
+          "type": "Markdown",
+          "content": "You must give the name of an 'approved person' who will be responsible for tasks on behalf of your organisation. This person must:\r\n\r\n* apply for accreditation\r\n* submit and verify data returns\r\n\r\n##  Approved person's details",
+          "options": {},
+          "schema": {}
+        },
+        {
+          "type": "TextField",
+          "title": "What is the approved person's full name?",
+          "name": "eKdnWs",
+          "shortDescription": "AP name",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "5106645a-0977-4f8f-896b-5fd2e69d7719"
+        },
+        {
+          "type": "EmailAddressField",
+          "title": "What is their email address?",
+          "name": "CJvZOT",
+          "shortDescription": "AP email address",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "66b3e254-b6ec-41de-ba6a-f866963683a3"
+        },
+        {
+          "type": "TelephoneNumberField",
+          "title": "What is their telephone number?",
+          "name": "yRKTUh",
+          "shortDescription": "AP telephone number",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "1ca9403e-402b-4fa6-a9b8-1e1df62f3d32"
+        },
+        {
+          "type": "RadiosField",
+          "title": "What is their role within the organisation?",
+          "name": "TwIrTO",
+          "shortDescription": "AP role",
+          "hint": "",
+          "list": "d0819f83-9680-471c-9eed-1bfa6116af1a",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "4cc48a53-1456-4d52-9171-cc01d796b904"
+        }
+      ],
+      "next": [],
+      "id": "1cb21dee-2aab-4d6d-b94d-08d715347044"
+    },
+    {
+      "title": "Your contact details",
+      "path": "/your-contact-details",
+      "components": [
+        {
+          "type": "TextField",
+          "title": "What is your full name?",
+          "name": "LnSGUi",
+          "shortDescription": "Submitter name",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "55002499-1354-4c82-b7ad-2ac5bc82c5ca"
+        },
+        {
+          "type": "EmailAddressField",
+          "title": "What is your email address?",
+          "name": "pPrfJB",
+          "shortDescription": "Submitter email address",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "22bf53aa-75a6-4767-b06f-50edbe7ead2c"
+        },
+        {
+          "type": "TelephoneNumberField",
+          "title": "What is your telephone number?",
+          "name": "aCYymT",
+          "shortDescription": "Submitter telephone number",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "d6f1dc87-c6dd-4b72-957e-4c85d46fed8c"
+        },
+        {
+          "type": "TextField",
+          "title": "What is your job title?",
+          "name": "DxFVqx",
+          "shortDescription": "Submitter job title",
+          "hint": "",
+          "options": {
+            "required": true
+          },
+          "schema": {},
+          "id": "fd35cf10-aa10-439b-b4ee-92e9190f21db"
+        }
+      ],
+      "next": [],
+      "id": "23063aa1-06e4-45d5-8fa0-e7f7e6bc4a7e"
+    },
+    {
+      "id": "449a45f6-4541-4a46-91bd-8b8931b07b50",
+      "title": "Summary",
+      "path": "/summary",
+      "controller": "SummaryPageController",
+      "next": [],
+      "components": [
+        {
+          "type": "Markdown",
+          "content": "If you want to keep a record of your submitted answers please print this page.\r\n\r\nBy submitting this application you confirm the information you provided is accurate.\r\n\r\n**You may face enforcement action if the data is inaccurate.**",
+          "options": {},
+          "schema": {},
+          "id": "501c41c7-36ca-4c31-9787-84311f6704b2"
+        }
+      ],
+      "events": {
+        "onSave": {
+          "type": "http",
+          "options": {
+            "method": "POST",
+            "url": "https://epr-backend.test.cdp-int.defra.cloud/v1/apply/registration"
+          }
+        }
+      }
+    }
+  ],
+  "conditions": [
+    {
+      "items": [
+        {
+          "id": "fed60572-e8dc-4e8a-ab06-3428d64e33f9",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "b15aeeec-9268-445b-b780-79abadcf736f",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts aluminium",
+      "id": "ef64bf63-3772-487e-9918-db4de9ebb789"
+    },
+    {
+      "items": [
+        {
+          "id": "4f1ab7dd-8eb8-4da3-837c-054e585f4c40",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "fa6cb2a8-35ed-48cd-8649-545f9942812f",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts glass",
+      "id": "e5f42a59-5976-4a0f-8311-7ee58dc00da4"
+    },
+    {
+      "items": [
+        {
+          "id": "f936ad36-3313-4ad9-b073-e6ad6039652c",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "fe45478b-cddd-4fc2-9bac-3abe4ef40fbd",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts paper or board",
+      "id": "be9650e5-a7d6-49c3-adfe-3c04248c2a8d"
+    },
+    {
+      "items": [
+        {
+          "id": "c90009c2-682d-4148-b5f0-78a0a2ca73de",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "304a480d-59d9-4226-ac65-0e6c5688d992",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts FBC",
+      "id": "ab66965e-8f95-4524-aa5a-94aedde33961"
+    },
+    {
+      "items": [
+        {
+          "id": "74b1756e-49db-4577-9eef-2686d5cde8cd",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "e4a4b332-713c-4a3e-a5f3-1ac57293dd07",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts plastic",
+      "id": "ae12b7ac-c6f8-4329-a5e3-0201056f535c"
+    },
+    {
+      "items": [
+        {
+          "id": "a61cc239-5ffb-40dc-9066-7c3f39f266e0",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "4390ee49-324a-4cf3-8ad0-bdb956e5981e",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts steel",
+      "id": "9373dcaa-3ad8-4dc0-b8eb-7fa63f9f5c37"
+    },
+    {
+      "items": [
+        {
+          "id": "06a19cac-61d5-430a-824a-c38cee8e1fcc",
+          "componentId": "5d88820e-fdf3-48b0-98d3-4fd658491f29",
+          "operator": "contains",
+          "value": {
+            "itemId": "11d978c5-9a89-499d-b528-b4ce453a0401",
+            "listId": "817a807a-14f0-464b-b5be-ad1a674d31da"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Accepts wood",
+      "id": "01a1ab21-ad64-4f36-ae90-458d9bf85faa"
+    },
+    {
+      "items": [
+        {
+          "id": "168f0df6-4260-47c3-92ce-8f872b615a1c",
+          "componentId": "e79ee112-f640-4d65-bb5a-587e4b24e0c2",
+          "operator": "is",
+          "value": false,
+          "type": "BooleanValue"
+        }
+      ],
+      "displayName": "No Org ID",
+      "id": "89394c66-d0dc-4473-9cf8-b70c9be5c15a"
+    },
+    {
+      "items": [
+        {
+          "id": "b8175083-5080-47dd-98b7-db5161c1eb8f",
+          "componentId": "4ca25209-1bfa-4741-bc58-7d6a1c052ec6",
+          "operator": "is",
+          "value": false,
+          "type": "BooleanValue"
+        }
+      ],
+      "displayName": "Do not serve notice to site",
+      "id": "2d13f33a-cc77-4de4-b757-ec9599ff03b8"
+    },
+    {
+      "items": [
+        {
+          "id": "a68ed284-256f-45bd-b65a-174748f12ba6",
+          "componentId": "f4ec22b8-8d78-4076-a395-b54ba06992e7",
+          "operator": "is",
+          "value": {
+            "itemId": "d51ecce0-a59d-4f63-819b-80e0993084b2",
+            "listId": "c106dec4-bfae-44ca-b5fa-5e5eb5599b23"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Registering glass",
+      "id": "a966a356-cde6-4293-9167-433c141bcab0"
+    },
+    {
+      "items": [
+        {
+          "id": "b3b75c3f-412c-4730-b19f-8b8efce401a1",
+          "componentId": "f76851fb-1bcc-4eb0-9513-4e5553efb829",
+          "operator": "contains",
+          "value": {
+            "itemId": "a52f0ca2-fc12-4123-a897-696848aa6074",
+            "listId": "42072681-503c-495b-a8ce-8a437b9349c0"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env Permit or W/M/L",
+      "id": "7235f35a-12cc-42d4-8f99-5d0c30950c63"
+    },
+    {
+      "items": [
+        {
+          "id": "907e3631-864a-4c31-a07e-29dd0e9f52bd",
+          "componentId": "f76851fb-1bcc-4eb0-9513-4e5553efb829",
+          "operator": "contains",
+          "value": {
+            "itemId": "901aa6c8-5ff4-4d99-971a-84b2ece18804",
+            "listId": "42072681-503c-495b-a8ce-8a437b9349c0"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Installation Permit",
+      "id": "c4c68a6e-b0df-4cad-bab4-8ea82b27698c"
+    },
+    {
+      "items": [
+        {
+          "id": "29a4968a-44a4-48c4-84d8-392807007e8b",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "826dbbb7-eb68-42f9-b59f-d33295c5ff12",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (Alu)",
+      "id": "ebb32d72-fb65-476d-8229-01d85f9a72eb"
+    },
+    {
+      "items": [
+        {
+          "id": "49372533-5041-4882-83a0-44dd42ac3402",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "75b1351b-9223-4ef1-8b3e-0a5f2809032b",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (FBC)",
+      "id": "43ffb99a-bc9b-41ad-b202-adf8a7ee5102"
+    },
+    {
+      "items": [
+        {
+          "id": "a8e0a9e4-4292-4bae-84e0-00c687c2d985",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "5782a612-b240-444c-8cf8-5c9c21f00023",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (Glass)",
+      "id": "b0956f05-7437-41c7-b6d8-7ec4b96f26eb"
+    },
+    {
+      "items": [
+        {
+          "id": "327fbaac-fed8-477f-ae78-6ccfa3b0e4a3",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "e711348d-c307-4ffd-b526-2dfb04358759",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (PB)",
+      "id": "dbe9c772-84d0-40e8-bb1f-81afb7ecfe33"
+    },
+    {
+      "items": [
+        {
+          "id": "a210777c-e39f-4fed-8046-5a41861ea00e",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "c3b99230-369e-411e-88cd-cd059614dd5b",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (Plastic)",
+      "id": "2a6e93a6-4c43-45aa-b3ec-34e25c2e0df2"
+    },
+    {
+      "items": [
+        {
+          "id": "619d446e-241c-49bb-b473-af0589715d64",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "d00f2268-dfe7-412e-b120-9520bc5d3fd5",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (Steel)",
+      "id": "7f493f0d-e187-43d5-9d9d-3cc00d5be7dc"
+    },
+    {
+      "items": [
+        {
+          "id": "daaf4477-3d9e-4e3d-b439-df0ffc31aad8",
+          "componentId": "dcad4859-37fe-44f1-8a67-fed0cd478926",
+          "operator": "contains",
+          "value": {
+            "itemId": "f8a0c461-f3c3-48df-a021-addc238803d2",
+            "listId": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Env or WML (Wood)",
+      "id": "63c3affc-8eb1-4b57-80b0-2be5c92895e7"
+    },
+    {
+      "items": [
+        {
+          "id": "839c325f-16e9-48d9-9cee-42a2db98c783",
+          "componentId": "f76851fb-1bcc-4eb0-9513-4e5553efb829",
+          "operator": "contains",
+          "value": {
+            "itemId": "72c8da90-b72f-467f-a37e-3417f5c0d36e",
+            "listId": "42072681-503c-495b-a8ce-8a437b9349c0"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is waste exemption",
+      "id": "440128be-4068-47e9-9c91-61e0d7374751"
+    },
+    {
+      "items": [
+        {
+          "id": "d4c53164-8797-4479-83da-6d8cecf48793",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "b1d2af90-0885-4c8d-8dc0-e8d5d67ea6e8",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (Alu)",
+      "id": "3a99802c-7516-4ce9-b843-479cca631f5a"
+    },
+    {
+      "items": [
+        {
+          "id": "98898e62-2ce8-4eb1-8899-89def025ae1f",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "9ee80fb4-f50d-45f6-81b3-2920f7da90d1",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (FBC)",
+      "id": "143e6bd9-2427-4a5a-b43c-3070e5932b19"
+    },
+    {
+      "items": [
+        {
+          "id": "ca6019a3-ed7b-47fa-9026-02ccd0d15d67",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "fa19775a-22f0-44b9-aa02-f56c02c7956c",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (Glass)",
+      "id": "4d3b7a11-898d-4448-a0bd-2fba5d3b0ff7"
+    },
+    {
+      "items": [
+        {
+          "id": "63385491-2af5-4a58-9f41-ff7190fb9166",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "917622cd-1510-40f7-bb05-353316518fec",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (PB)",
+      "id": "75103e7d-a6c5-4fde-938e-ba8b2248d0da"
+    },
+    {
+      "items": [
+        {
+          "id": "26ad703a-9225-44e4-8d97-939014f5c772",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "f86d085d-b626-46c9-892d-68dfdcfddfbf",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (Plastic)",
+      "id": "0779b8b4-cb8d-4c57-9f40-b79f279b2f03"
+    },
+    {
+      "items": [
+        {
+          "id": "3a22dc6f-324f-4669-b8f7-dbe21cc068e4",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "d6c135f8-85ee-45c1-8c2b-5ec3f8582359",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (Steel)",
+      "id": "8af47b3d-7bdc-4292-95a3-8db49a2ed999"
+    },
+    {
+      "items": [
+        {
+          "id": "f8a5a1ce-5e5b-401a-ba78-82f039ae7265",
+          "componentId": "efaf7946-680d-4dfe-97d0-4f52ad5adf73",
+          "operator": "contains",
+          "value": {
+            "itemId": "9ea4d6ef-14ac-4101-a4aa-e52c105dbdab",
+            "listId": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+          },
+          "type": "ListItemRef"
+        }
+      ],
+      "displayName": "Is Inst (Wood)",
+      "id": "246b39d0-959e-4af3-9f01-92c1a1099b81"
+    }
+  ],
+  "sections": [],
+  "lists": [
+    {
+      "name": "EHDwaD",
+      "title": "List for question JheIje",
+      "type": "string",
+      "items": [
+        {
+          "id": "b15aeeec-9268-445b-b780-79abadcf736f",
+          "text": "Aluminium (R4)",
+          "value": "Aluminium (R4)"
+        },
+        {
+          "id": "304a480d-59d9-4226-ac65-0e6c5688d992",
+          "text": "Fibre-based composite material (R3)",
+          "value": "Fibre-based composite material (R3)"
+        },
+        {
+          "id": "fa6cb2a8-35ed-48cd-8649-545f9942812f",
+          "text": "Glass (R5)",
+          "value": "Glass (R5)"
+        },
+        {
+          "id": "fe45478b-cddd-4fc2-9bac-3abe4ef40fbd",
+          "text": "Paper or board (R3)",
+          "value": "Paper or board (R3)"
+        },
+        {
+          "id": "e4a4b332-713c-4a3e-a5f3-1ac57293dd07",
+          "text": "Plastic (R3)",
+          "value": "Plastic (R3)"
+        },
+        {
+          "id": "4390ee49-324a-4cf3-8ad0-bdb956e5981e",
+          "text": "Steel (R4)",
+          "value": "Steel (R4)"
+        },
+        {
+          "id": "11d978c5-9a89-499d-b528-b4ce453a0401",
+          "text": "Wood (R3)",
+          "value": "Wood (R3)"
+        }
+      ],
+      "id": "817a807a-14f0-464b-b5be-ad1a674d31da"
+    },
+    {
+      "name": "mSuZzu",
+      "title": "List for question CHzniE",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "d4043771-dd7f-4a5a-8b92-bae43f9d43e4"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "0331067b-f07d-4a03-81f4-00f45af2fce6"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "e4a9ca09-5171-4d34-a299-6ecc73a91367"
+        }
+      ],
+      "id": "92371a63-fbac-455b-b05f-7aa3019edc8f"
+    },
+    {
+      "name": "CYFWzz",
+      "title": "List for question KjYQpk",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "cdf72e34-0795-4cae-a06d-cfa76ad03dae"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "cc4c3ac4-98eb-45c8-882f-fc17f3318131"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "2302487f-f5f3-4e28-abff-cd5082b073a1"
+        }
+      ],
+      "id": "22a59d26-1a1e-40b6-944e-4cd842555726"
+    },
+    {
+      "name": "gilwyZ",
+      "title": "List for question aYxyJv",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "a23034cd-0df0-40fc-aba6-1f591eeb7b49"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "c1e67b0a-3f5f-48b8-809d-95158d34b421"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "4360ab6a-7dbf-4fb2-8b11-02a1d8f495a8"
+        }
+      ],
+      "id": "13aa6a0b-0f64-4136-a432-0f7fd61b9402"
+    },
+    {
+      "name": "VzRBNn",
+      "title": "List for question CybNBT",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "9eaed392-4f89-4c34-a08a-bbc626c5b9c4"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "6eec6b89-9c19-47e3-bc1e-12bf39a800b9"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "06973310-fbfa-40d7-9380-2e74786bc1e0"
+        }
+      ],
+      "id": "51716d88-8e93-4687-931c-823199a58ffe"
+    },
+    {
+      "name": "ueCQEO",
+      "title": "List for question jhAwXO",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "65975e90-e0fb-429c-9268-c20aa67c7d14"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "a18d0009-9ef3-479d-bc26-48dd99e8a29b"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "a3ee25fb-4458-424e-8565-8ca9c71f67df"
+        }
+      ],
+      "id": "3fa312f3-87d6-4ebd-8b8d-85a2c38ccfcd"
+    },
+    {
+      "name": "vWkbAu",
+      "title": "List for question wrBNlw",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "c385fe72-6188-413c-a2d7-e34b95ea880d"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "7aa05a1b-b7ae-41e2-be39-d6233537b894"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "25720ceb-24cb-45a9-930c-c3e8b12b24a2"
+        }
+      ],
+      "id": "c2dc4e98-b29c-45f4-9483-2ed705c4e11e"
+    },
+    {
+      "name": "mVirWH",
+      "title": "List for question dQoVDq",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "36228bb2-e7e2-459f-8b06-1860589d4fe8"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "ef62fecb-398b-4006-b069-a7c121fdc3c0"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "6c3b7c11-bd34-4391-bd96-9c176cd54bc0"
+        }
+      ],
+      "id": "9e5e1abf-cbc8-4fb1-a8c2-29e74adc510e"
+    },
+    {
+      "name": "JejgQD",
+      "title": "List for question oXaouc",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "d4dcf3f1-8921-482c-bd0a-f7e64888768a"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "bc677dcb-347b-4c64-815b-0f17e865bfdf"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "68acc495-cdd7-40e3-a604-f53abf857426"
+        }
+      ],
+      "id": "1b6a6d4d-549b-4e8a-ba49-0c991993206b"
+    },
+    {
+      "name": "wYAPjf",
+      "title": "List for question PVPQSJ",
+      "type": "string",
+      "items": [
+        {
+          "id": "523b73c3-a9c5-45d8-b769-ac55e238e4c3",
+          "text": "Yearly",
+          "value": "Yearly"
+        },
+        {
+          "id": "8b0bea29-478f-40ae-b6a5-1e6508f76b3f",
+          "text": "Monthly",
+          "value": "Monthly"
+        },
+        {
+          "id": "03b0b2dd-f4b4-43d5-9e3a-c19e5b9a286d",
+          "text": "Weekly",
+          "value": "Weekly"
+        }
+      ],
+      "id": "e31b9d71-e218-4136-8164-361240b223ae"
+    },
+    {
+      "name": "HfolbS",
+      "title": "List for question oVyPAn",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "afcead89-8ab2-47b2-882c-1eabdccff86d"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "be55b331-dbf3-48cf-bb74-b9afd28fe652"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "511941bf-bf6f-439d-b107-1f81e5db53f6"
+        }
+      ],
+      "id": "1c67d6b8-393c-4982-9eba-a1e57fad7b5d"
+    },
+    {
+      "name": "ozJZSQ",
+      "title": "List for question gNdqCt",
+      "type": "string",
+      "items": [
+        {
+          "id": "16ff4b80-0207-4016-951c-8b8ce6f08c09",
+          "text": "Yearly",
+          "value": "Yearly"
+        },
+        {
+          "id": "76a74dd2-8d87-4245-bc3b-a22bf844fec1",
+          "text": "Monthly",
+          "value": "Monthly"
+        },
+        {
+          "id": "5f6d0aca-4d17-44d1-b112-13fe0c8a7f88",
+          "text": "Weekly",
+          "value": "Weekly"
+        }
+      ],
+      "id": "655d2e4d-8a65-47bb-b1a6-62efc97386c2"
+    },
+    {
+      "name": "NcbaOU",
+      "title": "List for question SMhqAO",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "6d309799-3e81-4892-8988-6894d548efb8"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "e7e4dc4c-0797-4067-bb6c-f080775bbe6b"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "b8315134-8e2c-47cb-adbd-a073de37c800"
+        }
+      ],
+      "id": "42aaba01-a830-40f0-bba4-a8a79600e697"
+    },
+    {
+      "name": "mfzVIU",
+      "title": "List for question YuzbTu",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "c09371fe-11ce-4d53-b1e1-678b1c28f7a0"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "a0569d8e-e985-4423-9659-96be634ef69f"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "e482bc02-465e-4035-b539-2e4ef84716e4"
+        }
+      ],
+      "id": "3368ab8f-58f6-49fc-aa79-1ccfce6d26f0"
+    },
+    {
+      "name": "aiEQNl",
+      "title": "List for question DVeeua",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "e98619e5-129d-41a3-a8e5-d6ef075b4e3a"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "2713e915-6017-4269-ac55-04c32285d25c"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "907656d5-612e-43e6-aece-36162104508e"
+        }
+      ],
+      "id": "b359bed8-63ee-43f6-b1ae-f0c495feb81e"
+    },
+    {
+      "name": "XalGSd",
+      "title": "List for question jmderv",
+      "type": "string",
+      "items": [
+        {
+          "id": "45c358a9-cf2d-4ad2-aad4-22a561054134",
+          "text": "Yearly",
+          "value": "Yearly"
+        },
+        {
+          "id": "32e0317e-c0d8-4691-9151-ec1b38170b45",
+          "text": "Monthly",
+          "value": "Monthly"
+        },
+        {
+          "id": "73478339-ea99-4c08-afc3-68f391c446b1",
+          "text": "Weekly",
+          "value": "Weekly"
+        }
+      ],
+      "id": "40e95c55-43dc-4742-811e-7967debaec72"
+    },
+    {
+      "name": "ZUmKHv",
+      "title": "List for question fKJptb",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "2ee879db-c99c-4fb0-aebb-54269e988fd2"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "1eb60d9e-297d-4fdc-9469-67baabb1f08a"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "3d07e410-4384-4e00-a835-97f228b128b2"
+        }
+      ],
+      "id": "7ba3ee01-627d-4cf8-b36a-3ead18ea3950"
+    },
+    {
+      "name": "ltgUQM",
+      "title": "List for question YNWfOC",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "762d334f-649b-4427-9cf0-c427b69052ca"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "daa9ca59-de86-409f-a7d1-27900a53efd7"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "1b8ca47e-6334-49dd-801e-5516305ed318"
+        }
+      ],
+      "id": "1efa9a64-f06c-4941-a920-bee8168ce648"
+    },
+    {
+      "name": "EqKJrh",
+      "title": "List for question EIbauW",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "53359ddd-96c1-495c-8f59-6ec4660041be"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "def9f043-7580-4fe5-abf2-e3c7f4fea2be"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "653f2f67-c24b-40e8-a82d-985898bec70f"
+        }
+      ],
+      "id": "b3a53087-6616-413d-85d2-f4000d113ef1"
+    },
+    {
+      "name": "vkgquL",
+      "title": "List for question bOVLpK",
+      "type": "string",
+      "items": [
+        {
+          "text": "Yearly",
+          "value": "Yearly",
+          "id": "aa64e20b-4d58-4412-9b45-e2ae657fa255"
+        },
+        {
+          "text": "Monthly",
+          "value": "Monthly",
+          "id": "2f819818-fa4b-481b-b560-9a960c80c3b0"
+        },
+        {
+          "text": "Weekly",
+          "value": "Weekly",
+          "id": "cf3bfb6c-aca3-4f88-9aba-cfd60246a9d7"
+        }
+      ],
+      "id": "a9ae6689-037d-4dac-b4bc-a1c875e17e94"
+    },
+    {
+      "name": "Wciiok",
+      "title": "List for question dFPgaw",
+      "type": "string",
+      "items": [
+        {
+          "id": "92bdb97a-e275-4f86-b409-ba0570354482",
+          "text": "Aluminium (R4)",
+          "value": "Aluminium (R4)"
+        },
+        {
+          "id": "6cb351cf-62a1-4848-8450-a971db4d19dd",
+          "text": "Fibre-based composite material (R3)",
+          "value": "Fibre-based composite material (R3)"
+        },
+        {
+          "id": "d51ecce0-a59d-4f63-819b-80e0993084b2",
+          "text": "Glass (R5)",
+          "value": "Glass (R5)"
+        },
+        {
+          "id": "02e90022-8258-46ae-bbf8-7bed088f495d",
+          "text": "Paper or board (R3)",
+          "value": "Paper or board (R3)"
+        },
+        {
+          "id": "266c7740-7bb2-4707-9bab-1d2492b87ac3",
+          "text": "Plastic (R3)",
+          "value": "Plastic (R3)"
+        },
+        {
+          "id": "feed04bd-ec97-44a2-b1d0-122b7aa51a05",
+          "text": "Steel (R4)",
+          "value": "Steel (R4)"
+        },
+        {
+          "id": "318766aa-6e62-44c9-a4f6-db86cfb99683",
+          "text": "Wood (R3)",
+          "value": "Wood (R3)"
+        }
+      ],
+      "id": "c106dec4-bfae-44ca-b5fa-5e5eb5599b23"
+    },
+    {
+      "name": "GpwTJl",
+      "title": "List for question VVwRDD",
+      "type": "string",
+      "items": [
+        {
+          "id": "1f2714d1-14a0-4486-89bd-4a91cb088dde",
+          "text": "Actual figures",
+          "value": "Actual figures"
+        },
+        {
+          "id": "5a0c8b6a-34c0-4dcf-bafc-730d1f26a7fc",
+          "text": "Estimated figures",
+          "value": "Estimated figures"
+        }
+      ],
+      "id": "82467cc2-5cff-4144-b977-1b35675ef5ff"
+    },
+    {
+      "name": "lGegTI",
+      "title": "List for question slZDTV",
+      "type": "string",
+      "items": [
+        {
+          "id": "d014fab4-7e73-4dbc-aa29-c671200a023b",
+          "text": "Actual figures",
+          "value": "Actual figures"
+        },
+        {
+          "id": "4725056a-4157-4d16-afec-7d43a4f5983c",
+          "text": "Estimated figures",
+          "value": "Estimated figures"
+        }
+      ],
+      "id": "e99bacd1-0f9a-4db5-9cb5-f8b23e4aff7e"
+    },
+    {
+      "name": "azkvYk",
+      "title": "List for question TwIrTO",
+      "type": "string",
+      "items": [
+        {
+          "id": "7295beb9-90a5-42a5-844e-ee6c589265e8",
+          "text": "Director",
+          "value": "Director"
+        },
+        {
+          "id": "b7f3c71c-0c09-4f49-90d7-2c64dd1acbf6",
+          "text": "Company secretary",
+          "value": "Company secretary"
+        },
+        {
+          "id": "2a504b08-4126-4201-954e-645b28543a8d",
+          "text": "Partner",
+          "value": "Partner"
+        },
+        {
+          "id": "9bcb696f-e7cf-4ca2-ae47-968f34d69587",
+          "text": "Owner",
+          "value": "Sole trader",
+          "hint": {
+            "text": "Sole trader",
+            "id": "5f1d3f30-e6d1-45ea-b726-862c2cd8a24f"
+          }
+        },
+        {
+          "id": "ebb75719-ee81-4bca-ab18-843e451574ba",
+          "text": "Chair, treasurer or secretary",
+          "value": "Chair, treasurer or secretary",
+          "hint": {
+            "text": "Unincorporated organisation",
+            "id": "25935e4b-0529-4f83-b64e-e2548a81e8cd"
+          }
+        },
+        {
+          "id": "55db5625-00ac-4071-a627-b48960d8e1b7",
+          "text": "Chief executive officer",
+          "value": "Chief executive officer"
+        }
+      ],
+      "id": "d0819f83-9680-471c-9eed-1bfa6116af1a"
+    },
+    {
+      "name": "ubMigR",
+      "title": "List for question YMRnmp",
+      "type": "string",
+      "items": [
+        {
+          "id": "ebaf85c9-dca2-452e-b07b-4da5c41ae2be",
+          "text": "Glass re-melt",
+          "value": "Glass re-melt"
+        },
+        {
+          "id": "32dbba7d-23f1-4b7e-8d60-4c973dce9d8f",
+          "text": "Glass other",
+          "value": "Glass other"
+        },
+        {
+          "id": "84e0c838-045e-4b03-a427-e30580c14a68",
+          "text": "Both",
+          "value": "Both"
+        }
+      ],
+      "id": "8d1da33b-5947-4d19-bbc3-eba6000d38f5"
+    },
+    {
+      "name": "GBrcRb",
+      "title": "List for question SoGzFb",
+      "type": "string",
+      "items": [
+        {
+          "id": "a52f0ca2-fc12-4123-a897-696848aa6074",
+          "text": "Environmental permit or waste management licence",
+          "value": "Environmental permit or waste management licence"
+        },
+        {
+          "id": "901aa6c8-5ff4-4d99-971a-84b2ece18804",
+          "text": "Installation permit",
+          "value": "Installation or PPC permit"
+        },
+        {
+          "id": "72c8da90-b72f-467f-a37e-3417f5c0d36e",
+          "text": "Waste exemption",
+          "value": "Waste exemption"
+        }
+      ],
+      "id": "42072681-503c-495b-a8ce-8a437b9349c0"
+    },
+    {
+      "name": "PJREis",
+      "title": "List for question NbsDhs",
+      "type": "string",
+      "items": [
+        {
+          "id": "826dbbb7-eb68-42f9-b59f-d33295c5ff12",
+          "text": "Aluminium (R4)",
+          "value": "Aluminium (R4)"
+        },
+        {
+          "id": "75b1351b-9223-4ef1-8b3e-0a5f2809032b",
+          "text": "Fibre-based composite material (R3)",
+          "value": "Fibre-based composite material (R3)"
+        },
+        {
+          "id": "5782a612-b240-444c-8cf8-5c9c21f00023",
+          "text": "Glass (R5)",
+          "value": "Glass (R5)"
+        },
+        {
+          "id": "e711348d-c307-4ffd-b526-2dfb04358759",
+          "text": "Paper or board (R3)",
+          "value": "Paper or board (R3)"
+        },
+        {
+          "id": "c3b99230-369e-411e-88cd-cd059614dd5b",
+          "text": "Plastic (R3)",
+          "value": "Plastic (R3)"
+        },
+        {
+          "id": "d00f2268-dfe7-412e-b120-9520bc5d3fd5",
+          "text": "Steel (R4)",
+          "value": "Steel (R4)"
+        },
+        {
+          "id": "f8a0c461-f3c3-48df-a021-addc238803d2",
+          "text": "Wood (R3)",
+          "value": "Wood (R3)"
+        }
+      ],
+      "id": "30e306af-25c5-4a6f-a52b-29a8483c7e85"
+    },
+    {
+      "name": "XtZRQo",
+      "title": "List for question ngAxFC",
+      "type": "string",
+      "items": [
+        {
+          "id": "b1d2af90-0885-4c8d-8dc0-e8d5d67ea6e8",
+          "text": "Aluminium (R4)",
+          "value": "Aluminium (R4)"
+        },
+        {
+          "id": "9ee80fb4-f50d-45f6-81b3-2920f7da90d1",
+          "text": "Fibre-based composite material (R3)",
+          "value": "Fibre-based composite material (R3)"
+        },
+        {
+          "id": "fa19775a-22f0-44b9-aa02-f56c02c7956c",
+          "text": "Glass (R5)",
+          "value": "Glass (R5)"
+        },
+        {
+          "id": "917622cd-1510-40f7-bb05-353316518fec",
+          "text": "Paper or board (R3)",
+          "value": "Paper or board (R3)"
+        },
+        {
+          "id": "f86d085d-b626-46c9-892d-68dfdcfddfbf",
+          "text": "Plastic (R3)",
+          "value": "Plastic (R3)"
+        },
+        {
+          "id": "d6c135f8-85ee-45c1-8c2b-5ec3f8582359",
+          "text": "Steel (R4)",
+          "value": "Steel (R4)"
+        },
+        {
+          "id": "9ea4d6ef-14ac-4101-a4aa-e52c105dbdab",
+          "text": "Wood (R3)",
+          "value": "Wood (R3)"
+        }
+      ],
+      "id": "db63ba95-107d-4663-84a4-01f90e2cab4d"
+    },
+    {
+      "name": "ooxaDA",
+      "title": "List for question XaXFWf",
+      "type": "string",
+      "items": [
+        {
+          "id": "cc141c21-517f-4789-8bee-2480e66ff64a",
+          "text": "Yearly",
+          "value": "Yearly"
+        },
+        {
+          "id": "2110db64-9b58-45ae-88e0-93e1be9777ac",
+          "text": "Monthly",
+          "value": "Monthly"
+        },
+        {
+          "id": "43852874-1d36-408a-a176-0423cad5ae62",
+          "text": "Weekly",
+          "value": "Weekly"
+        }
+      ],
+      "id": "171eff96-a07c-4e41-b5aa-ac982efdb6da"
+    },
+    {
+      "name": "puAUkB",
+      "title": "List for question nJkCtT",
+      "type": "string",
+      "items": [
+        {
+          "id": "7d896bd9-5698-4f9f-9a73-c96e80e73427",
+          "text": "Aluminium (R4)",
+          "value": "Aluminium (R4)"
+        },
+        {
+          "id": "8b5f2af3-6ab1-4bb4-ba99-dc7cb8b7bf20",
+          "text": "Fibre-based composite material (R3)",
+          "value": "Fibre-based composite material (R3)"
+        },
+        {
+          "id": "f335202f-410e-437c-bce1-4c746a422ca8",
+          "text": "Glass (R5)",
+          "value": "Glass (R5)"
+        },
+        {
+          "id": "f1aa6747-2bf2-43dd-a4c9-f48ceeb07c17",
+          "text": "Paper or board (R3)",
+          "value": "Paper or board (R3)"
+        },
+        {
+          "id": "8f012f9d-9975-4388-b735-f3878533b027",
+          "text": "Plastic (R3)",
+          "value": "Plastic (R3)"
+        },
+        {
+          "id": "e2270184-605a-49e7-9764-5609ead8bbc6",
+          "text": "Steel (R4)",
+          "value": "Steel (R4)"
+        },
+        {
+          "id": "5573ab1b-a734-4aa0-8073-c5d673e464b6",
+          "text": "Wood (R3)",
+          "value": "Wood (R3)"
+        }
+      ],
+      "id": "6856f0c4-9a95-4b05-91d5-277091e18936"
+    },
+    {
+      "name": "sMiBnJ",
+      "title": "List for question nVsBHG",
+      "type": "string",
+      "items": [
+        {
+          "text": "English",
+          "value": "en-gb",
+          "id": "7ef8095f-be9b-42f6-beb0-2143c330a04a"
+        }
+      ],
+      "id": "2d7519fe-ac7e-42a6-85ce-0b1af2a6d55c"
+    },
+    {
+      "name": "hGQjNp",
+      "title": "List for question JbuRDs",
+      "type": "string",
+      "items": [
+        {
+          "id": "e45d14b7-23af-4708-bf49-ffd2259bd8f9",
+          "text": "Yearly",
+          "value": "Yearly"
+        },
+        {
+          "id": "3cccb2a7-1a9f-42b3-bbae-8b1f5ff45707",
+          "text": "Monthly",
+          "value": "Monthly"
+        },
+        {
+          "id": "a89c45ed-12d9-4c90-92fe-08f040f85883",
+          "text": "Weekly",
+          "value": "Weekly"
+        }
+      ],
+      "id": "7a32423e-c12a-44d6-911e-b9c5c3e9e859"
+    }
+  ]
+}
