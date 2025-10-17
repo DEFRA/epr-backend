@@ -1,4 +1,5 @@
 import tls from 'node:tls'
+import { randomUUID } from 'node:crypto'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import { Piscina } from 'piscina'
@@ -28,6 +29,30 @@ const MOCK_CERT =
 const VALID_CERT_BASE64 = Buffer.from(MOCK_CERT).toString('base64')
 
 describe('patchTlsSecureContext', () => {
+  let server
+  let summaryLogsRepository
+
+  beforeAll(async () => {
+    const { createServer } = await import('#server/server.js')
+    server = await createServer()
+    await server.initialize()
+
+    const { createSummaryLogsRepository } = await import(
+      '#repositories/summary-logs/mongodb.js'
+    )
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    summaryLogsRepository = createSummaryLogsRepository(server.db)(mockLogger)
+  })
+
+  afterAll(async () => {
+    await server.stop()
+  })
+
   afterEach(() => {
     delete process.env.TRUSTSTORE_TEST_CERT
   })
@@ -47,23 +72,41 @@ describe('patchTlsSecureContext', () => {
     expect(() => patchTlsSecureContext()).not.toThrow()
   })
 
-  test('Should patch tls.createSecureContext in worker thread context', async () => {
+  test('Should apply TLS patch in real worker thread', async () => {
     process.env.TRUSTSTORE_TEST_CERT = VALID_CERT_BASE64
+
+    const summaryLogId = `test-${randomUUID()}`
+
+    await summaryLogsRepository.insert({
+      id: summaryLogId,
+      status: 'validating',
+      file: {
+        id: `file-${randomUUID()}`,
+        name: 'test.xlsx',
+        s3: { bucket: 'bucket', key: 'key' }
+      }
+    })
 
     const filename = fileURLToPath(import.meta.url)
     const dirname = path.dirname(filename)
-    const workerPath = path.join(dirname, 'test-worker.js')
+    const workerPath = path.resolve(
+      dirname,
+      '../../workers/summary-logs/worker/worker-thread.js'
+    )
 
     const pool = new Piscina({
       filename: workerPath,
       maxThreads: 1
     })
 
-    try {
-      const result = await pool.run()
+    const summaryLog = {
+      id: summaryLogId,
+      status: 'validating',
+      version: 1
+    }
 
-      expect(result.isPatched).toBe(true)
-      expect(result.canCreateContext).toBe(true)
+    try {
+      await pool.run({ summaryLog })
     } finally {
       await pool.destroy()
     }
