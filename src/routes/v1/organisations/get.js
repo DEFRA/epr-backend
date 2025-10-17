@@ -14,12 +14,6 @@ export const organisationsGet = {
   handler: async ({ organisationsRepository }, h) => {
     const organisations = await organisationsRepository.findAll()
 
-    if (!organisations) {
-      return h
-        .response({ message: 'No organisations found' })
-        .code(StatusCodes.NOT_FOUND)
-    }
-
     return h.response(organisations).code(StatusCodes.OK)
   }
 }

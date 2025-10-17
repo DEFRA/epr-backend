@@ -37,37 +37,4 @@ describe('/v1/organisations route', () => {
       expect(response.result).toEqual([{ id: 'org-1', name: 'Org One' }])
     })
   })
-
-  describe('not found path', () => {
-    /** @type {import('#common/hapi-types.js').HapiServer} */
-    let server
-
-    beforeAll(async () => {
-      const organisationsRepository = () => ({
-        async findAll() {
-          return null
-        }
-      })
-
-      server = await createServer({
-        repositories: { organisationsRepository },
-        featureFlags: createInMemoryFeatureFlags({ organisations: true })
-      })
-      await server.initialize()
-    })
-
-    afterAll(async () => {
-      await server?.stop()
-    })
-
-    it('returns 404 when repository returns null', async () => {
-      const response = await server.inject({
-        method: 'GET',
-        url: '/v1/organisations'
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-      expect(response.result).toEqual({ message: 'No organisations found' })
-    })
-  })
 })
