@@ -63,8 +63,7 @@ export const summaryLogsValidate = {
     const s3Path = `${s3Bucket}/${s3Key}`
 
     try {
-      await summaryLogsRepository.insert({
-        id: randomUUID(),
+      await summaryLogsRepository.insert(randomUUID(), {
         status: SUMMARY_LOG_STATUS.VALIDATING,
         organisationId,
         registrationId,

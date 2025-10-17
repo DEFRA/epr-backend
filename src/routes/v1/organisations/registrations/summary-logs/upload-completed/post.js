@@ -33,12 +33,11 @@ const buildFileData = (upload, existingFile = null) => {
   return fileData
 }
 
-const buildSummaryLogData = (summaryLogId, upload, existingFile = null) => {
+const buildSummaryLogData = (upload, existingFile = null) => {
   const status = determineStatusFromUpload(upload.fileStatus)
   const failureReason = determineFailureReason(status, upload.errorMessage)
 
   const data = {
-    id: summaryLogId,
     status,
     file: buildFileData(upload, existingFile)
   }
@@ -57,18 +56,19 @@ const buildSummaryLogData = (summaryLogId, upload, existingFile = null) => {
  * @param {TypedLogger} logger
  * @returns {Promise<string>} The new status
  */
-const upsertSummaryLog = async (
+const updateStatusBasedOnUpload = async (
   summaryLogsRepository,
   summaryLogId,
   upload,
   logger
 ) => {
-  const existingSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+  const existing = await summaryLogsRepository.findById(summaryLogId)
   const newStatus = determineStatusFromUpload(upload.fileStatus)
 
-  if (existingSummaryLog) {
+  if (existing) {
+    const { version, summaryLog } = existing
     try {
-      transitionStatus(existingSummaryLog, newStatus)
+      transitionStatus(summaryLog, newStatus)
     } catch (error) {
       logger.error({
         message: error.message,
@@ -87,19 +87,11 @@ const upsertSummaryLog = async (
       throw Boom.conflict(error.message)
     }
 
-    const updates = buildSummaryLogData(
-      summaryLogId,
-      upload,
-      existingSummaryLog.file
-    )
-    await summaryLogsRepository.update(
-      summaryLogId,
-      existingSummaryLog.version,
-      updates
-    )
+    const updates = buildSummaryLogData(upload, summaryLog.file)
+    await summaryLogsRepository.update(summaryLogId, version, updates)
   } else {
-    const summaryLog = buildSummaryLogData(summaryLogId, upload)
-    await summaryLogsRepository.insert(summaryLog)
+    const summaryLog = buildSummaryLogData(upload)
+    await summaryLogsRepository.insert(summaryLogId, summaryLog)
   }
 
   return newStatus
@@ -143,7 +135,7 @@ export const summaryLogsUploadCompleted = {
     const { summaryLogUpload } = payload.form
 
     try {
-      const status = await upsertSummaryLog(
+      const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,
         summaryLogUpload,
@@ -151,8 +143,13 @@ export const summaryLogsUploadCompleted = {
       )
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
-        const summaryLog = await summaryLogsRepository.findById(summaryLogId)
-        await summaryLogsValidator.validate(summaryLog)
+        const { version, summaryLog } =
+          await summaryLogsRepository.findById(summaryLogId)
+        await summaryLogsValidator.validate({
+          id: summaryLogId,
+          version,
+          summaryLog
+        })
       }
 
       const s3Info = formatS3Info(summaryLogUpload)

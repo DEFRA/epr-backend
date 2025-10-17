@@ -35,10 +35,9 @@ export const buildRejectedFile = (overrides = {}) => {
   }
 }
 
-export const buildSummaryLog = (id, overrides = {}) => {
+export const buildSummaryLog = (overrides = {}) => {
   const { file, ...logOverrides } = overrides
   return {
-    id,
     status: 'validating',
     file: file === undefined ? buildFile() : file,
     ...logOverrides
