@@ -74,7 +74,7 @@ export const createInMemorySummaryLogsRepository = () => {
       if (!doc) {
         return null
       }
-      const { id: docId, version, ...summaryLog } = doc
+      const { version, ...summaryLog } = doc
       return { version, summaryLog: structuredClone(summaryLog) }
     }
   })

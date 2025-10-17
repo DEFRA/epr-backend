@@ -9,7 +9,7 @@ export const summaryLogsValidatorWorker = async ({
   summaryLogsRepository,
   id,
   version,
-  summaryLog
+  _summaryLog
 }) => {
   logger.info({
     message: `Summary log validation worker started [${id}]`,
