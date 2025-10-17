@@ -15,7 +15,9 @@ export const organisationsGet = {
     const organisations = await organisationsRepository.findAll()
 
     if (!organisations) {
-      return h.response({ message: 'No organisations found' }).code(404)
+      return h
+        .response({ message: 'No organisations found' })
+        .code(StatusCodes.NOT_FOUND)
     }
 
     return h.response(organisations).code(StatusCodes.OK)
