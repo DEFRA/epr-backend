@@ -9,6 +9,7 @@ vi.mock('../../../config.js', () => createMockConfig())
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('./worker.js')
+vi.mock('#common/helpers/secure-context.js')
 
 describe('summaryLogsValidatorWorkerThread', () => {
   let mockDb
