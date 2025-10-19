@@ -13,7 +13,8 @@ export const workers = {
     version: '1.0.0',
     register: (server, options) => {
       const summaryLogsValidator =
-        options?.summaryLogsValidator ?? createSummaryLogsValidator()
+        options?.summaryLogsValidator ??
+        createSummaryLogsValidator(server.logger)
 
       server.decorate(
         'request',

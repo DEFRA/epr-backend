@@ -23,6 +23,9 @@ import { vi } from 'vitest'
  */
 export const createMockConfig = (customConfigMap = {}) => {
   const defaultConfigMap = {
+    awsRegion: 'eu-west-2',
+    s3Endpoint: 'http://localhost:4566',
+    isDevelopment: true,
     mongo: {
       mongoUrl: 'mongodb://localhost:27017',
       mongoOptions: { maxPoolSize: 10 },

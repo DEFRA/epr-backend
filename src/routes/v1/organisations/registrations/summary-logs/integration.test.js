@@ -7,6 +7,7 @@ import {
 } from '#common/enums/event.js'
 import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
 import { createInlineSummaryLogsValidator } from '#workers/summary-logs/inline.js'
+import { createInMemoryUploadsRepository } from '#repositories/uploads/inmemory.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -60,14 +61,17 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+    const uploadsRepository = createInMemoryUploadsRepository()
     const summaryLogsValidator = createInlineSummaryLogsValidator(
-      summaryLogsRepository
+      summaryLogsRepository,
+      uploadsRepository
     )
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: summaryLogsRepositoryFactory
+        summaryLogsRepository: summaryLogsRepositoryFactory,
+        uploadsRepository
       },
       workers: {
         summaryLogsValidator
@@ -144,9 +148,9 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns validating status', () => {
+      it('returns validated status', () => {
         expect(JSON.parse(response.payload)).toEqual({
-          status: SUMMARY_LOG_STATUS.VALIDATING
+          status: SUMMARY_LOG_STATUS.VALIDATED
         })
       })
     })
