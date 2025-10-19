@@ -1,4 +1,5 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3'
+import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
@@ -22,7 +23,7 @@ export const createUploadsRepository = (s3Client) => ({
     } catch (error) {
       if (
         error.name === 'NoSuchKey' ||
-        error.$metadata?.httpStatusCode === 404
+        error.$metadata?.httpStatusCode === StatusCodes.NOT_FOUND
       ) {
         return null
       }
