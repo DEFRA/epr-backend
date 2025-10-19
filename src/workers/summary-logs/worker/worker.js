@@ -19,18 +19,8 @@ export const summaryLogsValidatorWorker = async ({
   uploadsRepository,
   summaryLog
 }) => {
-  const {
-    id: summaryLogId,
-    version,
-    file: {
-      id: fileId,
-      name: filename,
-      s3: { bucket, key }
-    }
-  } = summaryLog
-
   logger.info({
-    message: `Summary log validation worker started: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`,
+    message: `Summary log validation worker started: summaryLogId=${summaryLog.id}, fileId=${summaryLog.file.id}, filename=${summaryLog.file.name}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.WORKER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -40,12 +30,12 @@ export const summaryLogsValidatorWorker = async ({
   let status = SUMMARY_LOG_STATUS.INVALID
   let failureReason
 
-  const context = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, s3Path=${bucket}/${key}`
+  const context = `summaryLogId=${summaryLog.id}, fileId=${summaryLog.file.id}, filename=${summaryLog.file.name}, s3Path=${summaryLog.file.s3.bucket}/${summaryLog.file.s3.key}`
 
   try {
     const summaryLogBuffer = await uploadsRepository.findByLocation({
-      bucket,
-      key
+      bucket: summaryLog.file.s3.bucket,
+      key: summaryLog.file.s3.key
     })
 
     if (summaryLogBuffer) {
@@ -89,17 +79,20 @@ export const summaryLogsValidatorWorker = async ({
 
     if (failureReason) {
       updates.failureReason = failureReason
-    } else if (
-      summaryLog.failureReason &&
-      status === SUMMARY_LOG_STATUS.VALIDATED
-    ) {
+    }
+
+    if (summaryLog.failureReason && status === SUMMARY_LOG_STATUS.VALIDATED) {
       updates.failureReason = null
     }
 
-    await summaryLogsRepository.update(summaryLogId, version, updates)
+    await summaryLogsRepository.update(
+      summaryLog.id,
+      summaryLog.version,
+      updates
+    )
 
     logger.info({
-      message: `Summary log updated: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=${status}`,
+      message: `Summary log updated: summaryLogId=${summaryLog.id}, fileId=${summaryLog.file.id}, filename=${summaryLog.file.name}, status=${status}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.WORKER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS

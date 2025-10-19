@@ -23,7 +23,7 @@ export const createInMemoryUploadsRepository = () => {
       }
 
       if (bucket === BUCKET && key === KEY) {
-        return await fixturePromise
+        return fixturePromise
       }
 
       return null
