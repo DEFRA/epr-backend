@@ -1,4 +1,7 @@
-import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
+import {
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-logs/status.js'
 
 import { summaryLogsValidatorWorker } from './worker.js'
 
@@ -15,19 +18,24 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 describe('summaryLogsValidatorWorker', () => {
-  let summaryLogsRepository
   let uploadsRepository
+  let summaryLogsParser
+  let summaryLogsRepository
   let summaryLog
 
   beforeEach(async () => {
-    summaryLogsRepository = {
-      update: vi.fn()
-    }
-
     uploadsRepository = {
       findByLocation: vi
         .fn()
         .mockResolvedValue(Buffer.from('mock file content'))
+    }
+
+    summaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({ parsed: 'data' })
+    }
+
+    summaryLogsRepository = {
+      update: vi.fn()
     }
 
     summaryLog = {
@@ -52,8 +60,9 @@ describe('summaryLogsValidatorWorker', () => {
 
   it('should log as expected when validation worker starts', async () => {
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     })
 
@@ -71,8 +80,9 @@ describe('summaryLogsValidatorWorker', () => {
 
   it('should fetch file from uploads repository', async () => {
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     })
 
@@ -84,8 +94,9 @@ describe('summaryLogsValidatorWorker', () => {
 
   it('should log as expected when file fetched successfully', async () => {
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     })
 
@@ -105,10 +116,11 @@ describe('summaryLogsValidatorWorker', () => {
     uploadsRepository.findByLocation.mockResolvedValue(null)
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
-    })
+    }).catch((err) => err)
 
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -124,8 +136,9 @@ describe('summaryLogsValidatorWorker', () => {
 
   it('should update status as expected when file is fetched successfully', async () => {
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     })
 
@@ -142,8 +155,9 @@ describe('summaryLogsValidatorWorker', () => {
     summaryLog.failureReason = 'Existing error'
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     })
 
@@ -161,10 +175,11 @@ describe('summaryLogsValidatorWorker', () => {
     uploadsRepository.findByLocation.mockResolvedValue(null)
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
-    })
+    }).catch((err) => err)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
@@ -182,8 +197,9 @@ describe('summaryLogsValidatorWorker', () => {
     )
 
     const result = await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     }).catch((err) => err)
 
@@ -195,7 +211,7 @@ describe('summaryLogsValidatorWorker', () => {
       1,
       {
         status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'Something went wrong while retrieving your file upload'
+        failureReason: 'S3 access denied'
       }
     )
   })
@@ -206,15 +222,16 @@ describe('summaryLogsValidatorWorker', () => {
     )
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     }).catch((err) => err)
 
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Failed to fetch summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx, s3Path=test-bucket/test-key',
+          'Failed to process summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
         event: expect.objectContaining({
           category: 'worker',
           action: 'process_failure'
@@ -225,8 +242,9 @@ describe('summaryLogsValidatorWorker', () => {
 
   it('should log as expected once status updated', async () => {
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog
     })
 
@@ -249,8 +267,9 @@ describe('summaryLogsValidatorWorker', () => {
     }
 
     const result = await summaryLogsValidatorWorker({
-      summaryLogsRepository: brokenRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository: brokenRepository,
       summaryLog
     }).catch((err) => err)
 

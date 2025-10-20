@@ -7,11 +7,19 @@ export const SUMMARY_LOG_STATUS = Object.freeze({
   SUBMITTED: 'submitted'
 })
 
+/**
+ * @typedef {typeof SUMMARY_LOG_STATUS[keyof typeof SUMMARY_LOG_STATUS]} SummaryLogStatus
+ */
+
 export const UPLOAD_STATUS = Object.freeze({
   COMPLETE: 'complete',
   REJECTED: 'rejected',
   PENDING: 'pending'
 })
+
+/**
+ * @typedef {typeof UPLOAD_STATUS[keyof typeof UPLOAD_STATUS]} UploadStatus
+ */
 
 const UploadStatusToSummaryLogStatusMap = {
   [UPLOAD_STATUS.REJECTED]: SUMMARY_LOG_STATUS.REJECTED,

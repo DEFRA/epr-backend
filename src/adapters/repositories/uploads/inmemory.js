@@ -9,11 +9,11 @@ export const BUCKET = 'test-bucket'
 export const KEY = 'path/to/summary-log.xlsx'
 
 /**
- * @returns {import('./port.js').UploadsRepository}
+ * @returns {import('#domain/uploads/repository/port.js').UploadsRepository}
  */
 export const createInMemoryUploadsRepository = () => {
   const fixturePromise = readFile(
-    path.join(dirname, '../../data/fixtures/uploads/reprocessor.xlsx')
+    path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
   )
 
   return {

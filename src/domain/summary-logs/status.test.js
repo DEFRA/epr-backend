@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
-  determineStatusFromUpload,
   determineFailureReason,
+  determineStatusFromUpload,
   getDefaultStatus,
-  transitionStatus,
   SUMMARY_LOG_STATUS,
+  transitionStatus,
   UPLOAD_STATUS
-} from './summary-log.js'
+} from './status.js'
 
-describe('summary-log domain', () => {
+describe('status', () => {
   describe('determineStatusFromUpload', () => {
     it('returns REJECTED when upload status is rejected', () => {
       const result = determineStatusFromUpload(UPLOAD_STATUS.REJECTED)

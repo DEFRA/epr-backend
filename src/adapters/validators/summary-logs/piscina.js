@@ -14,12 +14,15 @@ const dirname = path.dirname(filename)
 const ONE_MINUTE = 60_000
 
 const pool = new Piscina({
-  filename: path.join(dirname, 'worker/worker-thread.js'),
+  filename: path.join(
+    dirname,
+    '../../../workers/summary-logs/worker/worker-thread.js'
+  ),
   maxThreads: 1, // Match vCPU count on AWS instance
   idleTimeout: ONE_MINUTE
 })
 
-/** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 /**
  * @returns {SummaryLogsValidator}
@@ -28,14 +31,18 @@ export const createSummaryLogsValidator = (logger) => {
   return {
     validate: async (summaryLog) => {
       logger.info({
-        message: `Summary log validation worker spawning [${summaryLog.id}]`
+        message: `Summary log validation worker spawning: summaryLogId=${summaryLog.id}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+        }
       })
 
       pool
         .run({ summaryLog })
         .then(() => {
           logger.info({
-            message: `Summary log validation worker completed [${summaryLog.id}]`,
+            message: `Summary log validation worker completed: summaryLogId=${summaryLog.id}`,
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,
               action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -45,7 +52,7 @@ export const createSummaryLogsValidator = (logger) => {
         .catch((err) => {
           logger.error({
             error: err,
-            message: `Summary log validation worker failed [${summaryLog.id}]`,
+            message: `Summary log validation worker failed: summaryLogId=${summaryLog.id}`,
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,
               action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
