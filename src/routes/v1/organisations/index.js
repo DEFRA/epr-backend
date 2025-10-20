@@ -1,1 +1,1 @@
-export * as summaryLogsRoutes from './registrations/summary-logs/index.js'
+export { organisationsGet } from './get.js'
