@@ -35,7 +35,7 @@ The `backend` application has user to role mapping embedded within it, allowing 
 
 Additionally, the `backend` exposes an endpoint, say `GET /user-roles`, that returns the roles for a given user.
 
-> [!INFO]
+> [!NOTE]
 > The `GET /user-roles` endpoint will itself be protected - it will required incoming calls to be from a logged in user (identified by providing an access token) with the appropriate role
 
 To implement page access protection the `frontend` will make an API call to lookup the user's assigned roles.

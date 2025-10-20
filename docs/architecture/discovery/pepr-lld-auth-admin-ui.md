@@ -58,7 +58,7 @@ The AAD sign-in URL is
 
 ### Sign in user journey
 
-> [!INFO]
+> [!NOTE]
 > This represents the initial (simplest) journey being built - it is expecteded to change in future iterations to provide an improved user experience
 
 ```mermaid
@@ -183,3 +183,15 @@ U->>AAD: Submit form
 AAD->>U: 302
 U->>router: GET /{redirectUrl}
 ```
+
+## Session management
+
+An object with user session details is created and saved to server-side storage on a successful sign-in and removed on sign-out.
+
+The `@hapi/yar` plugin is used to manage those sessions and link them to the corresponding session cookies. `@hapi/yar` delegates the actual storage functionality to the `@hapi/catbox` plugin which is configured to use Redis for server-side storage.
+
+During sign-in, the user session is created when `/auth/callback` is called, using the information in the auth token received from AAD.
+
+`@hapi/cookie` ensures the user session information is available as context in every successive request to Admin UI when a user is authenticated.
+
+During sign-out, the user session is removed when `/auth/sign-out` is called.
