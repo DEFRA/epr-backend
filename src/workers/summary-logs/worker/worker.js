@@ -94,16 +94,13 @@ const updateSummaryLog = async ({
     failureReason: existingFailureReason
   } = summaryLog
 
-  const updatePayload = { status }
+  const updates = { status, failureReason }
 
-  // Only include failureReason if it's provided or if we need to clear an existing one
-  if (failureReason !== undefined) {
-    updatePayload.failureReason = failureReason
-  } else if (existingFailureReason && status === SUMMARY_LOG_STATUS.VALIDATED) {
-    updatePayload.failureReason = null
+  if (existingFailureReason && status === SUMMARY_LOG_STATUS.VALIDATED) {
+    updates.failureReason = null
   }
 
-  await summaryLogsRepository.update(summaryLogId, version, updatePayload)
+  await summaryLogsRepository.update(summaryLogId, version, updates)
 
   logger.info({
     message: `Summary log updated: ${msg}, status=${status}`,
