@@ -10,9 +10,27 @@ on:
       - synchronize
 
 jobs:
+  detect-changes:
+    name: Detect Changed Files
+    runs-on: ubuntu-latest
+    outputs:
+      docs-only: ${{ steps.filter.outputs.docs-only }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Check for docs-only changes
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            docs-only:
+              - '**/*.md'
+
   pr-prep:
     name: Preparation
     runs-on: ubuntu-latest
+    needs: detect-changes
     steps:
       - name: Check branch name
         uses: actions/github-script@v8
@@ -51,15 +69,12 @@ jobs:
               console.log('PR description already contains a link to the ticket')
             }
 
-  pr-validator:
-    name: Run Pull Request Checks
-    runs-on: ubuntu-latest
-    needs: pr-prep
-    steps:
-      - name: Checkout code
+      - name: Checkout code for ADR check
         uses: actions/checkout@v5
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
 
       - name: Check for ADR numbering conflicts
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
         run: |
           cd docs/architecture/decisions
           duplicates=$(ls -1 *.md | grep -E '^[0-9]{4}-' | sed 's/^\([0-9]\{4\}\)-.*/\1/' | sort | uniq -d)
@@ -69,6 +84,15 @@ jobs:
             exit 1
           fi
           echo "No ADR numbering conflicts found"
+
+  pr-validator:
+    name: Run Pull Request Checks
+    runs-on: ubuntu-latest
+    needs: [pr-prep, detect-changes]
+    if: needs.detect-changes.outputs.docs-only != 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
 
       - name: Test code and Create Test Coverage Reports
         uses: actions/setup-node@v6
@@ -106,7 +130,8 @@ jobs:
   test-journey:
     name: Run Journey Tests
     runs-on: ubuntu-latest
-    needs: pr-validator
+    needs: [pr-validator, detect-changes]
+    if: needs.detect-changes.outputs.docs-only != 'true'
     steps:
       - uses: actions/checkout@v5
       - run: docker build -t defradigital/epr-backend:${{github.sha}} .
