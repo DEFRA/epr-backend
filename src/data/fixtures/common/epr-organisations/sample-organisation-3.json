@@ -1,32 +1,36 @@
 {
-  "_id": "6507f1f77bcf86cd79943931",
-  "orgId": "50005",
+  "id": "6507f1f77bcf86cd79943931",
+  "orgId": 50005,
   "schemaVersion": 1,
   "version": 1,
-  "wasteProcessingTypes": ["reprocessor", "exporter"],
-  "reprocessingNations": ["northern ireland", "england"],
-  "businessType": "charity",
-  "submittedToRegulator": "niea",
   "statusHistory": [
     {
       "status": "created",
-      "updatedAt": "2025-11-01T12:00:00.000Z",
-      "updatedBy": { "email": "eve@charity.org" }
+      "updatedAt": "2025-11-01T12:00:00.000Z"
     }
   ],
+  "wasteProcessingTypes": ["reprocessor", "exporter"],
+  "reprocessingNations": ["northern_ireland", "england"],
+  "businessType": "unincorporated",
+  "submittedToRegulator": "niea",
+  "formSubmissionTime": "2025-11-01T12:00:00.000Z",
+  "submitterContactDetails": {
+    "fullName": "Eve Black",
+    "email": "eve.black@charity.org",
+    "title": "Director",
+    "phone": "3334445555"
+  },
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943932",
-      "status": "created",
-      "submittedToRegulator": "niea",
-      "orgName": "Green Future Trust",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-11-01T12:00:00.000Z",
-          "updatedBy": { "email": "eve@charity.org" }
+          "updatedAt": "2025-11-01T11:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "niea",
+      "orgName": "Green Future Trust",
       "formSubmissionTime": "2025-11-01T11:00:00.000Z",
       "site": {
         "address": {
@@ -34,27 +38,30 @@
           "town": "Belfast",
           "postcode": "BT1 1AA"
         },
+        "gridReference": "456789",
         "siteCapacity": [
           {
-            "material": "metal",
-            "authorisedWeight": "15",
-            "authorisedTimeScale": "yearly",
+            "material": "steel",
             "siteCapacityWeight": "18",
             "siteCapacityTimescale": "yearly"
           }
         ]
       },
-      "material": "metal",
+      "material": "steel",
       "wasteProcessingType": "reprocessor",
-      "accreditationId": "c3d4e5f6-7890-abcd-ef12-34567890abcd",
-      "gridReference": "456789",
+      "accreditationId": "68f6a147c117aec8a1ab749a",
       "wasteRegistrationNumber": "CBDU345678",
       "wasteManagementPermits": [
         {
           "type": "wml",
           "permitNumber": "WML345678",
-          "permittedMaterials": ["metal"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "steel",
+              "authorisedWeight": "15",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -73,16 +80,14 @@
     },
     {
       "id": "6507f1f77bcf86cd79943933",
-      "status": "created",
-      "submittedToRegulator": "niea",
-      "orgName": "Green Future Trust",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-11-01T12:00:00.000Z",
-          "updatedBy": { "email": "eve@charity.org" }
+          "updatedAt": "2025-11-01T11:30:00.000Z"
         }
       ],
+      "submittedToRegulator": "niea",
+      "orgName": "Green Future Trust",
       "formSubmissionTime": "2025-11-01T11:30:00.000Z",
       "material": "aluminium",
       "wasteProcessingType": "exporter",
@@ -91,8 +96,13 @@
         {
           "type": "wml",
           "permitNumber": "WML345679",
-          "permittedMaterials": ["aluminium"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "aluminium",
+              "authorisedWeight": "15",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -112,28 +122,26 @@
   ],
   "accreditations": [
     {
-      "id": "c3d4e5f6-7890-abcd-ef12-34567890abcd",
+      "id": "68f6a147c117aec8a1ab749a",
       "formSubmissionTime": "2025-11-01T13:00:00.000Z",
-      "status": "created",
-      "submittedToRegulator": "niea",
-      "orgName": "Green Future Trust",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-11-01T12:00:00.000Z",
-          "updatedBy": { "email": "eve@charity.org" }
+          "updatedAt": "2025-11-01T13:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "niea",
+      "orgName": "Green Future Trust",
       "site": {
         "address": {
           "line1": "100 Trust Road",
           "postcode": "BT1 1AA"
         }
       },
-      "material": "metal",
+      "material": "steel",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
-        "plannedIssuance": "8000 tonnes",
+        "tonnageBand": "up_to_10000",
         "signatories": [
           {
             "fullName": "Sam Green",
@@ -144,9 +152,9 @@
         ],
         "prnIncomeBusinessPlan": [
           {
-            "description": "Expand charity operations",
-            "detailedDescription": "Open new recycling centers",
-            "percentSpent": 50
+            "usageDescription": "Expand charity operations",
+            "detailedExplanation": "Open new recycling centers",
+            "percentIncomeSpent": 50
           }
         ]
       },

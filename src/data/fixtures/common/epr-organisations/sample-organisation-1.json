@@ -1,36 +1,36 @@
 {
-  "_id": "6507f1f77bcf86cd79943901",
-  "orgId": "50002",
+  "id": "6507f1f77bcf86cd79943901",
+  "orgId": 50002,
   "schemaVersion": 1,
   "version": 1,
+  "statusHistory": [
+    {
+      "status": "created",
+      "updatedAt": "2025-08-22T19:34:44.944Z"
+    }
+  ],
   "wasteProcessingTypes": ["reprocessor", "exporter"],
   "reprocessingNations": ["england", "wales"],
   "businessType": "partnership",
   "submittedToRegulator": "ea",
-  "statusHistory": [
-    {
-      "status": "created",
-      "updatedAt": "2025-08-22T19:34:44.944Z",
-      "updatedBy": {
-        "email": "test@corpo.com"
-      }
-    }
-  ],
+  "formSubmissionTime": "2025-08-22T19:34:44.944Z",
+  "submitterContactDetails": {
+    "fullName": "Luke Skywalker",
+    "email": "anakin.skywalker@starwars.com",
+    "title": "Partner",
+    "phone": "823456789"
+  },
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943902",
-      "status": "created",
-      "submittedToRegulator": "ea",
-      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-22T19:34:44.944Z",
-          "updatedBy": {
-            "email": "test@corpo.com"
-          }
+          "updatedAt": "2025-08-20T19:34:44.944Z"
         }
       ],
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "formSubmissionTime": "2025-08-20T19:34:44.944Z",
       "site": {
         "address": {
@@ -38,11 +38,10 @@
           "town": "London",
           "postcode": "SW2A 0AA"
         },
+        "gridReference": "123455",
         "siteCapacity": [
           {
             "material": "glass",
-            "authorisedWeight": "10",
-            "authorisedTimeScale": "yearly",
             "siteCapacityWeight": "15",
             "siteCapacityTimescale": "yearly"
           }
@@ -50,15 +49,19 @@
       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
-      "accreditationId": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
-      "gridReference": "123455",
+      "accreditationId": "68f6a147c117aec8a1ab7495",
       "wasteRegistrationNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
           "type": "wml",
           "permitNumber": "WML123456",
-          "permittedMaterials": ["glass"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "glass",
+              "authorisedWeight": "10",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -76,19 +79,15 @@
       }
     },
     {
-      "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
-      "status": "created",
-      "submittedToRegulator": "ea",
-      "orgName": "ACME ltd",
+      "id": "68f6a147c117aec8a1ab7494",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-22T19:34:44.944Z",
-          "updatedBy": {
-            "email": "test@corpo.com"
-          }
+          "updatedAt": "2025-08-21T19:34:44.944Z"
         }
       ],
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
@@ -97,8 +96,13 @@
         {
           "type": "wml",
           "permitNumber": "WML123456",
-          "permittedMaterials": ["plastic"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "plastic",
+              "authorisedWeight": "10",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -118,20 +122,16 @@
   ],
   "accreditations": [
     {
-      "id": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
+      "id": "68f6a147c117aec8a1ab7495",
       "formSubmissionTime": "2025-08-20T21:34:44.944Z",
-      "status": "created",
-      "submittedToRegulator": "ea",
-      "orgName": "ACME ltd",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-22T19:34:44.944Z",
-          "updatedBy": {
-            "email": "test@corpo.com"
-          }
+          "updatedAt": "2025-08-20T21:34:44.944Z"
         }
       ],
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "site": {
         "address": {
           "line1": "7 Glass processing site",
@@ -141,7 +141,7 @@
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
-        "plannedIssuance": "10000 tonnes",
+        "tonnageBand": "over_10000",
         "signatories": [
           {
             "fullName": "Yoda",
@@ -152,9 +152,9 @@
         ],
         "prnIncomeBusinessPlan": [
           {
-            "description": "New reprocessing infrastructure and maintaining existing infrastructure",
-            "detailedDescription": "Investing on buying to machine to separate glass from waste",
-            "percentSpent": 20
+            "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
+            "detailedExplanation": "Investing on buying to machine to separate glass from waste",
+            "percentIncomeSpent": 20
           }
         ]
       },
@@ -165,19 +165,16 @@
       }
     },
     {
-      "id": "26673c70-5f03-4865-a796-585ef4ddca30",
-      "status": "created",
-      "submittedToRegulator": "ea",
-      "orgName": "ACME ltd",
+      "id": "68f6a147c117aec8a1ab7496",
+      "formSubmissionTime": "2025-08-21T21:34:44.944Z",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-22T19:34:44.944Z",
-          "updatedBy": {
-            "email": "test@corpo.com"
-          }
+          "updatedAt": "2025-08-21T21:34:44.944Z"
         }
       ],
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "site": {
         "address": {
           "line1": "7",
@@ -187,7 +184,7 @@
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
-        "plannedIssuance": "10000 tonnes",
+        "tonnageBand": "over_10000",
         "signatories": [
           {
             "fullName": "Yoda",
@@ -198,9 +195,9 @@
         ],
         "prnIncomeBusinessPlan": [
           {
-            "description": "New reprocessing infrastructure and maintaining existing infrastructure",
-            "detailedDescription": "Investing on buying to machine to separate glass from waste",
-            "percentSpent": 20
+            "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
+            "detailedExplanation": "Investing on buying to machine to separate glass from waste",
+            "percentIncomeSpent": 20
           }
         ]
       },
@@ -211,30 +208,20 @@
       }
     },
     {
-      "id": "dc60a427-3bfa-4092-9282-bc533e4213f9",
-      "status": "created",
-      "submittedToRegulator": "ea",
-      "orgName": "ACME ltd",
+      "id": "68f6a147c117aec8a1ab7494",
+      "formSubmissionTime": "2025-08-22T21:34:44.944Z",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-22T19:34:44.944Z",
-          "updatedBy": {
-            "email": "test@corpo.com"
-          }
-        },
-        {
-          "status": "rejected",
-          "updatedAt": "2025-08-25T19:34:44.944Z",
-          "updatedBy": {
-            "email": "test@corpo.com"
-          }
+          "updatedAt": "2025-08-22T21:34:44.944Z"
         }
       ],
+      "submittedToRegulator": "ea",
+      "orgName": "ACME ltd",
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "prnIssuance": {
-        "plannedIssuance": "300 tonnes",
+      "pernIssuance": {
+        "tonnageBand": "up_to_500",
         "signatories": [
           {
             "fullName": "Princess Leia",
@@ -243,10 +230,10 @@
             "phone": "7234567890"
           }
         ],
-        "prnIncomeBusinessPlan": [
+        "pernIncomeBusinessPlan": [
           {
-            "description": "New vehicle to transport",
-            "percentSpent": 10
+            "usageDescription": "New vehicle to transport",
+            "percentIncomeSpent": 10
           }
         ]
       },

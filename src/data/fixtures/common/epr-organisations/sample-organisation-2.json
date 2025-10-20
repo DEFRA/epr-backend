@@ -1,60 +1,51 @@
 {
-  "_id": "6507f1f77bcf86cd79943921",
-  "orgId": "50004",
+  "id": "6507f1f77bcf86cd79943921",
+  "orgId": 50004,
   "schemaVersion": 1,
   "version": 1,
-  "wasteProcessingTypes": ["exporter"],
-  "reprocessingNations": ["wales"],
-  "businessType": "sole trader",
-  "submittedToRegulator": "nrw",
   "statusHistory": [
     {
       "status": "created",
-      "updatedAt": "2025-10-01T08:30:00.000Z",
-      "updatedBy": { "email": "carol@export.com" }
+      "updatedAt": "2025-10-01T08:30:00.000Z"
     }
   ],
+  "wasteProcessingTypes": ["exporter"],
+  "reprocessingNations": ["wales"],
+  "businessType": "individual",
+  "submittedToRegulator": "nrw",
+  "formSubmissionTime": "2025-10-01T08:30:00.000Z",
+  "submitterContactDetails": {
+    "fullName": "Carol White",
+    "email": "carol.white@export.com",
+    "title": "Owner",
+    "phone": "2223334444"
+  },
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943922",
-      "status": "created",
-      "submittedToRegulator": "nrw",
-      "orgName": "Plastic Exporters",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-10-01T08:30:00.000Z",
-          "updatedBy": { "email": "carol@export.com" }
+          "updatedAt": "2025-10-01T08:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "nrw",
+      "orgName": "Plastic Exporters",
       "formSubmissionTime": "2025-10-01T08:00:00.000Z",
-      "site": {
-        "address": {
-          "line1": "22 Export Lane",
-          "town": "Cardiff",
-          "postcode": "CF10 1AA"
-        },
-        "siteCapacity": [
-          {
-            "material": "plastic",
-            "authorisedWeight": "30",
-            "authorisedTimeScale": "yearly",
-            "siteCapacityWeight": "35",
-            "siteCapacityTimescale": "yearly"
-          }
-        ]
-      },
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "accreditationId": "b2c3d4e5-f678-90ab-cdef-234567890abc",
-      "gridReference": "345678",
       "wasteRegistrationNumber": "CBDU789012",
       "wasteManagementPermits": [
         {
           "type": "wml",
           "permitNumber": "WML789012",
-          "permittedMaterials": ["plastic"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "plastic",
+              "authorisedWeight": "30",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -74,18 +65,16 @@
   ],
   "accreditations": [
     {
-      "id": "b2c3d4e5-f678-90ab-cdef-234567890abc",
+      "id": "68f6a147c117aec8a1ab7499",
       "formSubmissionTime": "2025-10-01T09:00:00.000Z",
-      "status": "created",
-      "submittedToRegulator": "nrw",
-      "orgName": "Plastic Exporters",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-10-01T08:30:00.000Z",
-          "updatedBy": { "email": "carol@export.com" }
+          "updatedAt": "2025-10-01T09:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "nrw",
+      "orgName": "Plastic Exporters",
       "site": {
         "address": {
           "line1": "22 Export Lane",
@@ -94,21 +83,21 @@
       },
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "prnIssuance": {
-        "plannedIssuance": "2000 tonnes",
+      "pernIssuance": {
+        "tonnageBand": "up_to_5000",
         "signatories": [
           {
             "fullName": "Dave Green",
             "email": "dave.green@export.com",
-            "title": "PRN signatory",
+            "title": "PERN signatory",
             "phone": "5556667777"
           }
         ],
-        "prnIncomeBusinessPlan": [
+        "pernIncomeBusinessPlan": [
           {
-            "description": "Expand export fleet",
-            "detailedDescription": "Purchase new trucks",
-            "percentSpent": 40
+            "usageDescription": "Expand export fleet",
+            "detailedExplanation": "Purchase new trucks",
+            "percentIncomeSpent": 40
           }
         ]
       },
