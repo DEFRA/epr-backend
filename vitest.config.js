@@ -20,7 +20,8 @@ export default defineConfig({
         '**/*.port.js',
         'src/repositories/**/port.js',
         'src/workers/**/port.js',
-        'src/common/hapi-types.js'
+        'src/common/hapi-types.js',
+        'src/common/helpers/secure-context.js'
       ],
       thresholds: {
         lines: 100,

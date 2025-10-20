@@ -13,6 +13,7 @@ vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('#repositories/uploads/s3.js')
 vi.mock('./worker.js')
+vi.mock('#common/helpers/secure-context.js')
 
 describe('summaryLogsValidatorWorkerThread', () => {
   let mockDb

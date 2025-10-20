@@ -3,10 +3,13 @@ import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createUploadsRepository } from '#repositories/uploads/s3.js'
+import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 
 import { config } from '../../../config.js'
 
 import { summaryLogsValidatorWorker } from './worker.js'
+
+patchTlsSecureContext()
 
 export default async function summaryLogsValidatorWorkerThread({ summaryLog }) {
   const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
