@@ -1,13 +1,9 @@
 import { closeWorkerPool, createSummaryLogsValidator } from './piscina.js'
 
-const { mockRun, mockDestroy, mockLoggerInfo, mockLoggerError } = vi.hoisted(
-  () => ({
-    mockRun: vi.fn(),
-    mockDestroy: vi.fn(),
-    mockLoggerInfo: vi.fn(),
-    mockLoggerError: vi.fn()
-  })
-)
+const { mockRun, mockDestroy } = vi.hoisted(() => ({
+  mockRun: vi.fn(),
+  mockDestroy: vi.fn()
+}))
 
 vi.mock('piscina', () => ({
   Piscina: vi.fn(() => ({
@@ -16,22 +12,21 @@ vi.mock('piscina', () => ({
   }))
 }))
 
-vi.mock('#common/helpers/logging/logger.js', () => ({
-  logger: {
-    info: (...args) => mockLoggerInfo(...args),
-    error: (...args) => mockLoggerError(...args)
-  }
-}))
-
 describe('createSummaryLogsValidator', () => {
   let summaryLogsValidator
   let validationRequest
+  let logger
 
   beforeEach(() => {
     mockRun.mockResolvedValue(undefined)
     mockDestroy.mockResolvedValue(undefined)
 
-    summaryLogsValidator = createSummaryLogsValidator()
+    logger = {
+      info: vi.fn(),
+      error: vi.fn()
+    }
+
+    summaryLogsValidator = createSummaryLogsValidator(logger)
 
     validationRequest = {
       id: 'summary-log-123',
@@ -71,7 +66,7 @@ describe('createSummaryLogsValidator', () => {
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
+    expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Summary log validation worker completed [summary-log-123]',
         event: {
@@ -91,7 +86,7 @@ describe('createSummaryLogsValidator', () => {
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(mockLoggerError).toHaveBeenCalledWith({
+    expect(logger.error).toHaveBeenCalledWith({
       error,
       message: 'Summary log validation worker failed [summary-log-123]',
       event: {

@@ -1,0 +1,130 @@
+import { randomUUID } from 'crypto'
+
+import { logger } from '#common/helpers/logging/logger.js'
+import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryUploadsRepository } from '#repositories/uploads/inmemory.js'
+
+import { summaryLogsValidatorWorker } from './worker.js'
+
+describe('summaryLogsValidatorWorker integration', () => {
+  let summaryLogsRepository
+  let uploadsRepository
+
+  let summaryLogId
+  let initialSummaryLog
+
+  beforeEach(async () => {
+    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+
+    summaryLogsRepository = summaryLogsRepositoryFactory(logger)
+    uploadsRepository = createInMemoryUploadsRepository()
+
+    summaryLogId = randomUUID()
+
+    initialSummaryLog = {
+      status: SUMMARY_LOG_STATUS.VALIDATING,
+      file: {
+        id: `file-${randomUUID()}`,
+        name: 'test.xlsx',
+        status: UPLOAD_STATUS.COMPLETE,
+        s3: {
+          bucket: 'test-bucket',
+          key: 'path/to/summary-log.xlsx'
+        }
+      }
+    }
+  })
+
+  it('should update status to validated when file is fetched successfully', async () => {
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
+
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
+    })
+
+    await summaryLogsValidatorWorker({
+      summaryLogsRepository,
+      uploadsRepository,
+      id: summaryLogId,
+      version: inserted.version,
+      summaryLog: inserted.summaryLog
+    })
+
+    const updated = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      }
+    })
+  })
+
+  it('should update status to invalid with failure reason when file is not found', async () => {
+    initialSummaryLog.file.s3.key = 'some-other-key'
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
+
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
+    })
+
+    await summaryLogsValidatorWorker({
+      summaryLogsRepository,
+      uploadsRepository,
+      id: summaryLogId,
+      version: inserted.version,
+      summaryLog: inserted.summaryLog
+    })
+
+    const updated = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'Something went wrong while retrieving your file upload'
+      }
+    })
+  })
+
+  it('should still update status even if file fetch fails', async () => {
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
+
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
+    })
+
+    uploadsRepository.error = new Error('S3 access denied')
+
+    await summaryLogsValidatorWorker({
+      summaryLogsRepository,
+      uploadsRepository,
+      id: summaryLogId,
+      version: inserted.version,
+      summaryLog: inserted.summaryLog
+    }).catch((err) => err)
+
+    const updated = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'Something went wrong while retrieving your file upload'
+      }
+    })
+  })
+})

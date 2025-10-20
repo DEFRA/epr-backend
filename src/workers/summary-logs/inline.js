@@ -11,11 +11,15 @@ import { summaryLogsValidatorWorker } from '#workers/summary-logs/worker/worker.
 /**
  * @returns {SummaryLogsValidator}
  */
-export const createInlineSummaryLogsValidator = (summaryLogsRepository) => {
+export const createInlineSummaryLogsValidator = (
+  summaryLogsRepository,
+  uploadsRepository
+) => {
   return {
     validate: async ({ id, version, summaryLog }) => {
       summaryLogsValidatorWorker({
         summaryLogsRepository,
+        uploadsRepository,
         id,
         version,
         summaryLog

@@ -6,6 +6,7 @@ vi.mock('#workers/summary-logs/worker/worker.js')
 
 describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsRepository
+  let uploadsRepository
   let summaryLogsValidator
   let validationRequest
 
@@ -14,8 +15,13 @@ describe('createInlineSummaryLogsValidator', () => {
       updateStatus: vi.fn()
     }
 
+    uploadsRepository = {
+      findByLocation: vi.fn()
+    }
+
     summaryLogsValidator = createInlineSummaryLogsValidator(
-      summaryLogsRepository
+      summaryLogsRepository,
+      uploadsRepository
     )
 
     validationRequest = {
@@ -38,6 +44,7 @@ describe('createInlineSummaryLogsValidator', () => {
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
       summaryLogsRepository,
+      uploadsRepository,
       id: validationRequest.id,
       version: validationRequest.version,
       summaryLog: validationRequest.summaryLog

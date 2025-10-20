@@ -20,7 +20,8 @@ export default defineConfig({
         '**/*.port.js',
         'src/repositories/**/port.js',
         'src/workers/**/port.js',
-        'src/common/hapi-types.js'
+        'src/common/hapi-types.js',
+        'src/common/helpers/secure-context.js'
       ],
       thresholds: {
         lines: 100,
@@ -29,6 +30,10 @@ export default defineConfig({
         functions: 100
       }
     },
-    setupFiles: ['.vite/mongo-memory-server.js', '.vite/setup-files.js']
+    setupFiles: [
+      '.vite/mongo-memory-server.js',
+      '.vite/s3-memory-server-setup.js',
+      '.vite/setup-files.js'
+    ]
   }
 })

@@ -7,7 +7,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -25,7 +24,7 @@ const pool = new Piscina({
 /**
  * @returns {SummaryLogsValidator}
  */
-export const createSummaryLogsValidator = () => {
+export const createSummaryLogsValidator = (logger) => {
   return {
     validate: async ({ id, version, summaryLog }) => {
       logger.info({

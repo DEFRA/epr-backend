@@ -89,6 +89,7 @@ services:
       PORT: 3001
       NODE_ENV: development
       LOCALSTACK_ENDPOINT: http://localstack:4566
+      S3_ENDPOINT: http://localstack:4566
       MONGO_URI: mongodb://mongodb:27017/
       GOVUK_NOTIFY_API_KEY: /run/secrets/govuk_notify_api_key
       AUDIT_ENABLED: false

@@ -7,6 +7,7 @@ convict.addFormat(convictValidateMongoUri)
 convict.addFormats(convictFormatWithValidator)
 
 const isProduction = process.env.NODE_ENV === 'production'
+const isDevelopment = process.env.NODE_ENV !== 'production'
 const isTest = process.env.NODE_ENV === 'test'
 
 const baseConfig = {
@@ -33,6 +34,33 @@ const baseConfig = {
     doc: 'Api Service Name',
     format: String,
     default: 'epr-backend'
+  },
+  awsRegion: {
+    doc: 'AWS region',
+    format: String,
+    default: 'eu-west-2',
+    env: 'AWS_REGION'
+  },
+  s3Endpoint: {
+    doc: 'AWS S3 endpoint',
+    format: String,
+    default: 'http://127.0.0.1:4566',
+    env: 'S3_ENDPOINT'
+  },
+  isProduction: {
+    doc: 'If this application running in the production environment',
+    format: Boolean,
+    default: isProduction
+  },
+  isDevelopment: {
+    doc: 'If this application running in the development environment',
+    format: Boolean,
+    default: isDevelopment
+  },
+  isTest: {
+    doc: 'If this application running in the test environment',
+    format: Boolean,
+    default: isTest
   },
   debug: {
     doc: 'Determines which logged events are sent to the console. See: https://github.com/hapijs/hapi/blob/master/API.md#-serveroptionsdebug',
