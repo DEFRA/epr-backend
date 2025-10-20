@@ -11,21 +11,26 @@ import { summaryLogsValidatorWorker } from '#workers/summary-logs/worker/worker.
 /**
  * @returns {SummaryLogsValidator}
  */
-export const createInlineSummaryLogsValidator = (summaryLogsRepository) => {
+export const createInlineSummaryLogsValidator = (
+  summaryLogsRepository,
+  uploadsRepository
+) => {
   return {
     validate: async (summaryLog) => {
-      summaryLogsValidatorWorker({ summaryLogsRepository, summaryLog }).catch(
-        (error) => {
-          logger.error({
-            error,
-            message: `Summary log validation worker failed [${summaryLog.id}]`,
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.SERVER,
-              action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-            }
-          })
-        }
-      )
+      summaryLogsValidatorWorker({
+        summaryLog,
+        summaryLogsRepository,
+        uploadsRepository
+      }).catch((error) => {
+        logger.error({
+          error,
+          message: `Summary log validation worker failed [${summaryLog.id}]`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+          }
+        })
+      })
     }
   }
 }
