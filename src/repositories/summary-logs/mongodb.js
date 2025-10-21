@@ -37,17 +37,16 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
     const validatedId = validateId(id)
     const validatedUpdates = validateSummaryLogUpdate(updates)
 
+    /** @type {any} */
+    const filter = { _id: validatedId, version }
     const result = await db
       .collection(COLLECTION_NAME)
-      .updateOne(
-        { _id: validatedId, version },
-        { $set: validatedUpdates, $inc: { version: 1 } }
-      )
+      .updateOne(filter, { $set: validatedUpdates, $inc: { version: 1 } })
 
     if (result.matchedCount === 0) {
-      const existing = await db
-        .collection(COLLECTION_NAME)
-        .findOne({ _id: validatedId })
+      /** @type {any} */
+      const findFilter = { _id: validatedId }
+      const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
 
       if (!existing) {
         throw Boom.notFound(`Summary log with id ${validatedId} not found`)
@@ -73,9 +72,9 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
 
   async findById(id) {
     const validatedId = validateId(id)
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ _id: validatedId })
+    /** @type {any} */
+    const findByIdFilter = { _id: validatedId }
+    const doc = await db.collection(COLLECTION_NAME).findOne(findByIdFilter)
     if (!doc) {
       return null
     }
