@@ -11,7 +11,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
     describe('basic behaviour', () => {
       it('updates an organisation successfully', async () => {
-        const orgData = buildOrganisation({ orgId: 2001 })
+        const orgData = buildOrganisation()
         await repository.insert(orgData)
 
         await repository.update(orgData.id, 1, {
@@ -32,7 +32,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('throws not result error when organisation does not exist', async () => {
-        const organisation = buildOrganisation({ orgId: 2005 })
+        const organisation = buildOrganisation()
 
         await expect(
           repository.update(organisation.id, 1, {
@@ -45,7 +45,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('updates registration fields', async () => {
-        const organisation = buildOrganisation({ orgId: 2024 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
         const organisationAfterInsert = await repository.findById(
           organisation.id
@@ -84,7 +84,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('updates accreditation fields', async () => {
-        const organisation = buildOrganisation({ orgId: 2027 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
         const organisationAfterInsert = await repository.findById(
           organisation.id
@@ -122,7 +122,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('adds new registration via update', async () => {
-        const organisation = buildOrganisation({ orgId: 2029 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const { ObjectId } = await import('mongodb')
@@ -163,7 +163,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('adds new accreditation via update', async () => {
-        const organisation = buildOrganisation({ orgId: 2030 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const { ObjectId } = await import('mongodb')
@@ -201,7 +201,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
     describe('optimistic concurrency control', () => {
       it('throws conflict error when version does not match', async () => {
-        const organisation = buildOrganisation({ orgId: 2004 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await expect(
@@ -215,7 +215,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('prevents lost updates in concurrent scenarios', async () => {
-        const organisation = buildOrganisation({ orgId: 2006 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await repository.update(organisation.id, 1, {
@@ -242,7 +242,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
     describe('statusHistory handling', () => {
       it('adds new statusHistory entry when organisation status changes', async () => {
-        const organisation = buildOrganisation({ orgId: 2016 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await repository.update(organisation.id, 1, {
@@ -258,7 +258,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('does not modify statusHistory when organisation status is not changed', async () => {
-        const organisation = buildOrganisation({ orgId: 2017 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await repository.update(organisation.id, 1, {
@@ -272,7 +272,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('preserves all existing statusHistory entries when organisation status changes', async () => {
-        const organisation = buildOrganisation({ orgId: 2019 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await repository.update(organisation.id, 1, { status: STATUS.APPROVED })
@@ -291,7 +291,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('adds new statusHistory entry to registration when status changes', async () => {
-        const organisation = buildOrganisation({ orgId: 2023 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const registrationToUpdate = {
@@ -314,7 +314,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('preserves all existing statusHistory entries for registration', async () => {
-        const organisation = buildOrganisation({ orgId: 2025 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const regId = organisation.registrations[0].id
@@ -340,7 +340,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('adds new statusHistory entry to accreditation when status changes', async () => {
-        const organisation = buildOrganisation({ orgId: 2026 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const accreditationToUpdate = {
@@ -363,7 +363,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('preserves all existing statusHistory entries for accreditation', async () => {
-        const organisation = buildOrganisation({ orgId: 2028 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const accId = organisation.accreditations[0].id
@@ -389,7 +389,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('rejects invalid status value', async () => {
-        const organisation = buildOrganisation({ orgId: 2031 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await expect(
@@ -402,10 +402,10 @@ export const testUpdateBehaviour = (repositoryFactory) => {
 
     describe('non-updatable fields validation', () => {
       it('rejects updates to id field', async () => {
-        const organisation = buildOrganisation({ orgId: 2020 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
-        const newId = buildOrganisation({ orgId: 9999 }).id
+        const newId = buildOrganisation().id
 
         await expect(
           repository.update(organisation.id, 1, {
@@ -416,7 +416,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('rejects updates to version field', async () => {
-        const organisation = buildOrganisation({ orgId: 2021 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await expect(
@@ -428,7 +428,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
       })
 
       it('rejects updates to schemaVersion field', async () => {
-        const organisation = buildOrganisation({ orgId: 2022 })
+        const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         await expect(

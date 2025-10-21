@@ -26,7 +26,7 @@ export const testFindBehaviour = (repositoryFactory) => {
       })
 
       it('retrieves an organisation by ID after insert', async () => {
-        const orgData = buildOrganisation({ orgId: 1001 })
+        const orgData = buildOrganisation()
         await repository.insert(orgData)
 
         const result = await repository.findById(orgData.id)
@@ -45,15 +45,15 @@ export const testFindBehaviour = (repositoryFactory) => {
       })
 
       it('does not return organisations with different IDs', async () => {
-        const org1 = buildOrganisation({ orgId: 2001 })
-        const org2 = buildOrganisation({ orgId: 2002 })
+        const org1 = buildOrganisation()
+        const org2 = buildOrganisation()
 
         await Promise.all([org1, org2].map((org) => repository.insert(org)))
 
         const result = await repository.findById(org1.id)
 
         expect(result.id).toBe(org1.id)
-        expect(result.orgId).toBe(2001)
+        expect(result.orgId).toBe(org1.orgId)
       })
     })
 
@@ -65,9 +65,9 @@ export const testFindBehaviour = (repositoryFactory) => {
       })
 
       it('returns all organisations', async () => {
-        const org1 = buildOrganisation({ orgId: 3001 })
-        const org2 = buildOrganisation({ orgId: 3002 })
-        const org3 = buildOrganisation({ orgId: 3003 })
+        const org1 = buildOrganisation()
+        const org2 = buildOrganisation()
+        const org3 = buildOrganisation()
 
         await Promise.all(
           [org1, org2, org3].map((org) => repository.insert(org))
@@ -77,7 +77,7 @@ export const testFindBehaviour = (repositoryFactory) => {
 
         expect(result).toHaveLength(3)
         expect(result.map((o) => o.orgId)).toEqual(
-          expect.arrayContaining([3001, 3002, 3003])
+          expect.arrayContaining([org1.orgId, org2.orgId, org3.orgId])
         )
       })
     })

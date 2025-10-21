@@ -10,7 +10,7 @@ export const testInsertBehaviour = (repositoryFactory) => {
 
     describe('basic behaviour', () => {
       it('inserts an organisation without error', async () => {
-        const orgData = buildOrganisation({ orgId: 1001 })
+        const orgData = buildOrganisation()
 
         await repository.insert(orgData)
 
@@ -58,7 +58,7 @@ export const testInsertBehaviour = (repositoryFactory) => {
       })
 
       it('throws conflict error when inserting duplicate ID', async () => {
-        const organisation = buildOrganisation({ orgId: 1003 })
+        const organisation = buildOrganisation()
 
         await repository.insert(organisation)
 
@@ -161,7 +161,6 @@ export const testInsertBehaviour = (repositoryFactory) => {
       describe('field handling', () => {
         it('strips unknown fields from insert', async () => {
           const orgWithUnknownFields = buildOrganisation({
-            orgId: 3001,
             anotherBadField: 'field value1'
           })
 
@@ -174,7 +173,6 @@ export const testInsertBehaviour = (repositoryFactory) => {
 
         it('allows optional fields to be omitted', async () => {
           const minimalOrg = buildOrganisation({
-            orgId: 3002,
             businessType: undefined,
             companyDetails: undefined
           })
@@ -183,12 +181,11 @@ export const testInsertBehaviour = (repositoryFactory) => {
           const result = await repository.findById(minimalOrg.id)
 
           expect(result).toBeTruthy()
-          expect(result.orgId).toBe(3002)
+          expect(result.orgId).toBe(minimalOrg.orgId)
         })
 
         it('defaults registrations and accreditations to empty arrays when not provided', async () => {
           const orgData = buildOrganisation({
-            orgId: 3004,
             registrations: undefined,
             accreditations: undefined
           })
