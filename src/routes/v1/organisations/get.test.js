@@ -1,40 +1,33 @@
 import { StatusCodes } from 'http-status-codes'
-import { createServer } from '#server/server.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+async function setupServer(seed) {
+  const organisationsRepositoryFactory =
+    createInMemoryOrganisationsRepository(seed)
+  const featureFlags = createInMemoryFeatureFlags({ organisations: true })
 
-describe('/v1/organisations route', () => {
-  describe('success path', () => {
-    /** @type {import('#common/hapi-types.js').HapiServer} */
-    let server
+  return createTestServer({
+    repositories: { organisationsRepository: organisationsRepositoryFactory },
+    featureFlags
+  })
+}
 
-    beforeAll(async () => {
-      const organisationsRepository = () => ({
-        async findAll() {
-          return [{ id: 'org-1', name: 'Org One' }]
-        }
-      })
+describe('GET /v1/organisations', () => {
+  it('returns 200 and all organisations', async () => {
+    const seed = [
+      { _id: 'mongo-1', orgId: 500123, name: 'Acme' },
+      { _id: 'mongo-2', orgId: 500124, name: 'Beta' }
+    ]
+    const server = await setupServer(seed)
 
-      server = await createServer({
-        repositories: { organisationsRepository },
-        featureFlags: createInMemoryFeatureFlags({ organisations: true })
-      })
-      await server.initialize()
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/organisations'
     })
 
-    afterAll(async () => {
-      await server?.stop()
-    })
-
-    it('returns 200 and the organisations when repository returns data', async () => {
-      const response = await server.inject({
-        method: 'GET',
-        url: '/v1/organisations'
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      expect(response.result).toEqual([{ id: 'org-1', name: 'Org One' }])
-    })
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    expect(JSON.parse(response.payload)).toEqual(seed)
   })
 })

@@ -15,6 +15,25 @@ describe('In-memory organisations repository', () => {
     expect(result).toEqual(initial)
   })
 
+  it('findByOrgId returns matching organisation', async () => {
+    const initial = [
+      { _id: 'mongo-1', orgId: 500123, name: 'Acme' },
+      { _id: 'mongo-2', orgId: 500124, name: 'Beta' }
+    ]
+
+    const repo = createInMemoryOrganisationsRepository(initial)()
+    const result = await repo.findByOrgId(500123)
+    expect(result).toEqual({ _id: 'mongo-1', orgId: 500123, name: 'Acme' })
+  })
+
+  it('findByOrgId returns null when no match', async () => {
+    const initial = [{ _id: 'mongo-1', orgId: 500123, name: 'Acme' }]
+
+    const repo = createInMemoryOrganisationsRepository(initial)()
+    const result = await repo.findByOrgId(999999)
+    expect(result).toBeNull()
+  })
+
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
       const initial = [
@@ -49,6 +68,17 @@ describe('In-memory organisations repository', () => {
 
       const result = await repo.findAll()
       expect(result).toEqual([{ _id: 'org-1', name: 'Original' }])
+    })
+
+    it('findByOrgId returns a clone, not internal reference', async () => {
+      const initial = [{ _id: 'mongo-1', orgId: 500123, name: 'Acme' }]
+      const repo = createInMemoryOrganisationsRepository(initial)()
+
+      const result = await repo.findByOrgId(500123)
+      result.name = 'Changed'
+
+      const again = await repo.findByOrgId(500123)
+      expect(again).toEqual({ _id: 'mongo-1', orgId: 500123, name: 'Acme' })
     })
   })
 })

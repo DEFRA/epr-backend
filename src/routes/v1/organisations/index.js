@@ -1,1 +1,2 @@
-export { organisationsGet } from './get.js'
+export { organisationsGetAll } from './get.js'
+export { organisationsGetById } from './get-by-id.js'

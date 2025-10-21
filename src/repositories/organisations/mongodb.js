@@ -7,5 +7,8 @@ const COLLECTION_NAME = 'epr-organisations'
 export const createOrganisationsRepository = (db) => () => ({
   async findAll() {
     return db.collection(COLLECTION_NAME).find().toArray()
+  },
+  async findByOrgId(orgId) {
+    return db.collection(COLLECTION_NAME).findOne({ orgId })
   }
 })

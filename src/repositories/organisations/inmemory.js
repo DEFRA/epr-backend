@@ -19,6 +19,10 @@ export const createInMemoryOrganisationsRepository = (
     async findAll() {
       // Return a deep clone to prevent consumers mutating internal state.
       return structuredClone(storage)
+    },
+    async findByOrgId(orgId) {
+      const found = storage.find((o) => o.orgId === orgId)
+      return found ? structuredClone(found) : null
     }
   })
 }
