@@ -28,7 +28,7 @@ export const createInlineSummaryLogsValidator = (
       }).catch((error) => {
         logger.error({
           error,
-          message: `Summary log validation worker failed [${id}]`,
+          message: `Summary log validation worker failed: summaryLogId=${id}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
