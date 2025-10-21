@@ -1,24 +1,28 @@
 import { randomUUID } from 'crypto'
 
+import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
+import {
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryUploadsRepository } from '#repositories/uploads/inmemory.js'
 
 import { summaryLogsValidatorWorker } from './worker.js'
+import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
 
 describe('summaryLogsValidatorWorker integration', () => {
-  let summaryLogsRepository
   let uploadsRepository
+  let summaryLogsParser
+  let summaryLogsRepository
 
   let summaryLogId
   let initialSummaryLog
 
   beforeEach(async () => {
-    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-
-    summaryLogsRepository = summaryLogsRepositoryFactory(logger)
     uploadsRepository = createInMemoryUploadsRepository()
+    summaryLogsParser = createSummaryLogsParser()
+    summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     summaryLogId = randomUUID()
 
@@ -49,8 +53,9 @@ describe('summaryLogsValidatorWorker integration', () => {
     })
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog: insertedSummaryLog
     })
 
@@ -76,10 +81,11 @@ describe('summaryLogsValidatorWorker integration', () => {
     })
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog: insertedSummaryLog
-    })
+    }).catch((err) => err)
 
     const updatedSummaryLog = await summaryLogsRepository.findById(summaryLogId)
 
@@ -105,8 +111,9 @@ describe('summaryLogsValidatorWorker integration', () => {
     uploadsRepository.error = new Error('S3 access denied')
 
     await summaryLogsValidatorWorker({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       summaryLog: insertedSummaryLog
     }).catch((err) => err)
 
@@ -115,7 +122,7 @@ describe('summaryLogsValidatorWorker integration', () => {
     expect(updatedSummaryLog).toEqual({
       ...insertedSummaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason: 'Something went wrong while retrieving your file upload',
+      failureReason: 'S3 access denied',
       version: 2
     })
   })

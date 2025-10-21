@@ -1,11 +1,11 @@
 import {
+  closeWorkerPool,
+  createSummaryLogsValidator
+} from '#adapters/validators/summary-logs/piscina.js'
+import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import {
-  closeWorkerPool,
-  createSummaryLogsValidator
-} from '#workers/summary-logs/piscina.js'
 
 export const workers = {
   plugin: {

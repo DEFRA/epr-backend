@@ -7,15 +7,15 @@ import {
 import {
   determineFailureReason,
   determineStatusFromUpload,
-  transitionStatus,
   SUMMARY_LOG_STATUS,
+  transitionStatus,
   UPLOAD_STATUS
-} from '#domain/summary-log.js'
+} from '#domain/summary-logs/status.js'
 
 import { uploadCompletedPayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
 /** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
 /** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
 

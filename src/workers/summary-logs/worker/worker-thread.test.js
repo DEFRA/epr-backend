@@ -1,19 +1,21 @@
+import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
+import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { createUploadsRepository } from '#repositories/uploads/s3.js'
 import { createMockConfig } from '#test/helpers/mock-config.js'
 
 import { summaryLogsValidatorWorker } from './worker.js'
 import summaryLogsValidatorWorkerThread from './worker-thread.js'
 
-vi.mock('../../../config.js', () => createMockConfig())
+vi.mock('#adapters/parsers/summary-logs/stub.js')
+vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#common/helpers/s3/s3-client.js')
-vi.mock('#repositories/summary-logs/mongodb.js')
-vi.mock('#repositories/uploads/s3.js')
-vi.mock('./worker.js')
 vi.mock('#common/helpers/secure-context.js')
+vi.mock('#repositories/summary-logs/mongodb.js')
+vi.mock('../../../config.js', () => createMockConfig())
+vi.mock('./worker.js')
 
 describe('summaryLogsValidatorWorkerThread', () => {
   let mockDb
@@ -21,6 +23,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   let mockS3Client
   let mockSummaryLogsRepository
   let mockUploadsRepository
+  let mockSummaryLogsParser
 
   let summaryLog
 
@@ -44,6 +47,10 @@ describe('summaryLogsValidatorWorkerThread', () => {
       findByLocation: vi.fn()
     }
 
+    mockSummaryLogsParser = {
+      parse: vi.fn()
+    }
+
     summaryLog = {
       id: 'summary-log-123',
       status: 'validating',
@@ -56,6 +63,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       () => mockSummaryLogsRepository
     )
     vi.mocked(createUploadsRepository).mockReturnValue(mockUploadsRepository)
+    vi.mocked(createSummaryLogsParser).mockReturnValue(mockSummaryLogsParser)
     vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
   })
 
@@ -100,12 +108,19 @@ describe('summaryLogsValidatorWorkerThread', () => {
     expect(createUploadsRepository).toHaveBeenCalledWith(mockS3Client)
   })
 
-  it('should call validator worker with repositories and summary log', async () => {
+  it('should create summary logs parser', async () => {
+    await summaryLogsValidatorWorkerThread({ summaryLog })
+
+    expect(createSummaryLogsParser).toHaveBeenCalledWith()
+  })
+
+  it('should call validator worker as expected', async () => {
     await summaryLogsValidatorWorkerThread({ summaryLog })
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       uploadsRepository: mockUploadsRepository,
+      summaryLogsParser: mockSummaryLogsParser,
       summaryLog
     })
   })

@@ -1,10 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 
+import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createInMemoryUploadsRepository } from '#repositories/uploads/inmemory.js'
-import { createUploadsRepository } from '#repositories/uploads/s3.js'
-import { config } from '../../config.js'
+import { config } from '../../../config.js'
 
 export const bucket = 'test-bucket'
 export const key = 'path/to/summary-log.xlsx'

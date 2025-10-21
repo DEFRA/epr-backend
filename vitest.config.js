@@ -18,8 +18,8 @@ export default defineConfig({
         'src/index.js',
         'src/config.js',
         '**/*.port.js',
+        'src/domain/**/port.js',
         'src/repositories/**/port.js',
-        'src/workers/**/port.js',
         'src/common/hapi-types.js',
         'src/common/helpers/secure-context.js'
       ],

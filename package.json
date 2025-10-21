@@ -7,6 +7,7 @@
   "imports": {
     "#common/*": "./src/common/*",
     "#domain/*": "./src/domain/*",
+    "#adapters/*": "./src/adapters/*",
     "#repositories/*": "./src/repositories/*",
     "#workers/*": "./src/workers/*",
     "#routes/*": "./src/routes/*",
