@@ -68,8 +68,7 @@ describe('createSummaryLogsValidator', () => {
 
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
-        message:
-          'Summary log validation worker completed: summaryLogId=summary-log-123',
+        message: 'Summary log validation worker completed [summary-log-123]',
         event: {
           category: 'server',
           action: 'process_success'
@@ -89,8 +88,7 @@ describe('createSummaryLogsValidator', () => {
 
     expect(logger.error).toHaveBeenCalledWith({
       error,
-      message:
-        'Summary log validation worker failed: summaryLogId=summary-log-123',
+      message: 'Summary log validation worker failed [summary-log-123]',
       event: {
         category: 'server',
         action: 'process_failure'
