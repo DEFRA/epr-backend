@@ -41,7 +41,7 @@ describe('MongoDB organisations repository', () => {
       }
 
       const repository = createOrganisationsRepository(dbMock)()
-      const orgData = buildOrganisation({ orgId: 1001 })
+      const orgData = buildOrganisation()
 
       await expect(repository.insert(orgData)).rejects.toThrow(
         'Unexpected database error'

@@ -87,109 +87,124 @@ const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
   return [...processedExisting, ...newItems]
 }
 
+const performInsert = async (db, organisation) => {
+  const validated = validateOrganisationInsert(organisation)
+  const { id, ...orgFields } = validated
+
+  const registrations =
+    orgFields.registrations?.map((reg) => ({
+      ...reg,
+      statusHistory: createInitialStatusHistory()
+    })) || []
+
+  const accreditations =
+    orgFields.accreditations?.map((acc) => ({
+      ...acc,
+      statusHistory: createInitialStatusHistory()
+    })) || []
+
+  try {
+    await db.collection(COLLECTION_NAME).insertOne({
+      _id: id,
+      version: 1,
+      schemaVersion: SCHEMA_VERSION,
+      statusHistory: createInitialStatusHistory(),
+      ...orgFields,
+      registrations,
+      accreditations
+    })
+  } catch (error) {
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      throw Boom.conflict(`Organisation with ${id} already exists`)
+    }
+    throw error
+  }
+}
+
+const performUpdate = async (db, id, version, updates) => {
+  const validatedId = validateId(id)
+  const validatedUpdates = validateOrganisationUpdate(updates)
+
+  const existing = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ _id: validatedId })
+
+  if (!existing) {
+    throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+  }
+
+  const merged = {
+    ...existing,
+    ...validatedUpdates
+  }
+
+  const registrations = validatedUpdates.registrations
+    ? mergeItemsWithUpdates(
+        existing.registrations,
+        validatedUpdates.registrations
+      )
+    : existing.registrations
+
+  const accreditations = validatedUpdates.accreditations
+    ? mergeItemsWithUpdates(
+        existing.accreditations,
+        validatedUpdates.accreditations
+      )
+    : existing.accreditations
+
+  const result = await db.collection(COLLECTION_NAME).updateOne(
+    { _id: validatedId, version },
+    {
+      $set: {
+        ...merged,
+        statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+        registrations,
+        accreditations,
+        version: existing.version + 1
+      }
+    }
+  )
+
+  if (result.matchedCount === 0) {
+    throw Boom.conflict(
+      `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+    )
+  }
+}
+
+const performFindById = async (db, id) => {
+  const validatedId = validateId(id)
+  const doc = await db.collection(COLLECTION_NAME).findOne({ _id: validatedId })
+  if (!doc) {
+    throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+  }
+
+  return mapDocumentWithCurrentStatuses(doc)
+}
+
+const performFindAll = async (db) => {
+  const docs = await db.collection(COLLECTION_NAME).find().toArray()
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {import('./port.js').OrganisationsRepositoryFactory}
  */
 export const createOrganisationsRepository = (db) => () => ({
   async insert(organisation) {
-    const validated = validateOrganisationInsert(organisation)
-    const { id, ...orgFields } = validated
-
-    const registrations =
-      orgFields.registrations?.map((reg) => ({
-        ...reg,
-        statusHistory: createInitialStatusHistory()
-      })) || []
-
-    const accreditations =
-      orgFields.accreditations?.map((acc) => ({
-        ...acc,
-        statusHistory: createInitialStatusHistory()
-      })) || []
-
-    try {
-      await db.collection(COLLECTION_NAME).insertOne({
-        _id: id,
-        version: 1,
-        schemaVersion: SCHEMA_VERSION,
-        statusHistory: createInitialStatusHistory(),
-        ...orgFields,
-        registrations,
-        accreditations
-      })
-    } catch (error) {
-      if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-        throw Boom.conflict(`Organisation with ${id} already exists`)
-      }
-      throw error
-    }
+    return performInsert(db, organisation)
   },
 
   async update(id, version, updates) {
-    const validatedId = validateId(id)
-    const validatedUpdates = validateOrganisationUpdate(updates)
-
-    const existing = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ _id: validatedId })
-
-    if (!existing) {
-      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
-    }
-
-    const merged = {
-      ...existing,
-      ...validatedUpdates
-    }
-
-    const registrations = validatedUpdates.registrations
-      ? mergeItemsWithUpdates(
-          existing.registrations,
-          validatedUpdates.registrations
-        )
-      : existing.registrations
-
-    const accreditations = validatedUpdates.accreditations
-      ? mergeItemsWithUpdates(
-          existing.accreditations,
-          validatedUpdates.accreditations
-        )
-      : existing.accreditations
-
-    const result = await db.collection(COLLECTION_NAME).updateOne(
-      { _id: validatedId, version },
-      {
-        $set: {
-          ...merged,
-          statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
-          registrations,
-          accreditations,
-          version: existing.version + 1
-        }
-      }
-    )
-
-    if (result.matchedCount === 0) {
-      throw Boom.conflict(
-        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-      )
-    }
+    return performUpdate(db, id, version, updates)
   },
-  async findById(id) {
-    const validatedId = validateId(id)
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ _id: validatedId })
-    if (!doc) {
-      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
-    }
 
-    return mapDocumentWithCurrentStatuses(doc)
+  async findById(id) {
+    return performFindById(db, id)
   },
 
   async findAll() {
-    const docs = await db.collection(COLLECTION_NAME).find().toArray()
-    return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+    return performFindAll(db)
   }
 })
