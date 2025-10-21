@@ -16,12 +16,13 @@ export const summaryLogsGet = {
   handler: async ({ summaryLogsRepository, params }, h) => {
     const { summaryLogId } = params
 
-    const summaryLog = await summaryLogsRepository.findById(summaryLogId)
+    const result = await summaryLogsRepository.findById(summaryLogId)
 
-    if (!summaryLog) {
+    if (!result) {
       return h.response({ status: getDefaultStatus() }).code(StatusCodes.OK)
     }
 
+    const { summaryLog } = result
     const response = { status: summaryLog.status }
 
     if (summaryLog.failureReason) {

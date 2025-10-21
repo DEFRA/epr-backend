@@ -76,6 +76,8 @@ const parseSummaryLog = async ({
 /**
  * @param {Object} params
  * @param {SummaryLogsRepository} params.summaryLogsRepository
+ * @param {string} params.id
+ * @param {number} params.version
  * @param {Object} params.summaryLog
  * @param {SummaryLogStatus} params.status
  * @param {string|undefined} [params.failureReason]
@@ -83,16 +85,14 @@ const parseSummaryLog = async ({
  */
 const updateSummaryLog = async ({
   summaryLogsRepository,
+  id,
+  version,
   summaryLog,
   status,
   failureReason,
   msg
 }) => {
-  const {
-    id: summaryLogId,
-    version,
-    failureReason: existingFailureReason
-  } = summaryLog
+  const { failureReason: existingFailureReason } = summaryLog
 
   const updates = { status, failureReason }
 
@@ -100,7 +100,7 @@ const updateSummaryLog = async ({
     updates.failureReason = null
   }
 
-  await summaryLogsRepository.update(summaryLogId, version, updates)
+  await summaryLogsRepository.update(id, version, updates)
 
   logger.info({
     message: `Summary log updated: ${msg}, status=${status}`,
@@ -116,20 +116,23 @@ const updateSummaryLog = async ({
  * @param {UploadsRepository} params.uploadsRepository
  * @param {SummaryLogsParser} params.summaryLogsParser
  * @param {SummaryLogsRepository} params.summaryLogsRepository
+ * @param {string} params.id
+ * @param {number} params.version
  * @param {Object} params.summaryLog
  */
 export const summaryLogsValidatorWorker = async ({
   uploadsRepository,
   summaryLogsParser,
   summaryLogsRepository,
+  id,
+  version,
   summaryLog
 }) => {
   const {
-    id: summaryLogId,
     file: { id: fileId, name: filename }
   } = summaryLog
 
-  const msg = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
+  const msg = `summaryLogId=${id}, fileId=${fileId}, filename=${filename}`
 
   logger.info({
     message: `Summary log validation worker started: ${msg}`,
@@ -158,6 +161,8 @@ export const summaryLogsValidatorWorker = async ({
 
     await updateSummaryLog({
       summaryLogsRepository,
+      id,
+      version,
       summaryLog,
       status: SUMMARY_LOG_STATUS.VALIDATED,
       msg
@@ -174,6 +179,8 @@ export const summaryLogsValidatorWorker = async ({
 
     await updateSummaryLog({
       summaryLogsRepository,
+      id,
+      version,
       summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason: error.message,

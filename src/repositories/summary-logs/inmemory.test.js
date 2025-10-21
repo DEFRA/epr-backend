@@ -12,19 +12,19 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id, {
+      const summaryLog = buildSummaryLog({
         file: buildFile({ name: 'original.xlsx' })
       })
 
-      await repository.insert(summaryLog)
+      await repository.insert(id, summaryLog)
 
       const retrieved = await repository.findById(id)
-      retrieved.file.name = 'modified.xlsx'
-      retrieved.file.s3.bucket = 'hacked-bucket'
+      retrieved.summaryLog.file.name = 'modified.xlsx'
+      retrieved.summaryLog.file.s3.bucket = 'hacked-bucket'
 
       const retrievedAgain = await repository.findById(id)
-      expect(retrievedAgain.file.name).toBe('original.xlsx')
-      expect(retrievedAgain.file.s3.bucket).toBe('test-bucket')
+      expect(retrievedAgain.summaryLog.file.name).toBe('original.xlsx')
+      expect(retrievedAgain.summaryLog.file.s3.bucket).toBe('test-bucket')
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
@@ -32,18 +32,18 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id, {
+      const summaryLog = buildSummaryLog({
         file: buildFile({ name: 'original.xlsx' })
       })
 
-      await repository.insert(summaryLog)
+      await repository.insert(id, summaryLog)
 
       summaryLog.file.name = 'mutated.xlsx'
       summaryLog.file.s3.key = 'mutated-key'
 
       const retrieved = await repository.findById(id)
-      expect(retrieved.file.name).toBe('original.xlsx')
-      expect(retrieved.file.s3.key).toBe('test-key')
+      expect(retrieved.summaryLog.file.name).toBe('original.xlsx')
+      expect(retrieved.summaryLog.file.s3.key).toBe('test-key')
     })
 
     it('stores independent copies on update', async () => {
@@ -51,9 +51,9 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog(id)
+      const summaryLog = buildSummaryLog()
 
-      await repository.insert(summaryLog)
+      await repository.insert(id, summaryLog)
 
       const updates = {
         status: 'validating',
@@ -65,8 +65,8 @@ describe('In-memory summary logs repository', () => {
       updates.file.s3.bucket = 'evil-bucket'
 
       const retrieved = await repository.findById(id)
-      expect(retrieved.file.name).toBe('updated.xlsx')
-      expect(retrieved.file.s3.bucket).toBe('test-bucket')
+      expect(retrieved.summaryLog.file.name).toBe('updated.xlsx')
+      expect(retrieved.summaryLog.file.s3.bucket).toBe('test-bucket')
     })
   })
 })

@@ -21,6 +21,8 @@ describe('summaryLogsValidatorWorker', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
+  let id
+  let version
   let summaryLog
 
   beforeEach(async () => {
@@ -38,9 +40,10 @@ describe('summaryLogsValidatorWorker', () => {
       update: vi.fn()
     }
 
+    id = 'summary-log-123'
+    version = 1
+
     summaryLog = {
-      id: 'summary-log-123',
-      version: 1,
       status: SUMMARY_LOG_STATUS.VALIDATING,
       file: {
         id: 'file-123',
@@ -63,6 +66,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
 
@@ -83,6 +88,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
 
@@ -97,6 +104,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
 
@@ -119,6 +128,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     }).catch((err) => err)
 
@@ -139,6 +150,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
 
@@ -158,6 +171,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
 
@@ -178,6 +193,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     }).catch((err) => err)
 
@@ -200,6 +217,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     }).catch((err) => err)
 
@@ -225,6 +244,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     }).catch((err) => err)
 
@@ -245,6 +266,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      id,
+      version,
       summaryLog
     })
 
@@ -270,6 +293,8 @@ describe('summaryLogsValidatorWorker', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository: brokenRepository,
+      id,
+      version,
       summaryLog
     }).catch((err) => err)
 

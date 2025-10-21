@@ -9,7 +9,7 @@ describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsParser
   let summaryLogsRepository
   let summaryLogsValidator
-  let summaryLog
+  let validationRequest
 
   beforeEach(() => {
     uploadsRepository = {
@@ -30,9 +30,12 @@ describe('createInlineSummaryLogsValidator', () => {
       summaryLogsRepository
     )
 
-    summaryLog = {
+    validationRequest = {
       id: 'summary-log-123',
-      status: 'validating'
+      version: 1,
+      summaryLog: {
+        status: 'validating'
+      }
     }
 
     vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
@@ -43,19 +46,41 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should call worker with repository and summary log', async () => {
-    await summaryLogsValidator.validate(summaryLog)
+    await summaryLogsValidator.validate(validationRequest)
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
-      summaryLogsRepository,
+      uploadsRepository,
       summaryLogsParser,
-      summaryLog,
-      uploadsRepository
+      summaryLogsRepository,
+      id: validationRequest.id,
+      version: validationRequest.version,
+      summaryLog: validationRequest.summaryLog
     })
+  })
+
+  it('should log error with correct format when worker fails', async () => {
+    vi.mocked(summaryLogsValidatorWorker).mockRejectedValue(
+      new Error('Worker failed')
+    )
+
+    // Need to import logger to spy on it
+    const { logger } = await import('#common/helpers/logging/logger.js')
+    vi.spyOn(logger, 'error')
+
+    await summaryLogsValidator.validate(validationRequest)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Summary log validation worker failed: summaryLogId=summary-log-123'
+      })
+    )
   })
 
   it('should not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(summaryLog)
+      summaryLogsValidator.validate(validationRequest)
     ).resolves.toBeUndefined()
   })
 
@@ -65,7 +90,7 @@ describe('createInlineSummaryLogsValidator', () => {
     )
 
     await expect(
-      summaryLogsValidator.validate(summaryLog)
+      summaryLogsValidator.validate(validationRequest)
     ).resolves.toBeUndefined()
   })
 })

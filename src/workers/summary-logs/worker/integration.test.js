@@ -27,7 +27,6 @@ describe('summaryLogsValidatorWorker integration', () => {
     summaryLogId = randomUUID()
 
     initialSummaryLog = {
-      id: summaryLogId,
       status: SUMMARY_LOG_STATUS.VALIDATING,
       file: {
         id: `file-${randomUUID()}`,
@@ -42,70 +41,75 @@ describe('summaryLogsValidatorWorker integration', () => {
   })
 
   it('should update status to validated when file is fetched successfully', async () => {
-    await summaryLogsRepository.insert(initialSummaryLog)
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
 
-    const insertedSummaryLog =
-      await summaryLogsRepository.findById(summaryLogId)
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
 
-    expect(insertedSummaryLog).toEqual({
-      ...initialSummaryLog,
-      version: 1
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
     })
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
-      summaryLog: insertedSummaryLog
+      id: summaryLogId,
+      version: inserted.version,
+      summaryLog: inserted.summaryLog
     })
 
-    const updatedSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+    const updated = await summaryLogsRepository.findById(summaryLogId)
 
-    expect(updatedSummaryLog).toEqual({
-      ...insertedSummaryLog,
-      status: SUMMARY_LOG_STATUS.VALIDATED,
-      version: 2
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      }
     })
   })
 
   it('should update status to invalid with failure reason when file is not found', async () => {
     initialSummaryLog.file.s3.key = 'some-other-key'
-    await summaryLogsRepository.insert(initialSummaryLog)
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
 
-    const insertedSummaryLog =
-      await summaryLogsRepository.findById(summaryLogId)
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
 
-    expect(insertedSummaryLog).toEqual({
-      ...initialSummaryLog,
-      version: 1
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
     })
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
-      summaryLog: insertedSummaryLog
+      id: summaryLogId,
+      version: inserted.version,
+      summaryLog: inserted.summaryLog
     }).catch((err) => err)
 
-    const updatedSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+    const updated = await summaryLogsRepository.findById(summaryLogId)
 
-    expect(updatedSummaryLog).toEqual({
-      ...insertedSummaryLog,
-      status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason: 'Something went wrong while retrieving your file upload',
-      version: 2
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'Something went wrong while retrieving your file upload'
+      }
     })
   })
 
   it('should still update status even if file fetch fails', async () => {
-    await summaryLogsRepository.insert(initialSummaryLog)
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
 
-    const insertedSummaryLog =
-      await summaryLogsRepository.findById(summaryLogId)
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
 
-    expect(insertedSummaryLog).toEqual({
-      ...initialSummaryLog,
-      version: 1
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
     })
 
     const failingUploadsRepository = createInMemoryUploadsRepository({
@@ -116,16 +120,20 @@ describe('summaryLogsValidatorWorker integration', () => {
       uploadsRepository: failingUploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
-      summaryLog: insertedSummaryLog
+      id: summaryLogId,
+      version: inserted.version,
+      summaryLog: inserted.summaryLog
     }).catch((err) => err)
 
-    const updatedSummaryLog = await summaryLogsRepository.findById(summaryLogId)
+    const updated = await summaryLogsRepository.findById(summaryLogId)
 
-    expect(updatedSummaryLog).toEqual({
-      ...insertedSummaryLog,
-      status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason: 'S3 access denied',
-      version: 2
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'S3 access denied'
+      }
     })
   })
 })

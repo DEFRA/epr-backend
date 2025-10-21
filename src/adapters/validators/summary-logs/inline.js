@@ -17,16 +17,18 @@ export const createInlineSummaryLogsValidator = (
   summaryLogsRepository
 ) => {
   return {
-    validate: async (summaryLog) => {
+    validate: async ({ id, version, summaryLog }) => {
       summaryLogsValidatorWorker({
         uploadsRepository,
         summaryLogsParser,
         summaryLogsRepository,
+        id,
+        version,
         summaryLog
       }).catch((error) => {
         logger.error({
           error,
-          message: `Summary log validation worker failed: summaryLogId=${summaryLog.id}`,
+          message: `Summary log validation worker failed: summaryLogId=${id}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
