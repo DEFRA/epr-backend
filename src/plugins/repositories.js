@@ -53,8 +53,11 @@ export const repositories = {
         )
       } else {
         server.dependency('mongodb', () => {
-          const productionFactory = createSummaryLogsRepository(server.db)
-          registerPerRequest('summaryLogsRepository', productionFactory)
+          const db = server.db
+          if (db) {
+            const productionFactory = createSummaryLogsRepository(db)
+            registerPerRequest('summaryLogsRepository', productionFactory)
+          }
         })
       }
 
@@ -69,8 +72,11 @@ export const repositories = {
         )
       } else {
         server.dependency('mongodb', () => {
-          const productionFactory = createOrganisationsRepository(server.db)
-          registerPerRequest('organisationsRepository', productionFactory)
+          const db = server.db
+          if (db) {
+            const productionFactory = createOrganisationsRepository(db)
+            registerPerRequest('organisationsRepository', productionFactory)
+          }
         })
       }
     }
