@@ -7,7 +7,11 @@ import {
 
 export function getLocalSecret(name) {
   try {
-    return fs.readFileSync(process.env[name], 'utf8').toString().trim()
+    const path = process.env[name]
+    if (!path) {
+      throw new Error(`Environment variable ${name} is not set`)
+    }
+    return fs.readFileSync(path, 'utf8').toString().trim()
   } catch (error) {
     logger.error({
       error,

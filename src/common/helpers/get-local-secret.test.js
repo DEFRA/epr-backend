@@ -57,4 +57,11 @@ describe('getLocalSecret', () => {
       }
     })
   })
+
+  it('returns null if environment variable is not set', () => {
+    vi.unstubAllEnvs()
+    const result = getLocalSecret(secretName)
+    expect(result).toBeNull()
+    expect(mockLoggerError).toHaveBeenCalled()
+  })
 })

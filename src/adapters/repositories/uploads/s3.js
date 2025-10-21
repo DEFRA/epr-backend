@@ -17,6 +17,10 @@ export const createUploadsRepository = (s3Client) => ({
 
       const response = await s3Client.send(command)
 
+      if (!response.Body) {
+        return null
+      }
+
       const buffer = await response.Body.transformToByteArray()
 
       return Buffer.from(buffer)
