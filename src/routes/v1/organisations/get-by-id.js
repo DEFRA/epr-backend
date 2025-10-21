@@ -17,7 +17,7 @@ export const organisationsGetById = {
 
     const orgId = request.params.orgId.trim()
 
-    if (!orgId || orgId.length === 0) {
+    if (!orgId) {
       throw Boom.notFound('Organisation not found')
     }
 
