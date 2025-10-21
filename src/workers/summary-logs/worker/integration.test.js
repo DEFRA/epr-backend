@@ -108,10 +108,12 @@ describe('summaryLogsValidatorWorker integration', () => {
       version: 1
     })
 
-    uploadsRepository.error = new Error('S3 access denied')
+    const failingUploadsRepository = createInMemoryUploadsRepository({
+      throwError: new Error('S3 access denied')
+    })
 
     await summaryLogsValidatorWorker({
-      uploadsRepository,
+      uploadsRepository: failingUploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
       summaryLog: insertedSummaryLog
