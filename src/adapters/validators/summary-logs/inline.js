@@ -6,20 +6,22 @@ import { logger } from '#common/helpers/logging/logger.js'
 
 import { summaryLogsValidatorWorker } from '#workers/summary-logs/worker/worker.js'
 
-/** @typedef {import('#workers/summary-logs/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 /**
  * @returns {SummaryLogsValidator}
  */
 export const createInlineSummaryLogsValidator = (
-  summaryLogsRepository,
-  uploadsRepository
+  uploadsRepository,
+  summaryLogsParser,
+  summaryLogsRepository
 ) => {
   return {
     validate: async ({ id, version, summaryLog }) => {
       summaryLogsValidatorWorker({
-        summaryLogsRepository,
         uploadsRepository,
+        summaryLogsParser,
+        summaryLogsRepository,
         id,
         version,
         summaryLog

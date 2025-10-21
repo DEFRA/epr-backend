@@ -1,13 +1,17 @@
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
+import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { createInlineSummaryLogsValidator } from '#adapters/validators/summary-logs/inline.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { SUMMARY_LOG_STATUS, UPLOAD_STATUS } from '#domain/summary-log.js'
-import { createInlineSummaryLogsValidator } from '#workers/summary-logs/inline.js'
-import { createInMemoryUploadsRepository } from '#repositories/uploads/inmemory.js'
+import {
+  SUMMARY_LOG_STATUS,
+  UPLOAD_STATUS
+} from '#domain/summary-logs/status.js'
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createTestServer } from '#test/create-test-server.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -60,11 +64,13 @@ describe('Summary logs integration', () => {
       warn: vi.fn(),
       debug: vi.fn()
     }
-    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
     const uploadsRepository = createInMemoryUploadsRepository()
+    const summaryLogsParser = createSummaryLogsParser()
+    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
     const summaryLogsValidator = createInlineSummaryLogsValidator(
-      summaryLogsRepository,
-      uploadsRepository
+      uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository
     )
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 

@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { UPLOAD_STATUS } from '#domain/summary-log.js'
+import { UPLOAD_STATUS } from '#domain/summary-logs/status.js'
 
 /**
  * @typedef {Object} SummaryLogUpload

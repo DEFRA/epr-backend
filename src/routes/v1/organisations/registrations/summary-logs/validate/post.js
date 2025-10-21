@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 

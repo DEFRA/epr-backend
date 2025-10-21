@@ -1,6 +1,6 @@
 import Joi from 'joi'
 
-import { SUMMARY_LOG_STATUS } from '#domain/summary-log.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 const commonMessages = {
   'any.required': '{#label} is required',

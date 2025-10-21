@@ -5,7 +5,7 @@ import { StatusCodes } from 'http-status-codes'
 
 /**
  * @param {S3Client} s3Client
- * @returns {import('./port.js').UploadsRepository}
+ * @returns {import('#domain/uploads/repository/port.js').UploadsRepository}
  */
 export const createUploadsRepository = (s3Client) => ({
   async findByLocation({ bucket, key }) {

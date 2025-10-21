@@ -5,23 +5,29 @@ import { createInlineSummaryLogsValidator } from './inline.js'
 vi.mock('#workers/summary-logs/worker/worker.js')
 
 describe('createInlineSummaryLogsValidator', () => {
-  let summaryLogsRepository
   let uploadsRepository
+  let summaryLogsParser
+  let summaryLogsRepository
   let summaryLogsValidator
   let validationRequest
 
   beforeEach(() => {
-    summaryLogsRepository = {
-      updateStatus: vi.fn()
-    }
-
     uploadsRepository = {
       findByLocation: vi.fn()
     }
 
+    summaryLogsParser = {
+      parse: vi.fn()
+    }
+
+    summaryLogsRepository = {
+      updateStatus: vi.fn()
+    }
+
     summaryLogsValidator = createInlineSummaryLogsValidator(
-      summaryLogsRepository,
-      uploadsRepository
+      uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository
     )
 
     validationRequest = {
@@ -43,8 +49,9 @@ describe('createInlineSummaryLogsValidator', () => {
     await summaryLogsValidator.validate(validationRequest)
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
-      summaryLogsRepository,
       uploadsRepository,
+      summaryLogsParser,
+      summaryLogsRepository,
       id: validationRequest.id,
       version: validationRequest.version,
       summaryLog: validationRequest.summaryLog
