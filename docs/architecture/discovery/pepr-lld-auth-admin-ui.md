@@ -4,17 +4,6 @@
 > This document is a work in progress and is subject to change.
 
 <!-- prettier-ignore-start -->
-
-- [Overview](#overview)
-- [User groups](#user-groups)
-- [Sign in](#sign-in)
-  - [Sign in user journey](#sign-in-user-journey)
-  - [Sign in AAD flow](#sign-in-aad-flow)
-- [Sign out](#sign-out)
-  - [Sign out user journey](#sign-out-user-journey)
-  - [Sign out AAD flow](#sign-out-aad-flow)
-- [Session management](#session-management)
-<!-- prettier-ignore-start -->
 <!-- TOC -->
 * [pEPR: Low level design - Admin UI Authentication & Authorisation](#pepr-low-level-design---admin-ui-authentication--authorisation)
   * [Overview](#overview)
