@@ -77,4 +77,12 @@ sequenceDiagram
 
 ## Authorisation
 
-Details of authorisation mechanism TBC
+Initially a select group of team members will be assigned to the "service_maintainer" role
+
+- these users will be identified by the email address on their (Entra ID) access token
+- a list of (email addresses of) service maintainers will be supplied to the `epr-backend` application via config
+- APIs built to support the admin UI will only be accessible to users with the service_maintainer role
+
+We expect this simple authorisation approach to be short-lived - it enables launch of the admin UI service.
+
+It will be replaced with a more sophisticated approach (details TBC) that additionally meets to the authorisation requirements for _operators_ and _regulators_
