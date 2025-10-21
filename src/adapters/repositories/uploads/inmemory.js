@@ -16,11 +16,10 @@ export const createInMemoryUploadsRepository = () => {
     path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
   )
 
-  /** @type {import('#domain/uploads/repository/port.js').UploadsRepository & { error?: Error }} */
-  const repository = {
+  return {
     async findByLocation({ bucket, key }) {
-      if (repository.error) {
-        throw repository.error
+      if (this.error) {
+        throw this.error
       }
 
       if (bucket === BUCKET && key === KEY) {
@@ -30,6 +29,4 @@ export const createInMemoryUploadsRepository = () => {
       return null
     }
   }
-
-  return repository
 }
