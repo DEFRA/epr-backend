@@ -13,13 +13,11 @@ import { getConfig } from './config.js'
 async function startServer() {
   const config = getConfig()
   const auditConfig = config.get('audit')
-  /** @type {import('./common/hapi-types.js').HapiServer} */
-  let server
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)
 
   try {
-    server = await createServer()
+    const server = await createServer()
     await server.start()
 
     server.logger.info({
@@ -29,6 +27,8 @@ async function startServer() {
         action: LOGGING_EVENT_ACTIONS.START_SUCCESS
       }
     })
+
+    return server
   } catch (error) {
     logger.error({
       error,
@@ -38,9 +38,9 @@ async function startServer() {
         action: LOGGING_EVENT_ACTIONS.START_FAILURE
       }
     })
-  }
 
-  return server
+    return undefined
+  }
 }
 
 export { startServer }
