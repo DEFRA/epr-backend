@@ -14,18 +14,25 @@ jobs:
     name: Detect Changed Files
     runs-on: ubuntu-latest
     outputs:
-      docs-only: ${{ steps.filter.outputs.docs-only }}
+      docs-only: ${{ steps.check.outputs.docs-only }}
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
       - name: Check for docs-only changes
-        uses: dorny/paths-filter@v3
-        id: filter
+        id: check
+        uses: actions/github-script@v8
         with:
-          filters: |
-            docs-only:
-              - '**/*.md'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number
+            });
+
+            const docsOnly = files.length > 0 && files.every(file => file.filename.endsWith('.md'));
+
+            core.setOutput('docs-only', docsOnly);
+            console.log(`Documentation-only changes: ${docsOnly}`);
+            console.log(`Changed files: ${files.map(f => f.filename).join(', ')}`)
 
   pr-prep:
     name: Preparation
