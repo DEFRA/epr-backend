@@ -4,10 +4,13 @@
 > This document is a work in progress and is subject to change.
 
 <!-- prettier-ignore-start -->
+<!-- TOC -->
+* [pEPR: Low level design - API (epr-backend) Authentication & Authorisation](#pepr-low-level-design---api-epr-backend-authentication--authorisation)
+  * [Overview](#overview)
+  * [Authentication](#authentication)
+  * [Authorisation](#authorisation)
+<!-- TOC -->
 
-- [Overview](#overview)
-- [Authentication](#authentication)
-- [Authorisation](#authorisation)
 <!-- prettier-ignore-end -->
 
 ## Overview
