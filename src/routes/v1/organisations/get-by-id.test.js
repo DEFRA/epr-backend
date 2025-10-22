@@ -3,7 +3,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 
-/** @typedef {{ _id: string, orgId: string, name: string }} Organisation */
+/** @typedef {{ id: string, orgId: string, name: string }} Organisation */
 
 /**
  * Helper to create a server with organisations routes enabled and seeded repo.
@@ -20,27 +20,26 @@ async function setupServer(seed) {
   })
 }
 
-describe('GET /v1/organisations/{orgId}', () => {
+describe('GET /v1/organisations/{id}', () => {
   let server
 
   describe('happy path', () => {
     beforeEach(async () => {
       server = await setupServer([
-        { _id: 'mongo-1', orgId: '500123', name: 'Acme' },
-        { _id: 'mongo-2', orgId: '500124', name: 'Beta' }
+        { id: 'id-1', name: 'Acme' },
+        { id: 'id-2', name: 'Beta' }
       ])
     })
 
     it('returns 200 and the organisation when found', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/500123'
+        url: '/v1/organisations/id-1'
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        _id: 'mongo-1',
-        orgId: '500123',
+        id: 'id-1',
         name: 'Acme'
       })
     })
@@ -48,9 +47,7 @@ describe('GET /v1/organisations/{orgId}', () => {
 
   describe('not found cases', () => {
     beforeEach(async () => {
-      server = await setupServer([
-        { _id: 'mongo-1', orgId: '500123', name: 'Acme' }
-      ])
+      server = await setupServer([{ id: 'id-1', name: 'Acme' }])
     })
 
     it('returns 404 for orgId that does not exist', async () => {

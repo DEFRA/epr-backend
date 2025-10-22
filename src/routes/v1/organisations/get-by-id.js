@@ -3,7 +3,7 @@ import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
-export const organisationsGetByIdPath = '/v1/organisations/{orgId}'
+export const organisationsGetByIdPath = '/v1/organisations/{id}'
 
 export const organisationsGetById = {
   method: 'GET',
@@ -15,13 +15,13 @@ export const organisationsGetById = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
 
-    const orgId = request.params.orgId.trim()
+    const id = request.params.id.trim()
 
-    if (!orgId) {
+    if (!id) {
       throw Boom.notFound('Organisation not found')
     }
 
-    const organisation = await organisationsRepository.findByOrgId(orgId)
+    const organisation = await organisationsRepository.findById(id)
     if (!organisation) {
       throw Boom.notFound('Organisation not found')
     }
