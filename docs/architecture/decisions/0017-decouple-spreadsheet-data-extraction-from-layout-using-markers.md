@@ -55,6 +55,27 @@ The `@@EPR_` prefix makes markers highly distinctive and unlikely to appear in l
  */
 ```
 
+### Example Spreadsheet Layout
+
+The following table shows how markers would appear in a spreadsheet (markers would typically be in hidden columns):
+
+| Column A                        | Column B           | Column C            | Column D | Column E |
+| ------------------------------- | ------------------ | ------------------- | -------- | -------- |
+| `@@EPR_META:PROCESSING_TYPE@@`  | REPROCESSOR        |                     |          |          |
+| `@@EPR_META:TEMPLATE_VERSION@@` | 1                  |                     |          |          |
+| `@@EPR_META:MATERIAL@@`         | Paper and board    |                     |          |          |
+| `@@EPR_META:ACCREDITATION@@`    | ER25199864         |                     |          |          |
+|                                 |                    |                     |          |          |
+| `@@EPR_DATA:WASTE_BALANCE@@`    | OUR_REFERENCE      | DATE_RECEIVED       |          |          |
+|                                 | 12345678910        | 2025-05-25          |          |          |
+|                                 | 98765432100        | 2025-05-26          |          |          |
+|                                 |                    |                     |          |          |
+| `@@EPR_DATA:MONTHLY_REPORTS@@`  | SUPPLIER_NAME      | ADDRESS_LINE_1      |          |          |
+|                                 | Joe Blogs Refinery | 15 Good Street      |          |          |
+|                                 |                    |                     |          |          |
+| `@@EPR_DATA:PROCESSED@@`        | OUR_REFERENCE      | DATE_LOAD_LEFT_SITE |          |          |
+|                                 | 12345678910        | 2025-05-25          |          |          |
+
 ### Output Structure
 
 The parser will return a structured JSON object:
