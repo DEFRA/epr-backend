@@ -29,27 +29,27 @@ We will **decouple data extraction from spreadsheet layout by using hidden marke
 
 The spreadsheet templates will include hidden marker cells that follow these patterns:
 
-- **Metadata markers**: Cells matching regex `@@EPR_META:(.+)@@` indicate metadata values
+- **Metadata markers**: Cells starting with `__EPR_META_` indicate metadata values
   - The value to extract is located in the cell to the right of the marker
-  - Example: `@@EPR_META:PROCESSING_TYPE@@` → extract adjacent cell value
+  - Example: `__EPR_META_PROCESSING_TYPE` → extract adjacent cell value
 
-- **Data section markers**: Cells matching regex `@@EPR_DATA:(.+)@@` indicate the start of tabular data sections
+- **Data section markers**: Cells starting with `__EPR_DATA_` indicate the start of tabular data sections
   - The cells to the right of the marker contain column headers (on the same row)
   - Subsequent rows below contain data until an empty row is encountered
-  - Example: `@@EPR_DATA:WASTE_BALANCE@@` → extract headers to the right and rows below
+  - Example: `__EPR_DATA_WASTE_BALANCE` → extract headers to the right and rows below
 
-The `@@EPR_` prefix makes markers highly distinctive and unlikely to appear in legitimate user data.
+The double underscore prefix (`__EPR_`) makes markers highly distinctive and unlikely to appear in legitimate user data, while avoiding potential conflicts with spreadsheet formula operators (e.g., Excel's `@` implicit intersection operator).
 
 ### Parsing Algorithm
 
 ```javascript
 /**
  * Iterate over all worksheets:
- * - Look for cells matching regex "@@EPR_META:(.+)@@":
- *   - Extract marker name from capture group
+ * - Look for cells starting with "__EPR_META_":
+ *   - Extract marker name from suffix (e.g., "__EPR_META_PROCESSING_TYPE" → "PROCESSING_TYPE")
  *   - Extract contents of cell to right of marker
- * - Look for cells matching regex "@@EPR_DATA:(.+)@@":
- *   - Extract section name from capture group
+ * - Look for cells starting with "__EPR_DATA_":
+ *   - Extract section name from suffix (e.g., "__EPR_DATA_WASTE_BALANCE" → "WASTE_BALANCE")
  *   - Extract headers from cells to the right of marker (same row)
  *   - Extract data rows below marker until empty row encountered
  */
@@ -59,19 +59,19 @@ The `@@EPR_` prefix makes markers highly distinctive and unlikely to appear in l
 
 The following table shows how markers would appear in a spreadsheet (markers would typically be in hidden columns). Note that tables can be arranged either stacked vertically or side-by-side:
 
-| Column A                        | Column B        | Column C            | Column D                       | Column E           | Column F           |
-| ------------------------------- | --------------- | ------------------- | ------------------------------ | ------------------ | ------------------ |
-| `@@EPR_META:PROCESSING_TYPE@@`  | REPROCESSOR     |                     |                                |                    |                    |
-| `@@EPR_META:TEMPLATE_VERSION@@` | 1               |                     |                                |                    |                    |
-| `@@EPR_META:MATERIAL@@`         | Paper and board |                     |                                |                    |                    |
-| `@@EPR_META:ACCREDITATION@@`    | ER25199864      |                     |                                |                    |                    |
-|                                 |                 |                     |                                |                    |                    |
-| `@@EPR_DATA:WASTE_BALANCE@@`    | OUR_REFERENCE   | DATE_RECEIVED       | `@@EPR_DATA:MONTHLY_REPORTS@@` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
-|                                 | 12345678910     | 2025-05-25          |                                | Joe Blogs Refinery | 15 Good Street     |
-|                                 | 98765432100     | 2025-05-26          |                                | Acme Recycling     | 42 Industrial Park |
-|                                 |                 |                     |                                |                    |                    |
-| `@@EPR_DATA:PROCESSED@@`        | OUR_REFERENCE   | DATE_LOAD_LEFT_SITE |                                |                    |                    |
-|                                 | 12345678910     | 2025-05-25          |                                |                    |                    |
+| Column A                      | Column B        | Column C            | Column D                     | Column E           | Column F           |
+| ----------------------------- | --------------- | ------------------- | ---------------------------- | ------------------ | ------------------ |
+| `__EPR_META_PROCESSING_TYPE`  | REPROCESSOR     |                     |                              |                    |                    |
+| `__EPR_META_TEMPLATE_VERSION` | 1               |                     |                              |                    |                    |
+| `__EPR_META_MATERIAL`         | Paper and board |                     |                              |                    |                    |
+| `__EPR_META_ACCREDITATION`    | ER25199864      |                     |                              |                    |                    |
+|                               |                 |                     |                              |                    |                    |
+| `__EPR_DATA_WASTE_BALANCE`    | OUR_REFERENCE   | DATE_RECEIVED       | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
+|                               | 12345678910     | 2025-05-25          |                              | Joe Blogs Refinery | 15 Good Street     |
+|                               | 98765432100     | 2025-05-26          |                              | Acme Recycling     | 42 Industrial Park |
+|                               |                 |                     |                              |                    |                    |
+| `__EPR_DATA_PROCESSED`        | OUR_REFERENCE   | DATE_LOAD_LEFT_SITE |                              |                    |                    |
+|                               | 12345678910     | 2025-05-25          |                              |                    |                    |
 
 In this example:
 
@@ -138,8 +138,8 @@ The parser will return a structured JSON object:
 - **Flexibility**: Users can customize non-data areas of the spreadsheet without breaking the parser
   - Tables can be arranged vertically (stacked) or horizontally (side-by-side) as needed
   - Layout can be optimized for user experience without impacting parsing logic
-- **Self-documenting**: The marker names (e.g., `@@EPR_DATA:WASTE_BALANCE@@`) make it clear what data is being extracted from each section
-- **Collision resistance**: The `@@EPR_` prefix and surrounding `@@` delimiters make it highly unlikely that markers will accidentally match user-supplied data
+- **Self-documenting**: The marker names (e.g., `__EPR_DATA_WASTE_BALANCE`) make it clear what data is being extracted from each section
+- **Collision resistance**: The `__EPR_` prefix makes it highly unlikely that markers will accidentally match user-supplied data, while avoiding conflicts with spreadsheet formula operators
 - **Testability**: Tests can focus on marker detection and extraction logic rather than specific cell coordinates
 
 ### Trade-offs
@@ -160,7 +160,7 @@ The parser will return a structured JSON object:
   - Mitigation: Validation will fail with clear error messages if expected markers are missing
 
 - **Low Risk**: Marker naming conflicts if templates evolve
-  - Mitigation: Establish clear naming conventions and version markers (e.g., `@@EPR_META:TEMPLATE_VERSION@@`)
+  - Mitigation: Establish clear naming conventions and version markers (e.g., `__EPR_META_TEMPLATE_VERSION`)
 
 - **Low Risk**: Performance degradation with very large spreadsheets
   - Mitigation: Implement early termination when all expected markers are found
