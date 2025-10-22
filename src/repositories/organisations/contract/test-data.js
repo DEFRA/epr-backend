@@ -21,7 +21,9 @@ export const buildOrganisation = (overrides = {}) => {
     id: new ObjectId().toString(),
     ...overrides
   }
+  // @ts-ignore - Intentionally deleting properties for test data
   delete org.statusHistory
+  // @ts-ignore - Intentionally deleting properties for test data
   delete org.status
 
   deleteStatusForItems(org.registrations)
