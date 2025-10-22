@@ -57,24 +57,29 @@ The `@@EPR_` prefix makes markers highly distinctive and unlikely to appear in l
 
 ### Example Spreadsheet Layout
 
-The following table shows how markers would appear in a spreadsheet (markers would typically be in hidden columns):
+The following table shows how markers would appear in a spreadsheet (markers would typically be in hidden columns). Note that tables can be arranged either stacked vertically or side-by-side:
 
-| Column A                        | Column B           | Column C            | Column D | Column E |
-| ------------------------------- | ------------------ | ------------------- | -------- | -------- |
-| `@@EPR_META:PROCESSING_TYPE@@`  | REPROCESSOR        |                     |          |          |
-| `@@EPR_META:TEMPLATE_VERSION@@` | 1                  |                     |          |          |
-| `@@EPR_META:MATERIAL@@`         | Paper and board    |                     |          |          |
-| `@@EPR_META:ACCREDITATION@@`    | ER25199864         |                     |          |          |
-|                                 |                    |                     |          |          |
-| `@@EPR_DATA:WASTE_BALANCE@@`    | OUR_REFERENCE      | DATE_RECEIVED       |          |          |
-|                                 | 12345678910        | 2025-05-25          |          |          |
-|                                 | 98765432100        | 2025-05-26          |          |          |
-|                                 |                    |                     |          |          |
-| `@@EPR_DATA:MONTHLY_REPORTS@@`  | SUPPLIER_NAME      | ADDRESS_LINE_1      |          |          |
-|                                 | Joe Blogs Refinery | 15 Good Street      |          |          |
-|                                 |                    |                     |          |          |
-| `@@EPR_DATA:PROCESSED@@`        | OUR_REFERENCE      | DATE_LOAD_LEFT_SITE |          |          |
-|                                 | 12345678910        | 2025-05-25          |          |          |
+| Column A                        | Column B        | Column C            | Column D                       | Column E           | Column F           |
+| ------------------------------- | --------------- | ------------------- | ------------------------------ | ------------------ | ------------------ |
+| `@@EPR_META:PROCESSING_TYPE@@`  | REPROCESSOR     |                     |                                |                    |                    |
+| `@@EPR_META:TEMPLATE_VERSION@@` | 1               |                     |                                |                    |                    |
+| `@@EPR_META:MATERIAL@@`         | Paper and board |                     |                                |                    |                    |
+| `@@EPR_META:ACCREDITATION@@`    | ER25199864      |                     |                                |                    |                    |
+|                                 |                 |                     |                                |                    |                    |
+| `@@EPR_DATA:WASTE_BALANCE@@`    | OUR_REFERENCE   | DATE_RECEIVED       | `@@EPR_DATA:MONTHLY_REPORTS@@` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
+|                                 | 12345678910     | 2025-05-25          |                                | Joe Blogs Refinery | 15 Good Street     |
+|                                 | 98765432100     | 2025-05-26          |                                | Acme Recycling     | 42 Industrial Park |
+|                                 |                 |                     |                                |                    |                    |
+| `@@EPR_DATA:PROCESSED@@`        | OUR_REFERENCE   | DATE_LOAD_LEFT_SITE |                                |                    |                    |
+|                                 | 12345678910     | 2025-05-25          |                                |                    |                    |
+
+In this example:
+
+- Metadata markers are stacked at the top
+- `WASTE_BALANCE` and `MONTHLY_REPORTS` tables are side-by-side (columns A-C and D-F respectively)
+- `PROCESSED` table is below in columns A-C
+
+The parser doesn't care about the spatial arrangement - it simply finds markers and extracts the data associated with each one.
 
 ### Output Structure
 
@@ -91,15 +96,21 @@ The parser will return a structured JSON object:
   data: {
     WASTE_BALANCE: {
       headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
-      rows: [[12345678910, '2025-05-25'], [...]]
+      rows: [
+        [12345678910, '2025-05-25'],
+        [98765432100, '2025-05-26']
+      ]
     },
     MONTHLY_REPORTS: {
       headers: ['SUPPLIER_NAME', 'ADDRESS_LINE_1'],
-      rows: [['Joe Blogs Refinery', '15 Good Street'], [...]]
+      rows: [
+        ['Joe Blogs Refinery', '15 Good Street'],
+        ['Acme Recycling', '42 Industrial Park']
+      ]
     },
     PROCESSED: {
       headers: ['OUR_REFERENCE', 'DATE_LOAD_LEFT_SITE'],
-      rows: [[12345678910, '2025-05-25'], [...]]
+      rows: [[12345678910, '2025-05-25']]
     }
   }
 }
@@ -125,6 +136,8 @@ The parser will return a structured JSON object:
 - **Version tolerance**: Multiple template versions can be supported by the same parsing logic, as long as they use the same marker conventions
 - **Maintainability**: Parsing logic focuses on marker patterns and extraction rules rather than hardcoded cell positions
 - **Flexibility**: Users can customize non-data areas of the spreadsheet without breaking the parser
+  - Tables can be arranged vertically (stacked) or horizontally (side-by-side) as needed
+  - Layout can be optimized for user experience without impacting parsing logic
 - **Self-documenting**: The marker names (e.g., `@@EPR_DATA:WASTE_BALANCE@@`) make it clear what data is being extracted from each section
 - **Collision resistance**: The `@@EPR_` prefix and surrounding `@@` delimiters make it highly unlikely that markers will accidentally match user-supplied data
 - **Testability**: Tests can focus on marker detection and extraction logic rather than specific cell coordinates
