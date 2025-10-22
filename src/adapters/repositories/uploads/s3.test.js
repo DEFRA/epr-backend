@@ -48,12 +48,12 @@ describe('S3 uploads repository', () => {
       expect(result).toEqual(Buffer.from(new Uint8Array([1, 2, 3, 4, 5])))
     })
 
-    it('should return null when response.Body is undefined', async () => {
+    it('should throw error when response.Body is undefined', async () => {
       s3Client.send.mockResolvedValue({ Body: undefined })
 
-      const result = await repository.findByLocation({ bucket, key })
-
-      expect(result).toBeNull()
+      await expect(repository.findByLocation({ bucket, key })).rejects.toThrow(
+        `S3 GetObject returned no body for bucket=${bucket}, key=${key}`
+      )
     })
 
     it('should return null when file does not exist (NoSuchKey error)', async () => {

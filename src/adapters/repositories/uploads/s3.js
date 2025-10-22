@@ -18,7 +18,9 @@ export const createUploadsRepository = (s3Client) => ({
       const response = await s3Client.send(command)
 
       if (!response.Body) {
-        return null
+        throw new Error(
+          `S3 GetObject returned no body for bucket=${bucket}, key=${key}`
+        )
       }
 
       const buffer = await response.Body.transformToByteArray()
