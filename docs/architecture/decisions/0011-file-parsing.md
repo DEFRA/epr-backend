@@ -6,6 +6,8 @@ Date: 2025-10-07
 
 Approved
 
+Extended by [17. Decouple spreadsheet data extraction from layout using markers](0017-decouple-spreadsheet-data-extraction-from-layout-using-markers.md)
+
 ## Context
 
 Registered users provide Summary Log files as Excel spreadsheets via CDP Uploader (which performs virus scanning before publishing files to S3 for EPR team processing).
