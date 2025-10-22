@@ -76,8 +76,6 @@ erDiagram
 
   ACCREDITATION {
     ObjectId id PK "_id from accreditation collection. This is system generated id from accreditation form submission"
-    ISO8601 startDate "This will be provided by regulators"
-    ISO8601 endDate "This will be provided by regulators"
     long accreditationNumber "value assigned by regulators"
     enum submittedToRegulator "ea,nrw,sepa,niea"
     string orgName "Name of organisation"
