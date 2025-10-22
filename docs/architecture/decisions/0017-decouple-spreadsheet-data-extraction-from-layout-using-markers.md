@@ -39,9 +39,10 @@ The spreadsheet templates will include hidden marker cells that follow these pat
   - Example: `__EPR_DATA_UPDATE_WASTE_BALANCE` → extract headers to the right and rows below
 
 - **Skip column markers**: Cells containing `__EPR_SKIP_COLUMN` in the header row indicate columns to skip within a data section
-  - The parser skips this column but continues reading headers to the right
+  - The parser includes these columns in the extracted data as `null` values to maintain column index alignment
   - This allows a single logical table to be visually broken into sections with blank columns between them
-  - Example: `__EPR_DATA_SOMETHING | Header1 | Header2 | __EPR_SKIP_COLUMN | Header3 | Header4` → extract all four headers, skipping the marker column
+  - Keeping skipped columns ensures row/column calculations remain accurate for validation error reporting
+  - Example: `__EPR_DATA_SOMETHING | Header1 | Header2 | __EPR_SKIP_COLUMN | Header3 | Header4` → extract with null for the skip column position
 
 The double underscore prefix (`__EPR_`) makes markers highly distinctive and unlikely to appear in legitimate user data, while avoiding potential conflicts with spreadsheet formula operators (e.g., Excel's `@` implicit intersection operator).
 
@@ -57,10 +58,12 @@ The double underscore prefix (`__EPR_`) makes markers highly distinctive and unl
  * - Look for cells starting with "__EPR_DATA_":
  *   - Extract section name from suffix (e.g., "__EPR_DATA_UPDATE_WASTE_BALANCE" → "UPDATE_WASTE_BALANCE")
  *   - Extract headers from cells to the right of marker (same row)
- *     - Skip columns containing "__EPR_SKIP_COLUMN" but continue reading headers beyond them
+ *     - Record "__EPR_SKIP_COLUMN" positions as null in headers array
+ *     - Continue reading headers beyond skip markers
  *     - Stop reading headers when an empty cell is encountered
  *   - Extract data rows below marker until empty row encountered
- *     - For each row, skip columns corresponding to "__EPR_SKIP_COLUMN" positions in the header
+ *     - For each row, include null values at positions corresponding to "__EPR_SKIP_COLUMN" markers
+ *     - This maintains column index alignment for accurate location tracking
  *
  * All markers across all worksheets are collected into a single flattened structure.
  */
@@ -102,24 +105,24 @@ When a single logical table is visually broken into sections with blank columns 
 |                             | 12345678910   | 2025-05-25    |                     | ABC123       | Joe Blogs      |
 |                             | 98765432100   | 2025-05-26    |                     | XYZ789       | Acme Recycling |
 
-This extracts as a single table with four columns (skipping column D):
+This extracts as a single table with five columns (with null at column D to maintain index alignment):
 
 ```javascript
 {
   data: {
     WASTE_RECEIVED: {
       location: { sheet: 'Data', row: 1, column: 'B' },
-      headers: ['OUR_REFERENCE', 'DATE_RECEIVED', 'SUPPLIER_REF', 'SUPPLIER_NAME'],
+      headers: ['OUR_REFERENCE', 'DATE_RECEIVED', null, 'SUPPLIER_REF', 'SUPPLIER_NAME'],
       rows: [
-        [12345678910, '2025-05-25', 'ABC123', 'Joe Blogs'],
-        [98765432100, '2025-05-26', 'XYZ789', 'Acme Recycling']
+        [12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs'],
+        [98765432100, '2025-05-26', null, 'XYZ789', 'Acme Recycling']
       ]
     }
   }
 }
 ```
 
-The `__EPR_SKIP_COLUMN` markers allow visual separation (e.g., grouping related columns together) without breaking the logical table structure.
+The `__EPR_SKIP_COLUMN` markers allow visual separation (e.g., grouping related columns together) without breaking the logical table structure. The null values maintain column index alignment so that validation error reporting can accurately reference spreadsheet positions.
 
 ### Output Structure
 
