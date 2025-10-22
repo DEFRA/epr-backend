@@ -166,10 +166,13 @@ describe('#startServer', () => {
     beforeEach(async () => {
       await server.stop()
       createServerSpy.mockRejectedValue(new Error('Server failed to start'))
-      server = await startServerImport.startServer()
     })
 
-    test('Should log failed startup message', async () => {
+    test('Should log failed startup message and throw error', async () => {
+      await expect(startServerImport.startServer()).rejects.toThrow(
+        'Server failed to start'
+      )
+
       expect(mockLoggerError).toHaveBeenCalledWith({
         error: expect.any(Error),
         message: 'Server failed to start',

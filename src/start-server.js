@@ -39,7 +39,7 @@ async function startServer() {
       }
     })
 
-    return undefined
+    throw error
   }
 }
 
