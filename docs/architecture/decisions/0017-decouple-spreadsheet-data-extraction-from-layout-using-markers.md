@@ -126,7 +126,7 @@ The parser will return a structured JSON object:
   - Mitigation: Validation will fail with clear error messages if expected markers are missing
 
 - **Low Risk**: Marker naming conflicts if templates evolve
-  - Mitigation: Establish clear naming conventions and version markers (e.g., `META[TEMPLATE_VERSION]`)
+  - Mitigation: Establish clear naming conventions and version markers (e.g., `@@EPR_META:TEMPLATE_VERSION@@`)
 
 - **Low Risk**: Performance degradation with very large spreadsheets
   - Mitigation: Implement early termination when all expected markers are found
