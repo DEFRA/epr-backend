@@ -2,8 +2,9 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { ObjectId } from 'mongodb'
 
-/** @typedef {{ id: string, orgId: string, name: string }} Organisation */
+/** @typedef {{ id: string, name: string }} Organisation */
 
 /**
  * Helper to create a server with organisations routes enabled and seeded repo.
@@ -22,24 +23,25 @@ async function setupServer(seed) {
 
 describe('GET /v1/organisations/{id}', () => {
   let server
+  const initial = [
+    { id: new ObjectId().toString(), name: 'Acme' },
+    { id: new ObjectId().toString(), name: 'Beta' }
+  ]
 
   describe('happy path', () => {
     beforeEach(async () => {
-      server = await setupServer([
-        { id: 'id-1', name: 'Acme' },
-        { id: 'id-2', name: 'Beta' }
-      ])
+      server = await setupServer(initial)
     })
 
     it('returns 200 and the organisation when found', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/id-1'
+        url: `/v1/organisations/${initial[0].id}`
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
       expect(JSON.parse(response.payload)).toEqual({
-        id: 'id-1',
+        id: initial[0].id,
         name: 'Acme'
       })
     })
@@ -47,7 +49,9 @@ describe('GET /v1/organisations/{id}', () => {
 
   describe('not found cases', () => {
     beforeEach(async () => {
-      server = await setupServer([{ id: 'id-1', name: 'Acme' }])
+      server = await setupServer([
+        { id: new ObjectId().toString(), name: 'Acme' }
+      ])
     })
 
     it('returns 404 for orgId that does not exist', async () => {

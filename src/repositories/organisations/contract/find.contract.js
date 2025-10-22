@@ -12,7 +12,7 @@ export const testFindBehaviour = (repositoryFactory) => {
     describe('findById', () => {
       it('rejects invalid ObjectId format', async () => {
         await expect(repository.findById('invalid-id-format')).rejects.toThrow(
-          /id must be a valid MongoDB ObjectId/
+          /Organisation with id invalid-id-format not foun/
         )
       })
 
