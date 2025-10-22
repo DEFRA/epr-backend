@@ -173,10 +173,16 @@ const performUpdate = async (db, id, version, updates) => {
 }
 
 const performFindById = async (db, id) => {
-  const validatedId = validateId(id)
-  const doc = await db.collection(COLLECTION_NAME).findOne({ _id: validatedId })
+  // validate the ID and throw early
+  try {
+    validateId(id)
+  } catch (error) {
+    throw Boom.notFound(`Organisation with id ${id} not found`)
+  }
+
+  const doc = await db.collection(COLLECTION_NAME).findOne({ _id: id })
   if (!doc) {
-    throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
   return mapDocumentWithCurrentStatuses(doc)
