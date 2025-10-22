@@ -1,32 +1,36 @@
 {
-  "_id": "6507f1f77bcf86cd79943911",
-  "orgId": "50003",
+  "id": "6507f1f77bcf86cd79943911",
+  "orgId": 50003,
   "schemaVersion": 1,
   "version": 1,
-  "wasteProcessingTypes": ["reprocessor", "exporter"],
-  "reprocessingNations": ["scotland", "northern ireland"],
-  "businessType": "limited company",
-  "submittedToRegulator": "sepa",
   "statusHistory": [
     {
       "status": "created",
-      "updatedAt": "2025-09-10T10:00:00.000Z",
-      "updatedBy": { "email": "alice@ecorecycle.com" }
+      "updatedAt": "2025-09-10T10:00:00.000Z"
     }
   ],
+  "wasteProcessingTypes": ["reprocessor", "exporter"],
+  "reprocessingNations": ["scotland", "northern_ireland"],
+  "businessType": "partnership",
+  "submittedToRegulator": "sepa",
+  "formSubmissionTime": "2025-09-10T10:00:00.000Z",
+  "submitterContactDetails": {
+    "fullName": "Alice Smith",
+    "email": "alice.smith@ecorecycle.com",
+    "title": "Manager",
+    "phone": "1112223333"
+  },
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943912",
-      "status": "created",
-      "submittedToRegulator": "sepa",
-      "orgName": "Eco Recycle Ltd",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-09-10T10:00:00.000Z",
-          "updatedBy": { "email": "alice@ecorecycle.com" }
+          "updatedAt": "2025-09-09T09:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
       "formSubmissionTime": "2025-09-09T09:00:00.000Z",
       "site": {
         "address": {
@@ -34,11 +38,10 @@
           "town": "Edinburgh",
           "postcode": "EH1 1AA"
         },
+        "gridReference": "234567",
         "siteCapacity": [
           {
             "material": "paper",
-            "authorisedWeight": "20",
-            "authorisedTimeScale": "yearly",
             "siteCapacityWeight": "25",
             "siteCapacityTimescale": "yearly"
           }
@@ -46,15 +49,19 @@
       },
       "material": "paper",
       "wasteProcessingType": "reprocessor",
-      "accreditationId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "gridReference": "234567",
+      "accreditationId": "68f6a147c117aec8a1ab7497",
       "wasteRegistrationNumber": "CBDU654321",
       "wasteManagementPermits": [
         {
           "type": "wml",
           "permitNumber": "WML654321",
-          "permittedMaterials": ["paper"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "paper",
+              "authorisedWeight": "20",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -73,26 +80,29 @@
     },
     {
       "id": "6507f1f77bcf86cd79943913",
-      "status": "created",
-      "submittedToRegulator": "sepa",
-      "orgName": "Eco Recycle Ltd",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-09-10T10:00:00.000Z",
-          "updatedBy": { "email": "alice@ecorecycle.com" }
+          "updatedAt": "2025-09-09T10:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
       "formSubmissionTime": "2025-09-09T10:00:00.000Z",
-      "material": "cardboard",
+      "material": "paper",
       "wasteProcessingType": "exporter",
       "wasteRegistrationNumber": "CBDU654322",
       "wasteManagementPermits": [
         {
           "type": "wml",
           "permitNumber": "WML654322",
-          "permittedMaterials": ["cardboard"],
-          "permitWindow": "yearly"
+          "authorisedMaterials": [
+            {
+              "material": "paper",
+              "authorisedWeight": "20",
+              "timeScale": "yearly"
+            }
+          ]
         }
       ],
       "approvedPersons": [
@@ -112,18 +122,16 @@
   ],
   "accreditations": [
     {
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "id": "68f6a147c117aec8a1ab7497",
       "formSubmissionTime": "2025-09-09T11:00:00.000Z",
-      "status": "created",
-      "submittedToRegulator": "sepa",
-      "orgName": "Eco Recycle Ltd",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-09-10T10:00:00.000Z",
-          "updatedBy": { "email": "alice@ecorecycle.com" }
+          "updatedAt": "2025-09-09T11:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
       "site": {
         "address": {
           "line1": "1 Green Park",
@@ -133,7 +141,7 @@
       "material": "paper",
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
-        "plannedIssuance": "5000 tonnes",
+        "tonnageBand": "up_to_10000",
         "signatories": [
           {
             "fullName": "Carol White",
@@ -144,9 +152,9 @@
         ],
         "prnIncomeBusinessPlan": [
           {
-            "description": "Upgrade recycling plant",
-            "detailedDescription": "Install new sorting machines",
-            "percentSpent": 30
+            "usageDescription": "Upgrade recycling plant",
+            "detailedExplanation": "Install new sorting machines",
+            "percentIncomeSpent": 30
           }
         ]
       },
@@ -157,40 +165,39 @@
       }
     },
     {
-      "id": "b1c2d3e4-f5a6-7890-bcde-f12345678901",
-      "status": "created",
-      "submittedToRegulator": "sepa",
-      "orgName": "Eco Recycle Ltd",
+      "id": "68f6a147c117aec8a1ab7498",
+      "formSubmissionTime": "2025-09-09T12:00:00.000Z",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-09-10T10:00:00.000Z",
-          "updatedBy": { "email": "alice@ecorecycle.com" }
+          "updatedAt": "2025-09-09T12:00:00.000Z"
         }
       ],
+      "submittedToRegulator": "sepa",
+      "orgName": "Eco Recycle Ltd",
       "site": {
         "address": {
           "line1": "1 Green Park",
           "postcode": "EH1 1AA"
         }
       },
-      "material": "cardboard",
+      "material": "paper",
       "wasteProcessingType": "exporter",
-      "prnIssuance": {
-        "plannedIssuance": "2000 tonnes",
+      "pernIssuance": {
+        "tonnageBand": "up_to_5000",
         "signatories": [
           {
             "fullName": "Dan Black",
             "email": "dan.black@ecorecycle.com",
-            "title": "PRN signatory",
+            "title": "PERN signatory",
             "phone": "4445556666"
           }
         ],
-        "prnIncomeBusinessPlan": [
+        "pernIncomeBusinessPlan": [
           {
-            "description": "Expand export fleet",
-            "detailedDescription": "Purchase new trucks",
-            "percentSpent": 40
+            "usageDescription": "Expand export fleet",
+            "detailedExplanation": "Purchase new trucks",
+            "percentIncomeSpent": 40
           }
         ]
       },

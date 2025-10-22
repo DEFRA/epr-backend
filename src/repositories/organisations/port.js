@@ -1,7 +1,8 @@
 /**
  * @typedef {Object} OrganisationsRepository
+ * @property {(organisation: Object) => Promise<void>} insert
  * @property {() => Promise<Object[]>} findAll
- * @property {(orgId: string) => Promise<Object | null>} findByOrgId
+ * @property {(id: string) => Promise<Object|null>} findById
  */
 
 /**

@@ -1,23 +1,52 @@
-import { describe, it, expect, vi } from 'vitest'
+import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
+import { testOrganisationsRepositoryContract } from './port.contract.js'
+import { buildOrganisation } from './contract/test-data.js'
 
-describe('organisations mongodb repository', () => {
-  it('findAll returns all organisations from the organisations collection', async () => {
-    const toArray = vi
-      .fn()
-      .mockResolvedValue([{ _id: 'org-1', name: 'Org One' }])
-    const find = vi.fn(() => ({ toArray }))
-    const collection = vi.fn(() => ({ find }))
-    const db = { collection }
+describe('MongoDB organisations repository', () => {
+  let server
+  let organisationsRepositoryFactory
+  const COLLECTION_NAME = 'epr-organisations'
 
-    const repositoryFactory = createOrganisationsRepository(db)
-    const repo = repositoryFactory()
-    const result = await repo.findAll()
+  beforeAll(async () => {
+    const { createServer } = await import('#server/server.js')
+    server = await createServer()
+    await server.initialize()
 
-    expect(collection).toHaveBeenCalledWith('epr-organisations')
-    expect(find).toHaveBeenCalled()
-    expect(toArray).toHaveBeenCalled()
-    expect(result).toEqual([{ _id: 'org-1', name: 'Org One' }])
+    organisationsRepositoryFactory = createOrganisationsRepository(server.db)
+  })
+
+  beforeEach(async () => {
+    await server.db.collection(COLLECTION_NAME).deleteMany({})
+  })
+
+  afterAll(async () => {
+    await server.stop()
+  })
+
+  describe('organisations repository contract', () => {
+    testOrganisationsRepositoryContract(() => organisationsRepositoryFactory())
+  })
+
+  describe('MongoDB-specific error handling', () => {
+    it('rethrows unexpected database errors during insert', async () => {
+      const dbMock = {
+        collection: () => ({
+          insertOne: async () => {
+            const error = new Error('Unexpected database error')
+            error.code = 99999
+            throw error
+          }
+        })
+      }
+
+      const repository = createOrganisationsRepository(dbMock)()
+      const orgData = buildOrganisation()
+
+      await expect(repository.insert(orgData)).rejects.toThrow(
+        'Unexpected database error'
+      )
+    })
   })
 
   it('findByOrgId returns a single organisation by orgId', async () => {
