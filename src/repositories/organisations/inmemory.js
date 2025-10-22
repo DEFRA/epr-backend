@@ -1,5 +1,5 @@
 /**
- * @typedef {{ _id: string, [key: string]: any }} Organisation
+ * @typedef {{ id: string, [key: string]: any }} Organisation
  */
 
 /**

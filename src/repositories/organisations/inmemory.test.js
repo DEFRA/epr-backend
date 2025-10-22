@@ -5,8 +5,8 @@ import { ObjectId } from 'mongodb'
 describe('In-memory organisations repository', () => {
   it('findAll returns all organisations from in-memory storage', async () => {
     const initial = [
-      { id: 'org-1', name: 'Org One' },
-      { id: 'org-2', name: 'Org Two' }
+      { id: new ObjectId().toString(), name: 'Org One' },
+      { id: new ObjectId().toString(), name: 'Org Two' }
     ]
 
     const repositoryFactory = createInMemoryOrganisationsRepository(initial)
