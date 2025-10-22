@@ -16,6 +16,9 @@ export const createInMemoryOrganisationsRepository = (
   const storage = structuredClone(initialOrganisations)
 
   return () => ({
+    async insert(organisation) {
+      storage.push(structuredClone(organisation))
+    },
     async findAll() {
       return structuredClone(storage)
     },

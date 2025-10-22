@@ -19,7 +19,7 @@ import { uploadCompletedPayloadSchema } from './post.schema.js'
 /** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
 /** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
 
-const buildFileData = (upload, existingFile = null) => {
+const buildFileData = (upload, existingFile) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
 
   const fileData = existingFile
@@ -33,7 +33,7 @@ const buildFileData = (upload, existingFile = null) => {
   return fileData
 }
 
-const buildSummaryLogData = (upload, existingFile = null) => {
+const buildSummaryLogData = (upload, existingFile) => {
   const status = determineStatusFromUpload(upload.fileStatus)
   const failureReason = determineFailureReason(status, upload.errorMessage)
 
@@ -143,8 +143,13 @@ export const summaryLogsUploadCompleted = {
       )
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
-        const { version, summaryLog } =
-          await summaryLogsRepository.findById(summaryLogId)
+        const result = await summaryLogsRepository.findById(summaryLogId)
+        if (!result) {
+          throw Boom.notFound(
+            `Summary log ${summaryLogId} not found after upload`
+          )
+        }
+        const { version, summaryLog } = result
         await summaryLogsValidator.validate({
           id: summaryLogId,
           version,

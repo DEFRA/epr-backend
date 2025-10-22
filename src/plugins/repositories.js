@@ -53,7 +53,9 @@ export const repositories = {
         )
       } else {
         server.dependency('mongodb', () => {
-          const productionFactory = createSummaryLogsRepository(server.db)
+          const productionFactory = createSummaryLogsRepository(
+            /** @type {import('mongodb').Db} */ (server.db)
+          )
           registerPerRequest('summaryLogsRepository', productionFactory)
         })
       }
@@ -69,7 +71,9 @@ export const repositories = {
         )
       } else {
         server.dependency('mongodb', () => {
-          const productionFactory = createOrganisationsRepository(server.db)
+          const productionFactory = createOrganisationsRepository(
+            /** @type {import('mongodb').Db} */ (server.db)
+          )
           registerPerRequest('organisationsRepository', productionFactory)
         })
       }

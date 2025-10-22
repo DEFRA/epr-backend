@@ -35,6 +35,18 @@ describe('In-memory organisations repository', () => {
     expect(result).toBeNull()
   })
 
+  it('insert adds a new organisation', async () => {
+    const initial = [{ id: new ObjectId().toString(), name: 'Acme' }]
+    const repo = createInMemoryOrganisationsRepository(initial)()
+
+    const newOrg = { id: new ObjectId().toString(), name: 'Beta' }
+    await repo.insert(newOrg)
+
+    const result = await repo.findAll()
+    expect(result).toHaveLength(2)
+    expect(result[1]).toEqual(newOrg)
+  })
+
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {
       const initial = [

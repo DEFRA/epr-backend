@@ -73,7 +73,19 @@ vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
   }
 })
 
-vi.mock('#common/helpers/plugins/mongo-db-plugin.js')
+vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
+  mongoDbPlugin: {
+    plugin: {
+      name: 'mongodb',
+      version: '1.0.0',
+      register: (server) => {
+        server.decorate('server', 'db', {})
+        server.decorate('server', 'mongoClient', {})
+        server.decorate('server', 'locker', {})
+      }
+    }
+  }
+}))
 
 vi.mock('@defra/hapi-secure-context')
 
@@ -166,10 +178,13 @@ describe('#startServer', () => {
     beforeEach(async () => {
       await server.stop()
       createServerSpy.mockRejectedValue(new Error('Server failed to start'))
-      server = await startServerImport.startServer()
     })
 
-    test('Should log failed startup message', async () => {
+    test('Should log failed startup message and throw error', async () => {
+      await expect(startServerImport.startServer()).rejects.toThrow(
+        'Server failed to start'
+      )
+
       expect(mockLoggerError).toHaveBeenCalledWith({
         error: expect.any(Error),
         message: 'Server failed to start',

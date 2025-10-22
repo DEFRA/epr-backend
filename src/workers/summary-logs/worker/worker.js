@@ -80,7 +80,7 @@ const parseSummaryLog = async ({
  * @param {number} params.version
  * @param {Object} params.summaryLog
  * @param {SummaryLogStatus} params.status
- * @param {string|undefined} [params.failureReason]
+ * @param {string|undefined|null} [params.failureReason]
  * @param {string} params.msg
  */
 const updateSummaryLog = async ({
