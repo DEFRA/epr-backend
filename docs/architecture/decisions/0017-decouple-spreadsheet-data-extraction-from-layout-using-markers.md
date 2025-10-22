@@ -86,18 +86,31 @@ The parser doesn't care about the spatial arrangement - it simply finds markers 
 
 ### Output Structure
 
-The parser will return a structured JSON object:
+The parser will return a structured JSON object with source location for validation error reporting:
 
 ```javascript
 {
   meta: {
-    PROCESSING_TYPE: 'REPROCESSOR',
-    TEMPLATE_VERSION: '1',
-    MATERIAL: 'Paper and board',
-    ACCREDITATION: 'ER25199864'
+    PROCESSING_TYPE: {
+      value: 'REPROCESSOR',
+      location: { sheet: 'Received', row: 1, column: 'B' }
+    },
+    TEMPLATE_VERSION: {
+      value: '1',
+      location: { sheet: 'Received', row: 2, column: 'B' }
+    },
+    MATERIAL: {
+      value: 'Paper and board',
+      location: { sheet: 'Received', row: 3, column: 'B' }
+    },
+    ACCREDITATION: {
+      value: 'ER25199864',
+      location: { sheet: 'Received', row: 4, column: 'B' }
+    }
   },
   data: {
     WASTE_BALANCE: {
+      location: { sheet: 'Received', row: 6, column: 'B' },  // First header cell
       headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
       rows: [
         [12345678910, '2025-05-25'],
@@ -105,6 +118,7 @@ The parser will return a structured JSON object:
       ]
     },
     MONTHLY_REPORTS: {
+      location: { sheet: 'Received', row: 6, column: 'E' },  // First header cell
       headers: ['SUPPLIER_NAME', 'ADDRESS_LINE_1'],
       rows: [
         ['Joe Blogs Refinery', '15 Good Street'],
@@ -112,11 +126,35 @@ The parser will return a structured JSON object:
       ]
     },
     PROCESSED: {
+      location: { sheet: 'Processed', row: 10, column: 'B' },  // First header cell
       headers: ['OUR_REFERENCE', 'DATE_LOAD_LEFT_SITE'],
       rows: [[12345678910, '2025-05-25']]
     }
   }
 }
+```
+
+**Location Storage Strategy:**
+
+- **Metadata**: Store the location of the value cell (to the right of the marker)
+- **Data sections**: Store the location of the first header cell (to the right of the marker)
+
+**Deriving Specific Cell Locations:**
+
+For validation error reporting, specific cell locations can be calculated from the stored location:
+
+```javascript
+// For headers in a data section:
+// location.row (same row), location.column + columnIndex
+
+// For data cells in a data section:
+// location.row + 1 + rowIndex, location.column + columnIndex
+
+// Example: To find the cell at row index 1, column index 1 in WASTE_BALANCE:
+// Sheet: 'Received'
+// Row: 6 + 1 + 1 = 8
+// Column: B + 1 = C
+// Result: "Invalid date in sheet 'Received', row 8, column C"
 ```
 
 ### Implementation Notes
