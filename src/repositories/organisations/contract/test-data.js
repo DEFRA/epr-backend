@@ -15,16 +15,14 @@ function deleteStatusForItems(items) {
 }
 
 export const buildOrganisation = (overrides = {}) => {
+  const { statusHistory: _statusHistory, ...baseOrg } = org1
+
   const org = {
-    ...org1,
+    ...baseOrg,
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
     ...overrides
   }
-  // @ts-ignore - Intentionally deleting properties for test data
-  delete org.statusHistory
-  // @ts-ignore - Intentionally deleting properties for test data
-  delete org.status
 
   deleteStatusForItems(org.registrations)
   deleteStatusForItems(org.accreditations)
