@@ -20,5 +20,3 @@
  * @property {string} [organisationId]
  * @property {string} [registrationId]
  */
-
-export {}

@@ -5,8 +5,8 @@
  */
 export const createSummaryLogsParser = () => {
   return {
-    parse: async ({ summaryLog, buffer }) => {
-      return buffer.toString('utf8')
+    parse: async (summaryLogBuffer) => {
+      return summaryLogBuffer.toString('utf8')
     }
   }
 }

@@ -19,6 +19,7 @@ export default defineConfig({
         'src/config.js',
         '**/*.port.js',
         'src/domain/**/port.js',
+        'src/domain/**/model.js',
         'src/repositories/**/port.js',
         'src/common/hapi-types.js',
         'src/common/helpers/secure-context.js'
