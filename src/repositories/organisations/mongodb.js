@@ -29,11 +29,11 @@ const mapDocumentWithCurrentStatuses = (org) => {
 
   rest.status = getCurrentStatus(rest)
 
-  for (const item of rest.registrations) {
+  for (const item of rest.registrations ?? []) {
     item.status = getCurrentStatus(item)
   }
 
-  for (const item of rest.accreditations) {
+  for (const item of rest.accreditations ?? []) {
     item.status = getCurrentStatus(item)
   }
   return { id: _id.toString(), ...rest }

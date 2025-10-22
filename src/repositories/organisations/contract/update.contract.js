@@ -31,7 +31,7 @@ export const testUpdateBehaviour = (repositoryFactory) => {
         })
       })
 
-      it('throws not result error when organisation does not exist', async () => {
+      it('throws not found error when organisation does not exist', async () => {
         const organisation = buildOrganisation()
 
         await expect(

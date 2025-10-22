@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { ObjectId } from 'mongodb'
 
 async function setupServer(seed) {
   const organisationsRepositoryFactory =
@@ -17,8 +18,8 @@ async function setupServer(seed) {
 describe('GET /v1/organisations', () => {
   it('returns 200 and all organisations', async () => {
     const seed = [
-      { _id: 'mongo-1', orgId: 500123, name: 'Acme' },
-      { _id: 'mongo-2', orgId: 500124, name: 'Beta' }
+      { id: new ObjectId().toString(), name: 'Acme' },
+      { id: new ObjectId().toString(), name: 'Beta' }
     ]
     const server = await setupServer(seed)
 

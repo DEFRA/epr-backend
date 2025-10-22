@@ -291,8 +291,6 @@ const registrationSchema = Joi.object({
 
 const accreditationSchema = Joi.object({
   id: idSchema,
-  startDate: Joi.date().optional(),
-  endDate: Joi.date().optional(),
   accreditationNumber: Joi.number().optional(),
   status: Joi.string()
     .valid(
