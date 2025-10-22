@@ -44,7 +44,8 @@ The double underscore prefix (`__EPR_`) makes markers highly distinctive and unl
 
 ```javascript
 /**
- * Iterate over all worksheets:
+ * Iterate over all worksheets, flattening markers into a single structure:
+ * - Worksheet names are ignored - markers provide all necessary context
  * - Look for cells starting with "__EPR_META_":
  *   - Extract marker name from suffix (e.g., "__EPR_META_PROCESSING_TYPE" → "PROCESSING_TYPE")
  *   - Extract contents of cell to right of marker
@@ -52,6 +53,8 @@ The double underscore prefix (`__EPR_`) makes markers highly distinctive and unl
  *   - Extract section name from suffix (e.g., "__EPR_DATA_WASTE_BALANCE" → "WASTE_BALANCE")
  *   - Extract headers from cells to the right of marker (same row)
  *   - Extract data rows below marker until empty row encountered
+ *
+ * All markers across all worksheets are collected into a single flattened structure.
  */
 ```
 
@@ -120,6 +123,9 @@ The parser will return a structured JSON object:
 
 - Markers will be hidden in the spreadsheet (hidden rows/columns or white text on white background)
 - The parsing logic will scan all worksheets for markers rather than assuming specific sheet names or positions
+- **Worksheet names are ignored**: All markers are flattened into a single structure regardless of which worksheet they appear on
+  - Data can be organized across multiple worksheets for user convenience without affecting parsing
+  - Worksheet names do not provide semantic context - the marker names themselves contain all necessary information
 - The parser will extract **any** markers it finds, without pre-validating against a known set
   - This allows templates to evolve with new columns, sections, or metadata without requiring parser updates
   - Downstream validation and processing logic will handle unexpected or unknown data sections
@@ -137,6 +143,8 @@ The parser will return a structured JSON object:
 - **Maintainability**: Parsing logic focuses on marker patterns and extraction rules rather than hardcoded cell positions
 - **Flexibility**: Users can customize non-data areas of the spreadsheet without breaking the parser
   - Tables can be arranged vertically (stacked) or horizontally (side-by-side) as needed
+  - Data can be organized across multiple worksheets for user convenience
+  - Worksheet names can be changed without affecting parsing (markers provide all context)
   - Layout can be optimized for user experience without impacting parsing logic
 - **Self-documenting**: The marker names (e.g., `__EPR_DATA_WASTE_BALANCE`) make it clear what data is being extracted from each section
 - **Collision resistance**: The `__EPR_` prefix makes it highly unlikely that markers will accidentally match user-supplied data, while avoiding conflicts with spreadsheet formula operators
