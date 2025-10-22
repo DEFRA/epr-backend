@@ -52,11 +52,9 @@ describe('summaryLogsValidatorWorker integration', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id: summaryLogId,
-      version: inserted.version,
-      summaryLog: inserted.summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
@@ -83,11 +81,9 @@ describe('summaryLogsValidatorWorker integration', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id: summaryLogId,
-      version: inserted.version,
-      summaryLog: inserted.summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
@@ -118,11 +114,9 @@ describe('summaryLogsValidatorWorker integration', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository: failingUploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id: summaryLogId,
-      version: inserted.version,
-      summaryLog: inserted.summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)

@@ -12,11 +12,7 @@ import { summaryLogsValidatorWorker } from './worker.js'
 
 patchTlsSecureContext()
 
-export default async function summaryLogsValidatorWorkerThread({
-  id,
-  version,
-  summaryLog
-}) {
+export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
   const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
 
   const awsRegion = config.get('awsRegion')
@@ -44,11 +40,9 @@ export default async function summaryLogsValidatorWorkerThread({
 
       await summaryLogsValidatorWorker({
         uploadsRepository,
-        summaryLogsParser,
         summaryLogsRepository,
-        id,
-        version,
-        summaryLog
+        summaryLogsParser,
+        summaryLogId
       })
     } finally {
       s3Client.destroy()

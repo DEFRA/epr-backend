@@ -249,22 +249,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       payload
     })
 
-    expect(summaryLogsValidator.validate).toHaveBeenCalledWith({
-      id: summaryLogId,
-      version: 1,
-      summaryLog: {
-        status: SUMMARY_LOG_STATUS.VALIDATING,
-        file: {
-          id: fileId,
-          name: filename,
-          status: fileStatus,
-          s3: {
-            bucket: s3Bucket,
-            key: s3Key
-          }
-        }
-      }
-    })
+    expect(summaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should not invoke validation when uploaded file is still pending', async () => {

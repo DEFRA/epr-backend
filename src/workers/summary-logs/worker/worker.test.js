@@ -21,8 +21,7 @@ describe('summaryLogsValidatorWorker', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
-  let id
-  let version
+  let summaryLogId
   let summaryLog
 
   beforeEach(async () => {
@@ -36,12 +35,7 @@ describe('summaryLogsValidatorWorker', () => {
       parse: vi.fn().mockResolvedValue({ parsed: 'data' })
     }
 
-    summaryLogsRepository = {
-      update: vi.fn()
-    }
-
-    id = 'summary-log-123'
-    version = 1
+    summaryLogId = 'summary-log-123'
 
     summaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -55,20 +49,55 @@ describe('summaryLogsValidatorWorker', () => {
         }
       }
     }
+
+    summaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn()
+    }
   })
 
   afterEach(() => {
     vi.resetAllMocks()
   })
 
+  it('should find summary log by id', async () => {
+    await summaryLogsValidatorWorker({
+      uploadsRepository,
+      summaryLogsRepository,
+      summaryLogsParser,
+      summaryLogId
+    })
+
+    expect(summaryLogsRepository.findById).toHaveBeenCalledWith(
+      'summary-log-123'
+    )
+  })
+
+  it('should throw error if summary log is not found', async () => {
+    summaryLogsRepository.findById.mockResolvedValue(null)
+
+    const result = await summaryLogsValidatorWorker({
+      uploadsRepository,
+      summaryLogsRepository,
+      summaryLogsParser,
+      summaryLogId
+    }).catch((err) => err)
+
+    expect(result).toBeInstanceOf(Error)
+    expect(result.message).toBe(
+      'Summary log not found: summaryLogId=summary-log-123'
+    )
+  })
+
   it('should log as expected when validation worker starts', async () => {
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
@@ -86,11 +115,9 @@ describe('summaryLogsValidatorWorker', () => {
   it('should fetch file from uploads repository', async () => {
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     expect(uploadsRepository.findByLocation).toHaveBeenCalledWith({
@@ -102,11 +129,9 @@ describe('summaryLogsValidatorWorker', () => {
   it('should log as expected when file fetched successfully', async () => {
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
@@ -126,11 +151,9 @@ describe('summaryLogsValidatorWorker', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     expect(mockLoggerWarn).toHaveBeenCalledWith(
@@ -148,11 +171,9 @@ describe('summaryLogsValidatorWorker', () => {
   it('should update status as expected when file is fetched successfully', async () => {
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
@@ -169,11 +190,9 @@ describe('summaryLogsValidatorWorker', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
@@ -191,11 +210,9 @@ describe('summaryLogsValidatorWorker', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
@@ -215,11 +232,9 @@ describe('summaryLogsValidatorWorker', () => {
 
     const result = await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
@@ -242,11 +257,9 @@ describe('summaryLogsValidatorWorker', () => {
 
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     expect(mockLoggerError).toHaveBeenCalledWith(
@@ -264,11 +277,9 @@ describe('summaryLogsValidatorWorker', () => {
   it('should log as expected once status updated', async () => {
     await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     })
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
@@ -291,11 +302,9 @@ describe('summaryLogsValidatorWorker', () => {
 
     const result = await summaryLogsValidatorWorker({
       uploadsRepository,
-      summaryLogsParser,
       summaryLogsRepository: brokenRepository,
-      id,
-      version,
-      summaryLog
+      summaryLogsParser,
+      summaryLogId
     }).catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
