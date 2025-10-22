@@ -2,11 +2,11 @@ import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
-export const organisationsGetPath = '/v1/organisations'
+export const organisationsGetAllPath = '/v1/organisations'
 
-export const organisationsGet = {
+export const organisationsGetAll = {
   method: 'GET',
-  path: organisationsGetPath,
+  path: organisationsGetAllPath,
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit
