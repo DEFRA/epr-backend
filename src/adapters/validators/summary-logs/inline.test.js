@@ -9,7 +9,7 @@ describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsParser
   let summaryLogsRepository
   let summaryLogsValidator
-  let validationRequest
+  let summaryLogId
 
   beforeEach(() => {
     uploadsRepository = {
@@ -30,13 +30,7 @@ describe('createInlineSummaryLogsValidator', () => {
       summaryLogsRepository
     )
 
-    validationRequest = {
-      id: 'summary-log-123',
-      version: 1,
-      summaryLog: {
-        status: 'validating'
-      }
-    }
+    summaryLogId = 'summary-log-123'
 
     vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
   })
@@ -46,15 +40,13 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should call worker with repository and summary log', async () => {
-    await summaryLogsValidator.validate(validationRequest)
+    await summaryLogsValidator.validate(summaryLogId)
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
-      id: validationRequest.id,
-      version: validationRequest.version,
-      summaryLog: validationRequest.summaryLog
+      summaryLogId
     })
   })
 
@@ -67,7 +59,7 @@ describe('createInlineSummaryLogsValidator', () => {
     const { logger } = await import('#common/helpers/logging/logger.js')
     vi.spyOn(logger, 'error')
 
-    await summaryLogsValidator.validate(validationRequest)
+    await summaryLogsValidator.validate(summaryLogId)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(logger.error).toHaveBeenCalledWith(
@@ -80,7 +72,7 @@ describe('createInlineSummaryLogsValidator', () => {
 
   it('should not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(validationRequest)
+      summaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 
@@ -90,7 +82,7 @@ describe('createInlineSummaryLogsValidator', () => {
     )
 
     await expect(
-      summaryLogsValidator.validate(validationRequest)
+      summaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 })

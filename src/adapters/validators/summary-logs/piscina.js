@@ -29,9 +29,9 @@ const pool = new Piscina({
  */
 export const createSummaryLogsValidator = (logger) => {
   return {
-    validate: async ({ id, version, summaryLog }) => {
+    validate: async (summaryLogId) => {
       logger.info({
-        message: `Summary log validation worker spawning: summaryLogId=${id}`,
+        message: `Summary log validation worker spawning: summaryLogId=${summaryLogId}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
@@ -39,10 +39,10 @@ export const createSummaryLogsValidator = (logger) => {
       })
 
       pool
-        .run({ id, version, summaryLog })
+        .run(summaryLogId)
         .then(() => {
           logger.info({
-            message: `Summary log validation worker completed: summaryLogId=${id}`,
+            message: `Summary log validation worker completed: summaryLogId=${summaryLogId}`,
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,
               action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -52,7 +52,7 @@ export const createSummaryLogsValidator = (logger) => {
         .catch((err) => {
           logger.error({
             error: err,
-            message: `Summary log validation worker failed: summaryLogId=${id}`,
+            message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,
               action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE

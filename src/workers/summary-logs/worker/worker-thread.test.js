@@ -25,7 +25,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   let mockUploadsRepository
   let mockSummaryLogsParser
 
-  let summaryLog
+  let summaryLogId
 
   beforeEach(() => {
     mockDb = { collection: vi.fn() }
@@ -51,11 +51,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       parse: vi.fn()
     }
 
-    summaryLog = {
-      id: 'summary-log-123',
-      status: 'validating',
-      version: 1
-    }
+    summaryLogId = 'summary-log-123'
 
     vi.mocked(createMongoClient).mockResolvedValue(mockMongoClient)
     vi.mocked(createS3Client).mockReturnValue(mockS3Client)
@@ -72,7 +68,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create mongo client as expected', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(createMongoClient).toHaveBeenCalledWith({
       url: 'mongodb://localhost:27017',
@@ -81,19 +77,19 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should get database with expected name', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(mockMongoClient.db).toHaveBeenCalledWith('test-db')
   })
 
   it('should create summary logs repository with db', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(createSummaryLogsRepository).toHaveBeenCalledWith(mockDb)
   })
 
   it('should create S3 client with expected config', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(createS3Client).toHaveBeenCalledWith({
       region: 'eu-west-2',
@@ -103,36 +99,36 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create uploads repository', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(createUploadsRepository).toHaveBeenCalledWith(mockS3Client)
   })
 
   it('should create summary logs parser', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(createSummaryLogsParser).toHaveBeenCalledWith()
   })
 
   it('should call validator worker as expected', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       uploadsRepository: mockUploadsRepository,
       summaryLogsParser: mockSummaryLogsParser,
-      summaryLog
+      summaryLogId
     })
   })
 
   it('should destroy S3 client once worker completes', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(mockS3Client.destroy).toHaveBeenCalled()
   })
 
   it('should close mongo client once worker completes', async () => {
-    await summaryLogsValidatorWorkerThread({ summaryLog })
+    await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(mockMongoClient.close).toHaveBeenCalled()
   })
@@ -143,7 +139,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     )
 
     await expect(
-      summaryLogsValidatorWorkerThread({ summaryLog })
+      summaryLogsValidatorWorkerThread(summaryLogId)
     ).rejects.toThrow('Worker failed')
 
     expect(mockS3Client.destroy).toHaveBeenCalled()
@@ -156,7 +152,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     })
 
     await expect(
-      summaryLogsValidatorWorkerThread({ summaryLog })
+      summaryLogsValidatorWorkerThread(summaryLogId)
     ).rejects.toThrow('Repository creation failed')
 
     expect(mockS3Client.destroy).toHaveBeenCalled()
@@ -169,7 +165,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     })
 
     await expect(
-      summaryLogsValidatorWorkerThread({ summaryLog })
+      summaryLogsValidatorWorkerThread(summaryLogId)
     ).rejects.toThrow('S3 client creation failed')
 
     expect(mockMongoClient.close).toHaveBeenCalled()

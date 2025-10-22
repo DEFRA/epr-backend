@@ -5,16 +5,18 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
-/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
+/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/parser/port.js').SummaryLogsParser} SummaryLogsParser */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
+/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 /**
  * @param {Object} params
  * @param {UploadsRepository} params.uploadsRepository
- * @param {Object} params.summaryLog
+ * @param {SummaryLog} params.summaryLog
  * @param {string} params.msg
+ * @returns {Promise<Buffer|undefined>}
  */
 const fetchSummaryLog = async ({ uploadsRepository, summaryLog, msg }) => {
   const {
@@ -54,6 +56,7 @@ const fetchSummaryLog = async ({ uploadsRepository, summaryLog, msg }) => {
  * @param {SummaryLogsParser} params.summaryLogsParser
  * @param {Buffer} params.summaryLogBuffer
  * @param {string} params.msg
+ * @returns {Promise<Object>}
  */
 const parseSummaryLog = async ({
   summaryLogsParser,
@@ -78,10 +81,11 @@ const parseSummaryLog = async ({
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {string} params.id
  * @param {number} params.version
- * @param {Object} params.summaryLog
+ * @param {SummaryLog} params.summaryLog
  * @param {SummaryLogStatus} params.status
  * @param {string|undefined|null} [params.failureReason]
  * @param {string} params.msg
+ * @returns {Promise<void>}
  */
 const updateSummaryLog = async ({
   summaryLogsRepository,
@@ -114,25 +118,29 @@ const updateSummaryLog = async ({
 /**
  * @param {Object} params
  * @param {UploadsRepository} params.uploadsRepository
- * @param {SummaryLogsParser} params.summaryLogsParser
  * @param {SummaryLogsRepository} params.summaryLogsRepository
- * @param {string} params.id
- * @param {number} params.version
- * @param {Object} params.summaryLog
+ * @param {SummaryLogsParser} params.summaryLogsParser
+ * @param {string} params.summaryLogId
+ * @returns {Promise<void>}
  */
 export const summaryLogsValidatorWorker = async ({
   uploadsRepository,
-  summaryLogsParser,
   summaryLogsRepository,
-  id,
-  version,
-  summaryLog
+  summaryLogsParser,
+  summaryLogId
 }) => {
+  const result = await summaryLogsRepository.findById(summaryLogId)
+
+  if (!result) {
+    throw new Error(`Summary log not found: summaryLogId=${summaryLogId}`)
+  }
+
+  const { version, summaryLog } = result
   const {
     file: { id: fileId, name: filename }
   } = summaryLog
 
-  const msg = `summaryLogId=${id}, fileId=${fileId}, filename=${filename}`
+  const msg = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
   logger.info({
     message: `Summary log validation worker started: ${msg}`,
@@ -161,7 +169,7 @@ export const summaryLogsValidatorWorker = async ({
 
     await updateSummaryLog({
       summaryLogsRepository,
-      id,
+      id: summaryLogId,
       version,
       summaryLog,
       status: SUMMARY_LOG_STATUS.VALIDATED,
@@ -179,7 +187,7 @@ export const summaryLogsValidatorWorker = async ({
 
     await updateSummaryLog({
       summaryLogsRepository,
-      id,
+      id: summaryLogId,
       version,
       summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,

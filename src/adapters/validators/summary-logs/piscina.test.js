@@ -14,7 +14,7 @@ vi.mock('piscina', () => ({
 
 describe('createSummaryLogsValidator', () => {
   let summaryLogsValidator
-  let validationRequest
+  let summaryLogId
   let logger
 
   beforeEach(() => {
@@ -28,21 +28,7 @@ describe('createSummaryLogsValidator', () => {
 
     summaryLogsValidator = createSummaryLogsValidator(logger)
 
-    validationRequest = {
-      id: 'summary-log-123',
-      version: 1,
-      summaryLog: {
-        status: 'validating',
-        file: {
-          id: 'file-123',
-          name: 'test.xlsx',
-          s3: {
-            bucket: 'test-bucket',
-            key: 'test-key'
-          }
-        }
-      }
-    }
+    summaryLogId = 'summary-log-123'
   })
 
   afterEach(() => {
@@ -54,14 +40,14 @@ describe('createSummaryLogsValidator', () => {
     expect(summaryLogsValidator.validate).toBeInstanceOf(Function)
   })
 
-  it('runs worker with summary log', async () => {
-    await summaryLogsValidator.validate(validationRequest)
+  it('runs worker with summary log id', async () => {
+    await summaryLogsValidator.validate(summaryLogId)
 
-    expect(mockRun).toHaveBeenCalledWith(validationRequest)
+    expect(mockRun).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('logs success when worker completes', async () => {
-    await summaryLogsValidator.validate(validationRequest)
+    await summaryLogsValidator.validate(summaryLogId)
 
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -82,7 +68,7 @@ describe('createSummaryLogsValidator', () => {
     const error = new Error('Worker failed')
     mockRun.mockRejectedValue(error)
 
-    await summaryLogsValidator.validate(validationRequest)
+    await summaryLogsValidator.validate(summaryLogId)
 
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -100,7 +86,7 @@ describe('createSummaryLogsValidator', () => {
 
   it('does not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(validationRequest)
+      summaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 
@@ -108,7 +94,7 @@ describe('createSummaryLogsValidator', () => {
     mockRun.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
-      summaryLogsValidator.validate(validationRequest)
+      summaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 })

@@ -143,18 +143,7 @@ export const summaryLogsUploadCompleted = {
       )
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
-        const result = await summaryLogsRepository.findById(summaryLogId)
-        if (!result) {
-          throw Boom.notFound(
-            `Summary log ${summaryLogId} not found after upload`
-          )
-        }
-        const { version, summaryLog } = result
-        await summaryLogsValidator.validate({
-          id: summaryLogId,
-          version,
-          summaryLog
-        })
+        await summaryLogsValidator.validate(summaryLogId)
       }
 
       const s3Info = formatS3Info(summaryLogUpload)
