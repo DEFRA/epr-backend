@@ -34,9 +34,9 @@ The spreadsheet templates will include hidden marker cells that follow these pat
   - Example: `@@EPR_META:PROCESSING_TYPE@@` → extract adjacent cell value
 
 - **Data section markers**: Cells matching regex `@@EPR_DATA:(.+)@@` indicate the start of tabular data sections
-  - The row below the marker contains column headers
-  - Subsequent rows contain data until an empty row is encountered
-  - Example: `@@EPR_DATA:WASTE_BALANCE@@` → extract headers and rows below
+  - The cells to the right of the marker contain column headers (on the same row)
+  - Subsequent rows below contain data until an empty row is encountered
+  - Example: `@@EPR_DATA:WASTE_BALANCE@@` → extract headers to the right and rows below
 
 The `@@EPR_` prefix makes markers highly distinctive and unlikely to appear in legitimate user data.
 
@@ -50,8 +50,8 @@ The `@@EPR_` prefix makes markers highly distinctive and unlikely to appear in l
  *   - Extract contents of cell to right of marker
  * - Look for cells matching regex "@@EPR_DATA:(.+)@@":
  *   - Extract section name from capture group
- *   - Extract headers from row below marker
- *   - Extract rows until empty row encountered
+ *   - Extract headers from cells to the right of marker (same row)
+ *   - Extract data rows below marker until empty row encountered
  */
 ```
 
