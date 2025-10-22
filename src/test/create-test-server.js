@@ -27,20 +27,18 @@ export async function createTestServer(options = {}) {
     warn: vi.fn()
   }
 
-  if (testServer.ext) {
-    testServer.ext('onRequest', (request, h) => {
-      vi.spyOn(request.logger, 'info').mockImplementation(
-        testServer.loggerMocks.info
-      )
-      vi.spyOn(request.logger, 'error').mockImplementation(
-        testServer.loggerMocks.error
-      )
-      vi.spyOn(request.logger, 'warn').mockImplementation(
-        testServer.loggerMocks.warn
-      )
-      return h.continue
-    })
-  }
+  testServer.ext('onRequest', (request, h) => {
+    vi.spyOn(request.logger, 'info').mockImplementation(
+      testServer.loggerMocks.info
+    )
+    vi.spyOn(request.logger, 'error').mockImplementation(
+      testServer.loggerMocks.error
+    )
+    vi.spyOn(request.logger, 'warn').mockImplementation(
+      testServer.loggerMocks.warn
+    )
+    return h.continue
+  })
 
   return testServer
 }
