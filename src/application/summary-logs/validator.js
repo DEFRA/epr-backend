@@ -34,7 +34,7 @@ const fetchSummaryLog = async ({ uploadsRepository, summaryLog, msg }) => {
     logger.info({
       message: `Fetched summary log file: ${msg}, s3Path=${s3Bucket}/${s3Key}`,
       event: {
-        category: LOGGING_EVENT_CATEGORIES.WORKER,
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
@@ -42,7 +42,7 @@ const fetchSummaryLog = async ({ uploadsRepository, summaryLog, msg }) => {
     logger.warn({
       message: `Failed to fetch summary log file: ${msg}, s3Path=${s3Bucket}/${s3Key}`,
       event: {
-        category: LOGGING_EVENT_CATEGORIES.WORKER,
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
@@ -68,7 +68,7 @@ const parseSummaryLog = async ({
   logger.info({
     message: `Parsed summary log file: ${msg}`,
     event: {
-      category: LOGGING_EVENT_CATEGORIES.WORKER,
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
     }
   })
@@ -109,7 +109,7 @@ const updateSummaryLog = async ({
   logger.info({
     message: `Summary log updated: ${msg}, status=${status}`,
     event: {
-      category: LOGGING_EVENT_CATEGORIES.WORKER,
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
     }
   })
@@ -123,7 +123,7 @@ const updateSummaryLog = async ({
  * @param {string} params.summaryLogId
  * @returns {Promise<void>}
  */
-export const summaryLogsValidatorWorker = async ({
+export const summaryLogsValidator = async ({
   uploadsRepository,
   summaryLogsRepository,
   summaryLogsParser,
@@ -143,9 +143,9 @@ export const summaryLogsValidatorWorker = async ({
   const msg = `summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}`
 
   logger.info({
-    message: `Summary log validation worker started: ${msg}`,
+    message: `Summary log validation started: ${msg}`,
     event: {
-      category: LOGGING_EVENT_CATEGORIES.WORKER,
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.START_SUCCESS
     }
   })
@@ -180,7 +180,7 @@ export const summaryLogsValidatorWorker = async ({
       error,
       message: `Failed to process summary log file: ${msg}`,
       event: {
-        category: LOGGING_EVENT_CATEGORIES.WORKER,
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })

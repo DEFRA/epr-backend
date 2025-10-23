@@ -5,9 +5,10 @@
   "main": "src/index.js",
   "type": "module",
   "imports": {
+    "#adapters/*": "./src/adapters/*",
+    "#application/*": "./src/application/*",
     "#common/*": "./src/common/*",
     "#domain/*": "./src/domain/*",
-    "#adapters/*": "./src/adapters/*",
     "#repositories/*": "./src/repositories/*",
     "#workers/*": "./src/workers/*",
     "#routes/*": "./src/routes/*",
