@@ -19,12 +19,22 @@ import organisationFixture from '#data/fixtures/organisation.json' with { type: 
 import registrationFixture from '#data/fixtures/registration.json' with { type: 'json' }
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 
+import eprOrganisation1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
+import eprOrganisation2 from '#data/fixtures/common/epr-organisations/sample-organisation-2.json' with { type: 'json' }
+import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-organisation-3.json' with { type: 'json' }
+import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
+
+import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
+import { eprOrganisationFactory } from '#common/helpers/collections/factories/epr-organisation.js'
+
 export async function createOrUpdateCollections(db) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
 
   await createOrUpdateOrganisationCollection(db, collections)
   await createOrUpdateRegistrationCollection(db, collections)
   await createOrUpdateAccreditationCollection(db, collections)
+
+  await createOrUpdateEPROrganisationCollection(db, collections)
 }
 
 export async function createIndexes(db) {
@@ -69,5 +79,20 @@ export async function createSeedData(db) {
         rawSubmissionData: accreditationFixture
       })
     ])
+  }
+
+  const eprOrganisationDocCount = await db
+    .collection('epr-organisations')
+    .countDocuments()
+
+  if (eprOrganisationDocCount === 0) {
+    await db
+      .collection('epr-organisations')
+      .insertMany([
+        eprOrganisationFactory(eprOrganisation1),
+        eprOrganisationFactory(eprOrganisation2),
+        eprOrganisationFactory(eprOrganisation3),
+        eprOrganisationFactory(eprOrganisation4)
+      ])
   }
 }
