@@ -4,7 +4,7 @@ Date: 2025-10-22
 
 ## Status
 
-Proposed
+Accepted
 
 Extends [11. File parsing](0011-file-parsing.md)
 
