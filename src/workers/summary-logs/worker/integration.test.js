@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto'
 
+import { summaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -8,10 +10,7 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 
-import { summaryLogsValidatorWorker } from './worker.js'
-import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
-
-describe('summaryLogsValidatorWorker integration', () => {
+describe('summaryLogsValidator integration', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
@@ -50,7 +49,7 @@ describe('summaryLogsValidatorWorker integration', () => {
       summaryLog: initialSummaryLog
     })
 
-    await summaryLogsValidatorWorker({
+    await summaryLogsValidator({
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
@@ -79,7 +78,7 @@ describe('summaryLogsValidatorWorker integration', () => {
       summaryLog: initialSummaryLog
     })
 
-    await summaryLogsValidatorWorker({
+    await summaryLogsValidator({
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
@@ -112,7 +111,7 @@ describe('summaryLogsValidatorWorker integration', () => {
       throwError: new Error('S3 access denied')
     })
 
-    await summaryLogsValidatorWorker({
+    await summaryLogsValidator({
       uploadsRepository: failingUploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,

@@ -1,3 +1,4 @@
+import { summaryLogsValidator } from '#application/summary-logs/validator.js'
 import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -7,8 +8,6 @@ import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
 import { config } from '../../../config.js'
-
-import { summaryLogsValidatorWorker } from './worker.js'
 
 patchTlsSecureContext()
 
@@ -38,7 +37,7 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
       const uploadsRepository = createUploadsRepository(s3Client)
       const summaryLogsParser = createSummaryLogsParser()
 
-      await summaryLogsValidatorWorker({
+      await summaryLogsValidator({
         uploadsRepository,
         summaryLogsRepository,
         summaryLogsParser,

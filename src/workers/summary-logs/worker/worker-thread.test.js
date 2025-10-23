@@ -1,3 +1,4 @@
+import { summaryLogsValidator } from '#application/summary-logs/validator.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
@@ -5,9 +6,16 @@ import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createMockConfig } from '#test/helpers/mock-config.js'
 
-import { summaryLogsValidatorWorker } from './worker.js'
 import summaryLogsValidatorWorkerThread from './worker-thread.js'
 
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  }
+}))
+vi.mock('#application/summary-logs/validator.js')
 vi.mock('#adapters/parsers/summary-logs/stub.js')
 vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
@@ -15,7 +23,6 @@ vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
-vi.mock('./worker.js')
 
 describe('summaryLogsValidatorWorkerThread', () => {
   let mockDb
@@ -60,7 +67,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     )
     vi.mocked(createUploadsRepository).mockReturnValue(mockUploadsRepository)
     vi.mocked(createSummaryLogsParser).mockReturnValue(mockSummaryLogsParser)
-    vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
+    vi.mocked(summaryLogsValidator).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -113,7 +120,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   it('should call validator worker as expected', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
+    expect(summaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       uploadsRepository: mockUploadsRepository,
       summaryLogsParser: mockSummaryLogsParser,
@@ -134,7 +141,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should destroy S3 client and close mongo client even if worker fails', async () => {
-    vi.mocked(summaryLogsValidatorWorker).mockRejectedValue(
+    vi.mocked(summaryLogsValidator).mockRejectedValue(
       new Error('Worker failed')
     )
 
