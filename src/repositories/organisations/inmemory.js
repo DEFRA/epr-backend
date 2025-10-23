@@ -143,6 +143,16 @@ export const createInMemoryOrganisationsRepository = (
 
     async findById(id) {
       return performFindById(storage, id)
+    },
+
+    async findRegistrationById(organisationId, registrationId) {
+      const org = storage.find((o) => o.id === organisationId)
+      if (!org) return null
+
+      const registration = org.registrations?.find(
+        (r) => r.id === registrationId
+      )
+      return registration ? structuredClone(registration) : null
     }
   })
 }
