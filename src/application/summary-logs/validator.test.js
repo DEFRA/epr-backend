@@ -372,4 +372,24 @@ describe('validateRegistrationNumber', () => {
       })
     ).not.toThrow()
   })
+
+  it('throws error when registration number value is undefined', () => {
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: undefined,
+          location: { sheet: 'Data', row: 1, column: 'B' }
+        }
+      },
+      data: {}
+    }
+
+    expect(() =>
+      validateRegistrationNumber({
+        parsed,
+        expectedRegistrationId: 'REG12345',
+        msg: 'test-msg'
+      })
+    ).toThrow('Invalid summary log: missing registration number')
+  })
 })
