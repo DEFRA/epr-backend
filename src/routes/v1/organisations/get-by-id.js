@@ -22,9 +22,6 @@ export const organisationsGetById = {
     }
 
     const organisation = await organisationsRepository.findById(id)
-    if (!organisation) {
-      throw Boom.notFound('Organisation not found')
-    }
 
     return h.response(organisation).code(StatusCodes.OK)
   }
