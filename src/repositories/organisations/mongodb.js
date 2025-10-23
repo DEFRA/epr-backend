@@ -11,6 +11,7 @@ import {
   mergeSubcollection
 } from './helpers.js'
 import Boom from '@hapi/boom'
+import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -48,7 +49,7 @@ const performInsert = async (db, organisation) => {
 
   try {
     await db.collection(COLLECTION_NAME).insertOne({
-      _id: id,
+      _id: ObjectId.createFromHexString(id),
       version: 1,
       schemaVersion: SCHEMA_VERSION,
       statusHistory: createInitialStatusHistory(),
@@ -70,7 +71,7 @@ const performUpdate = async (db, id, version, updates) => {
 
   const existing = await db
     .collection(COLLECTION_NAME)
-    .findOne({ _id: validatedId })
+    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
   if (!existing) {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
@@ -91,7 +92,7 @@ const performUpdate = async (db, id, version, updates) => {
   )
 
   const result = await db.collection(COLLECTION_NAME).updateOne(
-    { _id: validatedId, version },
+    { _id: ObjectId.createFromHexString(validatedId), version },
     {
       $set: {
         ...merged,
@@ -112,13 +113,17 @@ const performUpdate = async (db, id, version, updates) => {
 
 const performFindById = async (db, id) => {
   // validate the ID and throw early
+  let validatedId
   try {
-    validateId(id)
+    validatedId = validateId(id)
   } catch (error) {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
-  const doc = await db.collection(COLLECTION_NAME).findOne({ _id: id })
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
+
   if (!doc) {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
