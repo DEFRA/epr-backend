@@ -5,7 +5,8 @@ import {
 
 import {
   summaryLogsValidator,
-  validateRegistrationNumber
+  validateRegistrationNumber,
+  fetchRegistration
 } from './validator.js'
 
 const mockLoggerInfo = vi.fn()
@@ -456,5 +457,44 @@ describe('validateRegistrationNumber', () => {
         msg: 'test-msg'
       })
     ).toThrow('Invalid summary log: missing registration number')
+  })
+})
+
+describe('fetchRegistration', () => {
+  it('returns registration when found', async () => {
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: 'reg-123',
+        wasteRegistrationNumber: 'WRN12345'
+      })
+    }
+
+    const result = await fetchRegistration({
+      organisationsRepository: mockOrganisationsRepository,
+      organisationId: 'org-123',
+      registrationId: 'reg-123',
+      msg: 'test-msg'
+    })
+
+    expect(result).toBeDefined()
+    expect(result.id).toBe('reg-123')
+    expect(result.wasteRegistrationNumber).toBe('WRN12345')
+  })
+
+  it('throws error when registration not found', async () => {
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue(null)
+    }
+
+    await expect(
+      fetchRegistration({
+        organisationsRepository: mockOrganisationsRepository,
+        organisationId: 'org-123',
+        registrationId: 'reg-123',
+        msg: 'test-msg'
+      })
+    ).rejects.toThrow(
+      'Registration not found: organisationId=org-123, registrationId=reg-123'
+    )
   })
 })

@@ -77,6 +77,44 @@ const parseSummaryLog = async ({
 }
 
 /**
+ * Fetches a registration from the organisations repository
+ *
+ * @param {Object} params
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {string} params.msg
+ * @returns {Promise<Object>}
+ */
+export const fetchRegistration = async ({
+  organisationsRepository,
+  organisationId,
+  registrationId,
+  msg
+}) => {
+  const registration = await organisationsRepository.findRegistrationById(
+    organisationId,
+    registrationId
+  )
+
+  if (!registration) {
+    throw new Error(
+      `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
+    )
+  }
+
+  logger.info({
+    message: `Fetched registration: ${msg}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+
+  return registration
+}
+
+/**
  * @param {Object} params
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {string} params.id
