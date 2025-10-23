@@ -3,6 +3,7 @@ import Hapi from '@hapi/hapi'
 import { secureContext } from '@defra/hapi-secure-context'
 
 import { getConfig } from '../config.js'
+import { cacheControl } from '#plugins/cache-control.js'
 import { router } from '#plugins/router.js'
 import { workers } from '#plugins/workers.js'
 import { repositories } from '#plugins/repositories.js'
@@ -47,6 +48,7 @@ async function createServer(options = {}) {
   // Hapi Plugins:
   // requestLogger  - automatically logs incoming requests
   // requestTracing - trace header logging and propagation
+  // cacheControl   - adds Cache-Control headers to prevent caching
   // secureContext  - loads CA certificates from environment config
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
@@ -57,6 +59,7 @@ async function createServer(options = {}) {
   await server.register([
     requestLogger,
     requestTracing,
+    cacheControl,
     secureContext,
     pulse,
     {

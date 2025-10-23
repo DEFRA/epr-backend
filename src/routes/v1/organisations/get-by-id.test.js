@@ -38,6 +38,20 @@ describe('GET /v1/organisations/{id}', () => {
       expect(result.id).toBe(org1.id)
       expect(result.orgId).toBe(org1.orgId)
     })
+
+    it('includes Cache-Control header in successful response', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${org.id}`
+      })
+
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
+    })
   })
 
   describe('not found cases', () => {
@@ -57,6 +71,18 @@ describe('GET /v1/organisations/{id}', () => {
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+    })
+
+    it('includes Cache-Control header in error response', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/organisations/999999'
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
     })
   })
 })
