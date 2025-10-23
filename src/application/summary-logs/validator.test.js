@@ -3,7 +3,10 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 
-import { summaryLogsValidator } from './validator.js'
+import {
+  summaryLogsValidator,
+  validateRegistrationNumber
+} from './validator.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
@@ -309,5 +312,64 @@ describe('summaryLogsValidator', () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Database error')
+  })
+})
+
+describe('validateRegistrationNumber', () => {
+  it('throws error when registration number is missing', () => {
+    const parsed = {
+      meta: {},
+      data: {}
+    }
+
+    expect(() =>
+      validateRegistrationNumber({
+        parsed,
+        expectedRegistrationId: 'REG12345',
+        msg: 'test-msg'
+      })
+    ).toThrow('Invalid summary log: missing registration number')
+  })
+
+  it('throws error when registration numbers do not match', () => {
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: 'REG99999',
+          location: { sheet: 'Data', row: 1, column: 'B' }
+        }
+      },
+      data: {}
+    }
+
+    expect(() =>
+      validateRegistrationNumber({
+        parsed,
+        expectedRegistrationId: 'REG12345',
+        msg: 'test-msg'
+      })
+    ).toThrow(
+      'Registration number mismatch: spreadsheet contains REG99999 but was uploaded to REG12345'
+    )
+  })
+
+  it('does not throw when registration numbers match', () => {
+    const parsed = {
+      meta: {
+        REGISTRATION_NUMBER: {
+          value: 'REG12345',
+          location: { sheet: 'Data', row: 1, column: 'B' }
+        }
+      },
+      data: {}
+    }
+
+    expect(() =>
+      validateRegistrationNumber({
+        parsed,
+        expectedRegistrationId: 'REG12345',
+        msg: 'test-msg'
+      })
+    ).not.toThrow()
   })
 })
