@@ -189,6 +189,49 @@ export const validateRegistrationNumber = ({
 }
 
 /**
+ * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
+ *
+ * @param {Object} params
+ * @param {Object} params.parsed - The parsed summary log structure from the parser
+ * @param {Object} params.registration - The registration object from the organisations repository
+ * @param {string} params.msg - Logging context message
+ * @throws {Error} If validation fails
+ */
+export const validateWasteRegistrationNumber = ({
+  parsed,
+  registration,
+  msg
+}) => {
+  const { wasteRegistrationNumber } = registration
+  const spreadsheetRegistrationNumber =
+    parsed?.meta?.WASTE_REGISTRATION_NUMBER?.value
+
+  if (!wasteRegistrationNumber) {
+    throw new Error(
+      'Invalid summary log: registration has no waste registration number'
+    )
+  }
+
+  if (!spreadsheetRegistrationNumber) {
+    throw new Error('Invalid summary log: missing registration number')
+  }
+
+  if (spreadsheetRegistrationNumber !== wasteRegistrationNumber) {
+    throw new Error(
+      `Registration number mismatch: spreadsheet contains ${spreadsheetRegistrationNumber} but registration is ${wasteRegistrationNumber}`
+    )
+  }
+
+  logger.info({
+    message: `Registration number validated: ${msg}, registrationNumber=${wasteRegistrationNumber}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+}
+
+/**
  * @param {Object} params
  * @param {UploadsRepository} params.uploadsRepository
  * @param {SummaryLogsRepository} params.summaryLogsRepository
