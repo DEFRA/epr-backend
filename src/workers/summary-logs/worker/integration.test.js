@@ -20,7 +20,9 @@ describe('summaryLogsValidator integration', () => {
 
   beforeEach(async () => {
     uploadsRepository = createInMemoryUploadsRepository()
-    summaryLogsParser = createSummaryLogsParser()
+    summaryLogsParser = createSummaryLogsParser({
+      registrationNumber: 'reg-456'
+    })
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     summaryLogId = randomUUID()

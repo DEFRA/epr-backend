@@ -65,7 +65,9 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsParser = createSummaryLogsParser()
+    const summaryLogsParser = createSummaryLogsParser({
+      registrationNumber: registrationId
+    })
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
