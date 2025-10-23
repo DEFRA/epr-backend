@@ -1,28 +1,19 @@
 import {
   validateId,
   validateOrganisationInsert,
-  validateOrganisationUpdate,
-  validateStatusHistory
+  validateOrganisationUpdate
 } from './validation.js'
+import {
+  SCHEMA_VERSION,
+  createInitialStatusHistory,
+  getCurrentStatus,
+  statusHistoryWithChanges,
+  mergeSubcollection
+} from './helpers.js'
 import Boom from '@hapi/boom'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-const SCHEMA_VERSION = 1
-
-const createStatusHistoryEntry = (status) => ({
-  status,
-  updatedAt: new Date()
-})
-
-const createInitialStatusHistory = () => {
-  const statusHistory = [createStatusHistoryEntry('created')]
-  return validateStatusHistory(statusHistory)
-}
-
-const getCurrentStatus = (existingItem) => {
-  return existingItem.statusHistory.at(-1).status
-}
 
 const mapDocumentWithCurrentStatuses = (org) => {
   const { _id, ...rest } = org
@@ -37,54 +28,6 @@ const mapDocumentWithCurrentStatuses = (org) => {
     item.status = getCurrentStatus(item)
   }
   return { id: _id.toString(), ...rest }
-}
-
-const statusHistoryWithChanges = (updatedItem, existingItem) => {
-  let statusHistory = createInitialStatusHistory()
-  if (existingItem) {
-    if (
-      updatedItem.status &&
-      updatedItem.status !== getCurrentStatus(existingItem)
-    ) {
-      statusHistory = [
-        ...existingItem.statusHistory,
-        createStatusHistoryEntry(updatedItem.status)
-      ]
-    } else {
-      statusHistory = existingItem.statusHistory
-    }
-  }
-  return validateStatusHistory(statusHistory)
-}
-
-/**
- * Merges registrations/accreditations updates with existing.
- * @param {Array} existingItems - Current registrations/accreditations from database
- * @param {Array} itemUpdates - registrations/accreditations to update or add
- * @returns {Array} Merged array with updated and registrations/accreditations
- */
-const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
-  const updatesById = new Map(itemUpdates.map((item) => [item.id, item]))
-
-  const processedExisting = existingItems.map((existingItem) => {
-    const update = updatesById.get(existingItem.id)
-    if (update) {
-      updatesById.delete(existingItem.id) // Mark as processed
-      return {
-        ...existingItem,
-        ...update,
-        statusHistory: statusHistoryWithChanges(update, existingItem)
-      }
-    }
-    return existingItem
-  })
-
-  const newItems = Array.from(updatesById.values()).map((newItem) => ({
-    ...newItem,
-    statusHistory: createInitialStatusHistory()
-  }))
-
-  return [...processedExisting, ...newItems]
 }
 
 const performInsert = async (db, organisation) => {
@@ -138,19 +81,14 @@ const performUpdate = async (db, id, version, updates) => {
     ...validatedUpdates
   }
 
-  const registrations = validatedUpdates.registrations
-    ? mergeItemsWithUpdates(
-        existing.registrations,
-        validatedUpdates.registrations
-      )
-    : existing.registrations
-
-  const accreditations = validatedUpdates.accreditations
-    ? mergeItemsWithUpdates(
-        existing.accreditations,
-        validatedUpdates.accreditations
-      )
-    : existing.accreditations
+  const registrations = mergeSubcollection(
+    existing.registrations,
+    validatedUpdates.registrations
+  )
+  const accreditations = mergeSubcollection(
+    existing.accreditations,
+    validatedUpdates.accreditations
+  )
 
   const result = await db.collection(COLLECTION_NAME).updateOne(
     { _id: validatedId, version },
