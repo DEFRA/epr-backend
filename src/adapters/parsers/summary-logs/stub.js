@@ -6,7 +6,15 @@
 export const createSummaryLogsParser = () => {
   return {
     parse: async (summaryLogBuffer) => {
-      return summaryLogBuffer.toString('utf8')
+      return {
+        meta: {
+          REGISTRATION_NUMBER: {
+            value: 'reg-456',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          }
+        },
+        data: {}
+      }
     }
   }
 }

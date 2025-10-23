@@ -35,13 +35,22 @@ describe('summaryLogsValidator', () => {
     }
 
     summaryLogsParser = {
-      parse: vi.fn().mockResolvedValue({ parsed: 'data' })
+      parse: vi.fn().mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: {
+            value: 'REG-TEST-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          }
+        },
+        data: {}
+      })
     }
 
     summaryLogId = 'summary-log-123'
 
     summaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
+      registrationId: 'REG-TEST-123',
       file: {
         id: 'file-123',
         name: 'test.xlsx',
@@ -312,6 +321,62 @@ describe('summaryLogsValidator', () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Database error')
+  })
+
+  it('sets status to INVALID when registration number is missing', async () => {
+    const summaryLogId = 'test-summary-log-id'
+    const fileId = 'test-file-id'
+    const filename = 'test.xlsx'
+    const registrationId = 'REG12345'
+
+    const summaryLog = {
+      file: {
+        id: fileId,
+        name: filename,
+        s3: {
+          bucket: 'test-bucket',
+          key: 'test-key'
+        }
+      },
+      registrationId
+    }
+
+    const mockUploadsRepository = {
+      findByLocation: vi.fn().mockResolvedValue(Buffer.from('test'))
+    }
+
+    const mockSummaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn().mockResolvedValue()
+    }
+
+    const mockSummaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({
+        meta: {}, // Missing REGISTRATION_NUMBER
+        data: {}
+      })
+    }
+
+    await expect(
+      summaryLogsValidator({
+        uploadsRepository: mockUploadsRepository,
+        summaryLogsRepository: mockSummaryLogsRepository,
+        summaryLogsParser: mockSummaryLogsParser,
+        summaryLogId
+      })
+    ).rejects.toThrow('Invalid summary log: missing registration number')
+
+    expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+      summaryLogId,
+      1,
+      {
+        status: 'invalid',
+        failureReason: 'Invalid summary log: missing registration number'
+      }
+    )
   })
 })
 

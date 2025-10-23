@@ -27,6 +27,7 @@ describe('summaryLogsValidator integration', () => {
 
     initialSummaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
+      registrationId: 'reg-456',
       file: {
         id: `file-${randomUUID()}`,
         name: 'test.xlsx',

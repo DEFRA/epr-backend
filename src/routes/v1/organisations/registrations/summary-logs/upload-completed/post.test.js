@@ -189,6 +189,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
       status: SUMMARY_LOG_STATUS.VALIDATING,
+      registrationId,
       file: {
         id: fileId,
         name: filename,
@@ -215,6 +216,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
       status: SUMMARY_LOG_STATUS.REJECTED,
+      registrationId,
       file: {
         id: fileId,
         name: filename,
@@ -438,6 +440,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
       expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
         status: SUMMARY_LOG_STATUS.REJECTED,
+        registrationId,
         file: {
           id: fileId,
           name: filename,

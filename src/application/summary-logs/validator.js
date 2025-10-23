@@ -196,9 +196,15 @@ export const summaryLogsValidator = async ({
       throw new Error('Something went wrong while retrieving your file upload')
     }
 
-    await parseSummaryLog({
+    const parsed = await parseSummaryLog({
       summaryLogsParser,
       summaryLogBuffer,
+      msg
+    })
+
+    validateRegistrationNumber({
+      parsed,
+      expectedRegistrationId: summaryLog.registrationId,
       msg
     })
 
