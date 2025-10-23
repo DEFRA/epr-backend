@@ -48,17 +48,6 @@ describe('MongoDB organisations repository', () => {
         'Unexpected database error'
       )
     })
-
-    it('returns null for invalid organisation ID in findRegistrationById', async () => {
-      const repository = organisationsRepositoryFactory()
-
-      const result = await repository.findRegistrationById(
-        'invalid-id',
-        'reg-123'
-      )
-
-      expect(result).toBeNull()
-    })
   })
 
   describe('handling missing registrations/accreditations', () => {

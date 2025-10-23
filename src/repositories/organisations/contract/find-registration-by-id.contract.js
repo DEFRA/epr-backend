@@ -121,5 +121,14 @@ export const testFindRegistrationByIdBehaviour = (repositoryFactory) => {
 
       expect(result).toBeNull()
     })
+
+    it('returns null for invalid organisation ID format', async () => {
+      const result = await repository.findRegistrationById(
+        'invalid-id',
+        'reg-123'
+      )
+
+      expect(result).toBeNull()
+    })
   })
 }
