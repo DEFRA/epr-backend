@@ -13,7 +13,5 @@ const collectionName = 'epr-organisations'
 export async function createOrUpdateEPROrganisationCollection(db, collections) {
   if (!collections.find(({ name }) => name === collectionName)) {
     await db.createCollection(collectionName)
-  } else {
-    await db.command({ collMod: collectionName })
   }
 }

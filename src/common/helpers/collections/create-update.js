@@ -83,7 +83,7 @@ export async function createSeedData(db) {
 
   const eprOrganisationDocCount = await db
     .collection('epr-organisations')
-    .count()
+    .countDocuments()
 
   if (eprOrganisationDocCount === 0) {
     await db
