@@ -1,14 +1,14 @@
-import { summaryLogsValidatorWorker } from '#workers/summary-logs/worker/worker.js'
+import { summaryLogsValidator } from '#application/summary-logs/validator.js'
 
 import { createInlineSummaryLogsValidator } from './inline.js'
 
-vi.mock('#workers/summary-logs/worker/worker.js')
+vi.mock('#application/summary-logs/validator.js')
 
 describe('createInlineSummaryLogsValidator', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
-  let summaryLogsValidator
+  let inlineSummaryLogsValidator
   let summaryLogId
 
   beforeEach(() => {
@@ -24,7 +24,7 @@ describe('createInlineSummaryLogsValidator', () => {
       updateStatus: vi.fn()
     }
 
-    summaryLogsValidator = createInlineSummaryLogsValidator(
+    inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository
@@ -32,7 +32,7 @@ describe('createInlineSummaryLogsValidator', () => {
 
     summaryLogId = 'summary-log-123'
 
-    vi.mocked(summaryLogsValidatorWorker).mockResolvedValue(undefined)
+    vi.mocked(summaryLogsValidator).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
@@ -40,9 +40,9 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should call worker with repository and summary log', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await inlineSummaryLogsValidator.validate(summaryLogId)
 
-    expect(summaryLogsValidatorWorker).toHaveBeenCalledWith({
+    expect(summaryLogsValidator).toHaveBeenCalledWith({
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
@@ -51,7 +51,7 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should log error with correct format when worker fails', async () => {
-    vi.mocked(summaryLogsValidatorWorker).mockRejectedValue(
+    vi.mocked(summaryLogsValidator).mockRejectedValue(
       new Error('Worker failed')
     )
 
@@ -59,7 +59,7 @@ describe('createInlineSummaryLogsValidator', () => {
     const { logger } = await import('#common/helpers/logging/logger.js')
     vi.spyOn(logger, 'error')
 
-    await summaryLogsValidator.validate(summaryLogId)
+    await inlineSummaryLogsValidator.validate(summaryLogId)
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(logger.error).toHaveBeenCalledWith(
@@ -72,17 +72,17 @@ describe('createInlineSummaryLogsValidator', () => {
 
   it('should not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(summaryLogId)
+      inlineSummaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 
   it('should not throw when worker fails', async () => {
-    vi.mocked(summaryLogsValidatorWorker).mockRejectedValue(
+    vi.mocked(summaryLogsValidator).mockRejectedValue(
       new Error('Worker failed')
     )
 
     await expect(
-      summaryLogsValidator.validate(summaryLogId)
+      inlineSummaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 })
