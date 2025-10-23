@@ -2,6 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'
+import { ObjectId } from 'mongodb'
 
 describe('MongoDB organisations repository', () => {
   let server
@@ -59,7 +60,7 @@ describe('MongoDB organisations repository', () => {
       await server.db
         .collection(COLLECTION_NAME)
         .updateOne(
-          { _id: organisation.id },
+          { _id: new ObjectId(organisation.id) },
           { $set: { registrations: null, accreditations: null } }
         )
 
