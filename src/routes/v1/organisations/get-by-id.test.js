@@ -40,9 +40,12 @@ describe('GET /v1/organisations/{id}', () => {
     })
 
     it('includes Cache-Control header in successful response', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${initial[0].id}`
+        url: `/v1/organisations/${org.id}`
       })
 
       expect(response.headers['cache-control']).toBe(
