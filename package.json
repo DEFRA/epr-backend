@@ -23,7 +23,6 @@
   },
   "scripts": {
     "adr:generate:toc": "adr generate toc > docs/architecture/decisions/index.md",
-    "db:seed": "./scripts/import-fixtures.sh",
     "docker:dev": "NODE_ENV=development npm run server:watch",
     "dev": "NODE_ENV=development npm run server:watch",
     "dev:debug": "NODE_ENV=development npm run server:debug",
