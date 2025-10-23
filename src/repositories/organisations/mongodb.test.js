@@ -60,7 +60,7 @@ describe('MongoDB organisations repository', () => {
       await server.db
         .collection(COLLECTION_NAME)
         .updateOne(
-          { _id: new ObjectId(organisation.id) },
+          { _id: ObjectId.createFromHexString(organisation.id) },
           { $set: { registrations: null, accreditations: null } }
         )
 

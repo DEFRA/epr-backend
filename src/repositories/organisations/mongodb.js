@@ -49,7 +49,7 @@ const performInsert = async (db, organisation) => {
 
   try {
     await db.collection(COLLECTION_NAME).insertOne({
-      _id: new ObjectId(id),
+      _id: ObjectId.createFromHexString(id),
       version: 1,
       schemaVersion: SCHEMA_VERSION,
       statusHistory: createInitialStatusHistory(),
@@ -71,7 +71,7 @@ const performUpdate = async (db, id, version, updates) => {
 
   const existing = await db
     .collection(COLLECTION_NAME)
-    .findOne({ _id: new ObjectId(validatedId) })
+    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
   if (!existing) {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
@@ -92,7 +92,7 @@ const performUpdate = async (db, id, version, updates) => {
   )
 
   const result = await db.collection(COLLECTION_NAME).updateOne(
-    { _id: new ObjectId(validatedId), version },
+    { _id: ObjectId.createFromHexString(validatedId), version },
     {
       $set: {
         ...merged,
@@ -122,7 +122,7 @@ const performFindById = async (db, id) => {
 
   const doc = await db
     .collection(COLLECTION_NAME)
-    .findOne({ _id: new ObjectId(validatedId) })
+    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
   if (!doc) {
     throw Boom.notFound(`Organisation with id ${id} not found`)
