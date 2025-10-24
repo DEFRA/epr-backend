@@ -18,19 +18,18 @@ describe('ExcelJSSummaryLogsParser', () => {
     )
   })
 
-  it('should parse Excel buffer and return hardcoded metadata', async () => {
+  it('should parse Excel buffer and return empty metadata', async () => {
     const result = await parser.parse(excelBuffer)
 
     expect(result).toBeDefined()
     expect(result.meta).toBeDefined()
-    expect(result.meta.WASTE_REGISTRATION_NUMBER).toBeDefined()
-    expect(result.meta.WASTE_REGISTRATION_NUMBER.value).toBe('WRN-123')
+    expect(result.meta).toEqual({})
   })
 
-  it('should return consistent hardcoded data', async () => {
+  it('should return consistent empty metadata', async () => {
     const result = await parser.parse(excelBuffer)
 
-    expect(result.meta.WASTE_REGISTRATION_NUMBER.value).toBe('WRN-123')
+    expect(result.meta).toEqual({})
   })
 
   it('should throw error for invalid Excel buffer', async () => {

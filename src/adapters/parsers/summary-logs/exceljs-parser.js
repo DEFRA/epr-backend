@@ -9,11 +9,7 @@ export class ExcelJSSummaryLogsParser {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(summaryLogBuffer)
     return {
-      meta: {
-        WASTE_REGISTRATION_NUMBER: {
-          value: 'WRN-123'
-        }
-      }
+      meta: {}
     }
   }
 }
