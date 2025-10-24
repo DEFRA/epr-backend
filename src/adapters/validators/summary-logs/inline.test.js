@@ -1,7 +1,11 @@
-import { summaryLogsValidator } from '#application/summary-logs/validator.js'
+import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
+import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
 
 import { createInlineSummaryLogsValidator } from './inline.js'
 
+vi.mock('#application/summary-logs/extractor.js')
+vi.mock('#application/summary-logs/updater.js')
 vi.mock('#application/summary-logs/validator.js')
 
 describe('createInlineSummaryLogsValidator', () => {
@@ -9,6 +13,9 @@ describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsParser
   let summaryLogsRepository
   let organisationsRepository
+  let mockSummaryLogExtractor
+  let mockSummaryLogUpdater
+  let mockSummaryLogsValidator
   let inlineSummaryLogsValidator
   let summaryLogId
 
@@ -29,6 +36,26 @@ describe('createInlineSummaryLogsValidator', () => {
       findRegistrationById: vi.fn()
     }
 
+    mockSummaryLogExtractor = {
+      extract: vi.fn()
+    }
+
+    mockSummaryLogUpdater = {
+      update: vi.fn()
+    }
+
+    mockSummaryLogsValidator = {
+      validate: vi.fn().mockResolvedValue(undefined)
+    }
+
+    vi.mocked(SummaryLogExtractor).mockImplementation(
+      () => mockSummaryLogExtractor
+    )
+    vi.mocked(SummaryLogUpdater).mockImplementation(() => mockSummaryLogUpdater)
+    vi.mocked(SummaryLogsValidator).mockImplementation(
+      () => mockSummaryLogsValidator
+    )
+
     inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
       summaryLogsParser,
@@ -37,28 +64,42 @@ describe('createInlineSummaryLogsValidator', () => {
     )
 
     summaryLogId = 'summary-log-123'
-
-    vi.mocked(summaryLogsValidator).mockResolvedValue(undefined)
   })
 
   afterEach(() => {
     vi.resetAllMocks()
   })
 
-  it('should call worker with repository and summary log', async () => {
-    await inlineSummaryLogsValidator.validate(summaryLogId)
-
-    expect(summaryLogsValidator).toHaveBeenCalledWith({
+  it('should create summary log extractor with dependencies', () => {
+    expect(SummaryLogExtractor).toHaveBeenCalledWith({
       uploadsRepository,
-      summaryLogsParser,
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogId
+      summaryLogsParser
     })
   })
 
+  it('should create summary log updater with dependencies', () => {
+    expect(SummaryLogUpdater).toHaveBeenCalledWith({
+      summaryLogsRepository
+    })
+  })
+
+  it('should create summary logs validator with dependencies', () => {
+    expect(SummaryLogsValidator).toHaveBeenCalledWith({
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogExtractor: mockSummaryLogExtractor,
+      summaryLogUpdater: mockSummaryLogUpdater
+    })
+  })
+
+  it('should call validator with summary log id', async () => {
+    await inlineSummaryLogsValidator.validate(summaryLogId)
+
+    expect(mockSummaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
+  })
+
   it('should log error with correct format when worker fails', async () => {
-    vi.mocked(summaryLogsValidator).mockRejectedValue(
+    mockSummaryLogsValidator.validate.mockRejectedValue(
       new Error('Worker failed')
     )
 
@@ -84,7 +125,7 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should not throw when worker fails', async () => {
-    vi.mocked(summaryLogsValidator).mockRejectedValue(
+    mockSummaryLogsValidator.validate.mockRejectedValue(
       new Error('Worker failed')
     )
 

@@ -1,7 +1,9 @@
 import { randomUUID } from 'crypto'
 
-import { summaryLogsValidator } from '#application/summary-logs/validator.js'
-import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
+import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
+import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -12,9 +14,12 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 
-describe('summaryLogsValidator integration', () => {
+describe('SummaryLogsValidator integration', () => {
   let uploadsRepository
   let summaryLogsParser
+  let summaryLogExtractor
+  let summaryLogUpdater
+  let summaryLogsValidator
   let summaryLogsRepository
   let organisationsRepository
 
@@ -23,6 +28,7 @@ describe('summaryLogsValidator integration', () => {
 
   beforeEach(async () => {
     uploadsRepository = createInMemoryUploadsRepository()
+    summaryLogsParser = new ExcelJSSummaryLogsParser()
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
 
     const testOrg = buildOrganisation({
@@ -40,9 +46,20 @@ describe('summaryLogsValidator integration', () => {
 
     organisationsRepository = createInMemoryOrganisationsRepository([testOrg])()
 
-    summaryLogsParser = createSummaryLogsParser({
-      registrationNumber: testOrg.registrations[0].id,
-      wasteRegistrationNumber: 'WRN-123'
+    summaryLogExtractor = new SummaryLogExtractor({
+      uploadsRepository,
+      summaryLogsParser
+    })
+
+    summaryLogUpdater = new SummaryLogUpdater({
+      summaryLogsRepository
+    })
+
+    summaryLogsValidator = new SummaryLogsValidator({
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogExtractor,
+      summaryLogUpdater
     })
 
     summaryLogId = randomUUID()
@@ -63,7 +80,7 @@ describe('summaryLogsValidator integration', () => {
     }
   })
 
-  it('should update status to validated when file is fetched successfully', async () => {
+  it('should update status as expected when validation succeeds', async () => {
     await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
 
     const inserted = await summaryLogsRepository.findById(summaryLogId)
@@ -73,13 +90,7 @@ describe('summaryLogsValidator integration', () => {
       summaryLog: initialSummaryLog
     })
 
-    await summaryLogsValidator({
-      uploadsRepository,
-      summaryLogsRepository,
-      summaryLogsParser,
-      organisationsRepository,
-      summaryLogId
-    })
+    await summaryLogsValidator.validate(summaryLogId)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
 
@@ -92,7 +103,7 @@ describe('summaryLogsValidator integration', () => {
     })
   })
 
-  it('should update status to invalid with failure reason when file is not found', async () => {
+  it('should update status as expected when validation fails because the file could not be found', async () => {
     initialSummaryLog.file.s3.key = 'some-other-key'
     await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
 
@@ -103,13 +114,7 @@ describe('summaryLogsValidator integration', () => {
       summaryLog: initialSummaryLog
     })
 
-    await summaryLogsValidator({
-      uploadsRepository,
-      summaryLogsRepository,
-      summaryLogsParser,
-      organisationsRepository,
-      summaryLogId
-    }).catch((err) => err)
+    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
 
@@ -123,7 +128,7 @@ describe('summaryLogsValidator integration', () => {
     })
   })
 
-  it('should still update status even if file fetch fails', async () => {
+  it('should update status as expected when validation fails because the file could not be fetched', async () => {
     await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
 
     const inserted = await summaryLogsRepository.findById(summaryLogId)
@@ -137,13 +142,19 @@ describe('summaryLogsValidator integration', () => {
       throwError: new Error('S3 access denied')
     })
 
-    await summaryLogsValidator({
+    const failingSummaryLogExtractor = new SummaryLogExtractor({
       uploadsRepository: failingUploadsRepository,
+      summaryLogsParser
+    })
+
+    const failingSummaryLogsValidator = new SummaryLogsValidator({
       summaryLogsRepository,
-      summaryLogsParser,
       organisationsRepository,
-      summaryLogId
-    }).catch((err) => err)
+      summaryLogExtractor: failingSummaryLogExtractor,
+      summaryLogUpdater
+    })
+
+    await failingSummaryLogsValidator.validate(summaryLogId).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
 
@@ -153,6 +164,49 @@ describe('summaryLogsValidator integration', () => {
         ...initialSummaryLog,
         status: SUMMARY_LOG_STATUS.INVALID,
         failureReason: 'S3 access denied'
+      }
+    })
+  })
+
+  it('should update status as expected when validation fails because the file could not be parsed', async () => {
+    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
+
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(inserted).toEqual({
+      version: 1,
+      summaryLog: initialSummaryLog
+    })
+
+    const failingParser = {
+      parse: vi
+        .fn()
+        .mockRejectedValue(
+          new Error('File is corrupt and cannot be parsed as zip archive')
+        )
+    }
+
+    const failingSummaryLogExtractor = new SummaryLogExtractor({
+      uploadsRepository,
+      summaryLogsParser: failingParser
+    })
+
+    const failingSummaryLogsValidator = new SummaryLogsValidator({
+      summaryLogsRepository,
+      summaryLogExtractor: failingSummaryLogExtractor,
+      summaryLogUpdater
+    })
+
+    await failingSummaryLogsValidator.validate(summaryLogId).catch((err) => err)
+
+    const updated = await summaryLogsRepository.findById(summaryLogId)
+
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...initialSummaryLog,
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'File is corrupt and cannot be parsed as zip archive'
       }
     })
   })

@@ -1,4 +1,6 @@
-import { summaryLogsValidator } from '#application/summary-logs/validator.js'
+import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
+import { SummaryLogsValidator as SummaryLogsValidatorClass } from '#application/summary-logs/validator.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -16,15 +18,25 @@ export const createInlineSummaryLogsValidator = (
   summaryLogsRepository,
   organisationsRepository
 ) => {
+  const summaryLogExtractor = new SummaryLogExtractor({
+    uploadsRepository,
+    summaryLogsParser
+  })
+
+  const summaryLogUpdater = new SummaryLogUpdater({
+    summaryLogsRepository
+  })
+
+  const summaryLogsValidator = new SummaryLogsValidatorClass({
+    summaryLogsRepository,
+    organisationsRepository,
+    summaryLogExtractor,
+    summaryLogUpdater
+  })
+
   return {
     validate: async (summaryLogId) => {
-      summaryLogsValidator({
-        uploadsRepository,
-        summaryLogsRepository,
-        summaryLogsParser,
-        organisationsRepository,
-        summaryLogId
-      }).catch((error) => {
+      summaryLogsValidator.validate(summaryLogId).catch((error) => {
         logger.error({
           error,
           message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
