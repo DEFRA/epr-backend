@@ -161,8 +161,8 @@ export const createOrganisationsRepository = (db) => () => ({
     let validatedOrgId
     try {
       validatedOrgId = validateId(organisationId)
-    } catch (error) {
-      // Invalid organisation ID format - treat as not found
+    } catch {
+      // Invalid organisation ID format - treat as not found per contract test
       return null
     }
 
