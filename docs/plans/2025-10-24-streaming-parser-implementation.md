@@ -17,43 +17,60 @@ Implement marker-based parsing in `ExcelJSSummaryLogsParser` using a streaming s
 
 ## State Machine Design
 
-### States
+### State Structure
 
-1. **`IDLE`** - Scanning for markers
-2. **`CAPTURING_METADATA`** - Next cell contains metadata value
-   - Context: `{ metadataName, location }`
-3. **`CAPTURING_HEADERS`** - Collecting column headers
-   - Context: `{ sectionName, headers: [], location }`
-4. **`CAPTURING_ROWS`** - Collecting data rows
-   - Context: `{ sectionName, headers: [...], rows: [], currentRow: [] }`
+The parser maintains:
 
-### State Transitions
+- **`metadataContext`** - Current metadata being captured or null
+  - `{ metadataName, location }`
+- **`activeCollections`** - Array of data sections being captured simultaneously
+  - Each: `{ sectionName, state: 'HEADERS' | 'ROWS', startColumn, headers: [], rows: [], location }`
 
-```
-IDLE + cell starts with '__EPR_META_X'
-  → CAPTURING_METADATA { metadataName: 'X', location }
+This allows multiple side-by-side tables to be captured concurrently on the same row.
 
-CAPTURING_METADATA + any cell value
-  → Emit metadata { name, value, location }
-  → IDLE
+### Processing Logic
 
-IDLE + cell starts with '__EPR_DATA_X'
-  → CAPTURING_HEADERS { sectionName: 'X', headers: [], location }
+**For each cell:**
 
-CAPTURING_HEADERS + non-empty cell
-  → Add to headers (null if '__EPR_SKIP_COLUMN')
-  → Stay in CAPTURING_HEADERS
+1. **Check for metadata marker** (`__EPR_META_X`):
+   - Set `metadataContext = { metadataName, location }`
+   - Next cell will be captured as metadata value
 
-CAPTURING_HEADERS + empty cell
-  → CAPTURING_ROWS { sectionName, headers, rows: [], currentRow: [] }
+2. **If metadata context is active**:
+   - Emit metadata `{ name, value, location }`
+   - Clear `metadataContext`
 
-CAPTURING_ROWS + end of row
-  → If currentRow all empty: emit data section, → IDLE
-  → Else: push currentRow to rows, start new currentRow
+3. **Check for data marker** (`__EPR_DATA_X`):
+   - Add new collection to `activeCollections`:
+     ```javascript
+     {
+       sectionName: 'X',
+       state: 'HEADERS',
+       startColumn: currentColumn + 1,
+       headers: [],
+       rows: [],
+       location: { sheet, row, column }
+     }
+     ```
 
-CAPTURING_ROWS + cell
-  → Add cell value to currentRow (null at skip column positions)
-```
+4. **For each active collection** (based on column position):
+   - **If state is 'HEADERS'**:
+     - Empty cell → transition to state 'ROWS'
+     - `__EPR_SKIP_COLUMN` → add null to headers
+     - Non-empty → add to headers
+   - **If state is 'ROWS'**:
+     - Add cell value to current row (null for empty cells at skip positions)
+
+**At end of each row:**
+
+- For collections in 'HEADERS' state → transition to 'ROWS'
+- For collections in 'ROWS' state:
+  - If current row is completely empty → emit collection, remove from active
+  - Else → append current row to rows, start new current row
+
+**At end of worksheet:**
+
+- Emit any remaining active collections
 
 ## Implementation Structure
 
