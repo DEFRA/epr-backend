@@ -46,4 +46,25 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     await expect(parser.parse(emptyBuffer)).rejects.toThrow()
   })
+
+  describe('marker-based parsing', () => {
+    it('should extract single metadata marker', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Sheet1')
+
+      worksheet.getCell('A1').value = '__EPR_META_PROCESSING_TYPE'
+      worksheet.getCell('B1').value = 'REPROCESSOR'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta).toEqual({
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR',
+          location: { sheet: 'Sheet1', row: 1, column: 'B' }
+        }
+      })
+    })
+  })
 })
