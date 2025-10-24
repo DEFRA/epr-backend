@@ -24,12 +24,15 @@ describe('ExcelJSSummaryLogsParser', () => {
     expect(result).toBeDefined()
     expect(result.meta).toBeDefined()
     expect(result.meta).toEqual({})
+    expect(result.data).toBeDefined()
+    expect(result.data).toEqual({})
   })
 
   it('should return consistent empty metadata', async () => {
     const result = await parser.parse(excelBuffer)
 
     expect(result.meta).toEqual({})
+    expect(result.data).toEqual({})
   })
 
   it('should throw error for invalid Excel buffer', async () => {
