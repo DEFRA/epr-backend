@@ -118,5 +118,47 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 2, column: 'B' }
       })
     })
+
+    it('extracts data section headers', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      sheet.getCell('B1').value = 'OUR_REFERENCE'
+      sheet.getCell('C1').value = 'DATE_RECEIVED'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const result = await parser.parse(buffer)
+
+      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: []
+      })
+    })
+
+    it('extracts data section headers ending with empty cell', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      sheet.getCell('B1').value = 'OUR_REFERENCE'
+      sheet.getCell('C1').value = 'DATE_RECEIVED'
+      sheet.getCell('D1').value = ''
+      sheet.getCell('E1').value = 'IGNORED'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const result = await parser.parse(buffer)
+
+      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: []
+      })
+    })
   })
 })

@@ -10,8 +10,7 @@ export class ExcelJSSummaryLogsParser {
     await workbook.xlsx.load(summaryLogBuffer)
 
     const result = { meta: {}, data: {} }
-    // eslint-disable-next-line no-unused-vars
-    const activeCollections = [] // Used in later tasks for data section tracking
+    const activeCollections = []
     let metadataContext = null
 
     workbook.eachSheet((worksheet) => {
@@ -20,6 +19,7 @@ export class ExcelJSSummaryLogsParser {
           const cellValue = cell.value
           const cellValueStr = cellValue?.toString() || ''
 
+          // Check for metadata marker
           if (!metadataContext && cellValueStr.startsWith('__EPR_META_')) {
             const metadataName = cellValueStr.replace('__EPR_META_', '')
             metadataContext = {
@@ -36,7 +36,63 @@ export class ExcelJSSummaryLogsParser {
             }
             metadataContext = null
           }
+
+          // Check for data marker
+          if (cellValueStr.startsWith('__EPR_DATA_')) {
+            const sectionName = cellValueStr.replace('__EPR_DATA_', '')
+            activeCollections.push({
+              sectionName,
+              state: 'HEADERS',
+              startColumn: colNumber + 1,
+              headers: [],
+              rows: [],
+              location: {
+                sheet: worksheet.name,
+                row: rowNumber,
+                column: this.columnToLetter(colNumber + 1)
+              }
+            })
+          }
+
+          // Process active collections
+          activeCollections.forEach((collection) => {
+            if (colNumber >= collection.startColumn) {
+              if (collection.state === 'HEADERS') {
+                if (cellValueStr === '') {
+                  // Empty cell marks end of headers
+                  collection.state = 'ROWS'
+                } else {
+                  collection.headers.push(cellValueStr)
+                }
+              }
+            }
+          })
         })
+
+        // At end of row, transition collections from HEADERS to ROWS
+        activeCollections.forEach((collection) => {
+          if (collection.state === 'HEADERS') {
+            collection.state = 'ROWS'
+          }
+        })
+
+        // Emit collections with headers but no rows yet
+        const toEmit = activeCollections.filter(
+          (c) => c.state === 'ROWS' && c.rows.length === 0
+        )
+        toEmit.forEach((collection) => {
+          result.data[collection.sectionName] = {
+            location: collection.location,
+            headers: collection.headers,
+            rows: []
+          }
+        })
+        // Remove emitted collections
+        activeCollections.splice(
+          0,
+          activeCollections.length,
+          ...activeCollections.filter((c) => !toEmit.includes(c))
+        )
       })
     })
 
