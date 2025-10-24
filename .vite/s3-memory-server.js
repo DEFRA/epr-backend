@@ -6,6 +6,7 @@ const buckets = new Map()
 
 function handleRequest(req, res) {
   const { pathname } = parse(req.url)
+  // const { pathname } = new URL(req.url, 'http://dummy')
   const pathParts = pathname.split('/').filter(Boolean)
 
   // Set CORS headers for S3 compatibility
