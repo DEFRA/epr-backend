@@ -72,30 +72,38 @@ export class ExcelJSSummaryLogsParser {
     ]
   }
 
+  processHeaderCell(collection, cellValueStr) {
+    if (cellValueStr === '') {
+      return { ...collection, state: 'ROWS' }
+    } else if (cellValueStr === '__EPR_SKIP_COLUMN') {
+      return { ...collection, headers: [...collection.headers, null] }
+    } else {
+      return { ...collection, headers: [...collection.headers, cellValueStr] }
+    }
+  }
+
+  processRowCell(collection, cellValue) {
+    const normalizedValue =
+      cellValue === null || cellValue === undefined || cellValue === ''
+        ? null
+        : cellValue
+    return {
+      ...collection,
+      currentRow: [...collection.currentRow, normalizedValue]
+    }
+  }
+
   updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber) {
     const columnIndex = colNumber - collection.startColumn
 
     if (columnIndex >= 0 && collection.state === 'HEADERS') {
-      if (cellValueStr === '') {
-        return { ...collection, state: 'ROWS' }
-      } else if (cellValueStr === '__EPR_SKIP_COLUMN') {
-        return { ...collection, headers: [...collection.headers, null] }
-      } else {
-        return { ...collection, headers: [...collection.headers, cellValueStr] }
-      }
+      return this.processHeaderCell(collection, cellValueStr)
     } else if (
       columnIndex >= 0 &&
       columnIndex < collection.headers.length &&
       collection.state === 'ROWS'
     ) {
-      const normalizedValue =
-        cellValue === null || cellValue === undefined || cellValue === ''
-          ? null
-          : cellValue
-      return {
-        ...collection,
-        currentRow: [...collection.currentRow, normalizedValue]
-      }
+      return this.processRowCell(collection, cellValue)
     } else {
       return collection
     }
@@ -120,6 +128,16 @@ export class ExcelJSSummaryLogsParser {
       }
     } else {
       return collection
+    }
+  }
+
+  emitCollectionsToResult(state, collections) {
+    for (const collection of collections) {
+      state.result.data[collection.sectionName] = {
+        location: collection.location,
+        headers: collection.headers,
+        rows: collection.rows
+      }
     }
   }
 
@@ -194,28 +212,17 @@ export class ExcelJSSummaryLogsParser {
         )
 
         // Emit completed collections and filter them out
-        state.activeCollections
-          .filter((c) => c.complete)
-          .forEach((collection) => {
-            state.result.data[collection.sectionName] = {
-              location: collection.location,
-              headers: collection.headers,
-              rows: collection.rows
-            }
-          })
+        const completedCollections = state.activeCollections.filter(
+          (c) => c.complete
+        )
+        this.emitCollectionsToResult(state, completedCollections)
         state.activeCollections = state.activeCollections.filter(
           (c) => !c.complete
         )
       }
 
       // Emit remaining collections at worksheet end
-      state.activeCollections.forEach((collection) => {
-        state.result.data[collection.sectionName] = {
-          location: collection.location,
-          headers: collection.headers,
-          rows: collection.rows
-        }
-      })
+      this.emitCollectionsToResult(state, state.activeCollections)
       state.activeCollections = []
     }
 
@@ -231,7 +238,7 @@ export class ExcelJSSummaryLogsParser {
     while (colNumber > 0) {
       const remainder = (colNumber - 1) % ExcelJSSummaryLogsParser.ALPHABET_SIZE
       column =
-        String.fromCharCode(
+        String.fromCodePoint(
           ExcelJSSummaryLogsParser.ASCII_CODE_OFFSET + remainder
         ) + column
       colNumber = Math.floor(
@@ -250,7 +257,7 @@ export class ExcelJSSummaryLogsParser {
     for (let i = 0; i < letter.length; i++) {
       result =
         result * ExcelJSSummaryLogsParser.ALPHABET_SIZE +
-        (letter.charCodeAt(i) - 64)
+        (letter.codePointAt(i) - 64)
     }
     return result
   }
