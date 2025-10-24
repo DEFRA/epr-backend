@@ -1,4 +1,5 @@
-*.config.*
+vitest.config.js
+eslint.config.js
 *.test.*
 __fixtures__
 src/test

@@ -13,17 +13,17 @@ The scripts generate test data and measure performance metrics (insert, read, up
 
 ## Directory Structure
 
-```
-scripts/
-├── single-nested-collection/
-│   ├── create-collection.js          # Creates collection with nested structure
-│   ├── benchmark-write-read.js       # Runs benchmarks for nested design
-│   └── data-generators.js            # Test data generation
-│
-└── separate-collections/
-    ├── create-collections.js         # Creates three separate collections
-    ├── benchmark-separate-collections.js  # Runs benchmarks for normalized design
-    └── data-generators.js            # Test data generation
+```sh
+mongo-performance-test/
+  ├── single-nested-collection/
+  │   ├── benchmark-write-read.js             # Runs benchmarks for nested design
+  │   ├── create-collection.js                # Creates collection with nested structure
+  │   └── data-generators.js                  # Test data generation
+  │
+  └── separate-collections/
+      ├── benchmark-separate-collections.js   # Runs benchmarks for normalized design
+      ├── create-collections.js               # Creates three separate collections
+      └── data-generators.js                  # Test data generation
 ```
 
 ## Prerequisites
