@@ -18,10 +18,11 @@ for (const item of ns) {
 
 export default [
   ...ns,
-  ...nodePlugin.configs['flat/recommended-module']
-  // {
-  //   rules: {
-  //     'n/no-deprecated-api': 'error'
-  //   }
-  // }
+  nodePlugin.configs['flat/recommended-module'],
+  {
+    files: ['.vite/**/*.js', '**/*.contract.js'],
+    rules: {
+      'n/no-unpublished-import': 'off'
+    }
+  }
 ]
