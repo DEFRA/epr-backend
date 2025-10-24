@@ -16,22 +16,27 @@ export class ExcelJSSummaryLogsParser {
     const activeCollections = []
     let metadataContext = null
 
-    workbook.eachSheet((worksheet) => {
+    for (const worksheet of workbook.worksheets) {
+      const rows = []
       worksheet.eachRow((row, rowNumber) => {
+        rows.push({ row, rowNumber })
+      })
+
+      for (const { row, rowNumber } of rows) {
         const cells = []
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
           cells.push({ cell, colNumber })
         })
 
         // Initialize current row for each active collection in ROWS state
-        activeCollections.forEach((collection) => {
+        for (const collection of activeCollections) {
           if (collection.state === 'ROWS') {
             collection.currentRow = []
           }
-        })
+        }
 
         // Process each cell
-        cells.forEach(({ cell, colNumber }) => {
+        for (const { cell, colNumber } of cells) {
           const cellValue = cell.value
           const cellValueStr = cellValue?.toString() || ''
 
@@ -63,6 +68,7 @@ export class ExcelJSSummaryLogsParser {
               headers: [],
               rows: [],
               currentRow: [],
+              complete: false,
               location: {
                 sheet: worksheet.name,
                 row: rowNumber,
@@ -72,7 +78,7 @@ export class ExcelJSSummaryLogsParser {
           }
 
           // Process active collections
-          activeCollections.forEach((collection) => {
+          for (const collection of activeCollections) {
             const columnIndex = colNumber - collection.startColumn
 
             if (columnIndex >= 0 && collection.state === 'HEADERS') {
@@ -98,11 +104,11 @@ export class ExcelJSSummaryLogsParser {
                   : cellValue
               )
             }
-          })
-        })
+          }
+        }
 
         // At end of row, process collections
-        activeCollections.forEach((collection) => {
+        for (const collection of activeCollections) {
           if (collection.state === 'HEADERS') {
             collection.state = 'ROWS'
           } else if (
@@ -127,7 +133,7 @@ export class ExcelJSSummaryLogsParser {
               collection.rows.push(collection.currentRow)
             }
           }
-        })
+        }
 
         // Remove completed collections
         activeCollections.splice(
@@ -135,18 +141,18 @@ export class ExcelJSSummaryLogsParser {
           activeCollections.length,
           ...activeCollections.filter((c) => !c.complete)
         )
-      })
+      }
 
       // At end of worksheet, emit remaining collections
-      activeCollections.forEach((collection) => {
+      for (const collection of activeCollections) {
         result.data[collection.sectionName] = {
           location: collection.location,
           headers: collection.headers,
           rows: collection.rows
         }
-      })
+      }
       activeCollections.splice(0, activeCollections.length)
-    })
+    }
 
     return result
   }
