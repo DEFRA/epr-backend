@@ -1,4 +1,3 @@
-import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInlineSummaryLogsValidator } from '#adapters/validators/summary-logs/inline.js'
 import {
@@ -67,7 +66,6 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsParser = new ExcelJSSummaryLogsParser()
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
     const testOrg = buildOrganisation({
@@ -87,6 +85,18 @@ describe('Summary logs integration', () => {
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
     ])()
+
+    const summaryLogsParser = {
+      parse: async () => ({
+        meta: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          }
+        },
+        data: {}
+      })
+    }
 
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
