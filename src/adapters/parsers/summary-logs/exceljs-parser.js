@@ -56,12 +56,20 @@ export class ExcelJSSummaryLogsParser {
 
           // Process active collections
           activeCollections.forEach((collection) => {
-            if (colNumber >= collection.startColumn) {
-              if (collection.state === 'HEADERS') {
-                if (cellValueStr === '') {
-                  // Empty cell marks end of headers
-                  collection.state = 'ROWS'
-                } else {
+            const columnIndex = colNumber - collection.startColumn
+
+            // Only process cells in this collection's range
+            if (columnIndex >= 0 && collection.state === 'HEADERS') {
+              if (cellValueStr === '') {
+                // Empty cell marks end of headers
+                collection.state = 'ROWS'
+              } else if (
+                columnIndex < collection.headers.length ||
+                collection.headers.length === 0 ||
+                columnIndex === collection.headers.length
+              ) {
+                // Only add header if we're building contiguous headers
+                if (columnIndex === collection.headers.length) {
                   collection.headers.push(cellValueStr)
                 }
               }
@@ -75,25 +83,17 @@ export class ExcelJSSummaryLogsParser {
             collection.state = 'ROWS'
           }
         })
-
-        // Emit collections with headers but no rows yet
-        const toEmit = activeCollections.filter(
-          (c) => c.state === 'ROWS' && c.rows.length === 0
-        )
-        toEmit.forEach((collection) => {
-          result.data[collection.sectionName] = {
-            location: collection.location,
-            headers: collection.headers,
-            rows: []
-          }
-        })
-        // Remove emitted collections
-        activeCollections.splice(
-          0,
-          activeCollections.length,
-          ...activeCollections.filter((c) => !toEmit.includes(c))
-        )
       })
+
+      // At end of worksheet, emit remaining collections
+      activeCollections.forEach((collection) => {
+        result.data[collection.sectionName] = {
+          location: collection.location,
+          headers: collection.headers,
+          rows: collection.rows
+        }
+      })
+      activeCollections.splice(0, activeCollections.length)
     })
 
     return result
