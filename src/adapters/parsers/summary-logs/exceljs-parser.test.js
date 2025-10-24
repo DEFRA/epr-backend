@@ -335,5 +335,57 @@ describe('ExcelJSSummaryLogsParser', () => {
         rows: [['A1', null, 'C1']]
       })
     })
+
+    it('handles realistic structure with metadata, skip columns, and sparse data', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Summary')
+
+      sheet.getCell('A1').value = '__EPR_META_PROCESSING_TYPE'
+      sheet.getCell('B1').value = 'REPROCESSOR'
+      sheet.getCell('A2').value = '__EPR_META_MATERIAL'
+      sheet.getCell('B2').value = 'Paper and board'
+
+      sheet.getCell('A4').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      sheet.getCell('B4').value = 'OUR_REFERENCE'
+      sheet.getCell('C4').value = 'DATE_RECEIVED'
+      sheet.getCell('D4').value = '__EPR_SKIP_COLUMN'
+      sheet.getCell('E4').value = 'SUPPLIER_REF'
+      sheet.getCell('F4').value = 'SUPPLIER_NAME'
+      sheet.getCell('B5').value = 12345678910
+      sheet.getCell('C5').value = '2025-05-25'
+      sheet.getCell('E5').value = 'ABC123'
+      sheet.getCell('F5').value = 'Joe Bloggs'
+      sheet.getCell('B6').value = 98765432100
+      sheet.getCell('C6').value = '2025-05-26'
+      sheet.getCell('F6').value = 'Jane Smith'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Summary', row: 1, column: 'B' }
+      })
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Summary', row: 2, column: 'B' }
+      })
+      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+        location: { sheet: 'Summary', row: 4, column: 'B' },
+        headers: [
+          'OUR_REFERENCE',
+          'DATE_RECEIVED',
+          null,
+          'SUPPLIER_REF',
+          'SUPPLIER_NAME'
+        ],
+        rows: [
+          [12345678910, '2025-05-25', null, 'ABC123', 'Joe Bloggs'],
+          [98765432100, '2025-05-26', null, null, 'Jane Smith']
+        ]
+      })
+    })
   })
 })
