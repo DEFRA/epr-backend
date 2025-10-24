@@ -278,5 +278,38 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.TRANSITION_TEST.rows).toHaveLength(1)
     })
+
+    it('handles skip column markers', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_WASTE_RECEIVED'
+      sheet.getCell('B1').value = 'OUR_REFERENCE'
+      sheet.getCell('C1').value = 'DATE_RECEIVED'
+      sheet.getCell('D1').value = '__EPR_SKIP_COLUMN'
+      sheet.getCell('E1').value = 'SUPPLIER_REF'
+      sheet.getCell('F1').value = 'SUPPLIER_NAME'
+      sheet.getCell('B2').value = 12345678910
+      sheet.getCell('C2').value = '2025-05-25'
+      sheet.getCell('E2').value = 'ABC123'
+      sheet.getCell('F2').value = 'Joe Blogs'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const result = await parser.parse(buffer)
+
+      expect(result.data.WASTE_RECEIVED).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: [
+          'OUR_REFERENCE',
+          'DATE_RECEIVED',
+          null,
+          'SUPPLIER_REF',
+          'SUPPLIER_NAME'
+        ],
+        rows: [[12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs']]
+      })
+    })
   })
 })

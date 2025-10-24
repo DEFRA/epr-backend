@@ -76,6 +76,8 @@ export class ExcelJSSummaryLogsParser {
               // Capturing headers
               if (cellValueStr === '') {
                 collection.state = 'ROWS'
+              } else if (cellValueStr === '__EPR_SKIP_COLUMN') {
+                collection.headers.push(null)
               } else {
                 collection.headers.push(cellValueStr)
               }
