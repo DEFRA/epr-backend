@@ -167,7 +167,7 @@ export const createOrganisationsRepository = (db) => () => ({
 
     const doc = await db
       .collection(COLLECTION_NAME)
-      .findOne({ _id: validatedOrgId })
+      .findOne({ _id: ObjectId.createFromHexString(validatedOrgId) })
     if (!doc) return null
 
     const registration = doc.registrations?.find((r) => r.id === registrationId)
