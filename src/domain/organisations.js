@@ -43,7 +43,8 @@ export const BUSINESS_TYPE = {
 
 export const PARTNER_TYPE = {
   COMPANY: 'company',
-  INDIVIDUAL: 'individual'
+  INDIVIDUAL: 'individual',
+  CORPORATE: 'corporate'
 }
 
 export const PARTNERSHIP_TYPE = {

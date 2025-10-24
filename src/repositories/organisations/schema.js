@@ -37,8 +37,7 @@ const addressSchema = Joi.object({
   country: Joi.string().optional(),
   postcode: Joi.string().optional(),
   region: Joi.string().optional(),
-  fullAddress: Joi.string().optional(),
-  line2ToCounty: Joi.string().optional()
+  fullAddress: Joi.string().optional()
 })
 
 const userSchema = Joi.object({
@@ -73,7 +72,8 @@ const companyDetailsSchema = Joi.object({
         'Registration number must be 8 characters (e.g., 01234567 or AC012345)'
     })
     .optional(),
-  registeredAddress: addressSchema.optional()
+  registeredAddress: addressSchema.optional(),
+  address: addressSchema.optional()
 })
 
 const partnerSchema = Joi.object({
@@ -243,6 +243,9 @@ const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
+  registrationNumber: Joi.string().optional(),
+  validFrom: Joi.date().optional(),
+  validTo: Joi.date().optional(),
   formSubmissionTime: Joi.date().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
@@ -291,7 +294,7 @@ const registrationSchema = Joi.object({
 
 const accreditationSchema = Joi.object({
   id: idSchema,
-  accreditationNumber: Joi.number().optional(),
+  accreditationNumber: Joi.string().optional(),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -301,6 +304,8 @@ const accreditationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
+  validFrom: Joi.date().optional(),
+  validTo: Joi.date().optional(),
   formSubmissionTime: Joi.date().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
@@ -376,11 +381,7 @@ export const organisationInsertSchema = Joi.object({
         NATION.NORTHERN_IRELAND
       )
     )
-    .min(1)
-    .required()
-    .messages({
-      'array.min': 'At least one reprocessing nation is required'
-    }),
+    .optional(),
   businessType: Joi.string()
     .valid(
       BUSINESS_TYPE.INDIVIDUAL,
