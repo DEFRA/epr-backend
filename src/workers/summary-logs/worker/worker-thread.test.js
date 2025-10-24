@@ -1,11 +1,11 @@
-import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
-import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createMockConfig } from '#test/helpers/mock-config.js'
 
 import summaryLogsValidatorWorkerThread from './worker-thread.js'
@@ -20,12 +20,12 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#application/summary-logs/updater.js')
 vi.mock('#application/summary-logs/validator.js')
-vi.mock('#adapters/parsers/summary-logs/exceljs-parser.js')
 vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
+vi.mock('#repositories/organisations/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
 describe('summaryLogsValidatorWorkerThread', () => {
@@ -34,7 +34,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   let mockS3Client
   let mockSummaryLogsRepository
   let mockUploadsRepository
-  let mockSummaryLogsParser
+  let mockOrganisationsRepository
   let mockSummaryLogExtractor
   let mockSummaryLogUpdater
   let mockSummaryLogsValidator
@@ -61,8 +61,8 @@ describe('summaryLogsValidatorWorkerThread', () => {
       findByLocation: vi.fn()
     }
 
-    mockSummaryLogsParser = {
-      parse: vi.fn()
+    mockOrganisationsRepository = {
+      findRegistrationById: vi.fn()
     }
 
     mockSummaryLogExtractor = {
@@ -85,11 +85,11 @@ describe('summaryLogsValidatorWorkerThread', () => {
       () => mockSummaryLogsRepository
     )
     vi.mocked(createUploadsRepository).mockReturnValue(mockUploadsRepository)
-    vi.mocked(ExcelJSSummaryLogsParser).mockImplementation(
-      () => mockSummaryLogsParser
+    vi.mocked(createOrganisationsRepository).mockReturnValue(
+      () => mockOrganisationsRepository
     )
-    vi.mocked(SummaryLogExtractor).mockImplementation(
-      () => mockSummaryLogExtractor
+    vi.mocked(createSummaryLogExtractor).mockReturnValue(
+      mockSummaryLogExtractor
     )
     vi.mocked(SummaryLogUpdater).mockImplementation(() => mockSummaryLogUpdater)
     vi.mocked(SummaryLogsValidator).mockImplementation(
@@ -138,18 +138,11 @@ describe('summaryLogsValidatorWorkerThread', () => {
     expect(createUploadsRepository).toHaveBeenCalledWith(mockS3Client)
   })
 
-  it('should create summary logs parser', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
-
-    expect(ExcelJSSummaryLogsParser).toHaveBeenCalledWith()
-  })
-
   it('should create summary log extractor', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(SummaryLogExtractor).toHaveBeenCalledWith({
-      uploadsRepository: mockUploadsRepository,
-      summaryLogsParser: mockSummaryLogsParser
+    expect(createSummaryLogExtractor).toHaveBeenCalledWith({
+      uploadsRepository: mockUploadsRepository
     })
   })
 
@@ -166,6 +159,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
 
     expect(SummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
+      organisationsRepository: mockOrganisationsRepository,
       summaryLogExtractor: mockSummaryLogExtractor,
       summaryLogUpdater: mockSummaryLogUpdater
     })

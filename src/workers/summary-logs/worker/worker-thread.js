@@ -1,13 +1,13 @@
-import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
-import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
 import { config } from '../../../config.js'
 
@@ -37,11 +37,10 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
 
       const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
       const uploadsRepository = createUploadsRepository(s3Client)
-      const summaryLogsParser = new ExcelJSSummaryLogsParser()
+      const organisationsRepository = createOrganisationsRepository(db)()
 
-      const summaryLogExtractor = new SummaryLogExtractor({
-        uploadsRepository,
-        summaryLogsParser
+      const summaryLogExtractor = createSummaryLogExtractor({
+        uploadsRepository
       })
 
       const summaryLogUpdater = new SummaryLogUpdater({
@@ -50,6 +49,7 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
 
       const summaryLogsValidator = new SummaryLogsValidator({
         summaryLogsRepository,
+        organisationsRepository,
         summaryLogExtractor,
         summaryLogUpdater
       })

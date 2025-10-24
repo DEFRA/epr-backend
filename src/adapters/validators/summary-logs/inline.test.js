@@ -1,4 +1,4 @@
-import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
 
@@ -10,8 +10,8 @@ vi.mock('#application/summary-logs/validator.js')
 
 describe('createInlineSummaryLogsValidator', () => {
   let uploadsRepository
-  let summaryLogsParser
   let summaryLogsRepository
+  let organisationsRepository
   let mockSummaryLogExtractor
   let mockSummaryLogUpdater
   let mockSummaryLogsValidator
@@ -23,12 +23,12 @@ describe('createInlineSummaryLogsValidator', () => {
       findByLocation: vi.fn()
     }
 
-    summaryLogsParser = {
-      parse: vi.fn()
-    }
-
     summaryLogsRepository = {
       updateStatus: vi.fn()
+    }
+
+    organisationsRepository = {
+      findRegistrationById: vi.fn()
     }
 
     mockSummaryLogExtractor = {
@@ -43,7 +43,7 @@ describe('createInlineSummaryLogsValidator', () => {
       validate: vi.fn().mockResolvedValue(undefined)
     }
 
-    vi.mocked(SummaryLogExtractor).mockImplementation(
+    vi.mocked(createSummaryLogExtractor).mockImplementation(
       () => mockSummaryLogExtractor
     )
     vi.mocked(SummaryLogUpdater).mockImplementation(() => mockSummaryLogUpdater)
@@ -53,8 +53,8 @@ describe('createInlineSummaryLogsValidator', () => {
 
     inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
-      summaryLogsParser,
-      summaryLogsRepository
+      summaryLogsRepository,
+      organisationsRepository
     )
 
     summaryLogId = 'summary-log-123'
@@ -65,9 +65,8 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should create summary log extractor with dependencies', () => {
-    expect(SummaryLogExtractor).toHaveBeenCalledWith({
-      uploadsRepository,
-      summaryLogsParser
+    expect(createSummaryLogExtractor).toHaveBeenCalledWith({
+      uploadsRepository
     })
   })
 
@@ -80,6 +79,7 @@ describe('createInlineSummaryLogsValidator', () => {
   it('should create summary logs validator with dependencies', () => {
     expect(SummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository,
+      organisationsRepository,
       summaryLogExtractor: mockSummaryLogExtractor,
       summaryLogUpdater: mockSummaryLogUpdater
     })

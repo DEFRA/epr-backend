@@ -9,20 +9,15 @@ export const BUCKET = 'test-bucket'
 export const KEY = 'path/to/summary-log.xlsx'
 
 /**
- * @param {{ throwError?: Error }} [config]
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository}
  */
-export const createInMemoryUploadsRepository = (config = {}) => {
+export const createInMemoryUploadsRepository = () => {
   const fixturePromise = readFile(
     path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
   )
 
   return {
     async findByLocation({ bucket, key }) {
-      if (config.throwError) {
-        throw config.throwError
-      }
-
       if (bucket === BUCKET && key === KEY) {
         return fixturePromise
       }

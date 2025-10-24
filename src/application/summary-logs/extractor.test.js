@@ -1,8 +1,16 @@
-import { SummaryLogExtractor } from './extractor.js'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { createSummaryLogExtractor } from './extractor.js'
+
+const mockParse = vi.fn().mockResolvedValue({ parsed: 'data' })
+
+vi.mock('#adapters/parsers/summary-logs/exceljs-parser.js', () => ({
+  ExcelJSSummaryLogsParser: vi.fn().mockImplementation(() => ({
+    parse: mockParse
+  }))
+}))
 
 describe('SummaryLogExtractor', () => {
   let uploadsRepository
-  let summaryLogsParser
   let summaryLogExtractor
   let summaryLog
 
@@ -13,13 +21,8 @@ describe('SummaryLogExtractor', () => {
         .mockResolvedValue(Buffer.from('mock file content'))
     }
 
-    summaryLogsParser = {
-      parse: vi.fn().mockResolvedValue({ parsed: 'data' })
-    }
-
-    summaryLogExtractor = new SummaryLogExtractor({
-      uploadsRepository,
-      summaryLogsParser
+    summaryLogExtractor = createSummaryLogExtractor({
+      uploadsRepository
     })
 
     summaryLog = {
@@ -33,7 +36,7 @@ describe('SummaryLogExtractor', () => {
   })
 
   afterEach(() => {
-    vi.resetAllMocks()
+    vi.clearAllMocks()
   })
 
   it('should fetch file from uploads repository', async () => {
@@ -64,12 +67,12 @@ describe('SummaryLogExtractor', () => {
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(summaryLogsParser.parse).toHaveBeenCalledWith(buffer)
+    expect(mockParse).toHaveBeenCalledWith(buffer)
   })
 
   it('should return parsed data', async () => {
     const parsedData = { foo: 'bar', baz: 123 }
-    summaryLogsParser.parse.mockResolvedValue(parsedData)
+    mockParse.mockResolvedValueOnce(parsedData)
 
     const result = await summaryLogExtractor.extract(summaryLog)
 
@@ -88,7 +91,7 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should throw error if parsing fails', async () => {
-    summaryLogsParser.parse.mockRejectedValue(new Error('Parse error'))
+    mockParse.mockRejectedValueOnce(new Error('Parse error'))
 
     const result = await summaryLogExtractor
       .extract(summaryLog)
