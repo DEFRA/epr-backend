@@ -162,13 +162,16 @@ export const createOrganisationsRepository = (db) => () => ({
     try {
       validatedOrgId = validateId(organisationId)
     } catch (error) {
+      // Invalid organisation ID format - treat as not found
       return null
     }
 
     const doc = await db
       .collection(COLLECTION_NAME)
       .findOne({ _id: ObjectId.createFromHexString(validatedOrgId) })
-    if (!doc) return null
+    if (!doc) {
+      return null
+    }
 
     const registration = doc.registrations?.find((r) => r.id === registrationId)
     return registration || null

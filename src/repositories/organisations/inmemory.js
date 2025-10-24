@@ -147,7 +147,9 @@ export const createInMemoryOrganisationsRepository = (
 
     async findRegistrationById(organisationId, registrationId) {
       const org = storage.find((o) => o.id === organisationId)
-      if (!org) return null
+      if (!org) {
+        return null
+      }
 
       const registration = org.registrations?.find(
         (r) => r.id === registrationId
