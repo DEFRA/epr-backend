@@ -18,6 +18,34 @@ describe('ExcelJSSummaryLogsParser', () => {
     )
   })
 
+  describe('columnToLetter', () => {
+    it('converts column 1 to A', () => {
+      expect(parser.columnToLetter(1)).toBe('A')
+    })
+
+    it('converts column 26 to Z', () => {
+      expect(parser.columnToLetter(26)).toBe('Z')
+    })
+
+    it('converts column 27 to AA', () => {
+      expect(parser.columnToLetter(27)).toBe('AA')
+    })
+  })
+
+  describe('letterToColumnNumber', () => {
+    it('converts A to column 1', () => {
+      expect(parser.letterToColumnNumber('A')).toBe(1)
+    })
+
+    it('converts Z to column 26', () => {
+      expect(parser.letterToColumnNumber('Z')).toBe(26)
+    })
+
+    it('converts AA to column 27', () => {
+      expect(parser.letterToColumnNumber('AA')).toBe(27)
+    })
+  })
+
   it('should parse Excel buffer and return empty metadata', async () => {
     const result = await parser.parse(excelBuffer)
 

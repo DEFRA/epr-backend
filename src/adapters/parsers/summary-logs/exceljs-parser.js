@@ -52,4 +52,16 @@ export class ExcelJSSummaryLogsParser {
     }
     return column
   }
+
+  /**
+   * @param {string} letter
+   * @returns {number}
+   */
+  letterToColumnNumber(letter) {
+    let result = 0
+    for (let i = 0; i < letter.length; i++) {
+      result = result * 26 + (letter.charCodeAt(i) - 64)
+    }
+    return result
+  }
 }
