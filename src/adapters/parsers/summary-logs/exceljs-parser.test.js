@@ -94,5 +94,29 @@ describe('ExcelJSSummaryLogsParser', () => {
         }
       })
     })
+
+    it('extracts multiple metadata markers', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_META_PROCESSING_TYPE'
+      sheet.getCell('B1').value = 'REPROCESSOR'
+      sheet.getCell('A2').value = '__EPR_META_MATERIAL'
+      sheet.getCell('B2').value = 'Paper and board'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Test', row: 2, column: 'B' }
+      })
+    })
   })
 })
