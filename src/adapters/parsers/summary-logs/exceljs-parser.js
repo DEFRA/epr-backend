@@ -10,27 +10,29 @@ export class ExcelJSSummaryLogsParser {
     await workbook.xlsx.load(summaryLogBuffer)
 
     const result = { meta: {}, data: {} }
+    // eslint-disable-next-line no-unused-vars
+    const activeCollections = [] // Used in later tasks for data section tracking
     let metadataContext = null
 
     workbook.eachSheet((worksheet) => {
       worksheet.eachRow((row, rowNumber) => {
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          const cellValue = cell.value?.toString() || ''
+          const cellValue = cell.value
+          const cellValueStr = cellValue?.toString() || ''
 
-          if (!metadataContext && cellValue.startsWith('__EPR_META_')) {
-            const metadataName = cellValue.replace('__EPR_META_', '')
+          if (!metadataContext && cellValueStr.startsWith('__EPR_META_')) {
+            const metadataName = cellValueStr.replace('__EPR_META_', '')
             metadataContext = {
-              metadataName,
-              location: {
-                sheet: worksheet.name,
-                row: rowNumber,
-                column: this.columnToLetter(colNumber + 1)
-              }
+              metadataName
             }
           } else if (metadataContext) {
             result.meta[metadataContext.metadataName] = {
               value: cellValue,
-              location: metadataContext.location
+              location: {
+                sheet: worksheet.name,
+                row: rowNumber,
+                column: this.columnToLetter(colNumber)
+              }
             }
             metadataContext = null
           }
