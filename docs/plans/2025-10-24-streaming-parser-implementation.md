@@ -128,8 +128,9 @@ Matches ADR-17 specification:
 - Stacked tables
 - Multiple worksheets
 
-### ExcelJS-Generated Files (edge cases)
+### ExcelJS-Generated (in-memory, edge cases)
 
+- Create workbooks in memory using ExcelJS during tests
 - Markers at sheet boundaries
 - Skip columns in various positions
 - Empty rows in middle of data
