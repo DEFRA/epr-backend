@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto'
 
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -40,8 +40,27 @@ describe('SummaryLogsValidator integration', () => {
 
     organisationsRepository = createInMemoryOrganisationsRepository([testOrg])()
 
-    summaryLogExtractor = createSummaryLogExtractor({
-      parsed: {
+    summaryLogId = randomUUID()
+
+    initialSummaryLog = {
+      status: SUMMARY_LOG_STATUS.VALIDATING,
+      organisationId: testOrg.id,
+      registrationId: testOrg.registrations[0].id,
+      file: {
+        id: `file-${randomUUID()}`,
+        name: 'test.xlsx',
+        status: UPLOAD_STATUS.COMPLETE,
+        s3: {
+          bucket: 'test-bucket',
+          key: 'path/to/summary-log.xlsx'
+        }
+      }
+    }
+
+    const fileId = initialSummaryLog.file.id
+
+    summaryLogExtractor = createInMemorySummaryLogExtractor({
+      [fileId]: {
         meta: {
           WASTE_REGISTRATION_NUMBER: {
             value: 'WRN-123',
@@ -62,23 +81,6 @@ describe('SummaryLogsValidator integration', () => {
       summaryLogExtractor,
       summaryLogUpdater
     })
-
-    summaryLogId = randomUUID()
-
-    initialSummaryLog = {
-      status: SUMMARY_LOG_STATUS.VALIDATING,
-      organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id,
-      file: {
-        id: `file-${randomUUID()}`,
-        name: 'test.xlsx',
-        status: UPLOAD_STATUS.COMPLETE,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'path/to/summary-log.xlsx'
-        }
-      }
-    }
   })
 
   it('should update status as expected when validation succeeds', async () => {
