@@ -56,6 +56,8 @@ export class ExcelJSSummaryLogsParser {
               }
             }
             metadataContext = null
+          } else {
+            // No action needed
           }
 
           // Check for data marker
@@ -103,6 +105,8 @@ export class ExcelJSSummaryLogsParser {
                   ? null
                   : cellValue
               )
+            } else {
+              // No action needed
             }
           }
         }
@@ -132,6 +136,8 @@ export class ExcelJSSummaryLogsParser {
               // Append row to collection
               collection.rows.push(collection.currentRow)
             }
+          } else {
+            // No action needed
           }
         }
 
