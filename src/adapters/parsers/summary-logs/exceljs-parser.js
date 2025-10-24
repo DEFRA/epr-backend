@@ -1,6 +1,9 @@
 import ExcelJS from 'exceljs'
 
 export class ExcelJSSummaryLogsParser {
+  static ALPHABET_SIZE = 26
+  static ASCII_CODE_OFFSET = 65
+
   /**
    * @param {Buffer} summaryLogBuffer
    * @returns {Promise<Object>}
@@ -155,9 +158,14 @@ export class ExcelJSSummaryLogsParser {
   columnToLetter(colNumber) {
     let column = ''
     while (colNumber > 0) {
-      const remainder = (colNumber - 1) % 26
-      column = String.fromCharCode(65 + remainder) + column
-      colNumber = Math.floor((colNumber - 1) / 26)
+      const remainder = (colNumber - 1) % ExcelJSSummaryLogsParser.ALPHABET_SIZE
+      column =
+        String.fromCharCode(
+          ExcelJSSummaryLogsParser.ASCII_CODE_OFFSET + remainder
+        ) + column
+      colNumber = Math.floor(
+        (colNumber - 1) / ExcelJSSummaryLogsParser.ALPHABET_SIZE
+      )
     }
     return column
   }
@@ -169,7 +177,9 @@ export class ExcelJSSummaryLogsParser {
   letterToColumnNumber(letter) {
     let result = 0
     for (let i = 0; i < letter.length; i++) {
-      result = result * 26 + (letter.charCodeAt(i) - 64)
+      result =
+        result * ExcelJSSummaryLogsParser.ALPHABET_SIZE +
+        (letter.charCodeAt(i) - 64)
     }
     return result
   }
