@@ -145,10 +145,11 @@ export class ExcelJSSummaryLogsParser {
           cells.push({ cell, colNumber })
         })
 
-        // Initialize currentRow for collections in ROWS state
-        state.activeCollections = state.activeCollections.map((c) =>
-          c.state === 'ROWS' ? { ...c, currentRow: [] } : c
-        )
+        // Initialize currentRow for all active collections
+        state.activeCollections = state.activeCollections.map((c) => ({
+          ...c,
+          currentRow: []
+        }))
 
         // Process cells with reduce
         state = cells.reduce((acc, { cell, colNumber }) => {
