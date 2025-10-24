@@ -8,8 +8,90 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('./updater.js').SummaryLogUpdater} SummaryLogUpdater */
+
+/**
+ * Fetches a registration from the organisations repository
+ *
+ * @param {Object} params
+ * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {string} params.msg
+ * @returns {Promise<Object>}
+ */
+export const fetchRegistration = async ({
+  organisationsRepository,
+  organisationId,
+  registrationId,
+  msg
+}) => {
+  const registration = await organisationsRepository.findRegistrationById(
+    organisationId,
+    registrationId
+  )
+
+  if (!registration) {
+    throw new Error(
+      `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
+    )
+  }
+
+  logger.info({
+    message: `Fetched registration: ${msg}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+
+  return registration
+}
+
+/**
+ * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
+ *
+ * @param {Object} params
+ * @param {Object} params.parsed - The parsed summary log structure from the parser
+ * @param {Object} params.registration - The registration object from the organisations repository
+ * @param {string} params.msg - Logging context message
+ * @throws {Error} If validation fails
+ */
+export const validateWasteRegistrationNumber = ({
+  parsed,
+  registration,
+  msg
+}) => {
+  const { wasteRegistrationNumber } = registration
+  const spreadsheetRegistrationNumber =
+    parsed?.meta?.WASTE_REGISTRATION_NUMBER?.value
+
+  if (!wasteRegistrationNumber) {
+    throw new Error(
+      'Invalid summary log: registration has no waste registration number'
+    )
+  }
+
+  if (!spreadsheetRegistrationNumber) {
+    throw new Error('Invalid summary log: missing registration number')
+  }
+
+  if (spreadsheetRegistrationNumber !== wasteRegistrationNumber) {
+    throw new Error(
+      `Registration number mismatch: spreadsheet contains ${spreadsheetRegistrationNumber} but registration is ${wasteRegistrationNumber}`
+    )
+  }
+
+  logger.info({
+    message: `Registration number validated: ${msg}, registrationNumber=${wasteRegistrationNumber}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+}
 
 /**
  * SummaryLogsValidator class that handles validation of summary log files
@@ -18,17 +100,126 @@ export class SummaryLogsValidator {
   /**
    * @param {Object} params
    * @param {SummaryLogsRepository} params.summaryLogsRepository
+   * @param {OrganisationsRepository} params.organisationsRepository
    * @param {SummaryLogExtractor} params.summaryLogExtractor
    * @param {SummaryLogUpdater} params.summaryLogUpdater
    */
   constructor({
     summaryLogsRepository,
+    organisationsRepository,
     summaryLogExtractor,
     summaryLogUpdater
   }) {
     this.summaryLogsRepository = summaryLogsRepository
+    this.organisationsRepository = organisationsRepository
     this.summaryLogExtractor = summaryLogExtractor
     this.summaryLogUpdater = summaryLogUpdater
+  }
+
+  /**
+   * Performs validation checks on the parsed summary log
+   *
+   * @param {Object} params
+   * @param {SummaryLog} params.summaryLog
+   * @param {string} params.msg
+   * @returns {Promise<Object>}
+   */
+  async performValidationChecks({ summaryLog, msg }) {
+    const parsed = await this.summaryLogExtractor.extract(summaryLog)
+
+    logger.info({
+      message: `Extracted summary log file: ${msg}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
+    })
+
+    const registration = await fetchRegistration({
+      organisationsRepository: this.organisationsRepository,
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      msg
+    })
+
+    validateWasteRegistrationNumber({
+      parsed,
+      registration,
+      msg
+    })
+
+    return parsed
+  }
+
+  /**
+   * Handles successful validation by updating status
+   *
+   * @param {Object} params
+   * @param {string} params.summaryLogId
+   * @param {number} params.version
+   * @param {SummaryLog} params.summaryLog
+   * @param {string} params.msg
+   * @returns {Promise<void>}
+   */
+  async handleValidationSuccess({ summaryLogId, version, summaryLog, msg }) {
+    await this.summaryLogUpdater.update({
+      id: summaryLogId,
+      version,
+      summaryLog,
+      status: SUMMARY_LOG_STATUS.VALIDATED
+    })
+
+    logger.info({
+      message: `Summary log updated: ${msg}, status=${SUMMARY_LOG_STATUS.VALIDATED}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
+    })
+  }
+
+  /**
+   * Handles validation failure by updating status and logging
+   *
+   * @param {Object} params
+   * @param {string} params.summaryLogId
+   * @param {number} params.version
+   * @param {SummaryLog} params.summaryLog
+   * @param {string} params.msg
+   * @param {Error} params.error
+   * @returns {Promise<void>}
+   */
+  async handleValidationFailure({
+    summaryLogId,
+    version,
+    summaryLog,
+    msg,
+    error
+  }) {
+    logger.error({
+      error,
+      message: `Failed to extract summary log file: ${msg}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    await this.summaryLogUpdater.update({
+      id: summaryLogId,
+      version,
+      summaryLog,
+      status: SUMMARY_LOG_STATUS.INVALID,
+      failureReason: error.message
+    })
+
+    logger.info({
+      message: `Summary log updated: ${msg}, status=${SUMMARY_LOG_STATUS.INVALID}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
+    })
   }
 
   /**
@@ -58,56 +249,21 @@ export class SummaryLogsValidator {
     })
 
     try {
-      await this.summaryLogExtractor.extract(summaryLog)
-
-      logger.info({
-        message: `Extracted summary log file: ${msg}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-        }
-      })
-
-      await this.summaryLogUpdater.update({
-        id: summaryLogId,
+      await this.performValidationChecks({ summaryLog, msg })
+      await this.handleValidationSuccess({
+        summaryLogId,
         version,
         summaryLog,
-        status: SUMMARY_LOG_STATUS.VALIDATED
-      })
-
-      logger.info({
-        message: `Summary log updated: ${msg}, status=${SUMMARY_LOG_STATUS.VALIDATED}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-        }
+        msg
       })
     } catch (error) {
-      logger.error({
-        error,
-        message: `Failed to extract summary log file: ${msg}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-        }
-      })
-
-      await this.summaryLogUpdater.update({
-        id: summaryLogId,
+      await this.handleValidationFailure({
+        summaryLogId,
         version,
         summaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: error.message
+        msg,
+        error
       })
-
-      logger.info({
-        message: `Summary log updated: ${msg}, status=${SUMMARY_LOG_STATUS.INVALID}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.SERVER,
-          action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-        }
-      })
-
       throw error
     }
   }

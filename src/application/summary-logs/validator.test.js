@@ -3,7 +3,11 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 
-import { SummaryLogsValidator } from './validator.js'
+import {
+  SummaryLogsValidator,
+  fetchRegistration,
+  validateWasteRegistrationNumber
+} from './validator.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
@@ -21,23 +25,40 @@ describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogUpdater
   let summaryLogsRepository
+  let organisationsRepository
   let summaryLogsValidator
   let summaryLogId
   let summaryLog
 
   beforeEach(async () => {
     summaryLogExtractor = {
-      extract: vi.fn().mockResolvedValue({ parsed: 'data' })
+      extract: vi.fn().mockResolvedValue({
+        meta: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN12345'
+          }
+        },
+        data: {}
+      })
     }
 
     summaryLogUpdater = {
       update: vi.fn().mockResolvedValue(undefined)
     }
 
+    organisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: 'reg-123',
+        wasteRegistrationNumber: 'WRN12345'
+      })
+    }
+
     summaryLogId = 'summary-log-123'
 
     summaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
+      organisationId: 'org-123',
+      registrationId: 'reg-123',
       file: {
         id: 'file-123',
         name: 'test.xlsx',
@@ -59,6 +80,7 @@ describe('SummaryLogsValidator', () => {
 
     summaryLogsValidator = new SummaryLogsValidator({
       summaryLogsRepository,
+      organisationsRepository,
       summaryLogExtractor,
       summaryLogUpdater
     })
@@ -119,7 +141,16 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it('should update status as expected when extraction succeeds', async () => {
+  it('should fetch registration after extraction', async () => {
+    await summaryLogsValidator.validate(summaryLogId)
+
+    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
+      'org-123',
+      'reg-123'
+    )
+  })
+
+  it('should update status as expected when validation succeeds', async () => {
     await summaryLogsValidator.validate(summaryLogId)
 
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
@@ -130,7 +161,7 @@ describe('SummaryLogsValidator', () => {
     })
   })
 
-  it('should update status as expected when extraction succeeds if existing record indicated failure', async () => {
+  it('should update status as expected when validation succeeds if existing record indicated failure', async () => {
     summaryLog.failureReason = 'Existing error'
 
     await summaryLogsValidator.validate(summaryLogId)
@@ -156,6 +187,43 @@ describe('SummaryLogsValidator', () => {
       summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason: 'Something went wrong while retrieving your file upload'
+    })
+  })
+
+  it('should update status as expected when registration not found', async () => {
+    organisationsRepository.findRegistrationById.mockResolvedValue(null)
+
+    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+
+    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
+      id: 'summary-log-123',
+      version: 1,
+      summaryLog,
+      status: SUMMARY_LOG_STATUS.INVALID,
+      failureReason:
+        'Registration not found: organisationId=org-123, registrationId=reg-123'
+    })
+  })
+
+  it('should update status as expected when waste registration number validation fails', async () => {
+    summaryLogExtractor.extract.mockResolvedValue({
+      meta: {
+        WASTE_REGISTRATION_NUMBER: {
+          value: 'WRN99999'
+        }
+      },
+      data: {}
+    })
+
+    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+
+    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
+      id: 'summary-log-123',
+      version: 1,
+      summaryLog,
+      status: SUMMARY_LOG_STATUS.INVALID,
+      failureReason:
+        'Registration number mismatch: spreadsheet contains WRN99999 but registration is WRN12345'
     })
   })
 
@@ -217,6 +285,7 @@ describe('SummaryLogsValidator', () => {
 
     const brokenValidator = new SummaryLogsValidator({
       summaryLogsRepository,
+      organisationsRepository,
       summaryLogExtractor,
       summaryLogUpdater: brokenUpdater
     })
@@ -227,5 +296,155 @@ describe('SummaryLogsValidator', () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Database error')
+  })
+})
+
+describe('fetchRegistration', () => {
+  it('returns registration when found', async () => {
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: 'reg-123',
+        wasteRegistrationNumber: 'WRN12345'
+      })
+    }
+
+    const result = await fetchRegistration({
+      organisationsRepository: mockOrganisationsRepository,
+      organisationId: 'org-123',
+      registrationId: 'reg-123',
+      msg: 'test-msg'
+    })
+
+    expect(result).toBeDefined()
+    expect(result.id).toBe('reg-123')
+    expect(result.wasteRegistrationNumber).toBe('WRN12345')
+  })
+
+  it('throws error when registration not found', async () => {
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue(null)
+    }
+
+    await expect(
+      fetchRegistration({
+        organisationsRepository: mockOrganisationsRepository,
+        organisationId: 'org-123',
+        registrationId: 'reg-123',
+        msg: 'test-msg'
+      })
+    ).rejects.toThrow(
+      'Registration not found: organisationId=org-123, registrationId=reg-123'
+    )
+  })
+})
+
+describe('validateWasteRegistrationNumber', () => {
+  it('throws error when registration has no wasteRegistrationNumber', () => {
+    const registration = {
+      id: 'reg-123'
+    }
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: {
+          value: 'WRN12345'
+        }
+      }
+    }
+
+    expect(() =>
+      validateWasteRegistrationNumber({
+        parsed,
+        registration,
+        msg: 'test-msg'
+      })
+    ).toThrow(
+      'Invalid summary log: registration has no waste registration number'
+    )
+  })
+
+  it('throws error when spreadsheet missing registration number', () => {
+    const registration = {
+      id: 'reg-123',
+      wasteRegistrationNumber: 'WRN12345'
+    }
+    const parsed = {
+      meta: {}
+    }
+
+    expect(() =>
+      validateWasteRegistrationNumber({
+        parsed,
+        registration,
+        msg: 'test-msg'
+      })
+    ).toThrow('Invalid summary log: missing registration number')
+  })
+
+  it('throws error when spreadsheet registration number value is undefined', () => {
+    const registration = {
+      id: 'reg-123',
+      wasteRegistrationNumber: 'WRN12345'
+    }
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: {
+          value: undefined
+        }
+      }
+    }
+
+    expect(() =>
+      validateWasteRegistrationNumber({
+        parsed,
+        registration,
+        msg: 'test-msg'
+      })
+    ).toThrow('Invalid summary log: missing registration number')
+  })
+
+  it('throws error when registration numbers do not match', () => {
+    const registration = {
+      id: 'reg-123',
+      wasteRegistrationNumber: 'WRN12345'
+    }
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: {
+          value: 'WRN99999'
+        }
+      }
+    }
+
+    expect(() =>
+      validateWasteRegistrationNumber({
+        parsed,
+        registration,
+        msg: 'test-msg'
+      })
+    ).toThrow(
+      'Registration number mismatch: spreadsheet contains WRN99999 but registration is WRN12345'
+    )
+  })
+
+  it('does not throw when registration numbers match', () => {
+    const registration = {
+      id: 'reg-123',
+      wasteRegistrationNumber: 'WRN12345'
+    }
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: {
+          value: 'WRN12345'
+        }
+      }
+    }
+
+    expect(() =>
+      validateWasteRegistrationNumber({
+        parsed,
+        registration,
+        msg: 'test-msg'
+      })
+    ).not.toThrow()
   })
 })

@@ -1,4 +1,4 @@
-import { SummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { SummaryLogsValidator as SummaryLogsValidatorClass } from '#application/summary-logs/validator.js'
 import {
@@ -14,12 +14,11 @@ import { logger } from '#common/helpers/logging/logger.js'
  */
 export const createInlineSummaryLogsValidator = (
   uploadsRepository,
-  summaryLogsParser,
-  summaryLogsRepository
+  summaryLogsRepository,
+  organisationsRepository
 ) => {
-  const summaryLogExtractor = new SummaryLogExtractor({
-    uploadsRepository,
-    summaryLogsParser
+  const summaryLogExtractor = createSummaryLogExtractor({
+    uploadsRepository
   })
 
   const summaryLogUpdater = new SummaryLogUpdater({
@@ -28,6 +27,7 @@ export const createInlineSummaryLogsValidator = (
 
   const summaryLogsValidator = new SummaryLogsValidatorClass({
     summaryLogsRepository,
+    organisationsRepository,
     summaryLogExtractor,
     summaryLogUpdater
   })

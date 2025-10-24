@@ -1,6 +1,4 @@
-import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { createInlineSummaryLogsValidator } from '#adapters/validators/summary-logs/inline.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -11,7 +9,12 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -65,13 +68,48 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsParser = new ExcelJSSummaryLogsParser()
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-    const summaryLogsValidator = createInlineSummaryLogsValidator(
-      uploadsRepository,
-      summaryLogsParser,
+
+    const testOrg = buildOrganisation({
+      registrations: [
+        {
+          id: registrationId,
+          wasteRegistrationNumber: 'WRN-123',
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          formSubmissionTime: new Date(),
+          submittedToRegulator: 'ea'
+        }
+      ]
+    })
+    testOrg.id = organisationId
+
+    const organisationsRepository = createInMemoryOrganisationsRepository([
+      testOrg
+    ])()
+
+    const summaryLogExtractor = createInMemorySummaryLogExtractor({
+      'file-123': {
+        meta: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          }
+        },
+        data: {}
+      }
+    })
+
+    const summaryLogUpdater = new SummaryLogUpdater({
       summaryLogsRepository
-    )
+    })
+
+    const summaryLogsValidator = new SummaryLogsValidator({
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogExtractor,
+      summaryLogUpdater
+    })
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
     server = await createTestServer({

@@ -155,5 +155,25 @@ export const createOrganisationsRepository = (db) => () => ({
 
   async findAll() {
     return performFindAll(db)
+  },
+
+  async findRegistrationById(organisationId, registrationId) {
+    let validatedOrgId
+    try {
+      validatedOrgId = validateId(organisationId)
+    } catch {
+      // Invalid organisation ID format - treat as not found per contract test
+      return null
+    }
+
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne({ _id: ObjectId.createFromHexString(validatedOrgId) })
+    if (!doc) {
+      return null
+    }
+
+    const registration = doc.registrations?.find((r) => r.id === registrationId)
+    return registration || null
   }
 })
