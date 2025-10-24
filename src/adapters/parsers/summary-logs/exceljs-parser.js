@@ -4,17 +4,134 @@ export class ExcelJSSummaryLogsParser {
   static ALPHABET_SIZE = 26
   static ASCII_CODE_OFFSET = 65
 
-  /**
-   * @param {Buffer} summaryLogBuffer
-   * @returns {Promise<Object>}
-   */
+  processCellForMetadata(
+    cellValue,
+    cellValueStr,
+    worksheet,
+    rowNumber,
+    colNumber,
+    state
+  ) {
+    if (!state.metadataContext && cellValueStr.startsWith('__EPR_META_')) {
+      return {
+        ...state,
+        metadataContext: {
+          metadataName: cellValueStr.replace('__EPR_META_', '')
+        }
+      }
+    } else if (state.metadataContext) {
+      return {
+        ...state,
+        result: {
+          ...state.result,
+          meta: {
+            ...state.result.meta,
+            [state.metadataContext.metadataName]: {
+              value: cellValue,
+              location: {
+                sheet: worksheet.name,
+                row: rowNumber,
+                column: this.columnToLetter(colNumber)
+              }
+            }
+          }
+        },
+        metadataContext: null
+      }
+    } else {
+      return state
+    }
+  }
+
+  processDataMarker(
+    cellValueStr,
+    worksheet,
+    rowNumber,
+    colNumber,
+    collections
+  ) {
+    if (!cellValueStr.startsWith('__EPR_DATA_')) {
+      return collections
+    }
+
+    return [
+      ...collections,
+      {
+        sectionName: cellValueStr.replace('__EPR_DATA_', ''),
+        state: 'HEADERS',
+        startColumn: colNumber + 1,
+        headers: [],
+        rows: [],
+        currentRow: [],
+        location: {
+          sheet: worksheet.name,
+          row: rowNumber,
+          column: this.columnToLetter(colNumber + 1)
+        }
+      }
+    ]
+  }
+
+  updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber) {
+    const columnIndex = colNumber - collection.startColumn
+
+    if (columnIndex >= 0 && collection.state === 'HEADERS') {
+      if (cellValueStr === '') {
+        return { ...collection, state: 'ROWS' }
+      } else if (cellValueStr === '__EPR_SKIP_COLUMN') {
+        return { ...collection, headers: [...collection.headers, null] }
+      } else {
+        return { ...collection, headers: [...collection.headers, cellValueStr] }
+      }
+    } else if (
+      columnIndex >= 0 &&
+      columnIndex < collection.headers.length &&
+      collection.state === 'ROWS'
+    ) {
+      const normalizedValue =
+        cellValue === null || cellValue === undefined || cellValue === ''
+          ? null
+          : cellValue
+      return {
+        ...collection,
+        currentRow: [...collection.currentRow, normalizedValue]
+      }
+    } else {
+      return collection
+    }
+  }
+
+  finalizeRowForCollection(collection) {
+    if (collection.state === 'HEADERS') {
+      return { ...collection, state: 'ROWS', currentRow: [] }
+    } else if (
+      collection.state === 'ROWS' &&
+      collection.currentRow.length > 0
+    ) {
+      const isEmptyRow = collection.currentRow.every((val) => val === null)
+      if (isEmptyRow) {
+        return { ...collection, complete: true }
+      } else {
+        return {
+          ...collection,
+          rows: [...collection.rows, collection.currentRow],
+          currentRow: []
+        }
+      }
+    } else {
+      return collection
+    }
+  }
+
   async parse(summaryLogBuffer) {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(summaryLogBuffer)
 
-    const result = { meta: {}, data: {} }
-    const activeCollections = []
-    let metadataContext = null
+    let state = {
+      result: { meta: {}, data: {} },
+      activeCollections: [],
+      metadataContext: null
+    }
 
     for (const worksheet of workbook.worksheets) {
       const rows = []
@@ -28,139 +145,80 @@ export class ExcelJSSummaryLogsParser {
           cells.push({ cell, colNumber })
         })
 
-        // Initialize current row for each active collection in ROWS state
-        for (const collection of activeCollections) {
-          if (collection.state === 'ROWS') {
-            collection.currentRow = []
-          }
-        }
+        // Initialize currentRow for collections in ROWS state
+        state.activeCollections = state.activeCollections.map((c) =>
+          c.state === 'ROWS' ? { ...c, currentRow: [] } : c
+        )
 
-        // Process each cell
-        for (const { cell, colNumber } of cells) {
+        // Process cells with reduce
+        state = cells.reduce((acc, { cell, colNumber }) => {
           const cellValue = cell.value
           const cellValueStr = cellValue?.toString() || ''
 
-          // Check for metadata marker
-          if (!metadataContext && cellValueStr.startsWith('__EPR_META_')) {
-            const metadataName = cellValueStr.replace('__EPR_META_', '')
-            metadataContext = {
-              metadataName
-            }
-          } else if (metadataContext) {
-            result.meta[metadataContext.metadataName] = {
-              value: cellValue,
-              location: {
-                sheet: worksheet.name,
-                row: rowNumber,
-                column: this.columnToLetter(colNumber)
-              }
-            }
-            metadataContext = null
-          } else {
-            // No action needed
-          }
+          // Process metadata
+          acc = this.processCellForMetadata(
+            cellValue,
+            cellValueStr,
+            worksheet,
+            rowNumber,
+            colNumber,
+            acc
+          )
 
-          // Check for data marker
-          if (cellValueStr.startsWith('__EPR_DATA_')) {
-            const sectionName = cellValueStr.replace('__EPR_DATA_', '')
-            activeCollections.push({
-              sectionName,
-              state: 'HEADERS',
-              startColumn: colNumber + 1,
-              headers: [],
-              rows: [],
-              currentRow: [],
-              complete: false,
-              location: {
-                sheet: worksheet.name,
-                row: rowNumber,
-                column: this.columnToLetter(colNumber + 1)
-              }
-            })
-          }
+          // Process data markers
+          acc.activeCollections = this.processDataMarker(
+            cellValueStr,
+            worksheet,
+            rowNumber,
+            colNumber,
+            acc.activeCollections
+          )
 
-          // Process active collections
-          for (const collection of activeCollections) {
-            const columnIndex = colNumber - collection.startColumn
-
-            if (columnIndex >= 0 && collection.state === 'HEADERS') {
-              // Capturing headers
-              if (cellValueStr === '') {
-                collection.state = 'ROWS'
-              } else if (cellValueStr === '__EPR_SKIP_COLUMN') {
-                collection.headers.push(null)
-              } else {
-                collection.headers.push(cellValueStr)
-              }
-            } else if (
-              columnIndex >= 0 &&
-              columnIndex < collection.headers.length &&
-              collection.state === 'ROWS'
-            ) {
-              // Add cell value to current row
-              collection.currentRow.push(
-                cellValue === null ||
-                  cellValue === undefined ||
-                  cellValue === ''
-                  ? null
-                  : cellValue
-              )
-            } else {
-              // No action needed
-            }
-          }
-        }
-
-        // At end of row, process collections
-        for (const collection of activeCollections) {
-          if (collection.state === 'HEADERS') {
-            collection.state = 'ROWS'
-          } else if (
-            collection.state === 'ROWS' &&
-            collection.currentRow.length > 0
-          ) {
-            // Check if row is all empty
-            const isEmptyRow = collection.currentRow.every(
-              (val) => val === null
+          // Update collections with cell data
+          acc.activeCollections = acc.activeCollections.map((collection) =>
+            this.updateCollectionWithCell(
+              collection,
+              cellValue,
+              cellValueStr,
+              colNumber
             )
+          )
 
-            if (isEmptyRow) {
-              // Emit collection and mark for removal
-              result.data[collection.sectionName] = {
-                location: collection.location,
-                headers: collection.headers,
-                rows: collection.rows
-              }
-              collection.complete = true
-            } else {
-              // Append row to collection
-              collection.rows.push(collection.currentRow)
+          return acc
+        }, state)
+
+        // Finalize row for each collection
+        state.activeCollections = state.activeCollections.map((c) =>
+          this.finalizeRowForCollection(c)
+        )
+
+        // Emit completed collections and filter them out
+        state.activeCollections
+          .filter((c) => c.complete)
+          .forEach((collection) => {
+            state.result.data[collection.sectionName] = {
+              location: collection.location,
+              headers: collection.headers,
+              rows: collection.rows
             }
-          } else {
-            // No action needed
-          }
-        }
-
-        // Remove completed collections
-        activeCollections.splice(
-          0,
-          activeCollections.length,
-          ...activeCollections.filter((c) => !c.complete)
+          })
+        state.activeCollections = state.activeCollections.filter(
+          (c) => !c.complete
         )
       }
 
-      // At end of worksheet, emit remaining collections
-      for (const collection of activeCollections) {
-        result.data[collection.sectionName] = {
+      // Emit remaining collections at worksheet end
+      state.activeCollections.forEach((collection) => {
+        state.result.data[collection.sectionName] = {
           location: collection.location,
           headers: collection.headers,
           rows: collection.rows
         }
-      }
-      activeCollections.splice(0, activeCollections.length)
+      })
+      state.activeCollections = []
     }
 
-    return result
+    return state.result
   }
 
   /**
