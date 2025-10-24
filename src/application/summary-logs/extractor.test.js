@@ -1,0 +1,100 @@
+import { SummaryLogExtractor } from './extractor.js'
+
+describe('SummaryLogExtractor', () => {
+  let uploadsRepository
+  let summaryLogsParser
+  let summaryLogExtractor
+  let summaryLog
+
+  beforeEach(() => {
+    uploadsRepository = {
+      findByLocation: vi
+        .fn()
+        .mockResolvedValue(Buffer.from('mock file content'))
+    }
+
+    summaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({ parsed: 'data' })
+    }
+
+    summaryLogExtractor = new SummaryLogExtractor({
+      uploadsRepository,
+      summaryLogsParser
+    })
+
+    summaryLog = {
+      file: {
+        s3: {
+          bucket: 'test-bucket',
+          key: 'test-key'
+        }
+      }
+    }
+  })
+
+  afterEach(() => {
+    vi.resetAllMocks()
+  })
+
+  it('should fetch file from uploads repository', async () => {
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(uploadsRepository.findByLocation).toHaveBeenCalledWith({
+      bucket: 'test-bucket',
+      key: 'test-key'
+    })
+  })
+
+  it('should throw error when file not found', async () => {
+    uploadsRepository.findByLocation.mockResolvedValue(null)
+
+    const result = await summaryLogExtractor
+      .extract(summaryLog)
+      .catch((err) => err)
+
+    expect(result).toBeInstanceOf(Error)
+    expect(result.message).toBe(
+      'Something went wrong while retrieving your file upload'
+    )
+  })
+
+  it('should parse the file buffer', async () => {
+    const buffer = Buffer.from('test content')
+    uploadsRepository.findByLocation.mockResolvedValue(buffer)
+
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(summaryLogsParser.parse).toHaveBeenCalledWith(buffer)
+  })
+
+  it('should return parsed data', async () => {
+    const parsedData = { foo: 'bar', baz: 123 }
+    summaryLogsParser.parse.mockResolvedValue(parsedData)
+
+    const result = await summaryLogExtractor.extract(summaryLog)
+
+    expect(result).toEqual(parsedData)
+  })
+
+  it('should throw error if S3 fetch fails', async () => {
+    uploadsRepository.findByLocation.mockRejectedValue(new Error('S3 error'))
+
+    const result = await summaryLogExtractor
+      .extract(summaryLog)
+      .catch((err) => err)
+
+    expect(result).toBeInstanceOf(Error)
+    expect(result.message).toBe('S3 error')
+  })
+
+  it('should throw error if parsing fails', async () => {
+    summaryLogsParser.parse.mockRejectedValue(new Error('Parse error'))
+
+    const result = await summaryLogExtractor
+      .extract(summaryLog)
+      .catch((err) => err)
+
+    expect(result).toBeInstanceOf(Error)
+    expect(result.message).toBe('Parse error')
+  })
+})
