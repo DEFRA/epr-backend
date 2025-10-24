@@ -10,7 +10,7 @@ export const createSummaryLogsParser = (options = {}) => {
   const { registrationNumber, wasteRegistrationNumber } = options
 
   return {
-    parse: async (summaryLogBuffer) => {
+    parse: async (_summaryLogBuffer) => {
       const meta = {}
 
       if (registrationNumber !== undefined) {
