@@ -154,41 +154,6 @@ const updateSummaryLog = async ({
 }
 
 /**
- * Validates that the registration number in the spreadsheet matches the expected registration ID
- *
- * @param {Object} params
- * @param {Object} params.parsed - The parsed summary log structure from the parser
- * @param {string} params.expectedRegistrationId - The registration ID from the upload URL
- * @param {string} params.msg - Logging context message
- * @throws {Error} If registration number is missing or mismatched
- */
-export const validateRegistrationNumber = ({
-  parsed,
-  expectedRegistrationId,
-  msg
-}) => {
-  const registrationNumber = parsed?.meta?.REGISTRATION_NUMBER?.value
-
-  if (!registrationNumber) {
-    throw new Error('Invalid summary log: missing registration number')
-  }
-
-  if (registrationNumber !== expectedRegistrationId) {
-    throw new Error(
-      `Registration number mismatch: spreadsheet contains ${registrationNumber} but was uploaded to ${expectedRegistrationId}`
-    )
-  }
-
-  logger.info({
-    message: `Registration number validated: ${msg}, registrationId=${expectedRegistrationId}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
-}
-
-/**
  * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
  *
  * @param {Object} params
@@ -282,12 +247,6 @@ export const summaryLogsValidator = async ({
     const parsed = await parseSummaryLog({
       summaryLogsParser,
       summaryLogBuffer,
-      msg
-    })
-
-    validateRegistrationNumber({
-      parsed,
-      expectedRegistrationId: summaryLog.registrationId,
       msg
     })
 

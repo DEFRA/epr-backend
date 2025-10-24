@@ -4,6 +4,7 @@ import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createMockConfig } from '#test/helpers/mock-config.js'
 
 import summaryLogsValidatorWorkerThread from './worker-thread.js'
@@ -22,6 +23,7 @@ vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
+vi.mock('#repositories/organisations/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
 describe('summaryLogsValidatorWorkerThread', () => {
@@ -31,6 +33,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   let mockSummaryLogsRepository
   let mockUploadsRepository
   let mockSummaryLogsParser
+  let mockOrganisationsRepository
 
   let summaryLogId
 
@@ -58,6 +61,10 @@ describe('summaryLogsValidatorWorkerThread', () => {
       parse: vi.fn()
     }
 
+    mockOrganisationsRepository = {
+      findRegistrationById: vi.fn()
+    }
+
     summaryLogId = 'summary-log-123'
 
     vi.mocked(createMongoClient).mockResolvedValue(mockMongoClient)
@@ -67,6 +74,9 @@ describe('summaryLogsValidatorWorkerThread', () => {
     )
     vi.mocked(createUploadsRepository).mockReturnValue(mockUploadsRepository)
     vi.mocked(createSummaryLogsParser).mockReturnValue(mockSummaryLogsParser)
+    vi.mocked(createOrganisationsRepository).mockReturnValue(
+      () => mockOrganisationsRepository
+    )
     vi.mocked(summaryLogsValidator).mockResolvedValue(undefined)
   })
 
@@ -124,6 +134,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       summaryLogsRepository: mockSummaryLogsRepository,
       uploadsRepository: mockUploadsRepository,
       summaryLogsParser: mockSummaryLogsParser,
+      organisationsRepository: mockOrganisationsRepository,
       summaryLogId
     })
   })

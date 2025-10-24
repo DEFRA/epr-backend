@@ -6,6 +6,7 @@ import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
 import { config } from '../../../config.js'
 
@@ -36,11 +37,13 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
       const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
       const uploadsRepository = createUploadsRepository(s3Client)
       const summaryLogsParser = createSummaryLogsParser()
+      const organisationsRepository = createOrganisationsRepository(db)()
 
       await summaryLogsValidator({
         uploadsRepository,
         summaryLogsRepository,
         summaryLogsParser,
+        organisationsRepository,
         summaryLogId
       })
     } finally {
