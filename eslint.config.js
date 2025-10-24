@@ -20,18 +20,6 @@ export default [
   ...ns,
   nodePlugin.configs['flat/recommended-module'],
   {
-    files: ['**/*.cjs'],
-    languageOptions: {
-      sourceType: 'commonjs',
-      globals: {
-        module: 'readonly',
-        require: 'readonly',
-        __dirname: 'readonly',
-        __filename: 'readonly'
-      }
-    }
-  },
-  {
     files: ['.vite/**/*.js', '**/*.contract.js'],
     rules: {
       'n/no-unpublished-import': 'off'

@@ -1,6 +1,5 @@
 vitest.config.js
 eslint.config.js
-babel.config.cjs
 *.test.*
 __fixtures__
 src/test
