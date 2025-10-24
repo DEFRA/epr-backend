@@ -1,4 +1,4 @@
-import { createSummaryLogsParser } from '#adapters/parsers/summary-logs/stub.js'
+import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInlineSummaryLogsValidator } from '#adapters/validators/summary-logs/inline.js'
 import {
@@ -65,7 +65,7 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsParser = createSummaryLogsParser()
+    const summaryLogsParser = new ExcelJSSummaryLogsParser()
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
@@ -144,6 +144,27 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
+        // Poll for validation to complete (inline validator is fire-and-forget)
+        // Retry up to 10 times with 50ms delay between attempts (max 500ms total)
+        let attempts = 0
+        const maxAttempts = 10
+        let status = SUMMARY_LOG_STATUS.VALIDATING
+
+        while (
+          status === SUMMARY_LOG_STATUS.VALIDATING &&
+          attempts < maxAttempts
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50))
+
+          const checkResponse = await server.inject({
+            method: 'GET',
+            url: buildGetUrl(summaryLogId)
+          })
+
+          status = JSON.parse(checkResponse.payload).status
+          attempts++
+        }
+
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(summaryLogId)
