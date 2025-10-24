@@ -214,5 +214,69 @@ describe('ExcelJSSummaryLogsParser', () => {
         rows: [[12345678910, '2025-05-25']]
       })
     })
+
+    it('handles side-by-side data sections without cross-contamination', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_TABLE_ONE'
+      sheet.getCell('B1').value = 'REF_ONE'
+      sheet.getCell('C1').value = 'DATE_ONE'
+      sheet.getCell('D1').value = ''
+      sheet.getCell('E1').value = '__EPR_DATA_TABLE_TWO'
+      sheet.getCell('F1').value = 'REF_TWO'
+      sheet.getCell('G1').value = 'DATE_TWO'
+
+      sheet.getCell('B2').value = 'ABC123'
+      sheet.getCell('C2').value = '2025-01-01'
+      sheet.getCell('F2').value = 'XYZ789'
+      sheet.getCell('G2').value = '2025-02-02'
+
+      sheet.getCell('B3').value = ''
+      sheet.getCell('C3').value = ''
+      sheet.getCell('F3').value = ''
+      sheet.getCell('G3').value = ''
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.TABLE_ONE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['REF_ONE', 'DATE_ONE'],
+        rows: [['ABC123', '2025-01-01']]
+      })
+
+      expect(result.data.TABLE_TWO).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'F' },
+        headers: ['REF_TWO', 'DATE_TWO'],
+        rows: [['XYZ789', '2025-02-02']]
+      })
+    })
+
+    it('transitions collection from HEADERS to ROWS state correctly', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_TRANSITION_TEST'
+      sheet.getCell('B1').value = 'HEADER_ONE'
+      sheet.getCell('C1').value = 'HEADER_TWO'
+      sheet.getCell('B2').value = 'row1_col1'
+      sheet.getCell('C2').value = 'row1_col2'
+      sheet.getCell('B3').value = ''
+      sheet.getCell('C3').value = ''
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.TRANSITION_TEST).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['HEADER_ONE', 'HEADER_TWO'],
+        rows: [['row1_col1', 'row1_col2']]
+      })
+
+      expect(result.data.TRANSITION_TEST.rows).toHaveLength(1)
+    })
   })
 })
