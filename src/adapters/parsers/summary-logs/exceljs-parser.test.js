@@ -160,5 +160,59 @@ describe('ExcelJSSummaryLogsParser', () => {
         rows: []
       })
     })
+
+    it('extracts data section with rows', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      sheet.getCell('B1').value = 'OUR_REFERENCE'
+      sheet.getCell('C1').value = 'DATE_RECEIVED'
+      sheet.getCell('B2').value = 12345678910
+      sheet.getCell('C2').value = '2025-05-25'
+      sheet.getCell('B3').value = 98765432100
+      sheet.getCell('C3').value = '2025-05-26'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const parser = new ExcelJSSummaryLogsParser()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [
+          [12345678910, '2025-05-25'],
+          [98765432100, '2025-05-26']
+        ]
+      })
+    })
+
+    it('extracts data section terminated by empty row', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      sheet.getCell('B1').value = 'OUR_REFERENCE'
+      sheet.getCell('C1').value = 'DATE_RECEIVED'
+      sheet.getCell('B2').value = 12345678910
+      sheet.getCell('C2').value = '2025-05-25'
+      sheet.getCell('B3').value = ''
+      sheet.getCell('C3').value = ''
+      sheet.getCell('B4').value = 'This should be ignored'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      const parser = new ExcelJSSummaryLogsParser()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [[12345678910, '2025-05-25']]
+      })
+    })
   })
 })

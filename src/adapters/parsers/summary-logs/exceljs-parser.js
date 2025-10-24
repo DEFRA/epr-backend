@@ -15,7 +15,20 @@ export class ExcelJSSummaryLogsParser {
 
     workbook.eachSheet((worksheet) => {
       worksheet.eachRow((row, rowNumber) => {
+        const cells = []
         row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          cells.push({ cell, colNumber })
+        })
+
+        // Initialize current row for each active collection in ROWS state
+        activeCollections.forEach((collection) => {
+          if (collection.state === 'ROWS') {
+            collection.currentRow = []
+          }
+        })
+
+        // Process each cell
+        cells.forEach(({ cell, colNumber }) => {
           const cellValue = cell.value
           const cellValueStr = cellValue?.toString() || ''
 
@@ -46,6 +59,7 @@ export class ExcelJSSummaryLogsParser {
               startColumn: colNumber + 1,
               headers: [],
               rows: [],
+              currentRow: [],
               location: {
                 sheet: worksheet.name,
                 row: rowNumber,
@@ -58,31 +72,64 @@ export class ExcelJSSummaryLogsParser {
           activeCollections.forEach((collection) => {
             const columnIndex = colNumber - collection.startColumn
 
-            // Only process cells in this collection's range
             if (columnIndex >= 0 && collection.state === 'HEADERS') {
+              // Capturing headers
               if (cellValueStr === '') {
-                // Empty cell marks end of headers
                 collection.state = 'ROWS'
-              } else if (
-                columnIndex < collection.headers.length ||
-                collection.headers.length === 0 ||
-                columnIndex === collection.headers.length
-              ) {
-                // Only add header if we're building contiguous headers
-                if (columnIndex === collection.headers.length) {
-                  collection.headers.push(cellValueStr)
-                }
+              } else {
+                collection.headers.push(cellValueStr)
               }
+            } else if (
+              columnIndex >= 0 &&
+              columnIndex < collection.headers.length &&
+              collection.state === 'ROWS'
+            ) {
+              // Add cell value to current row
+              collection.currentRow.push(
+                cellValue === null ||
+                  cellValue === undefined ||
+                  cellValue === ''
+                  ? null
+                  : cellValue
+              )
             }
           })
         })
 
-        // At end of row, transition collections from HEADERS to ROWS
+        // At end of row, process collections
         activeCollections.forEach((collection) => {
           if (collection.state === 'HEADERS') {
             collection.state = 'ROWS'
+          } else if (
+            collection.state === 'ROWS' &&
+            collection.currentRow.length > 0
+          ) {
+            // Check if row is all empty
+            const isEmptyRow = collection.currentRow.every(
+              (val) => val === null
+            )
+
+            if (isEmptyRow) {
+              // Emit collection and mark for removal
+              result.data[collection.sectionName] = {
+                location: collection.location,
+                headers: collection.headers,
+                rows: collection.rows
+              }
+              collection.complete = true
+            } else {
+              // Append row to collection
+              collection.rows.push(collection.currentRow)
+            }
           }
         })
+
+        // Remove completed collections
+        activeCollections.splice(
+          0,
+          activeCollections.length,
+          ...activeCollections.filter((c) => !c.complete)
+        )
       })
 
       // At end of worksheet, emit remaining collections
