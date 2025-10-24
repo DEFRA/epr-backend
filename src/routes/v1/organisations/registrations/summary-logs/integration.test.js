@@ -1,5 +1,4 @@
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { createInlineSummaryLogsValidator } from '#adapters/validators/summary-logs/inline.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -13,6 +12,9 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -86,8 +88,8 @@ describe('Summary logs integration', () => {
       testOrg
     ])()
 
-    const summaryLogsParser = {
-      parse: async () => ({
+    const summaryLogExtractor = createInMemorySummaryLogExtractor({
+      'file-123': {
         meta: {
           WASTE_REGISTRATION_NUMBER: {
             value: 'WRN-123',
@@ -95,15 +97,19 @@ describe('Summary logs integration', () => {
           }
         },
         data: {}
-      })
-    }
+      }
+    })
 
-    const summaryLogsValidator = createInlineSummaryLogsValidator(
-      uploadsRepository,
-      summaryLogsParser,
+    const summaryLogUpdater = new SummaryLogUpdater({
+      summaryLogsRepository
+    })
+
+    const summaryLogsValidator = new SummaryLogsValidator({
       summaryLogsRepository,
-      organisationsRepository
-    )
+      organisationsRepository,
+      summaryLogExtractor,
+      summaryLogUpdater
+    })
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
     server = await createTestServer({
