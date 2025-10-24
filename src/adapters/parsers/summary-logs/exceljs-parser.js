@@ -1,11 +1,5 @@
 import ExcelJS from 'exceljs'
 
-/** @typedef {import('#domain/summary-logs/parser/port.js').SummaryLogsParser} SummaryLogsParser */
-
-/**
- * ExcelJS-based implementation of SummaryLogsParser
- * @implements {SummaryLogsParser}
- */
 export class ExcelJSSummaryLogsParser {
   /**
    * @param {Buffer} summaryLogBuffer
