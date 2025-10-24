@@ -180,19 +180,19 @@ const fetchRegistration = async ({
 }
 ```
 
-**2. validateRegistrationNumber() - Enhanced validation function**
+**2. validateWasteRegistrationNumber() - Validation function**
 
 ```javascript
 /**
- * Validates that the registration number in the spreadsheet matches the registration's waste registration number
+ * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
- * @param {Object} params.registration - The registration entity from the database
+ * @param {Object} params.registration - The registration object from the organisations repository
  * @param {string} params.msg - Logging context message
  * @throws {Error} If validation fails
  */
-const validateRegistrationNumber = ({ parsed, registration, msg }) => {
+const validateWasteRegistrationNumber = ({ parsed, registration, msg }) => {
   const { wasteRegistrationNumber } = registration
   const spreadsheetRegistrationNumber =
     parsed?.meta?.WASTE_REGISTRATION_NUMBER?.value
@@ -265,8 +265,8 @@ try {
     msg
   })
 
-  // NEW: Validate registration number
-  validateRegistrationNumber({
+  // NEW: Validate waste registration number
+  validateWasteRegistrationNumber({
     parsed,
     registration,
     msg
@@ -303,14 +303,14 @@ No changes needed to the error handling infrastructure.
 
 ### Acceptance Criteria Mapping
 
-| AC  | Scenario                      | Implementation                                                                                      |
-| --- | ----------------------------- | --------------------------------------------------------------------------------------------------- |
-| AC1 | Registration number matches   | Validation passes, processing continues                                                             |
-| AC2 | Registration number mismatch  | `validateRegistrationNumber()` throws mismatch error, status set to `INVALID`                       |
-| AC3 | Registration number missing   | `validateRegistrationNumber()` throws missing error, status set to `INVALID`                        |
-| AC4 | Multiple registration markers | Parser throws during `parseSummaryLog()`, caught by existing error handler                          |
-| N/A | Registration not found        | `fetchRegistration()` throws not found error, status set to `INVALID`                               |
-| N/A | Registration has no number    | `validateRegistrationNumber()` throws "no waste registration number" error, status set to `INVALID` |
+| AC  | Scenario                      | Implementation                                                                                           |
+| --- | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+| AC1 | Registration number matches   | Validation passes, processing continues                                                                  |
+| AC2 | Registration number mismatch  | `validateWasteRegistrationNumber()` throws mismatch error, status set to `INVALID`                       |
+| AC3 | Registration number missing   | `validateWasteRegistrationNumber()` throws missing error, status set to `INVALID`                        |
+| AC4 | Multiple registration markers | Parser throws during `parseSummaryLog()`, caught by existing error handler                               |
+| N/A | Registration not found        | `fetchRegistration()` throws not found error, status set to `INVALID`                                    |
+| N/A | Registration has no number    | `validateWasteRegistrationNumber()` throws "no waste registration number" error, status set to `INVALID` |
 
 ### Error Messages
 
@@ -363,7 +363,7 @@ Registration number mismatch: spreadsheet contains {spreadsheetValue} but regist
 6. organisationsRepository.findRegistrationById(organisationId, registrationId)
    → Returns: { id, wasteRegistrationNumber: 'REG12345', ... }
                    ↓
-7. validateRegistrationNumber(parsed, registration)
+7. validateWasteRegistrationNumber(parsed, registration)
    → Compares: parsed.meta.WASTE_REGISTRATION_NUMBER.value === registration.wasteRegistrationNumber
    → Throws if mismatch or either is missing
                    ↓
@@ -381,7 +381,7 @@ Registration number mismatch: spreadsheet contains {spreadsheetValue} but regist
 3. Throws error when registration not found
 4. Logs success when found
 
-**For `validateRegistrationNumber()` helper:**
+**For `validateWasteRegistrationNumber()` helper:**
 
 1. Throws when `registration.wasteRegistrationNumber` is undefined
 2. Throws when `registration.wasteRegistrationNumber` is null
