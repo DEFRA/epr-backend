@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import { generateOrganisation } from './data-generators.js'
 import { MongoClient } from 'mongodb'
 import { createOrganisationCollection } from './create-collection.js'

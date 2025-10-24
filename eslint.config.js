@@ -1,3 +1,4 @@
+import nodePlugin from 'eslint-plugin-n'
 import neostandard from 'neostandard'
 
 const ns = neostandard({
@@ -15,4 +16,13 @@ for (const item of ns) {
   }
 }
 
-export default ns
+export default [
+  ...ns,
+  nodePlugin.configs['flat/recommended-module'],
+  {
+    files: ['.vite/**/*.js', '**/*.contract.js'],
+    rules: {
+      'n/no-unpublished-import': 'off'
+    }
+  }
+]

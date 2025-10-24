@@ -3,3 +3,4 @@ Dockerfile
 coverage
 src/test
 **/*.test.js
+**/*.contract.js
