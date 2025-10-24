@@ -1,4 +1,4 @@
-/** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
+import { SummaryLogExtractor } from './extractor.js'
 
 /**
  * Creates an in-memory summary log extractor for testing
@@ -10,7 +10,16 @@
 export const createSummaryLogExtractor = (options = {}) => {
   const { parsed = { meta: {}, data: {} } } = options
 
-  return {
-    extract: async (_summaryLog) => parsed
+  const mockUploadsRepository = {
+    findByLocation: async () => null
   }
+
+  const mockParser = {
+    parse: async () => parsed
+  }
+
+  return new SummaryLogExtractor({
+    uploadsRepository: mockUploadsRepository,
+    summaryLogsParser: mockParser
+  })
 }
