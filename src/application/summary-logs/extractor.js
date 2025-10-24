@@ -37,6 +37,7 @@ export const createSummaryLogExtractor = ({ uploadsRepository }) => {
         )
       }
 
+      // @ts-expect-error - ExcelJS parser currently returns Workbook, will be converted to ParsedSummaryLog in future
       return parser.parse(summaryLogBuffer)
     }
   }
