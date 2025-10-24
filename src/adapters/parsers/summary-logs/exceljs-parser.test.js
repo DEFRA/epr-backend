@@ -18,18 +18,19 @@ describe('ExcelJSSummaryLogsParser', () => {
     )
   })
 
-  it('should parse Excel buffer and return a workbook', async () => {
-    const workbook = await parser.parse(excelBuffer)
+  it('should parse Excel buffer and return hardcoded metadata', async () => {
+    const result = await parser.parse(excelBuffer)
 
-    expect(workbook).toBeDefined()
-    expect(workbook.worksheets).toBeDefined()
-    expect(Array.isArray(workbook.worksheets)).toBe(true)
+    expect(result).toBeDefined()
+    expect(result.meta).toBeDefined()
+    expect(result.meta.WASTE_REGISTRATION_NUMBER).toBeDefined()
+    expect(result.meta.WASTE_REGISTRATION_NUMBER.value).toBe('WRN-123')
   })
 
-  it('should load workbook with accessible worksheets', async () => {
-    const workbook = await parser.parse(excelBuffer)
+  it('should return consistent hardcoded data', async () => {
+    const result = await parser.parse(excelBuffer)
 
-    expect(workbook.worksheets.length).toBeGreaterThan(0)
+    expect(result.meta.WASTE_REGISTRATION_NUMBER.value).toBe('WRN-123')
   })
 
   it('should throw error for invalid Excel buffer', async () => {
