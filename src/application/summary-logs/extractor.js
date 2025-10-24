@@ -36,6 +36,6 @@ export class SummaryLogExtractor {
       throw new Error('Something went wrong while retrieving your file upload')
     }
 
-    return await this.summaryLogsParser.parse(summaryLogBuffer)
+    return this.summaryLogsParser.parse(summaryLogBuffer)
   }
 }
