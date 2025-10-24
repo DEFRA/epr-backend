@@ -8,9 +8,8 @@ describe('SummaryLogExtractor (production)', () => {
     // Convert testDataMap to uploads repository format
     const uploadsData = {}
     Object.keys(testDataMap).forEach((fileId) => {
-      // For contract tests, we need to mock the Excel file as a buffer
-      // In production, ExcelJS parses the buffer and returns workbook
-      // For testing, we'll need a helper that creates valid Excel buffers
+      // TODO: Use real Excel files for contract testing when available
+      // For now, using mock buffers - production extractor tested via unit tests
       uploadsData[`test-bucket/test-key-${fileId}`] = Buffer.from('mock')
     })
 
@@ -18,7 +17,6 @@ describe('SummaryLogExtractor (production)', () => {
     return createSummaryLogExtractor({ uploadsRepository })
   }
 
-  // Note: This will need ExcelJS mocking or real Excel files
-  // For now, we'll skip contract tests for production extractor
-  // and rely on existing unit tests until we can mock ExcelJS properly
+  // TODO: Enable contract tests when real Excel test files are available
+  // For now, production extractor is tested via existing unit tests
 })
