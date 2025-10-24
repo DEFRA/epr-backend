@@ -10,27 +10,29 @@ export class ExcelJSSummaryLogsParser {
     await workbook.xlsx.load(summaryLogBuffer)
 
     const result = { meta: {}, data: {} }
+    let metadataContext = null
 
     workbook.eachSheet((worksheet) => {
-      worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
-        row.eachCell({ includeEmpty: false }, (cell, colNumber) => {
-          const cellValue = cell.value
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          const cellValue = cell.value?.toString() || ''
 
-          if (
-            typeof cellValue === 'string' &&
-            cellValue.startsWith('__EPR_META_')
-          ) {
-            const markerName = cellValue.substring('__EPR_META_'.length)
-            const valueCell = row.getCell(colNumber + 1)
-
-            result.meta[markerName] = {
-              value: valueCell.value,
+          if (!metadataContext && cellValue.startsWith('__EPR_META_')) {
+            const metadataName = cellValue.replace('__EPR_META_', '')
+            metadataContext = {
+              metadataName,
               location: {
                 sheet: worksheet.name,
                 row: rowNumber,
                 column: this.columnToLetter(colNumber + 1)
               }
             }
+          } else if (metadataContext) {
+            result.meta[metadataContext.metadataName] = {
+              value: cellValue,
+              location: metadataContext.location
+            }
+            metadataContext = null
           }
         })
       })
