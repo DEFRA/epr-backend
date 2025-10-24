@@ -26,6 +26,7 @@ describe('summaryLogsValidator', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
+  let organisationsRepository
   let summaryLogId
   let summaryLog
 
@@ -42,9 +43,19 @@ describe('summaryLogsValidator', () => {
           REGISTRATION_NUMBER: {
             value: 'REG-TEST-123',
             location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-TEST-123'
           }
         },
         data: {}
+      })
+    }
+
+    organisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: 'REG-TEST-123',
+        wasteRegistrationNumber: 'WRN-TEST-123'
       })
     }
 
@@ -52,6 +63,7 @@ describe('summaryLogsValidator', () => {
 
     summaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
+      organisationId: 'org-123',
       registrationId: 'REG-TEST-123',
       file: {
         id: 'file-123',
@@ -82,6 +94,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -97,6 +110,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 
@@ -111,6 +125,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -131,6 +146,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -145,6 +161,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -167,6 +184,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 
@@ -187,6 +205,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -206,6 +225,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -226,6 +246,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 
@@ -248,6 +269,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 
@@ -273,6 +295,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 
@@ -293,6 +316,7 @@ describe('summaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -377,6 +401,326 @@ describe('summaryLogsValidator', () => {
       {
         status: 'invalid',
         failureReason: 'Invalid summary log: missing registration number'
+      }
+    )
+  })
+
+  it('sets status to INVALID when registration not found', async () => {
+    const summaryLogId = 'test-summary-log-id'
+    const organisationId = 'org-123'
+    const registrationId = 'reg-456'
+
+    const summaryLog = {
+      file: {
+        id: 'file-id',
+        name: 'test.xlsx',
+        s3: { bucket: 'test-bucket', key: 'test-key' }
+      },
+      organisationId,
+      registrationId
+    }
+
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue(null)
+    }
+
+    const mockUploadsRepository = {
+      findByLocation: vi.fn().mockResolvedValue(Buffer.from('test'))
+    }
+
+    const mockSummaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn().mockResolvedValue()
+    }
+
+    const mockSummaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'reg-456' },
+          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' }
+        },
+        data: {}
+      })
+    }
+
+    await expect(
+      summaryLogsValidator({
+        uploadsRepository: mockUploadsRepository,
+        summaryLogsRepository: mockSummaryLogsRepository,
+        summaryLogsParser: mockSummaryLogsParser,
+        organisationsRepository: mockOrganisationsRepository,
+        summaryLogId
+      })
+    ).rejects.toThrow(
+      `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
+    )
+
+    expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+      summaryLogId,
+      1,
+      {
+        status: 'invalid',
+        failureReason: `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
+      }
+    )
+  })
+
+  it('sets status to INVALID when registration has no wasteRegistrationNumber', async () => {
+    const summaryLogId = 'test-summary-log-id'
+    const organisationId = 'org-123'
+    const registrationId = 'reg-456'
+
+    const summaryLog = {
+      file: {
+        id: 'file-id',
+        name: 'test.xlsx',
+        s3: { bucket: 'test-bucket', key: 'test-key' }
+      },
+      organisationId,
+      registrationId
+    }
+
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: registrationId
+      })
+    }
+
+    const mockUploadsRepository = {
+      findByLocation: vi.fn().mockResolvedValue(Buffer.from('test'))
+    }
+
+    const mockSummaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn().mockResolvedValue()
+    }
+
+    const mockSummaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'reg-456' },
+          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' }
+        },
+        data: {}
+      })
+    }
+
+    await expect(
+      summaryLogsValidator({
+        uploadsRepository: mockUploadsRepository,
+        summaryLogsRepository: mockSummaryLogsRepository,
+        summaryLogsParser: mockSummaryLogsParser,
+        organisationsRepository: mockOrganisationsRepository,
+        summaryLogId
+      })
+    ).rejects.toThrow(
+      'Invalid summary log: registration has no waste registration number'
+    )
+
+    expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+      summaryLogId,
+      1,
+      {
+        status: 'invalid',
+        failureReason:
+          'Invalid summary log: registration has no waste registration number'
+      }
+    )
+  })
+
+  it('sets status to INVALID when spreadsheet missing waste registration number', async () => {
+    const summaryLogId = 'test-summary-log-id'
+    const organisationId = 'org-123'
+    const registrationId = 'reg-456'
+
+    const summaryLog = {
+      file: {
+        id: 'file-id',
+        name: 'test.xlsx',
+        s3: { bucket: 'test-bucket', key: 'test-key' }
+      },
+      organisationId,
+      registrationId
+    }
+
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: registrationId,
+        wasteRegistrationNumber: 'WRN12345'
+      })
+    }
+
+    const mockUploadsRepository = {
+      findByLocation: vi.fn().mockResolvedValue(Buffer.from('test'))
+    }
+
+    const mockSummaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn().mockResolvedValue()
+    }
+
+    const mockSummaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'reg-456' }
+        },
+        data: {}
+      })
+    }
+
+    await expect(
+      summaryLogsValidator({
+        uploadsRepository: mockUploadsRepository,
+        summaryLogsRepository: mockSummaryLogsRepository,
+        summaryLogsParser: mockSummaryLogsParser,
+        organisationsRepository: mockOrganisationsRepository,
+        summaryLogId
+      })
+    ).rejects.toThrow('Invalid summary log: missing registration number')
+
+    expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+      summaryLogId,
+      1,
+      {
+        status: 'invalid',
+        failureReason: 'Invalid summary log: missing registration number'
+      }
+    )
+  })
+
+  it('sets status to INVALID when waste registration numbers mismatch', async () => {
+    const summaryLogId = 'test-summary-log-id'
+    const organisationId = 'org-123'
+    const registrationId = 'reg-456'
+
+    const summaryLog = {
+      file: {
+        id: 'file-id',
+        name: 'test.xlsx',
+        s3: { bucket: 'test-bucket', key: 'test-key' }
+      },
+      organisationId,
+      registrationId
+    }
+
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: registrationId,
+        wasteRegistrationNumber: 'WRN12345'
+      })
+    }
+
+    const mockUploadsRepository = {
+      findByLocation: vi.fn().mockResolvedValue(Buffer.from('test'))
+    }
+
+    const mockSummaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn().mockResolvedValue()
+    }
+
+    const mockSummaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'reg-456' },
+          WASTE_REGISTRATION_NUMBER: { value: 'WRN99999' }
+        },
+        data: {}
+      })
+    }
+
+    await expect(
+      summaryLogsValidator({
+        uploadsRepository: mockUploadsRepository,
+        summaryLogsRepository: mockSummaryLogsRepository,
+        summaryLogsParser: mockSummaryLogsParser,
+        organisationsRepository: mockOrganisationsRepository,
+        summaryLogId
+      })
+    ).rejects.toThrow(
+      'Registration number mismatch: spreadsheet contains WRN99999 but registration is WRN12345'
+    )
+
+    expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+      summaryLogId,
+      1,
+      {
+        status: 'invalid',
+        failureReason:
+          'Registration number mismatch: spreadsheet contains WRN99999 but registration is WRN12345'
+      }
+    )
+  })
+
+  it('sets status to VALIDATED when waste registration numbers match', async () => {
+    const summaryLogId = 'test-summary-log-id'
+    const organisationId = 'org-123'
+    const registrationId = 'reg-456'
+
+    const summaryLog = {
+      file: {
+        id: 'file-id',
+        name: 'test.xlsx',
+        s3: { bucket: 'test-bucket', key: 'test-key' }
+      },
+      organisationId,
+      registrationId
+    }
+
+    const mockOrganisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: registrationId,
+        wasteRegistrationNumber: 'WRN12345'
+      })
+    }
+
+    const mockUploadsRepository = {
+      findByLocation: vi.fn().mockResolvedValue(Buffer.from('test'))
+    }
+
+    const mockSummaryLogsRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
+      update: vi.fn().mockResolvedValue()
+    }
+
+    const mockSummaryLogsParser = {
+      parse: vi.fn().mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'reg-456' },
+          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' }
+        },
+        data: {}
+      })
+    }
+
+    await summaryLogsValidator({
+      uploadsRepository: mockUploadsRepository,
+      summaryLogsRepository: mockSummaryLogsRepository,
+      summaryLogsParser: mockSummaryLogsParser,
+      organisationsRepository: mockOrganisationsRepository,
+      summaryLogId
+    })
+
+    expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+      summaryLogId,
+      1,
+      {
+        status: 'validated'
       }
     )
   })

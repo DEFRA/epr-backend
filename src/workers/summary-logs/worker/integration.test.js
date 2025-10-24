@@ -9,27 +9,48 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 
 describe('summaryLogsValidator integration', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
+  let organisationsRepository
 
   let summaryLogId
   let initialSummaryLog
 
   beforeEach(async () => {
     uploadsRepository = createInMemoryUploadsRepository()
-    summaryLogsParser = createSummaryLogsParser({
-      registrationNumber: 'reg-456'
-    })
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+
+    const testOrg = buildOrganisation({
+      registrations: [
+        {
+          id: randomUUID(),
+          wasteRegistrationNumber: 'WRN-123',
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          formSubmissionTime: new Date(),
+          submittedToRegulator: 'ea'
+        }
+      ]
+    })
+
+    organisationsRepository = createInMemoryOrganisationsRepository([testOrg])()
+
+    summaryLogsParser = createSummaryLogsParser({
+      registrationNumber: testOrg.registrations[0].id,
+      wasteRegistrationNumber: 'WRN-123'
+    })
 
     summaryLogId = randomUUID()
 
     initialSummaryLog = {
       status: SUMMARY_LOG_STATUS.VALIDATING,
-      registrationId: 'reg-456',
+      organisationId: testOrg.id,
+      registrationId: testOrg.registrations[0].id,
       file: {
         id: `file-${randomUUID()}`,
         name: 'test.xlsx',
@@ -56,6 +77,7 @@ describe('summaryLogsValidator integration', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     })
 
@@ -85,6 +107,7 @@ describe('summaryLogsValidator integration', () => {
       uploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 
@@ -118,6 +141,7 @@ describe('summaryLogsValidator integration', () => {
       uploadsRepository: failingUploadsRepository,
       summaryLogsRepository,
       summaryLogsParser,
+      organisationsRepository,
       summaryLogId
     }).catch((err) => err)
 

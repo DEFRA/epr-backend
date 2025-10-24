@@ -13,7 +13,8 @@ import { logger } from '#common/helpers/logging/logger.js'
 export const createInlineSummaryLogsValidator = (
   uploadsRepository,
   summaryLogsParser,
-  summaryLogsRepository
+  summaryLogsRepository,
+  organisationsRepository
 ) => {
   return {
     validate: async (summaryLogId) => {
@@ -21,6 +22,7 @@ export const createInlineSummaryLogsValidator = (
         uploadsRepository,
         summaryLogsRepository,
         summaryLogsParser,
+        organisationsRepository,
         summaryLogId
       }).catch((error) => {
         logger.error({

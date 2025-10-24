@@ -33,13 +33,22 @@ const buildFileData = (upload, existingFile) => {
   return fileData
 }
 
-const buildSummaryLogData = (upload, existingFile, registrationId) => {
+const buildSummaryLogData = (
+  upload,
+  existingFile,
+  organisationId,
+  registrationId
+) => {
   const status = determineStatusFromUpload(upload.fileStatus)
   const failureReason = determineFailureReason(status, upload.errorMessage)
 
   const data = {
     status,
     file: buildFileData(upload, existingFile)
+  }
+
+  if (organisationId) {
+    data.organisationId = organisationId
   }
 
   if (registrationId) {
@@ -58,6 +67,7 @@ const buildSummaryLogData = (upload, existingFile, registrationId) => {
  * @param {string} summaryLogId
  * @param {SummaryLogUpload} upload
  * @param {TypedLogger} logger
+ * @param {string} organisationId
  * @param {string} registrationId
  * @returns {Promise<string>} The new status
  */
@@ -66,6 +76,7 @@ const updateStatusBasedOnUpload = async (
   summaryLogId,
   upload,
   logger,
+  organisationId,
   registrationId
 ) => {
   const existing = await summaryLogsRepository.findById(summaryLogId)
@@ -93,10 +104,20 @@ const updateStatusBasedOnUpload = async (
       throw Boom.conflict(error.message)
     }
 
-    const updates = buildSummaryLogData(upload, summaryLog.file, registrationId)
+    const updates = buildSummaryLogData(
+      upload,
+      summaryLog.file,
+      organisationId,
+      registrationId
+    )
     await summaryLogsRepository.update(summaryLogId, version, updates)
   } else {
-    const summaryLog = buildSummaryLogData(upload, undefined, registrationId)
+    const summaryLog = buildSummaryLogData(
+      upload,
+      undefined,
+      organisationId,
+      registrationId
+    )
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
   }
 
@@ -137,7 +158,7 @@ export const summaryLogsUploadCompleted = {
       logger
     } = request
 
-    const { summaryLogId, registrationId } = params
+    const { summaryLogId, organisationId, registrationId } = params
     const { summaryLogUpload } = payload.form
 
     try {
@@ -146,6 +167,7 @@ export const summaryLogsUploadCompleted = {
         summaryLogId,
         summaryLogUpload,
         logger,
+        organisationId,
         registrationId
       )
 

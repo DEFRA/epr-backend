@@ -11,6 +11,8 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 
 const organisationId = 'org-123'
@@ -65,14 +67,36 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsParser = createSummaryLogsParser({
-      registrationNumber: registrationId
-    })
     const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+    const testOrg = buildOrganisation({
+      registrations: [
+        {
+          id: registrationId,
+          wasteRegistrationNumber: 'WRN-123',
+          material: 'paper',
+          wasteProcessingType: 'reprocessor',
+          formSubmissionTime: new Date(),
+          submittedToRegulator: 'ea'
+        }
+      ]
+    })
+    testOrg.id = organisationId
+
+    const organisationsRepository = createInMemoryOrganisationsRepository([
+      testOrg
+    ])()
+
+    const summaryLogsParser = createSummaryLogsParser({
+      registrationNumber: registrationId,
+      wasteRegistrationNumber: 'WRN-123'
+    })
+
     const summaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
       summaryLogsParser,
-      summaryLogsRepository
+      summaryLogsRepository,
+      organisationsRepository
     )
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 

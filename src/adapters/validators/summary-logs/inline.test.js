@@ -8,6 +8,7 @@ describe('createInlineSummaryLogsValidator', () => {
   let uploadsRepository
   let summaryLogsParser
   let summaryLogsRepository
+  let organisationsRepository
   let inlineSummaryLogsValidator
   let summaryLogId
 
@@ -24,10 +25,15 @@ describe('createInlineSummaryLogsValidator', () => {
       updateStatus: vi.fn()
     }
 
+    organisationsRepository = {
+      findRegistrationById: vi.fn()
+    }
+
     inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
       summaryLogsParser,
-      summaryLogsRepository
+      summaryLogsRepository,
+      organisationsRepository
     )
 
     summaryLogId = 'summary-log-123'
@@ -46,6 +52,7 @@ describe('createInlineSummaryLogsValidator', () => {
       uploadsRepository,
       summaryLogsParser,
       summaryLogsRepository,
+      organisationsRepository,
       summaryLogId
     })
   })

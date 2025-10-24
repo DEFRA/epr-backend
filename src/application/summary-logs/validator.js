@@ -236,6 +236,7 @@ export const validateWasteRegistrationNumber = ({
  * @param {UploadsRepository} params.uploadsRepository
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {SummaryLogsParser} params.summaryLogsParser
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} params.organisationsRepository
  * @param {string} params.summaryLogId
  * @returns {Promise<void>}
  */
@@ -243,6 +244,7 @@ export const summaryLogsValidator = async ({
   uploadsRepository,
   summaryLogsRepository,
   summaryLogsParser,
+  organisationsRepository,
   summaryLogId
 }) => {
   const result = await summaryLogsRepository.findById(summaryLogId)
@@ -286,6 +288,19 @@ export const summaryLogsValidator = async ({
     validateRegistrationNumber({
       parsed,
       expectedRegistrationId: summaryLog.registrationId,
+      msg
+    })
+
+    const registration = await fetchRegistration({
+      organisationsRepository,
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      msg
+    })
+
+    validateWasteRegistrationNumber({
+      parsed,
+      registration,
       msg
     })
 
