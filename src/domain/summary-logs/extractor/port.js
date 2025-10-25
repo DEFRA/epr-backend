@@ -27,6 +27,10 @@
  */
 
 /**
+ * @typedef {(buffer: Buffer) => Promise<ParsedSummaryLog>} SummaryLogParser
+ */
+
+/**
  * @typedef {Object} SummaryLogExtractor
  * @property {(summaryLog: SummaryLog) => Promise<ParsedSummaryLog>} extract
  */
