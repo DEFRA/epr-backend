@@ -107,13 +107,9 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('marker-based parsing', () => {
     it('should extract single metadata marker', async () => {
-      const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Sheet1')
-
-      populateSheet(worksheet, [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']])
-
-      const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parseSheet({
+        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']]
+      })
 
       expect(result.meta).toEqual({
         PROCESSING_TYPE: {
@@ -303,30 +299,26 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('handles realistic structure with metadata, skip columns, and sparse data', async () => {
-      const workbook = new ExcelJS.Workbook()
-      const sheet = workbook.addWorksheet('Summary')
-
-      populateSheet(sheet, [
-        // Metadata section
-        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
-        ['__EPR_META_MATERIAL', 'Paper and board'],
-        // Blank row
-        [],
-        // Data section
-        [
-          '__EPR_DATA_UPDATE_WASTE_BALANCE',
-          'OUR_REFERENCE',
-          'DATE_RECEIVED',
-          '__EPR_SKIP_COLUMN',
-          'SUPPLIER_REF',
-          'SUPPLIER_NAME'
-        ],
-        [null, 12345678910, '2025-05-25', null, 'ABC123', 'Joe Bloggs'],
-        [null, 98765432100, '2025-05-26', null, null, 'Jane Smith']
-      ])
-
-      const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parseSheet({
+        Summary: [
+          // Metadata section
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_MATERIAL', 'Paper and board'],
+          // Blank row
+          [],
+          // Data section
+          [
+            '__EPR_DATA_UPDATE_WASTE_BALANCE',
+            'OUR_REFERENCE',
+            'DATE_RECEIVED',
+            '__EPR_SKIP_COLUMN',
+            'SUPPLIER_REF',
+            'SUPPLIER_NAME'
+          ],
+          [null, 12345678910, '2025-05-25', null, 'ABC123', 'Joe Bloggs'],
+          [null, 98765432100, '2025-05-26', null, null, 'Jane Smith']
+        ]
+      })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
         value: 'REPROCESSOR',
@@ -355,16 +347,10 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('multiple worksheets', () => {
     it('should parse metadata from multiple sheets', async () => {
-      const workbook = new ExcelJS.Workbook()
-
-      const sheet1 = workbook.addWorksheet('Sheet1')
-      populateSheet(sheet1, [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']])
-
-      const sheet2 = workbook.addWorksheet('Sheet2')
-      populateSheet(sheet2, [['__EPR_META_MATERIAL', 'Paper and board']])
-
-      const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parseSheet({
+        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']],
+        Sheet2: [['__EPR_META_MATERIAL', 'Paper and board']]
+      })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
         value: 'REPROCESSOR',
@@ -377,28 +363,22 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should merge metadata and data sections from multiple worksheets', async () => {
-      const workbook = new ExcelJS.Workbook()
-
-      const sheet1 = workbook.addWorksheet('Sheet1')
-      populateSheet(sheet1, [
-        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
-        [],
-        ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'WEIGHT'],
-        [null, 12345, 100],
-        [null, 67890, 200]
-      ])
-
-      const sheet2 = workbook.addWorksheet('Sheet2')
-      populateSheet(sheet2, [
-        ['__EPR_META_MATERIAL', 'Paper and board'],
-        [],
-        ['__EPR_DATA_SUPPLIER_INFO', 'SUPPLIER_NAME', 'SUPPLIER_REF'],
-        [null, 'ABC Ltd', 'ABC123'],
-        [null, 'XYZ Corp', 'XYZ789']
-      ])
-
-      const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parseSheet({
+        Sheet1: [
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          [],
+          ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'WEIGHT'],
+          [null, 12345, 100],
+          [null, 67890, 200]
+        ],
+        Sheet2: [
+          ['__EPR_META_MATERIAL', 'Paper and board'],
+          [],
+          ['__EPR_DATA_SUPPLIER_INFO', 'SUPPLIER_NAME', 'SUPPLIER_REF'],
+          [null, 'ABC Ltd', 'ABC123'],
+          [null, 'XYZ Corp', 'XYZ789']
+        ]
+      })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
         value: 'REPROCESSOR',
