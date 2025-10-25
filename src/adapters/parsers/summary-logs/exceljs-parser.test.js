@@ -688,4 +688,79 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('date cells', () => {
+    it('should extract Date object from metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      const testDate = new Date('2025-05-25')
+
+      worksheet.getCell('A1').value = '__EPR_META_SUBMISSION_DATE'
+      worksheet.getCell('B1').value = testDate
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.SUBMISSION_DATE).toEqual({
+        value: testDate,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract Date objects from data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      const date1 = new Date('2025-05-25')
+      const date2 = new Date('2025-06-15')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_WASTE_RECEIVED'
+      worksheet.getCell('B1').value = 'OUR_REFERENCE'
+      worksheet.getCell('C1').value = 'DATE_RECEIVED'
+
+      worksheet.getCell('B2').value = 12345678910
+      worksheet.getCell('C2').value = date1
+
+      worksheet.getCell('B3').value = 98765432100
+      worksheet.getCell('C3').value = date2
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.WASTE_RECEIVED).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [
+          [12345678910, date1],
+          [98765432100, date2]
+        ]
+      })
+    })
+
+    it('should handle dates in mixed data types', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      const date = new Date('2025-05-25')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_MIXED_TYPES'
+      worksheet.getCell('B1').value = 'STRING_COL'
+      worksheet.getCell('C1').value = 'DATE_COL'
+      worksheet.getCell('D1').value = 'NUMBER_COL'
+
+      worksheet.getCell('B2').value = 'some text'
+      worksheet.getCell('C2').value = date
+      worksheet.getCell('D2').value = 42
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.MIXED_TYPES).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['STRING_COL', 'DATE_COL', 'NUMBER_COL'],
+        rows: [['some text', date, 42]]
+      })
+    })
+  })
 })
