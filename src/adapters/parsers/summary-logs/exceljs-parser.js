@@ -204,8 +204,7 @@ export class ExcelJSSummaryLogsParser {
           const cellValue = this.extractCellValue(rawCellValue)
           const cellValueStr = cellValue?.toString() || ''
 
-          // Process metadata
-          acc = this.processCellForMetadata(
+          const stateAfterMetadata = this.processCellForMetadata(
             cellValue,
             cellValueStr,
             worksheet,
@@ -214,17 +213,15 @@ export class ExcelJSSummaryLogsParser {
             acc
           )
 
-          // Process data markers
-          acc.activeCollections = this.processDataMarker(
+          const collectionsAfterMarkers = this.processDataMarker(
             cellValueStr,
             worksheet,
             rowNumber,
             colNumber,
-            acc.activeCollections
+            stateAfterMetadata.activeCollections
           )
 
-          // Update collections with cell data
-          acc.activeCollections = acc.activeCollections.map((collection) =>
+          const updatedCollections = collectionsAfterMarkers.map((collection) =>
             this.updateCollectionWithCell(
               collection,
               cellValue,
@@ -233,7 +230,10 @@ export class ExcelJSSummaryLogsParser {
             )
           )
 
-          return acc
+          return {
+            ...stateAfterMetadata,
+            activeCollections: updatedCollections
+          }
         }, state)
 
         // Finalize row for each collection
@@ -276,22 +276,5 @@ export class ExcelJSSummaryLogsParser {
       )
     }
     return column
-  }
-
-  /**
-   * @param {string} letter
-   * @returns {number}
-   */
-  letterToColumnNumber(letter) {
-    if (!/^[A-Z]+$/.test(letter)) {
-      throw new Error('Invalid column letter: must be uppercase only')
-    }
-    let result = 0
-    for (let i = 0; i < letter.length; i++) {
-      result =
-        result * ExcelJSSummaryLogsParser.ALPHABET_SIZE +
-        (letter.codePointAt(i) - 64)
-    }
-    return result
   }
 }

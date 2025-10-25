@@ -55,29 +55,6 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
-  describe('letterToColumnNumber', () => {
-    it('converts A to column 1', () => {
-      expect(parser.letterToColumnNumber('A')).toBe(1)
-    })
-
-    it('converts Z to column 26', () => {
-      expect(parser.letterToColumnNumber('Z')).toBe(26)
-    })
-
-    it('converts AA to column 27', () => {
-      expect(parser.letterToColumnNumber('AA')).toBe(27)
-    })
-
-    it.each(['', 'a', 'aa', 'Ab', '123', 'A1', '@#$'])(
-      'throws error for invalid input: %s',
-      (input) => {
-        expect(() => parser.letterToColumnNumber(input)).toThrow(
-          'Invalid column letter: must be uppercase only'
-        )
-      }
-    )
-  })
-
   describe('sheet with no markers', () => {
     it('should return empty metadata and data', async () => {
       const excelBuffer = await readFile(
