@@ -715,6 +715,32 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('all headers are skip columns', () => {
+    it('should handle data section where all headers are skip markers', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_ALL_SKIPPED',
+            '__EPR_SKIP_COLUMN',
+            '__EPR_SKIP_COLUMN',
+            '__EPR_SKIP_COLUMN'
+          ],
+          [null, 'value1', 'value2', 'value3'],
+          [null, 'value4', 'value5', 'value6']
+        ]
+      })
+
+      expect(result.data.ALL_SKIPPED).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: [null, null, null],
+        rows: [
+          ['value1', 'value2', 'value3'],
+          ['value4', 'value5', 'value6']
+        ]
+      })
+    })
+  })
+
   describe('date cells', () => {
     it('should extract Date object from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()

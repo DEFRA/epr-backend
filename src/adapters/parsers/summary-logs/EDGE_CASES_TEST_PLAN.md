@@ -157,8 +157,8 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Headers array full of nulls
 **Risk**: No actual data columns
 **Test Needed**: Data section with only skip columns
-**Expected Behavior**: Data rows are filled with nulls
-**Status**: ❌ Not tested
+**Expected Behavior**: Headers array full of nulls, data values still captured
+**Status**: ✅ TESTED - headers array correctly filled with nulls, data rows still contain values (skip markers only affect headers, not data extraction)
 
 ### 20. Partial Empty Rows
 
