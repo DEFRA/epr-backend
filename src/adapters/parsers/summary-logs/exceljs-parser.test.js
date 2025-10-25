@@ -581,4 +581,23 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('rows with more cells than headers', () => {
+    it('should ignore extra cells beyond the number of headers', async () => {
+      const result = await parseSheet([
+        ['__EPR_DATA_WASTE_BALANCE', 'HEADER_A', 'HEADER_B', 'HEADER_C'],
+        [null, 'value_a1', 'value_b1', 'value_c1', 'extra_1', 'extra_2'],
+        [null, 'value_a2', 'value_b2', 'value_c2', 'extra_3']
+      ])
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['HEADER_A', 'HEADER_B', 'HEADER_C'],
+        rows: [
+          ['value_a1', 'value_b1', 'value_c1'],
+          ['value_a2', 'value_b2', 'value_c2']
+        ]
+      })
+    })
+  })
 })
