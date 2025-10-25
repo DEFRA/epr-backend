@@ -689,6 +689,32 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('skip column marker as first header', () => {
+    it('should handle skip column marker immediately after data marker', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_BALANCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED',
+            'SUPPLIER_REF'
+          ],
+          [null, null, '2025-05-25', 'ABC123'],
+          [null, null, '2025-05-26', 'XYZ789']
+        ]
+      })
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: [null, 'DATE_RECEIVED', 'SUPPLIER_REF'],
+        rows: [
+          [null, '2025-05-25', 'ABC123'],
+          [null, '2025-05-26', 'XYZ789']
+        ]
+      })
+    })
+  })
+
   describe('date cells', () => {
     it('should extract Date object from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
