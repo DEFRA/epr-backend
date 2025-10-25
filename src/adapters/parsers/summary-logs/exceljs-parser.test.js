@@ -4,14 +4,12 @@ import { fileURLToPath } from 'node:url'
 
 import ExcelJS from 'exceljs'
 
-import { ExcelJSSummaryLogsParser } from './exceljs-parser.js'
+import { parse } from './exceljs-parser.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 describe('ExcelJSSummaryLogsParser', () => {
-  let parser
-
   /**
    * Populates a worksheet from a 2D array where each sub-array represents a row.
    * This makes the worksheet layout immediately visible in tests.
@@ -34,33 +32,15 @@ describe('ExcelJSSummaryLogsParser', () => {
     }
 
     const buffer = await workbook.xlsx.writeBuffer()
-    return parser.parse(buffer)
+    return parse(buffer)
   }
-
-  beforeEach(() => {
-    parser = new ExcelJSSummaryLogsParser()
-  })
-
-  describe('columnToLetter', () => {
-    it('converts column 1 to A', () => {
-      expect(parser.columnToLetter(1)).toBe('A')
-    })
-
-    it('converts column 26 to Z', () => {
-      expect(parser.columnToLetter(26)).toBe('Z')
-    })
-
-    it('converts column 27 to AA', () => {
-      expect(parser.columnToLetter(27)).toBe('AA')
-    })
-  })
 
   describe('sheet with no markers', () => {
     it('should return empty metadata and data', async () => {
       const excelBuffer = await readFile(
         path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
       )
-      const result = await parser.parse(excelBuffer)
+      const result = await parse(excelBuffer)
 
       expect(result).toBeDefined()
       expect(result.meta).toBeDefined()
@@ -73,13 +53,13 @@ describe('ExcelJSSummaryLogsParser', () => {
   it('should throw error for invalid Excel buffer', async () => {
     const invalidBuffer = Buffer.from('not an excel file')
 
-    await expect(parser.parse(invalidBuffer)).rejects.toThrow()
+    await expect(parse(invalidBuffer)).rejects.toThrow()
   })
 
   it('should handle empty buffer', async () => {
     const emptyBuffer = Buffer.from('')
 
-    await expect(parser.parse(emptyBuffer)).rejects.toThrow()
+    await expect(parse(emptyBuffer)).rejects.toThrow()
   })
 
   describe('marker-based parsing', () => {
@@ -614,7 +594,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('B1').value = { formula: '=10+20', result: 30 }
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parse(buffer)
 
       expect(result.meta.CALCULATION).toEqual({
         value: 30,
@@ -637,7 +617,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('C3').value = { formula: '=B3*2', result: 14 }
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parse(buffer)
 
       expect(result.data.CALCULATIONS).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -657,7 +637,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('B1').value = { formula: '=SUM(1,2,3)' }
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parse(buffer)
 
       expect(result.meta.UNCACHED).toEqual({
         value: null,
@@ -753,7 +733,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('B1').value = testDate
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parse(buffer)
 
       expect(result.meta.SUBMISSION_DATE).toEqual({
         value: testDate,
@@ -779,7 +759,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('C3').value = date2
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parse(buffer)
 
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -807,7 +787,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       worksheet.getCell('D2').value = 42
 
       const buffer = await workbook.xlsx.writeBuffer()
-      const result = await parser.parse(buffer)
+      const result = await parse(buffer)
 
       expect(result.data.MIXED_TYPES).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },

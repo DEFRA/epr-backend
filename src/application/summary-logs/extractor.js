@@ -1,4 +1,4 @@
-import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
@@ -12,8 +12,6 @@ import { ExcelJSSummaryLogsParser } from '#adapters/parsers/summary-logs/exceljs
  * @returns {SummaryLogExtractor}
  */
 export const createSummaryLogExtractor = ({ uploadsRepository }) => {
-  const parser = new ExcelJSSummaryLogsParser()
-
   return {
     /**
      * @param {SummaryLog} summaryLog
@@ -37,7 +35,7 @@ export const createSummaryLogExtractor = ({ uploadsRepository }) => {
         )
       }
 
-      return parser.parse(summaryLogBuffer)
+      return parse(summaryLogBuffer)
     }
   }
 }

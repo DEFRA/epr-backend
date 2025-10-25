@@ -1,12 +1,9 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSummaryLogExtractor } from './extractor.js'
-
-const mockParse = vi.fn().mockResolvedValue({ parsed: 'data' })
+import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
 vi.mock('#adapters/parsers/summary-logs/exceljs-parser.js', () => ({
-  ExcelJSSummaryLogsParser: vi.fn().mockImplementation(() => ({
-    parse: mockParse
-  }))
+  parse: vi.fn()
 }))
 
 describe('SummaryLogExtractor', () => {
@@ -15,6 +12,8 @@ describe('SummaryLogExtractor', () => {
   let summaryLog
 
   beforeEach(() => {
+    vi.mocked(parse).mockResolvedValue({ parsed: 'data' })
+
     uploadsRepository = {
       findByLocation: vi
         .fn()
@@ -67,12 +66,12 @@ describe('SummaryLogExtractor', () => {
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(mockParse).toHaveBeenCalledWith(buffer)
+    expect(parse).toHaveBeenCalledWith(buffer)
   })
 
   it('should return parsed data', async () => {
     const parsedData = { foo: 'bar', baz: 123 }
-    mockParse.mockResolvedValueOnce(parsedData)
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
     const result = await summaryLogExtractor.extract(summaryLog)
 
@@ -91,7 +90,7 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should throw error if parsing fails', async () => {
-    mockParse.mockRejectedValueOnce(new Error('Parse error'))
+    vi.mocked(parse).mockRejectedValueOnce(new Error('Parse error'))
 
     const result = await summaryLogExtractor
       .extract(summaryLog)
