@@ -406,7 +406,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     describe('metadata marker without value', () => {
-      it('should not lose metadata when two consecutive markers appear without value between them', async () => {
+      it('should not lose metadata when marker has no value before next marker appears', async () => {
         const ExcelJS = (await import('exceljs')).default
         const workbook = new ExcelJS.Workbook()
         const sheet = workbook.addWorksheet('Test')

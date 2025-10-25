@@ -11,19 +11,20 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Test Needed**: Workbook with data in Sheet1 and Sheet2, verify both are parsed
 **Status**: ❌ Not tested
 
-### 2. Metadata Marker Without Value
+### 2. Metadata Marker in Value Position
 
-**Issue**: `__EPR_META_TYPE` in A1, but A2 has another `__EPR_META_NAME` instead of value
-**Risk**: metadataContext overwritten, TYPE never gets value
-**Test Needed**: Two consecutive metadata markers without value between them
-**Status**: ✅ Tested
-**Fix Applied**: Modified `processCellForMetadata` to flush pending metadata context with null value when encountering a new metadata marker
+**Issue**: `__EPR_META_TYPE` in A1, but B1 has `__EPR_META_NAME` (another marker instead of value)
+**Risk**: Marker appears where value should be - indicates malformed sheet
+**Test Needed**: Row like `['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']` should throw error
+**Expected Behavior**: Throw error - marker in value position is malformed
+**Status**: ❌ Not tested - current implementation is WRONG
 
 ### 3. Multiple Metadata Markers on Same Row
 
-**Issue**: A1 has `__EPR_META_TYPE`, C1 has `__EPR_META_NAME`
-**Risk**: Second marker overwrites metadataContext, first is lost
-**Test Needed**: Two metadata markers in same row
+**Issue**: Row like `['__EPR_META_TYPE', null, '__EPR_META_NAME']` - A1=TYPE, B1=null, C1=NAME marker
+**Risk**: Second marker might overwrite metadataContext, first could be lost
+**Test Needed**: Two metadata markers in same row with null between them
+**Expected Behavior**: Record both - TYPE with null value at B1, NAME with value at D1
 **Status**: ❌ Not tested
 
 ### 4. Multiple Data Sections with Same Name
