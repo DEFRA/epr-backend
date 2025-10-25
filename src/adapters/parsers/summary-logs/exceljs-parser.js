@@ -267,9 +267,6 @@ export class ExcelJSSummaryLogsParser {
    * @returns {number}
    */
   letterToColumnNumber(letter) {
-    if (letter === '') {
-      throw new Error('Invalid column letter: empty string')
-    }
     if (!/^[A-Z]+$/.test(letter)) {
       throw new Error('Invalid column letter: must be uppercase only')
     }

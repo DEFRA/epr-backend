@@ -54,35 +54,14 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(parser.letterToColumnNumber('AA')).toBe(27)
     })
 
-    it.each([
-      { input: '', expectedError: 'Invalid column letter: empty string' },
-      {
-        input: 'a',
-        expectedError: 'Invalid column letter: must be uppercase only'
-      },
-      {
-        input: 'aa',
-        expectedError: 'Invalid column letter: must be uppercase only'
-      },
-      {
-        input: 'Ab',
-        expectedError: 'Invalid column letter: must be uppercase only'
-      },
-      {
-        input: '123',
-        expectedError: 'Invalid column letter: must be uppercase only'
-      },
-      {
-        input: 'A1',
-        expectedError: 'Invalid column letter: must be uppercase only'
-      },
-      {
-        input: '@#$',
-        expectedError: 'Invalid column letter: must be uppercase only'
+    it.each(['', 'a', 'aa', 'Ab', '123', 'A1', '@#$'])(
+      'throws error for invalid input: %s',
+      (input) => {
+        expect(() => parser.letterToColumnNumber(input)).toThrow(
+          'Invalid column letter: must be uppercase only'
+        )
       }
-    ])('throws error for invalid input: $input', ({ input, expectedError }) => {
-      expect(() => parser.letterToColumnNumber(input)).toThrow(expectedError)
-    })
+    )
   })
 
   describe('sheet with no markers', () => {
