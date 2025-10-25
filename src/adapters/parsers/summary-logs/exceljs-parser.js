@@ -3,6 +3,20 @@ import ExcelJS from 'exceljs'
 const ALPHABET_SIZE = 26
 const ASCII_CODE_OFFSET = 65
 
+/**
+ * @param {number} colNumber
+ * @returns {string}
+ */
+const columnToLetter = (colNumber) => {
+  let column = ''
+  while (colNumber > 0) {
+    const remainder = (colNumber - 1) % ALPHABET_SIZE
+    column = String.fromCodePoint(ASCII_CODE_OFFSET + remainder) + column
+    colNumber = Math.floor((colNumber - 1) / ALPHABET_SIZE)
+  }
+  return column
+}
+
 const extractCellValue = (cellValue) => {
   if (
     cellValue &&
@@ -169,6 +183,26 @@ const emitCollectionsToResult = (state, collections) => {
   }
 }
 
+/**
+ * Parses an Excel summary log buffer and extracts metadata and tabular data sections.
+ *
+ * Recognizes two types of markers in the spreadsheet:
+ * - Metadata markers: `__EPR_META_<NAME>` followed by a value in the next cell
+ * - Data section markers: `__EPR_DATA_<NAME>` followed by column headers, then rows of data
+ *
+ * Data sections continue until an empty row is encountered or the worksheet ends.
+ * Column headers can include `__EPR_SKIP_COLUMN` to mark columns that should be captured but have no header name.
+ *
+ * @param {Buffer} summaryLogBuffer - The Excel file buffer to parse
+ * @returns {Promise<{meta: Object, data: Object}>} Parsed structure containing:
+ *   - meta: Object where keys are metadata names and values are {value, location: {sheet, row, column}}
+ *   - data: Object where keys are section names and values are {location, headers: Array, rows: Array<Array>}
+ *
+ * @example
+ * const result = await parse(excelBuffer)
+ * // result.meta.PROCESSING_TYPE = { value: 'REPROCESSOR', location: { sheet: 'Sheet1', row: 1, column: 'B' } }
+ * // result.data.UPDATE_WASTE_BALANCE = { location: {...}, headers: ['REF', 'DATE'], rows: [[123, '2025-01-01']] }
+ */
 export const parse = async (summaryLogBuffer) => {
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.load(summaryLogBuffer)
@@ -256,18 +290,4 @@ export const parse = async (summaryLogBuffer) => {
   }
 
   return state.result
-}
-
-/**
- * @param {number} colNumber
- * @returns {string}
- */
-const columnToLetter = (colNumber) => {
-  let column = ''
-  while (colNumber > 0) {
-    const remainder = (colNumber - 1) % ALPHABET_SIZE
-    column = String.fromCodePoint(ASCII_CODE_OFFSET + remainder) + column
-    colNumber = Math.floor((colNumber - 1) / ALPHABET_SIZE)
-  }
-  return column
 }
