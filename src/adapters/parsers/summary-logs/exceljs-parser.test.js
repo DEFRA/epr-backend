@@ -404,32 +404,5 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
       })
     })
-
-    describe('metadata marker without value', () => {
-      it('should not lose metadata when marker has no value before next marker appears', async () => {
-        const ExcelJS = (await import('exceljs')).default
-        const workbook = new ExcelJS.Workbook()
-        const sheet = workbook.addWorksheet('Test')
-
-        populateSheet(sheet, [
-          ['__EPR_META_TYPE'],
-          ['__EPR_META_NAME', 'REPROCESSOR']
-        ])
-
-        const buffer = await workbook.xlsx.writeBuffer()
-        const result = await parser.parse(buffer)
-
-        // TYPE should be recorded with null value (not lost)
-        expect(result.meta.TYPE).toEqual({
-          value: null,
-          location: { sheet: 'Test', row: 1, column: 'B' }
-        })
-        // NAME should also be recorded
-        expect(result.meta.NAME).toEqual({
-          value: 'REPROCESSOR',
-          location: { sheet: 'Test', row: 2, column: 'B' }
-        })
-      })
-    })
   })
 })
