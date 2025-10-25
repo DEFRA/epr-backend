@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs'
 
+/** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
+
 const ALPHABET_SIZE = 26
 const ASCII_CODE_OFFSET = 65
 
@@ -194,9 +196,9 @@ const emitCollectionsToResult = (state, collections) => {
  * Column headers can include `__EPR_SKIP_COLUMN` to mark columns that should be captured but have no header name.
  *
  * @param {Buffer} summaryLogBuffer - The Excel file buffer to parse
- * @returns {Promise<{meta: Object, data: Object}>} Parsed structure containing:
- *   - meta: Object where keys are metadata names and values are {value, location: {sheet, row, column}}
- *   - data: Object where keys are section names and values are {location, headers: Array, rows: Array<Array>}
+ * @returns {Promise<ParsedSummaryLog>} Parsed structure with metadata and data sections.
+ *   Each metadata entry includes the value and its location (sheet, row, column).
+ *   Each data section includes headers, rows, and its starting location.
  *
  * @example
  * const result = await parse(excelBuffer)
