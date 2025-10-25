@@ -11,6 +11,19 @@ describe('ExcelJSSummaryLogsParser', () => {
   let parser
   let excelBuffer
 
+  /**
+   * Populates a worksheet from a 2D array where each sub-array represents a row.
+   * This makes the sheet layout immediately visible in tests.
+   *
+   * @param {Object} worksheet - ExcelJS worksheet to populate
+   * @param {Array<Array>} rows - 2D array where rows[0] is row 1, rows[1] is row 2, etc.
+   */
+  const populateSheet = (worksheet, rows) => {
+    rows.forEach((rowData, index) => {
+      worksheet.getRow(index + 1).values = rowData
+    })
+  }
+
   beforeEach(async () => {
     parser = new ExcelJSSummaryLogsParser()
     excelBuffer = await readFile(
@@ -81,8 +94,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Sheet1')
 
-      worksheet.getCell('A1').value = '__EPR_META_PROCESSING_TYPE'
-      worksheet.getCell('B1').value = 'REPROCESSOR'
+      populateSheet(worksheet, [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']])
 
       const buffer = await workbook.xlsx.writeBuffer()
       const result = await parser.parse(buffer)
@@ -100,13 +112,12 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_META_PROCESSING_TYPE'
-      sheet.getCell('B1').value = 'REPROCESSOR'
-      sheet.getCell('A2').value = '__EPR_META_MATERIAL'
-      sheet.getCell('B2').value = 'Paper and board'
+      populateSheet(sheet, [
+        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+        ['__EPR_META_MATERIAL', 'Paper and board']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const result = await parser.parse(buffer)
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
@@ -124,12 +135,11 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
-      sheet.getCell('B1').value = 'OUR_REFERENCE'
-      sheet.getCell('C1').value = 'DATE_RECEIVED'
+      populateSheet(sheet, [
+        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const result = await parser.parse(buffer)
 
       expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
@@ -144,14 +154,17 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
-      sheet.getCell('B1').value = 'OUR_REFERENCE'
-      sheet.getCell('C1').value = 'DATE_RECEIVED'
-      sheet.getCell('D1').value = ''
-      sheet.getCell('E1').value = 'IGNORED'
+      populateSheet(sheet, [
+        [
+          '__EPR_DATA_UPDATE_WASTE_BALANCE',
+          'OUR_REFERENCE',
+          'DATE_RECEIVED',
+          '',
+          'IGNORED'
+        ]
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const result = await parser.parse(buffer)
 
       expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
@@ -166,16 +179,13 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
-      sheet.getCell('B1').value = 'OUR_REFERENCE'
-      sheet.getCell('C1').value = 'DATE_RECEIVED'
-      sheet.getCell('B2').value = 12345678910
-      sheet.getCell('C2').value = '2025-05-25'
-      sheet.getCell('B3').value = 98765432100
-      sheet.getCell('C3').value = '2025-05-26'
+      populateSheet(sheet, [
+        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+        [null, 12345678910, '2025-05-25'],
+        [null, 98765432100, '2025-05-26']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const parser = new ExcelJSSummaryLogsParser()
       const result = await parser.parse(buffer)
 
@@ -194,17 +204,14 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
-      sheet.getCell('B1').value = 'OUR_REFERENCE'
-      sheet.getCell('C1').value = 'DATE_RECEIVED'
-      sheet.getCell('B2').value = 12345678910
-      sheet.getCell('C2').value = '2025-05-25'
-      sheet.getCell('B3').value = ''
-      sheet.getCell('C3').value = ''
-      sheet.getCell('B4').value = 'This should be ignored'
+      populateSheet(sheet, [
+        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+        [null, 12345678910, '2025-05-25'],
+        [null, '', ''],
+        [null, 'This should be ignored']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const parser = new ExcelJSSummaryLogsParser()
       const result = await parser.parse(buffer)
 
@@ -220,23 +227,19 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_TABLE_ONE'
-      sheet.getCell('B1').value = 'REF_ONE'
-      sheet.getCell('C1').value = 'DATE_ONE'
-      sheet.getCell('D1').value = ''
-      sheet.getCell('E1').value = '__EPR_DATA_TABLE_TWO'
-      sheet.getCell('F1').value = 'REF_TWO'
-      sheet.getCell('G1').value = 'DATE_TWO'
-
-      sheet.getCell('B2').value = 'ABC123'
-      sheet.getCell('C2').value = '2025-01-01'
-      sheet.getCell('F2').value = 'XYZ789'
-      sheet.getCell('G2').value = '2025-02-02'
-
-      sheet.getCell('B3').value = ''
-      sheet.getCell('C3').value = ''
-      sheet.getCell('F3').value = ''
-      sheet.getCell('G3').value = ''
+      populateSheet(sheet, [
+        [
+          '__EPR_DATA_TABLE_ONE',
+          'REF_ONE',
+          'DATE_ONE',
+          '',
+          '__EPR_DATA_TABLE_TWO',
+          'REF_TWO',
+          'DATE_TWO'
+        ],
+        [null, 'ABC123', '2025-01-01', null, null, 'XYZ789', '2025-02-02'],
+        [null, '', '', null, null, '', '']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
       const result = await parser.parse(buffer)
@@ -259,13 +262,11 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_TRANSITION_TEST'
-      sheet.getCell('B1').value = 'HEADER_ONE'
-      sheet.getCell('C1').value = 'HEADER_TWO'
-      sheet.getCell('B2').value = 'row1_col1'
-      sheet.getCell('C2').value = 'row1_col2'
-      sheet.getCell('B3').value = ''
-      sheet.getCell('C3').value = ''
+      populateSheet(sheet, [
+        ['__EPR_DATA_TRANSITION_TEST', 'HEADER_ONE', 'HEADER_TWO'],
+        [null, 'row1_col1', 'row1_col2'],
+        [null, '', '']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
       const result = await parser.parse(buffer)
@@ -284,19 +285,19 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_WASTE_RECEIVED'
-      sheet.getCell('B1').value = 'OUR_REFERENCE'
-      sheet.getCell('C1').value = 'DATE_RECEIVED'
-      sheet.getCell('D1').value = '__EPR_SKIP_COLUMN'
-      sheet.getCell('E1').value = 'SUPPLIER_REF'
-      sheet.getCell('F1').value = 'SUPPLIER_NAME'
-      sheet.getCell('B2').value = 12345678910
-      sheet.getCell('C2').value = '2025-05-25'
-      sheet.getCell('E2').value = 'ABC123'
-      sheet.getCell('F2').value = 'Joe Blogs'
+      populateSheet(sheet, [
+        [
+          '__EPR_DATA_WASTE_RECEIVED',
+          'OUR_REFERENCE',
+          'DATE_RECEIVED',
+          '__EPR_SKIP_COLUMN',
+          'SUPPLIER_REF',
+          'SUPPLIER_NAME'
+        ],
+        [null, 12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const result = await parser.parse(buffer)
 
       expect(result.data.WASTE_RECEIVED).toEqual({
@@ -317,16 +318,12 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Test')
 
-      sheet.getCell('A1').value = '__EPR_DATA_SPARSE'
-      sheet.getCell('B1').value = 'COL_A'
-      sheet.getCell('C1').value = 'COL_B'
-      sheet.getCell('D1').value = 'COL_C'
-      sheet.getCell('B2').value = 'A1'
-      // C2 is empty - intentionally not setting a value
-      sheet.getCell('D2').value = 'C1'
+      populateSheet(sheet, [
+        ['__EPR_DATA_SPARSE', 'COL_A', 'COL_B', 'COL_C'],
+        [null, 'A1', null, 'C1'] // C2 is empty - intentionally null
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const result = await parser.parse(buffer)
 
       expect(result.data.SPARSE).toEqual({
@@ -341,27 +338,26 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const sheet = workbook.addWorksheet('Summary')
 
-      sheet.getCell('A1').value = '__EPR_META_PROCESSING_TYPE'
-      sheet.getCell('B1').value = 'REPROCESSOR'
-      sheet.getCell('A2').value = '__EPR_META_MATERIAL'
-      sheet.getCell('B2').value = 'Paper and board'
-
-      sheet.getCell('A4').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
-      sheet.getCell('B4').value = 'OUR_REFERENCE'
-      sheet.getCell('C4').value = 'DATE_RECEIVED'
-      sheet.getCell('D4').value = '__EPR_SKIP_COLUMN'
-      sheet.getCell('E4').value = 'SUPPLIER_REF'
-      sheet.getCell('F4').value = 'SUPPLIER_NAME'
-      sheet.getCell('B5').value = 12345678910
-      sheet.getCell('C5').value = '2025-05-25'
-      sheet.getCell('E5').value = 'ABC123'
-      sheet.getCell('F5').value = 'Joe Bloggs'
-      sheet.getCell('B6').value = 98765432100
-      sheet.getCell('C6').value = '2025-05-26'
-      sheet.getCell('F6').value = 'Jane Smith'
+      populateSheet(sheet, [
+        // Metadata section
+        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+        ['__EPR_META_MATERIAL', 'Paper and board'],
+        // Blank row
+        [],
+        // Data section
+        [
+          '__EPR_DATA_UPDATE_WASTE_BALANCE',
+          'OUR_REFERENCE',
+          'DATE_RECEIVED',
+          '__EPR_SKIP_COLUMN',
+          'SUPPLIER_REF',
+          'SUPPLIER_NAME'
+        ],
+        [null, 12345678910, '2025-05-25', null, 'ABC123', 'Joe Bloggs'],
+        [null, 98765432100, '2025-05-26', null, null, 'Jane Smith']
+      ])
 
       const buffer = await workbook.xlsx.writeBuffer()
-
       const result = await parser.parse(buffer)
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
