@@ -59,6 +59,18 @@ describe('ExcelJSSummaryLogsParser', () => {
         'Invalid column letter: empty string'
       )
     })
+
+    it('throws error for lowercase letter a', () => {
+      expect(() => parser.letterToColumnNumber('a')).toThrow(
+        'Invalid column letter: must be uppercase only'
+      )
+    })
+
+    it('throws error for lowercase letters aa', () => {
+      expect(() => parser.letterToColumnNumber('aa')).toThrow(
+        'Invalid column letter: must be uppercase only'
+      )
+    })
   })
 
   describe('sheet with no markers', () => {

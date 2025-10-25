@@ -270,6 +270,9 @@ export class ExcelJSSummaryLogsParser {
     if (letter === '') {
       throw new Error('Invalid column letter: empty string')
     }
+    if (!/^[A-Z]+$/.test(letter)) {
+      throw new Error('Invalid column letter: must be uppercase only')
+    }
     let result = 0
     for (let i = 0; i < letter.length; i++) {
       result =

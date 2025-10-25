@@ -75,7 +75,8 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Silent failure, wrong column numbers
 **Test Needed**: letterToColumnNumber('a'), letterToColumnNumber('aa')
 **Expected Behavior**: Throw error
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - throws error with message: 'Invalid column letter: must be uppercase only'
+**Bug Found**: Yes - function was accepting lowercase letters and producing incorrect column numbers. Fixed by adding regex validation `/^[A-Z]+$/` to ensure uppercase only
 
 ### 10. Markers Not in Column A
 
