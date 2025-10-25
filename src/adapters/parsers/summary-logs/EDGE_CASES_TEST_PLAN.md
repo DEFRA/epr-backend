@@ -94,7 +94,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Is this intentional?
 **Test Needed**: Data section with numeric headers
 **Expected Behavior**: Headers stored as strings of numbers
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - numeric headers (2024, 2025, 2026) correctly stored as strings ('2024', '2025', '2026')
 
 ### 12. Empty/Null Metadata Value
 
@@ -118,7 +118,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Should return empty result
 **Test Needed**: Workbook with empty worksheet
 **Expected Behavior**: Return empty metadata and no data sections
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - empty worksheet correctly returns empty metadata and no data sections
 
 ### 15. Formula Cells
 
