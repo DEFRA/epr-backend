@@ -9,7 +9,6 @@ const dirname = path.dirname(filename)
 
 describe('ExcelJSSummaryLogsParser', () => {
   let parser
-  let excelBuffer
 
   /**
    * Populates a worksheet from a 2D array where each sub-array represents a row.
@@ -24,11 +23,8 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   }
 
-  beforeEach(async () => {
+  beforeEach(() => {
     parser = new ExcelJSSummaryLogsParser()
-    excelBuffer = await readFile(
-      path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
-    )
   })
 
   describe('columnToLetter', () => {
@@ -60,6 +56,9 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   it('should parse Excel buffer and return empty metadata', async () => {
+    const excelBuffer = await readFile(
+      path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
+    )
     const result = await parser.parse(excelBuffer)
 
     expect(result).toBeDefined()
@@ -70,6 +69,9 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   it('should return consistent empty metadata', async () => {
+    const excelBuffer = await readFile(
+      path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
+    )
     const result = await parser.parse(excelBuffer)
 
     expect(result.meta).toEqual({})
