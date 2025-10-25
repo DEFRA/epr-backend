@@ -25,10 +25,14 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   }
 
-  const parseSheet = async (rows) => {
+  const parseSheet = async (worksheets) => {
     const workbook = new ExcelJS.Workbook()
-    const sheet = workbook.addWorksheet('Test')
-    populateSheet(sheet, rows)
+
+    for (const [sheetName, rows] of Object.entries(worksheets)) {
+      const sheet = workbook.addWorksheet(sheetName)
+      populateSheet(sheet, rows)
+    }
+
     const buffer = await workbook.xlsx.writeBuffer()
     return parser.parse(buffer)
   }
@@ -120,10 +124,12 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('extracts multiple metadata markers', async () => {
-      const result = await parseSheet([
-        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
-        ['__EPR_META_MATERIAL', 'Paper and board']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_MATERIAL', 'Paper and board']
+        ]
+      })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
         value: 'REPROCESSOR',
@@ -136,9 +142,11 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('extracts data section headers', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED']
+        ]
+      })
 
       expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -148,15 +156,17 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('extracts data section headers ending with empty cell', async () => {
-      const result = await parseSheet([
-        [
-          '__EPR_DATA_UPDATE_WASTE_BALANCE',
-          'OUR_REFERENCE',
-          'DATE_RECEIVED',
-          '',
-          'IGNORED'
+      const result = await parseSheet({
+        Test: [
+          [
+            '__EPR_DATA_UPDATE_WASTE_BALANCE',
+            'OUR_REFERENCE',
+            'DATE_RECEIVED',
+            '',
+            'IGNORED'
+          ]
         ]
-      ])
+      })
 
       expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -166,11 +176,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('extracts data section with rows', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
-        [null, 12345678910, '2025-05-25'],
-        [null, 98765432100, '2025-05-26']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [null, 98765432100, '2025-05-26']
+        ]
+      })
 
       expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -183,12 +195,14 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('extracts data section terminated by empty row', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
-        [null, 12345678910, '2025-05-25'],
-        [null, '', ''],
-        [null, 'This should be ignored']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [null, '', ''],
+          [null, 'This should be ignored']
+        ]
+      })
 
       expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -198,19 +212,21 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('handles side-by-side data sections without cross-contamination', async () => {
-      const result = await parseSheet([
-        [
-          '__EPR_DATA_TABLE_ONE',
-          'REF_ONE',
-          'DATE_ONE',
-          '',
-          '__EPR_DATA_TABLE_TWO',
-          'REF_TWO',
-          'DATE_TWO'
-        ],
-        [null, 'ABC123', '2025-01-01', null, null, 'XYZ789', '2025-02-02'],
-        [null, '', '', null, null, '', '']
-      ])
+      const result = await parseSheet({
+        Test: [
+          [
+            '__EPR_DATA_TABLE_ONE',
+            'REF_ONE',
+            'DATE_ONE',
+            '',
+            '__EPR_DATA_TABLE_TWO',
+            'REF_TWO',
+            'DATE_TWO'
+          ],
+          [null, 'ABC123', '2025-01-01', null, null, 'XYZ789', '2025-02-02'],
+          [null, '', '', null, null, '', '']
+        ]
+      })
 
       expect(result.data.TABLE_ONE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -226,11 +242,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('transitions collection from HEADERS to ROWS state correctly', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_TRANSITION_TEST', 'HEADER_ONE', 'HEADER_TWO'],
-        [null, 'row1_col1', 'row1_col2'],
-        [null, '', '']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_TRANSITION_TEST', 'HEADER_ONE', 'HEADER_TWO'],
+          [null, 'row1_col1', 'row1_col2'],
+          [null, '', '']
+        ]
+      })
 
       expect(result.data.TRANSITION_TEST).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -242,17 +260,19 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('handles skip column markers', async () => {
-      const result = await parseSheet([
-        [
-          '__EPR_DATA_WASTE_RECEIVED',
-          'OUR_REFERENCE',
-          'DATE_RECEIVED',
-          '__EPR_SKIP_COLUMN',
-          'SUPPLIER_REF',
-          'SUPPLIER_NAME'
-        ],
-        [null, 12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs']
-      ])
+      const result = await parseSheet({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            'DATE_RECEIVED',
+            '__EPR_SKIP_COLUMN',
+            'SUPPLIER_REF',
+            'SUPPLIER_NAME'
+          ],
+          [null, 12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs']
+        ]
+      })
 
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -268,10 +288,12 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('handles sparse data with missing cells', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_SPARSE', 'COL_A', 'COL_B', 'COL_C'],
-        [null, 'A1', null, 'C1'] // C2 is empty - intentionally null
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_SPARSE', 'COL_A', 'COL_B', 'COL_C'],
+          [null, 'A1', null, 'C1'] // C2 is empty - intentionally null
+        ]
+      })
 
       expect(result.data.SPARSE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -409,9 +431,9 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('metadata marker in value position', () => {
     it('should throw error when marker appears where value should be', async () => {
-      const result = parseSheet([
-        ['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']
-      ])
+      const result = parseSheet({
+        Test: [['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']]
+      })
 
       await expect(result).rejects.toThrow(
         'Malformed sheet: metadata marker found in value position'
@@ -421,9 +443,9 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('multiple metadata markers on same row', () => {
     it('should record both markers when separated by null value', async () => {
-      const result = await parseSheet([
-        ['__EPR_META_TYPE', null, '__EPR_META_NAME', 'name value']
-      ])
+      const result = await parseSheet({
+        Test: [['__EPR_META_TYPE', null, '__EPR_META_NAME', 'name value']]
+      })
 
       expect(result.meta.TYPE).toEqual({
         value: null,
@@ -438,15 +460,17 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('multiple data sections with same name', () => {
     it('should throw error for duplicate data section names', async () => {
-      const result = parseSheet([
-        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
-        [null, 12345, '2025-05-25'],
-        [null, '', ''],
-        [],
-        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'SUPPLIER_REF', 'WEIGHT'],
-        [null, 'ABC123', 100],
-        [null, '', '']
-      ])
+      const result = parseSheet({
+        Test: [
+          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345, '2025-05-25'],
+          [null, '', ''],
+          [],
+          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'SUPPLIER_REF', 'WEIGHT'],
+          [null, 'ABC123', 100],
+          [null, '', '']
+        ]
+      })
 
       await expect(result).rejects.toThrow(
         'Duplicate data section name: UPDATE_WASTE_BALANCE'
@@ -456,11 +480,13 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('duplicate metadata markers', () => {
     it('should throw error for duplicate metadata marker names', async () => {
-      const result = parseSheet([
-        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
-        ['__EPR_META_MATERIAL', 'Paper and board'],
-        ['__EPR_META_PROCESSING_TYPE', 'EXPORTER']
-      ])
+      const result = parseSheet({
+        Test: [
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_MATERIAL', 'Paper and board'],
+          ['__EPR_META_PROCESSING_TYPE', 'EXPORTER']
+        ]
+      })
 
       await expect(result).rejects.toThrow(
         'Duplicate metadata name: PROCESSING_TYPE'
@@ -470,12 +496,14 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('data section without empty row terminator', () => {
     it('should emit data section that goes to last row without empty terminator', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
-        [null, 12345678910, '2025-05-25'],
-        [null, 98765432100, '2025-05-26'],
-        [null, 11122233344, '2025-05-27']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [null, 98765432100, '2025-05-26'],
+          [null, 11122233344, '2025-05-27']
+        ]
+      })
 
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -491,7 +519,9 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('empty/null metadata values', () => {
     it('should store empty string when metadata marker is followed by empty string cell', async () => {
-      const result = await parseSheet([['__EPR_META_PROCESSING_TYPE', '']])
+      const result = await parseSheet({
+        Test: [['__EPR_META_PROCESSING_TYPE', '']]
+      })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
         value: '',
@@ -500,9 +530,9 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should store null when metadata marker is followed by explicitly null cell', async () => {
-      const result = await parseSheet([
-        ['__EPR_META_MATERIAL', null, 'extra to ensure B2 is visited']
-      ])
+      const result = await parseSheet({
+        Test: [['__EPR_META_MATERIAL', null, 'extra to ensure B2 is visited']]
+      })
 
       expect(result.meta.MATERIAL).toEqual({
         value: null,
@@ -513,10 +543,12 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('markers not in column A', () => {
     it('should extract metadata marker and value from correct positions when not in column A', async () => {
-      const result = await parseSheet([
-        [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
-        [null, '__EPR_META_MATERIAL', 'Paper and board']
-      ])
+      const result = await parseSheet({
+        Test: [
+          [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          [null, '__EPR_META_MATERIAL', 'Paper and board']
+        ]
+      })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
         value: 'REPROCESSOR',
@@ -529,11 +561,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should extract data section with correct startColumn when marker not in column A', async () => {
-      const result = await parseSheet([
-        [null, '__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
-        [null, null, 12345678910, '2025-05-25'],
-        [null, null, 98765432100, '2025-05-26']
-      ])
+      const result = await parseSheet({
+        Test: [
+          [null, '__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, null, 12345678910, '2025-05-25'],
+          [null, null, 98765432100, '2025-05-26']
+        ]
+      })
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'C' },
@@ -546,22 +580,24 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
 
     it('should handle mixed placement of metadata and data markers', async () => {
-      const result = await parseSheet([
-        [null, null, '__EPR_META_TYPE', 'REPROCESSOR'],
-        [],
-        [
-          null,
-          null,
-          '__EPR_DATA_SECTION_ONE',
-          'HEADER_A',
-          'HEADER_B',
-          null,
-          '__EPR_DATA_SECTION_TWO',
-          'HEADER_X'
-        ],
-        [null, null, null, 'value_a1', 'value_b1', null, null, 'value_x1'],
-        [null, null, null, '', '', null, null, '']
-      ])
+      const result = await parseSheet({
+        Test: [
+          [null, null, '__EPR_META_TYPE', 'REPROCESSOR'],
+          [],
+          [
+            null,
+            null,
+            '__EPR_DATA_SECTION_ONE',
+            'HEADER_A',
+            'HEADER_B',
+            null,
+            '__EPR_DATA_SECTION_TWO',
+            'HEADER_X'
+          ],
+          [null, null, null, 'value_a1', 'value_b1', null, null, 'value_x1'],
+          [null, null, null, '', '', null, null, '']
+        ]
+      })
 
       expect(result.meta.TYPE).toEqual({
         value: 'REPROCESSOR',
@@ -584,11 +620,13 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('rows with more cells than headers', () => {
     it('should ignore extra cells beyond the number of headers', async () => {
-      const result = await parseSheet([
-        ['__EPR_DATA_WASTE_BALANCE', 'HEADER_A', 'HEADER_B', 'HEADER_C'],
-        [null, 'value_a1', 'value_b1', 'value_c1', 'extra_1', 'extra_2'],
-        [null, 'value_a2', 'value_b2', 'value_c2', 'extra_3']
-      ])
+      const result = await parseSheet({
+        Test: [
+          ['__EPR_DATA_WASTE_BALANCE', 'HEADER_A', 'HEADER_B', 'HEADER_C'],
+          [null, 'value_a1', 'value_b1', 'value_c1', 'extra_1', 'extra_2'],
+          [null, 'value_a2', 'value_b2', 'value_c2', 'extra_3']
+        ]
+      })
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
@@ -603,7 +641,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
   describe('completely empty worksheet', () => {
     it('should return empty metadata and no data sections for empty worksheet', async () => {
-      const result = await parseSheet([])
+      const result = await parseSheet({ Test: [] })
 
       expect(result.meta).toEqual({})
       expect(result.data).toEqual({})
