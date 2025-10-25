@@ -13,10 +13,14 @@ export class ExcelJSSummaryLogsParser {
     state
   ) {
     if (!state.metadataContext && cellValueStr.startsWith('__EPR_META_')) {
+      const metadataName = cellValueStr.replace('__EPR_META_', '')
+      if (state.result.meta[metadataName]) {
+        throw new Error(`Duplicate metadata name: ${metadataName}`)
+      }
       return {
         ...state,
         metadataContext: {
-          metadataName: cellValueStr.replace('__EPR_META_', '')
+          metadataName
         }
       }
     } else if (state.metadataContext) {

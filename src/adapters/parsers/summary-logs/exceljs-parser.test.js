@@ -522,4 +522,24 @@ describe('ExcelJSSummaryLogsParser', () => {
       )
     })
   })
+
+  describe('duplicate metadata markers', () => {
+    it('should throw error for duplicate metadata marker names', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+        ['__EPR_META_MATERIAL', 'Paper and board'],
+        ['__EPR_META_PROCESSING_TYPE', 'EXPORTER']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parser.parse(buffer)).rejects.toThrow(
+        'Duplicate metadata name: PROCESSING_TYPE'
+      )
+    })
+  })
 })
