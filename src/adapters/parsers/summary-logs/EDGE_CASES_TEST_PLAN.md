@@ -162,11 +162,11 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 
 ### 20. Partial Empty Rows
 
-**Issue**: `[null, null, 'X']` - line 119 checks ALL null
+**Issue**: `[null, null, 'X']` - line 143 checks ALL null
 **Risk**: Doesn't terminate section, is this correct?
 **Test Needed**: Row with some nulls and some values
 **Expected Behavior**: Row treated as data row, not terminator
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - rows with some nulls and some values correctly treated as data rows, only rows where ALL cells are null terminate the section
 
 ## Testing Strategy
 

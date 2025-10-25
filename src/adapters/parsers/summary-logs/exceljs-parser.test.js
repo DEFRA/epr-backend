@@ -741,6 +741,30 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('partial empty rows', () => {
+    it('should treat row with some nulls and some values as data row, not terminator', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_PARTIAL_NULLS', 'COLUMN_A', 'COLUMN_B', 'COLUMN_C'],
+          [null, 'value1', 'value2', 'value3'],
+          [null, null, null, 'only_last_has_value'],
+          [null, 'value4', null, 'value5'],
+          [null, null, null, null]
+        ]
+      })
+
+      expect(result.data.PARTIAL_NULLS).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['COLUMN_A', 'COLUMN_B', 'COLUMN_C'],
+        rows: [
+          ['value1', 'value2', 'value3'],
+          [null, null, 'only_last_has_value'],
+          ['value4', null, 'value5']
+        ]
+      })
+    })
+  })
+
   describe('date cells', () => {
     it('should extract Date object from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
