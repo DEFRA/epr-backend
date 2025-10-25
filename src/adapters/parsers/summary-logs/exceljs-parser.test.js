@@ -55,27 +55,19 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
-  it('should parse Excel buffer and return empty metadata', async () => {
-    const excelBuffer = await readFile(
-      path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
-    )
-    const result = await parser.parse(excelBuffer)
+  describe('sheet with no markers', () => {
+    it('should return empty metadata and data', async () => {
+      const excelBuffer = await readFile(
+        path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
+      )
+      const result = await parser.parse(excelBuffer)
 
-    expect(result).toBeDefined()
-    expect(result.meta).toBeDefined()
-    expect(result.meta).toEqual({})
-    expect(result.data).toBeDefined()
-    expect(result.data).toEqual({})
-  })
-
-  it('should return consistent empty metadata', async () => {
-    const excelBuffer = await readFile(
-      path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
-    )
-    const result = await parser.parse(excelBuffer)
-
-    expect(result.meta).toEqual({})
-    expect(result.data).toEqual({})
+      expect(result).toBeDefined()
+      expect(result.meta).toBeDefined()
+      expect(result.meta).toEqual({})
+      expect(result.data).toBeDefined()
+      expect(result.data).toEqual({})
+    })
   })
 
   it('should throw error for invalid Excel buffer', async () => {
