@@ -579,4 +579,96 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('markers not in column A', () => {
+    it('should extract metadata marker and value from correct positions when not in column A', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+        [null, '__EPR_META_MATERIAL', 'Paper and board']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 1, column: 'D' }
+      })
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Test', row: 2, column: 'C' }
+      })
+    })
+
+    it('should extract data section with correct startColumn when marker not in column A', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        [null, '__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+        [null, null, 12345678910, '2025-05-25'],
+        [null, null, 98765432100, '2025-05-26']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'C' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [
+          [12345678910, '2025-05-25'],
+          [98765432100, '2025-05-26']
+        ]
+      })
+    })
+
+    it('should handle mixed placement of metadata and data markers', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        [null, null, '__EPR_META_TYPE', 'REPROCESSOR'],
+        [],
+        [
+          null,
+          null,
+          '__EPR_DATA_SECTION_ONE',
+          'HEADER_A',
+          'HEADER_B',
+          null,
+          '__EPR_DATA_SECTION_TWO',
+          'HEADER_X'
+        ],
+        [null, null, null, 'value_a1', 'value_b1', null, null, 'value_x1'],
+        [null, null, null, '', '', null, null, '']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 1, column: 'D' }
+      })
+
+      expect(result.data.SECTION_ONE).toEqual({
+        location: { sheet: 'Test', row: 3, column: 'D' },
+        headers: ['HEADER_A', 'HEADER_B'],
+        rows: [['value_a1', 'value_b1']]
+      })
+
+      expect(result.data.SECTION_TWO).toEqual({
+        location: { sheet: 'Test', row: 3, column: 'H' },
+        headers: ['HEADER_X'],
+        rows: [['value_x1']]
+      })
+    })
+  })
 })

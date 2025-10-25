@@ -84,7 +84,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Metadata uses wrong cell as value, data has wrong startColumn
 **Test Needed**: `__EPR_META_TYPE` in C3, `__EPR_DATA_X` in B4
 **Expected Behavior**: Extract values correctly using respective value/startColumn
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - markers work correctly from any column position, with values/data extracted from column+1 offset
 
 ## Medium Priority - Edge Cases
 
