@@ -542,4 +542,32 @@ describe('ExcelJSSummaryLogsParser', () => {
       )
     })
   })
+
+  describe('data section without empty row terminator', () => {
+    it('should emit data section that goes to last row without empty terminator', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+        [null, 12345678910, '2025-05-25'],
+        [null, 98765432100, '2025-05-26'],
+        [null, 11122233344, '2025-05-27']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.WASTE_RECEIVED).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [
+          [12345678910, '2025-05-25'],
+          [98765432100, '2025-05-26'],
+          [11122233344, '2025-05-27']
+        ]
+      })
+    })
+  })
 })
