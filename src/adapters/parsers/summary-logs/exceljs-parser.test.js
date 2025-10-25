@@ -498,4 +498,28 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('multiple data sections with same name', () => {
+    it('should throw error for duplicate data section names', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+        [null, 12345, '2025-05-25'],
+        [null, '', ''],
+        [],
+        ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'SUPPLIER_REF', 'WEIGHT'],
+        [null, 'ABC123', 100],
+        [null, '', '']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parser.parse(buffer)).rejects.toThrow(
+        'Duplicate data section name: UPDATE_WASTE_BALANCE'
+      )
+    })
+  })
 })

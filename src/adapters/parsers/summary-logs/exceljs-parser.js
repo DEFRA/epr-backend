@@ -138,6 +138,11 @@ export class ExcelJSSummaryLogsParser {
 
   emitCollectionsToResult(state, collections) {
     for (const collection of collections) {
+      if (state.result.data[collection.sectionName]) {
+        throw new Error(
+          `Duplicate data section name: ${collection.sectionName}`
+        )
+      }
       state.result.data[collection.sectionName] = {
         location: collection.location,
         headers: collection.headers,

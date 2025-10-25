@@ -34,7 +34,8 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Second silently overwrites first (line 136)
 **Test Needed**: Two data sections with identical names
 **Expected Behavior**: Throw error on duplicate data section names
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - throws error with message: 'Duplicate data section name: UPDATE_WASTE_BALANCE'
+**Bug Found**: Yes - second section was silently overwriting the first. Fixed by adding validation in `emitCollectionsToResult`
 
 ### 5. Data Section Never Ends
 
