@@ -102,7 +102,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Stores null or '' as value
 **Test Needed**: Metadata marker with empty value cell
 **Expected Behavior**: Store null or '' as metadata value
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - empty string ('') is stored for empty string cells, null is stored for explicitly null cells
 
 ### 13. Rows with More Cells Than Headers
 

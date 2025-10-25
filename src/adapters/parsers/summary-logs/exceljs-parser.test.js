@@ -580,6 +580,42 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('empty/null metadata values', () => {
+    it('should store empty string when metadata marker is followed by empty string cell', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [['__EPR_META_PROCESSING_TYPE', '']])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: '',
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should store null when metadata marker is followed by explicitly null cell', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        ['__EPR_META_MATERIAL', null, 'extra to ensure B2 is visited']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.MATERIAL).toEqual({
+        value: null,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+  })
+
   describe('markers not in column A', () => {
     it('should extract metadata marker and value from correct positions when not in column A', async () => {
       const ExcelJS = (await import('exceljs')).default
