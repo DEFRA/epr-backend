@@ -9,7 +9,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Parser loops through all worksheets (line 154) but no test for multiple sheets
 **Risk**: Metadata/data from different sheets might not merge correctly
 **Test Needed**: Workbook with data in Sheet1 and Sheet2, verify both are parsed
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - metadata and data sections from multiple worksheets correctly merged into single result
 
 ### 2. Metadata Marker in Value Position
 
@@ -25,6 +25,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Second marker might overwrite metadataContext, first could be lost
 **Test Needed**: Two metadata markers in same row with null between them
 **Expected Behavior**: Record both - TYPE with null value at B1, NAME with value at D1
+**Variations**: Also test with non-null between markers, and with/without D1 existing
 **Status**: ❌ Not tested
 
 ### 4. Multiple Data Sections with Same Name
@@ -55,6 +56,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: 0 returns empty string, negatives cause infinite loop
 **Risk**: Crash or wrong results
 **Test Needed**: columnToLetter(0), columnToLetter(-1)
+**Expected Behavior**: Throw error for invalid input
 **Status**: ❌ Not tested
 
 ### 8. letterToColumnNumber('')
@@ -62,6 +64,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Empty string returns 0
 **Risk**: Is this intended behavior?
 **Test Needed**: letterToColumnNumber('')
+**Expected Behavior**: Throw error for invalid input
 **Status**: ❌ Not tested
 
 ### 9. Lowercase Letters in letterToColumnNumber
@@ -69,13 +72,15 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Assumes uppercase (codePointAt - 64), lowercase gives wrong result
 **Risk**: Silent failure, wrong column numbers
 **Test Needed**: letterToColumnNumber('a'), letterToColumnNumber('aa')
+**Expected Behavior**: Throw error
 **Status**: ❌ Not tested
 
 ### 10. Markers Not in Column A
 
 **Issue**: No enforcement that markers must be in column A
 **Risk**: Metadata uses wrong cell as value, data has wrong startColumn
-**Test Needed**: `__EPR_META_TYPE` in C1, `__EPR_DATA_X` in C1
+**Test Needed**: `__EPR_META_TYPE` in C3, `__EPR_DATA_X` in B4
+**Expected Behavior**: Extract values correctly using respective value/startColumn
 **Status**: ❌ Not tested
 
 ## Medium Priority - Edge Cases
@@ -85,6 +90,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Line 81 uses cellValueStr, numbers converted to strings
 **Risk**: Is this intentional?
 **Test Needed**: Data section with numeric headers
+**Expected Behavior**: Headers stored as strings of numbers
 **Status**: ❌ Not tested
 
 ### 12. Empty/Null Metadata Value
@@ -92,6 +98,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: `__EPR_META_TYPE` followed by empty cell
 **Risk**: Stores null or '' as value
 **Test Needed**: Metadata marker with empty value cell
+**Expected Behavior**: Store null or '' as metadata value
 **Status**: ❌ Not tested
 
 ### 13. Rows with More Cells Than Headers
@@ -99,6 +106,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Line 103 checks columnIndex < headers.length, extra cells ignored
 **Risk**: Silent data loss
 **Test Needed**: Row with 5 cells but only 3 headers
+**Expected Behavior**: Extra cells ignored
 **Status**: ❌ Not tested
 
 ### 14. Completely Empty Worksheet
@@ -106,6 +114,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: If eachRow returns nothing
 **Risk**: Should return empty result
 **Test Needed**: Workbook with empty worksheet
+**Expected Behavior**: Return empty metadata and no data sections
 **Status**: ❌ Not tested
 
 ### 15. Formula Cells
@@ -113,6 +122,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: ExcelJS might return formula or result
 **Risk**: Unpredictable behavior
 **Test Needed**: Cell with formula in metadata value and data row
+**Expected Behavior**: Return evaluated result (if possible?)
 **Status**: ❌ Not tested
 
 ### 16. Date Cells
@@ -120,6 +130,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Excel dates stored as numbers
 **Risk**: Need to verify handling
 **Test Needed**: Date in metadata value and data row
+**Expected Behavior**: Return date as JS Date object
 **Status**: ❌ Not tested
 
 ### 17. Multiple Data Sections on Same Row
@@ -127,6 +138,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: `__EPR_DATA_ONE` in A1, `__EPR_DATA_TWO` in E1
 **Risk**: Both added to activeCollections - does this work?
 **Test Needed**: Two data markers on same row
+**Expected Behavior**: Both data sections parsed correctly
 **Status**: ✅ Already tested (side-by-side)
 
 ### 18. Skip Column Marker as First Header
@@ -134,6 +146,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: `__EPR_SKIP_COLUMN` immediately after `__EPR_DATA_X`
 **Risk**: First header is null
 **Test Needed**: Skip marker in first position
+**Expected Behavior**: First header is null, data aligns correctly
 **Status**: ❌ Not tested
 
 ### 19. All Headers Are Skip Columns
@@ -141,6 +154,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Headers array full of nulls
 **Risk**: No actual data columns
 **Test Needed**: Data section with only skip columns
+**Expected Behavior**: Data rows are filled with nulls
 **Status**: ❌ Not tested
 
 ### 20. Partial Empty Rows
@@ -148,6 +162,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: `[null, null, 'X']` - line 119 checks ALL null
 **Risk**: Doesn't terminate section, is this correct?
 **Test Needed**: Row with some nulls and some values
+**Expected Behavior**: Row treated as data row, not terminator
 **Status**: ❌ Not tested
 
 ## Testing Strategy

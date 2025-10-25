@@ -379,47 +379,122 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
-  describe('edge cases', () => {
-    describe('multiple worksheets', () => {
-      it('should parse metadata from multiple sheets', async () => {
-        const ExcelJS = (await import('exceljs')).default
-        const workbook = new ExcelJS.Workbook()
+  describe('multiple worksheets', () => {
+    it('should parse metadata from multiple sheets', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
 
-        const sheet1 = workbook.addWorksheet('Sheet1')
-        populateSheet(sheet1, [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']])
+      const sheet1 = workbook.addWorksheet('Sheet1')
+      populateSheet(sheet1, [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']])
 
-        const sheet2 = workbook.addWorksheet('Sheet2')
-        populateSheet(sheet2, [['__EPR_META_MATERIAL', 'Paper and board']])
+      const sheet2 = workbook.addWorksheet('Sheet2')
+      populateSheet(sheet2, [['__EPR_META_MATERIAL', 'Paper and board']])
 
-        const buffer = await workbook.xlsx.writeBuffer()
-        const result = await parser.parse(buffer)
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
 
-        expect(result.meta.PROCESSING_TYPE).toEqual({
-          value: 'REPROCESSOR',
-          location: { sheet: 'Sheet1', row: 1, column: 'B' }
-        })
-        expect(result.meta.MATERIAL).toEqual({
-          value: 'Paper and board',
-          location: { sheet: 'Sheet2', row: 1, column: 'B' }
-        })
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Sheet1', row: 1, column: 'B' }
+      })
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Sheet2', row: 1, column: 'B' }
       })
     })
 
-    describe('metadata marker in value position', () => {
-      it('should throw error when marker appears where value should be', async () => {
-        const ExcelJS = (await import('exceljs')).default
-        const workbook = new ExcelJS.Workbook()
-        const sheet = workbook.addWorksheet('Test')
+    it('should merge metadata and data sections from multiple worksheets', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
 
-        populateSheet(sheet, [
-          ['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']
-        ])
+      const sheet1 = workbook.addWorksheet('Sheet1')
+      populateSheet(sheet1, [
+        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+        [],
+        ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'WEIGHT'],
+        [null, 12345, 100],
+        [null, 67890, 200]
+      ])
 
-        const buffer = await workbook.xlsx.writeBuffer()
+      const sheet2 = workbook.addWorksheet('Sheet2')
+      populateSheet(sheet2, [
+        ['__EPR_META_MATERIAL', 'Paper and board'],
+        [],
+        ['__EPR_DATA_SUPPLIER_INFO', 'SUPPLIER_NAME', 'SUPPLIER_REF'],
+        [null, 'ABC Ltd', 'ABC123'],
+        [null, 'XYZ Corp', 'XYZ789']
+      ])
 
-        await expect(parser.parse(buffer)).rejects.toThrow(
-          'Malformed sheet: metadata marker found in value position'
-        )
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Sheet1', row: 1, column: 'B' }
+      })
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Sheet2', row: 1, column: 'B' }
+      })
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Sheet1', row: 3, column: 'B' },
+        headers: ['OUR_REFERENCE', 'WEIGHT'],
+        rows: [
+          [12345, 100],
+          [67890, 200]
+        ]
+      })
+
+      expect(result.data.SUPPLIER_INFO).toEqual({
+        location: { sheet: 'Sheet2', row: 3, column: 'B' },
+        headers: ['SUPPLIER_NAME', 'SUPPLIER_REF'],
+        rows: [
+          ['ABC Ltd', 'ABC123'],
+          ['XYZ Corp', 'XYZ789']
+        ]
+      })
+    })
+  })
+
+  describe('metadata marker in value position', () => {
+    it('should throw error when marker appears where value should be', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        ['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parser.parse(buffer)).rejects.toThrow(
+        'Malformed sheet: metadata marker found in value position'
+      )
+    })
+  })
+
+  describe('multiple metadata markers on same row', () => {
+    it('should record both markers when separated by null value', async () => {
+      const ExcelJS = (await import('exceljs')).default
+      const workbook = new ExcelJS.Workbook()
+      const sheet = workbook.addWorksheet('Test')
+
+      populateSheet(sheet, [
+        ['__EPR_META_TYPE', null, '__EPR_META_NAME', 'name value']
+      ])
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.TYPE).toEqual({
+        value: null,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+      expect(result.meta.NAME).toEqual({
+        value: 'name value',
+        location: { sheet: 'Test', row: 1, column: 'D' }
       })
     })
   })
