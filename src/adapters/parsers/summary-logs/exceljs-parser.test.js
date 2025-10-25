@@ -600,4 +600,13 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('completely empty worksheet', () => {
+    it('should return empty metadata and no data sections for empty worksheet', async () => {
+      const result = await parseSheet([])
+
+      expect(result.meta).toEqual({})
+      expect(result.data).toEqual({})
+    })
+  })
 })
