@@ -26,7 +26,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Test Needed**: Two metadata markers in same row with null between them
 **Expected Behavior**: Record both - TYPE with null value at B1, NAME with value at D1
 **Variations**: Also test with non-null between markers, and with/without D1 existing
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - both metadata markers correctly recorded with their respective values and locations
 
 ### 4. Multiple Data Sections with Same Name
 
