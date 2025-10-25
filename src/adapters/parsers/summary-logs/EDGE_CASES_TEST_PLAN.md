@@ -17,7 +17,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Marker appears where value should be - indicates malformed sheet
 **Test Needed**: Row like `['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']` should throw error
 **Expected Behavior**: Throw error - marker in value position is malformed
-**Status**: ❌ Not tested - current implementation is WRONG
+**Status**: ✅ TESTED - throws error with message: 'Malformed sheet: metadata marker found in value position'
 
 ### 3. Multiple Metadata Markers on Same Row
 
@@ -32,6 +32,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: Two `__EPR_DATA_UPDATE_WASTE_BALANCE` sections
 **Risk**: Second silently overwrites first (line 136)
 **Test Needed**: Two data sections with identical names
+**Expected Behavior**: Throw error on duplicate data section names
 **Status**: ❌ Not tested
 
 ### 5. Data Section Never Ends
@@ -39,16 +40,17 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Issue**: No empty row before sheet ends
 **Risk**: Line 225 should emit, but not verified
 **Test Needed**: Data section that goes to last row without empty terminator
+**Expected Behavior**: Data section emitted at end of sheet
 **Status**: ❌ Not tested
 
-### 6. Very Large Column Numbers
+### 6. Very Large Column Numbers (skip this one)
 
 **Issue**: Tests go up to AA (27), but not AAA (703) or XFD (16384)
 **Risk**: Algorithm untested for large columns
 **Test Needed**: columnToLetter/letterToColumnNumber for AAA, XFD
-**Status**: ❌ Not tested
+**Status**: ❌ Not tested, unnecessary.
 
-### 7. columnToLetter(0) or Negative Numbers
+### 7. columnToLetter(0) or Negative Numbers (ignore)
 
 **Issue**: 0 returns empty string, negatives cause infinite loop
 **Risk**: Crash or wrong results

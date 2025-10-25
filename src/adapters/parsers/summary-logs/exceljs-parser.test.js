@@ -404,5 +404,23 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
       })
     })
+
+    describe('metadata marker in value position', () => {
+      it('should throw error when marker appears where value should be', async () => {
+        const ExcelJS = (await import('exceljs')).default
+        const workbook = new ExcelJS.Workbook()
+        const sheet = workbook.addWorksheet('Test')
+
+        populateSheet(sheet, [
+          ['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']
+        ])
+
+        const buffer = await workbook.xlsx.writeBuffer()
+
+        await expect(parser.parse(buffer)).rejects.toThrow(
+          'Malformed sheet: metadata marker found in value position'
+        )
+      })
+    })
   })
 })

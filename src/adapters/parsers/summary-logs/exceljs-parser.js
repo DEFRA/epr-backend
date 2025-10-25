@@ -20,6 +20,11 @@ export class ExcelJSSummaryLogsParser {
         }
       }
     } else if (state.metadataContext) {
+      if (cellValueStr.startsWith('__EPR_META_')) {
+        throw new Error(
+          'Malformed sheet: metadata marker found in value position'
+        )
+      }
       return {
         ...state,
         result: {
