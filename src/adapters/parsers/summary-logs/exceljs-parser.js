@@ -267,6 +267,9 @@ export class ExcelJSSummaryLogsParser {
    * @returns {number}
    */
   letterToColumnNumber(letter) {
+    if (letter === '') {
+      throw new Error('Invalid column letter: empty string')
+    }
     let result = 0
     for (let i = 0; i < letter.length; i++) {
       result =

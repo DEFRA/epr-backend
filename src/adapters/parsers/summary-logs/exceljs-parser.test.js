@@ -53,6 +53,12 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('converts AA to column 27', () => {
       expect(parser.letterToColumnNumber('AA')).toBe(27)
     })
+
+    it('throws error for empty string', () => {
+      expect(() => parser.letterToColumnNumber('')).toThrow(
+        'Invalid column letter: empty string'
+      )
+    })
   })
 
   describe('sheet with no markers', () => {
