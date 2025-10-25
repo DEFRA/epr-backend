@@ -627,4 +627,65 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data).toEqual({})
     })
   })
+
+  describe('formula cells', () => {
+    it('should extract formula result from metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_CALCULATION'
+      worksheet.getCell('B1').value = { formula: '=10+20', result: 30 }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.CALCULATION).toEqual({
+        value: 30,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract formula results from data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_CALCULATIONS'
+      worksheet.getCell('B1').value = 'INPUT'
+      worksheet.getCell('C1').value = 'RESULT'
+
+      worksheet.getCell('B2').value = 5
+      worksheet.getCell('C2').value = { formula: '=B2*2', result: 10 }
+
+      worksheet.getCell('B3').value = 7
+      worksheet.getCell('C3').value = { formula: '=B3*2', result: 14 }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.data.CALCULATIONS).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['INPUT', 'RESULT'],
+        rows: [
+          [5, 10],
+          [7, 14]
+        ]
+      })
+    })
+
+    it('should handle formula without cached result', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_UNCACHED'
+      worksheet.getCell('B1').value = { formula: '=SUM(1,2,3)' }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parser.parse(buffer)
+
+      expect(result.meta.UNCACHED).toEqual({
+        value: null,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+  })
 })

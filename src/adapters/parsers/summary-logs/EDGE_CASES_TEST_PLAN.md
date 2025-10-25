@@ -126,7 +126,7 @@ This document tracks edge cases that need test coverage for the ExcelJS Summary 
 **Risk**: Unpredictable behavior
 **Test Needed**: Cell with formula in metadata value and data row
 **Expected Behavior**: Return evaluated result (if possible?)
-**Status**: ❌ Not tested
+**Status**: ✅ TESTED - formula cells with cached results return the result value, formulas without cached results return null
 
 ### 16. Date Cells
 

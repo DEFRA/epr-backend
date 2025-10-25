@@ -4,6 +4,21 @@ export class ExcelJSSummaryLogsParser {
   static ALPHABET_SIZE = 26
   static ASCII_CODE_OFFSET = 65
 
+  extractCellValue(cellValue) {
+    if (
+      cellValue &&
+      typeof cellValue === 'object' &&
+      'formula' in cellValue &&
+      'result' in cellValue
+    ) {
+      return cellValue.result
+    }
+    if (cellValue && typeof cellValue === 'object' && 'formula' in cellValue) {
+      return null
+    }
+    return cellValue
+  }
+
   processCellForMetadata(
     cellValue,
     cellValueStr,
@@ -185,7 +200,8 @@ export class ExcelJSSummaryLogsParser {
 
         // Process cells with reduce
         state = cells.reduce((acc, { cell, colNumber }) => {
-          const cellValue = cell.value
+          const rawCellValue = cell.value
+          const cellValue = this.extractCellValue(rawCellValue)
           const cellValueStr = cellValue?.toString() || ''
 
           // Process metadata
