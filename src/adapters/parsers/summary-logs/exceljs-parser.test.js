@@ -378,4 +378,58 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('edge cases', () => {
+    describe('multiple worksheets', () => {
+      it('should parse metadata from multiple sheets', async () => {
+        const ExcelJS = (await import('exceljs')).default
+        const workbook = new ExcelJS.Workbook()
+
+        const sheet1 = workbook.addWorksheet('Sheet1')
+        populateSheet(sheet1, [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']])
+
+        const sheet2 = workbook.addWorksheet('Sheet2')
+        populateSheet(sheet2, [['__EPR_META_MATERIAL', 'Paper and board']])
+
+        const buffer = await workbook.xlsx.writeBuffer()
+        const result = await parser.parse(buffer)
+
+        expect(result.meta.PROCESSING_TYPE).toEqual({
+          value: 'REPROCESSOR',
+          location: { sheet: 'Sheet1', row: 1, column: 'B' }
+        })
+        expect(result.meta.MATERIAL).toEqual({
+          value: 'Paper and board',
+          location: { sheet: 'Sheet2', row: 1, column: 'B' }
+        })
+      })
+    })
+
+    describe('metadata marker without value', () => {
+      it('should not lose metadata when two consecutive markers appear without value between them', async () => {
+        const ExcelJS = (await import('exceljs')).default
+        const workbook = new ExcelJS.Workbook()
+        const sheet = workbook.addWorksheet('Test')
+
+        populateSheet(sheet, [
+          ['__EPR_META_TYPE', null],
+          ['__EPR_META_NAME', 'REPROCESSOR']
+        ])
+
+        const buffer = await workbook.xlsx.writeBuffer()
+        const result = await parser.parse(buffer)
+
+        // TYPE should be recorded with null value (not lost)
+        expect(result.meta.TYPE).toEqual({
+          value: null,
+          location: { sheet: 'Test', row: 1, column: 'B' }
+        })
+        // NAME should also be recorded
+        expect(result.meta.NAME).toEqual({
+          value: 'REPROCESSOR',
+          location: { sheet: 'Test', row: 2, column: 'B' }
+        })
+      })
+    })
+  })
 })

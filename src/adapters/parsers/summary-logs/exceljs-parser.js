@@ -12,11 +12,48 @@ export class ExcelJSSummaryLogsParser {
     colNumber,
     state
   ) {
-    if (!state.metadataContext && cellValueStr.startsWith('__EPR_META_')) {
-      return {
-        ...state,
-        metadataContext: {
-          metadataName: cellValueStr.replace('__EPR_META_', '')
+    if (cellValueStr.startsWith('__EPR_META_')) {
+      const newMetadataName = cellValueStr.replace('__EPR_META_', '')
+
+      if (state.metadataContext) {
+        return {
+          ...state,
+          result: {
+            ...state.result,
+            meta: {
+              ...state.result.meta,
+              [state.metadataContext.metadataName]: {
+                value: null,
+                location: {
+                  sheet: state.metadataContext.location.sheet,
+                  row: state.metadataContext.location.row,
+                  column: this.columnToLetter(
+                    state.metadataContext.location.markerColumn + 1
+                  )
+                }
+              }
+            }
+          },
+          metadataContext: {
+            metadataName: newMetadataName,
+            location: {
+              sheet: worksheet.name,
+              row: rowNumber,
+              markerColumn: colNumber
+            }
+          }
+        }
+      } else {
+        return {
+          ...state,
+          metadataContext: {
+            metadataName: newMetadataName,
+            location: {
+              sheet: worksheet.name,
+              row: rowNumber,
+              markerColumn: colNumber
+            }
+          }
         }
       }
     } else if (state.metadataContext) {
