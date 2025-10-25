@@ -412,7 +412,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         const sheet = workbook.addWorksheet('Test')
 
         populateSheet(sheet, [
-          ['__EPR_META_TYPE', null],
+          ['__EPR_META_TYPE'],
           ['__EPR_META_NAME', 'REPROCESSOR']
         ])
 
