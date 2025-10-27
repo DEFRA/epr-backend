@@ -6,6 +6,15 @@ import ExcelJS from 'exceljs'
 const ALPHABET_SIZE = 26
 const ASCII_CODE_OFFSET = 65
 
+const META_PREFIX = '__EPR_META_'
+const DATA_PREFIX = '__EPR_DATA_'
+const SKIP_COLUMN = '__EPR_SKIP_COLUMN'
+
+const CollectionState = {
+  HEADERS: 'HEADERS',
+  ROWS: 'ROWS'
+}
+
 /**
  * @param {number} colNumber
  * @returns {string}
@@ -43,8 +52,8 @@ const processCellForMetadata = (
   colNumber,
   state
 ) => {
-  if (!state.metadataContext && cellValueStr.startsWith('__EPR_META_')) {
-    const metadataName = cellValueStr.replace('__EPR_META_', '')
+  if (!state.metadataContext && cellValueStr.startsWith(META_PREFIX)) {
+    const metadataName = cellValueStr.replace(META_PREFIX, '')
     if (state.result.meta[metadataName]) {
       throw new Error(`Duplicate metadata name: ${metadataName}`)
     }
@@ -55,7 +64,7 @@ const processCellForMetadata = (
       }
     }
   } else if (state.metadataContext) {
-    if (cellValueStr.startsWith('__EPR_META_')) {
+    if (cellValueStr.startsWith(META_PREFIX)) {
       throw new Error(
         'Malformed sheet: metadata marker found in value position'
       )
@@ -90,15 +99,15 @@ const processDataMarker = (
   colNumber,
   collections
 ) => {
-  if (!cellValueStr.startsWith('__EPR_DATA_')) {
+  if (!cellValueStr.startsWith(DATA_PREFIX)) {
     return collections
   }
 
   return [
     ...collections,
     {
-      sectionName: cellValueStr.replace('__EPR_DATA_', ''),
-      state: 'HEADERS',
+      sectionName: cellValueStr.replace(DATA_PREFIX, ''),
+      state: CollectionState.HEADERS,
       startColumn: colNumber + 1,
       headers: [],
       rows: [],
@@ -114,8 +123,8 @@ const processDataMarker = (
 
 const processHeaderCell = (collection, cellValueStr) => {
   if (cellValueStr === '') {
-    return { ...collection, state: 'ROWS' }
-  } else if (cellValueStr === '__EPR_SKIP_COLUMN') {
+    return { ...collection, state: CollectionState.ROWS }
+  } else if (cellValueStr === SKIP_COLUMN) {
     return { ...collection, headers: [...collection.headers, null] }
   } else {
     return { ...collection, headers: [...collection.headers, cellValueStr] }
@@ -123,13 +132,13 @@ const processHeaderCell = (collection, cellValueStr) => {
 }
 
 const processRowCell = (collection, cellValue) => {
-  const normalizedValue =
+  const normalisedValue =
     cellValue === null || cellValue === undefined || cellValue === ''
       ? null
       : cellValue
   return {
     ...collection,
-    currentRow: [...collection.currentRow, normalizedValue]
+    currentRow: [...collection.currentRow, normalisedValue]
   }
 }
 
@@ -141,12 +150,12 @@ const updateCollectionWithCell = (
 ) => {
   const columnIndex = colNumber - collection.startColumn
 
-  if (columnIndex >= 0 && collection.state === 'HEADERS') {
+  if (columnIndex >= 0 && collection.state === CollectionState.HEADERS) {
     return processHeaderCell(collection, cellValueStr)
   } else if (
     columnIndex >= 0 &&
     columnIndex < collection.headers.length &&
-    collection.state === 'ROWS'
+    collection.state === CollectionState.ROWS
   ) {
     return processRowCell(collection, cellValue)
   } else {
@@ -155,9 +164,12 @@ const updateCollectionWithCell = (
 }
 
 const finalizeRowForCollection = (collection) => {
-  if (collection.state === 'HEADERS') {
-    return { ...collection, state: 'ROWS', currentRow: [] }
-  } else if (collection.state === 'ROWS' && collection.currentRow.length > 0) {
+  if (collection.state === CollectionState.HEADERS) {
+    return { ...collection, state: CollectionState.ROWS, currentRow: [] }
+  } else if (
+    collection.state === CollectionState.ROWS &&
+    collection.currentRow.length > 0
+  ) {
     const isEmptyRow = collection.currentRow.every((val) => val === null)
     if (isEmptyRow) {
       return { ...collection, complete: true }
@@ -210,8 +222,8 @@ export const parse = async (summaryLogBuffer) => {
       })
 
       // Initialize currentRow for all active collections
-      state.activeCollections = state.activeCollections.map((c) => ({
-        ...c,
+      state.activeCollections = state.activeCollections.map((collection) => ({
+        ...collection,
         currentRow: []
       }))
 
@@ -254,17 +266,17 @@ export const parse = async (summaryLogBuffer) => {
       }, state)
 
       // Finalize row for each collection
-      state.activeCollections = state.activeCollections.map((c) =>
-        finalizeRowForCollection(c)
+      state.activeCollections = state.activeCollections.map((collection) =>
+        finalizeRowForCollection(collection)
       )
 
       // Emit completed collections and filter them out
       const completedCollections = state.activeCollections.filter(
-        (c) => c.complete
+        (collection) => collection.complete
       )
       emitCollectionsToResult(state, completedCollections)
       state.activeCollections = state.activeCollections.filter(
-        (c) => !c.complete
+        (collection) => !collection.complete
       )
     }
 
