@@ -41,7 +41,7 @@ jobs:
     steps:
       - name: Check branch name
         uses: actions/github-script@v8
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -56,7 +56,7 @@ jobs:
             }
       - name: Add ticket link to PR description
         uses: actions/github-script@v8
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
         with:
           github-token: ${{secrets.GITHUB_TOKEN}}
           script: |
@@ -78,10 +78,10 @@ jobs:
 
       - name: Checkout code for ADR check
         uses: actions/checkout@v5
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
 
       - name: Check for ADR numbering conflicts
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'snyk-upgrade-') }}
+        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
         run: |
           cd docs/architecture/decisions
           duplicates=$(ls -1 *.md | grep -E '^[0-9]{4}-' | sed 's/^\([0-9]\{4\}\)-.*/\1/' | sort | uniq -d)
