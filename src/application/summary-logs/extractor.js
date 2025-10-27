@@ -5,6 +5,8 @@ import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 
+const FILE_PROCESSING_CATEGORY = 'file-processing'
+
 const logParsingSummary = (logger, parsedData) => {
   const metadataEntries = Object.entries(parsedData.meta).map(
     ([key, value]) => ({
@@ -26,7 +28,7 @@ const logParsingSummary = (logger, parsedData) => {
     {
       event: {
         action: 'summary-log-parsed',
-        category: 'file-processing'
+        category: FILE_PROCESSING_CATEGORY
       }
     },
     'Summary log parsing completed: %d metadata entries, %d data tables',
@@ -34,12 +36,12 @@ const logParsingSummary = (logger, parsedData) => {
     dataEntries.length
   )
 
-  metadataEntries.forEach((meta) => {
+  for (const meta of metadataEntries) {
     logger.info(
       {
         event: {
           action: 'metadata-parsed',
-          category: 'file-processing'
+          category: FILE_PROCESSING_CATEGORY
         }
       },
       'Metadata: %s = %s (at %s:%d:%s)',
@@ -49,14 +51,14 @@ const logParsingSummary = (logger, parsedData) => {
       meta.location.row,
       meta.location.column
     )
-  })
+  }
 
-  dataEntries.forEach((data) => {
+  for (const data of dataEntries) {
     logger.info(
       {
         event: {
           action: 'data-table-parsed',
-          category: 'file-processing'
+          category: FILE_PROCESSING_CATEGORY
         }
       },
       'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
@@ -68,7 +70,7 @@ const logParsingSummary = (logger, parsedData) => {
       data.location.row,
       data.location.column
     )
-  })
+  }
 }
 
 /**
