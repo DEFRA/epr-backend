@@ -44,8 +44,8 @@ export const workers = {
               action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING_SUCCESS
             }
           })
-          /* c8 ignore start */
         } catch (err) {
+          /* v8 ignore next 9 */
           server.logger.error({
             error: err,
             message: 'Failed to close worker pool',
@@ -54,7 +54,6 @@ export const workers = {
               action: LOGGING_EVENT_ACTIONS.CONNECTION_CLOSING_FAILURE
             }
           })
-          /* c8 ignore end */
         }
       })
     }

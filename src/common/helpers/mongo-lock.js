@@ -8,6 +8,7 @@ export class MongoLockError extends Error {
   constructor(message, ...rest) {
     super(...rest)
 
+    /* v8 ignore next 3 */
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, MongoLockError)
     }

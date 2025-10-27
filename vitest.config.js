@@ -23,7 +23,12 @@ export default defineConfig({
         'src/domain/**/port.js',
         'src/domain/**/model.js',
         'src/repositories/**/port.js',
-        'src/test'
+        'src/test',
+        '**/*.sh',
+        '**/*.md',
+        '**/*.xlsx',
+        '**/*.json',
+        '**/index.js'
       ],
       thresholds: {
         lines: 100,

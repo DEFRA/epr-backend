@@ -53,10 +53,9 @@ export const mongoDbPlugin = {
       server.decorate('server', 'db', db)
       server.decorate('server', 'locker', locker)
       // add coverage
-      /* c8 ignore start */
+      /* v8 ignore next 2 */
       server.decorate('request', 'db', () => db, { apply: true })
       server.decorate('request', 'locker', () => locker, { apply: true })
-      /* c8 ignore stop */
 
       server.events.on('stop', async () => {
         server.logger.info({
@@ -69,8 +68,9 @@ export const mongoDbPlugin = {
         try {
           await client.close()
           // add coverage
-          /* c8 ignore start */
+          /* v8 ignore next 1 */
         } catch (err) {
+          /* v8 ignore next 8 */
           server.logger.error({
             error: err,
             message: 'Failed to close mongo client',
@@ -80,7 +80,6 @@ export const mongoDbPlugin = {
             }
           })
         }
-        /* c8 ignore stop */
       })
     }
   }

@@ -1,5 +1,3 @@
-// @fixme: add coverage
-/* c8 ignore start */
 const health = {
   method: 'GET',
   path: '/health',
@@ -7,4 +5,3 @@ const health = {
 }
 
 export { health }
-/* c8 ignore stop */
