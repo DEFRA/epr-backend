@@ -132,13 +132,13 @@ const processHeaderCell = (collection, cellValueStr) => {
 }
 
 const processRowCell = (collection, cellValue) => {
-  const normalizedValue =
+  const normalisedValue =
     cellValue === null || cellValue === undefined || cellValue === ''
       ? null
       : cellValue
   return {
     ...collection,
-    currentRow: [...collection.currentRow, normalizedValue]
+    currentRow: [...collection.currentRow, normalisedValue]
   }
 }
 
@@ -222,8 +222,8 @@ export const parse = async (summaryLogBuffer) => {
       })
 
       // Initialize currentRow for all active collections
-      state.activeCollections = state.activeCollections.map((c) => ({
-        ...c,
+      state.activeCollections = state.activeCollections.map((collection) => ({
+        ...collection,
         currentRow: []
       }))
 
@@ -266,17 +266,17 @@ export const parse = async (summaryLogBuffer) => {
       }, state)
 
       // Finalize row for each collection
-      state.activeCollections = state.activeCollections.map((c) =>
-        finalizeRowForCollection(c)
+      state.activeCollections = state.activeCollections.map((collection) =>
+        finalizeRowForCollection(collection)
       )
 
       // Emit completed collections and filter them out
       const completedCollections = state.activeCollections.filter(
-        (c) => c.complete
+        (collection) => collection.complete
       )
       emitCollectionsToResult(state, completedCollections)
       state.activeCollections = state.activeCollections.filter(
-        (c) => !c.complete
+        (collection) => !collection.complete
       )
     }
 
