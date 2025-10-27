@@ -180,7 +180,7 @@ describe('SummaryLogExtractor', () => {
       'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
       'OrganisationDetails',
       JSON.stringify(['Name', 'Type']),
-      JSON.stringify(['Acme Corp', 'Producer']),
+      JSON.stringify(['Widget Ltd', 'Retailer']),
       2,
       'Sheet1',
       5,
@@ -237,6 +237,39 @@ describe('SummaryLogExtractor', () => {
       JSON.stringify(['Column1', 'Column2']),
       'null',
       0,
+      'Sheet1',
+      1,
+      'A'
+    )
+  })
+
+  it('should handle data table with only one row (example row)', async () => {
+    const parsedData = {
+      meta: {},
+      data: {
+        SingleRowTable: {
+          headers: ['Column1', 'Column2'],
+          rows: [['Example1', 'Example2']],
+          location: { sheet: 'Sheet1', row: 1, column: 'A' }
+        }
+      }
+    }
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
+
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'data-table-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'SingleRowTable',
+      JSON.stringify(['Column1', 'Column2']),
+      'null',
+      1,
       'Sheet1',
       1,
       'A'

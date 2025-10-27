@@ -19,7 +19,7 @@ const logParsingSummary = (logger, parsedData) => {
   const dataEntries = Object.entries(parsedData.data).map(([key, value]) => ({
     tableName: key,
     headers: value.headers,
-    exampleRow: value.rows[0] || null,
+    exampleRow: value.rows[1] || null,
     rowCount: value.rows.length,
     location: value.location
   }))
