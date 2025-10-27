@@ -18,7 +18,8 @@ export const createInlineSummaryLogsValidator = (
   organisationsRepository
 ) => {
   const summaryLogExtractor = createSummaryLogExtractor({
-    uploadsRepository
+    uploadsRepository,
+    logger
   })
 
   const summaryLogUpdater = new SummaryLogUpdater({

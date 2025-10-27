@@ -8,11 +8,15 @@ vi.mock('#adapters/parsers/summary-logs/exceljs-parser.js', () => ({
 
 describe('SummaryLogExtractor', () => {
   let uploadsRepository
+  let logger
   let summaryLogExtractor
   let summaryLog
 
   beforeEach(() => {
-    vi.mocked(parse).mockResolvedValue({ parsed: 'data' })
+    vi.mocked(parse).mockResolvedValue({
+      meta: {},
+      data: {}
+    })
 
     uploadsRepository = {
       findByLocation: vi
@@ -20,8 +24,13 @@ describe('SummaryLogExtractor', () => {
         .mockResolvedValue(Buffer.from('mock file content'))
     }
 
+    logger = {
+      info: vi.fn()
+    }
+
     summaryLogExtractor = createSummaryLogExtractor({
-      uploadsRepository
+      uploadsRepository,
+      logger
     })
 
     summaryLog = {
@@ -70,7 +79,18 @@ describe('SummaryLogExtractor', () => {
   })
 
   it('should return parsed data', async () => {
-    const parsedData = { foo: 'bar', baz: 123 }
+    const parsedData = {
+      meta: {
+        foo: { value: 'bar', location: { sheet: 'S1', row: 1, column: 'A' } }
+      },
+      data: {
+        baz: {
+          headers: ['col'],
+          rows: [[123]],
+          location: { sheet: 'S1', row: 2, column: 'A' }
+        }
+      }
+    }
     vi.mocked(parse).mockResolvedValueOnce(parsedData)
 
     const result = await summaryLogExtractor.extract(summaryLog)
@@ -98,5 +118,161 @@ describe('SummaryLogExtractor', () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Parse error')
+  })
+
+  it('should log parsing summary with metadata and data tables', async () => {
+    const parsedData = {
+      meta: {
+        DateSubmitted: {
+          value: '2024-01-15',
+          location: { sheet: 'Sheet1', row: 1, column: 'B' }
+        }
+      },
+      data: {
+        OrganisationDetails: {
+          headers: ['Name', 'Type'],
+          rows: [
+            ['Acme Corp', 'Producer'],
+            ['Widget Ltd', 'Retailer']
+          ],
+          location: { sheet: 'Sheet1', row: 5, column: 'A' }
+        }
+      }
+    }
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
+
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'summary-log-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Summary log parsing completed: %d metadata entries, %d data tables',
+      1,
+      1
+    )
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'metadata-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Metadata: %s = %s (at %s:%d:%s)',
+      'DateSubmitted',
+      '2024-01-15',
+      'Sheet1',
+      1,
+      'B'
+    )
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'data-table-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'OrganisationDetails',
+      JSON.stringify(['Name', 'Type']),
+      JSON.stringify(['Widget Ltd', 'Retailer']),
+      2,
+      'Sheet1',
+      5,
+      'A'
+    )
+  })
+
+  it('should log parsing summary with empty data', async () => {
+    const parsedData = {
+      meta: {},
+      data: {}
+    }
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
+
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'summary-log-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Summary log parsing completed: %d metadata entries, %d data tables',
+      0,
+      0
+    )
+  })
+
+  it('should handle data table with no rows', async () => {
+    const parsedData = {
+      meta: {},
+      data: {
+        EmptyTable: {
+          headers: ['Column1', 'Column2'],
+          rows: [],
+          location: { sheet: 'Sheet1', row: 1, column: 'A' }
+        }
+      }
+    }
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
+
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'data-table-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'EmptyTable',
+      JSON.stringify(['Column1', 'Column2']),
+      'null',
+      0,
+      'Sheet1',
+      1,
+      'A'
+    )
+  })
+
+  it('should handle data table with only one row (example row)', async () => {
+    const parsedData = {
+      meta: {},
+      data: {
+        SingleRowTable: {
+          headers: ['Column1', 'Column2'],
+          rows: [['Example1', 'Example2']],
+          location: { sheet: 'Sheet1', row: 1, column: 'A' }
+        }
+      }
+    }
+    vi.mocked(parse).mockResolvedValueOnce(parsedData)
+
+    await summaryLogExtractor.extract(summaryLog)
+
+    expect(logger.info).toHaveBeenCalledWith(
+      {
+        event: {
+          action: 'data-table-parsed',
+          category: 'file-processing'
+        }
+      },
+      'Data table: %s - Headers: %s, Example row: %s, Row count: %d (at %s:%d:%s)',
+      'SingleRowTable',
+      JSON.stringify(['Column1', 'Column2']),
+      'null',
+      1,
+      'Sheet1',
+      1,
+      'A'
+    )
   })
 })

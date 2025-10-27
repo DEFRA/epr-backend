@@ -65,9 +65,11 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should create summary log extractor with dependencies', () => {
-    expect(createSummaryLogExtractor).toHaveBeenCalledWith({
-      uploadsRepository
-    })
+    expect(createSummaryLogExtractor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uploadsRepository
+      })
+    )
   })
 
   it('should create summary log updater with dependencies', () => {

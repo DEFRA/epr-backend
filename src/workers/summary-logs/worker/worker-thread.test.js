@@ -141,9 +141,11 @@ describe('summaryLogsValidatorWorkerThread', () => {
   it('should create summary log extractor', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(createSummaryLogExtractor).toHaveBeenCalledWith({
-      uploadsRepository: mockUploadsRepository
-    })
+    expect(createSummaryLogExtractor).toHaveBeenCalledWith(
+      expect.objectContaining({
+        uploadsRepository: mockUploadsRepository
+      })
+    )
   })
 
   it('should create summary log updater', async () => {

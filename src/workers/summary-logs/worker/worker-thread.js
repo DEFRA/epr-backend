@@ -40,7 +40,8 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
       const organisationsRepository = createOrganisationsRepository(db)()
 
       const summaryLogExtractor = createSummaryLogExtractor({
-        uploadsRepository
+        uploadsRepository,
+        logger
       })
 
       const summaryLogUpdater = new SummaryLogUpdater({
