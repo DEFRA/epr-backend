@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import { produce } from 'immer'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
@@ -50,45 +51,29 @@ const processCellForMetadata = (
   worksheet,
   rowNumber,
   colNumber,
-  state
+  draftState
 ) => {
-  if (!state.metadataContext && cellValueStr.startsWith(META_PREFIX)) {
+  if (!draftState.metadataContext && cellValueStr.startsWith(META_PREFIX)) {
     const metadataName = cellValueStr.replace(META_PREFIX, '')
-    if (state.result.meta[metadataName]) {
+    if (draftState.result.meta[metadataName]) {
       throw new Error(`Duplicate metadata name: ${metadataName}`)
     }
-    return {
-      ...state,
-      metadataContext: {
-        metadataName
-      }
-    }
-  } else if (state.metadataContext) {
+    draftState.metadataContext = { metadataName }
+  } else if (draftState.metadataContext) {
     if (cellValueStr.startsWith(META_PREFIX)) {
       throw new Error(
         'Malformed sheet: metadata marker found in value position'
       )
     }
-    return {
-      ...state,
-      result: {
-        ...state.result,
-        meta: {
-          ...state.result.meta,
-          [state.metadataContext.metadataName]: {
-            value: cellValue,
-            location: {
-              sheet: worksheet.name,
-              row: rowNumber,
-              column: columnToLetter(colNumber)
-            }
-          }
-        }
-      },
-      metadataContext: null
+    draftState.result.meta[draftState.metadataContext.metadataName] = {
+      value: cellValue,
+      location: {
+        sheet: worksheet.name,
+        row: rowNumber,
+        column: columnToLetter(colNumber)
+      }
     }
-  } else {
-    return state
+    draftState.metadataContext = null
   }
 }
 
@@ -97,15 +82,10 @@ const processDataMarker = (
   worksheet,
   rowNumber,
   colNumber,
-  collections
+  draftCollections
 ) => {
-  if (!cellValueStr.startsWith(DATA_PREFIX)) {
-    return collections
-  }
-
-  return [
-    ...collections,
-    {
+  if (cellValueStr.startsWith(DATA_PREFIX)) {
+    draftCollections.push({
       sectionName: cellValueStr.replace(DATA_PREFIX, ''),
       state: CollectionState.HEADERS,
       startColumn: colNumber + 1,
@@ -117,145 +97,75 @@ const processDataMarker = (
         row: rowNumber,
         column: columnToLetter(colNumber + 1)
       }
-    }
-  ]
-}
-
-const processHeaderCell = (collection, cellValueStr) => {
-  if (cellValueStr === '') {
-    return { ...collection, state: CollectionState.ROWS }
-  } else if (cellValueStr === SKIP_COLUMN) {
-    return { ...collection, headers: [...collection.headers, null] }
-  } else {
-    return { ...collection, headers: [...collection.headers, cellValueStr] }
+    })
   }
 }
 
-const processRowCell = (collection, cellValue) => {
+const processHeaderCell = (draftCollection, cellValueStr) => {
+  if (cellValueStr === '') {
+    draftCollection.state = CollectionState.ROWS
+  } else if (cellValueStr === SKIP_COLUMN) {
+    draftCollection.headers.push(null)
+  } else {
+    draftCollection.headers.push(cellValueStr)
+  }
+}
+
+const processRowCell = (draftCollection, cellValue) => {
   const normalisedValue =
     cellValue === null || cellValue === undefined || cellValue === ''
       ? null
       : cellValue
-  return {
-    ...collection,
-    currentRow: [...collection.currentRow, normalisedValue]
-  }
+  draftCollection.currentRow.push(normalisedValue)
 }
 
 const updateCollectionWithCell = (
-  collection,
+  draftCollection,
   cellValue,
   cellValueStr,
   colNumber
 ) => {
-  const columnIndex = colNumber - collection.startColumn
+  const columnIndex = colNumber - draftCollection.startColumn
 
-  if (columnIndex >= 0 && collection.state === CollectionState.HEADERS) {
-    return processHeaderCell(collection, cellValueStr)
+  if (columnIndex >= 0 && draftCollection.state === CollectionState.HEADERS) {
+    processHeaderCell(draftCollection, cellValueStr)
   } else if (
     columnIndex >= 0 &&
-    columnIndex < collection.headers.length &&
-    collection.state === CollectionState.ROWS
+    columnIndex < draftCollection.headers.length &&
+    draftCollection.state === CollectionState.ROWS
   ) {
-    return processRowCell(collection, cellValue)
-  } else {
-    return collection
+    processRowCell(draftCollection, cellValue)
   }
 }
 
-const finalizeRowForCollection = (collection) => {
-  if (collection.state === CollectionState.HEADERS) {
-    return { ...collection, state: CollectionState.ROWS, currentRow: [] }
+const finalizeRowForCollection = (draftCollection) => {
+  if (draftCollection.state === CollectionState.HEADERS) {
+    draftCollection.state = CollectionState.ROWS
+    draftCollection.currentRow = []
   } else if (
-    collection.state === CollectionState.ROWS &&
-    collection.currentRow.length > 0
+    draftCollection.state === CollectionState.ROWS &&
+    draftCollection.currentRow.length > 0
   ) {
-    const isEmptyRow = collection.currentRow.every((val) => val === null)
+    const isEmptyRow = draftCollection.currentRow.every((val) => val === null)
     if (isEmptyRow) {
-      return { ...collection, complete: true }
+      draftCollection.complete = true
     } else {
-      return {
-        ...collection,
-        rows: [...collection.rows, collection.currentRow],
-        currentRow: []
-      }
+      draftCollection.rows.push(draftCollection.currentRow)
+      draftCollection.currentRow = []
     }
-  } else {
-    return collection
   }
 }
 
-const emitCollectionsToResult = (result, collections) =>
-  collections.reduce((acc, collection) => {
-    if (acc[collection.sectionName]) {
+const emitCollectionsToResult = (draftResult, collections) => {
+  for (const collection of collections) {
+    if (draftResult[collection.sectionName]) {
       throw new Error(`Duplicate data section name: ${collection.sectionName}`)
     }
-    return {
-      ...acc,
-      [collection.sectionName]: {
-        location: collection.location,
-        headers: collection.headers,
-        rows: collection.rows
-      }
+    draftResult[collection.sectionName] = {
+      location: collection.location,
+      headers: collection.headers,
+      rows: collection.rows
     }
-  }, result)
-
-const initializeCurrentRows = (collections) =>
-  collections.map((collection) => ({ ...collection, currentRow: [] }))
-
-const processCellsInRow = (state, cells, worksheet, rowNumber) =>
-  cells.reduce((acc, { cell, colNumber }) => {
-    const rawCellValue = cell.value
-    const cellValue = extractCellValue(rawCellValue)
-    const cellValueStr = cellValue?.toString() || ''
-
-    const stateAfterMetadata = processCellForMetadata(
-      cellValue,
-      cellValueStr,
-      worksheet,
-      rowNumber,
-      colNumber,
-      acc
-    )
-
-    const collectionsAfterMarkers = processDataMarker(
-      cellValueStr,
-      worksheet,
-      rowNumber,
-      colNumber,
-      stateAfterMetadata.activeCollections
-    )
-
-    const updatedCollections = collectionsAfterMarkers.map((collection) =>
-      updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber)
-    )
-
-    return {
-      ...stateAfterMetadata,
-      activeCollections: updatedCollections
-    }
-  }, state)
-
-const finalizeAndEmitCollections = (state) => {
-  const finalizedCollections = state.activeCollections.map((collection) =>
-    finalizeRowForCollection(collection)
-  )
-
-  const [completedCollections, activeCollections] = finalizedCollections.reduce(
-    ([completed, active], collection) =>
-      collection.complete
-        ? [[...completed, collection], active]
-        : [completed, [...active, collection]],
-    [[], []]
-  )
-
-  return {
-    ...state,
-    result: {
-      ...state.result,
-      data: emitCollectionsToResult(state.result.data, completedCollections)
-    },
-    activeCollections
   }
 }
 
@@ -275,39 +185,65 @@ const collectCellsFromRow = (row) => {
   return cells
 }
 
-const processRow = (state, row, rowNumber, worksheet) => {
+const processRow = (draftState, row, rowNumber, worksheet) => {
   const cells = collectCellsFromRow(row)
-  const stateWithInitializedRows = {
-    ...state,
-    activeCollections: initializeCurrentRows(state.activeCollections)
+
+  for (const collection of draftState.activeCollections) {
+    collection.currentRow = []
   }
-  const stateAfterCells = processCellsInRow(
-    stateWithInitializedRows,
-    cells,
-    worksheet,
-    rowNumber
-  )
-  return finalizeAndEmitCollections(stateAfterCells)
+
+  for (const { cell, colNumber } of cells) {
+    const rawCellValue = cell.value
+    const cellValue = extractCellValue(rawCellValue)
+    const cellValueStr = cellValue?.toString() || ''
+
+    processCellForMetadata(
+      cellValue,
+      cellValueStr,
+      worksheet,
+      rowNumber,
+      colNumber,
+      draftState
+    )
+
+    processDataMarker(
+      cellValueStr,
+      worksheet,
+      rowNumber,
+      colNumber,
+      draftState.activeCollections
+    )
+
+    for (const collection of draftState.activeCollections) {
+      updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber)
+    }
+  }
+
+  const completedCollections = []
+  const activeCollections = []
+
+  for (const collection of draftState.activeCollections) {
+    finalizeRowForCollection(collection)
+    if (collection.complete) {
+      completedCollections.push(collection)
+    } else {
+      activeCollections.push(collection)
+    }
+  }
+
+  emitCollectionsToResult(draftState.result.data, completedCollections)
+  draftState.activeCollections = activeCollections
 }
 
-const processWorksheet = (state, worksheet) => {
+const processWorksheet = (draftState, worksheet) => {
   const rows = collectRowsFromWorksheet(worksheet)
-  const stateAfterRows = rows.reduce(
-    (acc, { row, rowNumber }) => processRow(acc, row, rowNumber, worksheet),
-    state
-  )
 
-  return {
-    ...stateAfterRows,
-    result: {
-      ...stateAfterRows.result,
-      data: emitCollectionsToResult(
-        stateAfterRows.result.data,
-        stateAfterRows.activeCollections
-      )
-    },
-    activeCollections: []
+  for (const { row, rowNumber } of rows) {
+    processRow(draftState, row, rowNumber, worksheet)
   }
+
+  emitCollectionsToResult(draftState.result.data, draftState.activeCollections)
+  draftState.activeCollections = []
 }
 
 /** @type {SummaryLogParser} */
@@ -321,10 +257,9 @@ export const parse = async (summaryLogBuffer) => {
     metadataContext: null
   }
 
-  const finalState = workbook.worksheets.reduce(
-    (state, worksheet) => processWorksheet(state, worksheet),
-    initialState
-  )
-
-  return finalState.result
+  return produce(initialState, (draft) => {
+    for (const worksheet of workbook.worksheets) {
+      processWorksheet(draft, worksheet)
+    }
+  }).result
 }

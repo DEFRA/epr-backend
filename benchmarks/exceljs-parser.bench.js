@@ -128,13 +128,13 @@ await bench.run()
 console.table(
   bench.tasks.map(({ name, result }) => ({
     'Task Name': name,
-    'Ops/sec': result?.hz?.toFixed(2) ?? 'N/A',
-    'Average (ms)': result?.mean ? (result.mean * 1000).toFixed(3) : 'N/A',
-    'Min (ms)': result?.min ? (result.min * 1000).toFixed(3) : 'N/A',
-    'Max (ms)': result?.max ? (result.max * 1000).toFixed(3) : 'N/A',
-    'p95 (ms)': result?.p95 ? (result.p95 * 1000).toFixed(3) : 'N/A',
-    'p99 (ms)': result?.p99 ? (result.p99 * 1000).toFixed(3) : 'N/A',
-    Samples: result?.samples?.length ?? 'N/A'
+    'Ops/sec': result?.throughput.mean.toFixed(2) ?? 'N/A',
+    'Average (ms)': result?.latency.mean.toFixed(3) ?? 'N/A',
+    'Min (ms)': result?.latency.min.toFixed(3) ?? 'N/A',
+    'Max (ms)': result?.latency.max.toFixed(3) ?? 'N/A',
+    'p95 (ms)': result?.latency.p75?.toFixed(3) ?? 'N/A',
+    'p99 (ms)': result?.latency.p99?.toFixed(3) ?? 'N/A',
+    Samples: result?.latency.samples.length ?? 'N/A'
   }))
 )
 
