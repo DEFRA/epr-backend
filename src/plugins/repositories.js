@@ -30,7 +30,6 @@ export const repositories = {
         server.ext('onRequest', (request, h) => {
           Object.defineProperty(request, name, {
             get() {
-              /* v8 ignore next 3 */
               if (!this.app[name]) {
                 this.app[name] = factory(this.logger)
               }
