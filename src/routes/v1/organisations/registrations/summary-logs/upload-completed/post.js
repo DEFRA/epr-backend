@@ -44,15 +44,9 @@ const buildSummaryLogData = (
 
   const data = {
     status,
-    file: buildFileData(upload, existingFile)
-  }
-
-  if (organisationId) {
-    data.organisationId = organisationId
-  }
-
-  if (registrationId) {
-    data.registrationId = registrationId
+    file: buildFileData(upload, existingFile),
+    organisationId,
+    registrationId
   }
 
   if (failureReason) {

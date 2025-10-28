@@ -91,10 +91,12 @@ describe('summaryLogsValidatorWorkerThread', () => {
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
       mockSummaryLogExtractor
     )
-    vi.mocked(SummaryLogUpdater).mockImplementation(() => mockSummaryLogUpdater)
-    vi.mocked(SummaryLogsValidator).mockImplementation(
-      () => mockSummaryLogsValidator
-    )
+    vi.mocked(SummaryLogUpdater).mockImplementation(function () {
+      return mockSummaryLogUpdater
+    })
+    vi.mocked(SummaryLogsValidator).mockImplementation(function () {
+      return mockSummaryLogsValidator
+    })
   })
 
   afterEach(() => {

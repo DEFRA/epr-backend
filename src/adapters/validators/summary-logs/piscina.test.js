@@ -6,10 +6,12 @@ const { mockRun, mockDestroy } = vi.hoisted(() => ({
 }))
 
 vi.mock('piscina', () => ({
-  Piscina: vi.fn(() => ({
-    run: mockRun,
-    destroy: mockDestroy
-  }))
+  Piscina: vi.fn(function () {
+    return {
+      run: mockRun,
+      destroy: mockDestroy
+    }
+  })
 }))
 
 describe('createSummaryLogsValidator', () => {

@@ -223,7 +223,7 @@ describe('SummaryLogsValidator', () => {
       summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason:
-        'Registration number mismatch: spreadsheet contains WRN99999 but registration is WRN12345'
+        "Summary log's waste registration number does not match this registration"
     })
   })
 
@@ -422,7 +422,7 @@ describe('validateWasteRegistrationNumber', () => {
         msg: 'test-msg'
       })
     ).toThrow(
-      'Registration number mismatch: spreadsheet contains WRN99999 but registration is WRN12345'
+      "Summary log's waste registration number does not match this registration"
     )
   })
 
