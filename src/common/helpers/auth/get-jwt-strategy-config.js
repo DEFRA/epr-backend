@@ -1,9 +1,10 @@
 import Boom from '@hapi/boom'
+import { getDefraIdUserRoles } from './get-defra-id-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { config } from '../../../config.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
-  const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
+  const { defraIdOidcConfig, entraIdOidcConfig } = oidcConfigs
 
   return {
     keys: [
@@ -23,14 +24,14 @@ export function getJwtStrategyConfig(oidcConfigs) {
       maxAgeSec: 3600, // 60 minutes
       timeSkewSec: 15
     },
-    validate: async (artifacts) => {
+    validate: async (artifacts, request, h) => {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
-        // For Entra Id tokens, we only accept them if they were signed for Admin UI
-        const adminUiEntraClientId = config.get('oidc.entraId.clientId')
-        if (audience !== adminUiEntraClientId) {
+        // For Entra ID tokens, we only accept them if they were signed for Admin UI
+        const clientId = config.get('oidc.entraId.clientId')
+        if (audience !== clientId) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
@@ -47,27 +48,39 @@ export function getJwtStrategyConfig(oidcConfigs) {
         }
       }
 
-      if (
-        config.get('featureFlags.defraIdAuth') &&
-        issuer === defraIdOidcConfig.issuer
-      ) {
-        const frontendClientId = config.get('oidc.defraId.clientId')
-        if (audience !== frontendClientId) {
-          throw Boom.forbidden('Invalid audience for Defra Id token')
-        }
+      if (issuer === defraIdOidcConfig.issuer) {
+        // For Defra ID tokens, we only accept them if they were signed for Admin UI
+        // const clientId = config.get('oidc.defraId.wellKnownUrl')
+        //
+        // if (audience !== clientId) {
+        //   throw Boom.forbidden('Invalid audience for Defra ID token')
+        // }
 
-        // Placeholder for Defra Id token scope/roles
-        const scope = []
+        const { response, scope } = await getDefraIdUserRoles(
+          tokenPayload,
+          request,
+          h
+        )
 
-        return {
-          isValid: scope.length > 0,
-          credentials: {
-            id: contactId,
-            email,
-            issuer,
-            scope
-          }
-        }
+        const isValid = !!scope?.length
+
+        const credentials = isValid
+          ? {
+              id: contactId,
+              email,
+              issuer,
+              scope
+            }
+          : undefined
+
+        return response
+          ? {
+              response
+            }
+          : {
+              isValid,
+              credentials
+            }
       }
 
       throw Boom.badRequest(`Unrecognized token issuer: ${issuer}`)

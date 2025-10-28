@@ -1,11 +1,17 @@
-import {
-  PARTNER_TYPE,
-  PARTNERSHIP_TYPE,
-  STATUS,
-  USER_ROLES
-} from '#domain/organisations/model.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
+import {
+  STATUS,
+  PARTNER_TYPE,
+  PARTNERSHIP_TYPE
+} from '#domain/organisations/model.js'
+
+export const defraIdOrgIdSchema = Joi.string().required().messages({
+  'any.required': 'id is required',
+  'string.empty': 'id cannot be empty',
+  'string.base': 'id must be a string'
+})
 
 export const idSchema = Joi.string()
   .required()
@@ -33,35 +39,19 @@ export const addressSchema = Joi.object({
   fullAddress: Joi.string().optional()
 })
 
-const baseUserSchema = Joi.object({
+export const userSchema = Joi.object({
   fullName: Joi.string().required(),
-  email: Joi.string().email().required()
-})
+  email: Joi.string().email().required(),
+  phone: Joi.string().required(),
+  role: Joi.string().optional(),
+  title: Joi.string().optional()
+}).or('role', 'title')
 
-export const userSchema = baseUserSchema
-  .keys({
-    phone: Joi.string().required(),
-    role: Joi.string().optional(),
-    title: Joi.string().optional()
-  })
-  .or('role', 'title')
-
-export const collatedUserSchema = baseUserSchema.keys({
-  isInitialUser: Joi.boolean().required(),
-  roles: Joi.array()
-    .items(Joi.string().valid(USER_ROLES.STANDARD))
-    .min(1)
-    .required()
-})
-
-export const linkedDefraOrganisationSchema = Joi.object({
-  orgId: Joi.string().uuid().required(),
-  orgName: Joi.string().required(),
-  linkedBy: Joi.object({
-    email: Joi.string().email().required(),
-    id: Joi.string().uuid().required()
-  }).required(),
-  linkedAt: Joi.date().iso().required()
+export const userWithRolesSchema = Joi.object({
+  fullName: Joi.string().required(),
+  email: Joi.string().email().required(),
+  roles: Joi.array().items(ROLES.standardUser).optional(),
+  isInitialUser: Joi.boolean()
 })
 
 export const statusHistoryItemSchema = Joi.object({
@@ -69,6 +59,7 @@ export const statusHistoryItemSchema = Joi.object({
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
+      STATUS.ACTIVE,
       STATUS.REJECTED,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED

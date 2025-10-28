@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import Joi from 'joi'
+import { defraIdOrgIdSchema, userWithRolesSchema } from './base.js'
 import {
   idSchema,
   organisationInsertSchema,
@@ -11,6 +12,32 @@ import { accreditationSchema } from './accreditation.js'
 
 const formatValidationErrorDetails = (error) => {
   return error.details.map((d) => `${d.path.join('.')}: ${d.type}`).join('; ')
+}
+
+export const validateUser = (options = {}) => {
+  const entries = Object.entries(options)
+
+  return entries.map(([optionKey, optionValue]) => {
+    const { error, value } = userWithRolesSchema
+      .extract(optionKey)
+      .validate(optionValue)
+
+    if (error) {
+      throw Boom.badData(error.message)
+    }
+
+    return [optionKey, value]
+  })
+}
+
+export const validateDefraIdOrgId = (defraIdOrgId) => {
+  const { error, value } = defraIdOrgIdSchema.validate(defraIdOrgId)
+
+  if (error) {
+    throw Boom.badData(error.message)
+  }
+
+  return value
 }
 
 export const validateId = (id) => {
