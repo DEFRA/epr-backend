@@ -80,7 +80,7 @@ export const validateWasteRegistrationNumber = ({
 
   if (spreadsheetRegistrationNumber !== wasteRegistrationNumber) {
     throw new Error(
-      `Registration number mismatch: spreadsheet contains ${spreadsheetRegistrationNumber} but registration is ${wasteRegistrationNumber}`
+      "Summary log's waste registration number does not match this registration"
     )
   }
 
