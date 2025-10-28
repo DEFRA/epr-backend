@@ -9,7 +9,7 @@ Performance benchmarks for the Excel parser.
 Tests parser performance across various dataset sizes:
 
 ```bash
-npm run benchmark
+npm run benchmark:parser
 ```
 
 Tests:
@@ -25,13 +25,13 @@ Tests:
 Benchmark a specific Excel file:
 
 ```bash
-npm run benchmark:file <path-to-xlsx-file>
+npm run benchmark:parser:file <path-to-xlsx-file>
 ```
 
 Example:
 
 ```bash
-npm run benchmark:file ./test-data/large-file.xlsx
+npm run benchmark:parser:file ./test-data/large-file.xlsx
 ```
 
 Shows:
