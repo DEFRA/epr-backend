@@ -34,24 +34,17 @@ try {
 
   await bench.run()
 
-  const task = bench.tasks[0]
-  const result = task.result
-
-  if (result) {
-    console.log('📊 Benchmark Results')
-    console.log('━'.repeat(50))
-    console.log(`Operations/sec: ${result.hz?.toFixed(2) ?? 'N/A'}`)
-    console.log(
-      `Average:        ${result.latency.mean?.toFixed(3) ?? 'N/A'} ms`
-    )
-    console.log(`Median:         ${result.latency.p50?.toFixed(3) ?? 'N/A'} ms`)
-    console.log(`Min:            ${result.latency.min?.toFixed(3) ?? 'N/A'} ms`)
-    console.log(`Max:            ${result.latency.max?.toFixed(3) ?? 'N/A'} ms`)
-    console.log(`p95:            ${result.latency.p75?.toFixed(3) ?? 'N/A'} ms`)
-    console.log(`p99:            ${result.latency.p99?.toFixed(3) ?? 'N/A'} ms`)
-    console.log(`Samples:        ${result.latency.samples?.length ?? 'N/A'}`)
-    console.log('━'.repeat(50))
-  }
+  console.table(
+    bench.table((task) => ({
+      Task: task.name,
+      'ops/sec': task.result?.hz.toFixed(2),
+      'Average (ms)': task.result?.latency.mean.toFixed(2),
+      'Min (ms)': task.result?.latency.min.toFixed(2),
+      'Max (ms)': task.result?.latency.max.toFixed(2),
+      'p99 (ms)': task.result?.latency.p99?.toFixed(2) ?? 'N/A',
+      Samples: task.result?.latency.samples.length
+    }))
+  )
 
   console.log('\n✅ Benchmark completed!')
 } catch (error) {
