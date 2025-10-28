@@ -22,9 +22,10 @@ try {
   console.log('Running benchmark...\n')
 
   const bench = new Bench({
-    time: 2000,
-    warmupTime: 1000,
-    warmupIterations: 5
+    time: 10000,
+    iterations: 5,
+    warmupTime: 0,
+    warmupIterations: 1
   })
 
   bench.add(`parse ${filePath}`, async () => {
@@ -41,24 +42,14 @@ try {
     console.log('━'.repeat(50))
     console.log(`Operations/sec: ${result.hz?.toFixed(2) ?? 'N/A'}`)
     console.log(
-      `Average:        ${result.mean ? (result.mean * 1000).toFixed(3) : 'N/A'} ms`
+      `Average:        ${result.latency.mean?.toFixed(3) ?? 'N/A'} ms`
     )
-    console.log(
-      `Median:         ${result.median ? (result.median * 1000).toFixed(3) : 'N/A'} ms`
-    )
-    console.log(
-      `Min:            ${result.min ? (result.min * 1000).toFixed(3) : 'N/A'} ms`
-    )
-    console.log(
-      `Max:            ${result.max ? (result.max * 1000).toFixed(3) : 'N/A'} ms`
-    )
-    console.log(
-      `p95:            ${result.p95 ? (result.p95 * 1000).toFixed(3) : 'N/A'} ms`
-    )
-    console.log(
-      `p99:            ${result.p99 ? (result.p99 * 1000).toFixed(3) : 'N/A'} ms`
-    )
-    console.log(`Samples:        ${result.samples?.length ?? 'N/A'}`)
+    console.log(`Median:         ${result.latency.p50?.toFixed(3) ?? 'N/A'} ms`)
+    console.log(`Min:            ${result.latency.min?.toFixed(3) ?? 'N/A'} ms`)
+    console.log(`Max:            ${result.latency.max?.toFixed(3) ?? 'N/A'} ms`)
+    console.log(`p95:            ${result.latency.p75?.toFixed(3) ?? 'N/A'} ms`)
+    console.log(`p99:            ${result.latency.p99?.toFixed(3) ?? 'N/A'} ms`)
+    console.log(`Samples:        ${result.latency.samples?.length ?? 'N/A'}`)
     console.log('━'.repeat(50))
   }
 
