@@ -1,12 +1,16 @@
 {
   "id": "6507f1f77bcf86cd79943901",
-  "orgId": 50002,
+  "orgId": 500002,
   "schemaVersion": 1,
   "version": 1,
   "statusHistory": [
     {
       "status": "created",
-      "updatedAt": "2025-08-22T19:34:44.944Z"
+      "updatedAt": "2025-10-01T08:30:00.000Z"
+    },
+    {
+      "status": "approved",
+      "updatedAt": "2025-11-01T08:30:00.000Z"
     }
   ],
   "wasteProcessingTypes": ["reprocessor", "exporter"],
@@ -28,7 +32,7 @@
   "submittedToRegulator": "ea",
   "formSubmissionTime": "2025-08-22T19:34:44.944Z",
   "submitterContactDetails": {
-    "fullName": "Luke Skywalker",
+    "fullName": "Anakin Skywalker",
     "email": "anakin.skywalker@starwars.com",
     "title": "Partner",
     "phone": "823456789"
@@ -39,7 +43,11 @@
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-20T19:34:44.944Z"
+          "updatedAt": "2025-10-01T08:30:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "ea",
@@ -140,7 +148,11 @@
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-08-21T19:34:44.944Z"
+          "updatedAt": "2025-10-01T08:30:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "ea",
@@ -241,6 +253,10 @@
         {
           "status": "created",
           "updatedAt": "2025-08-21T21:34:44.944Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "ea",

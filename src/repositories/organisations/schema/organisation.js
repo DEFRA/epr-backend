@@ -7,10 +7,12 @@ import {
   BUSINESS_TYPE
 } from '#domain/organisations/model.js'
 import {
+  defraIdOrgIdSchema,
   idSchema,
   companyDetailsSchema,
   partnershipSchema,
-  userSchema
+  userSchema,
+  userWithRolesSchema
 } from './base.js'
 import { registrationSchema, registrationUpdateSchema } from './registration.js'
 import {
@@ -24,11 +26,13 @@ export { registrationSchema } from './registration.js'
 export const organisationInsertSchema = Joi.object({
   id: idSchema,
   orgId: Joi.number().required(),
+  defraIdOrgId: defraIdOrgIdSchema.optional(),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
       STATUS.REJECTED,
+      STATUS.ACTIVE,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
     )
@@ -71,7 +75,8 @@ export const organisationInsertSchema = Joi.object({
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
   registrations: Joi.array().items(registrationSchema).optional(),
-  accreditations: Joi.array().items(accreditationSchema).optional()
+  accreditations: Joi.array().items(accreditationSchema).optional(),
+  users: Joi.array().items(userWithRolesSchema)
 })
 
 const NON_UPDATABLE_FIELDS = ['id']

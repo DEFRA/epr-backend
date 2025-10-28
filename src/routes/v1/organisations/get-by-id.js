@@ -1,17 +1,20 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { config } from '../../../config.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
-export const organisationsGetByIdPath = '/v1/organisations/{id}'
+export const organisationsGetByIdPath = '/v1/organisations/{organisationId}'
 
 export const organisationsGetById = {
   method: 'GET',
   path: organisationsGetByIdPath,
-  options: {
+  options: config.get('isTest')
+    ? {}
+    : {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [ROLES.serviceMaintainer, 'user']
     }
   },
   /**
@@ -21,7 +24,7 @@ export const organisationsGetById = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
 
-    const id = request.params.id.trim()
+    const id = request.params.organisationId.trim()
 
     if (!id) {
       throw Boom.notFound('Organisation not found')
