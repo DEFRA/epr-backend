@@ -15,7 +15,9 @@ const mockLoggerWarn = vi.fn()
 const mockAudit = vi.fn()
 
 vi.mock('notifications-node-client', () => ({
-  NotifyClient: vi.fn(() => ({ sendEmail: mockSendEmail }))
+  NotifyClient: vi.fn(function () {
+    return { sendEmail: mockSendEmail }
+  })
 }))
 
 vi.mock('./logging/logger.js', async (importOriginal) => {

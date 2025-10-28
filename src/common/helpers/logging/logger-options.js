@@ -39,7 +39,7 @@ export const loggerOptions = {
     }
   },
   // @fixme: add coverage
-  /* c8 ignore start */
+  /* v8 ignore next 8 */
   mixin() {
     const mixinValues = {}
     const traceId = getTraceId()
@@ -48,5 +48,4 @@ export const loggerOptions = {
     }
     return mixinValues
   }
-  /* c8 ignore stop */
 }
