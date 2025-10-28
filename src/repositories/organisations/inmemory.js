@@ -7,7 +7,6 @@ import {
   SCHEMA_VERSION,
   createInitialStatusHistory,
   getCurrentStatus,
-  enrichItemsWithStatus,
   statusHistoryWithChanges,
   mergeSubcollection
 } from './helpers.js'
@@ -16,6 +15,12 @@ import Boom from '@hapi/boom'
 /**
  * @typedef {{ id: string, [key: string]: any }} Organisation
  */
+
+const enrichItemsWithStatus = (items) => {
+  for (const item of items) {
+    item.status = getCurrentStatus(item)
+  }
+}
 
 const enrichWithCurrentStatus = (org) => {
   org.status = getCurrentStatus(org)

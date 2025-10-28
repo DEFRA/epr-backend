@@ -16,12 +16,6 @@ export const getCurrentStatus = (existingItem) => {
   return existingItem.statusHistory.at(-1).status
 }
 
-export const enrichItemsWithStatus = (items) => {
-  for (const item of items) {
-    item.status = getCurrentStatus(item)
-  }
-}
-
 export const statusHistoryWithChanges = (updatedItem, existingItem) => {
   let statusHistory = createInitialStatusHistory()
   if (existingItem) {

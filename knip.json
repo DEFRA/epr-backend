@@ -1,0 +1,12 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/workers/summary-logs/worker/worker-thread.js!",
+    "src/**/*.test.js"
+  ],
+  "project": ["src/**/*.js!"],
+  "ignore": ["coverage/**", "dist/**", ".husky/**", "node_modules/**"],
+  "ignoreDependencies": ["husky", "pino-pretty"],
+  "ignoreBinaries": ["adr"],
+  "ignoreExportsUsedInFile": true
+}
