@@ -1,4 +1,6 @@
 import {
+  validateUser,
+  validateDefraIdOrgId,
   validateId,
   validateOrganisationInsert,
   validateOrganisationUpdate
@@ -13,6 +15,8 @@ import {
 } from './helpers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
+import { generateInitialUsers } from '#domain/organisations/generate-initial-users.js'
+import { STATUS } from '#domain/organisations/status.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -51,15 +55,20 @@ const performInsert = (db) => async (organisation) => {
       statusHistory: createInitialStatusHistory()
     })) || []
 
+  const data = {
+    _id: ObjectId.createFromHexString(id),
+    version: 1,
+    schemaVersion: SCHEMA_VERSION,
+    statusHistory: createInitialStatusHistory(),
+    ...orgFields,
+    registrations,
+    accreditations
+  }
+
   try {
     await db.collection(COLLECTION_NAME).insertOne({
-      _id: ObjectId.createFromHexString(id),
-      version: 1,
-      schemaVersion: SCHEMA_VERSION,
-      statusHistory: createInitialStatusHistory(),
-      ...orgFields,
-      registrations,
-      accreditations
+      ...data,
+      users: generateInitialUsers(data)
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
@@ -95,16 +104,18 @@ const performUpdate = (db) => async (id, version, updates) => {
     validatedUpdates.accreditations
   )
 
+  const data = {
+    ...merged,
+    statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+    registrations,
+    accreditations,
+    version: existing.version + 1
+  }
+
   const result = await db.collection(COLLECTION_NAME).updateOne(
     { _id: ObjectId.createFromHexString(validatedId), version },
     {
-      $set: {
-        ...merged,
-        statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
-        registrations,
-        accreditations,
-        version: existing.version + 1
-      }
+      $set: data
     }
   )
 
@@ -195,6 +206,64 @@ const performFindById =
     throw Boom.internal('Consistency timeout waiting for minimum version')
   }
 
+const performFindAllByDefraIdOrgId = async (db, defraIdOrgId) => {
+  // validate the ID and throw early
+  let validatedDefraIdOrgId
+  try {
+    validatedDefraIdOrgId = validateDefraIdOrgId(defraIdOrgId)
+  } catch (error) {
+    throw Boom.notFound(
+      `Organisation with defraIdOrgId ${defraIdOrgId} not found`
+    )
+  }
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({
+      defraIdOrgId: validatedDefraIdOrgId,
+      status: { $ne: STATUS.CREATED }
+    })
+    .toArray()
+
+  if (!docs.length) {
+    // throw Boom.notFound(`No organisations with provided email found`)
+
+    return []
+  }
+
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
+const performFindAllUnlinkedOrganisationsByUser = async (db, options) => {
+  // validate the name and throw early
+  let validatedUserEntries
+  try {
+    validatedUserEntries = validateUser(options)
+  } catch (error) {
+    throw Boom.notFound(`Organisation with provided email not found`)
+  }
+
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({
+      ...validatedUserEntries.reduce(
+        (prev, [key, value]) => ({ ...prev, [`users.${key}`]: value }),
+        {}
+      ),
+      defraIdOrgId: { $exists: false },
+      status: { $ne: STATUS.CREATED }
+    })
+    .toArray()
+
+  if (!docs.length) {
+    // throw Boom.notFound(`No organisations with provided email found`)
+
+    return []
+  }
+
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 const performFindAll = (db) => async () => {
   const docs = await db.collection(COLLECTION_NAME).find().toArray()
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
@@ -255,6 +324,14 @@ export const createOrganisationsRepository =
         }
 
         return registration
+      },
+
+      async findAllUnlinkedOrganisationsByUser(userOptions) {
+        return performFindAllUnlinkedOrganisationsByUser(db, userOptions)
+      },
+
+      async findAllByDefraIdOrgId(defraIdOrgId) {
+        return performFindAllByDefraIdOrgId(db, defraIdOrgId)
       }
     }
   }

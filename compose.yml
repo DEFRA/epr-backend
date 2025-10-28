@@ -1,28 +1,29 @@
 services:
-  localstack:
-    image: localstack/localstack:3.0.2
-    ports:
-      - '4566:4566' # LocalStack Gateway
-      - '4510-4559:4510-4559' # external services port range
-    env_file:
-      - 'compose/aws.env'
-    environment:
-      DEBUG: ${DEBUG:-1}
-      LS_LOG: WARN # Localstack DEBUG Level
-      SERVICES: s3,sqs,sns,firehose
-      LOCALSTACK_HOST: 127.0.0.1
-    volumes:
-      - '${TMPDIR:-/tmp}/localstack:/var/lib/localstack'
-      - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
-    healthcheck:
-      test: ['CMD', 'curl', 'localhost:4566']
-      interval: 5s
-      start_period: 5s
-      retries: 3
-    networks:
-      - cdp-tenant
+#  localstack:
+#    image: localstack/localstack:3.0.2
+#    ports:
+#      - '4566:4566' # LocalStack Gateway
+#      - '4510-4559:4510-4559' # external services port range
+#    env_file:
+#      - 'compose/aws.env'
+#    environment:
+#      DEBUG: ${DEBUG:-1}
+#      LS_LOG: WARN # Localstack DEBUG Level
+#      SERVICES: s3,sqs,sns,firehose
+#      LOCALSTACK_HOST: 127.0.0.1
+#    volumes:
+#      - '${TMPDIR:-/tmp}/localstack:/var/lib/localstack'
+#      - ./compose/start-localstack.sh:/etc/localstack/init/ready.d/start-localstack.sh
+#    healthcheck:
+#      test: ['CMD', 'curl', 'localhost:4566']
+#      interval: 5s
+#      start_period: 5s
+#      retries: 3
+#    networks:
+#      - cdp-tenant
 
   mongodb:
+    profiles: ['all']
     image: mongo:6.0.13
     networks:
       - cdp-tenant
@@ -35,52 +36,54 @@ services:
 
   ################################################################################
 
-  redis:
-    profiles: ['all']
-    image: redis:7.2.11-alpine3.21
-    ports:
-      - "6379:6379"
-    restart: always
-    networks:
-      - cdp-tenant
+#  redis:
+#    image: redis:7.2.11-alpine3.21
+#    ports:
+#      - "6379:6379"
+#    restart: always
+#    networks:
+#      - cdp-tenant
 
-  frontend:
-    profiles: ['all']
-    image: defradigital/epr-frontend:${FRONTEND_VERSION:-latest}
-    ports:
-      - '3000:3000'
-    links:
-      - 'localstack:localstack'
-      - 'redis:redis'
-    depends_on:
-      localstack:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    env_file:
-      - 'compose/aws.env'
-    environment:
-      PORT: 3000
-      NODE_ENV: development
-      EPR_BACKEND_URL: http://epr-backend:3001
-      LOCALSTACK_ENDPOINT: http://localstack:4566
-      REDIS_HOST: redis
-      USE_SINGLE_INSTANCE_CACHE: true
-    networks:
-      - cdp-tenant
+#  frontend:
+#    profiles: ['all']
+#    image: defradigital/epr-frontend:${FRONTEND_VERSION:-latest}
+#    ports:
+#      - '3000:3000'
+#    links:
+#      - 'localstack:localstack'
+#      - 'redis:redis'
+#    depends_on:
+#      localstack:
+#        condition: service_healthy
+#      redis:
+#        condition: service_started
+#    env_file:
+#      - 'compose/aws.env'
+#    environment:
+#      PORT: 3000
+#      NODE_ENV: development
+#      EPR_BACKEND_URL: http://epr-backend:3001
+#      LOCALSTACK_ENDPOINT: http://localstack:4567
+#      REDIS_HOST: redis
+#      USE_SINGLE_INSTANCE_CACHE: true
+#    networks:
+#      - cdp-tenant
 
   epr-backend:
+    profiles: ['all']
     build:
       context: .
       target: development
     ports:
       - '3001:3001'
+    extra_hosts:
+      - 'localhost:host-gateway'
     links:
-      - 'localstack:localstack'
+#      - 'localstack:localstack'
       - 'mongodb:mongodb'
     depends_on:
-      localstack:
-        condition: service_healthy
+#      localstack:
+#        condition: service_healthy
       mongodb:
         condition: service_started
     env_file:
@@ -95,6 +98,10 @@ services:
       AUDIT_ENABLED: false
       FEATURE_FLAG_SUMMARY_LOGS: true
       FEATURE_FLAG_ORGANISATIONS: true
+      DEFRA_ID_CLIENT_ID: 63983fc2-cfff-45bb-8ec2-959e21062b9a
+      DEFRA_ID_CLIENT_SECRET: test_value
+      DEFRA_ID_OIDC_CONFIGURATION_URL: http://localhost:3200/cdp-defra-id-stub/.well-known/openid-configuration
+      DEFRA_ID_SERVICE_ID: d7d72b79-9c62-ee11-8df0-000d3adf7047
     secrets:
       - govuk_notify_api_key
     networks:

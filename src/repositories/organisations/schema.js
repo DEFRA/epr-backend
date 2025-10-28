@@ -3,6 +3,7 @@ import { ObjectId } from 'mongodb'
 import {
   STATUS,
   REGULATOR,
+  ROLE,
   WASTE_PROCESSING_TYPE,
   NATION,
   BUSINESS_TYPE,
@@ -98,6 +99,12 @@ export const idSchema = Joi.string()
     'any.invalid': 'id must be a valid MongoDB ObjectId'
   })
 
+export const defraIdOrgIdSchema = Joi.string().required().messages({
+  'any.required': 'id is required',
+  'string.empty': 'id cannot be empty',
+  'string.base': 'id must be a string'
+})
+
 const addressSchema = Joi.object({
   line1: Joi.string().optional(),
   line2: Joi.string().optional(),
@@ -109,7 +116,7 @@ const addressSchema = Joi.object({
   fullAddress: Joi.string().optional()
 })
 
-const userSchema = Joi.object({
+export const userSchema = Joi.object({
   fullName: Joi.string().required(),
   email: Joi.string().email().required(),
   phone: Joi.string().required(),
@@ -117,12 +124,20 @@ const userSchema = Joi.object({
   title: Joi.string().optional()
 }).or('role', 'title')
 
+export const userWithRolesSchema = Joi.object({
+  fullName: Joi.string().required(),
+  email: Joi.string().email().required(),
+  roles: Joi.array().items(ROLE.STANDARD_USER).optional(),
+  isInitialUser: Joi.boolean()
+})
+
 export const statusHistoryItemSchema = Joi.object({
   status: Joi.string()
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
       STATUS.REJECTED,
+      STATUS.ACTIVE,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
     )
@@ -131,7 +146,7 @@ export const statusHistoryItemSchema = Joi.object({
   updatedBy: idSchema.optional()
 })
 
-const companyDetailsSchema = Joi.object({
+export const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),
   tradingName: Joi.string().optional(),
   registrationNumber: Joi.string()
@@ -323,6 +338,7 @@ export const registrationSchema = Joi.object({
       STATUS.CREATED,
       STATUS.APPROVED,
       STATUS.REJECTED,
+      STATUS.ACTIVE,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
     )
@@ -408,6 +424,7 @@ const accreditationSchema = Joi.object({
       STATUS.CREATED,
       STATUS.APPROVED,
       STATUS.REJECTED,
+      STATUS.ACTIVE,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
     )
@@ -457,11 +474,14 @@ const accreditationUpdateSchema = accreditationSchema.fork(
 export const organisationInsertSchema = Joi.object({
   id: idSchema,
   orgId: Joi.number().required(),
+  defraIdOrgId: defraIdOrgIdSchema.optional(),
+  users: Joi.array().items(userWithRolesSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
       STATUS.REJECTED,
+      STATUS.ACTIVE,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
     )

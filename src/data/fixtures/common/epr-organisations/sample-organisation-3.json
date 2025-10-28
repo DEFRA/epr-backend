@@ -1,12 +1,16 @@
 {
   "id": "6507f1f77bcf86cd79943931",
-  "orgId": 50005,
+  "orgId": 500005,
   "schemaVersion": 1,
   "version": 1,
   "statusHistory": [
     {
       "status": "created",
       "updatedAt": "2025-11-01T12:00:00.000Z"
+    },
+    {
+      "status": "approved",
+      "updatedAt": "2025-11-01T08:30:00.000Z"
     }
   ],
   "wasteProcessingTypes": ["reprocessor", "exporter"],
@@ -27,6 +31,10 @@
         {
           "status": "created",
           "updatedAt": "2025-11-01T11:00:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "niea",
@@ -70,6 +78,12 @@
           "email": "eve.black@charity.org",
           "title": "Director",
           "phone": "3334445555"
+        },
+        {
+          "fullName": "Yoda",
+          "email": "yoda@starwars.com",
+          "title": "PRN signatory",
+          "phone": "1234567890"
         }
       ],
       "suppliers": "Local steel suppliers",
@@ -127,6 +141,10 @@
         {
           "status": "created",
           "updatedAt": "2025-11-01T11:30:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "niea",
@@ -178,6 +196,10 @@
         {
           "status": "created",
           "updatedAt": "2025-11-01T13:00:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "niea",
