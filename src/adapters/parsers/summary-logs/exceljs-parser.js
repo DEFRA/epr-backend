@@ -20,13 +20,13 @@ const CollectionState = {
  * @returns {string}
  */
 const columnToLetter = (colNumber) => {
-  const toLetterRecursive = (n, acc = '') => {
-    if (n <= 0) return acc
-    const remainder = (n - 1) % ALPHABET_SIZE
-    const letter = String.fromCodePoint(ASCII_CODE_OFFSET + remainder)
-    return toLetterRecursive(Math.floor((n - 1) / ALPHABET_SIZE), letter + acc)
+  let column = ''
+  while (colNumber > 0) {
+    const remainder = (colNumber - 1) % ALPHABET_SIZE
+    column = String.fromCodePoint(ASCII_CODE_OFFSET + remainder) + column
+    colNumber = Math.floor((colNumber - 1) / ALPHABET_SIZE)
   }
-  return toLetterRecursive(colNumber)
+  return column
 }
 
 const extractCellValue = (cellValue) => {
@@ -185,128 +185,16 @@ const finalizeRowForCollection = (collection) => {
   }
 }
 
-const emitCollectionsToResult = (result, collections) =>
-  collections.reduce((acc, collection) => {
-    if (acc[collection.sectionName]) {
+const emitCollectionsToResult = (state, collections) => {
+  for (const collection of collections) {
+    if (state.result.data[collection.sectionName]) {
       throw new Error(`Duplicate data section name: ${collection.sectionName}`)
     }
-    return {
-      ...acc,
-      [collection.sectionName]: {
-        location: collection.location,
-        headers: collection.headers,
-        rows: collection.rows
-      }
+    state.result.data[collection.sectionName] = {
+      location: collection.location,
+      headers: collection.headers,
+      rows: collection.rows
     }
-  }, result)
-
-const initializeCurrentRows = (collections) =>
-  collections.map((collection) => ({ ...collection, currentRow: [] }))
-
-const processCellsInRow = (state, cells, worksheet, rowNumber) =>
-  cells.reduce((acc, { cell, colNumber }) => {
-    const rawCellValue = cell.value
-    const cellValue = extractCellValue(rawCellValue)
-    const cellValueStr = cellValue?.toString() || ''
-
-    const stateAfterMetadata = processCellForMetadata(
-      cellValue,
-      cellValueStr,
-      worksheet,
-      rowNumber,
-      colNumber,
-      acc
-    )
-
-    const collectionsAfterMarkers = processDataMarker(
-      cellValueStr,
-      worksheet,
-      rowNumber,
-      colNumber,
-      stateAfterMetadata.activeCollections
-    )
-
-    const updatedCollections = collectionsAfterMarkers.map((collection) =>
-      updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber)
-    )
-
-    return {
-      ...stateAfterMetadata,
-      activeCollections: updatedCollections
-    }
-  }, state)
-
-const finalizeAndEmitCollections = (state) => {
-  const finalizedCollections = state.activeCollections.map((collection) =>
-    finalizeRowForCollection(collection)
-  )
-
-  const [completedCollections, activeCollections] = finalizedCollections.reduce(
-    ([completed, active], collection) =>
-      collection.complete
-        ? [[...completed, collection], active]
-        : [completed, [...active, collection]],
-    [[], []]
-  )
-
-  return {
-    ...state,
-    result: {
-      ...state.result,
-      data: emitCollectionsToResult(state.result.data, completedCollections)
-    },
-    activeCollections
-  }
-}
-
-const collectRowsFromWorksheet = (worksheet) => {
-  const rows = []
-  worksheet.eachRow((row, rowNumber) => {
-    rows.push({ row, rowNumber })
-  })
-  return rows
-}
-
-const collectCellsFromRow = (row) => {
-  const cells = []
-  row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-    cells.push({ cell, colNumber })
-  })
-  return cells
-}
-
-const processRow = (state, row, rowNumber, worksheet) => {
-  const cells = collectCellsFromRow(row)
-  const stateWithInitializedRows = {
-    ...state,
-    activeCollections: initializeCurrentRows(state.activeCollections)
-  }
-  const stateAfterCells = processCellsInRow(
-    stateWithInitializedRows,
-    cells,
-    worksheet,
-    rowNumber
-  )
-  return finalizeAndEmitCollections(stateAfterCells)
-}
-
-const processWorksheet = (state, worksheet) => {
-  const rows = collectRowsFromWorksheet(worksheet)
-  const stateAfterRows = rows.reduce(
-    (acc, { row, rowNumber }) => processRow(acc, row, rowNumber, worksheet),
-    state
-  )
-
-  return {
-    ...stateAfterRows,
-    result: {
-      ...stateAfterRows.result,
-      data: emitCollectionsToResult(
-        stateAfterRows.result.data,
-        stateAfterRows.activeCollections
-      )
-    },
-    activeCollections: []
   }
 }
 
@@ -315,16 +203,87 @@ export const parse = async (summaryLogBuffer) => {
   const workbook = new ExcelJS.Workbook()
   await workbook.xlsx.load(summaryLogBuffer)
 
-  const initialState = {
+  let state = {
     result: { meta: {}, data: {} },
     activeCollections: [],
     metadataContext: null
   }
 
-  const finalState = workbook.worksheets.reduce(
-    (state, worksheet) => processWorksheet(state, worksheet),
-    initialState
-  )
+  for (const worksheet of workbook.worksheets) {
+    const rows = []
+    worksheet.eachRow((row, rowNumber) => {
+      rows.push({ row, rowNumber })
+    })
 
-  return finalState.result
+    for (const { row, rowNumber } of rows) {
+      const cells = []
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        cells.push({ cell, colNumber })
+      })
+
+      // Initialize currentRow for all active collections
+      state.activeCollections = state.activeCollections.map((collection) => ({
+        ...collection,
+        currentRow: []
+      }))
+
+      // Process cells with reduce
+      state = cells.reduce((acc, { cell, colNumber }) => {
+        const rawCellValue = cell.value
+        const cellValue = extractCellValue(rawCellValue)
+        const cellValueStr = cellValue?.toString() || ''
+
+        const stateAfterMetadata = processCellForMetadata(
+          cellValue,
+          cellValueStr,
+          worksheet,
+          rowNumber,
+          colNumber,
+          acc
+        )
+
+        const collectionsAfterMarkers = processDataMarker(
+          cellValueStr,
+          worksheet,
+          rowNumber,
+          colNumber,
+          stateAfterMetadata.activeCollections
+        )
+
+        const updatedCollections = collectionsAfterMarkers.map((collection) =>
+          updateCollectionWithCell(
+            collection,
+            cellValue,
+            cellValueStr,
+            colNumber
+          )
+        )
+
+        return {
+          ...stateAfterMetadata,
+          activeCollections: updatedCollections
+        }
+      }, state)
+
+      // Finalize row for each collection
+      state.activeCollections = state.activeCollections.map((collection) =>
+        finalizeRowForCollection(collection)
+      )
+
+      // Emit completed collections and filter them out
+      const completedCollections = state.activeCollections.filter(
+        (collection) => collection.complete
+      )
+      emitCollectionsToResult(state, completedCollections)
+      state.activeCollections = state.activeCollections.filter(
+        (collection) => !collection.complete
+      )
+    }
+
+    // Emit remaining collections at worksheet end
+    emitCollectionsToResult(state, state.activeCollections)
+    state.activeCollections = []
+  }
+
+  return state.result
 }
