@@ -6,7 +6,7 @@
   ],
   "project": ["src/**/*.js!"],
   "ignore": ["coverage/**", "dist/**", ".husky/**", "node_modules/**"],
-  "ignoreDependencies": ["husky", "pino-pretty"],
+  "ignoreDependencies": ["aws4", "husky", "pino-pretty"],
   "ignoreBinaries": ["adr"],
   "ignoreExportsUsedInFile": true
 }
