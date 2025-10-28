@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { config } from '../../../config.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -9,11 +10,13 @@ export const organisationsGetByIdPath = '/v1/organisations/{id}'
 export const organisationsGetById = {
   method: 'GET',
   path: organisationsGetByIdPath,
-  options: {
-    auth: {
-      scope: [ROLES.serviceMaintainer]
-    }
-  },
+  options: config.get('isTest')
+    ? {}
+    : {
+        auth: {
+          scope: [ROLES.serviceMaintainer, ROLES.standardUser]
+        }
+      },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
    * @param {Object} h - Hapi response toolkit

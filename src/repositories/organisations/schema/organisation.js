@@ -1,3 +1,4 @@
+import Joi from 'joi'
 import {
   BUSINESS_TYPE,
   NATION,
@@ -5,20 +6,19 @@ import {
   STATUS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import Joi from 'joi'
+import {
+  companyDetailsSchema,
+  defraIdOrgIdSchema,
+  idSchema,
+  partnershipSchema,
+  userSchema,
+  userWithRolesSchema
+} from './base.js'
+import { registrationSchema, registrationUpdateSchema } from './registration.js'
 import {
   accreditationSchema,
   accreditationUpdateSchema
 } from './accreditation.js'
-import {
-  collatedUserSchema,
-  companyDetailsSchema,
-  idSchema,
-  linkedDefraOrganisationSchema,
-  partnershipSchema,
-  userSchema
-} from './base.js'
-import { registrationSchema, registrationUpdateSchema } from './registration.js'
 
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
@@ -33,10 +33,9 @@ export const organisationInsertSchema = Joi.object({
     )
     .optional(),
   companyDetails: companyDetailsSchema.required(),
+  defraIdOrgId: defraIdOrgIdSchema.optional(),
   formSubmissionTime: Joi.date().iso().required(),
   id: idSchema,
-  linkedDefraOrganisation: linkedDefraOrganisationSchema.optional(),
-  managementContactDetails: userSchema.optional(),
   orgId: Joi.number().required(),
   partnership: partnershipSchema.optional(),
   registrations: Joi.array().items(registrationSchema).optional(),
@@ -54,6 +53,7 @@ export const organisationInsertSchema = Joi.object({
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
+      STATUS.ACTIVE,
       STATUS.REJECTED,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
@@ -63,7 +63,7 @@ export const organisationInsertSchema = Joi.object({
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
   submitterContactDetails: userSchema.required(),
-  users: Joi.array().items(collatedUserSchema).optional(),
+  users: Joi.array().items(userWithRolesSchema),
   wasteProcessingTypes: Joi.array()
     .items(
       Joi.string().valid(
@@ -75,7 +75,7 @@ export const organisationInsertSchema = Joi.object({
     .required()
     .messages({
       'array.min': 'At least one waste processing type is required'
-    })
+    }),
 })
 
 const NON_UPDATABLE_FIELDS = ['id']
