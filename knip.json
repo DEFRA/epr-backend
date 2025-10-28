@@ -1,0 +1,15 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/start-server.js",
+    "src/server/**/*.js",
+    "src/plugins/**/*.js",
+    "src/routes/**/index.js",
+    "src/**/*.test.js"
+  ],
+  "project": ["src/**/*.js"],
+  "ignore": ["coverage/**", "dist/**", ".husky/**", "node_modules/**"],
+  "ignoreDependencies": ["husky", "pino-pretty"],
+  "ignoreBinaries": ["adr"],
+  "ignoreExportsUsedInFile": true
+}
