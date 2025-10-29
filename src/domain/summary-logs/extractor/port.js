@@ -41,7 +41,7 @@
  * // result.meta.PROCESSING_TYPE = { value: 'REPROCESSOR', location: { sheet: 'Sheet1', row: 1, column: 'B' } }
  * // result.data.UPDATE_WASTE_BALANCE = { location: {...}, headers: ['REF', 'DATE'], rows: [[123, '2025-01-01']] }
  *
- * @typedef {(buffer: Buffer) => Promise<ParsedSummaryLog>} SummaryLogParser
+ * @typedef {(buffer: any) => Promise<ParsedSummaryLog>} SummaryLogParser
  */
 
 /**
