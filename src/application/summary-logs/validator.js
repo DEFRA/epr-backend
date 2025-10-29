@@ -16,14 +16,6 @@ import { validateSummaryLogMaterialType } from './validators/summary-log-materia
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('./updater.js').SummaryLogUpdater} SummaryLogUpdater */
 
-// Re-export for backwards compatibility
-export {
-  fetchRegistration,
-  validateWasteRegistrationNumber,
-  validateSummaryLogType,
-  validateSummaryLogMaterialType
-}
-
 const performValidationChecks = async ({
   summaryLog,
   loggingContext,
