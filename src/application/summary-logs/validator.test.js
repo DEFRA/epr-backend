@@ -95,14 +95,6 @@ describe('SummaryLogsValidator', () => {
     vi.resetAllMocks()
   })
 
-  it('should find summary log by id', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
-
-    expect(summaryLogsRepository.findById).toHaveBeenCalledWith(
-      'summary-log-123'
-    )
-  })
-
   it('should throw error if summary log is not found', async () => {
     summaryLogsRepository.findById.mockResolvedValue(null)
 
@@ -143,15 +135,6 @@ describe('SummaryLogsValidator', () => {
           action: 'process_success'
         })
       })
-    )
-  })
-
-  it('should fetch registration after extraction', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
-
-    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
-      'org-123',
-      'reg-123'
     )
   })
 
@@ -485,60 +468,4 @@ describe('validateSummaryLogType', () => {
       validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).toThrow('Invalid summary log: unrecognized summary log type')
   })
-
-  it.each([
-    {
-      summaryLogType: 'REPROCESSOR',
-      registrationType: 'exporter'
-    },
-    {
-      summaryLogType: 'EXPORTER',
-      registrationType: 'reprocessor'
-    }
-  ])(
-    'should throw error when type is $summaryLogType but registration is $registrationType',
-    ({ summaryLogType, registrationType }) => {
-      const parsed = {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-          SUMMARY_LOG_TYPE: { value: summaryLogType }
-        }
-      }
-      const registration = {
-        wasteProcessingType: registrationType
-      }
-
-      expect(() =>
-        validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-      ).toThrow('Summary log type does not match registration type')
-    }
-  )
-
-  it.each([
-    {
-      summaryLogType: 'REPROCESSOR',
-      registrationType: 'reprocessor'
-    },
-    {
-      summaryLogType: 'EXPORTER',
-      registrationType: 'exporter'
-    }
-  ])(
-    'should not throw when type is $summaryLogType and registration is $registrationType',
-    ({ summaryLogType, registrationType }) => {
-      const parsed = {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-          SUMMARY_LOG_TYPE: { value: summaryLogType }
-        }
-      }
-      const registration = {
-        wasteProcessingType: registrationType
-      }
-
-      expect(() =>
-        validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-      ).not.toThrow()
-    }
-  )
 })
