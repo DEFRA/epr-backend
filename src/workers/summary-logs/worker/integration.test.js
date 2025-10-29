@@ -125,15 +125,15 @@ describe('SummaryLogsValidator integration', () => {
   describe.each([
     {
       testCase: 'file could not be found',
-      errorMessage: 'Something went wrong while retrieving your file upload'
+      errorMessage: 'Test file retrieval error'
     },
     {
       testCase: 'file could not be fetched',
-      errorMessage: 'S3 access denied'
+      errorMessage: 'Test S3 error'
     },
     {
       testCase: 'file could not be parsed',
-      errorMessage: 'File is corrupt and cannot be parsed as zip archive'
+      errorMessage: 'Test file parse error'
     }
   ])('extraction failures', ({ testCase, errorMessage }) => {
     it(`should update status as expected when validation fails because the ${testCase}`, async () => {
