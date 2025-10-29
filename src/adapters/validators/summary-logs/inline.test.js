@@ -1,6 +1,6 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validator.js'
 
 import { createInlineSummaryLogsValidator } from './inline.js'
 
@@ -49,9 +49,9 @@ describe('createInlineSummaryLogsValidator', () => {
     vi.mocked(SummaryLogUpdater).mockImplementation(function () {
       return mockSummaryLogUpdater
     })
-    vi.mocked(SummaryLogsValidator).mockImplementation(function () {
-      return mockSummaryLogsValidator
-    })
+    vi.mocked(createSummaryLogsValidator).mockImplementation(
+      () => mockSummaryLogsValidator
+    )
 
     inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
@@ -81,7 +81,7 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should create summary logs validator with dependencies', () => {
-    expect(SummaryLogsValidator).toHaveBeenCalledWith({
+    expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor: mockSummaryLogExtractor,

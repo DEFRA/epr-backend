@@ -4,7 +4,7 @@ import {
 } from '#domain/summary-logs/status.js'
 
 import {
-  SummaryLogsValidator,
+  createSummaryLogsValidator,
   fetchRegistration,
   validateWasteRegistrationNumber,
   validateSummaryLogType,
@@ -88,7 +88,7 @@ describe('SummaryLogsValidator', () => {
       update: vi.fn()
     }
 
-    summaryLogsValidator = new SummaryLogsValidator({
+    summaryLogsValidator = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor,
@@ -276,7 +276,7 @@ describe('SummaryLogsValidator', () => {
       update: vi.fn().mockRejectedValue(new Error('Database error'))
     }
 
-    const brokenValidator = new SummaryLogsValidator({
+    const brokenValidator = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor,

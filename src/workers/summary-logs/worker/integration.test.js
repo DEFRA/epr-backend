@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validator.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -78,7 +78,7 @@ describe('SummaryLogsValidator integration', () => {
     const extractor =
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata)
 
-    const summaryLogsValidator = new SummaryLogsValidator({
+    const summaryLogsValidator = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor: extractor,

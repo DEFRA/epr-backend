@@ -1,6 +1,6 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator as SummaryLogsValidatorClass } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validator.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -26,7 +26,7 @@ export const createInlineSummaryLogsValidator = (
     summaryLogsRepository
   })
 
-  const summaryLogsValidator = new SummaryLogsValidatorClass({
+  const summaryLogsValidator = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
     summaryLogExtractor,

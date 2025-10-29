@@ -1,6 +1,6 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validator.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
@@ -94,9 +94,9 @@ describe('summaryLogsValidatorWorkerThread', () => {
     vi.mocked(SummaryLogUpdater).mockImplementation(function () {
       return mockSummaryLogUpdater
     })
-    vi.mocked(SummaryLogsValidator).mockImplementation(function () {
-      return mockSummaryLogsValidator
-    })
+    vi.mocked(createSummaryLogsValidator).mockReturnValue(
+      mockSummaryLogsValidator
+    )
   })
 
   afterEach(() => {
@@ -161,7 +161,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   it('should create summary logs validator', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(SummaryLogsValidator).toHaveBeenCalledWith({
+    expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       organisationsRepository: mockOrganisationsRepository,
       summaryLogExtractor: mockSummaryLogExtractor,
