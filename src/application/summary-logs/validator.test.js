@@ -6,7 +6,8 @@ import {
 import {
   SummaryLogsValidator,
   fetchRegistration,
-  validateWasteRegistrationNumber
+  validateWasteRegistrationNumber,
+  validateSummaryLogType
 } from './validator.js'
 
 const mockLoggerInfo = vi.fn()
@@ -446,5 +447,22 @@ describe('validateWasteRegistrationNumber', () => {
         msg: 'test-msg'
       })
     ).not.toThrow()
+  })
+})
+
+describe('validateSummaryLogType', () => {
+  it('should throw error when SUMMARY_LOG_TYPE is missing', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'reprocessor'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, msg: 'test' })
+    ).toThrow('Invalid summary log: missing summary log type')
   })
 })
