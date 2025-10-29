@@ -112,7 +112,7 @@ describe('Summary logs integration', () => {
       summaryLogsRepository
     })
 
-    const summaryLogsValidator = createSummaryLogsValidator({
+    const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor,
@@ -126,7 +126,7 @@ describe('Summary logs integration', () => {
         uploadsRepository
       },
       workers: {
-        summaryLogsValidator
+        summaryLogsValidator: { validate: validateSummaryLog }
       },
       featureFlags
     })

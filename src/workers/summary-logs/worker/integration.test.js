@@ -78,7 +78,7 @@ describe('SummaryLogsValidator integration', () => {
     const extractor =
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata)
 
-    const summaryLogsValidator = createSummaryLogsValidator({
+    const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor: extractor,
@@ -87,7 +87,7 @@ describe('SummaryLogsValidator integration', () => {
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
 

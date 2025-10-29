@@ -39,9 +39,7 @@ describe('createInlineSummaryLogsValidator', () => {
       update: vi.fn()
     }
 
-    mockSummaryLogsValidator = {
-      validate: vi.fn().mockResolvedValue(undefined)
-    }
+    mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
     vi.mocked(createSummaryLogExtractor).mockImplementation(
       () => mockSummaryLogExtractor
@@ -49,8 +47,8 @@ describe('createInlineSummaryLogsValidator', () => {
     vi.mocked(SummaryLogUpdater).mockImplementation(function () {
       return mockSummaryLogUpdater
     })
-    vi.mocked(createSummaryLogsValidator).mockImplementation(
-      () => mockSummaryLogsValidator
+    vi.mocked(createSummaryLogsValidator).mockReturnValue(
+      mockSummaryLogsValidator
     )
 
     inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
@@ -92,13 +90,11 @@ describe('createInlineSummaryLogsValidator', () => {
   it('should call validator with summary log id', async () => {
     await inlineSummaryLogsValidator.validate(summaryLogId)
 
-    expect(mockSummaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
+    expect(mockSummaryLogsValidator).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should log error with correct format when worker fails', async () => {
-    mockSummaryLogsValidator.validate.mockRejectedValue(
-      new Error('Worker failed')
-    )
+    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     // Need to import logger to spy on it
     const { logger } = await import('#common/helpers/logging/logger.js')
@@ -122,9 +118,7 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should not throw when worker fails', async () => {
-    mockSummaryLogsValidator.validate.mockRejectedValue(
-      new Error('Worker failed')
-    )
+    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
       inlineSummaryLogsValidator.validate(summaryLogId)

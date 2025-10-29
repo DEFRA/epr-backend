@@ -126,22 +126,23 @@ const handleValidationFailure = async ({
 }
 
 /**
- * Creates a summary logs validator
+ * Creates a summary logs validator function
  *
  * @param {Object} params
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {SummaryLogExtractor} params.summaryLogExtractor
  * @param {SummaryLogUpdater} params.summaryLogUpdater
- * @returns {Object} Validator with validate method
+ * @returns {Function} Function that validates a summary log by ID
  */
-export const createSummaryLogsValidator = ({
-  summaryLogsRepository,
-  organisationsRepository,
-  summaryLogExtractor,
-  summaryLogUpdater
-}) => ({
-  async validate(summaryLogId) {
+export const createSummaryLogsValidator =
+  ({
+    summaryLogsRepository,
+    organisationsRepository,
+    summaryLogExtractor,
+    summaryLogUpdater
+  }) =>
+  async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
 
     if (!result) {
@@ -189,4 +190,3 @@ export const createSummaryLogsValidator = ({
       throw error
     }
   }
-})

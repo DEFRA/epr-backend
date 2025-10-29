@@ -28,7 +28,7 @@ describe('SummaryLogsValidator', () => {
   let summaryLogUpdater
   let summaryLogsRepository
   let organisationsRepository
-  let summaryLogsValidator
+  let validateSummaryLog
   let summaryLogId
   let summaryLog
 
@@ -88,7 +88,7 @@ describe('SummaryLogsValidator', () => {
       update: vi.fn()
     }
 
-    summaryLogsValidator = createSummaryLogsValidator({
+    validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor,
@@ -103,9 +103,7 @@ describe('SummaryLogsValidator', () => {
   it('should throw error if summary log is not found', async () => {
     summaryLogsRepository.findById.mockResolvedValue(null)
 
-    const result = await summaryLogsValidator
-      .validate(summaryLogId)
-      .catch((err) => err)
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe(
@@ -114,7 +112,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should log as expected when validation starts', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await validateSummaryLog(summaryLogId)
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -129,7 +127,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should log as expected when extraction succeeds', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await validateSummaryLog(summaryLogId)
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -144,7 +142,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should update status as expected when validation succeeds', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await validateSummaryLog(summaryLogId)
 
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
@@ -157,7 +155,7 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when validation succeeds if existing record indicated failure', async () => {
     summaryLog.failureReason = 'Existing error'
 
-    await summaryLogsValidator.validate(summaryLogId)
+    await validateSummaryLog(summaryLogId)
 
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
@@ -172,7 +170,7 @@ describe('SummaryLogsValidator', () => {
       new Error('Something went wrong while retrieving your file upload')
     )
 
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
@@ -186,7 +184,7 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when registration not found', async () => {
     organisationsRepository.findRegistrationById.mockResolvedValue(null)
 
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
@@ -208,7 +206,7 @@ describe('SummaryLogsValidator', () => {
       data: {}
     })
 
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
@@ -223,9 +221,7 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when extraction causes an unexpected exception', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
-    const result = await summaryLogsValidator
-      .validate(summaryLogId)
-      .catch((err) => err)
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('S3 access denied')
@@ -242,7 +238,7 @@ describe('SummaryLogsValidator', () => {
   it('should log as expected when extraction fails', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -257,7 +253,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should log as expected once status updated', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await validateSummaryLog(summaryLogId)
 
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -276,16 +272,14 @@ describe('SummaryLogsValidator', () => {
       update: vi.fn().mockRejectedValue(new Error('Database error'))
     }
 
-    const brokenValidator = createSummaryLogsValidator({
+    const brokenValidate = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
       summaryLogExtractor,
       summaryLogUpdater: brokenUpdater
     })
 
-    const result = await brokenValidator
-      .validate(summaryLogId)
-      .catch((err) => err)
+    const result = await brokenValidate(summaryLogId).catch((err) => err)
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Database error')

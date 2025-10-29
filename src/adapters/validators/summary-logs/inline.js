@@ -26,7 +26,7 @@ export const createInlineSummaryLogsValidator = (
     summaryLogsRepository
   })
 
-  const summaryLogsValidator = createSummaryLogsValidator({
+  const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
     summaryLogExtractor,
@@ -35,7 +35,7 @@ export const createInlineSummaryLogsValidator = (
 
   return {
     validate: async (summaryLogId) => {
-      summaryLogsValidator.validate(summaryLogId).catch((error) => {
+      validateSummaryLog(summaryLogId).catch((error) => {
         logger.error({
           error,
           message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,

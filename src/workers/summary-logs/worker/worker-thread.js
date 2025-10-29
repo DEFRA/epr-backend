@@ -48,14 +48,14 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
         summaryLogsRepository
       })
 
-      const summaryLogsValidator = createSummaryLogsValidator({
+      const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         summaryLogExtractor,
         summaryLogUpdater
       })
 
-      await summaryLogsValidator.validate(summaryLogId)
+      await validateSummaryLog(summaryLogId)
     } finally {
       s3Client.destroy()
     }

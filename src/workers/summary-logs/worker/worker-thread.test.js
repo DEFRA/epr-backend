@@ -73,9 +73,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       update: vi.fn()
     }
 
-    mockSummaryLogsValidator = {
-      validate: vi.fn().mockResolvedValue(undefined)
-    }
+    mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
     summaryLogId = 'summary-log-123'
 
@@ -172,7 +170,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   it('should call validator as expected', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(mockSummaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
+    expect(mockSummaryLogsValidator).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should destroy S3 client once worker completes', async () => {
@@ -188,9 +186,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should destroy S3 client and close mongo client even if worker fails', async () => {
-    mockSummaryLogsValidator.validate.mockRejectedValue(
-      new Error('Worker failed')
-    )
+    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
       summaryLogsValidatorWorkerThread(summaryLogId)
