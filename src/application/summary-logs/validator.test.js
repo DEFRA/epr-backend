@@ -465,4 +465,84 @@ describe('validateSummaryLogType', () => {
       validateSummaryLogType({ parsed, registration, msg: 'test' })
     ).toThrow('Invalid summary log: missing summary log type')
   })
+
+  it('should throw error when SUMMARY_LOG_TYPE is unrecognized', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'INVALID_TYPE' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'reprocessor'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, msg: 'test' })
+    ).toThrow('Invalid summary log: unrecognized summary log type')
+  })
+
+  it('should throw error when type is REPROCESSOR but registration is exporter', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'REPROCESSOR' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'exporter'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, msg: 'test' })
+    ).toThrow('Summary log type does not match registration type')
+  })
+
+  it('should throw error when type is EXPORTER but registration is reprocessor', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'EXPORTER' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'reprocessor'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, msg: 'test' })
+    ).toThrow('Summary log type does not match registration type')
+  })
+
+  it('should not throw when type is REPROCESSOR and registration is reprocessor', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'REPROCESSOR' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'reprocessor'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, msg: 'test' })
+    ).not.toThrow()
+  })
+
+  it('should not throw when type is EXPORTER and registration is exporter', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'EXPORTER' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'exporter'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, msg: 'test' })
+    ).not.toThrow()
+  })
 })
