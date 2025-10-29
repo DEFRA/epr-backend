@@ -13,6 +13,16 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 /** @typedef {import('./updater.js').SummaryLogUpdater} SummaryLogUpdater */
 
 /**
+ * Mapping between spreadsheet type values and database type values
+ */
+const SPREADSHEET_TYPE_TO_DB_TYPE = {
+  REPROCESSOR: 'reprocessor',
+  EXPORTER: 'exporter'
+}
+
+const VALID_SPREADSHEET_TYPES = Object.keys(SPREADSHEET_TYPE_TO_DB_TYPE)
+
+/**
  * Fetches a registration from the organisations repository
  *
  * @param {Object} params
@@ -86,6 +96,41 @@ export const validateWasteRegistrationNumber = ({
 
   logger.info({
     message: `Registration number validated: ${msg}, registrationNumber=${wasteRegistrationNumber}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+}
+
+/**
+ * Validates that the summary log type in the spreadsheet matches the registration's waste processing type
+ *
+ * @param {Object} params
+ * @param {Object} params.parsed - The parsed summary log structure from the parser
+ * @param {Object} params.registration - The registration object from the organisations repository
+ * @param {string} params.msg - Logging context message
+ * @throws {Error} If validation fails
+ */
+export const validateSummaryLogType = ({ parsed, registration, msg }) => {
+  const { wasteProcessingType } = registration
+  const spreadsheetType = parsed?.meta?.SUMMARY_LOG_TYPE?.value
+
+  if (!spreadsheetType) {
+    throw new Error('Invalid summary log: missing summary log type')
+  }
+
+  if (!VALID_SPREADSHEET_TYPES.includes(spreadsheetType)) {
+    throw new Error('Invalid summary log: unrecognized summary log type')
+  }
+
+  const expectedDbType = SPREADSHEET_TYPE_TO_DB_TYPE[spreadsheetType]
+  if (expectedDbType !== wasteProcessingType) {
+    throw new Error('Summary log type does not match registration type')
+  }
+
+  logger.info({
+    message: `Summary log type validated: ${msg}, spreadsheetType=${spreadsheetType}, wasteProcessingType=${wasteProcessingType}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,
       action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
