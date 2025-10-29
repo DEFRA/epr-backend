@@ -1,5 +1,8 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import * as jsondiffpatch from 'jsondiffpatch'
+import * as jsonpatchFormatter from 'jsondiffpatch/formatters/jsonpatch'
+
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const organisationsPatchByIdPath = '/v1/organisations/{id}'
@@ -43,17 +46,23 @@ export const organisationsPatchById = {
 
     const { version, updateFragment } = request.payload
 
-    let organisation
+    const jsondiffpatchInstance = jsondiffpatch.create({
+      propertyFilter: function (name) {
+        return name !== 'version'
+      }
+    })
+
+    let diff = ''
     try {
+      const previousVersion = await organisationsRepository.findById(id)
       await organisationsRepository.update(id, version, updateFragment)
-      organisation = await organisationsRepository.findById(id)
+      const newVersion = await organisationsRepository.findById(id)
+      const delta = jsondiffpatchInstance.diff(previousVersion, newVersion)
+      diff = jsonpatchFormatter.format(delta)
     } catch (error) {
-      // Not happy letting the client know all the details of the mongo error
-      console.log('error', error)
-      // TODO: Should we add joi errors in a different way?
       throw Boom.boomify(error)
     }
 
-    return h.response(organisation).code(StatusCodes.OK)
+    return h.response(diff).code(StatusCodes.OK)
   }
 }
