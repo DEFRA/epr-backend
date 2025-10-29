@@ -13,36 +13,40 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 
 describe('SummaryLogsValidator integration', () => {
-  let summaryLogExtractor
   let summaryLogUpdater
-  let summaryLogsValidator
   let summaryLogsRepository
-  let organisationsRepository
-
-  let summaryLogId
-  let initialSummaryLog
 
   beforeEach(async () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
+    summaryLogUpdater = new SummaryLogUpdater({ summaryLogsRepository })
+  })
 
-    const testOrg = buildOrganisation({
+  const createTestOrg = (wasteProcessingType, wasteRegistrationNumber) => {
+    return buildOrganisation({
       registrations: [
         {
           id: randomUUID(),
-          wasteRegistrationNumber: 'WRN-123',
+          wasteRegistrationNumber,
           material: 'paper',
-          wasteProcessingType: 'reprocessor',
+          wasteProcessingType,
           formSubmissionTime: new Date(),
           submittedToRegulator: 'ea'
         }
       ]
     })
+  }
 
-    organisationsRepository = createInMemoryOrganisationsRepository([testOrg])()
+  const createExtractor = (fileId, metadata) => {
+    return createInMemorySummaryLogExtractor({
+      [fileId]: {
+        meta: metadata,
+        data: {}
+      }
+    })
+  }
 
-    summaryLogId = randomUUID()
-
-    initialSummaryLog = {
+  const createSummaryLog = (testOrg) => {
+    return {
       status: SUMMARY_LOG_STATUS.VALIDATING,
       organisationId: testOrg.id,
       registrationId: testOrg.registrations[0].id,
@@ -56,45 +60,41 @@ describe('SummaryLogsValidator integration', () => {
         }
       }
     }
-
-    const fileId = initialSummaryLog.file.id
-
-    summaryLogExtractor = createInMemorySummaryLogExtractor({
-      [fileId]: {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
-          },
-          SUMMARY_LOG_TYPE: {
-            value: 'REPROCESSOR',
-            location: { sheet: 'Data', row: 2, column: 'B' }
-          }
-        },
-        data: {}
-      }
-    })
-
-    summaryLogUpdater = new SummaryLogUpdater({
-      summaryLogsRepository
-    })
-
-    summaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
-    })
-  })
+  }
 
   it('should update status as expected when validation succeeds', async () => {
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
+    const testOrg = createTestOrg('reprocessor', 'WRN-123')
+    const organisationsRepository = createInMemoryOrganisationsRepository([
+      testOrg
+    ])()
+    const summaryLog = createSummaryLog(testOrg)
+    const summaryLogId = randomUUID()
+
+    const summaryLogExtractor = createExtractor(summaryLog.file.id, {
+      WASTE_REGISTRATION_NUMBER: {
+        value: 'WRN-123',
+        location: { sheet: 'Data', row: 1, column: 'B' }
+      },
+      SUMMARY_LOG_TYPE: {
+        value: 'REPROCESSOR',
+        location: { sheet: 'Data', row: 2, column: 'B' }
+      }
+    })
+
+    const summaryLogsValidator = new SummaryLogsValidator({
+      summaryLogsRepository,
+      organisationsRepository,
+      summaryLogExtractor,
+      summaryLogUpdater
+    })
+
+    await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
     const inserted = await summaryLogsRepository.findById(summaryLogId)
 
     expect(inserted).toEqual({
       version: 1,
-      summaryLog: initialSummaryLog
+      summaryLog
     })
 
     await summaryLogsValidator.validate(summaryLogId)
@@ -104,358 +104,185 @@ describe('SummaryLogsValidator integration', () => {
     expect(updated).toEqual({
       version: 2,
       summaryLog: {
-        ...initialSummaryLog,
+        ...summaryLog,
         status: SUMMARY_LOG_STATUS.VALIDATED
       }
     })
   })
 
-  it('should update status as expected when validation fails because the file could not be found', async () => {
-    initialSummaryLog.file.s3.key = 'some-other-key'
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
+  describe.each([
+    {
+      testCase: 'file could not be found',
+      errorMessage: 'Something went wrong while retrieving your file upload'
+    },
+    {
+      testCase: 'file could not be fetched',
+      errorMessage: 'S3 access denied'
+    },
+    {
+      testCase: 'file could not be parsed',
+      errorMessage: 'File is corrupt and cannot be parsed as zip archive'
+    }
+  ])('extraction failures', ({ testCase, errorMessage }) => {
+    it(`should update status as expected when validation fails because the ${testCase}`, async () => {
+      const testOrg = createTestOrg('reprocessor', 'WRN-123')
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+      const summaryLog = createSummaryLog(testOrg)
+      const summaryLogId = randomUUID()
 
-    const inserted = await summaryLogsRepository.findById(summaryLogId)
+      const failingSummaryLogExtractor = {
+        extract: async () => {
+          throw new Error(errorMessage)
+        }
+      }
 
-    expect(inserted).toEqual({
-      version: 1,
-      summaryLog: initialSummaryLog
+      const summaryLogsValidator = new SummaryLogsValidator({
+        summaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor: failingSummaryLogExtractor,
+        summaryLogUpdater
+      })
+
+      await summaryLogsRepository.insert(summaryLogId, summaryLog)
+
+      const inserted = await summaryLogsRepository.findById(summaryLogId)
+
+      expect(inserted).toEqual({
+        version: 1,
+        summaryLog
+      })
+
+      await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+
+      const updated = await summaryLogsRepository.findById(summaryLogId)
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason: errorMessage
+        }
+      })
     })
+  })
 
-    const failingSummaryLogExtractor = {
-      extract: async () => {
-        throw new Error(
-          'Something went wrong while retrieving your file upload'
+  describe.each([
+    {
+      testCase: 'REPROCESSOR type matches reprocessor registration',
+      registrationType: 'reprocessor',
+      registrationWRN: 'WRN-123',
+      spreadsheetType: 'REPROCESSOR',
+      expectedStatus: SUMMARY_LOG_STATUS.VALIDATED,
+      expectedFailureReason: undefined
+    },
+    {
+      testCase: 'EXPORTER type matches exporter registration',
+      registrationType: 'exporter',
+      registrationWRN: 'WRN-456',
+      spreadsheetType: 'EXPORTER',
+      expectedStatus: SUMMARY_LOG_STATUS.VALIDATED,
+      expectedFailureReason: undefined
+    },
+    {
+      testCase: 'EXPORTER type does not match reprocessor registration',
+      registrationType: 'reprocessor',
+      registrationWRN: 'WRN-123',
+      spreadsheetType: 'EXPORTER',
+      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
+      expectedFailureReason: 'Summary log type does not match registration type'
+    },
+    {
+      testCase: 'REPROCESSOR type does not match exporter registration',
+      registrationType: 'exporter',
+      registrationWRN: 'WRN-456',
+      spreadsheetType: 'REPROCESSOR',
+      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
+      expectedFailureReason: 'Summary log type does not match registration type'
+    },
+    {
+      testCase: 'type is missing',
+      registrationType: 'reprocessor',
+      registrationWRN: 'WRN-123',
+      spreadsheetType: undefined,
+      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
+      expectedFailureReason: 'Invalid summary log: missing summary log type'
+    },
+    {
+      testCase: 'type is unrecognized',
+      registrationType: 'reprocessor',
+      registrationWRN: 'WRN-123',
+      spreadsheetType: 'INVALID_TYPE',
+      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
+      expectedFailureReason:
+        'Invalid summary log: unrecognized summary log type'
+    }
+  ])(
+    'type validation',
+    ({
+      testCase,
+      registrationType,
+      registrationWRN,
+      spreadsheetType,
+      expectedStatus,
+      expectedFailureReason
+    }) => {
+      it(`should handle validation when ${testCase}`, async () => {
+        const testOrg = createTestOrg(registrationType, registrationWRN)
+        const organisationsRepository = createInMemoryOrganisationsRepository([
+          testOrg
+        ])()
+        const summaryLog = createSummaryLog(testOrg)
+        const summaryLogId = randomUUID()
+
+        const metadata = {
+          WASTE_REGISTRATION_NUMBER: {
+            value: registrationWRN,
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          }
+        }
+
+        if (spreadsheetType !== undefined) {
+          metadata.SUMMARY_LOG_TYPE = {
+            value: spreadsheetType,
+            location: { sheet: 'Data', row: 2, column: 'B' }
+          }
+        }
+
+        const summaryLogExtractor = createExtractor(
+          summaryLog.file.id,
+          metadata
         )
-      }
-    }
 
-    const failingSummaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor: failingSummaryLogExtractor,
-      summaryLogUpdater
-    })
+        const summaryLogsValidator = new SummaryLogsValidator({
+          summaryLogsRepository,
+          organisationsRepository,
+          summaryLogExtractor,
+          summaryLogUpdater
+        })
 
-    await failingSummaryLogsValidator.validate(summaryLogId).catch((err) => err)
+        await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-    const updated = await summaryLogsRepository.findById(summaryLogId)
+        await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
 
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'Something went wrong while retrieving your file upload'
-      }
-    })
-  })
+        const updated = await summaryLogsRepository.findById(summaryLogId)
 
-  it('should update status as expected when validation fails because the file could not be fetched', async () => {
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
-
-    const inserted = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(inserted).toEqual({
-      version: 1,
-      summaryLog: initialSummaryLog
-    })
-
-    const failingSummaryLogExtractor = {
-      extract: async () => {
-        throw new Error('S3 access denied')
-      }
-    }
-
-    const failingSummaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor: failingSummaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await failingSummaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-    const updated = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'S3 access denied'
-      }
-    })
-  })
-
-  it('should update status as expected when validation fails because the file could not be parsed', async () => {
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
-
-    const inserted = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(inserted).toEqual({
-      version: 1,
-      summaryLog: initialSummaryLog
-    })
-
-    const failingSummaryLogExtractor = {
-      extract: async () => {
-        throw new Error('File is corrupt and cannot be parsed as zip archive')
-      }
-    }
-
-    const failingSummaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor: failingSummaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await failingSummaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-    const updated = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'File is corrupt and cannot be parsed as zip archive'
-      }
-    })
-  })
-
-  it('should validate successfully when SUMMARY_LOG_TYPE is REPROCESSOR and registration is reprocessor', async () => {
-    const fileId = initialSummaryLog.file.id
-
-    summaryLogExtractor = createInMemorySummaryLogExtractor({
-      [fileId]: {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
-          },
-          SUMMARY_LOG_TYPE: {
-            value: 'REPROCESSOR',
-            location: { sheet: 'Data', row: 2, column: 'B' }
-          }
-        },
-        data: {}
-      }
-    })
-
-    summaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
-
-    await summaryLogsValidator.validate(summaryLogId)
-
-    const updated = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.VALIDATED
-      }
-    })
-  })
-
-  it('should fail validation when SUMMARY_LOG_TYPE is EXPORTER but registration is reprocessor', async () => {
-    const fileId = initialSummaryLog.file.id
-
-    summaryLogExtractor = createInMemorySummaryLogExtractor({
-      [fileId]: {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
-          },
-          SUMMARY_LOG_TYPE: {
-            value: 'EXPORTER',
-            location: { sheet: 'Data', row: 2, column: 'B' }
-          }
-        },
-        data: {}
-      }
-    })
-
-    summaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
-
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-    const updated = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'Summary log type does not match registration type'
-      }
-    })
-  })
-
-  it('should fail validation when SUMMARY_LOG_TYPE is missing', async () => {
-    const fileId = initialSummaryLog.file.id
-
-    summaryLogExtractor = createInMemorySummaryLogExtractor({
-      [fileId]: {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
-          }
-        },
-        data: {}
-      }
-    })
-
-    summaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
-
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-    const updated = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'Invalid summary log: missing summary log type'
-      }
-    })
-  })
-
-  it('should fail validation when SUMMARY_LOG_TYPE is unrecognized', async () => {
-    const fileId = initialSummaryLog.file.id
-
-    summaryLogExtractor = createInMemorySummaryLogExtractor({
-      [fileId]: {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
-          },
-          SUMMARY_LOG_TYPE: {
-            value: 'INVALID_TYPE',
-            location: { sheet: 'Data', row: 2, column: 'B' }
-          }
-        },
-        data: {}
-      }
-    })
-
-    summaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await summaryLogsRepository.insert(summaryLogId, initialSummaryLog)
-
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-    const updated = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...initialSummaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason: 'Invalid summary log: unrecognized summary log type'
-      }
-    })
-  })
-
-  it('should validate successfully when SUMMARY_LOG_TYPE is EXPORTER and registration is exporter', async () => {
-    const testOrg = buildOrganisation({
-      registrations: [
-        {
-          id: randomUUID(),
-          wasteRegistrationNumber: 'WRN-456',
-          material: 'plastic',
-          wasteProcessingType: 'exporter',
-          formSubmissionTime: new Date(),
-          submittedToRegulator: 'ea'
+        const expectedSummaryLog = {
+          ...summaryLog,
+          status: expectedStatus
         }
-      ]
-    })
 
-    organisationsRepository = createInMemoryOrganisationsRepository([testOrg])()
-
-    const exporterSummaryLogId = randomUUID()
-    const exporterSummaryLog = {
-      status: SUMMARY_LOG_STATUS.VALIDATING,
-      organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id,
-      file: {
-        id: `file-${randomUUID()}`,
-        name: 'exporter-test.xlsx',
-        status: UPLOAD_STATUS.COMPLETE,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'path/to/exporter-summary-log.xlsx'
+        if (expectedFailureReason) {
+          expectedSummaryLog.failureReason = expectedFailureReason
         }
-      }
+
+        expect(updated).toEqual({
+          version: 2,
+          summaryLog: expectedSummaryLog
+        })
+      })
     }
-
-    const fileId = exporterSummaryLog.file.id
-
-    summaryLogExtractor = createInMemorySummaryLogExtractor({
-      [fileId]: {
-        meta: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-456',
-            location: { sheet: 'Data', row: 1, column: 'B' }
-          },
-          SUMMARY_LOG_TYPE: {
-            value: 'EXPORTER',
-            location: { sheet: 'Data', row: 2, column: 'B' }
-          }
-        },
-        data: {}
-      }
-    })
-
-    summaryLogsValidator = new SummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
-    })
-
-    await summaryLogsRepository.insert(exporterSummaryLogId, exporterSummaryLog)
-
-    await summaryLogsValidator.validate(exporterSummaryLogId)
-
-    const updated = await summaryLogsRepository.findById(exporterSummaryLogId)
-
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...exporterSummaryLog,
-        status: SUMMARY_LOG_STATUS.VALIDATED
-      }
-    })
-  })
+  )
 })
