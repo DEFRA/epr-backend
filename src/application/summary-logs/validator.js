@@ -193,6 +193,12 @@ export class SummaryLogsValidator {
       msg
     })
 
+    validateSummaryLogType({
+      parsed,
+      registration,
+      msg
+    })
+
     return parsed
   }
 

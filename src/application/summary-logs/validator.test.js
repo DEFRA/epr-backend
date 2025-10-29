@@ -37,6 +37,9 @@ describe('SummaryLogsValidator', () => {
         meta: {
           WASTE_REGISTRATION_NUMBER: {
             value: 'WRN12345'
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'REPROCESSOR'
           }
         },
         data: {}
@@ -50,7 +53,8 @@ describe('SummaryLogsValidator', () => {
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
-        wasteRegistrationNumber: 'WRN12345'
+        wasteRegistrationNumber: 'WRN12345',
+        wasteProcessingType: 'reprocessor'
       })
     }
 
@@ -297,6 +301,31 @@ describe('SummaryLogsValidator', () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Database error')
+  })
+
+  it('should call validateSummaryLogType during performValidationChecks', async () => {
+    organisationsRepository.findRegistrationById.mockResolvedValue({
+      id: 'reg-123',
+      wasteRegistrationNumber: 'WRN12345',
+      wasteProcessingType: 'reprocessor'
+    })
+
+    summaryLogExtractor.extract.mockResolvedValue({
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'REPROCESSOR' }
+      },
+      data: {}
+    })
+
+    await summaryLogsValidator.validate(summaryLogId)
+
+    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
+      id: summaryLogId,
+      version: 1,
+      summaryLog,
+      status: SUMMARY_LOG_STATUS.VALIDATED
+    })
   })
 })
 

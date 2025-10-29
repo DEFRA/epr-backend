@@ -94,6 +94,10 @@ describe('Summary logs integration', () => {
           WASTE_REGISTRATION_NUMBER: {
             value: 'WRN-123',
             location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'REPROCESSOR',
+            location: { sheet: 'Data', row: 2, column: 'B' }
           }
         },
         data: {}
