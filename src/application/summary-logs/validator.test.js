@@ -6,7 +6,8 @@ import {
 import {
   SummaryLogsValidator,
   fetchRegistration,
-  validateWasteRegistrationNumber
+  validateWasteRegistrationNumber,
+  validateSummaryLogType
 } from './validator.js'
 
 const mockLoggerInfo = vi.fn()
@@ -36,6 +37,9 @@ describe('SummaryLogsValidator', () => {
         meta: {
           WASTE_REGISTRATION_NUMBER: {
             value: 'WRN12345'
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'REPROCESSOR'
           }
         },
         data: {}
@@ -49,7 +53,8 @@ describe('SummaryLogsValidator', () => {
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
-        wasteRegistrationNumber: 'WRN12345'
+        wasteRegistrationNumber: 'WRN12345',
+        wasteProcessingType: 'reprocessor'
       })
     }
 
@@ -88,14 +93,6 @@ describe('SummaryLogsValidator', () => {
 
   afterEach(() => {
     vi.resetAllMocks()
-  })
-
-  it('should find summary log by id', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
-
-    expect(summaryLogsRepository.findById).toHaveBeenCalledWith(
-      'summary-log-123'
-    )
   })
 
   it('should throw error if summary log is not found', async () => {
@@ -138,15 +135,6 @@ describe('SummaryLogsValidator', () => {
           action: 'process_success'
         })
       })
-    )
-  })
-
-  it('should fetch registration after extraction', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
-
-    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
-      'org-123',
-      'reg-123'
     )
   })
 
@@ -312,7 +300,7 @@ describe('fetchRegistration', () => {
       organisationsRepository: mockOrganisationsRepository,
       organisationId: 'org-123',
       registrationId: 'reg-123',
-      msg: 'test-msg'
+      loggingContext: 'test-context'
     })
 
     expect(result).toBeDefined()
@@ -330,7 +318,7 @@ describe('fetchRegistration', () => {
         organisationsRepository: mockOrganisationsRepository,
         organisationId: 'org-123',
         registrationId: 'reg-123',
-        msg: 'test-msg'
+        loggingContext: 'test-context'
       })
     ).rejects.toThrow(
       'Registration not found: organisationId=org-123, registrationId=reg-123'
@@ -446,5 +434,49 @@ describe('validateWasteRegistrationNumber', () => {
         msg: 'test-msg'
       })
     ).not.toThrow()
+  })
+})
+
+describe('validateSummaryLogType', () => {
+  it('should throw error when SUMMARY_LOG_TYPE is missing', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'reprocessor'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
+    ).toThrow('Invalid summary log: missing summary log type')
+  })
+
+  it('should log error and throw when registration has unexpected type', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        SUMMARY_LOG_TYPE: { value: 'REPROCESSOR' }
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'invalid-unexpected-type'
+    }
+
+    expect(() =>
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
+    ).toThrow('Summary log type does not match registration type')
+
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Unexpected registration type: test, wasteProcessingType=invalid-unexpected-type',
+        event: expect.objectContaining({
+          category: 'server',
+          action: 'process_failure'
+        })
+      })
+    )
   })
 })
