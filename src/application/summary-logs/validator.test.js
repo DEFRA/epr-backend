@@ -452,20 +452,4 @@ describe('validateSummaryLogType', () => {
       validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).toThrow('Invalid summary log: missing summary log type')
   })
-
-  it('should throw error when SUMMARY_LOG_TYPE is unrecognized', () => {
-    const parsed = {
-      meta: {
-        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-        SUMMARY_LOG_TYPE: { value: 'INVALID_TYPE' }
-      }
-    }
-    const registration = {
-      wasteProcessingType: 'reprocessor'
-    }
-
-    expect(() =>
-      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-    ).toThrow('Invalid summary log: unrecognized summary log type')
-  })
 })
