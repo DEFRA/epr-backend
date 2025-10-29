@@ -1,5 +1,4 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
@@ -18,7 +17,6 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 vi.mock('#application/summary-logs/extractor.js')
-vi.mock('#application/summary-logs/updater.js')
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
@@ -36,7 +34,6 @@ describe('summaryLogsValidatorWorkerThread', () => {
   let mockUploadsRepository
   let mockOrganisationsRepository
   let mockSummaryLogExtractor
-  let mockSummaryLogUpdater
   let mockSummaryLogsValidator
 
   let summaryLogId
@@ -69,10 +66,6 @@ describe('summaryLogsValidatorWorkerThread', () => {
       extract: vi.fn()
     }
 
-    mockSummaryLogUpdater = {
-      update: vi.fn()
-    }
-
     mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
     summaryLogId = 'summary-log-123'
@@ -89,9 +82,6 @@ describe('summaryLogsValidatorWorkerThread', () => {
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
       mockSummaryLogExtractor
     )
-    vi.mocked(SummaryLogUpdater).mockImplementation(function () {
-      return mockSummaryLogUpdater
-    })
     vi.mocked(createSummaryLogsValidator).mockReturnValue(
       mockSummaryLogsValidator
     )
@@ -148,22 +138,13 @@ describe('summaryLogsValidatorWorkerThread', () => {
     )
   })
 
-  it('should create summary log updater', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
-
-    expect(SummaryLogUpdater).toHaveBeenCalledWith({
-      summaryLogsRepository: mockSummaryLogsRepository
-    })
-  })
-
   it('should create summary logs validator', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
     expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       organisationsRepository: mockOrganisationsRepository,
-      summaryLogExtractor: mockSummaryLogExtractor,
-      summaryLogUpdater: mockSummaryLogUpdater
+      summaryLogExtractor: mockSummaryLogExtractor
     })
   })
 

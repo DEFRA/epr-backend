@@ -1,11 +1,9 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 
 import { createInlineSummaryLogsValidator } from './inline.js'
 
 vi.mock('#application/summary-logs/extractor.js')
-vi.mock('#application/summary-logs/updater.js')
 vi.mock('#application/summary-logs/validate.js')
 
 describe('createInlineSummaryLogsValidator', () => {
@@ -13,7 +11,6 @@ describe('createInlineSummaryLogsValidator', () => {
   let summaryLogsRepository
   let organisationsRepository
   let mockSummaryLogExtractor
-  let mockSummaryLogUpdater
   let mockSummaryLogsValidator
   let inlineSummaryLogsValidator
   let summaryLogId
@@ -35,18 +32,11 @@ describe('createInlineSummaryLogsValidator', () => {
       extract: vi.fn()
     }
 
-    mockSummaryLogUpdater = {
-      update: vi.fn()
-    }
-
     mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
     vi.mocked(createSummaryLogExtractor).mockImplementation(
       () => mockSummaryLogExtractor
     )
-    vi.mocked(SummaryLogUpdater).mockImplementation(function () {
-      return mockSummaryLogUpdater
-    })
     vi.mocked(createSummaryLogsValidator).mockReturnValue(
       mockSummaryLogsValidator
     )
@@ -72,18 +62,11 @@ describe('createInlineSummaryLogsValidator', () => {
     )
   })
 
-  it('should create summary log updater with dependencies', () => {
-    expect(SummaryLogUpdater).toHaveBeenCalledWith({
-      summaryLogsRepository
-    })
-  })
-
   it('should create summary logs validator with dependencies', () => {
     expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor: mockSummaryLogExtractor,
-      summaryLogUpdater: mockSummaryLogUpdater
+      summaryLogExtractor: mockSummaryLogExtractor
     })
   })
 

@@ -19,7 +19,6 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 
 describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
-  let summaryLogUpdater
   let summaryLogsRepository
   let organisationsRepository
   let validateSummaryLog
@@ -42,10 +41,6 @@ describe('SummaryLogsValidator', () => {
         },
         data: {}
       })
-    }
-
-    summaryLogUpdater = {
-      update: vi.fn().mockResolvedValue(undefined)
     }
 
     organisationsRepository = {
@@ -85,8 +80,7 @@ describe('SummaryLogsValidator', () => {
     validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
+      summaryLogExtractor
     })
   })
 
@@ -138,11 +132,13 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when validation succeeds', async () => {
     await validateSummaryLog(summaryLogId)
 
-    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
-      id: 'summary-log-123',
-      version: 1,
-      status: SUMMARY_LOG_STATUS.VALIDATED
-    })
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      }
+    )
   })
 
   it('should update status as expected when extraction fails', async () => {
@@ -152,12 +148,14 @@ describe('SummaryLogsValidator', () => {
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
-      id: 'summary-log-123',
-      version: 1,
-      status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason: 'Something went wrong while retrieving your file upload'
-    })
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      {
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'Something went wrong while retrieving your file upload'
+      }
+    )
   })
 
   it('should update status as expected when registration not found', async () => {
@@ -165,13 +163,15 @@ describe('SummaryLogsValidator', () => {
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
-      id: 'summary-log-123',
-      version: 1,
-      status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason:
-        'Registration not found: organisationId=org-123, registrationId=reg-123'
-    })
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      {
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason:
+          'Registration not found: organisationId=org-123, registrationId=reg-123'
+      }
+    )
   })
 
   it('should update status as expected when waste registration number validation fails', async () => {
@@ -186,13 +186,15 @@ describe('SummaryLogsValidator', () => {
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
-      id: 'summary-log-123',
-      version: 1,
-      status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason:
-        "Summary log's waste registration number does not match this registration"
-    })
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      {
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason:
+          "Summary log's waste registration number does not match this registration"
+      }
+    )
   })
 
   it('should update status as expected when extraction causes an unexpected exception', async () => {
@@ -203,12 +205,14 @@ describe('SummaryLogsValidator', () => {
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('S3 access denied')
 
-    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
-      id: 'summary-log-123',
-      version: 1,
-      status: SUMMARY_LOG_STATUS.INVALID,
-      failureReason: 'S3 access denied'
-    })
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      {
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: 'S3 access denied'
+      }
+    )
   })
 
   it('should log as expected when extraction fails', async () => {
@@ -244,15 +248,18 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should throw error if repository update fails', async () => {
-    const brokenUpdater = {
+    const brokenRepository = {
+      findById: vi.fn().mockResolvedValue({
+        version: 1,
+        summaryLog
+      }),
       update: vi.fn().mockRejectedValue(new Error('Database error'))
     }
 
     const brokenValidate = createSummaryLogsValidator({
-      summaryLogsRepository,
+      summaryLogsRepository: brokenRepository,
       organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater: brokenUpdater
+      summaryLogExtractor
     })
 
     const result = await brokenValidate(summaryLogId).catch((err) => err)

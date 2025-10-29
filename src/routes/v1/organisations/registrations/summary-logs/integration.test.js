@@ -14,7 +14,6 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -108,15 +107,10 @@ describe('Summary logs integration', () => {
       }
     })
 
-    const summaryLogUpdater = new SummaryLogUpdater({
-      summaryLogsRepository
-    })
-
     const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
+      summaryLogExtractor
     })
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 

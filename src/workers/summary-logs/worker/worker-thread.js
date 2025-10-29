@@ -1,5 +1,4 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -44,15 +43,10 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
         logger
       })
 
-      const summaryLogUpdater = new SummaryLogUpdater({
-        summaryLogsRepository
-      })
-
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        summaryLogExtractor,
-        summaryLogUpdater
+        summaryLogExtractor
       })
 
       await validateSummaryLog(summaryLogId)

@@ -13,7 +13,6 @@ import { validateSummaryLogMaterialType } from './validations/summary-log-materi
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
-/** @typedef {import('./updater.js').SummaryLogUpdater} SummaryLogUpdater */
 
 const fetchRegistration = async ({
   organisationsRepository,
@@ -91,11 +90,9 @@ const handleValidationSuccess = async ({
   summaryLogId,
   version,
   loggingContext,
-  summaryLogUpdater
+  summaryLogsRepository
 }) => {
-  await summaryLogUpdater.update({
-    id: summaryLogId,
-    version,
+  await summaryLogsRepository.update(summaryLogId, version, {
     status: SUMMARY_LOG_STATUS.VALIDATED
   })
 
@@ -113,7 +110,7 @@ const handleValidationFailure = async ({
   version,
   loggingContext,
   error,
-  summaryLogUpdater
+  summaryLogsRepository
 }) => {
   logger.error({
     error,
@@ -124,9 +121,7 @@ const handleValidationFailure = async ({
     }
   })
 
-  await summaryLogUpdater.update({
-    id: summaryLogId,
-    version,
+  await summaryLogsRepository.update(summaryLogId, version, {
     status: SUMMARY_LOG_STATUS.INVALID,
     failureReason: error.message
   })
@@ -147,16 +142,10 @@ const handleValidationFailure = async ({
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {OrganisationsRepository} params.organisationsRepository
  * @param {SummaryLogExtractor} params.summaryLogExtractor
- * @param {SummaryLogUpdater} params.summaryLogUpdater
  * @returns {Function} Function that validates a summary log by ID
  */
 export const createSummaryLogsValidator =
-  ({
-    summaryLogsRepository,
-    organisationsRepository,
-    summaryLogExtractor,
-    summaryLogUpdater
-  }) =>
+  ({ summaryLogsRepository, organisationsRepository, summaryLogExtractor }) =>
   async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
 
@@ -190,7 +179,7 @@ export const createSummaryLogsValidator =
         summaryLogId,
         version,
         loggingContext,
-        summaryLogUpdater
+        summaryLogsRepository
       })
     } catch (error) {
       await handleValidationFailure({
@@ -198,7 +187,7 @@ export const createSummaryLogsValidator =
         version,
         loggingContext,
         error,
-        summaryLogUpdater
+        summaryLogsRepository
       })
       throw error
     }
