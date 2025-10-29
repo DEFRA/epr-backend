@@ -20,10 +20,6 @@ const SPREADSHEET_TYPE_TO_REGISTRATION_TYPE = {
   EXPORTER: 'exporter'
 }
 
-const VALID_SPREADSHEET_TYPES = Object.keys(
-  SPREADSHEET_TYPE_TO_REGISTRATION_TYPE
-)
-
 /**
  * Fetches a registration from the organisations repository
  *
@@ -124,10 +120,6 @@ export const validateSummaryLogType = ({
 
   if (!spreadsheetType) {
     throw new Error('Invalid summary log: missing summary log type')
-  }
-
-  if (!VALID_SPREADSHEET_TYPES.includes(spreadsheetType)) {
-    throw new Error('Invalid summary log: unrecognized summary log type')
   }
 
   const expectedRegistrationType =

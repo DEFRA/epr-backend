@@ -289,7 +289,7 @@ describe('SummaryLogsValidator integration', () => {
         summaryLog: {
           ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: 'Invalid summary log: unrecognized summary log type'
+          failureReason: 'Summary log type does not match registration type'
         }
       })
     })
