@@ -122,39 +122,25 @@ describe('SummaryLogsValidator integration', () => {
     })
   })
 
-  describe.each([
-    {
-      testCase: 'file could not be found',
-      errorMessage: 'Test file retrieval error'
-    },
-    {
-      testCase: 'file could not be fetched',
-      errorMessage: 'Test S3 error'
-    },
-    {
-      testCase: 'file could not be parsed',
-      errorMessage: 'Test file parse error'
-    }
-  ])('extraction failures', ({ testCase, errorMessage }) => {
-    it(`should update status as expected when validation fails because the ${testCase}`, async () => {
-      const { updated, summaryLog } = await runValidation({
-        registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
-        summaryLogExtractor: {
-          extract: async () => {
-            throw new Error(errorMessage)
-          }
+  it('should fail validation when extraction throws error', async () => {
+    const errorMessage = 'Test extraction error'
+    const { updated, summaryLog } = await runValidation({
+      registrationType: 'reprocessor',
+      registrationWRN: 'WRN-123',
+      summaryLogExtractor: {
+        extract: async () => {
+          throw new Error(errorMessage)
         }
-      })
+      }
+    })
 
-      expect(updated).toEqual({
-        version: 2,
-        summaryLog: {
-          ...summaryLog,
-          status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: errorMessage
-        }
-      })
+    expect(updated).toEqual({
+      version: 2,
+      summaryLog: {
+        ...summaryLog,
+        status: SUMMARY_LOG_STATUS.INVALID,
+        failureReason: errorMessage
+      }
     })
   })
 
