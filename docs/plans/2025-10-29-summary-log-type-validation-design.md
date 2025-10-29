@@ -142,7 +142,7 @@ Test full validation flow through the worker with mocked parser and repository:
 
 ## Impact Analysis
 
-### No changes required to:
+### No changes required to
 
 - Parser (already extracts metadata with `__EPR_META_` prefix)
 - Error handling (already handles validation failures)
@@ -150,7 +150,7 @@ Test full validation flow through the worker with mocked parser and repository:
 - Repository or schema (no new fields needed)
 - Infrastructure
 
-### Changes required:
+### Changes required
 
 - Add validation function to `validator.js`
 - Add mapping constants to `validator.js`
@@ -158,12 +158,12 @@ Test full validation flow through the worker with mocked parser and repository:
 - Add unit tests
 - Add integration tests
 
-### Backwards compatibility:
+### Backwards compatibility
 
 - Existing summary logs without `SUMMARY_LOG_TYPE` will fail validation
 - This is expected behaviour - templates must include the new metadata tag
 
-### Performance impact:
+### Performance impact
 
 Negligible - single string comparison after data already fetched for registration number validation.
 
