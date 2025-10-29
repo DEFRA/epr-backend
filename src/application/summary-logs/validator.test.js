@@ -486,67 +486,59 @@ describe('validateSummaryLogType', () => {
     ).toThrow('Invalid summary log: unrecognized summary log type')
   })
 
-  it('should throw error when type is REPROCESSOR but registration is exporter', () => {
-    const parsed = {
-      meta: {
-        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-        SUMMARY_LOG_TYPE: { value: 'REPROCESSOR' }
+  it.each([
+    {
+      summaryLogType: 'REPROCESSOR',
+      registrationType: 'exporter'
+    },
+    {
+      summaryLogType: 'EXPORTER',
+      registrationType: 'reprocessor'
+    }
+  ])(
+    'should throw error when type is $summaryLogType but registration is $registrationType',
+    ({ summaryLogType, registrationType }) => {
+      const parsed = {
+        meta: {
+          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+          SUMMARY_LOG_TYPE: { value: summaryLogType }
+        }
       }
-    }
-    const registration = {
-      wasteProcessingType: 'exporter'
-    }
-
-    expect(() =>
-      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-    ).toThrow('Summary log type does not match registration type')
-  })
-
-  it('should throw error when type is EXPORTER but registration is reprocessor', () => {
-    const parsed = {
-      meta: {
-        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-        SUMMARY_LOG_TYPE: { value: 'EXPORTER' }
+      const registration = {
+        wasteProcessingType: registrationType
       }
-    }
-    const registration = {
-      wasteProcessingType: 'reprocessor'
-    }
 
-    expect(() =>
-      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-    ).toThrow('Summary log type does not match registration type')
-  })
+      expect(() =>
+        validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
+      ).toThrow('Summary log type does not match registration type')
+    }
+  )
 
-  it('should not throw when type is REPROCESSOR and registration is reprocessor', () => {
-    const parsed = {
-      meta: {
-        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-        SUMMARY_LOG_TYPE: { value: 'REPROCESSOR' }
+  it.each([
+    {
+      summaryLogType: 'REPROCESSOR',
+      registrationType: 'reprocessor'
+    },
+    {
+      summaryLogType: 'EXPORTER',
+      registrationType: 'exporter'
+    }
+  ])(
+    'should not throw when type is $summaryLogType and registration is $registrationType',
+    ({ summaryLogType, registrationType }) => {
+      const parsed = {
+        meta: {
+          WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+          SUMMARY_LOG_TYPE: { value: summaryLogType }
+        }
       }
-    }
-    const registration = {
-      wasteProcessingType: 'reprocessor'
-    }
-
-    expect(() =>
-      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-    ).not.toThrow()
-  })
-
-  it('should not throw when type is EXPORTER and registration is exporter', () => {
-    const parsed = {
-      meta: {
-        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
-        SUMMARY_LOG_TYPE: { value: 'EXPORTER' }
+      const registration = {
+        wasteProcessingType: registrationType
       }
-    }
-    const registration = {
-      wasteProcessingType: 'exporter'
-    }
 
-    expect(() =>
-      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
-    ).not.toThrow()
-  })
+      expect(() =>
+        validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
+      ).not.toThrow()
+    }
+  )
 })
