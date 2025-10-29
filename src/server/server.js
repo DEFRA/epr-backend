@@ -14,6 +14,7 @@ import { failAction } from '#common/helpers/fail-action.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
+import { runFormsDataMigration } from './run-forms-data-migration.js'
 
 async function createServer(options = {}) {
   setupProxy()
@@ -83,6 +84,8 @@ async function createServer(options = {}) {
     },
     router
   ])
+
+  server.ext('onPostStart', () => runFormsDataMigration(server, options))
 
   return server
 }

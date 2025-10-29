@@ -7,5 +7,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isOrganisationRoutesEnabled() {
     return flags.organisations ?? false
+  },
+  isFormsDataMigrationEnabled() {
+    return flags.formsDataMigration ?? false
   }
 })

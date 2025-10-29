@@ -14,10 +14,9 @@ describe('parseUkAddress', () => {
 
       expect(result).toEqual({
         line1: '45 High Street',
-        line2: '',
         town: 'Birmingham',
-        county: '',
-        postcode: 'B2 4AA'
+        postcode: 'B2 4AA',
+        country: 'UK'
       })
     })
 
@@ -31,7 +30,8 @@ describe('parseUkAddress', () => {
         line2: 'High Street',
         town: 'Birmingham',
         county: 'West Midlands',
-        postcode: 'B2 4AA'
+        postcode: 'B2 4AA',
+        country: 'UK'
       })
     })
 
@@ -40,10 +40,9 @@ describe('parseUkAddress', () => {
 
       expect(result).toEqual({
         line1: '123 Main St',
-        line2: '',
         town: 'London',
-        county: '',
-        postcode: 'SE1 9SG'
+        postcode: 'SE1 9SG',
+        country: 'UK'
       })
     })
   })
@@ -55,7 +54,8 @@ describe('parseUkAddress', () => {
       expect(result).toEqual({
         line1: '123',
         postcode: 'SE1 9SG',
-        fullAddress: '123, Main St,London,SE1 9SG'
+        fullAddress: '123, Main St,London,SE1 9SG',
+        country: 'UK'
       })
     })
 
@@ -67,7 +67,8 @@ describe('parseUkAddress', () => {
       expect(result).toEqual({
         line1: '45',
         postcode: 'B2 4AA',
-        fullAddress: '45,High Street,Birmingham,B2 4AA'
+        fullAddress: '45,High Street,Birmingham,B2 4AA',
+        country: 'UK'
       })
     })
 
@@ -79,7 +80,8 @@ describe('parseUkAddress', () => {
       expect(result).toEqual({
         line1: '78 Portland Place',
         postcode: 'W1B 1NT',
-        fullAddress: '78 Portland Place,London,London,W1B 1NT'
+        fullAddress: '78 Portland Place,London,London,W1B 1NT',
+        country: 'UK'
       })
     })
 
@@ -91,7 +93,8 @@ describe('parseUkAddress', () => {
       expect(result).toEqual({
         line1: '90',
         postcode: 'W1B 1NT',
-        fullAddress: '90,Portland Place,London,W1B 1NT'
+        fullAddress: '90,Portland Place,London,W1B 1NT',
+        country: 'UK'
       })
     })
 
@@ -103,7 +106,8 @@ describe('parseUkAddress', () => {
       expect(result).toEqual({
         line1: 'Unit 15',
         postcode: 'M1 5JG',
-        fullAddress: 'Unit 15, Innovation Park,Manchester,M1 5JG'
+        fullAddress: 'Unit 15, Innovation Park,Manchester,M1 5JG',
+        country: 'UK'
       })
     })
 
@@ -116,21 +120,26 @@ describe('parseUkAddress', () => {
         line1: 'Unit 15',
         postcode: 'M1 5JG',
         fullAddress:
-          'Unit 15, Innovation Park,Technology Way,Manchester,Greater Manchester,M1 5JG'
+          'Unit 15, Innovation Park,Technology Way,Manchester,Greater Manchester,M1 5JG',
+        country: 'UK'
       })
     })
 
     it('should return fullAddress when not enough parts', () => {
       const result = parseUkAddress('Only two parts,B2 4AA')
 
-      expect(result).toEqual({ fullAddress: 'Only two parts,B2 4AA' })
+      expect(result).toEqual({
+        fullAddress: 'Only two parts,B2 4AA',
+        country: 'UK'
+      })
     })
 
     it('should return fullAddress when no commas', () => {
       const result = parseUkAddress('45 High Street Birmingham B2 4AA')
 
       expect(result).toEqual({
-        fullAddress: '45 High Street Birmingham B2 4AA'
+        fullAddress: '45 High Street Birmingham B2 4AA',
+        country: 'UK'
       })
     })
   })
@@ -144,7 +153,8 @@ describe('parseUkAddress', () => {
       expect(result).toEqual({
         line1: '45',
         postcode: 'B2 4AA',
-        fullAddress: '  45  ,  High Street  ,  Birmingham  ,  B2 4AA  '
+        fullAddress: '  45  ,  High Street  ,  Birmingham  ,  B2 4AA  ',
+        country: 'UK'
       })
     })
 
@@ -153,29 +163,18 @@ describe('parseUkAddress', () => {
 
       expect(result).toEqual({
         line1: '45 High Street',
-        line2: '',
         town: 'Birmingham',
-        county: '',
-        postcode: 'B2 4AA'
+        postcode: 'B2 4AA',
+        country: 'UK'
       })
     })
 
-    it('should return fullAddress when input is empty', () => {
-      const result = parseUkAddress('')
-
-      expect(result).toEqual({ fullAddress: '' })
+    it('should return undefined when input is empty', () => {
+      expect(parseUkAddress('')).toBeUndefined()
     })
 
-    it('should return fullAddress when input is null', () => {
-      const result = parseUkAddress(null)
-
-      expect(result).toEqual({ fullAddress: '' })
-    })
-
-    it('should return fullAddress when input is undefined', () => {
-      const result = parseUkAddress(undefined)
-
-      expect(result).toEqual({ fullAddress: '' })
+    it('should return undefined when input is null', () => {
+      expect(parseUkAddress(null)).toBeUndefined()
     })
   })
 })
