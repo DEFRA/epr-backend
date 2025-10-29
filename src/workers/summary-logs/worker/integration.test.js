@@ -62,44 +62,56 @@ describe('SummaryLogsValidator integration', () => {
     }
   }
 
-  it('should update status as expected when validation succeeds', async () => {
-    const testOrg = createTestOrg('reprocessor', 'WRN-123')
+  const runValidation = async ({
+    registrationType,
+    registrationWRN,
+    metadata,
+    summaryLogExtractor = null
+  }) => {
+    const testOrg = createTestOrg(registrationType, registrationWRN)
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
     ])()
     const summaryLog = createSummaryLog(testOrg)
     const summaryLogId = randomUUID()
 
-    const summaryLogExtractor = createExtractor(summaryLog.file.id, {
-      WASTE_REGISTRATION_NUMBER: {
-        value: 'WRN-123',
-        location: { sheet: 'Data', row: 1, column: 'B' }
-      },
-      SUMMARY_LOG_TYPE: {
-        value: 'REPROCESSOR',
-        location: { sheet: 'Data', row: 2, column: 'B' }
-      }
-    })
+    const extractor =
+      summaryLogExtractor || createExtractor(summaryLog.file.id, metadata)
 
     const summaryLogsValidator = new SummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor,
+      summaryLogExtractor: extractor,
       summaryLogUpdater
     })
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-    const inserted = await summaryLogsRepository.findById(summaryLogId)
-
-    expect(inserted).toEqual({
-      version: 1,
-      summaryLog
-    })
-
-    await summaryLogsValidator.validate(summaryLogId)
+    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
+
+    return {
+      updated,
+      summaryLog
+    }
+  }
+
+  it('should update status as expected when validation succeeds', async () => {
+    const { updated, summaryLog } = await runValidation({
+      registrationType: 'reprocessor',
+      registrationWRN: 'WRN-123',
+      metadata: {
+        WASTE_REGISTRATION_NUMBER: {
+          value: 'WRN-123',
+          location: { sheet: 'Data', row: 1, column: 'B' }
+        },
+        SUMMARY_LOG_TYPE: {
+          value: 'REPROCESSOR',
+          location: { sheet: 'Data', row: 2, column: 'B' }
+        }
+      }
+    })
 
     expect(updated).toEqual({
       version: 2,
@@ -125,38 +137,15 @@ describe('SummaryLogsValidator integration', () => {
     }
   ])('extraction failures', ({ testCase, errorMessage }) => {
     it(`should update status as expected when validation fails because the ${testCase}`, async () => {
-      const testOrg = createTestOrg('reprocessor', 'WRN-123')
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-      const summaryLog = createSummaryLog(testOrg)
-      const summaryLogId = randomUUID()
-
-      const failingSummaryLogExtractor = {
-        extract: async () => {
-          throw new Error(errorMessage)
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        summaryLogExtractor: {
+          extract: async () => {
+            throw new Error(errorMessage)
+          }
         }
-      }
-
-      const summaryLogsValidator = new SummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        summaryLogExtractor: failingSummaryLogExtractor,
-        summaryLogUpdater
       })
-
-      await summaryLogsRepository.insert(summaryLogId, summaryLog)
-
-      const inserted = await summaryLogsRepository.findById(summaryLogId)
-
-      expect(inserted).toEqual({
-        version: 1,
-        summaryLog
-      })
-
-      await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-      const updated = await summaryLogsRepository.findById(summaryLogId)
 
       expect(updated).toEqual({
         version: 2,
@@ -169,120 +158,140 @@ describe('SummaryLogsValidator integration', () => {
     })
   })
 
-  describe.each([
-    {
-      testCase: 'REPROCESSOR type matches reprocessor registration',
-      registrationType: 'reprocessor',
-      registrationWRN: 'WRN-123',
-      spreadsheetType: 'REPROCESSOR',
-      expectedStatus: SUMMARY_LOG_STATUS.VALIDATED,
-      expectedFailureReason: undefined
-    },
-    {
-      testCase: 'EXPORTER type matches exporter registration',
-      registrationType: 'exporter',
-      registrationWRN: 'WRN-456',
-      spreadsheetType: 'EXPORTER',
-      expectedStatus: SUMMARY_LOG_STATUS.VALIDATED,
-      expectedFailureReason: undefined
-    },
-    {
-      testCase: 'EXPORTER type does not match reprocessor registration',
-      registrationType: 'reprocessor',
-      registrationWRN: 'WRN-123',
-      spreadsheetType: 'EXPORTER',
-      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
-      expectedFailureReason: 'Summary log type does not match registration type'
-    },
-    {
-      testCase: 'REPROCESSOR type does not match exporter registration',
-      registrationType: 'exporter',
-      registrationWRN: 'WRN-456',
-      spreadsheetType: 'REPROCESSOR',
-      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
-      expectedFailureReason: 'Summary log type does not match registration type'
-    },
-    {
-      testCase: 'type is missing',
-      registrationType: 'reprocessor',
-      registrationWRN: 'WRN-123',
-      spreadsheetType: undefined,
-      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
-      expectedFailureReason: 'Invalid summary log: missing summary log type'
-    },
-    {
-      testCase: 'type is unrecognized',
-      registrationType: 'reprocessor',
-      registrationWRN: 'WRN-123',
-      spreadsheetType: 'INVALID_TYPE',
-      expectedStatus: SUMMARY_LOG_STATUS.INVALID,
-      expectedFailureReason:
-        'Invalid summary log: unrecognized summary log type'
-    }
-  ])(
-    'type validation',
-    ({
-      testCase,
-      registrationType,
-      registrationWRN,
-      spreadsheetType,
-      expectedStatus,
-      expectedFailureReason
-    }) => {
-      it(`should handle validation when ${testCase}`, async () => {
-        const testOrg = createTestOrg(registrationType, registrationWRN)
-        const organisationsRepository = createInMemoryOrganisationsRepository([
-          testOrg
-        ])()
-        const summaryLog = createSummaryLog(testOrg)
-        const summaryLogId = randomUUID()
+  describe('successful type matching', () => {
+    describe.each([
+      {
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        spreadsheetType: 'REPROCESSOR'
+      },
+      {
+        registrationType: 'exporter',
+        registrationWRN: 'WRN-456',
+        spreadsheetType: 'EXPORTER'
+      }
+    ])(
+      'when $spreadsheetType type matches $registrationType registration',
+      ({ registrationType, registrationWRN, spreadsheetType }) => {
+        it('should validate successfully', async () => {
+          const { updated, summaryLog } = await runValidation({
+            registrationType,
+            registrationWRN,
+            metadata: {
+              WASTE_REGISTRATION_NUMBER: {
+                value: registrationWRN,
+                location: { sheet: 'Data', row: 1, column: 'B' }
+              },
+              SUMMARY_LOG_TYPE: {
+                value: spreadsheetType,
+                location: { sheet: 'Data', row: 2, column: 'B' }
+              }
+            }
+          })
 
-        const metadata = {
+          expect(updated).toEqual({
+            version: 2,
+            summaryLog: {
+              ...summaryLog,
+              status: SUMMARY_LOG_STATUS.VALIDATED
+            }
+          })
+        })
+      }
+    )
+  })
+
+  describe('type mismatches', () => {
+    describe.each([
+      {
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        spreadsheetType: 'EXPORTER'
+      },
+      {
+        registrationType: 'exporter',
+        registrationWRN: 'WRN-456',
+        spreadsheetType: 'REPROCESSOR'
+      }
+    ])(
+      'when $spreadsheetType type does not match $registrationType registration',
+      ({ registrationType, registrationWRN, spreadsheetType }) => {
+        it('should fail validation with mismatch error', async () => {
+          const { updated, summaryLog } = await runValidation({
+            registrationType,
+            registrationWRN,
+            metadata: {
+              WASTE_REGISTRATION_NUMBER: {
+                value: registrationWRN,
+                location: { sheet: 'Data', row: 1, column: 'B' }
+              },
+              SUMMARY_LOG_TYPE: {
+                value: spreadsheetType,
+                location: { sheet: 'Data', row: 2, column: 'B' }
+              }
+            }
+          })
+
+          expect(updated).toEqual({
+            version: 2,
+            summaryLog: {
+              ...summaryLog,
+              status: SUMMARY_LOG_STATUS.INVALID,
+              failureReason: 'Summary log type does not match registration type'
+            }
+          })
+        })
+      }
+    )
+  })
+
+  describe('invalid type scenarios', () => {
+    it('should fail validation when type is missing', async () => {
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        metadata: {
           WASTE_REGISTRATION_NUMBER: {
-            value: registrationWRN,
+            value: 'WRN-123',
             location: { sheet: 'Data', row: 1, column: 'B' }
           }
         }
+      })
 
-        if (spreadsheetType !== undefined) {
-          metadata.SUMMARY_LOG_TYPE = {
-            value: spreadsheetType,
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason: 'Invalid summary log: missing summary log type'
+        }
+      })
+    })
+
+    it('should fail validation when type is unrecognized', async () => {
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        metadata: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'INVALID_TYPE',
             location: { sheet: 'Data', row: 2, column: 'B' }
           }
         }
-
-        const summaryLogExtractor = createExtractor(
-          summaryLog.file.id,
-          metadata
-        )
-
-        const summaryLogsValidator = new SummaryLogsValidator({
-          summaryLogsRepository,
-          organisationsRepository,
-          summaryLogExtractor,
-          summaryLogUpdater
-        })
-
-        await summaryLogsRepository.insert(summaryLogId, summaryLog)
-
-        await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
-
-        const updated = await summaryLogsRepository.findById(summaryLogId)
-
-        const expectedSummaryLog = {
-          ...summaryLog,
-          status: expectedStatus
-        }
-
-        if (expectedFailureReason) {
-          expectedSummaryLog.failureReason = expectedFailureReason
-        }
-
-        expect(updated).toEqual({
-          version: 2,
-          summaryLog: expectedSummaryLog
-        })
       })
-    }
-  )
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason: 'Invalid summary log: unrecognized summary log type'
+        }
+      })
+    })
+  })
 })
