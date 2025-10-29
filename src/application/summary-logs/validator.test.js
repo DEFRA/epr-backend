@@ -317,7 +317,7 @@ describe('fetchRegistration', () => {
       organisationsRepository: mockOrganisationsRepository,
       organisationId: 'org-123',
       registrationId: 'reg-123',
-      msg: 'test-msg'
+      loggingContext: 'test-context'
     })
 
     expect(result).toBeDefined()
@@ -335,7 +335,7 @@ describe('fetchRegistration', () => {
         organisationsRepository: mockOrganisationsRepository,
         organisationId: 'org-123',
         registrationId: 'reg-123',
-        msg: 'test-msg'
+        loggingContext: 'test-context'
       })
     ).rejects.toThrow(
       'Registration not found: organisationId=org-123, registrationId=reg-123'
@@ -466,7 +466,7 @@ describe('validateSummaryLogType', () => {
     }
 
     expect(() =>
-      validateSummaryLogType({ parsed, registration, msg: 'test' })
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).toThrow('Invalid summary log: missing summary log type')
   })
 
@@ -482,7 +482,7 @@ describe('validateSummaryLogType', () => {
     }
 
     expect(() =>
-      validateSummaryLogType({ parsed, registration, msg: 'test' })
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).toThrow('Invalid summary log: unrecognized summary log type')
   })
 
@@ -498,7 +498,7 @@ describe('validateSummaryLogType', () => {
     }
 
     expect(() =>
-      validateSummaryLogType({ parsed, registration, msg: 'test' })
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).toThrow('Summary log type does not match registration type')
   })
 
@@ -514,7 +514,7 @@ describe('validateSummaryLogType', () => {
     }
 
     expect(() =>
-      validateSummaryLogType({ parsed, registration, msg: 'test' })
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).toThrow('Summary log type does not match registration type')
   })
 
@@ -530,7 +530,7 @@ describe('validateSummaryLogType', () => {
     }
 
     expect(() =>
-      validateSummaryLogType({ parsed, registration, msg: 'test' })
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).not.toThrow()
   })
 
@@ -546,7 +546,7 @@ describe('validateSummaryLogType', () => {
     }
 
     expect(() =>
-      validateSummaryLogType({ parsed, registration, msg: 'test' })
+      validateSummaryLogType({ parsed, registration, loggingContext: 'test' })
     ).not.toThrow()
   })
 })
