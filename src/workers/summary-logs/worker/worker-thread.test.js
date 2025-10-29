@@ -1,6 +1,6 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
@@ -19,7 +19,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#application/summary-logs/updater.js')
-vi.mock('#application/summary-logs/validator.js')
+vi.mock('#application/summary-logs/validate.js')
 vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#common/helpers/s3/s3-client.js')

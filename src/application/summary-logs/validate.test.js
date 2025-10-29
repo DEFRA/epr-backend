@@ -3,7 +3,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 
-import { createSummaryLogsValidator } from './validator.js'
+import { createSummaryLogsValidator } from './validate.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()

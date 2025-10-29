@@ -1,12 +1,12 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 
 import { createInlineSummaryLogsValidator } from './inline.js'
 
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#application/summary-logs/updater.js')
-vi.mock('#application/summary-logs/validator.js')
+vi.mock('#application/summary-logs/validate.js')
 
 describe('createInlineSummaryLogsValidator', () => {
   let uploadsRepository

@@ -4,10 +4,9 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { fetchRegistration } from './fetch-registration.js'
-import { validateWasteRegistrationNumber } from './validators/waste-registration-number.js'
-import { validateSummaryLogType } from './validators/summary-log-type.js'
-import { validateSummaryLogMaterialType } from './validators/summary-log-material-type.js'
+import { validateWasteRegistrationNumber } from './validations/waste-registration-number.js'
+import { validateSummaryLogType } from './validations/summary-log-type.js'
+import { validateSummaryLogMaterialType } from './validations/summary-log-material-type.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -15,6 +14,34 @@ import { validateSummaryLogMaterialType } from './validators/summary-log-materia
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('./updater.js').SummaryLogUpdater} SummaryLogUpdater */
+
+const fetchRegistration = async ({
+  organisationsRepository,
+  organisationId,
+  registrationId,
+  loggingContext
+}) => {
+  const registration = await organisationsRepository.findRegistrationById(
+    organisationId,
+    registrationId
+  )
+
+  if (!registration) {
+    throw new Error(
+      `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
+    )
+  }
+
+  logger.info({
+    message: `Fetched registration: ${loggingContext}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+
+  return registration
+}
 
 const performValidationChecks = async ({
   summaryLog,
