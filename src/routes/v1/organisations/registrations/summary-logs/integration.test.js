@@ -98,6 +98,10 @@ describe('Summary logs integration', () => {
           SUMMARY_LOG_TYPE: {
             value: 'REPROCESSOR',
             location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
           }
         },
         data: {}

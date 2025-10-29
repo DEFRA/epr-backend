@@ -7,7 +7,8 @@ import {
   SummaryLogsValidator,
   fetchRegistration,
   validateWasteRegistrationNumber,
-  validateSummaryLogType
+  validateSummaryLogType,
+  validateSummaryLogMaterialType
 } from './validator.js'
 
 const mockLoggerInfo = vi.fn()
@@ -40,6 +41,9 @@ describe('SummaryLogsValidator', () => {
           },
           SUMMARY_LOG_TYPE: {
             value: 'REPROCESSOR'
+          },
+          MATERIAL: {
+            value: 'Aluminium'
           }
         },
         data: {}
@@ -54,7 +58,8 @@ describe('SummaryLogsValidator', () => {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
         wasteRegistrationNumber: 'WRN12345',
-        wasteProcessingType: 'reprocessor'
+        wasteProcessingType: 'reprocessor',
+        material: 'aluminium'
       })
     }
 
@@ -476,6 +481,105 @@ describe('validateSummaryLogType', () => {
           category: 'server',
           action: 'process_failure'
         })
+      })
+    )
+  })
+})
+
+describe('validateSummaryLogMaterialType', () => {
+  it('should throw error when MATERIAL is missing', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' }
+      }
+    }
+    const registration = {
+      material: 'aluminium'
+    }
+
+    expect(() =>
+      validateSummaryLogMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+    ).toThrow('Invalid summary log: missing material')
+  })
+
+  it('should log error and throw when registration has unexpected material', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        MATERIAL: { value: 'Aluminium' }
+      }
+    }
+    const registration = {
+      material: 'invalid-unexpected-material'
+    }
+
+    expect(() =>
+      validateSummaryLogMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+    ).toThrow('Material does not match registration material')
+
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Unexpected registration material: test, material=invalid-unexpected-material',
+        event: expect.objectContaining({
+          category: 'server',
+          action: 'process_failure'
+        })
+      })
+    )
+  })
+
+  it('should throw error when material type does not match', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        MATERIAL: { value: 'Aluminium' }
+      }
+    }
+    const registration = {
+      material: 'plastic'
+    }
+
+    expect(() =>
+      validateSummaryLogMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+    ).toThrow('Material does not match registration material')
+  })
+
+  it('should validate successfully when material types match', () => {
+    const parsed = {
+      meta: {
+        WASTE_REGISTRATION_NUMBER: { value: 'WRN12345' },
+        MATERIAL: { value: 'Aluminium' }
+      }
+    }
+    const registration = {
+      material: 'aluminium'
+    }
+
+    expect(() =>
+      validateSummaryLogMaterialType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+    ).not.toThrow()
+
+    expect(mockLoggerInfo).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          'Validated material: test, spreadsheetMaterial=Aluminium, registrationMaterial=aluminium'
       })
     )
   })
