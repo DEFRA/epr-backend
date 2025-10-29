@@ -13,14 +13,16 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 /** @typedef {import('./updater.js').SummaryLogUpdater} SummaryLogUpdater */
 
 /**
- * Mapping between spreadsheet type values and database type values
+ * Mapping between spreadsheet type values and registration waste processing types
  */
-const SPREADSHEET_TYPE_TO_DB_TYPE = {
+const SPREADSHEET_TYPE_TO_REGISTRATION_TYPE = {
   REPROCESSOR: 'reprocessor',
   EXPORTER: 'exporter'
 }
 
-const VALID_SPREADSHEET_TYPES = Object.keys(SPREADSHEET_TYPE_TO_DB_TYPE)
+const VALID_SPREADSHEET_TYPES = Object.keys(
+  SPREADSHEET_TYPE_TO_REGISTRATION_TYPE
+)
 
 /**
  * Fetches a registration from the organisations repository
@@ -124,8 +126,9 @@ export const validateSummaryLogType = ({ parsed, registration, msg }) => {
     throw new Error('Invalid summary log: unrecognized summary log type')
   }
 
-  const expectedDbType = SPREADSHEET_TYPE_TO_DB_TYPE[spreadsheetType]
-  if (expectedDbType !== wasteProcessingType) {
+  const expectedRegistrationType =
+    SPREADSHEET_TYPE_TO_REGISTRATION_TYPE[spreadsheetType]
+  if (expectedRegistrationType !== wasteProcessingType) {
     throw new Error('Summary log type does not match registration type')
   }
 
