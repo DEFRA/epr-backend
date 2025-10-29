@@ -90,14 +90,12 @@ const performValidationChecks = async ({
 const handleValidationSuccess = async ({
   summaryLogId,
   version,
-  summaryLog,
   loggingContext,
   summaryLogUpdater
 }) => {
   await summaryLogUpdater.update({
     id: summaryLogId,
     version,
-    summaryLog,
     status: SUMMARY_LOG_STATUS.VALIDATED
   })
 
@@ -113,7 +111,6 @@ const handleValidationSuccess = async ({
 const handleValidationFailure = async ({
   summaryLogId,
   version,
-  summaryLog,
   loggingContext,
   error,
   summaryLogUpdater
@@ -130,7 +127,6 @@ const handleValidationFailure = async ({
   await summaryLogUpdater.update({
     id: summaryLogId,
     version,
-    summaryLog,
     status: SUMMARY_LOG_STATUS.INVALID,
     failureReason: error.message
   })
@@ -193,7 +189,6 @@ export const createSummaryLogsValidator =
       await handleValidationSuccess({
         summaryLogId,
         version,
-        summaryLog,
         loggingContext,
         summaryLogUpdater
       })
@@ -201,7 +196,6 @@ export const createSummaryLogsValidator =
       await handleValidationFailure({
         summaryLogId,
         version,
-        summaryLog,
         loggingContext,
         error,
         summaryLogUpdater

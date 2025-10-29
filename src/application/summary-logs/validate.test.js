@@ -141,20 +141,6 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
       version: 1,
-      summaryLog,
-      status: SUMMARY_LOG_STATUS.VALIDATED
-    })
-  })
-
-  it('should update status as expected when validation succeeds if existing record indicated failure', async () => {
-    summaryLog.failureReason = 'Existing error'
-
-    await validateSummaryLog(summaryLogId)
-
-    expect(summaryLogUpdater.update).toHaveBeenCalledWith({
-      id: 'summary-log-123',
-      version: 1,
-      summaryLog,
       status: SUMMARY_LOG_STATUS.VALIDATED
     })
   })
@@ -169,7 +155,6 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
       version: 1,
-      summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason: 'Something went wrong while retrieving your file upload'
     })
@@ -183,7 +168,6 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
       version: 1,
-      summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason:
         'Registration not found: organisationId=org-123, registrationId=reg-123'
@@ -205,7 +189,6 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
       version: 1,
-      summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason:
         "Summary log's waste registration number does not match this registration"
@@ -223,7 +206,6 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogUpdater.update).toHaveBeenCalledWith({
       id: 'summary-log-123',
       version: 1,
-      summaryLog,
       status: SUMMARY_LOG_STATUS.INVALID,
       failureReason: 'S3 access denied'
     })
