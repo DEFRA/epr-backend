@@ -20,6 +20,10 @@ const SPREADSHEET_TYPE_TO_REGISTRATION_TYPE = {
   EXPORTER: 'exporter'
 }
 
+const VALID_REGISTRATION_TYPES = Object.values(
+  SPREADSHEET_TYPE_TO_REGISTRATION_TYPE
+)
+
 /**
  * Fetches a registration from the organisations repository
  *
@@ -120,6 +124,16 @@ export const validateSummaryLogType = ({
 
   if (!spreadsheetType) {
     throw new Error('Invalid summary log: missing summary log type')
+  }
+
+  if (!VALID_REGISTRATION_TYPES.includes(wasteProcessingType)) {
+    logger.error({
+      message: `Unexpected registration type: ${loggingContext}, wasteProcessingType=${wasteProcessingType}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
   }
 
   const expectedRegistrationType =
