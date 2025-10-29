@@ -247,7 +247,7 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it('should throw error if repository update fails', async () => {
+  it('should throw error if repository update fails during success handler without marking as invalid', async () => {
     const brokenRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -266,5 +266,10 @@ describe('SummaryLogsValidator', () => {
 
     expect(result).toBeInstanceOf(Error)
     expect(result.message).toBe('Database error')
+
+    expect(brokenRepository.update).toHaveBeenCalledTimes(1)
+    expect(brokenRepository.update).toHaveBeenCalledWith('summary-log-123', 1, {
+      status: SUMMARY_LOG_STATUS.VALIDATED
+    })
   })
 })

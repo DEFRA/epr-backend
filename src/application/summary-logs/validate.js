@@ -175,12 +175,6 @@ export const createSummaryLogsValidator =
         summaryLogExtractor,
         organisationsRepository
       })
-      await handleValidationSuccess({
-        summaryLogId,
-        version,
-        loggingContext,
-        summaryLogsRepository
-      })
     } catch (error) {
       await handleValidationFailure({
         summaryLogId,
@@ -191,4 +185,11 @@ export const createSummaryLogsValidator =
       })
       throw error
     }
+
+    await handleValidationSuccess({
+      summaryLogId,
+      version,
+      loggingContext,
+      summaryLogsRepository
+    })
   }
