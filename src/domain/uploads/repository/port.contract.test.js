@@ -1,10 +1,13 @@
 import {
-  s3Test as it,
+  afterAll,
+  beforeAll,
+  beforeEach,
+  afterEach,
   describe,
   expect,
-  beforeEach,
-  afterEach
-} from '#vite/fixtures/s3.js'
+  it
+} from 'vitest'
+import { startS3Server, stopS3Server } from '#vite/s3-memory-server.js'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
@@ -59,6 +62,13 @@ const implementations = [
 ]
 
 describe('uploads contract tests', () => {
+  beforeAll(async () => {
+    await startS3Server()
+  })
+
+  afterAll(async () => {
+    await stopS3Server()
+  })
   describe.each(implementations)('$name', ({ name, create, destroy }) => {
     let uploadsRepository
 
