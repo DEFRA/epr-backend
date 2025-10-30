@@ -1,3 +1,4 @@
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
@@ -13,7 +14,7 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
-import { createTestServer } from '#test/create-test-server.js'
+import { it } from './test-fixtures.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({
@@ -29,25 +30,24 @@ vi.mock('@defra/cdp-auditing', () => ({
 vi.mock('#common/helpers/notify.js')
 
 const url = organisationPath
-let server
 
 describe(`${url} route`, () => {
-  beforeEach(async () => {
-    server = await createTestServer()
-
+  beforeEach(() => {
     mockAudit.mockClear()
     mockInsertOne.mockClear()
     mockCountDocuments.mockClear()
+  })
 
+  it('returns 200 and echoes back payload on valid request', async ({
+    server
+  }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
     collectionSpy.mockReturnValue({
       countDocuments: mockCountDocuments,
       insertOne: mockInsertOne
     })
-  })
 
-  it('returns 200 and echoes back payload on valid request', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -99,7 +99,7 @@ describe(`${url} route`, () => {
     )
   })
 
-  it('returns 400 if payload is not an object', async () => {
+  it('returns 400 if payload is not an object', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -111,7 +111,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
 
-  it('returns 400 if payload is null', async () => {
+  it('returns 400 if payload is null', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -123,7 +123,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 422 if payload is missing email', async () => {
+  it('returns 422 if payload is missing email', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -160,7 +160,7 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 422 if payload is missing orgName', async () => {
+  it('returns 422 if payload is missing orgName', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -197,7 +197,7 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 422 if payload is missing regulatorEmail', async () => {
+  it('returns 422 if payload is missing regulatorEmail', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -220,7 +220,14 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 500 if error is thrown by insertOne', async () => {
+  it('returns 500 if error is thrown by insertOne', async ({ server }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
@@ -251,7 +258,14 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 500 if error is thrown by sendEmail', async () => {
+  it('returns 500 if error is thrown by sendEmail', async ({ server }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('Notify API failed')
     sendEmail.mockRejectedValueOnce(error)

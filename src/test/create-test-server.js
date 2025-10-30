@@ -15,7 +15,13 @@ import { vi } from 'vitest'
  * @returns {Promise<TestServer>}
  */
 export async function createTestServer(options = {}) {
-  const server = await createServer(options)
+  // If repositories are provided, assume in-memory mode and skip MongoDB
+  const skipMongoDb = options.repositories !== undefined
+
+  const server = await createServer({
+    skipMongoDb,
+    ...options
+  })
   await server.initialize()
 
   /** @type {TestServer} */

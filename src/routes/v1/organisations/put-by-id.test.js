@@ -4,7 +4,6 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
-import { beforeAll } from 'vitest'
 
 describe('PUT /v1/organisations/{id}', () => {
   let server
@@ -59,7 +58,7 @@ describe('PUT /v1/organisations/{id}', () => {
   describe('not found cases', () => {
     describe('when the orgId does not exist', async () => {
       let response
-      beforeAll(async () => {
+      beforeEach(async () => {
         const org = buildOrganisation()
         const nonExistentId = new ObjectId().toString()
 
