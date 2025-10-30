@@ -3,6 +3,12 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import {
+  testServerFixture as test,
+  describe,
+  expect,
+  beforeEach
+} from '../../../test/create-test-server-fixture.js'
 
 describe('GET /v1/organisations/{id}', () => {
   let server
@@ -21,7 +27,7 @@ describe('GET /v1/organisations/{id}', () => {
   })
 
   describe('happy path', () => {
-    it('returns 200 and the organisation when found', async () => {
+    test('returns 200 and the organisation when found', async () => {
       const org1 = buildOrganisation()
       const org2 = buildOrganisation()
 
@@ -39,7 +45,7 @@ describe('GET /v1/organisations/{id}', () => {
       expect(result.orgId).toBe(org1.orgId)
     })
 
-    it('includes Cache-Control header in successful response', async () => {
+    test('includes Cache-Control header in successful response', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)
 
@@ -55,7 +61,7 @@ describe('GET /v1/organisations/{id}', () => {
   })
 
   describe('not found cases', () => {
-    it('returns 404 for orgId that does not exist', async () => {
+    test('returns 404 for orgId that does not exist', async () => {
       const response = await server.inject({
         method: 'GET',
         url: '/v1/organisations/999999'
@@ -64,7 +70,7 @@ describe('GET /v1/organisations/{id}', () => {
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
-    it('returns 404 when orgId is missing (whitespace-only path segment)', async () => {
+    test('returns 404 when orgId is missing (whitespace-only path segment)', async () => {
       const response = await server.inject({
         method: 'GET',
         url: '/v1/organisations/%20%20%20'
@@ -73,7 +79,7 @@ describe('GET /v1/organisations/{id}', () => {
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
-    it('includes Cache-Control header in error response', async () => {
+    test('includes Cache-Control header in error response', async () => {
       const response = await server.inject({
         method: 'GET',
         url: '/v1/organisations/999999'
