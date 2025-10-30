@@ -14,7 +14,6 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'

@@ -7,7 +7,6 @@ import { summaryLogsValidatePath } from './post.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { describe, it, expect, beforeEach } from 'vitest'
 
 const url = summaryLogsValidatePath
 const payload = {
