@@ -1,6 +1,5 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
@@ -44,18 +43,13 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
         logger
       })
 
-      const summaryLogUpdater = new SummaryLogUpdater({
-        summaryLogsRepository
-      })
-
-      const summaryLogsValidator = new SummaryLogsValidator({
+      const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
-        summaryLogExtractor,
-        summaryLogUpdater
+        summaryLogExtractor
       })
 
-      await summaryLogsValidator.validate(summaryLogId)
+      await validateSummaryLog(summaryLogId)
     } finally {
       s3Client.destroy()
     }

@@ -1,8 +1,7 @@
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -13,12 +12,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 
 describe('SummaryLogsValidator integration', () => {
-  let summaryLogUpdater
   let summaryLogsRepository
 
   beforeEach(async () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
-    summaryLogUpdater = new SummaryLogUpdater({ summaryLogsRepository })
   })
 
   const createTestOrg = (wasteProcessingType, wasteRegistrationNumber) => {
@@ -78,16 +75,15 @@ describe('SummaryLogsValidator integration', () => {
     const extractor =
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata)
 
-    const summaryLogsValidator = new SummaryLogsValidator({
+    const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor: extractor,
-      summaryLogUpdater
+      summaryLogExtractor: extractor
     })
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
-    await summaryLogsValidator.validate(summaryLogId).catch((err) => err)
+    await validateSummaryLog(summaryLogId).catch((err) => err)
 
     const updated = await summaryLogsRepository.findById(summaryLogId)
 
@@ -109,6 +105,10 @@ describe('SummaryLogsValidator integration', () => {
         SUMMARY_LOG_TYPE: {
           value: 'REPROCESSOR',
           location: { sheet: 'Data', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Data', row: 3, column: 'B' }
         }
       }
     })
@@ -171,6 +171,10 @@ describe('SummaryLogsValidator integration', () => {
               SUMMARY_LOG_TYPE: {
                 value: spreadsheetType,
                 location: { sheet: 'Data', row: 2, column: 'B' }
+              },
+              MATERIAL: {
+                value: 'Paper_and_board',
+                location: { sheet: 'Data', row: 3, column: 'B' }
               }
             }
           })

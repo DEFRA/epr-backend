@@ -1,6 +1,5 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator as SummaryLogsValidatorClass } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -8,6 +7,21 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 
 /** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
+
+const runValidationInline = async (summaryLogId, validateSummaryLog) => {
+  try {
+    await validateSummaryLog(summaryLogId)
+  } catch (error) {
+    logger.error({
+      error,
+      message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+  }
+}
 
 /**
  * @returns {SummaryLogsValidator}
@@ -22,29 +36,17 @@ export const createInlineSummaryLogsValidator = (
     logger
   })
 
-  const summaryLogUpdater = new SummaryLogUpdater({
-    summaryLogsRepository
-  })
-
-  const summaryLogsValidator = new SummaryLogsValidatorClass({
+  const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
-    summaryLogExtractor,
-    summaryLogUpdater
+    summaryLogExtractor
   })
 
   return {
     validate: async (summaryLogId) => {
-      summaryLogsValidator.validate(summaryLogId).catch((error) => {
-        logger.error({
-          error,
-          message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-          }
-        })
-      })
+      // Fire-and-forget: validation runs asynchronously, request returns immediately
+      // Intentionally not awaiting as the HTTP response completes before validation finishes
+      runValidationInline(summaryLogId, validateSummaryLog)
     }
   }
 }

@@ -1,19 +1,16 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 
 import { createInlineSummaryLogsValidator } from './inline.js'
 
 vi.mock('#application/summary-logs/extractor.js')
-vi.mock('#application/summary-logs/updater.js')
-vi.mock('#application/summary-logs/validator.js')
+vi.mock('#application/summary-logs/validate.js')
 
 describe('createInlineSummaryLogsValidator', () => {
   let uploadsRepository
   let summaryLogsRepository
   let organisationsRepository
   let mockSummaryLogExtractor
-  let mockSummaryLogUpdater
   let mockSummaryLogsValidator
   let inlineSummaryLogsValidator
   let summaryLogId
@@ -35,23 +32,14 @@ describe('createInlineSummaryLogsValidator', () => {
       extract: vi.fn()
     }
 
-    mockSummaryLogUpdater = {
-      update: vi.fn()
-    }
-
-    mockSummaryLogsValidator = {
-      validate: vi.fn().mockResolvedValue(undefined)
-    }
+    mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
     vi.mocked(createSummaryLogExtractor).mockImplementation(
       () => mockSummaryLogExtractor
     )
-    vi.mocked(SummaryLogUpdater).mockImplementation(function () {
-      return mockSummaryLogUpdater
-    })
-    vi.mocked(SummaryLogsValidator).mockImplementation(function () {
-      return mockSummaryLogsValidator
-    })
+    vi.mocked(createSummaryLogsValidator).mockReturnValue(
+      mockSummaryLogsValidator
+    )
 
     inlineSummaryLogsValidator = createInlineSummaryLogsValidator(
       uploadsRepository,
@@ -74,31 +62,22 @@ describe('createInlineSummaryLogsValidator', () => {
     )
   })
 
-  it('should create summary log updater with dependencies', () => {
-    expect(SummaryLogUpdater).toHaveBeenCalledWith({
-      summaryLogsRepository
-    })
-  })
-
   it('should create summary logs validator with dependencies', () => {
-    expect(SummaryLogsValidator).toHaveBeenCalledWith({
+    expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor: mockSummaryLogExtractor,
-      summaryLogUpdater: mockSummaryLogUpdater
+      summaryLogExtractor: mockSummaryLogExtractor
     })
   })
 
   it('should call validator with summary log id', async () => {
     await inlineSummaryLogsValidator.validate(summaryLogId)
 
-    expect(mockSummaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
+    expect(mockSummaryLogsValidator).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should log error with correct format when worker fails', async () => {
-    mockSummaryLogsValidator.validate.mockRejectedValue(
-      new Error('Worker failed')
-    )
+    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     // Need to import logger to spy on it
     const { logger } = await import('#common/helpers/logging/logger.js')
@@ -122,9 +101,7 @@ describe('createInlineSummaryLogsValidator', () => {
   })
 
   it('should not throw when worker fails', async () => {
-    mockSummaryLogsValidator.validate.mockRejectedValue(
-      new Error('Worker failed')
-    )
+    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
       inlineSummaryLogsValidator.validate(summaryLogId)
