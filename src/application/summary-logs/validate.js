@@ -71,13 +71,13 @@ const performValidationChecks = async ({
     validateSummaryLogMaterialType
   ]
 
-  validators.forEach((validate) => {
+  for (const validate of validators) {
     validate({
       parsed,
       registration,
       loggingContext
     })
-  })
+  }
 
   return parsed
 }
