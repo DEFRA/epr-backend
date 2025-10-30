@@ -19,8 +19,8 @@ export async function createTestServer(options = {}) {
   const skipMongoDb = options.repositories !== undefined
 
   const server = await createServer({
-    ...options,
-    skipMongoDb
+    skipMongoDb,
+    ...options
   })
   await server.initialize()
 

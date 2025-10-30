@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { setup as setupMongo, teardown as teardownMongo } from 'vitest-mongodb'
 import { Db, MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 import { randomUUID } from 'node:crypto'
@@ -9,7 +10,17 @@ describe('MongoDB collections setup', () => {
   const testDbName = `epr-backend-test-${randomUUID()}`
 
   beforeAll(async () => {
+    await setupMongo({
+      binary: {
+        version: 'latest'
+      },
+      serverOptions: {},
+      autoStart: false
+    })
+
+    const mongoUri = globalThis.__MONGO_URI__
     originalMongoDatabase = process.env.MONGO_DATABASE
+    process.env.MONGO_URI = mongoUri
     process.env.MONGO_DATABASE = testDbName
 
     const { createServer } = await import('#server/server.js')
@@ -23,6 +34,7 @@ describe('MongoDB collections setup', () => {
       await server.stop()
     }
     process.env.MONGO_DATABASE = originalMongoDatabase
+    await teardownMongo()
   })
 
   it('should have expected decorators', () => {

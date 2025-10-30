@@ -4,7 +4,7 @@ import { createTestServer } from '#test/create-test-server.js'
 
 describe('GET /health', () => {
   it('returns 200 with success message', async () => {
-    const server = await createTestServer()
+    const server = await createTestServer({ skipMongoDb: true })
 
     const response = await server.inject({
       method: 'GET',

@@ -1,21 +1,24 @@
 import { randomUUID } from 'node:crypto'
+import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest'
+import {
+  setupRepositoryDb,
+  teardownRepositoryDb
+} from '../../../.vite/fixtures/repository-db.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
 describe('MongoDB summary logs repository', () => {
-  let server
+  let mongoClient
   let summaryLogsRepositoryFactory
 
   beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-
-    summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
+    const { db, mongoClient: client } = await setupRepositoryDb()
+    mongoClient = client
+    summaryLogsRepositoryFactory = createSummaryLogsRepository(db)
   })
 
   afterAll(async () => {
-    await server.stop()
+    await teardownRepositoryDb(mongoClient)
   })
 
   testSummaryLogsRepositoryContract((logger) =>
