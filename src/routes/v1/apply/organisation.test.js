@@ -13,7 +13,12 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
-import { createTestServer } from '#test/create-test-server.js'
+import {
+  testServerFixture as test,
+  describe,
+  expect,
+  beforeEach
+} from '../../../test/create-test-server-fixture.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({
@@ -29,26 +34,23 @@ vi.mock('@defra/cdp-auditing', () => ({
 vi.mock('#common/helpers/notify.js')
 
 const url = organisationPath
-let server
 
 describe(`${url} route`, () => {
-  beforeEach(async () => {
-    server = await createTestServer()
-
+  beforeEach(() => {
     mockAudit.mockClear()
     mockInsertOne.mockClear()
     mockCountDocuments.mockClear()
+  })
 
-    const collectionSpy = vi.spyOn(server.db, 'collection')
+  test('returns 200 and echoes back payload on valid request', async ({ testServer }) => {
+    const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({
       countDocuments: mockCountDocuments,
       insertOne: mockInsertOne
     })
-  })
 
-  it('returns 200 and echoes back payload on valid request', async () => {
-    const response = await server.inject({
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: organisationFixture
@@ -88,7 +90,7 @@ describe(`${url} route`, () => {
         referenceNumber: expect.any(String)
       }
     )
-    expect(server.loggerMocks.info).toHaveBeenCalledWith(
+    expect(testServer.loggerMocks.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message: expect.any(String),
         event: {
@@ -99,8 +101,8 @@ describe(`${url} route`, () => {
     )
   })
 
-  it('returns 400 if payload is not an object', async () => {
-    const response = await server.inject({
+  test('returns 400 if payload is not an object', async ({ testServer }) => {
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: 'not-an-object'
@@ -111,8 +113,8 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
 
-  it('returns 400 if payload is null', async () => {
-    const response = await server.inject({
+  test('returns 400 if payload is null', async ({ testServer }) => {
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: null
@@ -123,8 +125,8 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 422 if payload is missing email', async () => {
-    const response = await server.inject({
+  test('returns 422 if payload is missing email', async ({ testServer }) => {
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: {
@@ -160,8 +162,8 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 422 if payload is missing orgName', async () => {
-    const response = await server.inject({
+  test('returns 422 if payload is missing orgName', async ({ testServer }) => {
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: {
@@ -197,8 +199,8 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 422 if payload is missing regulatorEmail', async () => {
-    const response = await server.inject({
+  test('returns 422 if payload is missing regulatorEmail', async ({ testServer }) => {
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: {
@@ -220,14 +222,21 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 500 if error is thrown by insertOne', async () => {
+  test('returns 500 if error is thrown by insertOne', async ({ testServer }) => {
+    const collectionSpy = vi.spyOn(testServer.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
       throw error
     })
 
-    const response = await server.inject({
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: organisationFixture
@@ -236,7 +245,7 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+    expect(testServer.loggerMocks.error).toHaveBeenCalledWith({
       error,
       message: `Failure on ${organisationPath}`,
       event: {
@@ -251,12 +260,19 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 500 if error is thrown by sendEmail', async () => {
+  test('returns 500 if error is thrown by sendEmail', async ({ testServer }) => {
+    const collectionSpy = vi.spyOn(testServer.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      countDocuments: mockCountDocuments,
+      insertOne: mockInsertOne
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('Notify API failed')
     sendEmail.mockRejectedValueOnce(error)
 
-    const response = await server.inject({
+    const response = await testServer.inject({
       method: 'POST',
       url,
       payload: organisationFixture
@@ -265,7 +281,7 @@ describe(`${url} route`, () => {
     expect(response.statusCode).toEqual(statusCode)
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
-    expect(server.loggerMocks.error).toHaveBeenCalledWith({
+    expect(testServer.loggerMocks.error).toHaveBeenCalledWith({
       error,
       message: `Failure on ${organisationPath}`,
       event: {
