@@ -24,46 +24,46 @@ import { test, vi } from 'vitest'
 export const applyRouteTest = test.extend(
   {
     // eslint-disable-next-line no-empty-pattern
-    testServer: async ({}, use) => {
+    server: async ({}, use) => {
       const { createServer } = await import('#server/server.js')
-      const server = await createServer({ skipMongoDb: true })
+      const testServer = await createServer({ skipMongoDb: true })
 
       // Add a mock db object that can be spied on
-      // This allows tests to do: vi.spyOn(testServer.db, 'collection')
+      // This allows tests to do: vi.spyOn(server.db, 'collection')
       const mockDb = {
         collection: vi.fn()
       }
 
-      server.decorate('server', 'db', mockDb)
-      server.decorate('request', 'db', mockDb)
+      testServer.decorate('server', 'db', mockDb)
+      testServer.decorate('request', 'db', mockDb)
 
-      await server.initialize()
+      await testServer.initialize()
 
       /** @type {TestServer} */
-      const testServer = /** @type {*} */ (server)
+      const server = /** @type {*} */ (testServer)
 
-      testServer.loggerMocks = {
+      server.loggerMocks = {
         info: vi.fn(),
         error: vi.fn(),
         warn: vi.fn()
       }
 
-      testServer.ext('onRequest', (request, h) => {
+      server.ext('onRequest', (request, h) => {
         vi.spyOn(request.logger, 'info').mockImplementation(
-          testServer.loggerMocks.info
+          server.loggerMocks.info
         )
         vi.spyOn(request.logger, 'error').mockImplementation(
-          testServer.loggerMocks.error
+          server.loggerMocks.error
         )
         vi.spyOn(request.logger, 'warn').mockImplementation(
-          testServer.loggerMocks.warn
+          server.loggerMocks.warn
         )
         return h.continue
       })
 
-      await use(testServer)
+      await use(server)
 
-      await server.stop()
+      await testServer.stop()
     }
   },
   { scope: 'file' }
