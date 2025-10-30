@@ -1,0 +1,557 @@
+
+> epr-backend@0.0.0 test
+> TZ=UTC vitest run --coverage
+
+
+ RUN  v3.2.4 /Users/graemefoster/Development/Defra/epr-backend/main
+      Coverage enabled with v8
+
+ ✓ src/start-server.test.js (4 tests) 443ms
+ ✓ src/routes/v1/organisations/get-by-id.test.js (5 tests) 404ms
+ ✓ src/routes/v1/organisations/registrations/summary-logs/validate/post.test.js (8 tests) 894ms
+ ✓ src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.validation.test.js (12 tests) 94ms
+ ✓ src/repositories/summary-logs/mongodb.test.js (2 tests) 2365ms
+   ✓ MongoDB summary logs repository > summary logs repository contract  2362ms
+ ✓ src/routes/v1/organisations/registrations/summary-logs/integration.test.js (12 tests) 1994ms
+   ✓ Summary logs integration > marking upload as completed with pending file > logs completion  358ms
+ ✓ src/plugins/repositories.test.js (2 tests) 99ms
+ ✓ src/application/summary-logs/validator.test.js (21 tests) 8ms
+ ✓ src/repositories/organisations/inmemory.test.js (48 tests) 54ms
+ ✓ src/repositories/summary-logs/inmemory.test.js (48 tests) 20ms
+ ✓ src/routes/v1/organisations/get.test.js (1 test) 92ms
+ ✓ src/adapters/validators/summary-logs/piscina.test.js (8 tests) 7ms
+ ✓ src/common/helpers/convict/validate-mongo-uri.test.js (2 tests) 13ms
+ ✓ src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.test.js (22 tests) 193ms
+ ✓ src/forms-submission-data/parse-forms-data.test.js (36 tests) 20ms
+ ✓ src/application/summary-logs/extractor.test.js (10 tests) 5ms
+ ✓ src/common/helpers/mongo-lock.test.js (4 tests) 6ms
+ ✓ src/common/helpers/mongo-client.test.js (4 tests) 13ms
+ ✓ src/common/helpers/apply/extract-answers.test.js (17 tests) 5ms
+ ✓ src/common/helpers/notify.test.js (6 tests) 5ms
+ ✓ src/domain/summary-logs/status.test.js (20 tests) 4ms
+ ✓ src/workers/summary-logs/worker/integration.test.js (8 tests) 6ms
+ ✓ src/repositories/organisations/validation.test.js (3 tests) 4ms
+ ✓ src/common/helpers/logging/logger.test.js (4 tests) 5ms
+ ✓ src/common/helpers/get-local-secret.test.js (3 tests) 4ms
+ ✓ src/forms-submission-data/parse-address.test.js (16 tests) 3ms
+ ✓ src/application/summary-logs/updater.test.js (4 tests) 7ms
+ ✓ src/common/helpers/metrics.test.js (6 tests) 3ms
+ ✓ src/common/helpers/global-handlers.test.js (2 tests) 3ms
+ ✓ src/common/helpers/proxy/setup-proxy.test.js (2 tests) 3ms
+ ✓ src/application/summary-logs/extractor-inmemory.test.js (2 tests) 3ms
+ ✓ src/routes/health.test.js (1 test) 4644ms
+   ✓ GET /health > returns 200 with success message  4642ms
+ ✓ src/common/helpers/fail-action.test.js (2 tests) 3ms
+ ✓ src/feature-flags/feature-flags.inmemory.test.js (4 tests) 2ms
+ ✓ src/repositories/organisations/helpers.test.js (3 tests) 3ms
+ ✓ src/repositories/organisations/mongodb.test.js (3 tests) 5090ms
+   ✓ MongoDB organisations repository > organisations repository contract  2312ms
+   ✓ MongoDB organisations repository > MongoDB-specific error handling > rethrows unexpected database errors during insert  1470ms
+   ✓ MongoDB organisations repository > handling missing registrations/accreditations > handles status update when arrays are set to null directly in database  1306ms
+ ✓ src/common/helpers/mongo.test.js (4 tests) 9376ms
+   ✓ mongoDb > Set up > should have expected decorators  3654ms
+   ✓ mongoDb > Set up > should have expected database name  2323ms
+   ✓ mongoDb > Set up > should have expected namespace  1701ms
+   ✓ mongoDb > Shut down > should close Mongo client on server stop  1697ms
+ ✓ src/routes/v1/apply/accreditation.test.js (7 tests) 14884ms
+   ✓ /v1/apply/accreditation route > returns 201 and echoes back payload on valid request  4321ms
+   ✓ /v1/apply/accreditation route > returns 400 if payload is not an object  2019ms
+   ✓ /v1/apply/accreditation route > returns 400 if payload is null  1836ms
+   ✓ /v1/apply/accreditation route > returns 422 if payload is missing orgId  1779ms
+   ✓ /v1/apply/accreditation route > returns 422 if payload is missing reference number  1636ms
+   ✓ /v1/apply/accreditation route > returns 500 if error is thrown by insertOne  1623ms
+   ✓ /v1/apply/accreditation route > returns 500 if insertOne fails with mongo validation failures  1669ms
+ ✓ src/routes/v1/apply/registration.test.js (8 tests) 16234ms
+   ✓ /v1/apply/registration route > returns 201 and echoes back payload on valid request  4228ms
+   ✓ /v1/apply/registration route > returns 400 if payload is not an object  2034ms
+   ✓ /v1/apply/registration route > returns 400 if payload is null  1855ms
+   ✓ /v1/apply/registration route > returns 422 if payload is missing orgId  1826ms
+   ✓ /v1/apply/registration route > returns 422 if payload is missing reference number  1647ms
+   ✓ /v1/apply/registration route > returns 422 if orgId is below minimum value  1634ms
+   ✓ /v1/apply/registration route > returns 500 if error is thrown by insertOne  1665ms
+   ✓ /v1/apply/registration route > returns 500 if insertOne fails with mongo validation failures  1344ms
+ ✓ src/routes/v1/apply/organisation.test.js (8 tests) 16102ms
+   ✓ /v1/apply/organisation route > returns 200 and echoes back payload on valid request  4136ms
+   ✓ /v1/apply/organisation route > returns 400 if payload is not an object  2054ms
+   ✓ /v1/apply/organisation route > returns 400 if payload is null  1857ms
+   ✓ /v1/apply/organisation route > returns 422 if payload is missing email  1791ms
+   ✓ /v1/apply/organisation route > returns 422 if payload is missing orgName  1608ms
+   ✓ /v1/apply/organisation route > returns 422 if payload is missing regulatorEmail  1635ms
+   ✓ /v1/apply/organisation route > returns 500 if error is thrown by insertOne  1684ms
+   ✓ /v1/apply/organisation route > returns 500 if error is thrown by sendEmail  1336ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/adapters/repositories/uploads/s3.test.js [ src/adapters/repositories/uploads/s3.test.js ]
+Error: Cannot find package '@aws-sdk/client-s3' imported from '/Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.test.js'
+ ❯ src/adapters/repositories/uploads/s3.test.js:2:1
+      1| import { afterEach, beforeEach, describe, expect, it, vi } from 'vites…
+      2| import { GetObjectCommand } from '@aws-sdk/client-s3'
+       | ^
+      3| 
+      4| import { createUploadsRepository } from './s3.js'
+
+Caused by: Error: Failed to load url @aws-sdk/client-s3 (resolved id: @aws-sdk/client-s3) in /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.test.js. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-M_KD0XSK.js:26400:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/adapters/validators/summary-logs/inline.test.js [ src/adapters/validators/summary-logs/inline.test.js ]
+ FAIL  src/workers/summary-logs/worker/worker-thread.test.js [ src/workers/summary-logs/worker/worker-thread.test.js ]
+Error: Cannot find package 'exceljs' imported from '/Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/parsers/summary-logs/exceljs-parser.js'
+ ❯ src/adapters/parsers/summary-logs/exceljs-parser.js:1:1
+      1| import ExcelJS from 'exceljs'
+       | ^
+      2| import { produce } from 'immer'
+      3| 
+
+Caused by: Error: Failed to load url exceljs (resolved id: exceljs) in /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/parsers/summary-logs/exceljs-parser.test.js. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-M_KD0XSK.js:26400:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+ FAIL  src/adapters/parsers/summary-logs/exceljs-parser.test.js [ src/adapters/parsers/summary-logs/exceljs-parser.test.js ]
+Error: Cannot find package 'exceljs' imported from '/Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/parsers/summary-logs/exceljs-parser.test.js'
+ ❯ src/adapters/parsers/summary-logs/exceljs-parser.test.js:5:1
+      3| import { fileURLToPath } from 'node:url'
+      4| 
+      5| import ExcelJS from 'exceljs'
+       | ^
+      6| 
+      7| import { parse } from './exceljs-parser.js'
+
+Caused by: Error: Failed to load url exceljs (resolved id: exceljs) in /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/parsers/summary-logs/exceljs-parser.test.js. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-M_KD0XSK.js:26400:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/6]⎯
+
+ FAIL  src/common/helpers/s3/s3-client.test.js [ src/common/helpers/s3/s3-client.test.js ]
+Error: Cannot find package '@aws-sdk/client-s3' imported from '/Users/graemefoster/Development/Defra/epr-backend/main/src/common/helpers/s3/s3-client.test.js'
+ ❯ src/common/helpers/s3/s3-client.test.js:1:1
+      1| import { S3Client } from '@aws-sdk/client-s3'
+       | ^
+      2| 
+      3| import { createS3Client } from './s3-client.js'
+
+Caused by: Error: Failed to load url @aws-sdk/client-s3 (resolved id: @aws-sdk/client-s3) in /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.test.js. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-M_KD0XSK.js:26400:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/6]⎯
+
+ FAIL  src/domain/uploads/repository/port.contract.test.js [ src/domain/uploads/repository/port.contract.test.js ]
+Error: Cannot find package '@aws-sdk/client-s3' imported from '/Users/graemefoster/Development/Defra/epr-backend/main/src/domain/uploads/repository/port.contract.test.js'
+ ❯ src/domain/uploads/repository/port.contract.test.js:2:1
+      1| import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+      2| import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client…
+       | ^
+      3| 
+      4| import { createInMemoryUploadsRepository } from '#adapters/repositorie…
+
+Caused by: Error: Failed to load url @aws-sdk/client-s3 (resolved id: @aws-sdk/client-s3) in /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.test.js. Does the file exist?
+ ❯ loadAndTransform node_modules/vite/dist/node/chunks/dep-M_KD0XSK.js:26400:33
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/6]⎯
+
+⎯⎯⎯⎯⎯⎯ Unhandled Errors ⎯⎯⎯⎯⎯⎯
+
+Vitest caught 24 unhandled errors during the test run.
+This might cause false positive tests. Resolve unhandled errors to make sure your tests are not affected.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/get-by-id.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/integration.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/start-server.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/validate/post.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/get-by-id.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/integration.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/start-server.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/validate/post.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.validation.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.validation.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/common/helpers/mongo.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "should have expected decorators". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/common/helpers/mongo.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "should have expected decorators". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/apply/organisation.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 200 and echoes back payload on valid request". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/apply/accreditation.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 201 and echoes back payload on valid request". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/apply/registration.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 201 and echoes back payload on valid request". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/apply/accreditation.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 201 and echoes back payload on valid request". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/apply/organisation.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 200 and echoes back payload on valid request". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/apply/registration.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 201 and echoes back payload on valid request". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/health.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 200 with success message". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/health.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+The latest test that might've caused the error is "returns 200 with success message". It might mean one of the following:
+- The error was thrown, while Vitest was running this test.
+- If the error occurred after the test had been completed, this was the last documented test before it was thrown.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/get.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+
+⎯⎯⎯⎯⎯ Uncaught Exception ⎯⎯⎯⎯⎯
+Error: Cannot find package '@aws-sdk/client-s3' imported from /Users/graemefoster/Development/Defra/epr-backend/main/src/adapters/repositories/uploads/s3.js
+ ❯ Object.getPackageJSONURL node:internal/modules/package_json_reader:266:9
+ ❯ packageResolve node:internal/modules/esm/resolve:767:81
+ ❯ moduleResolve node:internal/modules/esm/resolve:853:18
+ ❯ defaultResolve node:internal/modules/esm/resolve:983:11
+ ❯ #cachedDefaultResolve node:internal/modules/esm/loader:717:20
+ ❯ ModuleLoader.resolve node:internal/modules/esm/loader:694:38
+ ❯ ModuleLoader.getModuleJobForImport node:internal/modules/esm/loader:308:38
+ ❯ ModuleJob._link node:internal/modules/esm/module_job:183:49
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { code: 'ERR_MODULE_NOT_FOUND' }
+This error originated in "src/routes/v1/organisations/get.test.js" test file. It doesn't mean the error was thrown inside the file itself, but while it was running.
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+
+
+ Test Files  6 failed | 40 passed (46)
+      Tests  382 passed (382)
+     Errors  24 errors
+   Start at  08:13:17
+   Duration  18.44s (transform 938ms, setup 432ms, collect 12.37s, tests 73.12s, environment 5ms, prepare 3.91s)
+
