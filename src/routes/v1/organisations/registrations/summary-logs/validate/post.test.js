@@ -7,6 +7,7 @@ import { summaryLogsValidatePath } from './post.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { describe, it, expect } from 'vitest'
 
 const url = summaryLogsValidatePath
 const payload = {
@@ -15,19 +16,16 @@ const payload = {
   fileId: 'test-file-id',
   filename: 'test-filename.xlsx'
 }
-let server
 
 describe(`${url} route`, () => {
-  beforeEach(async () => {
-    server = await createTestServer({
+  it('returns 202 and status', async () => {
+    const server = await createTestServer({
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-  })
 
-  it('returns 202 and status', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -48,6 +46,13 @@ describe(`${url} route`, () => {
   })
 
   it('returns 400 if payload is not an object', async () => {
+    const server = await createTestServer({
+      repositories: {
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
+      },
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+    })
+
     const response = await server.inject({
       method: 'POST',
       url,
@@ -60,6 +65,13 @@ describe(`${url} route`, () => {
   })
 
   it('returns 400 if payload is null', async () => {
+    const server = await createTestServer({
+      repositories: {
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
+      },
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+    })
+
     const response = await server.inject({
       method: 'POST',
       url,
@@ -74,6 +86,13 @@ describe(`${url} route`, () => {
   it.each([['s3Bucket'], ['s3Key'], ['fileId'], ['filename']])(
     'returns 422 if payload is missing %s',
     async (key) => {
+      const server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: createInMemorySummaryLogsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      })
+
       const response = await server.inject({
         method: 'POST',
         url,
@@ -91,6 +110,13 @@ describe(`${url} route`, () => {
   )
 
   it('returns 500 if error is thrown', async () => {
+    const server = await createTestServer({
+      repositories: {
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
+      },
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('logging failed')
     server.loggerMocks.info.mockImplementationOnce(() => {
