@@ -8,15 +8,19 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
 
-export function registrationAndAccreditationHandler(name, path, factory) {
+export function registrationAndAccreditationHandler(
+  repositoryMethodName,
+  path,
+  factory
+) {
   /**
    * @param {import('../../hapi-types.js').HapiRequest} request
    */
-  return async ({ db, payload, logger }, h) => {
+  return async ({ applicationsRepository, payload, logger }, h) => {
     const { answers, orgId, rawSubmissionData, referenceNumber } = payload
 
     try {
-      await db.collection(name).insertOne(
+      await applicationsRepository[repositoryMethodName](
         factory({
           orgId,
           referenceNumber,
@@ -37,7 +41,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
       })
 
       logger.info({
-        message: `Stored ${name} data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
+        message: `Stored ${repositoryMethodName} data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -46,7 +50,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
       return h.response().code(StatusCodes.CREATED)
     } catch (error) {
       const validationFailedForFields = getValidationFailedFields(error)
-      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
+      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, validation failures: ${validationFailedForFields}`
       logger.error({
         error,
         message,

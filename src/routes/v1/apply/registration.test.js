@@ -9,9 +9,9 @@ import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import registrationFixture from '#data/fixtures/registration.json'
 import { registrationPath } from './registration.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { createInMemoryApplicationsRepository } from '#repositories/applications/inmemory.js'
 
 const mockAudit = vi.fn()
-const mockInsertOne = vi.fn()
 const mockGlobalLoggerWarn = vi.fn()
 
 vi.mock('@defra/cdp-auditing', () => ({
@@ -30,20 +30,26 @@ vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
 
 const url = registrationPath
 let server
+let applicationsRepository
 
 describe(`${url} route`, () => {
   beforeEach(async () => {
-    server = await createTestServer()
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    const applicationsRepositoryFactory = createInMemoryApplicationsRepository()
+    applicationsRepository = applicationsRepositoryFactory(mockLogger)
+
+    server = await createTestServer({
+      repositories: { applicationsRepository: () => applicationsRepository }
+    })
 
     mockAudit.mockClear()
-    mockInsertOne.mockClear()
     mockGlobalLoggerWarn.mockClear()
-
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockReturnValue({
-      insertOne: mockInsertOne
-    })
   })
 
   it('returns 201 and echoes back payload on valid request', async () => {
@@ -231,10 +237,13 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 500 if error is thrown by insertOne', async () => {
+  it('returns 500 if error is thrown by repository', async () => {
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
-    const error = new Error('db.collection.insertOne failed')
-    mockInsertOne.mockImplementationOnce(() => {
+    const error = new Error('Repository insert failed')
+    vi.spyOn(
+      applicationsRepository,
+      'insertRegistration'
+    ).mockImplementationOnce(() => {
       throw error
     })
 
@@ -249,7 +258,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
       error,
-      message: `Failure on ${registrationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
+      message: `Failure on ${registrationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, validation failures: `,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -262,14 +271,18 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 500 if insertOne fails with mongo validation failures', async () => {
+  it('returns 500 if repository fails with validation failures', async () => {
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
-    const error = Object.assign(new Error('db.collection.insertOne failed'), {
+    const error = Object.assign(new Error('Repository insert failed'), {
       errInfo: JSON.parse(
         '{"failingDocumentId":"68da86a39a36abfab162b707","details":{"operatorName":"$jsonSchema","title":"Registration Validation","schemaRulesNotSatisfied":[{"operatorName":"properties","propertiesNotSatisfied":[{"propertyName":"orgId","description":"\'orgId\' must be a positive integer above 500000 and is required","details":[{"operatorName":"minimum","specifiedAs":{"minimum":500000},"reason":"comparison failed","consideredValue":100000}]}]}]}}'
       )
     })
-    mockInsertOne.mockImplementationOnce(() => {
+
+    vi.spyOn(
+      applicationsRepository,
+      'insertRegistration'
+    ).mockImplementationOnce(() => {
       throw error
     })
 
@@ -284,7 +297,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
       error,
-      message: `Failure on /v1/apply/registration for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
+      message: `Failure on /v1/apply/registration for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE

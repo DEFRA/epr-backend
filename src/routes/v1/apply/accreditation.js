@@ -17,7 +17,7 @@ export const accreditation = {
     }
   },
   handler: registrationAndAccreditationHandler(
-    'accreditation',
+    'insertAccreditation',
     accreditationPath,
     accreditationFactory
   )

@@ -17,7 +17,7 @@ const registration = {
     }
   },
   handler: registrationAndAccreditationHandler(
-    'registration',
+    'insertRegistration',
     registrationPath,
     registrationFactory
   )

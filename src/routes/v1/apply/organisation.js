@@ -6,7 +6,6 @@ import {
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
-  ORG_ID_START_NUMBER,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
 } from '#common/enums/index.js'
@@ -20,15 +19,6 @@ import { organisationFactory } from '#common/helpers/collections/factories/index
 import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'
-
-async function getNextOrgId(collection) {
-  const count = await collection.countDocuments({
-    orgId: {
-      $gte: ORG_ID_START_NUMBER
-    }
-  })
-  return ORG_ID_START_NUMBER + count + 1
-}
 
 async function sendConfirmationEmails(email, regulatorEmail, context) {
   await sendEmail(
@@ -88,26 +78,22 @@ export const organisation = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest} request
    */
-  handler: async ({ db, payload, logger }, h) => {
-    const collection = db.collection('organisation')
+  handler: async ({ applicationsRepository, payload, logger }, h) => {
     const { answers, email, orgName, rawSubmissionData, regulatorEmail } =
       payload
 
     try {
-      const orgId = await getNextOrgId(collection)
-
-      const { insertedId } = await collection.insertOne(
-        organisationFactory({
-          orgId,
-          orgName,
-          email,
-          nations: null,
-          answers,
-          rawSubmissionData
-        })
-      )
-
-      const referenceNumber = insertedId.toString()
+      const { orgId, referenceNumber } =
+        await applicationsRepository.insertOrganisation(
+          organisationFactory({
+            orgId: 0,
+            orgName,
+            email,
+            nations: null,
+            answers,
+            rawSubmissionData
+          })
+        )
 
       audit({
         event: {

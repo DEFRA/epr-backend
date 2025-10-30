@@ -24,7 +24,8 @@ describe('repositories plugin', () => {
         plugin: repositories.plugin,
         options: {
           summaryLogsRepository: mockFactory,
-          organisationsRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          organisationsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          applicationsRepository: vi.fn(() => ({ findAll: vi.fn() }))
         }
       })
 
@@ -58,7 +59,8 @@ describe('repositories plugin', () => {
         plugin: repositories.plugin,
         options: {
           organisationsRepository: mockFactory,
-          summaryLogsRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          summaryLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          applicationsRepository: vi.fn(() => ({ findAll: vi.fn() }))
         }
       })
 

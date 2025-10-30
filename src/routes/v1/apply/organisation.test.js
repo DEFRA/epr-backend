@@ -14,13 +14,9 @@ import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
 import { createTestServer } from '#test/create-test-server.js'
+import { createInMemoryApplicationsRepository } from '#repositories/applications/inmemory.js'
 
 const mockAudit = vi.fn()
-const mockInsertOne = vi.fn().mockResolvedValue({
-  insertedId: { toString: () => '12345678901234567890abcd' }
-})
-
-const mockCountDocuments = vi.fn(() => 1)
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -30,21 +26,25 @@ vi.mock('#common/helpers/notify.js')
 
 const url = organisationPath
 let server
+let applicationsRepository
 
 describe(`${url} route`, () => {
   beforeEach(async () => {
-    server = await createTestServer()
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+
+    const applicationsRepositoryFactory = createInMemoryApplicationsRepository()
+    applicationsRepository = applicationsRepositoryFactory(mockLogger)
+
+    server = await createTestServer({
+      repositories: { applicationsRepository: () => applicationsRepository }
+    })
 
     mockAudit.mockClear()
-    mockInsertOne.mockClear()
-    mockCountDocuments.mockClear()
-
-    const collectionSpy = vi.spyOn(server.db, 'collection')
-
-    collectionSpy.mockReturnValue({
-      countDocuments: mockCountDocuments,
-      insertOne: mockInsertOne
-    })
   })
 
   it('returns 200 and echoes back payload on valid request', async () => {
@@ -54,7 +54,7 @@ describe(`${url} route`, () => {
       payload: organisationFixture
     })
 
-    const orgId = 500002
+    const orgId = 500001
     const orgName = 'ACME ltd'
 
     expect(response.statusCode).toEqual(StatusCodes.OK)
@@ -220,10 +220,13 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 500 if error is thrown by insertOne', async () => {
+  it('returns 500 if error is thrown by repository', async () => {
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
-    const error = new Error('db.collection.insertOne failed')
-    mockInsertOne.mockImplementationOnce(() => {
+    const error = new Error('Repository insert failed')
+    vi.spyOn(
+      applicationsRepository,
+      'insertOrganisation'
+    ).mockImplementationOnce(() => {
       throw error
     })
 

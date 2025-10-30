@@ -1,10 +1,12 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createApplicationsRepository } from '#repositories/applications/mongodb.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
+ * @property {import('#repositories/applications/port.js').ApplicationsRepositoryFactory} [applicationsRepository] - Optional test override for applications repository factory
  */
 
 export const repositories = {
@@ -75,6 +77,24 @@ export const repositories = {
             /** @type {import('mongodb').Db} */ (server.db)
           )
           registerPerRequest('organisationsRepository', productionFactory)
+        })
+      }
+
+      const applicationsRepositoryFactory = options?.applicationsRepository
+        ? options.applicationsRepository
+        : null
+
+      if (applicationsRepositoryFactory) {
+        registerPerRequest(
+          'applicationsRepository',
+          applicationsRepositoryFactory
+        )
+      } else {
+        server.dependency('mongodb', () => {
+          const productionFactory = createApplicationsRepository(
+            /** @type {import('mongodb').Db} */ (server.db)
+          )
+          registerPerRequest('applicationsRepository', productionFactory)
         })
       }
     }
