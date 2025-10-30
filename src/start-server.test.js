@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import hapi from '@hapi/hapi'
 
 import {
@@ -6,6 +7,14 @@ import {
 } from '#common/enums/event.js'
 
 import { getConfig } from './config.js'
+import {
+  serverTest as test,
+  describe,
+  expect,
+  beforeEach,
+  beforeAll,
+  afterAll
+} from '../.vite/db-fixture.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()
