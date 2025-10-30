@@ -1,16 +1,12 @@
+import { describe, it, expect } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import {
-  testServerFixture as test,
-  describe,
-  expect
-} from '../../../../.vite/fixtures/test-server.js'
 
 describe('GET /v1/organisations', () => {
-  test('returns 200 and all organisations', async () => {
+  it('returns 200 and all organisations', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
