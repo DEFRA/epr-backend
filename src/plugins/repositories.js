@@ -53,15 +53,15 @@ export const repositories = {
           'summaryLogsRepository',
           summaryLogsRepositoryFactory
         )
-      } else if (!skipMongoDb) {
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
+      } else {
         server.dependency('mongodb', () => {
           const productionFactory = createSummaryLogsRepository(
             /** @type {import('mongodb').Db} */ (server.db)
           )
           registerPerRequest('summaryLogsRepository', productionFactory)
         })
-      } else {
-        // No repository registered - test is skipping MongoDB and not providing a factory
       }
 
       const organisationsRepositoryFactory = options?.organisationsRepository
@@ -73,15 +73,15 @@ export const repositories = {
           'organisationsRepository',
           organisationsRepositoryFactory
         )
-      } else if (!skipMongoDb) {
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
+      } else {
         server.dependency('mongodb', () => {
           const productionFactory = createOrganisationsRepository(
             /** @type {import('mongodb').Db} */ (server.db)
           )
           registerPerRequest('organisationsRepository', productionFactory)
         })
-      } else {
-        // No repository registered - test is skipping MongoDB and not providing a factory
       }
     }
   }
