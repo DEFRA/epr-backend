@@ -8,7 +8,7 @@ import {
 
 import { getConfig } from './config.js'
 import {
-  serverTest as test,
+  serverWithDbTest as test,
   describe,
   expect,
   beforeEach,

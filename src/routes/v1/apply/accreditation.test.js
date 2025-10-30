@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
@@ -9,11 +10,11 @@ import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import accreditationFixture from '#data/fixtures/accreditation.json'
 import { accreditationPath } from './accreditation.js'
 import {
-  testServerFixture as test,
+  applyRouteTest as test,
   describe,
   expect,
   beforeEach
-} from '../../../../.vite/fixtures/test-server.js'
+} from './test-fixtures.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn()

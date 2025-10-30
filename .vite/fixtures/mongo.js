@@ -23,24 +23,6 @@ export const dbFixture = {
 
 export const dbTest = baseTest.extend(dbFixture, { scope: 'file' })
 
-export const dbInstanceTest = dbTest.extend(
-  {
-    dbInstance: async ({ db }, use) => {
-      // eslint-disable-next-line no-unused-vars
-      const _mongoUri = db
-      const { MongoClient } = await import('mongodb')
-      const client = new MongoClient(process.env.MONGO_URI)
-      await client.connect()
-      const database = client.db('epr-backend')
-
-      await use(database)
-
-      await client.close()
-    }
-  },
-  { scope: 'file' }
-)
-
 export {
   expect,
   describe,

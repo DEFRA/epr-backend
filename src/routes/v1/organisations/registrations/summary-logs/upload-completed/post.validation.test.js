@@ -12,6 +12,7 @@ describe('POST upload-completed validation', () => {
 
   beforeAll(async () => {
     server = await createServer({
+      skipMongoDb: true,
       repositories: {
         summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
