@@ -14,7 +14,7 @@ import {
   beforeEach,
   beforeAll,
   afterAll
-} from '../.vite/fixtures/server.js'
+} from '#vite/fixtures/server.js'
 
 const mockLoggerInfo = vi.fn()
 const mockLoggerError = vi.fn()

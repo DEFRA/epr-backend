@@ -2,7 +2,7 @@ import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
 import {
   setupRepositoryDb,
   teardownRepositoryDb
-} from '../../../.vite/fixtures/repository-db.js'
+} from '#vite/fixtures/repository-db.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'

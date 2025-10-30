@@ -4,7 +4,7 @@ import {
   expect,
   beforeEach,
   afterEach
-} from '../../../../.vite/fixtures/s3.js'
+} from '#vite/fixtures/s3.js'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'

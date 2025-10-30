@@ -3,7 +3,7 @@ import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest'
 import {
   setupRepositoryDb,
   teardownRepositoryDb
-} from '../../../.vite/fixtures/repository-db.js'
+} from '#vite/fixtures/repository-db.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
