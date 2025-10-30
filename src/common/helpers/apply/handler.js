@@ -40,8 +40,9 @@ export function registrationAndAccreditationHandler(
         }
       })
 
+      const typeName = repositoryMethodName.replace(/^insert/, '').toLowerCase()
       logger.info({
-        message: `Stored ${repositoryMethodName} data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
+        message: `Stored ${typeName} data for orgId: ${orgId} and referenceNumber: ${referenceNumber}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS
@@ -50,7 +51,7 @@ export function registrationAndAccreditationHandler(
       return h.response().code(StatusCodes.CREATED)
     } catch (error) {
       const validationFailedForFields = getValidationFailedFields(error)
-      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, validation failures: ${validationFailedForFields}`
+      const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
       logger.error({
         error,
         message,

@@ -189,7 +189,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
       error,
-      message: `Failure on ${accreditationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, validation failures: `,
+      message: `Failure on ${accreditationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: `,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
@@ -228,7 +228,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
       error,
-      message: `Failure on ${accreditationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
+      message: `Failure on ${accreditationPath} for orgId: 500000 and referenceNumber: 68a66ec3dabf09f3e442b2da, mongo validation failures: orgId - 'orgId' must be a positive integer above 500000 and is required`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
