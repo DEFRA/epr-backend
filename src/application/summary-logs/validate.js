@@ -65,22 +65,18 @@ const performValidationChecks = async ({
     loggingContext
   })
 
-  validateWasteRegistrationNumber({
-    parsed,
-    registration,
-    loggingContext
-  })
+  const validators = [
+    validateWasteRegistrationNumber,
+    validateSummaryLogType,
+    validateSummaryLogMaterialType
+  ]
 
-  validateSummaryLogType({
-    parsed,
-    registration,
-    loggingContext
-  })
-
-  validateSummaryLogMaterialType({
-    parsed,
-    registration,
-    loggingContext
+  validators.forEach((validate) => {
+    validate({
+      parsed,
+      registration,
+      loggingContext
+    })
   })
 
   return parsed
