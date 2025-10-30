@@ -66,5 +66,6 @@ export const it = test.extend(
       await testServer.stop()
     }
   },
+  // @ts-expect-error - Vitest 4 supports scope parameter but types don't reflect it yet
   { scope: 'file' }
 )
