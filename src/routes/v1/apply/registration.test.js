@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
@@ -9,12 +9,7 @@ import {
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import registrationFixture from '#data/fixtures/registration.json'
 import { registrationPath } from './registration.js'
-import {
-  applyRouteTest as it,
-  describe,
-  expect,
-  beforeEach
-} from './test-fixtures.js'
+import { it } from './test-fixtures.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn()

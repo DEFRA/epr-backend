@@ -21,7 +21,7 @@ import { test, vi } from 'vitest'
  *
  * ~10x faster than testServerFixture because it skips MongoDB startup.
  */
-export const applyRouteTest = test.extend(
+export const it = test.extend(
   {
     // eslint-disable-next-line no-empty-pattern
     server: async ({}, use) => {
@@ -68,6 +68,3 @@ export const applyRouteTest = test.extend(
   },
   { scope: 'file' }
 )
-
-// eslint-disable-next-line n/no-unpublished-import
-export { expect, describe, beforeEach, afterEach, vi } from 'vitest'

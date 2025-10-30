@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
@@ -14,12 +14,7 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
-import {
-  applyRouteTest as it,
-  describe,
-  expect,
-  beforeEach
-} from './test-fixtures.js'
+import { it } from './test-fixtures.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({

@@ -1,4 +1,4 @@
-import { serverWithDbTest } from './server.js'
+import { it as serverWithDbTest } from './server-with-db.js'
 import { vi } from 'vitest'
 
 /**
@@ -11,7 +11,7 @@ import { vi } from 'vitest'
  * }} TestServer
  */
 
-export const testServerFixture = serverWithDbTest.extend(
+export const it = serverWithDbTest.extend(
   {
     testServer: async ({ server }, use) => {
       /** @type {TestServer} */
@@ -41,5 +41,3 @@ export const testServerFixture = serverWithDbTest.extend(
   },
   { scope: 'file' }
 )
-
-export { expect, describe, beforeEach, afterEach } from 'vitest'

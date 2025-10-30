@@ -1,7 +1,7 @@
 import { test as baseTest } from 'vitest'
 import { setup as setupMongo, teardown as teardownMongo } from 'vitest-mongodb'
 
-export const dbFixture = {
+const dbFixture = {
   // eslint-disable-next-line no-empty-pattern
   db: async ({}, use) => {
     await setupMongo({
@@ -21,15 +21,4 @@ export const dbFixture = {
   }
 }
 
-export const dbTest = baseTest.extend(dbFixture, { scope: 'file' })
-
-export {
-  expect,
-  describe,
-  it,
-  beforeEach,
-  afterEach,
-  beforeAll,
-  afterAll,
-  vi
-} from 'vitest'
+export const it = baseTest.extend(dbFixture, { scope: 'file' })
