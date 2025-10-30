@@ -4,7 +4,7 @@ import { Db, MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 import { randomUUID } from 'node:crypto'
 
-describe('MongoDB collections setup', () => {
+describe('MongoDB plugin', () => {
   let server
   let originalMongoDatabase
   const testDbName = `epr-backend-test-${randomUUID()}`
