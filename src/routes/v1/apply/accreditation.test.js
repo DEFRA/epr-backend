@@ -30,7 +30,9 @@ describe(`${url} route`, () => {
     mockInsertOne.mockClear()
   })
 
-  test('returns 201 and echoes back payload on valid request', async ({ testServer }) => {
+  test('returns 201 and echoes back payload on valid request', async ({
+    testServer
+  }) => {
     const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -128,7 +130,9 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  test('returns 422 if payload is missing reference number', async ({ testServer }) => {
+  test('returns 422 if payload is missing reference number', async ({
+    testServer
+  }) => {
     const response = await testServer.inject({
       method: 'POST',
       url,
@@ -164,7 +168,9 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  test('returns 500 if error is thrown by insertOne', async ({ testServer }) => {
+  test('returns 500 if error is thrown by insertOne', async ({
+    testServer
+  }) => {
     const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -201,7 +207,9 @@ describe(`${url} route`, () => {
     })
   })
 
-  test('returns 500 if insertOne fails with mongo validation failures', async ({ testServer }) => {
+  test('returns 500 if insertOne fails with mongo validation failures', async ({
+    testServer
+  }) => {
     const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({

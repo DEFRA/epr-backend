@@ -42,7 +42,9 @@ describe(`${url} route`, () => {
     mockCountDocuments.mockClear()
   })
 
-  test('returns 200 and echoes back payload on valid request', async ({ testServer }) => {
+  test('returns 200 and echoes back payload on valid request', async ({
+    testServer
+  }) => {
     const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -199,7 +201,9 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  test('returns 422 if payload is missing regulatorEmail', async ({ testServer }) => {
+  test('returns 422 if payload is missing regulatorEmail', async ({
+    testServer
+  }) => {
     const response = await testServer.inject({
       method: 'POST',
       url,
@@ -222,7 +226,9 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  test('returns 500 if error is thrown by insertOne', async ({ testServer }) => {
+  test('returns 500 if error is thrown by insertOne', async ({
+    testServer
+  }) => {
     const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({
@@ -260,7 +266,9 @@ describe(`${url} route`, () => {
     })
   })
 
-  test('returns 500 if error is thrown by sendEmail', async ({ testServer }) => {
+  test('returns 500 if error is thrown by sendEmail', async ({
+    testServer
+  }) => {
     const collectionSpy = vi.spyOn(testServer.db, 'collection')
 
     collectionSpy.mockReturnValue({

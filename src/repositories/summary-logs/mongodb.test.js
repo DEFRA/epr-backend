@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { dbInstanceTest as test, describe, expect } from '../../../.vite/db-fixture.js'
+import {
+  dbInstanceTest as test,
+  describe,
+  expect
+} from '../../../.vite/db-fixture.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 

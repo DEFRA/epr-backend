@@ -1,4 +1,9 @@
-import { dbInstanceTest as test, beforeEach, describe, expect } from '../../../.vite/db-fixture.js'
+import {
+  dbInstanceTest as test,
+  beforeEach,
+  describe,
+  expect
+} from '../../../.vite/db-fixture.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'
@@ -12,7 +17,8 @@ describe('MongoDB organisations repository', () => {
   })
 
   test('organisations repository contract', async ({ dbInstance }) => {
-    const organisationsRepositoryFactory = createOrganisationsRepository(dbInstance)
+    const organisationsRepositoryFactory =
+      createOrganisationsRepository(dbInstance)
     testOrganisationsRepositoryContract(() => organisationsRepositoryFactory())
   })
 
@@ -38,8 +44,11 @@ describe('MongoDB organisations repository', () => {
   })
 
   describe('handling missing registrations/accreditations', () => {
-    test('handles status update when arrays are set to null directly in database', async ({ dbInstance }) => {
-      const organisationsRepositoryFactory = createOrganisationsRepository(dbInstance)
+    test('handles status update when arrays are set to null directly in database', async ({
+      dbInstance
+    }) => {
+      const organisationsRepositoryFactory =
+        createOrganisationsRepository(dbInstance)
       const repository = organisationsRepositoryFactory()
       const organisation = buildOrganisation()
       await repository.insert(organisation)
