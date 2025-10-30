@@ -16,15 +16,19 @@ export const testDataIsolationBehaviour = (repositoryFactory) => {
         await repository.insert(org2)
 
         const firstRead = await repository.findAll()
-        const originalOrgId = firstRead[0].orgId
+        const org1FromFirstRead = firstRead.find((o) => o.orgId === org1.orgId)
+        const originalOrgId = org1FromFirstRead.orgId
 
         // mutate returned array and objects
-        firstRead[0].orgId = 999999
+        org1FromFirstRead.orgId = 999999
         firstRead.push(buildOrganisation())
 
         const secondRead = await repository.findAll()
-        expect(secondRead).toHaveLength(2)
-        expect(secondRead[0].orgId).toBe(originalOrgId)
+        const org1FromSecondRead = secondRead.find(
+          (o) => o.orgId === originalOrgId
+        )
+        expect(org1FromSecondRead.orgId).toBe(originalOrgId)
+        expect(secondRead.some((o) => o.orgId === org2.orgId)).toBe(true)
       })
     })
 

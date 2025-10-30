@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { SCHEMA_VERSION, ORG_ID_START_NUMBER } from '#common/enums/index.js'
 
 export const testInsertOrganisationBehaviour = (repositoryFactory) => {
@@ -20,8 +21,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 1,
-          orgName: 'Test Org',
-          email: 'test@example.com',
+          orgName: `Test Org ${randomUUID()}`,
+          email: `test-${randomUUID()}@example.com`,
           nations: null,
           answers: [
             {
@@ -47,8 +48,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 2,
-          orgName: 'Another Org',
-          email: 'another@example.com',
+          orgName: `Another Org ${randomUUID()}`,
+          email: `another-${randomUUID()}@example.com`,
           nations: null,
           answers: [],
           rawSubmissionData: {}
@@ -65,8 +66,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 3,
-          orgName: 'Multi-Nation Org',
-          email: 'multi@example.com',
+          orgName: `Multi-Nation Org ${randomUUID()}`,
+          email: `multi-${randomUUID()}@example.com`,
           nations: ['England', 'Wales'],
           answers: [],
           rawSubmissionData: {}
@@ -78,13 +79,13 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
         expect(result.referenceNumber).toBeTruthy()
       })
 
-      it('generates sequential orgIds for multiple organisations', async () => {
+      it('generates incrementing orgIds for multiple organisations', async () => {
         const org1 = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: 0,
-          orgName: 'First Org',
-          email: 'first@example.com',
+          orgName: `First Org ${randomUUID()}`,
+          email: `first-${randomUUID()}@example.com`,
           nations: null,
           answers: [],
           rawSubmissionData: {}
@@ -94,8 +95,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: 0,
-          orgName: 'Second Org',
-          email: 'second@example.com',
+          orgName: `Second Org ${randomUUID()}`,
+          email: `second-${randomUUID()}@example.com`,
           nations: null,
           answers: [],
           rawSubmissionData: {}
@@ -105,7 +106,9 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
         const result2 = await repository.insertOrganisation(org2)
 
         expect(result1.orgId).toBeGreaterThanOrEqual(ORG_ID_START_NUMBER)
-        expect(result2.orgId).toBe(result1.orgId + 1)
+        expect(result2.orgId).toBeGreaterThanOrEqual(ORG_ID_START_NUMBER)
+        expect(result2.orgId).toBeGreaterThan(result1.orgId)
+        expect(result1.referenceNumber).not.toBe(result2.referenceNumber)
       })
     })
 
@@ -115,7 +118,7 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 99,
-          email: 'test@example.com',
+          email: `test-${randomUUID()}@example.com`,
           nations: null,
           answers: [],
           rawSubmissionData: {}
@@ -131,7 +134,7 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 99,
-          orgName: 'Test Org',
+          orgName: `Test Org ${randomUUID()}`,
           nations: null,
           answers: [],
           rawSubmissionData: {}
@@ -147,7 +150,7 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 99,
-          orgName: 'Test Org',
+          orgName: `Test Org ${randomUUID()}`,
           email: 'not-an-email',
           nations: null,
           answers: [],
@@ -164,8 +167,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 111,
-          orgName: 'Test Org',
-          email: 'test@example.com',
+          orgName: `Test Org ${randomUUID()}`,
+          email: `test-${randomUUID()}@example.com`,
           nations: null,
           answers: [],
           rawSubmissionData: {},
@@ -182,8 +185,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 222,
-          orgName: 'Test Org',
-          email: 'test@example.com',
+          orgName: `Test Org ${randomUUID()}`,
+          email: `test-${randomUUID()}@example.com`,
           nations: null,
           rawSubmissionData: {}
         }
@@ -198,8 +201,8 @@ export const testInsertOrganisationBehaviour = (repositoryFactory) => {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
           orgId: ORG_ID_START_NUMBER + 333,
-          orgName: 'Test Org',
-          email: 'test@example.com',
+          orgName: `Test Org ${randomUUID()}`,
+          email: `test-${randomUUID()}@example.com`,
           nations: null,
           answers: []
         }

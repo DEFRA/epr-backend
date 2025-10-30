@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
+import { afterAll, beforeAll, describe, it, expect } from 'vitest'
 import {
   setupRepositoryDb,
   teardownRepositoryDb
@@ -19,10 +19,6 @@ describe('MongoDB organisations repository', () => {
     db = setup.db
     mongoClient = setup.mongoClient
     organisationsRepositoryFactory = createOrganisationsRepository(db)
-  })
-
-  beforeEach(async () => {
-    await db.collection(COLLECTION_NAME).deleteMany({})
   })
 
   afterAll(async () => {

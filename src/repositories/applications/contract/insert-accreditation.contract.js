@@ -1,3 +1,4 @@
+import { ObjectId } from 'mongodb'
 import { SCHEMA_VERSION, ORG_ID_START_NUMBER } from '#common/enums/index.js'
 
 export const testInsertAccreditationBehaviour = (repositoryFactory) => {
@@ -19,8 +20,8 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const accreditation = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          orgId: ORG_ID_START_NUMBER + 123,
-          referenceNumber: '507f1f77bcf86cd799439011',
+          orgId: ORG_ID_START_NUMBER + Math.floor(Math.random() * 100000),
+          referenceNumber: new ObjectId().toHexString(),
           answers: [
             {
               shortDescription: 'Question 1',
@@ -39,8 +40,8 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const accreditation = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          orgId: ORG_ID_START_NUMBER + 456,
-          referenceNumber: '507f191e810c19729de860ea',
+          orgId: ORG_ID_START_NUMBER + Math.floor(Math.random() * 100000),
+          referenceNumber: new ObjectId().toHexString(),
           answers: [],
           rawSubmissionData: {}
         }
@@ -54,7 +55,7 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const invalid = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          referenceNumber: '507f191e810c19729de860eb',
+          referenceNumber: new ObjectId().toHexString(),
           answers: [],
           rawSubmissionData: {}
         }
@@ -68,7 +69,7 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const invalid = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          orgId: ORG_ID_START_NUMBER + 999,
+          orgId: ORG_ID_START_NUMBER + Math.floor(Math.random() * 100000),
           answers: [],
           rawSubmissionData: {}
         }
@@ -82,8 +83,8 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const invalid = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          orgId: ORG_ID_START_NUMBER + 111,
-          referenceNumber: '507f191e810c19729de860ec',
+          orgId: ORG_ID_START_NUMBER + Math.floor(Math.random() * 100000),
+          referenceNumber: new ObjectId().toHexString(),
           answers: [],
           rawSubmissionData: {},
           hackerField: 'DROP TABLE'
@@ -98,8 +99,8 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const invalid = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          orgId: ORG_ID_START_NUMBER + 222,
-          referenceNumber: '507f191e810c19729de860ed',
+          orgId: ORG_ID_START_NUMBER + Math.floor(Math.random() * 100000),
+          referenceNumber: new ObjectId().toHexString(),
           rawSubmissionData: {}
         }
 
@@ -112,8 +113,8 @@ export const testInsertAccreditationBehaviour = (repositoryFactory) => {
         const invalid = {
           schemaVersion: SCHEMA_VERSION,
           createdAt: new Date(),
-          orgId: ORG_ID_START_NUMBER + 333,
-          referenceNumber: '507f191e810c19729de860ee',
+          orgId: ORG_ID_START_NUMBER + Math.floor(Math.random() * 100000),
+          referenceNumber: new ObjectId().toHexString(),
           answers: []
         }
 
