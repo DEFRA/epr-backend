@@ -60,6 +60,8 @@ export const repositories = {
           )
           registerPerRequest('summaryLogsRepository', productionFactory)
         })
+      } else {
+        // No repository registered - test is skipping MongoDB and not providing a factory
       }
 
       const organisationsRepositoryFactory = options?.organisationsRepository
@@ -78,6 +80,8 @@ export const repositories = {
           )
           registerPerRequest('organisationsRepository', productionFactory)
         })
+      } else {
+        // No repository registered - test is skipping MongoDB and not providing a factory
       }
     }
   }
