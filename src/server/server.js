@@ -56,19 +56,29 @@ async function createServer(options = {}) {
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // workers        - sets up worker thread pools and attaches to `request` objects
   // router         - routes used in the app
-  await server.register([
+  const plugins = [
     requestLogger,
     requestTracing,
     cacheControl,
     secureContext,
-    pulse,
-    {
+    pulse
+  ]
+
+  // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
+  if (!options.skipMongoDb) {
+    plugins.push({
       plugin: mongoDbPlugin,
       options: config.get('mongo')
-    },
+    })
+  }
+
+  plugins.push(
     {
       plugin: repositories,
-      options: options.repositories
+      options: {
+        ...options.repositories,
+        skipMongoDb: options.skipMongoDb
+      }
     },
     {
       plugin: featureFlags,
@@ -82,7 +92,9 @@ async function createServer(options = {}) {
       options: options.workers
     },
     router
-  ])
+  )
+
+  await server.register(plugins)
 
   return server
 }

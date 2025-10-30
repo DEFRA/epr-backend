@@ -201,3 +201,32 @@ describe('MongoDB summary logs repository', () => {
 - ✅ Repository tests using beforeAll (contract test compatibility)
 - ✅ Helper tests using beforeAll
 - ✅ Full test suite passing
+
+## Update: In-Memory Test Optimization (2025-10-30)
+
+**Implementation:** Conditional MongoDB plugin registration allows in-memory tests to skip MongoDB Memory Server entirely.
+
+**Problem:** 6 route test files used in-memory repositories but still paid ~6-7 second MongoDB startup cost per file.
+
+**Solution:**
+
+1. Made MongoDB plugin registration conditional in `server.js` (`skipMongoDb` option)
+2. Auto-detect in-memory mode in `createTestServer` when repositories provided
+3. Updated repositories plugin to skip MongoDB dependency check when not available
+
+**Performance Impact:**
+
+- **Individual in-memory tests**: ~6-7s → ~300-400ms (**95% faster**)
+- **4 in-memory route tests together**: 1.35s total
+- **Full suite**: 543 tests passing, 100% coverage maintained
+
+**Files Optimized:**
+
+- `src/routes/v1/organisations/get.test.js`
+- `src/routes/v1/organisations/get-by-id.test.js`
+- `src/routes/v1/organisations/registrations/summary-logs/validate/post.test.js`
+- `src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.test.js`
+- `src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.validation.test.js`
+- `src/routes/v1/organisations/registrations/summary-logs/integration.test.js`
+
+**See:** [In-Memory Optimization Details](./in-memory-optimization.md) for implementation details.

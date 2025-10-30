@@ -1,13 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
-import {
-  testServerFixture as test,
-  describe,
-  expect
-} from '../../.vite/fixtures/test-server.js'
+import { describe, it, expect } from 'vitest'
+import { createTestServer } from '#test/create-test-server.js'
 
 describe('GET /health', () => {
-  test('returns 200 with success message', async ({ testServer }) => {
-    const response = await testServer.inject({
+  it('returns 200 with success message', async () => {
+    const server = await createTestServer()
+
+    const response = await server.inject({
       method: 'GET',
       url: '/health'
     })
