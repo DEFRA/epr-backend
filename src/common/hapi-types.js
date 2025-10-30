@@ -8,6 +8,9 @@
  * @property {TypedLogger} logger - CDP-compliant typed logger
  * @property {*} [db] - MongoDB database (added by mongoDb plugin)
  * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
+ * @property {*} [summaryLogsRepository] - Summary logs repository (added by repositories plugin)
+ * @property {*} [organisationsRepository] - Organisations repository (added by repositories plugin)
+ * @property {*} [applicationsRepository] - Applications repository (added by repositories plugin)
  * @property {*} [payload] - Request payload
  * @property {*} [params] - Route parameters
  * @property {*} [query] - Query string parameters
