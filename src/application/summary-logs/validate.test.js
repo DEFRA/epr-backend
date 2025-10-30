@@ -272,4 +272,28 @@ describe('SummaryLogsValidator', () => {
       status: SUMMARY_LOG_STATUS.VALIDATED
     })
   })
+
+  it('should log error and rethrow original error if repository update fails during failure handler', async () => {
+    const extractionError = new Error('S3 access denied')
+    const databaseError = new Error('Database error')
+
+    summaryLogExtractor.extract.mockRejectedValue(extractionError)
+    summaryLogsRepository.update.mockRejectedValue(databaseError)
+
+    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
+
+    expect(result).toBe(extractionError)
+
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: databaseError,
+        message:
+          'Failed to handle validation failure: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
+        event: expect.objectContaining({
+          category: 'server',
+          action: 'process_failure'
+        })
+      })
+    )
+  })
 })

@@ -176,13 +176,24 @@ export const createSummaryLogsValidator =
         organisationsRepository
       })
     } catch (error) {
-      await handleValidationFailure({
-        summaryLogId,
-        version,
-        loggingContext,
-        error,
-        summaryLogsRepository
-      })
+      try {
+        await handleValidationFailure({
+          summaryLogId,
+          version,
+          loggingContext,
+          error,
+          summaryLogsRepository
+        })
+      } catch (failureHandlingError) {
+        logger.error({
+          error: failureHandlingError,
+          message: `Failed to handle validation failure: ${loggingContext}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+          }
+        })
+      }
       throw error
     }
 

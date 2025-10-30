@@ -29,6 +29,8 @@ export const createInlineSummaryLogsValidator = (
 
   return {
     validate: async (summaryLogId) => {
+      // Fire-and-forget: validation runs asynchronously, request returns immediately
+      // Intentionally not awaiting as the HTTP response completes before validation finishes
       validateSummaryLog(summaryLogId).catch((error) => {
         logger.error({
           error,
