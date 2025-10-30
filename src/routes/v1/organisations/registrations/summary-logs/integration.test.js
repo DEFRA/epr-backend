@@ -15,6 +15,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
 import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
