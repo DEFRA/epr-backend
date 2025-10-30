@@ -8,6 +8,21 @@ import { logger } from '#common/helpers/logging/logger.js'
 
 /** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
+const runValidationInline = async (summaryLogId, validateSummaryLog) => {
+  try {
+    await validateSummaryLog(summaryLogId)
+  } catch (error) {
+    logger.error({
+      error,
+      message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+  }
+}
+
 /**
  * @returns {SummaryLogsValidator}
  */
@@ -31,16 +46,7 @@ export const createInlineSummaryLogsValidator = (
     validate: async (summaryLogId) => {
       // Fire-and-forget: validation runs asynchronously, request returns immediately
       // Intentionally not awaiting as the HTTP response completes before validation finishes
-      validateSummaryLog(summaryLogId).catch((error) => {
-        logger.error({
-          error,
-          message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-          }
-        })
-      })
+      runValidationInline(summaryLogId, validateSummaryLog)
     }
   }
 }

@@ -27,9 +27,33 @@ const pool = new Piscina({
 /**
  * @returns {SummaryLogsValidator}
  */
+const runValidationInWorker = async (summaryLogId, logger) => {
+  try {
+    await pool.run(summaryLogId)
+    logger.info({
+      message: `Summary log validation worker completed: summaryLogId=${summaryLogId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
+    })
+  } catch (err) {
+    logger.error({
+      error: err,
+      message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+  }
+}
+
 export const createSummaryLogsValidator = (logger) => {
   return {
     validate: async (summaryLogId) => {
+      // Fire-and-forget: validation runs asynchronously in worker thread, request returns immediately
+      // Intentionally not awaiting as the HTTP response completes before validation finishes
       logger.info({
         message: `Summary log validation worker spawning: summaryLogId=${summaryLogId}`,
         event: {
@@ -38,29 +62,7 @@ export const createSummaryLogsValidator = (logger) => {
         }
       })
 
-      pool
-        .run(summaryLogId)
-        .then(() => {
-          logger.info({
-            message: `Summary log validation worker completed: summaryLogId=${summaryLogId}`,
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.SERVER,
-              action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-            }
-          })
-        })
-        .catch((err) => {
-          logger.error({
-            error: err,
-            message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.SERVER,
-              action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-            }
-          })
-
-          // Intentionally not re-throwing as this is the result of a worker thread and the request has already completed...
-        })
+      runValidationInWorker(summaryLogId, logger)
     }
   }
 }
