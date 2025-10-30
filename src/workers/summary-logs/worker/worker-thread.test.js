@@ -1,6 +1,5 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
@@ -18,8 +17,7 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 vi.mock('#application/summary-logs/extractor.js')
-vi.mock('#application/summary-logs/updater.js')
-vi.mock('#application/summary-logs/validator.js')
+vi.mock('#application/summary-logs/validate.js')
 vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#common/helpers/s3/s3-client.js')
@@ -36,7 +34,6 @@ describe('summaryLogsValidatorWorkerThread', () => {
   let mockUploadsRepository
   let mockOrganisationsRepository
   let mockSummaryLogExtractor
-  let mockSummaryLogUpdater
   let mockSummaryLogsValidator
 
   let summaryLogId
@@ -69,13 +66,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       extract: vi.fn()
     }
 
-    mockSummaryLogUpdater = {
-      update: vi.fn()
-    }
-
-    mockSummaryLogsValidator = {
-      validate: vi.fn().mockResolvedValue(undefined)
-    }
+    mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
     summaryLogId = 'summary-log-123'
 
@@ -91,12 +82,9 @@ describe('summaryLogsValidatorWorkerThread', () => {
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
       mockSummaryLogExtractor
     )
-    vi.mocked(SummaryLogUpdater).mockImplementation(function () {
-      return mockSummaryLogUpdater
-    })
-    vi.mocked(SummaryLogsValidator).mockImplementation(function () {
-      return mockSummaryLogsValidator
-    })
+    vi.mocked(createSummaryLogsValidator).mockReturnValue(
+      mockSummaryLogsValidator
+    )
   })
 
   afterEach(() => {
@@ -150,29 +138,20 @@ describe('summaryLogsValidatorWorkerThread', () => {
     )
   })
 
-  it('should create summary log updater', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
-
-    expect(SummaryLogUpdater).toHaveBeenCalledWith({
-      summaryLogsRepository: mockSummaryLogsRepository
-    })
-  })
-
   it('should create summary logs validator', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(SummaryLogsValidator).toHaveBeenCalledWith({
+    expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       organisationsRepository: mockOrganisationsRepository,
-      summaryLogExtractor: mockSummaryLogExtractor,
-      summaryLogUpdater: mockSummaryLogUpdater
+      summaryLogExtractor: mockSummaryLogExtractor
     })
   })
 
   it('should call validator as expected', async () => {
     await summaryLogsValidatorWorkerThread(summaryLogId)
 
-    expect(mockSummaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
+    expect(mockSummaryLogsValidator).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should destroy S3 client once worker completes', async () => {
@@ -188,9 +167,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should destroy S3 client and close mongo client even if worker fails', async () => {
-    mockSummaryLogsValidator.validate.mockRejectedValue(
-      new Error('Worker failed')
-    )
+    mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
       summaryLogsValidatorWorkerThread(summaryLogId)

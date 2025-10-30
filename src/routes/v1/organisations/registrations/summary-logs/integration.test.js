@@ -13,8 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { SummaryLogsValidator } from '#application/summary-logs/validator.js'
-import { SummaryLogUpdater } from '#application/summary-logs/updater.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 const organisationId = 'org-123'
@@ -99,21 +98,20 @@ describe('Summary logs integration', () => {
           SUMMARY_LOG_TYPE: {
             value: 'REPROCESSOR',
             location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
           }
         },
         data: {}
       }
     })
 
-    const summaryLogUpdater = new SummaryLogUpdater({
-      summaryLogsRepository
-    })
-
-    const summaryLogsValidator = new SummaryLogsValidator({
+    const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
-      summaryLogExtractor,
-      summaryLogUpdater
+      summaryLogExtractor
     })
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
@@ -123,7 +121,7 @@ describe('Summary logs integration', () => {
         uploadsRepository
       },
       workers: {
-        summaryLogsValidator
+        summaryLogsValidator: { validate: validateSummaryLog }
       },
       featureFlags
     })
