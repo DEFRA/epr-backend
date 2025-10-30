@@ -1,4 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import {
+  s3Test as it,
+  describe,
+  expect,
+  beforeEach,
+  afterEach
+} from '../../../../.vite/fixtures/s3.js'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
