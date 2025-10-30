@@ -1,29 +1,18 @@
 import { randomUUID } from 'node:crypto'
+import { serverTest as test, describe, expect } from '../../../.vite/db-fixture.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
 describe('MongoDB summary logs repository', () => {
-  let server
-  let summaryLogsRepositoryFactory
-
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-
-    summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
+  test('summary logs repository contract', async ({ server }) => {
+    const summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
+    testSummaryLogsRepositoryContract((logger) =>
+      summaryLogsRepositoryFactory(logger)
+    )
   })
-
-  afterAll(async () => {
-    await server.stop()
-  })
-
-  testSummaryLogsRepositoryContract((logger) =>
-    summaryLogsRepositoryFactory(logger)
-  )
 
   describe('MongoDB-specific error handling', () => {
-    it('re-throws non-duplicate key errors from MongoDB', async () => {
+    test('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = {
         collection: () => ({
           insertOne: async () => {
