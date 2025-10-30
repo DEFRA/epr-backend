@@ -1,36 +1,23 @@
-import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
+import { dbInstanceTest as test, beforeEach, describe, expect } from '../../../.vite/db-fixture.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'
 import { ObjectId } from 'mongodb'
 
 describe('MongoDB organisations repository', () => {
-  let server
-  let organisationsRepositoryFactory
   const COLLECTION_NAME = 'epr-organisations'
 
-  beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-
-    organisationsRepositoryFactory = createOrganisationsRepository(server.db)
+  beforeEach(async ({ dbInstance }) => {
+    await dbInstance.collection(COLLECTION_NAME).deleteMany({})
   })
 
-  beforeEach(async () => {
-    await server.db.collection(COLLECTION_NAME).deleteMany({})
-  })
-
-  afterAll(async () => {
-    await server.stop()
-  })
-
-  describe('organisations repository contract', () => {
+  test('organisations repository contract', async ({ dbInstance }) => {
+    const organisationsRepositoryFactory = createOrganisationsRepository(dbInstance)
     testOrganisationsRepositoryContract(() => organisationsRepositoryFactory())
   })
 
   describe('MongoDB-specific error handling', () => {
-    it('rethrows unexpected database errors during insert', async () => {
+    test('rethrows unexpected database errors during insert', async () => {
       const dbMock = {
         collection: () => ({
           insertOne: async () => {
@@ -51,13 +38,14 @@ describe('MongoDB organisations repository', () => {
   })
 
   describe('handling missing registrations/accreditations', () => {
-    it('handles status update when arrays are set to null directly in database', async () => {
+    test('handles status update when arrays are set to null directly in database', async ({ dbInstance }) => {
+      const organisationsRepositoryFactory = createOrganisationsRepository(dbInstance)
       const repository = organisationsRepositoryFactory()
       const organisation = buildOrganisation()
       await repository.insert(organisation)
 
       // Directly set arrays to null in database (simulating edge case)
-      await server.db
+      await dbInstance
         .collection(COLLECTION_NAME)
         .updateOne(
           { _id: ObjectId.createFromHexString(organisation.id) },

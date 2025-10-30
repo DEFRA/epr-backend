@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { serverTest as test, describe, expect } from '../../../.vite/db-fixture.js'
+import { dbInstanceTest as test, describe, expect } from '../../../.vite/db-fixture.js'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
 describe('MongoDB summary logs repository', () => {
-  test('summary logs repository contract', async ({ server }) => {
-    const summaryLogsRepositoryFactory = createSummaryLogsRepository(server.db)
+  test('summary logs repository contract', async ({ dbInstance }) => {
+    const summaryLogsRepositoryFactory = createSummaryLogsRepository(dbInstance)
     testSummaryLogsRepositoryContract((logger) =>
       summaryLogsRepositoryFactory(logger)
     )
