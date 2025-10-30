@@ -1,15 +1,13 @@
 import { StatusCodes } from 'http-status-codes'
-import { createTestServer } from '#test/create-test-server.js'
+import {
+  testServerFixture as test,
+  describe,
+  expect
+} from '../test/create-test-server-fixture.js'
 
 describe('GET /health', () => {
-  let server
-
-  beforeEach(async () => {
-    server = await createTestServer()
-  })
-
-  it('returns 200 with success message', async () => {
-    const response = await server.inject({
+  test('returns 200 with success message', async ({ testServer }) => {
+    const response = await testServer.inject({
       method: 'GET',
       url: '/health'
     })
