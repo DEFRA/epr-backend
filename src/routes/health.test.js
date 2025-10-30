@@ -1,14 +1,11 @@
 import { StatusCodes } from 'http-status-codes'
+import { describe, it, expect } from 'vitest'
 import { createTestServer } from '#test/create-test-server.js'
 
 describe('GET /health', () => {
-  let server
-
-  beforeEach(async () => {
-    server = await createTestServer()
-  })
-
   it('returns 200 with success message', async () => {
+    const server = await createTestServer({ skipMongoDb: true })
+
     const response = await server.inject({
       method: 'GET',
       url: '/health'

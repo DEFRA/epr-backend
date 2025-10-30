@@ -37,10 +37,6 @@ export default defineConfig({
         functions: 100
       }
     },
-    setupFiles: [
-      '.vite/mongo-memory-server.js',
-      '.vite/s3-memory-server-setup.js',
-      '.vite/setup-files.js'
-    ]
+    setupFiles: ['.vite/setup-files.js']
   }
 })

@@ -1,21 +1,32 @@
+import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
+import {
+  setupRepositoryDb,
+  teardownRepositoryDb
+} from '#vite/fixtures/repository-db.js'
 import { SCHEMA_VERSION, ORG_ID_START_NUMBER } from '#common/enums/index.js'
 import { createApplicationsRepository } from './mongodb.js'
 import { testApplicationsRepositoryContract } from './port.contract.js'
 
 describe('MongoDB applications repository', () => {
-  let server
+  let db
+  let mongoClient
   let applicationsRepositoryFactory
 
   beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
+    const setup = await setupRepositoryDb()
+    db = setup.db
+    mongoClient = setup.mongoClient
+    applicationsRepositoryFactory = createApplicationsRepository(db)
+  })
 
-    applicationsRepositoryFactory = createApplicationsRepository(server.db)
+  beforeEach(async () => {
+    await db.collection('accreditation').deleteMany({})
+    await db.collection('registration').deleteMany({})
+    await db.collection('organisation').deleteMany({})
   })
 
   afterAll(async () => {
-    await server.stop()
+    await teardownRepositoryDb(mongoClient)
   })
 
   testApplicationsRepositoryContract((logger) =>

@@ -16,7 +16,8 @@
     "#data/*": "./src/data/*",
     "#server/*": "./src/server/*",
     "#feature-flags/*": "./src/feature-flags/*",
-    "#test/*": "./src/test/*"
+    "#test/*": "./src/test/*",
+    "#vite/*": "./.vite/*"
   },
   "engines": {
     "node": ">=22"

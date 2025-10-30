@@ -7,6 +7,7 @@ import { createApplicationsRepository } from '#repositories/applications/mongodb
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
  * @property {import('#repositories/applications/port.js').ApplicationsRepositoryFactory} [applicationsRepository] - Optional test override for applications repository factory
+ * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  */
 
 export const repositories = {
@@ -18,6 +19,7 @@ export const repositories = {
      * @param {RepositoriesPluginOptions} [options]
      */
     register: (server, options) => {
+      const skipMongoDb = options?.skipMongoDb ?? false
       /**
        * Registers a per-request dependency with logger injection.
        * Uses lazy initialization to defer creation until first access, and caches
@@ -53,6 +55,8 @@ export const repositories = {
           'summaryLogsRepository',
           summaryLogsRepositoryFactory
         )
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createSummaryLogsRepository(
@@ -71,6 +75,8 @@ export const repositories = {
           'organisationsRepository',
           organisationsRepositoryFactory
         )
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createOrganisationsRepository(
@@ -89,6 +95,8 @@ export const repositories = {
           'applicationsRepository',
           applicationsRepositoryFactory
         )
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createApplicationsRepository(

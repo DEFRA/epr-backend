@@ -1,28 +1,32 @@
 import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
+import {
+  setupRepositoryDb,
+  teardownRepositoryDb
+} from '#vite/fixtures/repository-db.js'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'
 import { ObjectId } from 'mongodb'
 
 describe('MongoDB organisations repository', () => {
-  let server
+  let db
+  let mongoClient
   let organisationsRepositoryFactory
   const COLLECTION_NAME = 'epr-organisations'
 
   beforeAll(async () => {
-    const { createServer } = await import('#server/server.js')
-    server = await createServer()
-    await server.initialize()
-
-    organisationsRepositoryFactory = createOrganisationsRepository(server.db)
+    const setup = await setupRepositoryDb()
+    db = setup.db
+    mongoClient = setup.mongoClient
+    organisationsRepositoryFactory = createOrganisationsRepository(db)
   })
 
   beforeEach(async () => {
-    await server.db.collection(COLLECTION_NAME).deleteMany({})
+    await db.collection(COLLECTION_NAME).deleteMany({})
   })
 
   afterAll(async () => {
-    await server.stop()
+    await teardownRepositoryDb(mongoClient)
   })
 
   describe('organisations repository contract', () => {
@@ -57,7 +61,7 @@ describe('MongoDB organisations repository', () => {
       await repository.insert(organisation)
 
       // Directly set arrays to null in database (simulating edge case)
-      await server.db
+      await db
         .collection(COLLECTION_NAME)
         .updateOne(
           { _id: ObjectId.createFromHexString(organisation.id) },
