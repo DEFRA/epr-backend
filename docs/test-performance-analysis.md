@@ -122,43 +122,82 @@ Unless test execution time becomes a significant developer friction point, the c
 - **Test Framework**: Vitest with MongoDB Memory Server
 - **Coverage Provider**: v8
 
-## Update: Test Fixture Migration (2025-10-30)
+## Update: Test Fixture Migration - Hybrid Approach (2025-10-30)
 
-**Implementation:** Migrated from global `setupFiles` to opt-in test fixtures using Vitest 4's `test.extend()` API.
+**Implementation:** Hybrid approach - fixtures for route tests, `beforeAll` for repository tests.
+
+**Why Hybrid?**
+
+Initial attempt to migrate all tests to fixtures failed because:
+
+- Contract test functions (`testSummaryLogsRepositoryContract`) register tests at import/parse time
+- Fixtures only provide values at test-run time
+- Calling contract tests inside fixture `test()` functions resulted in 91 missing tests (543 → 452)
+- Coverage dropped from 100% to 97.87%
+
+**Solution:** Use fixtures only where they work - route tests with single test cases.
 
 **Fixtures Available:**
 
-- `dbTest` - MongoDB only
-- `s3Test` - S3 only
-- `integrationTest` - Both MongoDB and S3
-- `serverTest` - Full Hapi server with MongoDB
-- `testServerFixture` - Hapi server with MongoDB and logger mocks (for route tests)
+- `testServerFixture` - Hapi server with MongoDB and logger mocks (for route tests only)
 
-**Usage:**
+**Usage Patterns:**
 
 ```javascript
-// Unit tests (no MongoDB) - import from 'vitest'
-import { describe, it, expect } from 'vitest'
+// Route tests - USE FIXTURES
+import {
+  testServerFixture as test,
+  describe,
+  expect
+} from '../../test/create-test-server-fixture.js'
 
-// Integration tests (need MongoDB) - import from fixture
-import { serverTest as test, describe, expect } from '../.vite/db-fixture.js'
+test('GET /health returns 200', async ({ testServer }) => {
+  const response = await testServer.inject({ method: 'GET', url: '/health' })
+  expect(response.statusCode).toBe(200)
+})
 
-test('repository test', async ({ server }) => {
-  const repository = createRepository(server.db)
-  // ...
+// Repository tests - USE beforeAll (contract tests require this)
+describe('MongoDB summary logs repository', () => {
+  let server
+  let repositoryFactory
+
+  beforeAll(async () => {
+    const { createServer } = await import('#server/server.js')
+    server = await createServer()
+    await server.initialize()
+    repositoryFactory = createRepository(server.db)
+  })
+
+  afterAll(async () => {
+    await server.stop()
+  })
+
+  // Contract test registers nested tests - requires beforeAll pattern
+  testSummaryLogsRepositoryContract((logger) => repositoryFactory(logger))
 })
 ```
 
+**Performance Impact:**
+
+| Metric             | Main   | PAE-449 | Change         |
+| ------------------ | ------ | ------- | -------------- |
+| **Total Duration** | 12.05s | 12.56s  | +0.51s (+4%)   |
+| **Transform**      | 8.74s  | 6.46s   | -2.28s (-26%)  |
+| **Setup**          | 6.95s  | 7.73s   | +0.78s (+11%)  |
+| **Tests**          | 543    | 543     | ✅ All passing |
+| **Coverage**       | 100%   | 100%    | ✅ Maintained  |
+
 **Benefits:**
 
-- Unit tests skip MongoDB setup entirely (6-second savings)
-- Clear separation between unit and integration tests
-- Better test isolation and faster feedback loops
-- Explicit dependencies in test files
+- Route tests cleaner with fixture pattern
+- Repository tests work correctly with contract patterns
+- All 543 tests passing
+- 100% coverage maintained
+- Slight performance improvement in transform phase
 
 **Migration Status:**
 
-- ✅ All repository tests converted
-- ✅ All route tests converted
-- ✅ Server tests converted
-- ✅ Helper tests converted
+- ✅ All route tests using fixtures
+- ✅ Repository tests using beforeAll (contract test compatibility)
+- ✅ Helper tests using beforeAll
+- ✅ Full test suite passing
