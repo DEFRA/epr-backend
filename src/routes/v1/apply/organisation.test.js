@@ -18,7 +18,7 @@ import {
   describe,
   expect,
   beforeEach
-} from '../../../test/create-test-server-fixture.js'
+} from '../../../../.vite/fixtures/test-server.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({

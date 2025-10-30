@@ -7,7 +7,7 @@ import {
   testServerFixture as test,
   describe,
   expect
-} from '../../../test/create-test-server-fixture.js'
+} from '../../../../.vite/fixtures/test-server.js'
 
 describe('GET /v1/organisations', () => {
   test('returns 200 and all organisations', async () => {

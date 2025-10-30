@@ -3,7 +3,7 @@ import {
   testServerFixture as test,
   describe,
   expect
-} from '../test/create-test-server-fixture.js'
+} from '../../.vite/fixtures/test-server.js'
 
 describe('GET /health', () => {
   test('returns 200 with success message', async ({ testServer }) => {

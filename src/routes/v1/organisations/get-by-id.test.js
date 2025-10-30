@@ -8,7 +8,7 @@ import {
   describe,
   expect,
   beforeEach
-} from '../../../test/create-test-server-fixture.js'
+} from '../../../../.vite/fixtures/test-server.js'
 
 describe('GET /v1/organisations/{id}', () => {
   let server
