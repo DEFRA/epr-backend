@@ -69,8 +69,8 @@ const performValidationChecks = async ({
   const validators = [
     validateWasteRegistrationNumber,
     validateSummaryLogType,
-    validateSummaryLogMaterialType,
-    validateAccreditationNumber
+    validateAccreditationNumber,
+    validateSummaryLogMaterialType
   ]
 
   for (const validate of validators) {

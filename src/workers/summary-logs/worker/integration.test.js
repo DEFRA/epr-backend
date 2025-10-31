@@ -18,18 +18,37 @@ describe('SummaryLogsValidator integration', () => {
     summaryLogsRepository = createInMemorySummaryLogsRepository()(logger)
   })
 
-  const createTestOrg = (wasteProcessingType, wasteRegistrationNumber) => {
-    return buildOrganisation({
-      registrations: [
-        {
+  const createTestOrg = (
+    wasteProcessingType,
+    wasteRegistrationNumber,
+    accreditationNumber
+  ) => {
+    const registrationId = randomUUID()
+
+    const accreditation = accreditationNumber
+      ? {
           id: randomUUID(),
-          wasteRegistrationNumber,
+          accreditationNumber,
           material: 'paper',
           wasteProcessingType,
           formSubmissionTime: new Date(),
           submittedToRegulator: 'ea'
         }
-      ]
+      : undefined
+
+    const registration = {
+      id: registrationId,
+      wasteRegistrationNumber,
+      material: 'paper',
+      wasteProcessingType,
+      formSubmissionTime: new Date(),
+      submittedToRegulator: 'ea',
+      ...(accreditation && { accreditationId: accreditation.id })
+    }
+
+    return buildOrganisation({
+      registrations: [registration],
+      accreditations: accreditation ? [accreditation] : []
     })
   }
 
@@ -62,10 +81,15 @@ describe('SummaryLogsValidator integration', () => {
   const runValidation = async ({
     registrationType,
     registrationWRN,
+    accreditationNumber,
     metadata,
     summaryLogExtractor = null
   }) => {
-    const testOrg = createTestOrg(registrationType, registrationWRN)
+    const testOrg = createTestOrg(
+      registrationType,
+      registrationWRN,
+      accreditationNumber
+    )
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
     ])()
@@ -280,6 +304,175 @@ describe('SummaryLogsValidator integration', () => {
           ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
           failureReason: 'Summary log type does not match registration type'
+        }
+      })
+    })
+  })
+
+  describe('accreditation number validation', () => {
+    it('should validate successfully when registration has accreditation and numbers match', async () => {
+      const accreditationNumber = 87654321
+
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        accreditationNumber,
+        metadata: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'REPROCESSOR',
+            location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          },
+          ACCREDITATION_NUMBER: {
+            value: accreditationNumber,
+            location: { sheet: 'Data', row: 4, column: 'B' }
+          }
+        }
+      })
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.VALIDATED
+        }
+      })
+    })
+
+    it('should fail validation when registration has accreditation but spreadsheet number does not match', async () => {
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        accreditationNumber: 87654321,
+        metadata: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'REPROCESSOR',
+            location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          },
+          ACCREDITATION_NUMBER: {
+            value: 99999999,
+            location: { sheet: 'Data', row: 4, column: 'B' }
+          }
+        }
+      })
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason:
+            "Summary log's accreditation number does not match this registration"
+        }
+      })
+    })
+
+    it('should fail validation when registration has accreditation but spreadsheet is missing accreditation number', async () => {
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'reprocessor',
+        registrationWRN: 'WRN-123',
+        accreditationNumber: 87654321,
+        metadata: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-123',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'REPROCESSOR',
+            location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          }
+        }
+      })
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason: 'Invalid summary log: missing accreditation number'
+        }
+      })
+    })
+
+    it('should validate successfully when registration has no accreditation and spreadsheet is blank', async () => {
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'WRN-456',
+        metadata: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-456',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'EXPORTER',
+            location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          }
+        }
+      })
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.VALIDATED
+        }
+      })
+    })
+
+    it('should fail validation when registration has no accreditation but spreadsheet provides number', async () => {
+      const { updated, summaryLog } = await runValidation({
+        registrationType: 'exporter',
+        registrationWRN: 'WRN-456',
+        metadata: {
+          WASTE_REGISTRATION_NUMBER: {
+            value: 'WRN-456',
+            location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          SUMMARY_LOG_TYPE: {
+            value: 'EXPORTER',
+            location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          },
+          ACCREDITATION_NUMBER: {
+            value: 12345678,
+            location: { sheet: 'Data', row: 4, column: 'B' }
+          }
+        }
+      })
+
+      expect(updated).toEqual({
+        version: 2,
+        summaryLog: {
+          ...summaryLog,
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason:
+            'Invalid summary log: accreditation number provided but registration has no accreditation'
         }
       })
     })
