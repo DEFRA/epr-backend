@@ -51,6 +51,87 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
+    it('returns registration with hydrated accreditation when accreditationId exists', async () => {
+      const accreditation = {
+        id: new ObjectId().toString(),
+        accreditationNumber: 87654321,
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        formSubmissionTime: '2025-08-19T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        accreditationId: accreditation.id,
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration],
+        accreditations: [accreditation]
+      })
+
+      await repository.insert(org)
+
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id
+      )
+
+      expect(result).toMatchObject({
+        id: registration.id,
+        orgName: registration.orgName,
+        material: registration.material,
+        wasteProcessingType: registration.wasteProcessingType,
+        wasteRegistrationNumber: registration.wasteRegistrationNumber,
+        accreditationId: accreditation.id,
+        accreditation: {
+          id: accreditation.id,
+          accreditationNumber: accreditation.accreditationNumber,
+          material: accreditation.material,
+          wasteProcessingType: accreditation.wasteProcessingType
+        }
+      })
+    })
+
+    it('returns registration without accreditation field when accreditationId is undefined', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'plastic',
+        wasteProcessingType: 'exporter',
+        wasteRegistrationNumber: 'CBDU222222',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id
+      )
+
+      expect(result).toMatchObject({
+        id: registration.id,
+        orgName: registration.orgName,
+        material: registration.material,
+        wasteProcessingType: registration.wasteProcessingType,
+        wasteRegistrationNumber: registration.wasteRegistrationNumber
+      })
+      expect(result.accreditation).toBeUndefined()
+    })
+
     it('returns null when organisation does not exist', async () => {
       const nonExistentOrgId = new ObjectId().toString()
       const registrationId = new ObjectId().toString()
