@@ -9,7 +9,7 @@ import {
   vi
 } from 'vitest'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
-import { startMinioServer, stopMinioServer } from '#vite/fixtures/minio.js'
+import { startS3Server, stopS3Server } from '#vite/fixtures/s3.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from './s3.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
@@ -21,21 +21,21 @@ describe('S3 uploads repository', () => {
   let s3Client
 
   beforeAll(async () => {
-    await startMinioServer()
+    await startS3Server()
   })
 
   afterAll(async () => {
-    await stopMinioServer()
+    await stopS3Server()
   })
 
   beforeEach(async () => {
     s3Client = createS3Client({
       region: 'us-east-1',
-      endpoint: globalThis.__MINIO_ENDPOINT__,
+      endpoint: globalThis.__S3_ENDPOINT__,
       forcePathStyle: true,
       credentials: {
-        accessKeyId: globalThis.__MINIO_ACCESS_KEY__,
-        secretAccessKey: globalThis.__MINIO_SECRET_KEY__
+        accessKeyId: globalThis.__S3_ACCESS_KEY__,
+        secretAccessKey: globalThis.__S3_SECRET_KEY__
       }
     })
 
