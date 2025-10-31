@@ -19,7 +19,13 @@ const it = mongoIt.extend({
   },
 
   summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
-    const repository = summaryLogsRepositoryFactory(console)
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    const repository = summaryLogsRepositoryFactory(mockLogger)
     await use(repository)
   }
 })
