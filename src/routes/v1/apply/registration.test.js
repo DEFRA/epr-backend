@@ -1,3 +1,4 @@
+import { vi, describe, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import {
   AUDIT_EVENT_ACTIONS,
@@ -8,7 +9,7 @@ import {
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import registrationFixture from '#data/fixtures/registration.json'
 import { registrationPath } from './registration.js'
-import { createTestServer } from '#test/create-test-server.js'
+import { it } from './test-fixtures.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn()
@@ -29,24 +30,23 @@ vi.mock('#common/helpers/logging/logger.js', async (importOriginal) => {
 })
 
 const url = registrationPath
-let server
 
 describe(`${url} route`, () => {
-  beforeEach(async () => {
-    server = await createTestServer()
-
+  beforeEach(() => {
     mockAudit.mockClear()
     mockInsertOne.mockClear()
     mockGlobalLoggerWarn.mockClear()
+  })
 
+  it('returns 201 and echoes back payload on valid request', async ({
+    server
+  }) => {
     const collectionSpy = vi.spyOn(server.db, 'collection')
 
     collectionSpy.mockReturnValue({
       insertOne: mockInsertOne
     })
-  })
 
-  it('returns 201 and echoes back payload on valid request', async () => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -77,7 +77,7 @@ describe(`${url} route`, () => {
     )
   })
 
-  it('returns 400 if payload is not an object', async () => {
+  it('returns 400 if payload is not an object', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -89,7 +89,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid request payload JSON format/)
   })
 
-  it('returns 400 if payload is null', async () => {
+  it('returns 400 if payload is null', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -101,7 +101,7 @@ describe(`${url} route`, () => {
     expect(body.message).toMatch(/Invalid payload/)
   })
 
-  it('returns 422 if payload is missing orgId', async () => {
+  it('returns 422 if payload is missing orgId', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -138,7 +138,9 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 422 if payload is missing reference number', async () => {
+  it('returns 422 if payload is missing reference number', async ({
+    server
+  }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -174,7 +176,7 @@ describe(`${url} route`, () => {
     expect(body.message).toEqual(message)
   })
 
-  it('returns 422 if orgId is below minimum value', async () => {
+  it('returns 422 if orgId is below minimum value', async ({ server }) => {
     const response = await server.inject({
       method: 'POST',
       url,
@@ -231,7 +233,13 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 500 if error is thrown by insertOne', async () => {
+  it('returns 500 if error is thrown by insertOne', async ({ server }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      insertOne: mockInsertOne
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = new Error('db.collection.insertOne failed')
     mockInsertOne.mockImplementationOnce(() => {
@@ -262,7 +270,15 @@ describe(`${url} route`, () => {
     })
   })
 
-  it('returns 500 if insertOne fails with mongo validation failures', async () => {
+  it('returns 500 if insertOne fails with mongo validation failures', async ({
+    server
+  }) => {
+    const collectionSpy = vi.spyOn(server.db, 'collection')
+
+    collectionSpy.mockReturnValue({
+      insertOne: mockInsertOne
+    })
+
     const statusCode = StatusCodes.INTERNAL_SERVER_ERROR
     const error = Object.assign(new Error('db.collection.insertOne failed'), {
       errInfo: JSON.parse(
