@@ -1,12 +1,13 @@
+import { describe, beforeEach } from 'vitest'
 import { buildOrganisation } from './test-data.js'
 import { STATUS } from '#domain/organisations.js'
 
-export const testFindBehaviour = (repositoryFactory) => {
+export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
 
-    beforeEach(async () => {
-      repository = await repositoryFactory()
+    beforeEach(async ({ organisationsRepository }) => {
+      repository = await organisationsRepository()
     })
 
     describe('findById', () => {

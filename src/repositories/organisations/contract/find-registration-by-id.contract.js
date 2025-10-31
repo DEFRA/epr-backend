@@ -1,12 +1,13 @@
+import { describe, beforeEach } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { buildOrganisation } from './test-data.js'
 
-export const testFindRegistrationByIdBehaviour = (repositoryFactory) => {
+export const testFindRegistrationByIdBehaviour = (it) => {
   describe('findRegistrationById', () => {
     let repository
 
-    beforeEach(async () => {
-      repository = await repositoryFactory()
+    beforeEach(async ({ organisationsRepository }) => {
+      repository = await organisationsRepository()
     })
 
     it('returns registration when both organisation ID and registration ID are valid', async () => {

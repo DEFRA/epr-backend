@@ -1,11 +1,12 @@
+import { describe, beforeEach } from 'vitest'
 import { buildOrganisation } from './test-data.js'
 
-export const testDataIsolationBehaviour = (repositoryFactory) => {
+export const testDataIsolationBehaviour = (it) => {
   describe('data isolation', () => {
     let repository
 
-    beforeEach(async () => {
-      repository = await repositoryFactory()
+    beforeEach(async ({ organisationsRepository }) => {
+      repository = await organisationsRepository()
     })
 
     describe('findAll isolation', () => {
