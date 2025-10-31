@@ -21,10 +21,10 @@ import { test, vi } from 'vitest'
  *
  * ~10x faster than testServerFixture because it skips MongoDB startup.
  */
-export const it = test.extend(
-  {
+export const it = test.extend({
+  server: [
     // eslint-disable-next-line no-empty-pattern
-    server: async ({}, use) => {
+    async ({}, use) => {
       const { createServer } = await import('#server/server.js')
       const testServer = await createServer({ skipMongoDb: true })
 
@@ -64,7 +64,7 @@ export const it = test.extend(
       await use(server)
 
       await testServer.stop()
-    }
-  },
-  { scope: 'file' }
-)
+    },
+    { scope: 'file' }
+  ]
+})

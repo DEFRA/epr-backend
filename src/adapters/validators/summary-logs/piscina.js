@@ -25,7 +25,7 @@ const pool = new Piscina({
 /** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
 
 /**
- * @returns {SummaryLogsValidator}
+ * @returns {Promise<void>}
  */
 const runValidationInWorker = async (summaryLogId, logger) => {
   try {
