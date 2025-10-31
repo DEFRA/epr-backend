@@ -5,6 +5,8 @@ import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
+const DATABASE_NAME = 'epr-backend'
+
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
@@ -13,7 +15,7 @@ const it = mongoIt.extend({
   },
 
   summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
-    const database = mongoClient.db('epr-backend')
+    const database = mongoClient.db(DATABASE_NAME)
     const factory = createSummaryLogsRepository(database)
     await use(factory)
   },
