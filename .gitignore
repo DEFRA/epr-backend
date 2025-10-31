@@ -3,6 +3,7 @@
 .vscode
 .idea
 .server
+.schemas
 node_modules
 npm-debug.log
 coverage
