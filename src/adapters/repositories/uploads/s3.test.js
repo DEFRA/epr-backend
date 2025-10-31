@@ -1,91 +1,82 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GetObjectCommand } from '@aws-sdk/client-s3'
-
+import { describe, expect, vi } from 'vitest'
+import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { it as s3It } from '#vite/fixtures/s3.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from './s3.js'
-
-vi.mock('@aws-sdk/client-s3')
+import { testUploadsRepositoryContract } from './port.contract.js'
 
 const bucket = 'test-bucket'
-const key = 'test-key'
+const key = 'path/to/summary-log.xlsx'
 
-describe('S3 uploads repository', () => {
-  let s3Client
-  let repository
+const it = s3It.extend({
+  s3Client: async ({ s3 }, use) => {
+    const client = createS3Client({
+      region: 'us-east-1',
+      endpoint: s3,
+      forcePathStyle: true,
+      credentials: {
+        accessKeyId: globalThis.__S3_ACCESS_KEY__,
+        secretAccessKey: globalThis.__S3_SECRET_KEY__
+      }
+    })
 
-  beforeEach(() => {
-    s3Client = {
-      send: vi.fn().mockResolvedValue({
-        Body: {
-          transformToByteArray: vi
-            .fn()
-            .mockResolvedValue(new Uint8Array([1, 2, 3, 4, 5]))
-        }
-      })
+    try {
+      await client.send(
+        new CreateBucketCommand({
+          Bucket: bucket
+        })
+      )
+    } catch (error) {
+      if (error.name !== 'BucketAlreadyOwnedByYou') {
+        throw error
+      }
     }
 
-    repository = createUploadsRepository(s3Client)
-  })
-
-  afterEach(() => {
-    vi.resetAllMocks()
-  })
-
-  describe('findByLocation', () => {
-    it('should call s3 as expected', async () => {
-      await repository.findByLocation({ bucket, key })
-
-      expect(s3Client.send).toHaveBeenCalled()
-      expect(GetObjectCommand).toHaveBeenCalledWith({
+    await client.send(
+      new PutObjectCommand({
         Bucket: bucket,
-        Key: key
+        Key: key,
+        Body: Buffer.from('test file content')
       })
-    })
+    )
 
-    it('should return expected result', async () => {
-      const result = await repository.findByLocation({ bucket, key })
+    await use(client)
+    client.destroy()
+  },
 
-      expect(result).toBeInstanceOf(Buffer)
-      expect(result).toEqual(Buffer.from(new Uint8Array([1, 2, 3, 4, 5])))
-    })
+  uploadsRepository: async ({ s3Client }, use) => {
+    await use(createUploadsRepository(s3Client))
+  }
+})
 
-    it('should throw error when response.Body is undefined', async () => {
-      s3Client.send.mockResolvedValue({ Body: undefined })
+describe('S3 uploads repository', () => {
+  testUploadsRepositoryContract(it)
 
-      await expect(repository.findByLocation({ bucket, key })).rejects.toThrow(
-        `S3 GetObject returned no body for bucket=${bucket}, key=${key}`
+  describe('S3-specific error handling', () => {
+    it('throws error when response.Body is undefined', async () => {
+      const mockS3Client = {
+        send: vi.fn().mockResolvedValue({ Body: undefined })
+      }
+
+      const repository = createUploadsRepository(mockS3Client)
+
+      await expect(
+        repository.findByLocation({ bucket: 'test', key: 'test' })
+      ).rejects.toThrow(
+        'S3 GetObject returned no body for bucket=test, key=test'
       )
     })
 
-    it('should return null when file does not exist (NoSuchKey error)', async () => {
-      const error = new Error('The specified key does not exist')
-      error.name = 'NoSuchKey'
+    it('re-throws unexpected errors', async () => {
+      const mockS3Client = {
+        send: vi.fn().mockRejectedValue(new Error('Network error'))
+      }
 
-      s3Client.send.mockRejectedValue(error)
+      const repository = createUploadsRepository(mockS3Client)
 
-      const result = await repository.findByLocation({ bucket, key })
-
-      expect(result).toBeNull()
-    })
-
-    it('should return null when file does not exist (404 status code)', async () => {
-      const error = new Error('Not found')
-      error.$metadata = { httpStatusCode: 404 }
-
-      s3Client.send.mockRejectedValue(error)
-
-      const result = await repository.findByLocation({ bucket, key })
-
-      expect(result).toBeNull()
-    })
-
-    it('should throw error for unexpected errors', async () => {
-      const error = new Error('Network error')
-
-      s3Client.send.mockRejectedValue(error)
-
-      await expect(repository.findByLocation({ bucket, key })).rejects.toThrow(
-        'Network error'
-      )
+      await expect(
+        repository.findByLocation({ bucket: 'test', key: 'test' })
+      ).rejects.toThrow('Network error')
     })
   })
 })

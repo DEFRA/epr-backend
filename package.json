@@ -92,6 +92,7 @@
     "neostandard": "0.12.2",
     "nodemon": "3.1.10",
     "prettier": "3.6.2",
+    "testcontainers": "11.7.2",
     "tinybench": "5.1.0",
     "vitest": "4.0.5",
     "vitest-fetch-mock": "0.4.5",
