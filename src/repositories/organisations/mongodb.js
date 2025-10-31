@@ -174,6 +174,23 @@ export const createOrganisationsRepository = (db) => () => ({
     }
 
     const registration = doc.registrations?.find((r) => r.id === registrationId)
-    return registration || null
+    if (!registration) {
+      return null
+    }
+
+    // Hydrate with accreditation if accreditationId exists
+    if (registration.accreditationId) {
+      const accreditation = doc.accreditations?.find(
+        (a) => a.id === registration.accreditationId
+      )
+      if (accreditation) {
+        return {
+          ...registration,
+          accreditation
+        }
+      }
+    }
+
+    return registration
   }
 })
