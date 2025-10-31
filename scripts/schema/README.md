@@ -7,7 +7,7 @@ This folder contains small helpers that use `joi-to-json` to transform the Joi s
 ## What it generates today
 
 - `scripts/schema/index.js` currently generates a single file:
-  - `.schemas/organisation.json` – derived from `src/repositories/organisations/schema.js` (the `organisationUpdateSchema`).
+  - `.schemas/organisation.update.json` – derived from `src/repositories/organisations/schema.js` (the `organisationUpdateSchema`).
 
 You can extend this to generate more schemas (see Extending below).
 
@@ -35,7 +35,7 @@ npm run schema:generate
 
 This will create the output directory (if missing) and write JSON Schema files under:
 
-- `.schemas/organisation.json`
+- `.schemas/organisation.update.json`
 
 ## Clean and re-generate
 
@@ -88,7 +88,7 @@ if (!fs.existsSync(outputDir)) {
 // Existing organisation schema
 const organisation = getOrganisationJSONSchema()
 fs.writeFileSync(
-  path.join(outputDir, 'organisation.json'),
+  path.join(outputDir, 'organisation.update.json'),
   JSON.stringify(organisation, null, 2)
 )
 
