@@ -4,12 +4,17 @@ export function createS3Client({
   region,
   endpoint,
   forcePathStyle,
-  credentials
+  credentials = undefined
 }) {
-  return new S3Client({
+  const config = {
     region,
     endpoint,
-    forcePathStyle,
-    credentials
-  })
+    forcePathStyle
+  }
+
+  if (credentials) {
+    config.credentials = credentials
+  }
+
+  return new S3Client(config)
 }
