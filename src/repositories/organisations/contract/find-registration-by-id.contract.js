@@ -117,6 +117,32 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       expect(result.accreditation).toBeUndefined()
     })
 
+    it('returns registration without accreditation field when accreditationId does not match any accreditation', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU333333',
+        accreditationId: new ObjectId().toString(),
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id
+      )
+
+      expect(result.accreditation).toBeUndefined()
+    })
+
     it('returns null when organisation does not exist', async () => {
       const nonExistentOrgId = new ObjectId().toString()
       const registrationId = new ObjectId().toString()
