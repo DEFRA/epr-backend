@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto'
-import { describe, beforeEach, expect, vi } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
-
-const COLLECTION_NAME = 'summary-logs'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -27,13 +25,6 @@ const it = mongoIt.extend({
 })
 
 describe('MongoDB summary logs repository', () => {
-  beforeEach(async ({ mongoClient }) => {
-    await mongoClient
-      .db('epr-backend')
-      .collection(COLLECTION_NAME)
-      .deleteMany({})
-  })
-
   describe('summary logs repository contract', () => {
     testSummaryLogsRepositoryContract(it)
   })
