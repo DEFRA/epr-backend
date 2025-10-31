@@ -6,6 +6,7 @@ import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'
 
 const COLLECTION_NAME = 'epr-organisations'
+const DATABASE_NAME = 'epr-backend'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -15,7 +16,7 @@ const it = mongoIt.extend({
   },
 
   organisationsRepository: async ({ mongoClient }, use) => {
-    const database = mongoClient.db('epr-backend')
+    const database = mongoClient.db(DATABASE_NAME)
     const factory = createOrganisationsRepository(database)
     await use(factory)
   }
@@ -24,7 +25,7 @@ const it = mongoIt.extend({
 describe('MongoDB organisations repository', () => {
   beforeEach(async ({ mongoClient }) => {
     await mongoClient
-      .db('epr-backend')
+      .db(DATABASE_NAME)
       .collection(COLLECTION_NAME)
       .deleteMany({})
   })
@@ -65,7 +66,7 @@ describe('MongoDB organisations repository', () => {
 
       // Directly set arrays to null in database (simulating edge case)
       await mongoClient
-        .db('epr-backend')
+        .db(DATABASE_NAME)
         .collection(COLLECTION_NAME)
         .updateOne(
           { _id: ObjectId.createFromHexString(organisation.id) },
