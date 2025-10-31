@@ -7,6 +7,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { validateWasteRegistrationNumber } from './validations/waste-registration-number.js'
 import { validateSummaryLogType } from './validations/summary-log-type.js'
 import { validateSummaryLogMaterialType } from './validations/summary-log-material-type.js'
+import { validateAccreditationNumber } from './validations/validate-accreditation-number.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -68,7 +69,8 @@ const performValidationChecks = async ({
   const validators = [
     validateWasteRegistrationNumber,
     validateSummaryLogType,
-    validateSummaryLogMaterialType
+    validateSummaryLogMaterialType,
+    validateAccreditationNumber
   ]
 
   for (const validate of validators) {
