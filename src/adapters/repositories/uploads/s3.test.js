@@ -1,15 +1,6 @@
-import {
-  afterAll,
-  beforeAll,
-  beforeEach,
-  afterEach,
-  describe,
-  expect,
-  it,
-  vi
-} from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
-import { startS3Server, stopS3Server } from '#vite/fixtures/s3.js'
+import { it as s3It } from '#vite/fixtures/s3.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from './s3.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
@@ -17,21 +8,11 @@ import { testUploadsRepositoryContract } from './port.contract.js'
 const bucket = 'test-bucket'
 const key = 'path/to/summary-log.xlsx'
 
-describe('S3 uploads repository', () => {
-  let s3Client
-
-  beforeAll(async () => {
-    await startS3Server()
-  })
-
-  afterAll(async () => {
-    await stopS3Server()
-  })
-
-  beforeEach(async () => {
-    s3Client = createS3Client({
+const it = s3It.extend({
+  s3Client: async ({ s3 }, use) => {
+    const client = createS3Client({
       region: 'us-east-1',
-      endpoint: globalThis.__S3_ENDPOINT__,
+      endpoint: s3,
       forcePathStyle: true,
       credentials: {
         accessKeyId: globalThis.__S3_ACCESS_KEY__,
@@ -40,7 +21,7 @@ describe('S3 uploads repository', () => {
     })
 
     try {
-      await s3Client.send(
+      await client.send(
         new CreateBucketCommand({
           Bucket: bucket
         })
@@ -51,20 +32,25 @@ describe('S3 uploads repository', () => {
       }
     }
 
-    await s3Client.send(
+    await client.send(
       new PutObjectCommand({
         Bucket: bucket,
         Key: key,
         Body: Buffer.from('test file content')
       })
     )
-  })
 
-  afterEach(() => {
-    s3Client?.destroy()
-  })
+    await use(client)
+    client.destroy()
+  },
 
-  testUploadsRepositoryContract(() => createUploadsRepository(s3Client))
+  uploadsRepository: async ({ s3Client }, use) => {
+    await use(createUploadsRepository(s3Client))
+  }
+})
+
+describe('S3 uploads repository', () => {
+  testUploadsRepositoryContract(it)
 
   describe('S3-specific error handling', () => {
     it('throws error when response.Body is undefined', async () => {
