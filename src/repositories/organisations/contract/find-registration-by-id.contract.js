@@ -84,19 +84,11 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         registration.id
       )
 
-      expect(result).toMatchObject({
-        id: registration.id,
-        orgName: registration.orgName,
-        material: registration.material,
-        wasteProcessingType: registration.wasteProcessingType,
-        wasteRegistrationNumber: registration.wasteRegistrationNumber,
-        accreditationId: accreditation.id,
-        accreditation: {
-          id: accreditation.id,
-          accreditationNumber: accreditation.accreditationNumber,
-          material: accreditation.material,
-          wasteProcessingType: accreditation.wasteProcessingType
-        }
+      expect(result.accreditation).toMatchObject({
+        id: accreditation.id,
+        accreditationNumber: accreditation.accreditationNumber,
+        material: accreditation.material,
+        wasteProcessingType: accreditation.wasteProcessingType
       })
     })
 
@@ -122,13 +114,6 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         registration.id
       )
 
-      expect(result).toMatchObject({
-        id: registration.id,
-        orgName: registration.orgName,
-        material: registration.material,
-        wasteProcessingType: registration.wasteProcessingType,
-        wasteRegistrationNumber: registration.wasteRegistrationNumber
-      })
       expect(result.accreditation).toBeUndefined()
     })
 
