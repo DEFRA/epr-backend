@@ -26,6 +26,9 @@ export const testInsertBehaviour = (it) => {
         })
 
         await repository.insert(id, summaryLog)
+
+        const found = await repository.findById(id)
+        expect(found).toBeTruthy()
       })
 
       it('stores the summary log so it can be retrieved', async () => {
@@ -170,6 +173,9 @@ export const testInsertBehaviour = (it) => {
           const minimalLog = buildSummaryLog()
 
           await repository.insert(id, minimalLog)
+
+          const found = await repository.findById(id)
+          expect(found).toBeTruthy()
         })
 
         it('accepts valid file.status values', async () => {
@@ -185,6 +191,11 @@ export const testInsertBehaviour = (it) => {
 
           await repository.insert(id1, completeLog)
           await repository.insert(id2, rejectedLog)
+
+          const found1 = await repository.findById(id1)
+          const found2 = await repository.findById(id2)
+          expect(found1.summaryLog.file.status).toBe('complete')
+          expect(found2.summaryLog.file.status).toBe('rejected')
         })
       })
 
