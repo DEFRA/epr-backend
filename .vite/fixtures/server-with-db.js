@@ -1,8 +1,8 @@
 import { it as dbTest } from './mongo.js'
 
-export const it = dbTest.extend(
-  {
-    server: async ({ db }, use) => {
+export const it = dbTest.extend({
+  server: [
+    async ({ db }, use) => {
       // db parameter triggers MongoDB setup (unused directly)
       // eslint-disable-next-line no-unused-vars
       const _dbUri = db
@@ -13,7 +13,7 @@ export const it = dbTest.extend(
       await use(server)
 
       await server.stop()
-    }
-  },
-  { scope: 'file' }
-)
+    },
+    { scope: 'file' }
+  ]
+})
