@@ -159,7 +159,25 @@ export const createInMemoryOrganisationsRepository = (
       const registration = org.registrations?.find(
         (r) => r.id === registrationId
       )
-      return registration ? structuredClone(registration) : null
+
+      if (!registration) {
+        return null
+      }
+
+      // Hydrate with accreditation if accreditationId exists
+      if (registration.accreditationId) {
+        const accreditation = org.accreditations?.find(
+          (a) => a.id === registration.accreditationId
+        )
+        if (accreditation) {
+          return structuredClone({
+            ...registration,
+            accreditation
+          })
+        }
+      }
+
+      return structuredClone(registration)
     }
   })
 }
