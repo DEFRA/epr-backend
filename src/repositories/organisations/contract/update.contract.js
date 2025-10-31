@@ -1,4 +1,4 @@
-import { describe, beforeEach } from 'vitest'
+import { describe, beforeEach, expect } from 'vitest'
 import { buildOrganisation } from './test-data.js'
 import { STATUS } from '#domain/organisations.js'
 

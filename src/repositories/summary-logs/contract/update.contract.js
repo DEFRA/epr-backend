@@ -1,4 +1,4 @@
-import { describe, beforeEach } from 'vitest'
+import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import {
   TEST_S3_BUCKET,

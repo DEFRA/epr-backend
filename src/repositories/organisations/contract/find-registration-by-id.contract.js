@@ -1,4 +1,4 @@
-import { describe, beforeEach } from 'vitest'
+import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import { buildOrganisation } from './test-data.js'
 

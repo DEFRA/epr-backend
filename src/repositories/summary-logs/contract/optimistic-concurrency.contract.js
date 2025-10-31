@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { describe, beforeEach, vi } from 'vitest'
+import { describe, beforeEach, expect, vi } from 'vitest'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 
 const createAndInsertSummaryLog = async (
