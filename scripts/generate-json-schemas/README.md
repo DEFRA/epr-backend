@@ -6,7 +6,7 @@ This folder contains small helpers that use `joi-to-json` to transform the Joi s
 
 ## What it generates today
 
-- `scripts/schema/index.js` currently generates a single file:
+- `scripts/generate-json-schemas/index.js` currently generates a single file:
   - `.schemas/organisation.update.json` – derived from `src/repositories/organisations/schema.js` (the `organisationUpdateSchema`).
 
 You can extend this to generate more schemas (see Extending below).
