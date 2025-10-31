@@ -1,18 +1,13 @@
+import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { buildFile, buildSummaryLog } from './test-data.js'
 
-export const testFindBehaviour = (repositoryFactory) => {
+export const testFindBehaviour = (it) => {
   describe('find', () => {
     let repository
-    const logger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
 
-    beforeEach(async () => {
-      repository = await repositoryFactory(logger)
+    beforeEach(async ({ summaryLogsRepository }) => {
+      repository = summaryLogsRepository
     })
 
     describe('findById', () => {

@@ -1,36 +1,37 @@
-import { afterAll, beforeAll, beforeEach, describe, it, expect } from 'vitest'
-import {
-  setupRepositoryDb,
-  teardownRepositoryDb
-} from '#vite/fixtures/repository-db.js'
+import { describe, beforeEach, expect } from 'vitest'
+import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { MongoClient, ObjectId } from 'mongodb'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation } from './contract/test-data.js'
-import { ObjectId } from 'mongodb'
+
+const COLLECTION_NAME = 'epr-organisations'
+const DATABASE_NAME = 'epr-backend'
+
+const it = mongoIt.extend({
+  mongoClient: async ({ db }, use) => {
+    const client = await MongoClient.connect(db)
+    await use(client)
+    await client.close()
+  },
+
+  organisationsRepository: async ({ mongoClient }, use) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const factory = createOrganisationsRepository(database)
+    await use(factory)
+  }
+})
 
 describe('MongoDB organisations repository', () => {
-  let db
-  let mongoClient
-  let organisationsRepositoryFactory
-  const COLLECTION_NAME = 'epr-organisations'
-
-  beforeAll(async () => {
-    const setup = await setupRepositoryDb()
-    db = setup.db
-    mongoClient = setup.mongoClient
-    organisationsRepositoryFactory = createOrganisationsRepository(db)
-  })
-
-  beforeEach(async () => {
-    await db.collection(COLLECTION_NAME).deleteMany({})
-  })
-
-  afterAll(async () => {
-    await teardownRepositoryDb(mongoClient)
+  beforeEach(async ({ mongoClient }) => {
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection(COLLECTION_NAME)
+      .deleteMany({})
   })
 
   describe('organisations repository contract', () => {
-    testOrganisationsRepositoryContract(() => organisationsRepositoryFactory())
+    testOrganisationsRepositoryContract(it)
   })
 
   describe('MongoDB-specific error handling', () => {
@@ -55,13 +56,17 @@ describe('MongoDB organisations repository', () => {
   })
 
   describe('handling missing registrations/accreditations', () => {
-    it('handles status update when arrays are set to null directly in database', async () => {
-      const repository = organisationsRepositoryFactory()
+    it('handles status update when arrays are set to null directly in database', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
       const organisation = buildOrganisation()
       await repository.insert(organisation)
 
       // Directly set arrays to null in database (simulating edge case)
-      await db
+      await mongoClient
+        .db(DATABASE_NAME)
         .collection(COLLECTION_NAME)
         .updateOne(
           { _id: ObjectId.createFromHexString(organisation.id) },

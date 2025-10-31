@@ -1,11 +1,12 @@
+import { describe, beforeEach, expect } from 'vitest'
 import { buildOrganisation } from './test-data.js'
 
-export const testInsertBehaviour = (repositoryFactory) => {
+export const testInsertBehaviour = (it) => {
   describe('insert', () => {
     let repository
 
-    beforeEach(async () => {
-      repository = await repositoryFactory()
+    beforeEach(async ({ organisationsRepository }) => {
+      repository = await organisationsRepository()
     })
 
     describe('basic behaviour', () => {

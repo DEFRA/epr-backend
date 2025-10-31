@@ -1,29 +1,41 @@
 import { randomUUID } from 'node:crypto'
-import { beforeAll, afterAll, describe, it, expect, vi } from 'vitest'
-import {
-  setupRepositoryDb,
-  teardownRepositoryDb
-} from '#vite/fixtures/repository-db.js'
+import { describe, expect, vi } from 'vitest'
+import { it as mongoIt } from '#vite/fixtures/mongo.js'
+import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 
+const DATABASE_NAME = 'epr-backend'
+
+const it = mongoIt.extend({
+  mongoClient: async ({ db }, use) => {
+    const client = await MongoClient.connect(db)
+    await use(client)
+    await client.close()
+  },
+
+  summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const factory = createSummaryLogsRepository(database)
+    await use(factory)
+  },
+
+  summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    }
+    const repository = summaryLogsRepositoryFactory(mockLogger)
+    await use(repository)
+  }
+})
+
 describe('MongoDB summary logs repository', () => {
-  let mongoClient
-  let summaryLogsRepositoryFactory
-
-  beforeAll(async () => {
-    const { db, mongoClient: client } = await setupRepositoryDb()
-    mongoClient = client
-    summaryLogsRepositoryFactory = createSummaryLogsRepository(db)
+  describe('summary logs repository contract', () => {
+    testSummaryLogsRepositoryContract(it)
   })
-
-  afterAll(async () => {
-    await teardownRepositoryDb(mongoClient)
-  })
-
-  testSummaryLogsRepositoryContract((logger) =>
-    summaryLogsRepositoryFactory(logger)
-  )
 
   describe('MongoDB-specific error handling', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
