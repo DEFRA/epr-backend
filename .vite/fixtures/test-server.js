@@ -11,9 +11,9 @@ import { vi } from 'vitest'
  * }} TestServer
  */
 
-export const it = serverWithDbTest.extend(
-  {
-    testServer: async ({ server }, use) => {
+export const it = serverWithDbTest.extend({
+  testServer: [
+    async ({ server }, use) => {
       /** @type {TestServer} */
       const testServer = /** @type {*} */ (server)
 
@@ -37,7 +37,7 @@ export const it = serverWithDbTest.extend(
       })
 
       await use(testServer)
-    }
-  },
-  { scope: 'file' }
-)
+    },
+    { scope: 'file' }
+  ]
+})
