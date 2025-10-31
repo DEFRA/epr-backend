@@ -1,10 +1,26 @@
 import { randomUUID } from 'node:crypto'
+import { describe, vi, expect, it as base } from 'vitest'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
 
+const it = base.extend({
+  // eslint-disable-next-line no-empty-pattern
+  summaryLogsRepositoryFactory: async ({}, use) => {
+    const factory = createInMemorySummaryLogsRepository()
+    await use(factory)
+  },
+
+  summaryLogsRepository: async ({ summaryLogsRepositoryFactory }, use) => {
+    const repository = summaryLogsRepositoryFactory(console)
+    await use(repository)
+  }
+})
+
 describe('In-memory summary logs repository', () => {
-  testSummaryLogsRepositoryContract(createInMemorySummaryLogsRepository())
+  describe('summary logs repository contract', () => {
+    testSummaryLogsRepositoryContract(it)
+  })
 
   describe('data isolation', () => {
     it('returns independent copies that cannot modify stored data', async () => {

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { vi } from 'vitest'
+import { describe, beforeEach, vi } from 'vitest'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 
 const createAndInsertSummaryLog = async (
@@ -18,18 +18,12 @@ const updateAndFetch = async (repository, id, version, updates) => {
   return repository.findById(id)
 }
 
-export const testOptimisticConcurrency = (repositoryFactory) => {
+export const testOptimisticConcurrency = (it) => {
   describe('optimistic concurrency', () => {
     let repository
-    const logger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
 
-    beforeEach(async () => {
-      repository = await repositoryFactory(logger)
+    beforeEach(async ({ summaryLogsRepository }) => {
+      repository = summaryLogsRepository
     })
 
     describe('version control', () => {
@@ -187,14 +181,16 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
     })
 
     describe('conflict logging', () => {
-      it('logs version conflict with appropriate event metadata', async () => {
+      it('logs version conflict with appropriate event metadata', async ({
+        summaryLogsRepositoryFactory
+      }) => {
         const logger = {
           info: vi.fn(),
           error: vi.fn(),
           warn: vi.fn(),
           debug: vi.fn()
         }
-        const repository = repositoryFactory(logger)
+        const repository = summaryLogsRepositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
@@ -228,14 +224,16 @@ export const testOptimisticConcurrency = (repositoryFactory) => {
         )
       })
 
-      it('includes error details in log when version conflict occurs', async () => {
+      it('includes error details in log when version conflict occurs', async ({
+        summaryLogsRepositoryFactory
+      }) => {
         const logger = {
           info: vi.fn(),
           error: vi.fn(),
           warn: vi.fn(),
           debug: vi.fn()
         }
-        const repository = repositoryFactory(logger)
+        const repository = summaryLogsRepositoryFactory(logger)
 
         const { id, initial } = await createAndInsertSummaryLog(
           repository,

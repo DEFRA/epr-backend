@@ -1,3 +1,4 @@
+import { describe, beforeEach } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import {
   TEST_S3_BUCKET,
@@ -8,18 +9,12 @@ import {
   buildSummaryLog
 } from './test-data.js'
 
-export const testInsertBehaviour = (repositoryFactory) => {
+export const testInsertBehaviour = (it) => {
   describe('insert', () => {
     let repository
-    const logger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
 
-    beforeEach(async () => {
-      repository = await repositoryFactory(logger)
+    beforeEach(async ({ summaryLogsRepository }) => {
+      repository = summaryLogsRepository
     })
 
     describe('basic behaviour', () => {
