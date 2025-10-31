@@ -7,7 +7,9 @@ export async function startMinioServer() {
     return
   }
 
-  minioContainer = await new GenericContainer('minio/minio:latest')
+  minioContainer = await new GenericContainer(
+    'minio/minio:RELEASE.2025-09-07T16-13-09Z'
+  )
     .withExposedPorts(9000)
     .withEnvironment({
       MINIO_ROOT_USER: 'minioadmin',
