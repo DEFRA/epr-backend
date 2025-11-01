@@ -83,8 +83,8 @@
     "glob": "11.0.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.5",
-    "eslint": "9.38.0",
+    "@vitest/coverage-v8": "4.0.6",
+    "eslint": "9.39.0",
     "eslint-plugin-n": "17.23.1",
     "husky": "9.1.7",
     "knip": "5.66.4",
@@ -94,7 +94,7 @@
     "prettier": "3.6.2",
     "testcontainers": "11.7.2",
     "tinybench": "5.1.0",
-    "vitest": "4.0.5",
+    "vitest": "4.0.6",
     "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.2"
   }
