@@ -15,8 +15,9 @@ import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-const DEFAULT_MAX_CONSISTENCY_RETRIES = 10
-const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 10
+// Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
+const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
+const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
 
 const mapDocumentWithCurrentStatuses = (org) => {
   const { _id, ...rest } = org
