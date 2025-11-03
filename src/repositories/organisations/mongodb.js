@@ -15,8 +15,8 @@ import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
-const MAX_CONSISTENCY_RETRIES = 10
-const CONSISTENCY_RETRY_DELAY_MS = 10
+const DEFAULT_MAX_CONSISTENCY_RETRIES = 10
+const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 10
 
 const mapDocumentWithCurrentStatuses = (org) => {
   const { _id, ...rest } = org
@@ -130,7 +130,13 @@ const handleFoundDocument = (doc, minimumVersion) => {
   return { shouldReturn: false }
 }
 
-const performFindById = async (db, id, minimumVersion) => {
+const performFindById = async (
+  db,
+  id,
+  minimumVersion,
+  maxRetries,
+  retryDelayMs
+) => {
   // validate the ID and throw early
   let validatedId
   try {
@@ -139,12 +145,12 @@ const performFindById = async (db, id, minimumVersion) => {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
-  for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+  for (let i = 0; i < maxRetries; i++) {
     const doc = await db
       .collection(COLLECTION_NAME)
       .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
-    const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
+    const isLastRetry = i === maxRetries - 1
 
     if (doc) {
       const { shouldReturn, result } = handleFoundDocument(doc, minimumVersion)
@@ -160,9 +166,7 @@ const performFindById = async (db, id, minimumVersion) => {
 
     // Wait before next retry
     if (!isLastRetry) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-      )
+      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
     }
   }
 
@@ -177,37 +181,51 @@ const performFindAll = async (db) => {
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
+ * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
  * @returns {import('./port.js').OrganisationsRepositoryFactory}
  */
-export const createOrganisationsRepository = (db) => () => ({
-  async insert(organisation) {
-    return performInsert(db, organisation)
-  },
+export const createOrganisationsRepository =
+  (db, eventualConsistencyConfig) => () => {
+    const maxRetries =
+      eventualConsistencyConfig?.maxRetries ?? DEFAULT_MAX_CONSISTENCY_RETRIES
+    const retryDelayMs =
+      eventualConsistencyConfig?.retryDelayMs ??
+      DEFAULT_CONSISTENCY_RETRY_DELAY_MS
 
-  async update(id, version, updates) {
-    return performUpdate(db, id, version, updates)
-  },
+    return {
+      async insert(organisation) {
+        return performInsert(db, organisation)
+      },
 
-  async findById(id, minimumVersion) {
-    return performFindById(db, id, minimumVersion)
-  },
+      async update(id, version, updates) {
+        return performUpdate(db, id, version, updates)
+      },
 
-  async findAll() {
-    return performFindAll(db)
-  },
+      async findById(id, minimumVersion) {
+        return performFindById(db, id, minimumVersion, maxRetries, retryDelayMs)
+      },
 
-  async findRegistrationById(
-    organisationId,
-    registrationId,
-    minimumOrgVersion
-  ) {
-    const org = await this.findById(organisationId, minimumOrgVersion)
-    const registration = org.registrations?.find((r) => r.id === registrationId)
+      async findAll() {
+        return performFindAll(db)
+      },
 
-    if (!registration) {
-      throw Boom.notFound(`Registration with id ${registrationId} not found`)
+      async findRegistrationById(
+        organisationId,
+        registrationId,
+        minimumOrgVersion
+      ) {
+        const org = await this.findById(organisationId, minimumOrgVersion)
+        const registration = org.registrations?.find(
+          (r) => r.id === registrationId
+        )
+
+        if (!registration) {
+          throw Boom.notFound(
+            `Registration with id ${registrationId} not found`
+          )
+        }
+
+        return registration
+      }
     }
-
-    return registration
   }
-})

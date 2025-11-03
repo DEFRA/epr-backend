@@ -77,7 +77,8 @@ async function createServer(options = {}) {
       plugin: repositories,
       options: {
         ...options.repositories,
-        skipMongoDb: options.skipMongoDb
+        skipMongoDb: options.skipMongoDb,
+        eventualConsistency: config.get('mongo.eventualConsistency')
       }
     },
     {

@@ -147,6 +147,20 @@ const baseConfig = {
         ],
         default: 'secondary'
       }
+    },
+    eventualConsistency: {
+      maxRetries: {
+        doc: 'Maximum number of retries when waiting for eventual consistency',
+        format: 'nat',
+        default: isTest ? 10 : 20,
+        env: 'MONGO_EVENTUAL_CONSISTENCY_MAX_RETRIES'
+      },
+      retryDelayMs: {
+        doc: 'Delay in milliseconds between eventual consistency retries',
+        format: 'nat',
+        default: isTest ? 10 : 25,
+        env: 'MONGO_EVENTUAL_CONSISTENCY_RETRY_DELAY_MS'
+      }
     }
   },
   httpProxy: {
