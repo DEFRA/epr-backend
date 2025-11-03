@@ -113,12 +113,6 @@ const performUpdate = async (db, id, version, updates) => {
   }
 }
 
-const shouldRetryFind = (expectedVersion, retryIndex) => {
-  return (
-    expectedVersion !== undefined && retryIndex < MAX_CONSISTENCY_RETRIES - 1
-  )
-}
-
 const handleFoundDocument = (doc, expectedVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
@@ -150,24 +144,26 @@ const performFindById = async (db, id, expectedVersion) => {
       .collection(COLLECTION_NAME)
       .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
+    const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
+
     if (doc) {
       const { shouldReturn, result } = handleFoundDocument(doc, expectedVersion)
       if (shouldReturn) {
         return result
       }
-    } else if (shouldRetryFind(expectedVersion, i) === false) {
+    } else if (expectedVersion === undefined || isLastRetry) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
     }
 
-    // Wait before retry
-    if (i < MAX_CONSISTENCY_RETRIES - 1) {
+    // Wait before next retry
+    if (!isLastRetry) {
       await new Promise((resolve) =>
         setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
       )
     }
   }
 
-  // Timeout
+  // Exhausted retries waiting for version
   throw Boom.internal('Consistency timeout waiting for expected version')
 }
 
