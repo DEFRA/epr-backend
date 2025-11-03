@@ -151,8 +151,11 @@ const performFindById = async (db, id, minimumVersion) => {
       if (shouldReturn) {
         return result
       }
+      // Document exists but version too low - will retry
     } else if (minimumVersion === undefined || isLastRetry) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
+    } else {
+      // Document not found but have retries left - will retry
     }
 
     // Wait before next retry
