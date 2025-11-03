@@ -36,8 +36,12 @@ describe('PUT /v1/organisations/{id}', () => {
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-      expect(response.payload).toBe('')
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      // returned organisation should have the same id and an incremented version
+      expect(body.id).toBe(org.id)
+      expect(body.version).toBe(org.version + 1)
+      expect(body.wasteProcessingTypes).toEqual(['reprocessor'])
     })
 
     it('includes Cache-Control header in successful response', async () => {
@@ -46,7 +50,11 @@ describe('PUT /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'PUT',
-        url: `/v1/organisations/${org.id}`
+        url: `/v1/organisations/${org.id}`,
+        payload: {
+          version: org.version,
+          updateFragment: { wasteProcessingTypes: org.wasteProcessingTypes }
+        }
       })
 
       expect(response.headers['cache-control']).toBe(
@@ -56,6 +64,45 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 
   describe('not found cases', () => {
+    it('returns 404 when update succeeds but repository does not return the updated organisation', async () => {
+      const org = buildOrganisation()
+
+      // repository factory that simulates successful update but findById returns null
+      const brokenRepoFactory = () => ({
+        async insert() {},
+        async update() {},
+        async findAll() {
+          return []
+        },
+        async findById() {
+          return null
+        },
+        async findRegistrationById() {
+          return null
+        }
+      })
+
+      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
+
+      const serverWithBrokenRepo = await createTestServer({
+        repositories: { organisationsRepository: brokenRepoFactory },
+        featureFlags
+      })
+
+      const response = await serverWithBrokenRepo.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${org.id}`,
+        payload: {
+          version: org.version,
+          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toMatch(/Organisation not found/)
+    })
+
     describe('when the orgId does not exist', async () => {
       let response
       beforeEach(async () => {
