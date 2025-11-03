@@ -51,19 +51,19 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('returns null when organisation does not exist', async () => {
+    it('throws 404 when organisation does not exist', async () => {
       const nonExistentOrgId = new ObjectId().toString()
       const registrationId = new ObjectId().toString()
 
-      const result = await repository.findRegistrationById(
-        nonExistentOrgId,
-        registrationId
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(nonExistentOrgId, registrationId)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('returns null when registration does not exist in organisation', async () => {
+    it('throws 404 when registration does not exist in organisation', async () => {
       const registration = {
         id: new ObjectId().toString(),
         orgName: 'Test Org',
@@ -81,15 +81,15 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       await repository.insert(org)
 
       const nonExistentRegistrationId = new ObjectId().toString()
-      const result = await repository.findRegistrationById(
-        org.id,
-        nonExistentRegistrationId
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(org.id, nonExistentRegistrationId)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('does not return registrations from different organisations', async () => {
+    it('throws 404 when registration is from different organisation', async () => {
       const registration1 = {
         id: new ObjectId().toString(),
         orgName: 'Org 1',
@@ -115,21 +115,130 @@ export const testFindRegistrationByIdBehaviour = (it) => {
 
       await Promise.all([org1, org2].map((org) => repository.insert(org)))
 
-      const result = await repository.findRegistrationById(
-        org1.id,
-        registration2.id
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(org1.id, registration2.id)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('returns null for invalid organisation ID format', async () => {
+    it('throws 404 for invalid organisation ID format', async () => {
+      await expect(
+        repository.findRegistrationById('invalid-id', 'reg-123')
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+
+    it('throws timeout error when minimumOrgVersion never arrives', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      // Request a version that will never exist
+      await expect(
+        repository.findRegistrationById(org.id, registration.id, 999)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 },
+        message: 'Consistency timeout waiting for minimum version'
+      })
+    })
+
+    it('waits for minimumOrgVersion and returns registration when version arrives', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      // Update to create version 2
+      await repository.update(org.id, 1, {
+        wasteProcessingTypes: ['exporter']
+      })
+
+      // Request with minimumOrgVersion=2 - should retry until version 2 appears
       const result = await repository.findRegistrationById(
-        'invalid-id',
-        'reg-123'
+        org.id,
+        registration.id,
+        2
       )
 
-      expect(result).toBeNull()
+      expect(result).toMatchObject({
+        id: registration.id,
+        orgName: registration.orgName,
+        material: registration.material
+      })
+    })
+
+    it('waits for minimumOrgVersion and throws 404 when registration does not exist', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      // Update to create version 2
+      await repository.update(org.id, 1, {
+        wasteProcessingTypes: ['exporter']
+      })
+
+      const nonExistentRegistrationId = new ObjectId().toString()
+
+      // Request with minimumOrgVersion=2 for non-existent registration
+      await expect(
+        repository.findRegistrationById(org.id, nonExistentRegistrationId, 2)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+
+    it('throws 404 when waiting for non-existent organisation with minimumOrgVersion', async () => {
+      const nonExistentOrgId = new ObjectId().toString()
+      const registrationId = new ObjectId().toString()
+
+      // Request minimumOrgVersion for org that doesn't exist - should retry then throw 404
+      await expect(
+        repository.findRegistrationById(nonExistentOrgId, registrationId, 1)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
   })
 }

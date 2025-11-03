@@ -6,6 +6,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
+ * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
 
 export const repositories = {
@@ -78,7 +79,8 @@ export const repositories = {
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createOrganisationsRepository(
-            /** @type {import('mongodb').Db} */ (server.db)
+            /** @type {import('mongodb').Db} */ (server.db),
+            options?.eventualConsistency
           )
           registerPerRequest('organisationsRepository', productionFactory)
         })
