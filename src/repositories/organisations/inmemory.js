@@ -19,16 +19,17 @@ const CONSISTENCY_RETRY_DELAY_MS = 10
  * @typedef {{ id: string, [key: string]: any }} Organisation
  */
 
-const enrichItemsWithStatus = (items) => {
-  for (const item of items) {
-    item.status = getCurrentStatus(item)
-  }
-}
-
 const enrichWithCurrentStatus = (org) => {
   org.status = getCurrentStatus(org)
-  enrichItemsWithStatus(org.registrations)
-  enrichItemsWithStatus(org.accreditations)
+
+  for (const item of org.registrations) {
+    item.status = getCurrentStatus(item)
+  }
+
+  for (const item of org.accreditations) {
+    item.status = getCurrentStatus(item)
+  }
+
   return org
 }
 
@@ -159,7 +160,7 @@ export const createInMemoryOrganisationsRepository = (
   initialOrganisations = []
 ) => {
   const storage = structuredClone(initialOrganisations)
-  const staleCache = structuredClone(initialOrganisations)
+  const staleCache = structuredClone(storage)
   const pendingSyncRef = { current: null }
 
   return () => ({
@@ -222,45 +223,16 @@ export const createInMemoryOrganisationsRepository = (
       registrationId,
       expectedOrgVersion
     ) {
-      for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-        const org = staleCache.find((o) => o.id === organisationId)
+      const org = await this.findById(organisationId, expectedOrgVersion)
+      const registration = org.registrations?.find(
+        (r) => r.id === registrationId
+      )
 
-        if (!org) {
-          // No org found - retry in case it's propagating
-          if (
-            expectedOrgVersion === undefined ||
-            i === MAX_CONSISTENCY_RETRIES - 1
-          ) {
-            return null
-          }
-        } else {
-          // No version expectation - return immediately
-          if (expectedOrgVersion === undefined) {
-            const registration = org.registrations?.find(
-              (r) => r.id === registrationId
-            )
-            return registration ? structuredClone(registration) : null
-          }
-
-          // Version matches - consistency achieved
-          if (org.version >= expectedOrgVersion) {
-            const registration = org.registrations?.find(
-              (r) => r.id === registrationId
-            )
-            return registration ? structuredClone(registration) : null
-          }
-        }
-
-        // Wait before retry
-        if (i < MAX_CONSISTENCY_RETRIES - 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-          )
-        }
+      if (!registration) {
+        throw Boom.notFound(`Registration with id ${registrationId} not found`)
       }
 
-      // Timeout
-      throw Boom.internal('Consistency timeout waiting for expected version')
+      return structuredClone(registration)
     }
   })
 }

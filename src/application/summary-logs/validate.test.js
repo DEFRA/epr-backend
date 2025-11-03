@@ -2,6 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'
 
@@ -159,7 +160,9 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should update status as expected when registration not found', async () => {
-    organisationsRepository.findRegistrationById.mockResolvedValue(null)
+    organisationsRepository.findRegistrationById.mockRejectedValue(
+      Boom.notFound('Registration with id reg-123 not found')
+    )
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
@@ -168,8 +171,7 @@ describe('SummaryLogsValidator', () => {
       1,
       {
         status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason:
-          'Registration not found: organisationId=org-123, registrationId=reg-123'
+        failureReason: 'Registration with id reg-123 not found'
       }
     )
   })

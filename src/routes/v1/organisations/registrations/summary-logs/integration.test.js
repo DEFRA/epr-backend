@@ -15,8 +15,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 
-const organisationId = 'org-123'
-const registrationId = 'reg-456'
+import { ObjectId } from 'mongodb'
+
+const organisationId = new ObjectId().toString()
+const registrationId = new ObjectId().toString()
 
 const createUploadPayload = (
   fileStatus,

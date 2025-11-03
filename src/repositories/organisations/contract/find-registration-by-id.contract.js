@@ -51,19 +51,19 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('returns null when organisation does not exist', async () => {
+    it('throws 404 when organisation does not exist', async () => {
       const nonExistentOrgId = new ObjectId().toString()
       const registrationId = new ObjectId().toString()
 
-      const result = await repository.findRegistrationById(
-        nonExistentOrgId,
-        registrationId
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(nonExistentOrgId, registrationId)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('returns null when registration does not exist in organisation', async () => {
+    it('throws 404 when registration does not exist in organisation', async () => {
       const registration = {
         id: new ObjectId().toString(),
         orgName: 'Test Org',
@@ -81,15 +81,15 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       await repository.insert(org)
 
       const nonExistentRegistrationId = new ObjectId().toString()
-      const result = await repository.findRegistrationById(
-        org.id,
-        nonExistentRegistrationId
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(org.id, nonExistentRegistrationId)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('does not return registrations from different organisations', async () => {
+    it('throws 404 when registration is from different organisation', async () => {
       const registration1 = {
         id: new ObjectId().toString(),
         orgName: 'Org 1',
@@ -115,21 +115,21 @@ export const testFindRegistrationByIdBehaviour = (it) => {
 
       await Promise.all([org1, org2].map((org) => repository.insert(org)))
 
-      const result = await repository.findRegistrationById(
-        org1.id,
-        registration2.id
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(org1.id, registration2.id)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('returns null for invalid organisation ID format', async () => {
-      const result = await repository.findRegistrationById(
-        'invalid-id',
-        'reg-123'
-      )
-
-      expect(result).toBeNull()
+    it('throws 404 for invalid organisation ID format', async () => {
+      await expect(
+        repository.findRegistrationById('invalid-id', 'reg-123')
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
     it('throws timeout error when expectedOrgVersion never arrives', async () => {
@@ -195,7 +195,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('waits for expectedOrgVersion and returns null when registration does not exist', async () => {
+    it('waits for expectedOrgVersion and throws 404 when registration does not exist', async () => {
       const registration = {
         id: new ObjectId().toString(),
         orgName: 'Test Org',
@@ -220,27 +220,25 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       const nonExistentRegistrationId = new ObjectId().toString()
 
       // Request with expectedOrgVersion=2 for non-existent registration
-      const result = await repository.findRegistrationById(
-        org.id,
-        nonExistentRegistrationId,
-        2
-      )
-
-      expect(result).toBeNull()
+      await expect(
+        repository.findRegistrationById(org.id, nonExistentRegistrationId, 2)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
-    it('returns null when waiting for non-existent organisation with expectedOrgVersion', async () => {
+    it('throws 404 when waiting for non-existent organisation with expectedOrgVersion', async () => {
       const nonExistentOrgId = new ObjectId().toString()
       const registrationId = new ObjectId().toString()
 
-      // Request expectedOrgVersion for org that doesn't exist - should retry then return null
-      const result = await repository.findRegistrationById(
-        nonExistentOrgId,
-        registrationId,
-        1
-      )
-
-      expect(result).toBeNull()
+      // Request expectedOrgVersion for org that doesn't exist - should retry then throw 404
+      await expect(
+        repository.findRegistrationById(nonExistentOrgId, registrationId, 1)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
   })
 }

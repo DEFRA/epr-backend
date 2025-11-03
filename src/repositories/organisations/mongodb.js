@@ -189,56 +189,13 @@ export const createOrganisationsRepository = (db) => () => ({
     registrationId,
     expectedOrgVersion
   ) {
-    let validatedOrgId
-    try {
-      validatedOrgId = validateId(organisationId)
-    } catch {
-      // Invalid organisation ID format - treat as not found per contract test
-      return null
+    const org = await this.findById(organisationId, expectedOrgVersion)
+    const registration = org.registrations?.find((r) => r.id === registrationId)
+
+    if (!registration) {
+      throw Boom.notFound(`Registration with id ${registrationId} not found`)
     }
 
-    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-      const doc = await db
-        .collection(COLLECTION_NAME)
-        .findOne({ _id: ObjectId.createFromHexString(validatedOrgId) })
-
-      if (!doc) {
-        // No version expectation or last retry - return null
-        if (
-          expectedOrgVersion === undefined ||
-          i === MAX_CONSISTENCY_RETRIES - 1
-        ) {
-          return null
-        }
-      } else {
-        const mapped = mapDocumentWithCurrentStatuses(doc)
-
-        // No version expectation - return immediately
-        if (expectedOrgVersion === undefined) {
-          const registration = mapped.registrations?.find(
-            (r) => r.id === registrationId
-          )
-          return registration || null
-        }
-
-        // Version matches
-        if (mapped.version >= expectedOrgVersion) {
-          const registration = mapped.registrations?.find(
-            (r) => r.id === registrationId
-          )
-          return registration || null
-        }
-      }
-
-      // Wait before retry
-      if (i < MAX_CONSISTENCY_RETRIES - 1) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-        )
-      }
-    }
-
-    // Timeout
-    throw Boom.internal('Consistency timeout waiting for expected version')
+    return registration
   }
 })
