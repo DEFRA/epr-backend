@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import Boom from '@hapi/boom'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -22,7 +23,7 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 
   describe('happy path', () => {
-    it('returns 204 and no content when the org Id exists, the version is correct and the fragment is valid', async () => {
+    it('returns 200 and the updated organisation when the org Id exists, the version is correct and the fragment is valid', async () => {
       const org = buildOrganisation()
 
       await organisationsRepository.insert(org)
@@ -75,7 +76,8 @@ describe('PUT /v1/organisations/{id}', () => {
           return []
         },
         async findById() {
-          return null
+          // simulate repository throwing not-found error
+          throw Boom.notFound('Organisation not found')
         },
         async findRegistrationById() {
           return null

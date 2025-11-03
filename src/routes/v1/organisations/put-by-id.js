@@ -53,10 +53,6 @@ export const organisationsPutById = {
     try {
       await organisationsRepository.update(id, version, sanitisedFragment)
       const updated = await organisationsRepository.findById(id)
-      if (!updated) {
-        // If repository reports not found after successful update, treat as not found
-        throw Boom.notFound('Organisation not found')
-      }
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)
