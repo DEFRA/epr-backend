@@ -131,5 +131,116 @@ export const testFindRegistrationByIdBehaviour = (it) => {
 
       expect(result).toBeNull()
     })
+
+    it('throws timeout error when expectedOrgVersion never arrives', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      // Request a version that will never exist
+      await expect(
+        repository.findRegistrationById(org.id, registration.id, 999)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 },
+        message: 'Consistency timeout waiting for expected version'
+      })
+    })
+
+    it('waits for expectedOrgVersion and returns registration when version arrives', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      // Update to create version 2
+      await repository.update(org.id, 1, {
+        wasteProcessingTypes: ['exporter']
+      })
+
+      // Request with expectedOrgVersion=2 - should retry until version 2 appears
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id,
+        2
+      )
+
+      expect(result).toMatchObject({
+        id: registration.id,
+        orgName: registration.orgName,
+        material: registration.material
+      })
+    })
+
+    it('waits for expectedOrgVersion and returns null when registration does not exist', async () => {
+      const registration = {
+        id: new ObjectId().toString(),
+        orgName: 'Test Org',
+        material: 'glass',
+        wasteProcessingType: 'reprocessor',
+        wasteRegistrationNumber: 'CBDU111111',
+        formSubmissionTime: '2025-08-20T19:34:44.944Z',
+        submittedToRegulator: 'ea'
+      }
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      // Update to create version 2
+      await repository.update(org.id, 1, {
+        wasteProcessingTypes: ['exporter']
+      })
+
+      const nonExistentRegistrationId = new ObjectId().toString()
+
+      // Request with expectedOrgVersion=2 for non-existent registration
+      const result = await repository.findRegistrationById(
+        org.id,
+        nonExistentRegistrationId,
+        2
+      )
+
+      expect(result).toBeNull()
+    })
+
+    it('returns null when waiting for non-existent organisation with expectedOrgVersion', async () => {
+      const nonExistentOrgId = new ObjectId().toString()
+      const registrationId = new ObjectId().toString()
+
+      // Request expectedOrgVersion for org that doesn't exist - should retry then return null
+      const result = await repository.findRegistrationById(
+        nonExistentOrgId,
+        registrationId,
+        1
+      )
+
+      expect(result).toBeNull()
+    })
   })
 }

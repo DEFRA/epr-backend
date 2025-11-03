@@ -15,6 +15,8 @@ import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+const MAX_CONSISTENCY_RETRIES = 10
+const CONSISTENCY_RETRY_DELAY_MS = 10
 
 const mapDocumentWithCurrentStatuses = (org) => {
   const { _id, ...rest } = org
@@ -111,7 +113,7 @@ const performUpdate = async (db, id, version, updates) => {
   }
 }
 
-const performFindById = async (db, id) => {
+const performFindById = async (db, id, expectedVersion) => {
   // validate the ID and throw early
   let validatedId
   try {
@@ -120,15 +122,40 @@ const performFindById = async (db, id) => {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
-  const doc = await db
-    .collection(COLLECTION_NAME)
-    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
+  for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
-  if (!doc) {
-    throw Boom.notFound(`Organisation with id ${id} not found`)
+    if (!doc) {
+      // No version expectation or last retry - throw not found
+      if (expectedVersion === undefined || i === MAX_CONSISTENCY_RETRIES - 1) {
+        throw Boom.notFound(`Organisation with id ${id} not found`)
+      }
+    } else {
+      const mapped = mapDocumentWithCurrentStatuses(doc)
+
+      // No version expectation - return immediately
+      if (expectedVersion === undefined) {
+        return mapped
+      }
+
+      // Version matches
+      if (mapped.version >= expectedVersion) {
+        return mapped
+      }
+    }
+
+    // Wait before retry
+    if (i < MAX_CONSISTENCY_RETRIES - 1) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+      )
+    }
   }
 
-  return mapDocumentWithCurrentStatuses(doc)
+  // Timeout
+  throw Boom.internal('Consistency timeout waiting for expected version')
 }
 
 const performFindAll = async (db) => {
@@ -149,15 +176,19 @@ export const createOrganisationsRepository = (db) => () => ({
     return performUpdate(db, id, version, updates)
   },
 
-  async findById(id) {
-    return performFindById(db, id)
+  async findById(id, expectedVersion) {
+    return performFindById(db, id, expectedVersion)
   },
 
   async findAll() {
     return performFindAll(db)
   },
 
-  async findRegistrationById(organisationId, registrationId) {
+  async findRegistrationById(
+    organisationId,
+    registrationId,
+    expectedOrgVersion
+  ) {
     let validatedOrgId
     try {
       validatedOrgId = validateId(organisationId)
@@ -166,14 +197,48 @@ export const createOrganisationsRepository = (db) => () => ({
       return null
     }
 
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ _id: ObjectId.createFromHexString(validatedOrgId) })
-    if (!doc) {
-      return null
+    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+      const doc = await db
+        .collection(COLLECTION_NAME)
+        .findOne({ _id: ObjectId.createFromHexString(validatedOrgId) })
+
+      if (!doc) {
+        // No version expectation or last retry - return null
+        if (
+          expectedOrgVersion === undefined ||
+          i === MAX_CONSISTENCY_RETRIES - 1
+        ) {
+          return null
+        }
+      } else {
+        const mapped = mapDocumentWithCurrentStatuses(doc)
+
+        // No version expectation - return immediately
+        if (expectedOrgVersion === undefined) {
+          const registration = mapped.registrations?.find(
+            (r) => r.id === registrationId
+          )
+          return registration || null
+        }
+
+        // Version matches
+        if (mapped.version >= expectedOrgVersion) {
+          const registration = mapped.registrations?.find(
+            (r) => r.id === registrationId
+          )
+          return registration || null
+        }
+      }
+
+      // Wait before retry
+      if (i < MAX_CONSISTENCY_RETRIES - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+        )
+      }
     }
 
-    const registration = doc.registrations?.find((r) => r.id === registrationId)
-    return registration || null
+    // Timeout
+    throw Boom.internal('Consistency timeout waiting for expected version')
   }
 })
