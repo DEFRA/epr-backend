@@ -12,8 +12,9 @@ import {
 } from './helpers.js'
 import Boom from '@hapi/boom'
 
-const DEFAULT_MAX_CONSISTENCY_RETRIES = 10
-const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 10
+// Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
+const MAX_CONSISTENCY_RETRIES = 5
+const CONSISTENCY_RETRY_DELAY_MS = 5
 
 /**
  * @typedef {{ id: string, [key: string]: any }} Organisation
@@ -146,30 +147,23 @@ const performFindById = (staleCache) => (id) => {
 /**
  * Create an in-memory organisations repository.
  * Ensures data isolation by deep-cloning on store and on read.
+ * Uses aggressive retry settings optimized for setImmediate() sync timing.
  *
  * @param {Organisation[]} [initialOrganisations=[]]
- * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
  * @returns {import('./port.js').OrganisationsRepositoryFactory}
  */
 export const createInMemoryOrganisationsRepository = (
-  initialOrganisations = [],
-  eventualConsistencyConfig
+  initialOrganisations = []
 ) => {
   const storage = structuredClone(initialOrganisations)
   const staleCache = structuredClone(storage)
   const pendingSyncRef = { current: null }
 
-  const maxRetries =
-    eventualConsistencyConfig?.maxRetries ?? DEFAULT_MAX_CONSISTENCY_RETRIES
-  const retryDelayMs =
-    eventualConsistencyConfig?.retryDelayMs ??
-    DEFAULT_CONSISTENCY_RETRY_DELAY_MS
-
   const findByIdFromCache = performFindById(staleCache)
 
   return () => {
     const findById = async (id, minimumVersion) => {
-      for (let i = 0; i < maxRetries; i++) {
+      for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
         try {
           const result = findByIdFromCache(id)
 
@@ -184,14 +178,16 @@ export const createInMemoryOrganisationsRepository = (
           }
         } catch (error) {
           // Document not found - retry in case it's propagating
-          if (i === maxRetries - 1) {
+          if (i === MAX_CONSISTENCY_RETRIES - 1) {
             throw error
           }
         }
 
         // Wait before retry
-        if (i < maxRetries - 1) {
-          await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+        if (i < MAX_CONSISTENCY_RETRIES - 1) {
+          await new Promise((resolve) =>
+            setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+          )
         }
       }
 
