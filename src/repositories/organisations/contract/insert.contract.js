@@ -17,8 +17,11 @@ export const testInsertBehaviour = (it) => {
 
         const result = await repository.findById(orgData.id)
 
+        const { statusHistory: _orgStatusHistory, ...orgWithoutStatusHistory } =
+          orgData
+
         const expectedData = {
-          ...orgData,
+          ...orgWithoutStatusHistory,
           formSubmissionTime: new Date(orgData.formSubmissionTime),
           registrations: orgData.registrations.map((reg) => {
             const { statusHistory, ...regWithoutStatusHistory } = reg

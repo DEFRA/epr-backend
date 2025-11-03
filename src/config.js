@@ -10,6 +10,14 @@ const isProduction = process.env.NODE_ENV === 'production'
 const isDevelopment = process.env.NODE_ENV !== 'production'
 const isTest = process.env.NODE_ENV === 'test'
 
+// Fast test values for eventual consistency retries
+const TEST_CONSISTENCY_MAX_RETRIES = 10
+const TEST_CONSISTENCY_RETRY_DELAY_MS = 10
+
+// Production-safe defaults for multi-AZ MongoDB w:majority (p99 lag: 100-200ms)
+const PRODUCTION_CONSISTENCY_MAX_RETRIES = 20
+const PRODUCTION_CONSISTENCY_RETRY_DELAY_MS = 25
+
 const baseConfig = {
   serviceVersion: {
     doc: 'The service version, this variable is injected into your docker container in CDP environments',
@@ -146,6 +154,24 @@ const baseConfig = {
           'nearest'
         ],
         default: 'secondary'
+      }
+    },
+    eventualConsistency: {
+      maxRetries: {
+        doc: 'Maximum number of retries when waiting for eventual consistency',
+        format: 'nat',
+        default: isTest
+          ? TEST_CONSISTENCY_MAX_RETRIES
+          : PRODUCTION_CONSISTENCY_MAX_RETRIES,
+        env: 'MONGO_EVENTUAL_CONSISTENCY_MAX_RETRIES'
+      },
+      retryDelayMs: {
+        doc: 'Delay in milliseconds between eventual consistency retries',
+        format: 'nat',
+        default: isTest
+          ? TEST_CONSISTENCY_RETRY_DELAY_MS
+          : PRODUCTION_CONSISTENCY_RETRY_DELAY_MS,
+        env: 'MONGO_EVENTUAL_CONSISTENCY_RETRY_DELAY_MS'
       }
     }
   },

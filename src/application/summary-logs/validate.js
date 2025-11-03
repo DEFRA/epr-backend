@@ -25,12 +25,6 @@ const fetchRegistration = async ({
     registrationId
   )
 
-  if (!registration) {
-    throw new Error(
-      `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
-    )
-  }
-
   logger.info({
     message: `Fetched registration: ${loggingContext}`,
     event: {

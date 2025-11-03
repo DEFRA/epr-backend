@@ -3,8 +3,8 @@
  * @property {(organisation: Object) => Promise<void>} insert
  * @property {(id: string, version: number, updates: Object) => Promise<void>} update
  * @property {() => Promise<Object[]>} findAll
- * @property {(id: string) => Promise<Object|null>} findById
- * @property {(organisationId: string, registrationId: string) => Promise<Object|null>} findRegistrationById
+ * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
+ * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Object|null>} findRegistrationById
  */
 
 /**
