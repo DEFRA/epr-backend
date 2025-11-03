@@ -113,6 +113,29 @@ const performUpdate = async (db, id, version, updates) => {
   }
 }
 
+const shouldRetryFind = (expectedVersion, retryIndex) => {
+  return (
+    expectedVersion !== undefined && retryIndex < MAX_CONSISTENCY_RETRIES - 1
+  )
+}
+
+const handleFoundDocument = (doc, expectedVersion) => {
+  const mapped = mapDocumentWithCurrentStatuses(doc)
+
+  // No version expectation - return immediately
+  if (expectedVersion === undefined) {
+    return { shouldReturn: true, result: mapped }
+  }
+
+  // Version matches - return
+  if (mapped.version >= expectedVersion) {
+    return { shouldReturn: true, result: mapped }
+  }
+
+  // Version doesn't match yet - retry
+  return { shouldReturn: false }
+}
+
 const performFindById = async (db, id, expectedVersion) => {
   // validate the ID and throw early
   let validatedId
@@ -127,23 +150,13 @@ const performFindById = async (db, id, expectedVersion) => {
       .collection(COLLECTION_NAME)
       .findOne({ _id: ObjectId.createFromHexString(validatedId) })
 
-    if (!doc) {
-      // No version expectation or last retry - throw not found
-      if (expectedVersion === undefined || i === MAX_CONSISTENCY_RETRIES - 1) {
-        throw Boom.notFound(`Organisation with id ${id} not found`)
+    if (doc) {
+      const { shouldReturn, result } = handleFoundDocument(doc, expectedVersion)
+      if (shouldReturn) {
+        return result
       }
-    } else {
-      const mapped = mapDocumentWithCurrentStatuses(doc)
-
-      // No version expectation - return immediately
-      if (expectedVersion === undefined) {
-        return mapped
-      }
-
-      // Version matches
-      if (mapped.version >= expectedVersion) {
-        return mapped
-      }
+    } else if (shouldRetryFind(expectedVersion, i) === false) {
+      throw Boom.notFound(`Organisation with id ${id} not found`)
     }
 
     // Wait before retry
