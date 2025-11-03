@@ -37,6 +37,6 @@ export default defineConfig({
         functions: 100
       }
     },
-    setupFiles: ['.vite/setup-files.js']
+    setupFiles: ['.vite/setup-files.js', '.vite/setup-msw.js']
   }
 })
