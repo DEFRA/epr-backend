@@ -33,7 +33,7 @@ const mapDocumentWithCurrentStatuses = (org) => {
   return { id: _id.toString(), ...rest }
 }
 
-const performInsert = async (db, organisation) => {
+const performInsert = (db) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
 
@@ -67,7 +67,7 @@ const performInsert = async (db, organisation) => {
   }
 }
 
-const performUpdate = async (db, id, version, updates) => {
+const performUpdate = (db) => async (id, version, updates) => {
   const validatedId = validateId(id)
   const validatedUpdates = validateOrganisationUpdate(updates)
 
@@ -130,51 +130,49 @@ const handleFoundDocument = (doc, minimumVersion) => {
   return { shouldReturn: false }
 }
 
-const performFindById = async (
-  db,
-  id,
-  minimumVersion,
-  maxRetries,
-  retryDelayMs
-) => {
-  // validate the ID and throw early
-  let validatedId
-  try {
-    validatedId = validateId(id)
-  } catch (error) {
-    throw Boom.notFound(`Organisation with id ${id} not found`)
-  }
-
-  for (let i = 0; i < maxRetries; i++) {
-    const doc = await db
-      .collection(COLLECTION_NAME)
-      .findOne({ _id: ObjectId.createFromHexString(validatedId) })
-
-    const isLastRetry = i === maxRetries - 1
-
-    if (doc) {
-      const { shouldReturn, result } = handleFoundDocument(doc, minimumVersion)
-      if (shouldReturn) {
-        return result
-      }
-      // Document exists but version too low - will retry
-    } else if (minimumVersion === undefined || isLastRetry) {
+const performFindById =
+  (db, maxRetries, retryDelayMs) => async (id, minimumVersion) => {
+    // validate the ID and throw early
+    let validatedId
+    try {
+      validatedId = validateId(id)
+    } catch (error) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
-    } else {
-      // Document not found but have retries left - will retry
     }
 
-    // Wait before next retry
-    if (!isLastRetry) {
-      await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+    for (let i = 0; i < maxRetries; i++) {
+      const doc = await db
+        .collection(COLLECTION_NAME)
+        .findOne({ _id: ObjectId.createFromHexString(validatedId) })
+
+      const isLastRetry = i === maxRetries - 1
+
+      if (doc) {
+        const { shouldReturn, result } = handleFoundDocument(
+          doc,
+          minimumVersion
+        )
+        if (shouldReturn) {
+          return result
+        }
+        // Document exists but version too low - will retry
+      } else if (minimumVersion === undefined || isLastRetry) {
+        throw Boom.notFound(`Organisation with id ${id} not found`)
+      } else {
+        // Document not found but have retries left - will retry
+      }
+
+      // Wait before next retry
+      if (!isLastRetry) {
+        await new Promise((resolve) => setTimeout(resolve, retryDelayMs))
+      }
     }
+
+    // Exhausted retries waiting for minimum version
+    throw Boom.internal('Consistency timeout waiting for minimum version')
   }
 
-  // Exhausted retries waiting for minimum version
-  throw Boom.internal('Consistency timeout waiting for minimum version')
-}
-
-const performFindAll = async (db) => {
+const performFindAll = (db) => async () => {
   const docs = await db.collection(COLLECTION_NAME).find().toArray()
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
@@ -192,29 +190,20 @@ export const createOrganisationsRepository =
       eventualConsistencyConfig?.retryDelayMs ??
       DEFAULT_CONSISTENCY_RETRY_DELAY_MS
 
+    const findById = performFindById(db, maxRetries, retryDelayMs)
+
     return {
-      async insert(organisation) {
-        return performInsert(db, organisation)
-      },
-
-      async update(id, version, updates) {
-        return performUpdate(db, id, version, updates)
-      },
-
-      async findById(id, minimumVersion) {
-        return performFindById(db, id, minimumVersion, maxRetries, retryDelayMs)
-      },
-
-      async findAll() {
-        return performFindAll(db)
-      },
+      insert: performInsert(db),
+      update: performUpdate(db),
+      findById,
+      findAll: performFindAll(db),
 
       async findRegistrationById(
         organisationId,
         registrationId,
         minimumOrgVersion
       ) {
-        const org = await this.findById(organisationId, minimumOrgVersion)
+        const org = await findById(organisationId, minimumOrgVersion)
         const registration = org.registrations?.find(
           (r) => r.id === registrationId
         )

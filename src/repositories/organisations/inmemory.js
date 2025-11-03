@@ -54,7 +54,7 @@ const scheduleStaleCacheSync = (storage, staleCache, pendingSyncRef) => {
   })
 }
 
-const performInsert = (storage, staleCache, organisation) => {
+const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
 
@@ -82,57 +82,51 @@ const performInsert = (storage, staleCache, organisation) => {
   staleCache.push(structuredClone(newOrg))
 }
 
-const performUpdate = (
-  storage,
-  staleCache,
-  pendingSyncRef,
-  id,
-  version,
-  updates
-) => {
-  const validatedId = validateId(id)
-  const validatedUpdates = validateOrganisationUpdate(updates)
+const performUpdate =
+  (storage, staleCache, pendingSyncRef) => async (id, version, updates) => {
+    const validatedId = validateId(id)
+    const validatedUpdates = validateOrganisationUpdate(updates)
 
-  const existingIndex = storage.findIndex((o) => o.id === validatedId)
-  if (existingIndex === -1) {
-    throw Boom.notFound(`Organisation with id ${validatedId} not found`)
-  }
+    const existingIndex = storage.findIndex((o) => o.id === validatedId)
+    if (existingIndex === -1) {
+      throw Boom.notFound(`Organisation with id ${validatedId} not found`)
+    }
 
-  const existing = storage[existingIndex]
+    const existing = storage[existingIndex]
 
-  if (existing.version !== version) {
-    throw Boom.conflict(
-      `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+    if (existing.version !== version) {
+      throw Boom.conflict(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
+    }
+
+    const merged = {
+      ...existing,
+      ...validatedUpdates
+    }
+
+    const registrations = mergeSubcollection(
+      existing.registrations,
+      validatedUpdates.registrations
     )
+    const accreditations = mergeSubcollection(
+      existing.accreditations,
+      validatedUpdates.accreditations
+    )
+
+    storage[existingIndex] = {
+      ...merged,
+      statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+      registrations,
+      accreditations,
+      version: existing.version + 1
+    }
+
+    // Schedule async staleCache update
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
   }
 
-  const merged = {
-    ...existing,
-    ...validatedUpdates
-  }
-
-  const registrations = mergeSubcollection(
-    existing.registrations,
-    validatedUpdates.registrations
-  )
-  const accreditations = mergeSubcollection(
-    existing.accreditations,
-    validatedUpdates.accreditations
-  )
-
-  storage[existingIndex] = {
-    ...merged,
-    statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
-    registrations,
-    accreditations,
-    version: existing.version + 1
-  }
-
-  // Schedule async staleCache update
-  scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-}
-
-const performFindById = (staleCache, id) => {
+const performFindById = (staleCache) => (id) => {
   try {
     validateId(id)
   } catch (validationError) {
@@ -171,32 +165,13 @@ export const createInMemoryOrganisationsRepository = (
     eventualConsistencyConfig?.retryDelayMs ??
     DEFAULT_CONSISTENCY_RETRY_DELAY_MS
 
-  return () => ({
-    async insert(organisation) {
-      return performInsert(storage, staleCache, organisation)
-    },
+  const findByIdFromCache = performFindById(staleCache)
 
-    async update(id, version, updates) {
-      return performUpdate(
-        storage,
-        staleCache,
-        pendingSyncRef,
-        id,
-        version,
-        updates
-      )
-    },
-
-    async findAll() {
-      return structuredClone(staleCache).map((org) =>
-        enrichWithCurrentStatus({ ...org })
-      )
-    },
-
-    async findById(id, minimumVersion) {
+  return () => {
+    const findById = async (id, minimumVersion) => {
       for (let i = 0; i < maxRetries; i++) {
         try {
-          const result = performFindById(staleCache, id)
+          const result = findByIdFromCache(id)
 
           // No version expectation - return immediately (may be stale)
           if (minimumVersion === undefined) {
@@ -222,23 +197,38 @@ export const createInMemoryOrganisationsRepository = (
 
       // Timeout - throw error
       throw Boom.internal('Consistency timeout waiting for minimum version')
-    },
-
-    async findRegistrationById(
-      organisationId,
-      registrationId,
-      minimumOrgVersion
-    ) {
-      const org = await this.findById(organisationId, minimumOrgVersion)
-      const registration = org.registrations?.find(
-        (r) => r.id === registrationId
-      )
-
-      if (!registration) {
-        throw Boom.notFound(`Registration with id ${registrationId} not found`)
-      }
-
-      return structuredClone(registration)
     }
-  })
+
+    return {
+      insert: performInsert(storage, staleCache),
+      update: performUpdate(storage, staleCache, pendingSyncRef),
+
+      async findAll() {
+        return structuredClone(staleCache).map((org) =>
+          enrichWithCurrentStatus({ ...org })
+        )
+      },
+
+      findById,
+
+      async findRegistrationById(
+        organisationId,
+        registrationId,
+        minimumOrgVersion
+      ) {
+        const org = await findById(organisationId, minimumOrgVersion)
+        const registration = org.registrations?.find(
+          (r) => r.id === registrationId
+        )
+
+        if (!registration) {
+          throw Boom.notFound(
+            `Registration with id ${registrationId} not found`
+          )
+        }
+
+        return structuredClone(registration)
+      }
+    }
+  }
 }
