@@ -113,16 +113,16 @@ const performUpdate = async (db, id, version, updates) => {
   }
 }
 
-const handleFoundDocument = (doc, expectedVersion) => {
+const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
   // No version expectation - return immediately
-  if (expectedVersion === undefined) {
+  if (minimumVersion === undefined) {
     return { shouldReturn: true, result: mapped }
   }
 
   // Version matches - return
-  if (mapped.version >= expectedVersion) {
+  if (mapped.version >= minimumVersion) {
     return { shouldReturn: true, result: mapped }
   }
 
@@ -130,7 +130,7 @@ const handleFoundDocument = (doc, expectedVersion) => {
   return { shouldReturn: false }
 }
 
-const performFindById = async (db, id, expectedVersion) => {
+const performFindById = async (db, id, minimumVersion) => {
   // validate the ID and throw early
   let validatedId
   try {
@@ -147,11 +147,11 @@ const performFindById = async (db, id, expectedVersion) => {
     const isLastRetry = i === MAX_CONSISTENCY_RETRIES - 1
 
     if (doc) {
-      const { shouldReturn, result } = handleFoundDocument(doc, expectedVersion)
+      const { shouldReturn, result } = handleFoundDocument(doc, minimumVersion)
       if (shouldReturn) {
         return result
       }
-    } else if (expectedVersion === undefined || isLastRetry) {
+    } else if (minimumVersion === undefined || isLastRetry) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
     }
 
@@ -163,8 +163,8 @@ const performFindById = async (db, id, expectedVersion) => {
     }
   }
 
-  // Exhausted retries waiting for version
-  throw Boom.internal('Consistency timeout waiting for expected version')
+  // Exhausted retries waiting for minimum version
+  throw Boom.internal('Consistency timeout waiting for minimum version')
 }
 
 const performFindAll = async (db) => {
@@ -185,8 +185,8 @@ export const createOrganisationsRepository = (db) => () => ({
     return performUpdate(db, id, version, updates)
   },
 
-  async findById(id, expectedVersion) {
-    return performFindById(db, id, expectedVersion)
+  async findById(id, minimumVersion) {
+    return performFindById(db, id, minimumVersion)
   },
 
   async findAll() {
@@ -196,9 +196,9 @@ export const createOrganisationsRepository = (db) => () => ({
   async findRegistrationById(
     organisationId,
     registrationId,
-    expectedOrgVersion
+    minimumOrgVersion
   ) {
-    const org = await this.findById(organisationId, expectedOrgVersion)
+    const org = await this.findById(organisationId, minimumOrgVersion)
     const registration = org.registrations?.find((r) => r.id === registrationId)
 
     if (!registration) {

@@ -185,18 +185,18 @@ export const createInMemoryOrganisationsRepository = (
       )
     },
 
-    async findById(id, expectedVersion) {
+    async findById(id, minimumVersion) {
       for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
         try {
           const result = performFindById(staleCache, id)
 
           // No version expectation - return immediately (may be stale)
-          if (expectedVersion === undefined) {
+          if (minimumVersion === undefined) {
             return result
           }
 
           // Version matches - consistency achieved
-          if (result.version >= expectedVersion) {
+          if (result.version >= minimumVersion) {
             return result
           }
         } catch (error) {
@@ -215,15 +215,15 @@ export const createInMemoryOrganisationsRepository = (
       }
 
       // Timeout - throw error
-      throw Boom.internal('Consistency timeout waiting for expected version')
+      throw Boom.internal('Consistency timeout waiting for minimum version')
     },
 
     async findRegistrationById(
       organisationId,
       registrationId,
-      expectedOrgVersion
+      minimumOrgVersion
     ) {
-      const org = await this.findById(organisationId, expectedOrgVersion)
+      const org = await this.findById(organisationId, minimumOrgVersion)
       const registration = org.registrations?.find(
         (r) => r.id === registrationId
       )

@@ -132,7 +132,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('throws timeout error when expectedOrgVersion never arrives', async () => {
+    it('throws timeout error when minimumOrgVersion never arrives', async () => {
       const registration = {
         id: new ObjectId().toString(),
         orgName: 'Test Org',
@@ -155,11 +155,11 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       ).rejects.toMatchObject({
         isBoom: true,
         output: { statusCode: 500 },
-        message: 'Consistency timeout waiting for expected version'
+        message: 'Consistency timeout waiting for minimum version'
       })
     })
 
-    it('waits for expectedOrgVersion and returns registration when version arrives', async () => {
+    it('waits for minimumOrgVersion and returns registration when version arrives', async () => {
       const registration = {
         id: new ObjectId().toString(),
         orgName: 'Test Org',
@@ -181,7 +181,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         wasteProcessingTypes: ['exporter']
       })
 
-      // Request with expectedOrgVersion=2 - should retry until version 2 appears
+      // Request with minimumOrgVersion=2 - should retry until version 2 appears
       const result = await repository.findRegistrationById(
         org.id,
         registration.id,
@@ -195,7 +195,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('waits for expectedOrgVersion and throws 404 when registration does not exist', async () => {
+    it('waits for minimumOrgVersion and throws 404 when registration does not exist', async () => {
       const registration = {
         id: new ObjectId().toString(),
         orgName: 'Test Org',
@@ -219,7 +219,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
 
       const nonExistentRegistrationId = new ObjectId().toString()
 
-      // Request with expectedOrgVersion=2 for non-existent registration
+      // Request with minimumOrgVersion=2 for non-existent registration
       await expect(
         repository.findRegistrationById(org.id, nonExistentRegistrationId, 2)
       ).rejects.toMatchObject({
@@ -228,11 +228,11 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       })
     })
 
-    it('throws 404 when waiting for non-existent organisation with expectedOrgVersion', async () => {
+    it('throws 404 when waiting for non-existent organisation with minimumOrgVersion', async () => {
       const nonExistentOrgId = new ObjectId().toString()
       const registrationId = new ObjectId().toString()
 
-      // Request expectedOrgVersion for org that doesn't exist - should retry then throw 404
+      // Request minimumOrgVersion for org that doesn't exist - should retry then throw 404
       await expect(
         repository.findRegistrationById(nonExistentOrgId, registrationId, 1)
       ).rejects.toMatchObject({

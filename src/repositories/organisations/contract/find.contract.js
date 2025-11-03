@@ -57,7 +57,7 @@ export const testFindBehaviour = (it) => {
         expect(result.orgId).toBe(org1.orgId)
       })
 
-      it('throws timeout error when expectedVersion never arrives', async () => {
+      it('throws timeout error when minimumVersion never arrives', async () => {
         const orgData = buildOrganisation()
         await repository.insert(orgData)
 
@@ -67,11 +67,11 @@ export const testFindBehaviour = (it) => {
         ).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 500 },
-          message: 'Consistency timeout waiting for expected version'
+          message: 'Consistency timeout waiting for minimum version'
         })
       })
 
-      it('waits for expectedVersion and returns organisation when version arrives', async () => {
+      it('waits for minimumVersion and returns organisation when version arrives', async () => {
         const orgData = buildOrganisation()
         await repository.insert(orgData)
 
@@ -80,7 +80,7 @@ export const testFindBehaviour = (it) => {
           wasteProcessingTypes: ['exporter']
         })
 
-        // Request with expectedVersion=2 - should retry until version 2 appears
+        // Request with minimumVersion=2 - should retry until version 2 appears
         const result = await repository.findById(orgData.id, 2)
 
         expect(result).toMatchObject({
@@ -91,11 +91,11 @@ export const testFindBehaviour = (it) => {
         })
       })
 
-      it('throws timeout when waiting for non-existent document with expectedVersion', async () => {
+      it('throws timeout when waiting for non-existent document with minimumVersion', async () => {
         const { ObjectId } = await import('mongodb')
         const nonExistentId = new ObjectId().toString()
 
-        // Request expectedVersion for document that doesn't exist - should retry then timeout
+        // Request minimumVersion for document that doesn't exist - should retry then timeout
         await expect(
           repository.findById(nonExistentId, 1)
         ).rejects.toMatchObject({
