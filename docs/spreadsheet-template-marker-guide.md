@@ -87,7 +87,7 @@ Markers must remain in the spreadsheet but should be hidden from users. Use one 
 - Hide the column containing markers (right-click column header, select "Hide")
 - Hide the row containing markers (right-click row number, select "Hide")
 - Set marker cell font color to white and background to white
-- Lock and protect cells containing markers
+Ensure that any cells containing markers are locked and protected. 
 
 The first method (hiding columns) is most reliable and easiest to maintain.
 
