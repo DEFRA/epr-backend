@@ -3,26 +3,7 @@ import { describe, vi, expect, it as base } from 'vitest'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
-
-// Eventual consistency retry configuration
-const MAX_RETRIES = 20
-const RETRY_DELAY_MS = 25
-
-const waitForVersion = async (repository, id, expectedVersion) => {
-  for (let i = 0; i < MAX_RETRIES; i++) {
-    const result = await repository.findById(id)
-    if (result?.version >= expectedVersion) {
-      return result
-    }
-    /* v8 ignore next 5 */
-    if (i < MAX_RETRIES - 1) {
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
-    }
-  }
-  throw new Error(
-    `Timeout waiting for version ${expectedVersion} on summary log ${id}`
-  )
-}
+import { waitForVersion } from './contract/test-helpers.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

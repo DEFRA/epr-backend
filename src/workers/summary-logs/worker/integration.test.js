@@ -8,28 +8,9 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-
-// Eventual consistency retry configuration
-const MAX_RETRIES = 20
-const RETRY_DELAY_MS = 25
-
-const waitForVersion = async (repository, id, expectedVersion) => {
-  for (let i = 0; i < MAX_RETRIES; i++) {
-    const result = await repository.findById(id)
-    if (result?.version >= expectedVersion) {
-      return result
-    }
-    /* v8 ignore next 5 */
-    if (i < MAX_RETRIES - 1) {
-      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
-    }
-  }
-  throw new Error(
-    `Timeout waiting for version ${expectedVersion} on summary log ${id}`
-  )
-}
 
 describe('SummaryLogsValidator integration', () => {
   let summaryLogsRepository
