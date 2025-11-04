@@ -34,7 +34,7 @@ The system extracts "REPROCESSOR" as PROCESSING_TYPE, "1" as TEMPLATE_VERSION, a
 
 Data section markers identify tables of data. A data section marker starts with `__EPR_DATA_` followed by the table name in capital letters with underscores between words.
 
-Put the marker in a cell. Put column headers in the cells to the right on the same row. The system reads headers until it encounters an empty cell—headers stop at the first empty cell. Put data rows below the headers. A row where all data cells are empty or null signals the end of the table. If the table continues to the last row of data, the system reads all rows without requiring an empty terminator.
+Put the marker in a cell - machine-readable column headers must be in the cells to the right on the same row. The system reads headers until it encounters an empty cell—headers stop at the first empty cell. Put data rows below the headers. A row where all data cells are empty or null signals the end of the table. If the table continues to the last row of data, the system reads all rows without requiring an empty terminator.
 
 **Example:**
 
