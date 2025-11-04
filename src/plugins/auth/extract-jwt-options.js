@@ -1,3 +1,13 @@
+import { getConfig } from '../../config.js'
+
+async function getScope(email, tokenPayload, request) {
+  const config = getConfig()
+  if (config.isProduction) {
+    throw new Error('Something went wron')
+  }
+  return []
+}
+
 export function extractJwtOptions({ jwks_uri: jwksUri, issuer }) {
   return {
     keys: {
