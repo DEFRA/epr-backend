@@ -14,6 +14,7 @@ import { failAction } from '#common/helpers/fail-action.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
+import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 
 async function createServer(options = {}) {
   setupProxy()
@@ -96,6 +97,8 @@ async function createServer(options = {}) {
   )
 
   await server.register(plugins)
+
+  server.ext('onPostStart', () => logFilesUploadedFromForms(server, options))
 
   return server
 }

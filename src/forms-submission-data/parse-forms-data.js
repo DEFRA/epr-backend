@@ -135,13 +135,13 @@ export function flattenAnswersByShortDesc(answers) {
 
 /**
  * Retrieve file upload details by shortDescription
- * @param {Object} rawFormSubmission - The raw form submission object
+ * @param {Object} rawSubmissionData - The raw form submission object
  * @param {string} shortDescription - The shortDescription of the file upload field
  * @returns {Array<Object>} Array of file upload details with transformed keys
  */
-export function retrieveFileUploadDetails(rawFormSubmission, shortDescription) {
-  const pages = rawFormSubmission?.rawSubmissionData?.meta?.definition?.pages
-  const files = rawFormSubmission?.rawSubmissionData?.data?.files
+export function retrieveFileUploadDetails(rawSubmissionData, shortDescription) {
+  const pages = rawSubmissionData?.meta?.definition?.pages
+  const files = rawSubmissionData?.data?.files
 
   const component = pages
     ?.flatMap((page) => page.components || [])
