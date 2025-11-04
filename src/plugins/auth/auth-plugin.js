@@ -2,7 +2,7 @@ import { getOidcConfigs } from '#common/helpers/auth/get-oidc-configs.js'
 import { eitherTokenAuthScheme } from './either-token-auth-scheme.js'
 import { extractJwtOptions } from './extract-jwt-options.js'
 
-export const auth = {
+export const authPlugin = {
   plugin: {
     name: 'auth',
     version: '1.0.0',
