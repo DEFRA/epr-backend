@@ -18,7 +18,7 @@ The system finds markers by scanning all cells in all worksheets. The `__EPR_` p
 
 Metadata markers identify single values like processing type, template version, or accreditation number. A metadata marker starts with `__EPR_META_` followed by the field name in capital letters with underscores between words.
 
-Put the marker in a cell. Put the value to extract in the cell immediately to the right.
+Put the marker in a cell - the contents of the cell immediately to the right is the value that will be extracted.
 
 **Example:**
 
