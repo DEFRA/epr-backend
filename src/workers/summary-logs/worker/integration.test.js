@@ -8,6 +8,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 
@@ -85,7 +86,7 @@ describe('SummaryLogsValidator integration', () => {
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    const updated = await summaryLogsRepository.findById(summaryLogId)
+    const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
     return {
       updated,

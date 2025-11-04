@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
+import { waitForVersion } from './test-helpers.js'
 
 const createAndInsertSummaryLog = async (
   repository,
@@ -15,7 +16,7 @@ const createAndInsertSummaryLog = async (
 
 const updateAndFetch = async (repository, id, version, updates) => {
   await repository.update(id, version, updates)
-  return repository.findById(id)
+  return waitForVersion(repository, id, version + 1)
 }
 
 export const testOptimisticConcurrency = (it) => {
@@ -69,7 +70,7 @@ export const testOptimisticConcurrency = (it) => {
           output: { statusCode: 409 }
         })
 
-        const final = await repository.findById(id)
+        const final = await waitForVersion(repository, id, 2)
         expect(final.summaryLog.status).toBe('validating')
         expect(final.version).toBe(2)
       })
@@ -145,7 +146,7 @@ export const testOptimisticConcurrency = (it) => {
           }
         })
 
-        const final = await repository.findById(id)
+        const final = await waitForVersion(repository, id, 2)
         expect(final.summaryLog.status).toBe('validating')
         expect(final.version).toBe(2)
       })
@@ -174,7 +175,7 @@ export const testOptimisticConcurrency = (it) => {
           output: { statusCode: 409 }
         })
 
-        const final = await repository.findById(id)
+        const final = await waitForVersion(repository, id, 2)
         expect(final.version).toBe(2)
         expect(['validating', 'rejected']).toContain(final.summaryLog.status)
       })

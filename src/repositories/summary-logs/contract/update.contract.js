@@ -6,6 +6,7 @@ import {
   buildPendingFile,
   buildSummaryLog
 } from './test-data.js'
+import { waitForVersion } from './test-helpers.js'
 
 export const testUpdateBehaviour = (it) => {
   describe('update', () => {
@@ -34,7 +35,7 @@ export const testUpdateBehaviour = (it) => {
           })
         })
 
-        const found = await repository.findById(id)
+        const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('validating')
         expect(found.summaryLog.file.status).toBe('complete')
         expect(found.summaryLog.file.s3.bucket).toBe(TEST_S3_BUCKET)
@@ -67,7 +68,7 @@ export const testUpdateBehaviour = (it) => {
           status: 'rejected'
         })
 
-        const found = await repository.findById(id)
+        const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('rejected')
         expect(found.summaryLog.organisationId).toBe('org-123')
         expect(found.summaryLog.registrationId).toBe('reg-456')
@@ -120,7 +121,7 @@ export const testUpdateBehaviour = (it) => {
             evilField: 'rm -rf /'
           })
 
-          const found = await repository.findById(id)
+          const found = await waitForVersion(repository, id, 2)
           expect(found.summaryLog.hackerField).toBeUndefined()
           expect(found.summaryLog.evilField).toBeUndefined()
           expect(found.summaryLog.status).toBe('validating')
