@@ -204,6 +204,64 @@ const baseConfig = {
       }
     }
   },
+  oidc: {
+    entraId: {
+      tenantId: {
+        doc: 'Azure Active Directory Tenant ID',
+        format: String,
+        env: 'ENTRA_TENANT_ID',
+        default: '6f504113-6b64-43f2-ade9-242e05780007'
+      },
+      clientId: {
+        doc: 'Azure App Client ID',
+        format: String,
+        env: 'ENTRA_CLIENT_ID',
+        default: 'bd06da51-53f6-46d0-a9f0-ac562864c887'
+      },
+      clientSecret: {
+        doc: 'Azure App Client Secret',
+        format: String,
+        sensitive: true,
+        env: 'ENTRA_CLIENT_SECRET',
+        default: 'test'
+      },
+      get oidcWellKnownConfigurationUrl() {
+        return {
+          doc: 'OIDC .well-known configuration URL',
+          format: String,
+          env: 'OIDC_WELL_KNOWN_CONFIGURATION_URL',
+          default: `https://login.microsoftonline.com/${this.tenantId.default}/v2.0/.well-known/openid-configuration`
+        }
+      }
+    },
+    defraId: {
+      configurationUrl: {
+        doc: 'DEFRA ID OIDC Configuration URL',
+        format: String,
+        env: 'DEFRA_ID_OIDC_CONFIGURATION_URL',
+        default: ''
+      },
+      serviceId: {
+        doc: 'DEFRA ID Service ID',
+        format: String,
+        env: 'DEFRA_ID_SERVICE_ID',
+        default: ''
+      },
+      clientId: {
+        doc: 'DEFRA ID Client ID',
+        format: String,
+        env: 'DEFRA_ID_CLIENT_ID',
+        default: ''
+      },
+      clientSecret: {
+        doc: 'DEFRA ID Client Secret',
+        format: String,
+        sensitive: true,
+        env: 'DEFRA_ID_CLIENT_SECRET',
+        default: ''
+      }
+    }
+  },
   featureFlags: {
     summaryLogs: {
       doc: 'Feature Flag: Summary Logs',

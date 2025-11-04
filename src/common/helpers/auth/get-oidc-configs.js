@@ -8,12 +8,12 @@ async function getOidcConfigs() {
   const getDefraIdOidcConfig = () =>
     fetchJson(config.get('oidc.defraId.oidcWellKnownConfigurationUrl'))
 
-  const [entraIdPayload, defraIdPayload] = await Promise.all([
+  const [entraIdOidcConfig, defraIdOidcConfig] = await Promise.all([
     getEntraIdOidcConfig(),
     getDefraIdOidcConfig()
   ])
 
-  return { entraIdPayload, defraIdPayload }
+  return { entraIdOidcConfig, defraIdOidcConfig }
 }
 
 export { getOidcConfigs }
