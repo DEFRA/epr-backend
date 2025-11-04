@@ -7,6 +7,26 @@ import {
   buildSummaryLog
 } from './test-data.js'
 
+// Eventual consistency retry configuration
+const MAX_RETRIES = 20
+const RETRY_DELAY_MS = 25
+
+const waitForVersion = async (repository, id, expectedVersion) => {
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const result = await repository.findById(id)
+    if (result?.version >= expectedVersion) {
+      return result
+    }
+    /* v8 ignore next 5 */
+    if (i < MAX_RETRIES - 1) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    }
+  }
+  throw new Error(
+    `Timeout waiting for version ${expectedVersion} on summary log ${id}`
+  )
+}
+
 export const testUpdateBehaviour = (it) => {
   describe('update', () => {
     let repository
@@ -34,7 +54,7 @@ export const testUpdateBehaviour = (it) => {
           })
         })
 
-        const found = await repository.findById(id)
+        const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('validating')
         expect(found.summaryLog.file.status).toBe('complete')
         expect(found.summaryLog.file.s3.bucket).toBe(TEST_S3_BUCKET)
@@ -67,7 +87,7 @@ export const testUpdateBehaviour = (it) => {
           status: 'rejected'
         })
 
-        const found = await repository.findById(id)
+        const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('rejected')
         expect(found.summaryLog.organisationId).toBe('org-123')
         expect(found.summaryLog.registrationId).toBe('reg-456')
@@ -120,7 +140,7 @@ export const testUpdateBehaviour = (it) => {
             evilField: 'rm -rf /'
           })
 
-          const found = await repository.findById(id)
+          const found = await waitForVersion(repository, id, 2)
           expect(found.summaryLog.hackerField).toBeUndefined()
           expect(found.summaryLog.evilField).toBeUndefined()
           expect(found.summaryLog.status).toBe('validating')

@@ -4,6 +4,26 @@ import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
 
+// Eventual consistency retry configuration
+const MAX_RETRIES = 20
+const RETRY_DELAY_MS = 25
+
+const waitForVersion = async (repository, id, expectedVersion) => {
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const result = await repository.findById(id)
+    if (result?.version >= expectedVersion) {
+      return result
+    }
+    /* v8 ignore next 5 */
+    if (i < MAX_RETRIES - 1) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    }
+  }
+  throw new Error(
+    `Timeout waiting for version ${expectedVersion} on summary log ${id}`
+  )
+}
+
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
   summaryLogsRepositoryFactory: async ({}, use) => {
@@ -86,7 +106,7 @@ describe('In-memory summary logs repository', () => {
       updates.file.name = 'mutated.xlsx'
       updates.file.s3.bucket = 'evil-bucket'
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 2)
       expect(retrieved.summaryLog.file.name).toBe('updated.xlsx')
       expect(retrieved.summaryLog.file.s3.bucket).toBe('test-bucket')
     })

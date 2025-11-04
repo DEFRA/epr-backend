@@ -2,6 +2,26 @@ import { randomUUID } from 'node:crypto'
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 
+// Eventual consistency retry configuration
+const MAX_RETRIES = 20
+const RETRY_DELAY_MS = 25
+
+const waitForVersion = async (repository, id, expectedVersion) => {
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    const result = await repository.findById(id)
+    if (result?.version >= expectedVersion) {
+      return result
+    }
+    /* v8 ignore next 5 */
+    if (i < MAX_RETRIES - 1) {
+      await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS))
+    }
+  }
+  throw new Error(
+    `Timeout waiting for version ${expectedVersion} on summary log ${id}`
+  )
+}
+
 const createAndInsertSummaryLog = async (
   repository,
   idPrefix,
@@ -15,7 +35,7 @@ const createAndInsertSummaryLog = async (
 
 const updateAndFetch = async (repository, id, version, updates) => {
   await repository.update(id, version, updates)
-  return repository.findById(id)
+  return waitForVersion(repository, id, version + 1)
 }
 
 export const testOptimisticConcurrency = (it) => {
@@ -69,7 +89,7 @@ export const testOptimisticConcurrency = (it) => {
           output: { statusCode: 409 }
         })
 
-        const final = await repository.findById(id)
+        const final = await waitForVersion(repository, id, 2)
         expect(final.summaryLog.status).toBe('validating')
         expect(final.version).toBe(2)
       })
@@ -145,7 +165,7 @@ export const testOptimisticConcurrency = (it) => {
           }
         })
 
-        const final = await repository.findById(id)
+        const final = await waitForVersion(repository, id, 2)
         expect(final.summaryLog.status).toBe('validating')
         expect(final.version).toBe(2)
       })
@@ -174,7 +194,7 @@ export const testOptimisticConcurrency = (it) => {
           output: { statusCode: 409 }
         })
 
-        const final = await repository.findById(id)
+        const final = await waitForVersion(repository, id, 2)
         expect(final.version).toBe(2)
         expect(['validating', 'rejected']).toContain(final.summaryLog.status)
       })
