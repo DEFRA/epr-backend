@@ -1,5 +1,4 @@
 import { getOidcConfigs } from '#common/helpers/auth/get-oidc-configs.js'
-import jwt from '@hapi/jwt'
 import { eitherTokenAuthScheme } from './either-token-auth-scheme.js'
 import { extractJwtOptions } from './extract-jwt-options.js'
 
@@ -8,8 +7,6 @@ export const auth = {
     name: 'auth',
     version: '1.0.0',
     register: async (server) => {
-      await server.register(jwt)
-
       const { entraIdOidcConfig, defraIdOidcConfig } = await getOidcConfigs()
 
       server.auth.strategy(
@@ -42,6 +39,9 @@ export const auth = {
           }
         ]
       })
+
+      // The most restrictive strategy is the default one
+      server.auth.default('entra-id-access-token')
     }
   }
 }

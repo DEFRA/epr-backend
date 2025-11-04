@@ -51,6 +51,7 @@ async function sendConfirmationEmails(email, regulatorEmail, context) {
 export const organisation = {
   method: 'POST',
   path: organisationPath,
+  auth: false,
   options: {
     validate: {
       payload: (data, _options) => {

@@ -11,6 +11,7 @@ const registrationPath = '/v1/apply/registration'
 const registration = {
   method: 'POST',
   path: registrationPath,
+  auth: false,
   options: {
     validate: {
       payload: registrationAndAccreditationPayload

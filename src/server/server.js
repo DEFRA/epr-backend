@@ -1,4 +1,5 @@
 import Hapi from '@hapi/hapi'
+import Jwt from '@hapi/jwt'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
@@ -61,7 +62,8 @@ async function createServer(options = {}) {
     requestTracing,
     cacheControl,
     secureContext,
-    pulse
+    pulse,
+    Jwt
   ]
 
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)

@@ -10,6 +10,7 @@ export const accreditationPath = '/v1/apply/accreditation'
  */
 export const accreditation = {
   method: 'POST',
+  auth: false,
   path: accreditationPath,
   options: {
     validate: {
