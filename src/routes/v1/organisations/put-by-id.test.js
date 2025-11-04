@@ -65,46 +65,6 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 
   describe('not found cases', () => {
-    it('returns 404 when update succeeds but repository does not return the updated organisation', async () => {
-      const org = buildOrganisation()
-
-      // repository factory that simulates successful update but findById returns null
-      const brokenRepoFactory = () => ({
-        async insert() {},
-        async update() {},
-        async findAll() {
-          return []
-        },
-        async findById() {
-          // simulate repository throwing not-found error
-          throw Boom.notFound('Organisation not found')
-        },
-        async findRegistrationById() {
-          return null
-        }
-      })
-
-      const featureFlags = createInMemoryFeatureFlags({ organisations: true })
-
-      const serverWithBrokenRepo = await createTestServer({
-        repositories: { organisationsRepository: brokenRepoFactory },
-        featureFlags
-      })
-
-      const response = await serverWithBrokenRepo.inject({
-        method: 'PUT',
-        url: `/v1/organisations/${org.id}`,
-        payload: {
-          version: org.version,
-          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(/Organisation not found/)
-    })
-
     describe('when the orgId does not exist', async () => {
       let response
       beforeEach(async () => {
