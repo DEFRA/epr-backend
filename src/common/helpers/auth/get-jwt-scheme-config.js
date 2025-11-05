@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
-import { config } from '../../config.js'
+import { config } from '../../../config.js'
 
 export function getJwtSchemeConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs

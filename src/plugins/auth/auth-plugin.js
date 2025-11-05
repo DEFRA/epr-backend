@@ -1,5 +1,5 @@
-import { getOidcConfigs } from './get-oidc-configs.js'
-import { getJwtSchemeConfig } from './get-jwt-scheme-config.js'
+import { getOidcConfigs } from '#common/helpers/auth/get-oidc-configs.js'
+import { getJwtSchemeConfig } from '#common/helpers/auth/get-jwt-scheme-config.js'
 
 export const authPlugin = {
   plugin: {

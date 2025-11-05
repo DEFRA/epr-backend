@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { getConfig } from '../../config.js'
+import { getConfig } from '../../../config.js'
 
 export async function getEntraUserRoles(tokenPayload, request) {
   const userEmail = tokenPayload.email

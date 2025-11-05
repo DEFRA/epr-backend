@@ -15,12 +15,6 @@ export const fetchJson = async (url, options) => {
     }
   }
 
-  console.log(
-    '\n\n\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- '
-  )
-  console.log('url', url)
-  console.log('completeOptions', completeOptions)
-
   try {
     const response = await fetch(url, completeOptions)
 
