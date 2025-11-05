@@ -439,7 +439,7 @@ describe('extractAnswers - validate all EA fixtures for duplicates', () => {
 describe('retrieveFileUploadDetails', () => {
   it('should retrieve file upload details', () => {
     const result = retrieveFileUploadDetails(
-      exporterRegistration,
+      exporterRegistration.rawSubmissionData,
       'Sampling and inspection plan'
     )
 
@@ -453,7 +453,7 @@ describe('retrieveFileUploadDetails', () => {
 
   it('should retrieve file with ORS Log shortDescription', () => {
     const result = retrieveFileUploadDetails(
-      exporterRegistration,
+      exporterRegistration.rawSubmissionData,
       'Overseas reprocessing and interim sites'
     )
 
@@ -466,12 +466,10 @@ describe('retrieveFileUploadDetails', () => {
 
   it('should throw error when FileUploadField exists but has no files', () => {
     const dataWithoutFiles = {
-      rawSubmissionData: {
-        ...exporterRegistration.rawSubmissionData,
-        data: {
-          ...exporterRegistration.rawSubmissionData.data,
-          files: {}
-        }
+      ...exporterRegistration.rawSubmissionData,
+      data: {
+        ...exporterRegistration.rawSubmissionData.data,
+        files: {}
       }
     }
 
@@ -485,7 +483,10 @@ describe('retrieveFileUploadDetails', () => {
 
   it('should throw error when file upload field not found', () => {
     expect(() =>
-      retrieveFileUploadDetails(exporterRegistration, 'Non-existent field')
+      retrieveFileUploadDetails(
+        exporterRegistration.rawSubmissionData,
+        'Non-existent field'
+      )
     ).toThrow(
       'File upload field not found for shortDescription: Non-existent field'
     )
@@ -493,42 +494,43 @@ describe('retrieveFileUploadDetails', () => {
 
   it('should throw error when shortDescription matches TextField not FileUploadField', () => {
     expect(() =>
-      retrieveFileUploadDetails(exporterRegistration, 'Org name')
+      retrieveFileUploadDetails(
+        exporterRegistration.rawSubmissionData,
+        'Org name'
+      )
     ).toThrow('File upload field not found for shortDescription: Org name')
   })
 
   it('should handle pages without components property when searching for file', () => {
     const mockData = {
-      rawSubmissionData: {
-        meta: {
-          definition: {
-            pages: [
-              {
-                title: 'Empty Page'
-                // No components property
-              },
-              {
-                title: 'File Upload Page',
-                components: [
-                  {
-                    type: 'FileUploadField',
-                    shortDescription: 'Test file',
-                    name: 'testFile'
-                  }
-                ]
-              }
-            ]
-          }
-        },
-        data: {
-          files: {
-            testFile: [
-              {
-                fileId: 'test-id',
-                userDownloadLink: 'http://test.com/file'
-              }
-            ]
-          }
+      meta: {
+        definition: {
+          pages: [
+            {
+              title: 'Empty Page'
+              // No components property
+            },
+            {
+              title: 'File Upload Page',
+              components: [
+                {
+                  type: 'FileUploadField',
+                  shortDescription: 'Test file',
+                  name: 'testFile'
+                }
+              ]
+            }
+          ]
+        }
+      },
+      data: {
+        files: {
+          testFile: [
+            {
+              fileId: 'test-id',
+              userDownloadLink: 'http://test.com/file'
+            }
+          ]
         }
       }
     }

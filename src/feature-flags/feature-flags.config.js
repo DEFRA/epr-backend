@@ -7,5 +7,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isOrganisationRoutesEnabled() {
     return config.get('featureFlags.organisations')
+  },
+  isLogFileUploadsFromFormsEnabled() {
+    return config.get('featureFlags.logFileUploadsFromForms')
   }
 })

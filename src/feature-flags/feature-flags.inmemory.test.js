@@ -20,5 +20,21 @@ describe('createInMemoryFeatureFlags', () => {
   it('returns false when no flags are provided', () => {
     const flags = createInMemoryFeatureFlags()
     expect(flags.isSummaryLogsEnabled()).toBe(false)
+    expect(flags.isLogFileUploadsFromFormsEnabled()).toBe(false)
+  })
+
+  it('returns true when logFileUploadsFromForms flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ logFileUploadsFromForms: true })
+    expect(flags.isLogFileUploadsFromFormsEnabled()).toBe(true)
+  })
+
+  it('returns false when logFileUploadsFromForms flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ logFileUploadsFromForms: false })
+    expect(flags.isLogFileUploadsFromFormsEnabled()).toBe(false)
+  })
+
+  it('returns false when logFileUploadsFromForms flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isLogFileUploadsFromFormsEnabled()).toBe(false)
   })
 })

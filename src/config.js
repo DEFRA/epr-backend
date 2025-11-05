@@ -242,6 +242,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_ORGANISATIONS'
+    },
+    logFileUploadsFromForms: {
+      doc: 'Feature Flag: To enable logging of file ids uploaded from defra-forms on startup',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS'
     }
   }
 }
