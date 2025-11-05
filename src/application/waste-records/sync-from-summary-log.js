@@ -24,7 +24,21 @@ export const syncFromSummaryLog = (dependencies) => {
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog.uri)
 
-    // 2. Transform to waste records
+    // 2. Load all existing waste records for this org/reg
+    const existingRecordsArray = await wasteRecordRepository.findAll(
+      summaryLog.organisationId,
+      summaryLog.registrationId
+    )
+
+    // 3. Convert to Map keyed by type:rowId for efficient lookup
+    const existingRecords = new Map(
+      existingRecordsArray.map((record) => [
+        `${record.type}:${record.rowId}`,
+        record
+      ])
+    )
+
+    // 4. Transform to waste records
     const summaryLogContext = {
       summaryLog: {
         id: summaryLog.id,
@@ -38,10 +52,10 @@ export const syncFromSummaryLog = (dependencies) => {
     const wasteRecords = await transformFromSummaryLog(
       parsedData,
       summaryLogContext,
-      wasteRecordRepository.findByCompositeKey
+      existingRecords
     )
 
-    // 3. Save waste records
+    // 5. Save waste records
     await wasteRecordRepository.saveAll(wasteRecords)
   }
 }

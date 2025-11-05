@@ -18,7 +18,7 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * @param {string} summaryLogContext.organisationId - The organisation ID
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
- * @param {Function} [findExistingRecord] - Optional function to find existing waste records
+ * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
  * @returns {Promise<WasteRecord[]>} Array of waste records
  */
 /**
@@ -46,14 +46,14 @@ const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPES)
  * @param {Object} tableData - Table data with headers and rows
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
- * @param {Function} [findExistingRecord] - Optional function to find existing waste records
+ * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
  * @returns {Promise<WasteRecord[]>} Array of waste records
  */
 const transformTable = async (
   tableData,
   rowTransformer,
   context,
-  findExistingRecord
+  existingRecords
 ) => {
   const { headers, rows } = tableData
   const { summaryLog, organisationId, registrationId, accreditationId } =
@@ -73,15 +73,9 @@ const transformTable = async (
         rowIndex
       )
 
-      // Look up existing waste record if finder function provided
-      const existingRecord = findExistingRecord
-        ? await findExistingRecord(
-            organisationId,
-            registrationId,
-            wasteRecordType,
-            rowId
-          )
-        : null
+      // Look up existing waste record from Map if provided
+      const existingRecord =
+        existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
 
       if (existingRecord) {
         // Add new version to existing record
@@ -132,7 +126,7 @@ const transformTable = async (
 export const transformFromSummaryLog = async (
   parsedData,
   summaryLogContext,
-  findExistingRecord
+  existingRecords
 ) => {
   // Check for unknown processing type
   const processingType = parsedData.meta.PROCESSING_TYPE?.value
@@ -157,7 +151,7 @@ export const transformFromSummaryLog = async (
         tableData,
         rowTransformer,
         summaryLogContext,
-        findExistingRecord
+        existingRecords
       )
     }
   )

@@ -131,12 +131,14 @@ describe('transformFromSummaryLog', () => {
     }
 
     const existingWasteRecord = createExistingWasteRecord()
-    const findExistingRecord = createFindExistingRecordStub(existingWasteRecord)
+    const existingRecords = new Map([
+      [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
+    ])
 
     const result = await transformFromSummaryLog(
       parsedData,
       summaryLogContext,
-      findExistingRecord
+      existingRecords
     )
 
     expect(result).toHaveLength(1)
@@ -245,20 +247,6 @@ function createExistingWasteRecord() {
         }
       }
     ]
-  }
-}
-
-function createFindExistingRecordStub(existingRecord) {
-  return async (organisationId, registrationId, type, rowId) => {
-    if (
-      organisationId === 'org-1' &&
-      registrationId === 'reg-1' &&
-      type === WASTE_RECORD_TYPE.RECEIVED &&
-      rowId === FIRST_ROW_ID
-    ) {
-      return existingRecord
-    }
-    return null
   }
 }
 

@@ -40,7 +40,11 @@ describe('syncFromSummaryLog', () => {
     }
 
     const wasteRecordRepositoryStub = {
-      findByCompositeKey: async () => null,
+      findAll: async (organisationId, registrationId) => {
+        expect(organisationId).toBe('org-1')
+        expect(registrationId).toBe('reg-1')
+        return []
+      },
       saveAll: async (wasteRecords) => {
         expect(wasteRecords).toHaveLength(2)
         expect(wasteRecords[0]).toMatchObject({
@@ -124,16 +128,10 @@ describe('syncFromSummaryLog', () => {
     }
 
     const wasteRecordRepositoryStub = {
-      findByCompositeKey: async (
-        organisationId,
-        registrationId,
-        type,
-        rowId
-      ) => {
-        if (rowId === 'row-123') {
-          return existingRecord
-        }
-        return null
+      findAll: async (organisationId, registrationId) => {
+        expect(organisationId).toBe('org-1')
+        expect(registrationId).toBe('reg-1')
+        return [existingRecord]
       },
       saveAll: async (wasteRecords) => {
         expect(wasteRecords).toHaveLength(1)
