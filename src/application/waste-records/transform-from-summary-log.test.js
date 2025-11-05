@@ -189,6 +189,32 @@ describe('transformFromSummaryLog', () => {
       transformFromSummaryLog(parsedData, summaryLogContext)
     ).rejects.toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
   })
+
+  it('returns empty array when no processing type is specified', async () => {
+    const parsedData = {
+      meta: {},
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          rows: [[FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT]]
+        }
+      }
+    }
+
+    const summaryLogContext = {
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    const result = await transformFromSummaryLog(parsedData, summaryLogContext)
+
+    expect(result).toEqual([])
+  })
 })
 
 function createExistingWasteRecord() {

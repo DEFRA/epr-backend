@@ -21,11 +21,23 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * @param {Function} [findExistingRecord] - Optional function to find existing waste records
  * @returns {Promise<WasteRecord[]>} Array of waste records
  */
-const KNOWN_PROCESSING_TYPES = [
-  'REPROCESSOR_INPUT',
-  'REPROCESSOR_OUTPUT',
-  'EXPORTER'
-]
+/**
+ * Dispatch map: processing type → table name → row transformer function
+ * Maps each combination of processing type and table to its specific row transformer
+ */
+const PROCESSING_TYPES = {
+  REPROCESSOR_INPUT: {
+    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
+  },
+  REPROCESSOR_OUTPUT: {
+    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
+  },
+  EXPORTER: {
+    // TODO: Add table transformers when business confirms mappings
+  }
+}
+
+const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPES)
 
 /**
  * Generic table transformation function
@@ -128,16 +140,29 @@ export const transformFromSummaryLog = async (
     throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
   }
 
-  const receivedLoadsData = parsedData.data.RECEIVED_LOADS_FOR_REPROCESSING
+  // Look up table transformers for this processing type
+  const tableTransformers = PROCESSING_TYPES[processingType] || {}
 
-  if (!receivedLoadsData) {
-    return []
-  }
+  // Transform each table that exists in the parsed data
+  const transformations = Object.entries(tableTransformers).map(
+    ([tableName, rowTransformer]) => {
+      const tableData = parsedData.data[tableName]
 
-  return transformTable(
-    receivedLoadsData,
-    transformReceivedLoadsRow,
-    summaryLogContext,
-    findExistingRecord
+      // Skip tables that don't exist in this summary log
+      if (!tableData) {
+        return Promise.resolve([])
+      }
+
+      return transformTable(
+        tableData,
+        rowTransformer,
+        summaryLogContext,
+        findExistingRecord
+      )
+    }
   )
+
+  // Wait for all table transformations to complete and flatten results
+  const results = await Promise.all(transformations)
+  return results.flat()
 }
