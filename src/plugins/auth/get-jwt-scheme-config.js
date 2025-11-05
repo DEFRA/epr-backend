@@ -8,10 +8,10 @@ export function getJwtSchemeConfig(oidcConfigs) {
   return {
     keys: [
       {
-        uri: entraIdOidcConfig.jwksUri
+        uri: entraIdOidcConfig.jwks_uri
       },
       {
-        uri: defraIdOidcConfig.jwksUri
+        uri: defraIdOidcConfig.jwks_uri
       }
     ],
     verify: {
