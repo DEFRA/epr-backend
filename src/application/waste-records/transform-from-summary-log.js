@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import {
-  WASTE_RECORD_TYPE,
-  VERSION_STATUS
-} from '#domain/waste-records/model.js'
+import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 
 /**
  * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog
@@ -51,22 +49,25 @@ export const transformFromSummaryLog = async (
     summaryLogContext
 
   return Promise.all(
-    rows.map(async (row) => {
+    rows.map(async (row, rowIndex) => {
       // Map row values to object using headers
       const rowData = headers.reduce((acc, header, index) => {
         acc[header] = row[index]
         return acc
       }, /** @type {Record<string, any>} */ ({}))
 
-      // Extract rowId (should be first column based on ROW_ID header)
-      const rowId = rowData.ROW_ID
+      // Transform row using type-specific transformer
+      const { wasteRecordType, rowId, data } = await transformReceivedLoadsRow(
+        rowData,
+        rowIndex
+      )
 
       // Look up existing waste record if finder function provided
       const existingRecord = findExistingRecord
         ? await findExistingRecord(
             organisationId,
             registrationId,
-            WASTE_RECORD_TYPE.RECEIVED,
+            wasteRecordType,
             rowId
           )
         : null
@@ -78,12 +79,12 @@ export const transformFromSummaryLog = async (
           createdAt: new Date().toISOString(),
           status: VERSION_STATUS.UPDATED,
           summaryLog,
-          data: rowData
+          data
         }
 
         return {
           ...existingRecord,
-          data: rowData,
+          data,
           versions: [...existingRecord.versions, newVersion]
         }
       }
@@ -94,7 +95,7 @@ export const transformFromSummaryLog = async (
         createdAt: new Date().toISOString(),
         status: VERSION_STATUS.CREATED,
         summaryLog,
-        data: rowData
+        data
       }
 
       const wasteRecord = {
@@ -102,8 +103,8 @@ export const transformFromSummaryLog = async (
         organisationId,
         registrationId,
         rowId,
-        type: WASTE_RECORD_TYPE.RECEIVED,
-        data: rowData,
+        type: wasteRecordType,
+        data,
         versions: [version]
       }
 
