@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
+import { config } from '../../config.js'
 
 export function getJwtSchemeConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
@@ -28,7 +29,10 @@ export function getJwtSchemeConfig(oidcConfigs) {
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
-        if (audience !== entraIdOidcConfig.aud) {
+        // Entra Id is not providing an audience in the token, so we need to supply it
+        // This audience may not need to be a secret, only an env var
+        const adminUiAsAudience = config.get('oidc.entraId.audience')
+        if (audience !== adminUiAsAudience) {
           throw Boom.badRequest('Invalid audience for Entra ID token')
         }
 

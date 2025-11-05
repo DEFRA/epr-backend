@@ -212,6 +212,12 @@ const baseConfig = {
         env: 'ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL',
         default:
           'https://login.microsoftonline.com/bd06da51-53f6-46d0-a9f0-ac562864c887/v2.0/.well-known/openid-configuration'
+      },
+      audience: {
+        doc: 'Admin UI app as audience',
+        format: String,
+        env: 'SECRET_ADMIN_UI_AS_AUDIENCE',
+        default: 'test'
       }
     },
     defraId: {
