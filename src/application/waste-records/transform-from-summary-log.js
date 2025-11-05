@@ -27,26 +27,25 @@ const KNOWN_PROCESSING_TYPES = [
   'EXPORTER'
 ]
 
-export const transformFromSummaryLog = async (
-  parsedData,
-  summaryLogContext,
+/**
+ * Generic table transformation function
+ * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
+ *
+ * @param {Object} tableData - Table data with headers and rows
+ * @param {Function} rowTransformer - Function to transform each row
+ * @param {Object} context - Context for creating waste records
+ * @param {Function} [findExistingRecord] - Optional function to find existing waste records
+ * @returns {Promise<WasteRecord[]>} Array of waste records
+ */
+const transformTable = async (
+  tableData,
+  rowTransformer,
+  context,
   findExistingRecord
 ) => {
-  // Check for unknown processing type
-  const processingType = parsedData.meta.PROCESSING_TYPE?.value
-  if (processingType && !KNOWN_PROCESSING_TYPES.includes(processingType)) {
-    throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
-  }
-
-  const receivedLoadsData = parsedData.data.RECEIVED_LOADS_FOR_REPROCESSING
-
-  if (!receivedLoadsData) {
-    return []
-  }
-
-  const { headers, rows } = receivedLoadsData
+  const { headers, rows } = tableData
   const { summaryLog, organisationId, registrationId, accreditationId } =
-    summaryLogContext
+    context
 
   return Promise.all(
     rows.map(async (row, rowIndex) => {
@@ -57,7 +56,7 @@ export const transformFromSummaryLog = async (
       }, /** @type {Record<string, any>} */ ({}))
 
       // Transform row using type-specific transformer
-      const { wasteRecordType, rowId, data } = await transformReceivedLoadsRow(
+      const { wasteRecordType, rowId, data } = await rowTransformer(
         rowData,
         rowIndex
       )
@@ -115,5 +114,30 @@ export const transformFromSummaryLog = async (
 
       return wasteRecord
     })
+  )
+}
+
+export const transformFromSummaryLog = async (
+  parsedData,
+  summaryLogContext,
+  findExistingRecord
+) => {
+  // Check for unknown processing type
+  const processingType = parsedData.meta.PROCESSING_TYPE?.value
+  if (processingType && !KNOWN_PROCESSING_TYPES.includes(processingType)) {
+    throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
+  }
+
+  const receivedLoadsData = parsedData.data.RECEIVED_LOADS_FOR_REPROCESSING
+
+  if (!receivedLoadsData) {
+    return []
+  }
+
+  return transformTable(
+    receivedLoadsData,
+    transformReceivedLoadsRow,
+    summaryLogContext,
+    findExistingRecord
   )
 }
