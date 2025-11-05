@@ -57,14 +57,19 @@ describe('logFilesUploadedFromForms', () => {
 
     await logFilesUploadedFromForms(mockServer)
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
-      'Starting logging of files uploaded from defra forms : true'
-    )
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
-      'Total files uploaded from registration and accreditation forms 2'
-    )
-    expect(mockLoggerInfo).toHaveBeenCalledWith('Form A,id-1,file-1')
-    expect(mockLoggerInfo).toHaveBeenCalledWith('Form B,id-2,file-2')
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message: 'Starting logging of files uploaded from defra forms : true'
+    })
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message:
+        'Total files uploaded from registration and accreditation forms 2'
+    })
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message: 'Form A,id-1,file-1'
+    })
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message: 'Form B,id-2,file-2'
+    })
   })
 
   it('should skip logging when feature flag is disabled', async () => {
@@ -74,9 +79,10 @@ describe('logFilesUploadedFromForms', () => {
 
     await logFilesUploadedFromForms(mockServer)
 
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
-      'Feature flag disabled, skipping logging of files uploaded from defra forms'
-    )
+    expect(mockLoggerInfo).toHaveBeenCalledWith({
+      message:
+        'Feature flag disabled, skipping logging of files uploaded from defra forms'
+    })
     expect(mockGetUploadedFileInfo).not.toHaveBeenCalled()
   })
 
@@ -89,9 +95,9 @@ describe('logFilesUploadedFromForms', () => {
 
     await logFilesUploadedFromForms(mockServer)
 
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      mockError,
-      'Failed to run logging of files uploaded from defra forms'
-    )
+    expect(mockLoggerError).toHaveBeenCalledWith({
+      error: mockError,
+      message: 'Failed to run logging of files uploaded from defra forms'
+    })
   })
 })
