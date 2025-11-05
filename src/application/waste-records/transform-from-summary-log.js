@@ -19,7 +19,7 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {Promise<WasteRecord[]>} Array of waste records
+ * @returns {WasteRecord[]} Array of waste records
  */
 /**
  * Dispatch map: processing type → table name → row transformer function
@@ -47,9 +47,9 @@ const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPES)
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {Promise<WasteRecord[]>} Array of waste records
+ * @returns {WasteRecord[]} Array of waste records
  */
-const transformTable = async (
+const transformTable = (
   tableData,
   rowTransformer,
   context,
@@ -59,71 +59,66 @@ const transformTable = async (
   const { summaryLog, organisationId, registrationId, accreditationId } =
     context
 
-  return Promise.all(
-    rows.map(async (row, rowIndex) => {
-      // Map row values to object using headers
-      const rowData = headers.reduce((acc, header, index) => {
-        acc[header] = row[index]
-        return acc
-      }, /** @type {Record<string, any>} */ ({}))
+  return rows.map((row, rowIndex) => {
+    // Map row values to object using headers
+    const rowData = headers.reduce((acc, header, index) => {
+      acc[header] = row[index]
+      return acc
+    }, /** @type {Record<string, any>} */ ({}))
 
-      // Transform row using type-specific transformer
-      const { wasteRecordType, rowId, data } = await rowTransformer(
-        rowData,
-        rowIndex
-      )
+    // Transform row using type-specific transformer
+    const { wasteRecordType, rowId, data } = rowTransformer(rowData, rowIndex)
 
-      // Look up existing waste record from Map if provided
-      const existingRecord =
-        existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
+    // Look up existing waste record from Map if provided
+    const existingRecord =
+      existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
 
-      if (existingRecord) {
-        // Add new version to existing record
-        const newVersion = {
-          id: randomUUID(),
-          createdAt: new Date().toISOString(),
-          status: VERSION_STATUS.UPDATED,
-          summaryLog,
-          data
-        }
-
-        return {
-          ...existingRecord,
-          data,
-          versions: [...existingRecord.versions, newVersion]
-        }
-      }
-
-      // Create new waste record
-      const version = {
+    if (existingRecord) {
+      // Add new version to existing record
+      const newVersion = {
         id: randomUUID(),
         createdAt: new Date().toISOString(),
-        status: VERSION_STATUS.CREATED,
+        status: VERSION_STATUS.UPDATED,
         summaryLog,
         data
       }
 
-      const wasteRecord = {
-        id: randomUUID(),
-        organisationId,
-        registrationId,
-        rowId,
-        type: wasteRecordType,
+      return {
+        ...existingRecord,
         data,
-        versions: [version]
+        versions: [...existingRecord.versions, newVersion]
       }
+    }
 
-      // Only include accreditationId if provided
-      if (accreditationId) {
-        wasteRecord.accreditationId = accreditationId
-      }
+    // Create new waste record
+    const version = {
+      id: randomUUID(),
+      createdAt: new Date().toISOString(),
+      status: VERSION_STATUS.CREATED,
+      summaryLog,
+      data
+    }
 
-      return wasteRecord
-    })
-  )
+    const wasteRecord = {
+      id: randomUUID(),
+      organisationId,
+      registrationId,
+      rowId,
+      type: wasteRecordType,
+      data,
+      versions: [version]
+    }
+
+    // Only include accreditationId if provided
+    if (accreditationId) {
+      wasteRecord.accreditationId = accreditationId
+    }
+
+    return wasteRecord
+  })
 }
 
-export const transformFromSummaryLog = async (
+export const transformFromSummaryLog = (
   parsedData,
   summaryLogContext,
   existingRecords
@@ -138,13 +133,13 @@ export const transformFromSummaryLog = async (
   const tableTransformers = PROCESSING_TYPES[processingType] || {}
 
   // Transform each table that exists in the parsed data
-  const transformations = Object.entries(tableTransformers).map(
+  const results = Object.entries(tableTransformers).map(
     ([tableName, rowTransformer]) => {
       const tableData = parsedData.data[tableName]
 
       // Skip tables that don't exist in this summary log
       if (!tableData) {
-        return Promise.resolve([])
+        return []
       }
 
       return transformTable(
@@ -156,7 +151,5 @@ export const transformFromSummaryLog = async (
     }
   )
 
-  // Wait for all table transformations to complete and flatten results
-  const results = await Promise.all(transformations)
   return results.flat()
 }

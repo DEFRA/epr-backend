@@ -49,7 +49,7 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationId: summaryLog.accreditationId
     }
 
-    const wasteRecords = await transformFromSummaryLog(
+    const wasteRecords = transformFromSummaryLog(
       parsedData,
       summaryLogContext,
       existingRecords

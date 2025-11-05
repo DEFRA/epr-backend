@@ -15,7 +15,7 @@ const UPDATED_DATE = '2025-01-20'
 const UPDATED_WEIGHT = 250.5
 
 describe('transformFromSummaryLog', () => {
-  it('transforms parsed RECEIVED_LOADS data into waste records', async () => {
+  it('transforms parsed RECEIVED_LOADS data into waste records', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -43,14 +43,14 @@ describe('transformFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const result = await transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(parsedData, summaryLogContext)
 
     expect(result).toHaveLength(2)
     expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
     expectValidWasteRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
   })
 
-  it('returns empty array when no RECEIVED_LOADS data present', async () => {
+  it('returns empty array when no RECEIVED_LOADS data present', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -69,12 +69,12 @@ describe('transformFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const result = await transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(parsedData, summaryLogContext)
 
     expect(result).toEqual([])
   })
 
-  it('includes optional accreditationId when provided', async () => {
+  it('includes optional accreditationId when provided', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -100,12 +100,12 @@ describe('transformFromSummaryLog', () => {
       accreditationId: 'acc-1'
     }
 
-    const result = await transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(parsedData, summaryLogContext)
 
     expect(result[0].accreditationId).toBe('acc-1')
   })
 
-  it('adds new version to existing waste record when rowId already exists', async () => {
+  it('adds new version to existing waste record when rowId already exists', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -135,7 +135,7 @@ describe('transformFromSummaryLog', () => {
       [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
     ])
 
-    const result = await transformFromSummaryLog(
+    const result = transformFromSummaryLog(
       parsedData,
       summaryLogContext,
       existingRecords
@@ -168,7 +168,7 @@ describe('transformFromSummaryLog', () => {
     expect(result[0].versions[1].createdAt).toBeTruthy()
   })
 
-  it('throws error for unknown processing type', async () => {
+  it('throws error for unknown processing type', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -187,12 +187,12 @@ describe('transformFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    await expect(
+    expect(() =>
       transformFromSummaryLog(parsedData, summaryLogContext)
-    ).rejects.toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
+    ).toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
   })
 
-  it('returns empty array when no processing type is specified', async () => {
+  it('returns empty array when no processing type is specified', () => {
     const parsedData = {
       meta: {},
       data: {
@@ -213,7 +213,7 @@ describe('transformFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const result = await transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(parsedData, summaryLogContext)
 
     expect(result).toEqual([])
   })

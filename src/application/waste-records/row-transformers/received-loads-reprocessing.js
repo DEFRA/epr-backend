@@ -5,10 +5,10 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
  *
  * @param {Record<string, any>} rowData - Row data mapped from headers
  * @param {number} rowIndex - Row index for error messages
- * @returns {Promise<{wasteRecordType: string, rowId: string, data: Record<string, any>}>}
+ * @returns {{wasteRecordType: string, rowId: string, data: Record<string, any>}}
  * @throws {Error} If required fields are missing
  */
-export const transformReceivedLoadsRow = async (rowData, rowIndex) => {
+export const transformReceivedLoadsRow = (rowData, rowIndex) => {
   if (!rowData.ROW_ID) {
     throw new Error(`Missing ROW_ID at row ${rowIndex}`)
   }
