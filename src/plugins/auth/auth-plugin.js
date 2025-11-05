@@ -1,5 +1,5 @@
 import { getOidcConfigs } from '#common/helpers/auth/get-oidc-configs.js'
-import { getJwtSchemeConfig } from '#common/helpers/auth/get-jwt-scheme-config.js'
+import { getJwtStrategyConfig } from '#common/helpers/auth/get-jwt-strategy-config.js'
 
 export const authPlugin = {
   plugin: {
@@ -11,7 +11,7 @@ export const authPlugin = {
       server.auth.strategy(
         'access-token',
         'jwt',
-        getJwtSchemeConfig(oidcConfigs)
+        getJwtStrategyConfig(oidcConfigs)
       )
       server.auth.default('access-token')
     }

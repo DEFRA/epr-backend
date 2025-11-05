@@ -3,7 +3,7 @@ import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { config } from '../../../config.js'
 
-export function getJwtSchemeConfig(oidcConfigs) {
+export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
 
   return {
