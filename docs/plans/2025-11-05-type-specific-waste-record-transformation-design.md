@@ -19,7 +19,7 @@ We use a two-level dispatch map: processing type → table name → row transfor
 
 ### Structure
 
-```
+```javascript
 PROCESSING_TYPES = {
   REPROCESSOR_INPUT: {
     RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
@@ -76,7 +76,7 @@ const transformReceivedLoadsRow = async (rowData, rowIndex, context) => {
 
 ### File Organization
 
-```
+```text
 src/application/waste-records/
 ├── transform-from-summary-log.js       # Main dispatcher + transformTable
 ├── row-transformers/
@@ -101,7 +101,7 @@ Row validation catches both missing headers and empty values naturally by checki
 
 Errors throw with descriptive messages including context:
 
-```
+```text
 Missing ROW_ID at row 5
 Unknown PROCESSING_TYPE: INVALID_TYPE
 Missing DATE_RECEIVED_FOR_REPROCESSING at row 12
