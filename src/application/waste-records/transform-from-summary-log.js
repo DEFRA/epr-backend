@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/type.js'
-import { VERSION_STATUS } from '#domain/waste-records/version-status.js'
+import {
+  WASTE_RECORD_TYPE,
+  VERSION_STATUS
+} from '#domain/waste-records/model.js'
 
 /**
  * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog

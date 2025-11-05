@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { WASTE_RECORD_TYPE } from '#domain/waste-records/type.js'
-import { VERSION_STATUS } from '#domain/waste-records/version-status.js'
+import {
+  WASTE_RECORD_TYPE,
+  VERSION_STATUS
+} from '#domain/waste-records/model.js'
 
 const SUMMARY_LOG_ID = 'summary-log-1'
 const SUMMARY_LOG_URI = 's3://bucket/key'
