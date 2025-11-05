@@ -15,11 +15,15 @@ describe('syncFromSummaryLog', () => {
     }
 
     const parsedData = {
-      meta: {},
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
       data: {
-        RECEIVED_LOADS: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED', 'GROSS_WEIGHT'],
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
             ['row-123', '2025-01-15', 100.5],
             ['row-456', '2025-01-16', 200.75]
@@ -72,11 +76,15 @@ describe('syncFromSummaryLog', () => {
     }
 
     const parsedData = {
-      meta: {},
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
       data: {
-        RECEIVED_LOADS: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED', 'GROSS_WEIGHT'],
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [['row-123', '2025-01-20', 250.5]]
         }
       }
@@ -90,7 +98,7 @@ describe('syncFromSummaryLog', () => {
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
         ROW_ID: 'row-123',
-        DATE_RECEIVED: '2025-01-15',
+        DATE_RECEIVED_FOR_REPROCESSING: '2025-01-15',
         GROSS_WEIGHT: 100.5
       },
       versions: [
@@ -98,11 +106,13 @@ describe('syncFromSummaryLog', () => {
           id: 'version-1',
           createdAt: '2025-01-15T10:00:00.000Z',
           status: VERSION_STATUS.CREATED,
-          summaryLogId: 'summary-log-1',
-          summaryLogUri: 's3://bucket/key',
+          summaryLog: {
+            id: 'summary-log-1',
+            uri: 's3://bucket/key'
+          },
           data: {
             ROW_ID: 'row-123',
-            DATE_RECEIVED: '2025-01-15',
+            DATE_RECEIVED_FOR_REPROCESSING: '2025-01-15',
             GROSS_WEIGHT: 100.5
           }
         }

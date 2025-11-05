@@ -40,7 +40,7 @@ export const transformFromSummaryLog = async (
     throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
   }
 
-  const receivedLoadsData = parsedData.data.RECEIVED_LOADS
+  const receivedLoadsData = parsedData.data.RECEIVED_LOADS_FOR_REPROCESSING
 
   if (!receivedLoadsData) {
     return []

@@ -7,7 +7,6 @@ import {
 
 const SUMMARY_LOG_ID = 'summary-log-1'
 const SUMMARY_LOG_URI = 's3://bucket/key'
-const DATE_RECEIVED = 'DATE_RECEIVED'
 const FIRST_ROW_ID = 'row-123'
 const FIRST_DATE = '2025-01-15'
 const FIRST_WEIGHT = 100.5
@@ -18,11 +17,15 @@ const UPDATED_WEIGHT = 250.5
 describe('transformFromSummaryLog', () => {
   it('transforms parsed RECEIVED_LOADS data into waste records', async () => {
     const parsedData = {
-      meta: {},
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
       data: {
-        RECEIVED_LOADS: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', DATE_RECEIVED, 'GROSS_WEIGHT'],
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
             [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
             ['row-456', '2025-01-16', SECOND_WEIGHT]
@@ -49,7 +52,11 @@ describe('transformFromSummaryLog', () => {
 
   it('returns empty array when no RECEIVED_LOADS data present', async () => {
     const parsedData = {
-      meta: {},
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
       data: {}
     }
 
@@ -69,11 +76,15 @@ describe('transformFromSummaryLog', () => {
 
   it('includes optional accreditationId when provided', async () => {
     const parsedData = {
-      meta: {},
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
       data: {
-        RECEIVED_LOADS: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', DATE_RECEIVED],
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
           rows: [[FIRST_ROW_ID, FIRST_DATE]]
         }
       }
@@ -96,11 +107,15 @@ describe('transformFromSummaryLog', () => {
 
   it('adds new version to existing waste record when rowId already exists', async () => {
     const parsedData = {
-      meta: {},
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
       data: {
-        RECEIVED_LOADS: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', DATE_RECEIVED, 'GROSS_WEIGHT'],
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [[FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT]]
         }
       }
@@ -143,7 +158,7 @@ describe('transformFromSummaryLog', () => {
       },
       data: {
         ROW_ID: FIRST_ROW_ID,
-        DATE_RECEIVED: UPDATED_DATE,
+        DATE_RECEIVED_FOR_REPROCESSING: UPDATED_DATE,
         GROSS_WEIGHT: UPDATED_WEIGHT
       }
     })
@@ -185,7 +200,7 @@ function createExistingWasteRecord() {
     type: WASTE_RECORD_TYPE.RECEIVED,
     data: {
       ROW_ID: FIRST_ROW_ID,
-      DATE_RECEIVED: FIRST_DATE,
+      DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
       GROSS_WEIGHT: FIRST_WEIGHT
     },
     versions: [
@@ -199,7 +214,7 @@ function createExistingWasteRecord() {
         },
         data: {
           ROW_ID: FIRST_ROW_ID,
-          DATE_RECEIVED: FIRST_DATE,
+          DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
           GROSS_WEIGHT: FIRST_WEIGHT
         }
       }
@@ -229,7 +244,7 @@ function expectValidWasteRecord(record, rowId, dateReceived, grossWeight) {
     type: WASTE_RECORD_TYPE.RECEIVED,
     data: {
       ROW_ID: rowId,
-      DATE_RECEIVED: dateReceived,
+      DATE_RECEIVED_FOR_REPROCESSING: dateReceived,
       GROSS_WEIGHT: grossWeight
     }
   })
@@ -244,7 +259,7 @@ function expectValidWasteRecord(record, rowId, dateReceived, grossWeight) {
     },
     data: {
       ROW_ID: rowId,
-      DATE_RECEIVED: dateReceived,
+      DATE_RECEIVED_FOR_REPROCESSING: dateReceived,
       GROSS_WEIGHT: grossWeight
     }
   })
