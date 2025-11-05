@@ -19,9 +19,14 @@ import {
  * @param {string} summaryLogContext.organisationId - The organisation ID
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
- * @returns {WasteRecord[]} Array of waste records
+ * @param {Function} [findExistingRecord] - Optional function to find existing waste records
+ * @returns {Promise<WasteRecord[]>} Array of waste records
  */
-export const transformFromSummaryLog = (parsedData, summaryLogContext) => {
+export const transformFromSummaryLog = async (
+  parsedData,
+  summaryLogContext,
+  findExistingRecord
+) => {
   const receivedLoadsData = parsedData.data.RECEIVED_LOADS
 
   if (!receivedLoadsData) {
@@ -37,40 +42,71 @@ export const transformFromSummaryLog = (parsedData, summaryLogContext) => {
     accreditationId
   } = summaryLogContext
 
-  return rows.map((row) => {
-    // Map row values to object using headers
-    const rowData = headers.reduce((acc, header, index) => {
-      acc[header] = row[index]
-      return acc
-    }, /** @type {Record<string, any>} */ ({}))
+  return Promise.all(
+    rows.map(async (row) => {
+      // Map row values to object using headers
+      const rowData = headers.reduce((acc, header, index) => {
+        acc[header] = row[index]
+        return acc
+      }, /** @type {Record<string, any>} */ ({}))
 
-    // Extract rowId (should be first column based on ROW_ID header)
-    const rowId = rowData.ROW_ID
+      // Extract rowId (should be first column based on ROW_ID header)
+      const rowId = rowData.ROW_ID
 
-    const version = {
-      id: randomUUID(),
-      createdAt: new Date().toISOString(),
-      status: VERSION_STATUS.CREATED,
-      summaryLogId,
-      summaryLogUri,
-      data: rowData
-    }
+      // Look up existing waste record if finder function provided
+      const existingRecord = findExistingRecord
+        ? await findExistingRecord(
+            organisationId,
+            registrationId,
+            WASTE_RECORD_TYPE.RECEIVED,
+            rowId
+          )
+        : null
 
-    const wasteRecord = {
-      id: randomUUID(),
-      organisationId,
-      registrationId,
-      rowId,
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: rowData,
-      versions: [version]
-    }
+      if (existingRecord) {
+        // Add new version to existing record
+        const newVersion = {
+          id: randomUUID(),
+          createdAt: new Date().toISOString(),
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId,
+          summaryLogUri,
+          data: rowData
+        }
 
-    // Only include accreditationId if provided
-    if (accreditationId) {
-      wasteRecord.accreditationId = accreditationId
-    }
+        return {
+          ...existingRecord,
+          data: rowData,
+          versions: [...existingRecord.versions, newVersion]
+        }
+      }
 
-    return wasteRecord
-  })
+      // Create new waste record
+      const version = {
+        id: randomUUID(),
+        createdAt: new Date().toISOString(),
+        status: VERSION_STATUS.CREATED,
+        summaryLogId,
+        summaryLogUri,
+        data: rowData
+      }
+
+      const wasteRecord = {
+        id: randomUUID(),
+        organisationId,
+        registrationId,
+        rowId,
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: rowData,
+        versions: [version]
+      }
+
+      // Only include accreditationId if provided
+      if (accreditationId) {
+        wasteRecord.accreditationId = accreditationId
+      }
+
+      return wasteRecord
+    })
+  )
 }
