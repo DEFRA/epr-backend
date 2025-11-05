@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
-import { getEntraUserRoles, getDefraUserRoles } from './get-roles.js'
+import { getDefraUserRoles } from './get-defra-user-roles.js'
+import { getEntraUserRoles } from './get-entra-user-roles.js'
 
 export function getJwtSchemeConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
@@ -46,7 +47,7 @@ export function getJwtSchemeConfig(oidcConfigs) {
 
       if (issuer === defraIdOidcConfig.issuer) {
         if (audience !== defraIdOidcConfig.aud) {
-          throw Boom.badRequest('Invalid audience for Entra ID token')
+          throw Boom.badRequest('Invalid audience for Defra ID token')
         }
 
         const scope = await getDefraUserRoles(tokenPayload, request)
