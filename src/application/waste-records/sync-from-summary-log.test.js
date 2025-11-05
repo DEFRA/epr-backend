@@ -55,10 +55,12 @@ describe('syncFromSummaryLog', () => {
       }
     }
 
-    await syncFromSummaryLog(summaryLog, {
+    const sync = syncFromSummaryLog({
       extractor: extractorStub,
       wasteRecordRepository: wasteRecordRepositoryStub
     })
+
+    await sync(summaryLog)
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -132,9 +134,11 @@ describe('syncFromSummaryLog', () => {
       }
     }
 
-    await syncFromSummaryLog(summaryLog, {
+    const sync = syncFromSummaryLog({
       extractor: extractorStub,
       wasteRecordRepository: wasteRecordRepositoryStub
     })
+
+    await sync(summaryLog)
   })
 })

@@ -14,8 +14,9 @@ import {
  *
  * @param {ParsedSummaryLog} parsedData - The parsed summary log data
  * @param {Object} summaryLogContext - Context from the summary log
- * @param {string} summaryLogContext.summaryLogId - The summary log ID
- * @param {string} summaryLogContext.summaryLogUri - The S3 URI for the summary log
+ * @param {Object} summaryLogContext.summaryLog - The summary log reference
+ * @param {string} summaryLogContext.summaryLog.id - The summary log ID
+ * @param {string} summaryLogContext.summaryLog.uri - The S3 URI for the summary log
  * @param {string} summaryLogContext.organisationId - The organisation ID
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
@@ -34,13 +35,8 @@ export const transformFromSummaryLog = async (
   }
 
   const { headers, rows } = receivedLoadsData
-  const {
-    summaryLogId,
-    summaryLogUri,
-    organisationId,
-    registrationId,
-    accreditationId
-  } = summaryLogContext
+  const { summaryLog, organisationId, registrationId, accreditationId } =
+    summaryLogContext
 
   return Promise.all(
     rows.map(async (row) => {
@@ -69,8 +65,7 @@ export const transformFromSummaryLog = async (
           id: randomUUID(),
           createdAt: new Date().toISOString(),
           status: VERSION_STATUS.UPDATED,
-          summaryLogId,
-          summaryLogUri,
+          summaryLog,
           data: rowData
         }
 
@@ -86,8 +81,7 @@ export const transformFromSummaryLog = async (
         id: randomUUID(),
         createdAt: new Date().toISOString(),
         status: VERSION_STATUS.CREATED,
-        summaryLogId,
-        summaryLogUri,
+        summaryLog,
         data: rowData
       }
 

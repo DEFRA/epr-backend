@@ -20,12 +20,17 @@ export const VERSION_STATUS = Object.freeze({
  */
 
 /**
+ * @typedef {Object} SummaryLogReference
+ * @property {string} id - Summary log ID
+ * @property {string} uri - S3 object URI
+ */
+
+/**
  * @typedef {Object} WasteRecordVersion
  * @property {string} id
  * @property {string} createdAt - ISO8601 timestamp
  * @property {VersionStatus} status
- * @property {string} summaryLogId - Foreign key to summary log that created this version
- * @property {string} summaryLogUri - S3 object URI to avoid extra query
+ * @property {SummaryLogReference} summaryLog - Reference to summary log that created this version
  * @property {Object} data - For 'created' status: all fields required for reporting. For 'updated'/'pending': only changed fields
  */
 

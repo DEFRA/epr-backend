@@ -32,8 +32,10 @@ describe('transformFromSummaryLog', () => {
     }
 
     const summaryLogContext = {
-      summaryLogId: SUMMARY_LOG_ID,
-      summaryLogUri: SUMMARY_LOG_URI,
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
       organisationId: 'org-1',
       registrationId: 'reg-1'
     }
@@ -52,8 +54,10 @@ describe('transformFromSummaryLog', () => {
     }
 
     const summaryLogContext = {
-      summaryLogId: SUMMARY_LOG_ID,
-      summaryLogUri: SUMMARY_LOG_URI,
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
       organisationId: 'org-1',
       registrationId: 'reg-1'
     }
@@ -76,8 +80,10 @@ describe('transformFromSummaryLog', () => {
     }
 
     const summaryLogContext = {
-      summaryLogId: SUMMARY_LOG_ID,
-      summaryLogUri: SUMMARY_LOG_URI,
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
       organisationId: 'org-1',
       registrationId: 'reg-1',
       accreditationId: 'acc-1'
@@ -101,8 +107,10 @@ describe('transformFromSummaryLog', () => {
     }
 
     const summaryLogContext = {
-      summaryLogId: 'summary-log-2',
-      summaryLogUri: 's3://bucket/key2',
+      summaryLog: {
+        id: 'summary-log-2',
+        uri: 's3://bucket/key2'
+      },
       organisationId: 'org-1',
       registrationId: 'reg-1'
     }
@@ -122,12 +130,17 @@ describe('transformFromSummaryLog', () => {
     expect(result[0].versions[0]).toMatchObject({
       id: 'version-1',
       status: VERSION_STATUS.CREATED,
-      summaryLogId: SUMMARY_LOG_ID
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      }
     })
     expect(result[0].versions[1]).toMatchObject({
       status: VERSION_STATUS.UPDATED,
-      summaryLogId: 'summary-log-2',
-      summaryLogUri: 's3://bucket/key2',
+      summaryLog: {
+        id: 'summary-log-2',
+        uri: 's3://bucket/key2'
+      },
       data: {
         ROW_ID: FIRST_ROW_ID,
         DATE_RECEIVED: UPDATED_DATE,
@@ -156,8 +169,10 @@ function createExistingWasteRecord() {
         id: 'version-1',
         createdAt: '2025-01-15T10:00:00.000Z',
         status: VERSION_STATUS.CREATED,
-        summaryLogId: SUMMARY_LOG_ID,
-        summaryLogUri: SUMMARY_LOG_URI,
+        summaryLog: {
+          id: SUMMARY_LOG_ID,
+          uri: SUMMARY_LOG_URI
+        },
         data: {
           ROW_ID: FIRST_ROW_ID,
           DATE_RECEIVED: FIRST_DATE,
@@ -199,8 +214,10 @@ function expectValidWasteRecord(record, rowId, dateReceived, grossWeight) {
   expect(record.versions).toHaveLength(1)
   expect(record.versions[0]).toMatchObject({
     status: VERSION_STATUS.CREATED,
-    summaryLogId: SUMMARY_LOG_ID,
-    summaryLogUri: SUMMARY_LOG_URI,
+    summaryLog: {
+      id: SUMMARY_LOG_ID,
+      uri: SUMMARY_LOG_URI
+    },
     data: {
       ROW_ID: rowId,
       DATE_RECEIVED: dateReceived,
