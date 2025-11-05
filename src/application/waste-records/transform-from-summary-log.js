@@ -40,7 +40,7 @@ export const transformFromSummaryLog = (parsedData, summaryLogContext) => {
     const rowData = headers.reduce((acc, header, index) => {
       acc[header] = row[index]
       return acc
-    }, {})
+    }, /** @type {Record<string, any>} */ ({}))
 
     // Extract rowId (should be first column based on ROW_ID header)
     const rowId = rowData.ROW_ID
