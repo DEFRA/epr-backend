@@ -150,6 +150,30 @@ describe('transformFromSummaryLog', () => {
     expect(result[0].versions[1].id).toBeTruthy()
     expect(result[0].versions[1].createdAt).toBeTruthy()
   })
+
+  it('throws error for unknown processing type', async () => {
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'UNKNOWN_TYPE'
+        }
+      },
+      data: {}
+    }
+
+    const summaryLogContext = {
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    await expect(
+      transformFromSummaryLog(parsedData, summaryLogContext)
+    ).rejects.toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
+  })
 })
 
 function createExistingWasteRecord() {

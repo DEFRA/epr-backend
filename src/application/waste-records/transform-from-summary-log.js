@@ -23,11 +23,23 @@ import {
  * @param {Function} [findExistingRecord] - Optional function to find existing waste records
  * @returns {Promise<WasteRecord[]>} Array of waste records
  */
+const KNOWN_PROCESSING_TYPES = [
+  'REPROCESSOR_INPUT',
+  'REPROCESSOR_OUTPUT',
+  'EXPORTER'
+]
+
 export const transformFromSummaryLog = async (
   parsedData,
   summaryLogContext,
   findExistingRecord
 ) => {
+  // Check for unknown processing type
+  const processingType = parsedData.meta.PROCESSING_TYPE?.value
+  if (processingType && !KNOWN_PROCESSING_TYPES.includes(processingType)) {
+    throw new Error(`Unknown PROCESSING_TYPE: ${processingType}`)
+  }
+
   const receivedLoadsData = parsedData.data.RECEIVED_LOADS
 
   if (!receivedLoadsData) {
