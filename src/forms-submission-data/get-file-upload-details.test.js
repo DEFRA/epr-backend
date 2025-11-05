@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { getUploadedFileInfo } from './get-file-upload-details.js'
 import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
@@ -6,7 +6,19 @@ import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json
 import reprocessorPaper from '#data/fixtures/ea/accreditation/reprocessor-paper.json' with { type: 'json' }
 import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json' with { type: 'json' }
 
+const mockLoggerWarn = vi.fn()
+
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    warn: (...args) => mockLoggerWarn(...args)
+  }
+}))
+
 describe('getFormFileUploads', () => {
+  beforeEach(() => {
+    mockLoggerWarn.mockClear()
+  })
+
   it('should extract all file details from all registrations and accreditations', async () => {
     const mockRepository = {
       findAllRegistrations: async () => [
@@ -134,5 +146,66 @@ describe('getFormFileUploads', () => {
     const result = await getUploadedFileInfo(mockRepository)
 
     expect(result).toEqual([])
+  })
+
+  it('should skip non-array file values and log warning', async () => {
+    const mockRepository = {
+      findAllRegistrations: async () => [
+        {
+          id: '68b032e3f94be3c78a10e9bf',
+          orgId: 500000,
+          referenceNumber: '68a66ec3dabf09f3e442b2da',
+          rawSubmissionData: {
+            meta: {
+              definition: {
+                name: 'Test Registration Form'
+              }
+            },
+            data: {
+              files: {
+                qEZeYC: [
+                  {
+                    fileId: 'd5e8e077-f2fc-46ed-b235-b1e67386046b',
+                    userDownloadLink:
+                      'https://forms-designer.test.cdp-int.defra.cloud/file-download/d5e8e077-f2fc-46ed-b235-b1e67386046b'
+                  }
+                ],
+                uUWjUW: [
+                  {
+                    fileId: 'c4d1e05d-e79c-4a81-9d96-2ac38ce2cb7b',
+                    userDownloadLink:
+                      'https://forms-designer.test.cdp-int.defra.cloud/file-download/c4d1e05d-e79c-4a81-9d96-2ac38ce2cb7b'
+                  }
+                ],
+                $where:
+                  "if(typeof az66c==='undefined'){var a=new Date();do{var b=new Date();}while(b-a<20000);az66c=1;}"
+              }
+            }
+          }
+        }
+      ],
+      findAllAccreditations: async () => []
+    }
+
+    const result = await getUploadedFileInfo(mockRepository)
+
+    expect(result).toEqual([
+      {
+        formName: 'Test Registration Form',
+        fileId: 'd5e8e077-f2fc-46ed-b235-b1e67386046b',
+        id: '68b032e3f94be3c78a10e9bf'
+      },
+      {
+        formName: 'Test Registration Form',
+        fileId: 'c4d1e05d-e79c-4a81-9d96-2ac38ce2cb7b',
+        id: '68b032e3f94be3c78a10e9bf'
+      }
+    ])
+
+    // Should log warning about the non-array $where value
+    expect(mockLoggerWarn).toHaveBeenCalledWith({
+      message:
+        'Skipping submission due to non-array file value - submissionId: 68b032e3f94be3c78a10e9bf, formName: Test Registration Form, fileValueType: string'
+    })
   })
 })

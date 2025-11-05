@@ -1,3 +1,5 @@
+import { logger } from '#common/helpers/logging/logger.js'
+
 function extractFilesFromSubmissions(submissions) {
   return submissions.flatMap((submission) => {
     const filesByField = submission?.rawSubmissionData?.data?.files
@@ -8,13 +10,19 @@ function extractFilesFromSubmissions(submissions) {
       return []
     }
 
-    return Object.values(filesByField).flatMap((fileArray) =>
-      fileArray.map((file) => ({
+    return Object.values(filesByField).flatMap((fileArray) => {
+      if (!Array.isArray(fileArray)) {
+        logger.warn({
+          message: `Skipping submission due to non-array file value - submissionId: ${id}, formName: ${formName}, fileValueType: ${typeof fileArray}`
+        })
+        return []
+      }
+      return fileArray.map((file) => ({
         formName,
         fileId: file.fileId,
         id
       }))
-    )
+    })
   })
 }
 
