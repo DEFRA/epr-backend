@@ -1,11 +1,18 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { syncFromSummaryLog } from './sync-from-summary-log.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 
 describe('syncFromSummaryLog', () => {
+  let wasteRecordRepository
+
+  beforeEach(() => {
+    wasteRecordRepository = createInMemoryWasteRecordsRepository()()
+  })
+
   it('extracts, transforms, and saves waste records from summary log', async () => {
     const summaryLog = {
       id: 'summary-log-1',
@@ -39,61 +46,32 @@ describe('syncFromSummaryLog', () => {
       }
     }
 
-    const wasteRecordRepositoryStub = {
-      findAll: async (organisationId, registrationId) => {
-        expect(organisationId).toBe('org-1')
-        expect(registrationId).toBe('reg-1')
-        return []
-      },
-      saveAll: async (wasteRecords) => {
-        expect(wasteRecords).toHaveLength(2)
-        expect(wasteRecords[0]).toMatchObject({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: 'row-123',
-          type: WASTE_RECORD_TYPE.RECEIVED
-        })
-        expect(wasteRecords[1]).toMatchObject({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: 'row-456',
-          type: WASTE_RECORD_TYPE.RECEIVED
-        })
-        return wasteRecords
-      }
-    }
-
     const sync = syncFromSummaryLog({
       extractor: extractorStub,
-      wasteRecordRepository: wasteRecordRepositoryStub
+      wasteRecordRepository
     })
 
     await sync(summaryLog)
+
+    // Verify records were saved
+    const savedRecords = await wasteRecordRepository.findAll('org-1', 'reg-1')
+    expect(savedRecords).toHaveLength(2)
+    expect(savedRecords[0]).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 'row-123',
+      type: WASTE_RECORD_TYPE.RECEIVED
+    })
+    expect(savedRecords[1]).toMatchObject({
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      rowId: 'row-456',
+      type: WASTE_RECORD_TYPE.RECEIVED
+    })
   })
 
   it('updates existing waste records when rowId already exists', async () => {
-    const summaryLog = {
-      id: 'summary-log-2',
-      uri: 's3://bucket/key2',
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-          rows: [['row-123', '2025-01-20', 250.5]]
-        }
-      }
-    }
-
+    // First, save an initial record
     const existingRecord = {
       organisationId: 'org-1',
       registrationId: 'reg-1',
@@ -121,29 +99,46 @@ describe('syncFromSummaryLog', () => {
       ]
     }
 
+    await wasteRecordRepository.saveAll([existingRecord])
+
+    const summaryLog = {
+      id: 'summary-log-2',
+      uri: 's3://bucket/key2',
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          rows: [['row-123', '2025-01-20', 250.5]]
+        }
+      }
+    }
+
     const extractorStub = {
       extract: async () => parsedData
     }
 
-    const wasteRecordRepositoryStub = {
-      findAll: async (organisationId, registrationId) => {
-        expect(organisationId).toBe('org-1')
-        expect(registrationId).toBe('reg-1')
-        return [existingRecord]
-      },
-      saveAll: async (wasteRecords) => {
-        expect(wasteRecords).toHaveLength(1)
-        expect(wasteRecords[0].versions).toHaveLength(2)
-        expect(wasteRecords[0].versions[1].status).toBe(VERSION_STATUS.UPDATED)
-        return wasteRecords
-      }
-    }
-
     const sync = syncFromSummaryLog({
       extractor: extractorStub,
-      wasteRecordRepository: wasteRecordRepositoryStub
+      wasteRecordRepository
     })
 
     await sync(summaryLog)
+
+    // Verify record was updated
+    const savedRecords = await wasteRecordRepository.findAll('org-1', 'reg-1')
+    expect(savedRecords).toHaveLength(1)
+    expect(savedRecords[0].versions).toHaveLength(2)
+    expect(savedRecords[0].versions[1].status).toBe(VERSION_STATUS.UPDATED)
+    expect(savedRecords[0].data.GROSS_WEIGHT).toBe(250.5)
   })
 })
