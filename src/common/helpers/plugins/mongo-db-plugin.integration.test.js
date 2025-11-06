@@ -12,7 +12,7 @@ describe('MongoDB plugin', () => {
   beforeAll(async () => {
     await setupMongo({
       binary: {
-        version: 'latest'
+        version: '7.0.24'
       },
       serverOptions: {},
       autoStart: false
