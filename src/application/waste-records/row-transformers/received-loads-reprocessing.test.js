@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { transformReceivedLoadsRow } from './received-loads-reprocessing.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
+const TEST_ROW_INDEX_5 = 5
+const TEST_ROW_INDEX_12 = 12
+const TEST_ROW_INDEX_42 = 42
+
 describe('transformReceivedLoadsRow', () => {
   it('transforms valid row data correctly', () => {
     const rowData = {
@@ -25,8 +29,8 @@ describe('transformReceivedLoadsRow', () => {
       GROSS_WEIGHT: 100.5
     }
 
-    expect(() => transformReceivedLoadsRow(rowData, 5)).toThrow(
-      'Missing ROW_ID at row 5'
+    expect(() => transformReceivedLoadsRow(rowData, TEST_ROW_INDEX_5)).toThrow(
+      `Missing ROW_ID at row ${TEST_ROW_INDEX_5}`
     )
   })
 
@@ -36,8 +40,8 @@ describe('transformReceivedLoadsRow', () => {
       GROSS_WEIGHT: 100.5
     }
 
-    expect(() => transformReceivedLoadsRow(rowData, 12)).toThrow(
-      'Missing DATE_RECEIVED_FOR_REPROCESSING at row 12'
+    expect(() => transformReceivedLoadsRow(rowData, TEST_ROW_INDEX_12)).toThrow(
+      `Missing DATE_RECEIVED_FOR_REPROCESSING at row ${TEST_ROW_INDEX_12}`
     )
   })
 
@@ -46,8 +50,8 @@ describe('transformReceivedLoadsRow', () => {
       GROSS_WEIGHT: 100.5
     }
 
-    expect(() => transformReceivedLoadsRow(rowData, 42)).toThrow(
-      'Missing ROW_ID at row 42'
+    expect(() => transformReceivedLoadsRow(rowData, TEST_ROW_INDEX_42)).toThrow(
+      `Missing ROW_ID at row ${TEST_ROW_INDEX_42}`
     )
   })
 })
