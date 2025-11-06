@@ -132,6 +132,7 @@ export const summaryLogsUploadCompleted = {
   method: 'POST',
   path: summaryLogsUploadCompletedPath,
   options: {
+    auth: false,
     validate: {
       payload: uploadCompletedPayloadSchema,
       failAction: (_request, _h, err) => {

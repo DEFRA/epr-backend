@@ -20,6 +20,7 @@ export const summaryLogsValidate = {
   method: 'POST',
   path: summaryLogsValidatePath,
   options: {
+    auth: false,
     validate: {
       payload: (data, _options) => {
         if (!data || typeof data !== 'object') {

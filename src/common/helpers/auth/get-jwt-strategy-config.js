@@ -1,5 +1,4 @@
 import Boom from '@hapi/boom'
-import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { config } from '../../../config.js'
 
@@ -49,23 +48,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
         }
       }
 
-      if (issuer === defraIdOidcConfig.issuer) {
-        if (audience !== defraIdOidcConfig.aud) {
-          throw Boom.badRequest('Invalid audience for Defra ID token')
-        }
-
-        const scope = await getDefraUserRoles(tokenPayload, request)
-
-        return {
-          isValid: true,
-          credentials: {
-            id: contactId,
-            email,
-            issuer,
-            scope
-          }
-        }
-      }
+      // Defra id authentication goes here
 
       throw Boom.badRequest(`Unrecognized token issuer: ${issuer}`)
     }
