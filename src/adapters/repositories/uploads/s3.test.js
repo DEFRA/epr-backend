@@ -6,12 +6,24 @@ import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from './s3.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 
-// Suppress MSW warnings for S3/MinIO requests on localhost
+// Suppress MSW warnings for S3/MinIO and testcontainers requests on localhost
 beforeAll(() => {
-  server.events.on('request:unhandled', ({ request }) => {
-    if (request.url.includes('127.0.0.1')) {
-      // Silently ignore S3/MinIO requests
-      return
+  // Close the server that was started with 'warn' mode
+  server.close()
+  // Restart with custom handler that ignores localhost requests
+  server.listen({
+    onUnhandledRequest(request) {
+      const url = new URL(request.url)
+      // Silently ignore localhost requests (testcontainers Docker API, MinIO, etc.)
+      if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+        return
+      }
+      // Warn for other unhandled requests
+      console.warn(
+        '[MSW] Warning: intercepted a request without a matching request handler:',
+        request.method,
+        request.url
+      )
     }
   })
 })
