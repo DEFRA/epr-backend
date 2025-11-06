@@ -28,7 +28,8 @@ export default defineConfig({
         '**/*.md',
         '**/*.xlsx',
         '**/*.json',
-        '**/index.js'
+        '**/index.js',
+        '.DS_STORE'
       ],
       thresholds: {
         lines: 100,
