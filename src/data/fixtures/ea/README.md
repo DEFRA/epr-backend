@@ -52,6 +52,9 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 | [503179](./organisation/registered-no-partnership.json)         | UK registered non partnership company                                    |
 | [503180](./organisation/non-registered-uk-sole-trader.json)     | UK non-registered sole trader, person applying not in control of company |
 | [503181](./organisation/non-registered-outside-uk-address.json) | UK non-registered organisation with non-UK main address                  |
+| [503286](./organisation/unincorporated-separate-control.json)   | UK unincorporated association with separate management contact           |
+| [503287](./organisation/sole-trader-separate-contro.json)       | UK sole trader with separate management contact                          |
+| [503288](./organisation/non-uk-separate-control.json)           | Non-UK organisation with separate management contact                     |
 
 ### Registration
 
