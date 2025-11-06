@@ -41,6 +41,8 @@ erDiagram
     ObjectId id  PK "_id from registration collection. This is system generated id from registration form submission"
     ISO8601 formSubmissionTime "Time at which form was submitted"
     enum submittedToRegulator "ea,nrw,sepa,niea"
+    ISO8601 validFrom "regulator provided date from which registration is valid"
+    ISO8601 validTo "regulator provided date till which registration is valid"
     enum status "created,approved,rejected,suspended,archived.The initial status created is system generated but afterwards driven by regulator decisions"
     string orgName "Name of organisation"
     STATUS-HISTORY[] statusHistory "Status change history"
@@ -76,8 +78,10 @@ erDiagram
 
   ACCREDITATION {
     ObjectId id PK "_id from accreditation collection. This is system generated id from accreditation form submission"
-    long accreditationNumber "value assigned by regulators"
+    string accreditationNumber "value assigned by regulators"
     enum submittedToRegulator "ea,nrw,sepa,niea"
+    ISO8601 validFrom "regulator provided date from which accreditation is valid"
+    ISO8601 validTo "regulator provided date till which accreditation is valid"
     string orgName "Name of organisation"
     ISO8601 formSubmissionTime "Time at which form was submitted"
     SITE site "applicable only for reprocessor"
