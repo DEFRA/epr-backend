@@ -15,7 +15,7 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
   const storage = structuredClone(initialRecords)
 
   return () => ({
-    async findAll(organisationId, registrationId) {
+    async findByRegistration(organisationId, registrationId) {
       const validatedOrgId = validateOrganisationId(organisationId)
       const validatedRegId = validateRegistrationId(registrationId)
 
@@ -28,7 +28,7 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       )
     },
 
-    async saveAll(wasteRecords) {
+    async upsertWasteRecords(wasteRecords) {
       for (const record of wasteRecords) {
         const validatedRecord = validateWasteRecord(record)
 

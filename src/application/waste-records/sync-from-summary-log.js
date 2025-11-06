@@ -25,7 +25,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const parsedData = await extractor.extract(summaryLog.uri)
 
     // 2. Load all existing waste records for this org/reg
-    const existingRecordsArray = await wasteRecordRepository.findAll(
+    const existingRecordsArray = await wasteRecordRepository.findByRegistration(
       summaryLog.organisationId,
       summaryLog.registrationId
     )
@@ -56,6 +56,6 @@ export const syncFromSummaryLog = (dependencies) => {
     )
 
     // 5. Save waste records
-    await wasteRecordRepository.saveAll(wasteRecords)
+    await wasteRecordRepository.upsertWasteRecords(wasteRecords)
   }
 }

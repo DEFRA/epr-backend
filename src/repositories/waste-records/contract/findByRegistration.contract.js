@@ -1,8 +1,8 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteRecord } from './test-data.js'
 
-export const testFindAllBehaviour = (createTest) => {
-  describe('findAll', () => {
+export const testFindByRegistrationBehaviour = (createTest) => {
+  describe('findByRegistration', () => {
     let repository
 
     beforeEach(async ({ wasteRecordsRepository }) => {
@@ -10,7 +10,7 @@ export const testFindAllBehaviour = (createTest) => {
     })
 
     createTest('returns empty array when no waste records exist', async () => {
-      const result = await repository.findAll('org-1', 'reg-1')
+      const result = await repository.findByRegistration('org-1', 'reg-1')
 
       expect(result).toEqual([])
     })
@@ -29,9 +29,9 @@ export const testFindAllBehaviour = (createTest) => {
           rowId: 'row-2'
         })
 
-        await repository.saveAll([record1, record2])
+        await repository.upsertWasteRecords([record1, record2])
 
-        const result = await repository.findAll('org-1', 'reg-1')
+        const result = await repository.findByRegistration('org-1', 'reg-1')
 
         expect(result).toHaveLength(2)
         expect(result.map((r) => r.rowId)).toEqual(
@@ -54,9 +54,9 @@ export const testFindAllBehaviour = (createTest) => {
           rowId: 'row-2'
         })
 
-        await repository.saveAll([org1Record, org2Record])
+        await repository.upsertWasteRecords([org1Record, org2Record])
 
-        const result = await repository.findAll('org-1', 'reg-1')
+        const result = await repository.findByRegistration('org-1', 'reg-1')
 
         expect(result).toHaveLength(1)
         expect(result[0].rowId).toBe('row-1')
@@ -78,9 +78,9 @@ export const testFindAllBehaviour = (createTest) => {
           rowId: 'row-2'
         })
 
-        await repository.saveAll([reg1Record, reg2Record])
+        await repository.upsertWasteRecords([reg1Record, reg2Record])
 
-        const result = await repository.findAll('org-1', 'reg-1')
+        const result = await repository.findByRegistration('org-1', 'reg-1')
 
         expect(result).toHaveLength(1)
         expect(result[0].rowId).toBe('row-1')

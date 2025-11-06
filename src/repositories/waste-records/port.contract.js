@@ -1,9 +1,9 @@
-import { testFindAllBehaviour } from './contract/findAll.contract.js'
-import { testSaveAllBehaviour } from './contract/saveAll.contract.js'
+import { testFindByRegistrationBehaviour } from './contract/findByRegistration.contract.js'
+import { testUpsertWasteRecordsBehaviour } from './contract/upsertWasteRecords.contract.js'
 import { testDataIsolationBehaviour } from './contract/data-isolation.contract.js'
 
 export const testWasteRecordsRepositoryContract = (repositoryFactory) => {
-  testFindAllBehaviour(repositoryFactory)
-  testSaveAllBehaviour(repositoryFactory)
+  testFindByRegistrationBehaviour(repositoryFactory)
+  testUpsertWasteRecordsBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)
 }

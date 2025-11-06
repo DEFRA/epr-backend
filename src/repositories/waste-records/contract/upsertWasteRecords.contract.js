@@ -2,8 +2,8 @@ import { describe, beforeEach, expect } from 'vitest'
 import { buildWasteRecord } from './test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-export const testSaveAllBehaviour = (createTest) => {
-  describe('saveAll', () => {
+export const testUpsertWasteRecordsBehaviour = (createTest) => {
+  describe('upsertWasteRecords', () => {
     let repository
 
     beforeEach(async ({ wasteRecordsRepository }) => {
@@ -14,14 +14,14 @@ export const testSaveAllBehaviour = (createTest) => {
       const record1 = buildWasteRecord({ rowId: 'row-1' })
       const record2 = buildWasteRecord({ rowId: 'row-2' })
 
-      await repository.saveAll([record1, record2])
+      await repository.upsertWasteRecords([record1, record2])
 
-      const result = await repository.findAll('org-1', 'reg-1')
+      const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(2)
     })
 
     createTest('saves empty array without error', async () => {
-      await expect(repository.saveAll([])).resolves.not.toThrow()
+      await expect(repository.upsertWasteRecords([])).resolves.not.toThrow()
     })
 
     createTest('upserts waste records by org/reg/type/rowId', async () => {
@@ -41,7 +41,7 @@ export const testSaveAllBehaviour = (createTest) => {
         ]
       })
 
-      await repository.saveAll([initial])
+      await repository.upsertWasteRecords([initial])
 
       // Save updated version with same key
       const updated = buildWasteRecord({
@@ -66,9 +66,9 @@ export const testSaveAllBehaviour = (createTest) => {
         ]
       })
 
-      await repository.saveAll([updated])
+      await repository.upsertWasteRecords([updated])
 
-      const result = await repository.findAll('org-1', 'reg-1')
+      const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
       expect(result[0].data.VALUE).toBe('updated')
       expect(result[0].versions).toHaveLength(2)
@@ -84,9 +84,9 @@ export const testSaveAllBehaviour = (createTest) => {
         type: WASTE_RECORD_TYPE.PROCESSED
       })
 
-      await repository.saveAll([receivedRecord, processedRecord])
+      await repository.upsertWasteRecords([receivedRecord, processedRecord])
 
-      const result = await repository.findAll('org-1', 'reg-1')
+      const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(2)
       expect(result.map((r) => r.type)).toEqual(
         expect.arrayContaining([
@@ -102,9 +102,9 @@ export const testSaveAllBehaviour = (createTest) => {
         accreditationId: 'acc-1'
       })
 
-      await repository.saveAll([recordWithAccreditation])
+      await repository.upsertWasteRecords([recordWithAccreditation])
 
-      const result = await repository.findAll('org-1', 'reg-1')
+      const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
       expect(result[0].accreditationId).toBe('acc-1')
     })

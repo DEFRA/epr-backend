@@ -64,7 +64,10 @@ describe('syncFromSummaryLog', () => {
     await sync(summaryLog)
 
     // Verify records were saved
-    const savedRecords = await wasteRecordRepository.findAll('org-1', 'reg-1')
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
     expect(savedRecords).toHaveLength(2)
     expect(savedRecords[0]).toMatchObject({
       organisationId: 'org-1',
@@ -109,7 +112,7 @@ describe('syncFromSummaryLog', () => {
       ]
     }
 
-    await wasteRecordRepository.saveAll([existingRecord])
+    await wasteRecordRepository.upsertWasteRecords([existingRecord])
 
     const summaryLog = {
       id: 'summary-log-2',
@@ -149,7 +152,10 @@ describe('syncFromSummaryLog', () => {
     await sync(summaryLog)
 
     // Verify record was updated
-    const savedRecords = await wasteRecordRepository.findAll('org-1', 'reg-1')
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
     expect(savedRecords).toHaveLength(1)
     expect(savedRecords[0].versions).toHaveLength(2)
     expect(savedRecords[0].versions[1].status).toBe(VERSION_STATUS.UPDATED)

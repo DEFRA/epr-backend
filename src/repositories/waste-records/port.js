@@ -4,8 +4,8 @@
 
 /**
  * @typedef {Object} WasteRecordsRepository
- * @property {(organisationId: string, registrationId: string) => Promise<WasteRecord[]>} findAll
- * @property {(wasteRecords: WasteRecord[]) => Promise<void>} saveAll
+ * @property {(organisationId: string, registrationId: string) => Promise<WasteRecord[]>} findByRegistration
+ * @property {(wasteRecords: WasteRecord[]) => Promise<void>} upsertWasteRecords
  */
 
 /**
