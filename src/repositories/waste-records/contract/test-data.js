@@ -1,20 +1,24 @@
+import { randomUUID } from 'node:crypto'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 
+let rowIdCounter = 0
+
+const generateRowId = () => {
+  rowIdCounter++
+  return `row-${randomUUID()}-${rowIdCounter}`
+}
+
 /**
  * Build a minimal waste record for testing
- * @param {Object} overrides - Must include rowId as it's a required field
- * @param {string} overrides.rowId - Required row identifier from data
+ * @param {Object} overrides - Optional overrides for the waste record
+ * @param {string} [overrides.rowId] - Row identifier from data (auto-generated if not provided)
  * @returns {import('#domain/waste-records/model.js').WasteRecord}
  */
-export const buildWasteRecord = (overrides) => {
-  if (!overrides?.rowId) {
-    throw new Error('rowId is required')
-  }
-
-  const rowId = overrides.rowId
+export const buildWasteRecord = (overrides = {}) => {
+  const rowId = overrides.rowId || generateRowId()
   const organisationId = overrides.organisationId || 'org-1'
   const registrationId = overrides.registrationId || 'reg-1'
   const type = overrides.type || WASTE_RECORD_TYPE.RECEIVED
