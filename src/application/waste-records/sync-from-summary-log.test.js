@@ -6,6 +6,12 @@ import {
 } from '#domain/waste-records/model.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 
+const TEST_DATE_2025_01_15 = '2025-01-15'
+const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
+const TEST_WEIGHT_100_5 = 100.5
+const TEST_WEIGHT_200_75 = 200.75
+const TEST_WEIGHT_250_5 = 250.5
+
 describe('syncFromSummaryLog', () => {
   let wasteRecordRepository
 
@@ -30,10 +36,14 @@ describe('syncFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
           rows: [
-            ['row-123', '2025-01-15', 100.5],
-            ['row-456', '2025-01-16', 200.75]
+            ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5],
+            ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
           ]
         }
       }
@@ -79,8 +89,8 @@ describe('syncFromSummaryLog', () => {
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
         ROW_ID: 'row-123',
-        DATE_RECEIVED_FOR_REPROCESSING: '2025-01-15',
-        GROSS_WEIGHT: 100.5
+        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+        GROSS_WEIGHT: TEST_WEIGHT_100_5
       },
       versions: [
         {
@@ -92,8 +102,8 @@ describe('syncFromSummaryLog', () => {
           },
           data: {
             ROW_ID: 'row-123',
-            DATE_RECEIVED_FOR_REPROCESSING: '2025-01-15',
-            GROSS_WEIGHT: 100.5
+            DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+            GROSS_WEIGHT: TEST_WEIGHT_100_5
           }
         }
       ]
@@ -117,8 +127,12 @@ describe('syncFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-          rows: [['row-123', '2025-01-20', 250.5]]
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [['row-123', '2025-01-20', TEST_WEIGHT_250_5]]
         }
       }
     }
@@ -139,6 +153,6 @@ describe('syncFromSummaryLog', () => {
     expect(savedRecords).toHaveLength(1)
     expect(savedRecords[0].versions).toHaveLength(2)
     expect(savedRecords[0].versions[1].status).toBe(VERSION_STATUS.UPDATED)
-    expect(savedRecords[0].data.GROSS_WEIGHT).toBe(250.5)
+    expect(savedRecords[0].data[FIELD_GROSS_WEIGHT]).toBe(TEST_WEIGHT_250_5)
   })
 })
