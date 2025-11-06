@@ -111,7 +111,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/mongodb-binaries
-          key: mongodb-binaries-${{ runner.os }}-7.0.24
+          key: mongodb-binaries-${{ runner.os }}-7.0.14
           restore-keys: |
             mongodb-binaries-${{ runner.os }}-
 
