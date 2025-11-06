@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 
@@ -76,7 +75,6 @@ const transformTable = (
     if (existingRecord) {
       // Add new version to existing record
       const newVersion = {
-        id: randomUUID(),
         createdAt: new Date().toISOString(),
         status: VERSION_STATUS.UPDATED,
         summaryLog,
@@ -92,7 +90,6 @@ const transformTable = (
 
     // Create new waste record
     const version = {
-      id: randomUUID(),
       createdAt: new Date().toISOString(),
       status: VERSION_STATUS.CREATED,
       summaryLog,
@@ -100,7 +97,6 @@ const transformTable = (
     }
 
     const wasteRecord = {
-      id: randomUUID(),
       organisationId,
       registrationId,
       rowId,

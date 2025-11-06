@@ -95,7 +95,6 @@ describe('syncFromSummaryLog', () => {
     }
 
     const existingRecord = {
-      id: 'existing-id',
       organisationId: 'org-1',
       registrationId: 'reg-1',
       rowId: 'row-123',
@@ -107,7 +106,6 @@ describe('syncFromSummaryLog', () => {
       },
       versions: [
         {
-          id: 'version-1',
           createdAt: '2025-01-15T10:00:00.000Z',
           status: VERSION_STATUS.CREATED,
           summaryLog: {
@@ -135,7 +133,6 @@ describe('syncFromSummaryLog', () => {
       },
       saveAll: async (wasteRecords) => {
         expect(wasteRecords).toHaveLength(1)
-        expect(wasteRecords[0].id).toBe('existing-id')
         expect(wasteRecords[0].versions).toHaveLength(2)
         expect(wasteRecords[0].versions[1].status).toBe(VERSION_STATUS.UPDATED)
         return wasteRecords

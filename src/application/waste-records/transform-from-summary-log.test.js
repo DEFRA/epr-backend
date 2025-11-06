@@ -142,10 +142,8 @@ describe('transformFromSummaryLog', () => {
     )
 
     expect(result).toHaveLength(1)
-    expect(result[0].id).toBe('existing-id')
     expect(result[0].versions).toHaveLength(2)
     expect(result[0].versions[0]).toMatchObject({
-      id: 'version-1',
       status: VERSION_STATUS.CREATED,
       summaryLog: {
         id: SUMMARY_LOG_ID,
@@ -164,7 +162,6 @@ describe('transformFromSummaryLog', () => {
         GROSS_WEIGHT: UPDATED_WEIGHT
       }
     })
-    expect(result[0].versions[1].id).toBeTruthy()
     expect(result[0].versions[1].createdAt).toBeTruthy()
   })
 
@@ -221,7 +218,6 @@ describe('transformFromSummaryLog', () => {
 
 function createExistingWasteRecord() {
   return {
-    id: 'existing-id',
     organisationId: 'org-1',
     registrationId: 'reg-1',
     rowId: FIRST_ROW_ID,
@@ -233,7 +229,6 @@ function createExistingWasteRecord() {
     },
     versions: [
       {
-        id: 'version-1',
         createdAt: '2025-01-15T10:00:00.000Z',
         status: VERSION_STATUS.CREATED,
         summaryLog: {
@@ -263,7 +258,6 @@ function expectValidWasteRecord(record, rowId, dateReceived, grossWeight) {
     }
   })
 
-  expect(record.id).toBeTruthy()
   expect(record.versions).toHaveLength(1)
   expect(record.versions[0]).toMatchObject({
     status: VERSION_STATUS.CREATED,
@@ -277,6 +271,5 @@ function expectValidWasteRecord(record, rowId, dateReceived, grossWeight) {
       GROSS_WEIGHT: grossWeight
     }
   })
-  expect(record.versions[0].id).toBeTruthy()
   expect(record.versions[0].createdAt).toBeTruthy()
 }
