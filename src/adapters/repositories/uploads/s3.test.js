@@ -1,9 +1,20 @@
-import { describe, expect, vi } from 'vitest'
+import { beforeAll, describe, expect, vi } from 'vitest'
 import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { it as s3It } from '#vite/fixtures/s3.js'
+import { server } from '#vite/setup-msw.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from './s3.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
+
+// Suppress MSW warnings for S3/MinIO requests on localhost
+beforeAll(() => {
+  server.events.on('request:unhandled', ({ request }) => {
+    if (request.url.includes('127.0.0.1')) {
+      // Silently ignore S3/MinIO requests
+      return
+    }
+  })
+})
 
 const bucket = 'test-bucket'
 const key = 'path/to/summary-log.xlsx'
