@@ -32,7 +32,7 @@ const PROCESSING_TYPES = {
     RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
   },
   EXPORTER: {
-    // TODO: Add table transformers when business confirms mappings
+    // No table transformers yet - awaiting business confirmation of data mappings
   }
 }
 
