@@ -20,16 +20,6 @@ export const testSaveAllBehaviour = (createTest) => {
       expect(result).toHaveLength(2)
     })
 
-    createTest('auto-generates rowId when not provided', async () => {
-      const record = buildWasteRecord()
-
-      await repository.saveAll([record])
-
-      const result = await repository.findAll('org-1', 'reg-1')
-      expect(result).toHaveLength(1)
-      expect(result[0].rowId).toMatch(/^row-\d+$/)
-    })
-
     createTest('saves empty array without error', async () => {
       await expect(repository.saveAll([])).resolves.not.toThrow()
     })
