@@ -13,8 +13,7 @@ const generateRowId = () => {
 
 /**
  * Build a minimal waste record for testing
- * @param {Object} overrides - Optional overrides for the waste record
- * @param {string} [overrides.rowId] - Row identifier from data (auto-generated if not provided)
+ * @param {Partial<import('#domain/waste-records/model.js').WasteRecord>} [overrides] - Optional overrides for the waste record
  * @returns {import('#domain/waste-records/model.js').WasteRecord}
  */
 export const buildWasteRecord = (overrides = {}) => {
