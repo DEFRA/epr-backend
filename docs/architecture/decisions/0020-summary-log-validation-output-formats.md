@@ -134,7 +134,6 @@ For invalid submissions (FATAL errors):
   "issues": [
     {
       "code": "MISSING_REQUIRED_FIELD",
-      "title": "Invalid meta field 'REGISTRATION': is required",
       "source": {
         "pointer": "/meta/REGISTRATION"
       },
@@ -156,7 +155,6 @@ For validated submissions (no FATAL errors, may have ERROR/WARNING):
   "issues": [
     {
       "code": "MISSING_REQUIRED_FIELD",
-      "title": "Missing required field",
       "source": {
         "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/1"
       },
@@ -168,7 +166,6 @@ For validated submissions (no FATAL errors, may have ERROR/WARNING):
     },
     {
       "code": "CALCULATION_FAILURE",
-      "title": "Calculation failure",
       "source": {
         "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/12"
       },
@@ -254,8 +251,6 @@ const errorMessages = {
 }
 ```
 
-The `title` field provides a default English message for development/debugging, but production clients should use `code` for display.
-
 ## Consequences
 
 ### Positive
@@ -313,7 +308,6 @@ The `title` field provides a default English message for development/debugging, 
   "issues": [
     {
       "code": "INVALID_FORMAT",
-      "title": "Invalid meta field 'PROCESSING_TYPE': must be in SCREAMING_SNAKE_CASE format",
       "source": { "pointer": "/meta/PROCESSING_TYPE" },
       "meta": {
         "type": "TECHNICAL_FATAL",
@@ -371,7 +365,6 @@ The `title` field provides a default English message for development/debugging, 
   "issues": [
     {
       "code": "MISSING_REQUIRED_FIELD",
-      "title": "Missing required field",
       "source": { "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/1" },
       "meta": {
         "type": "TECHNICAL_ERROR",
@@ -381,7 +374,6 @@ The `title` field provides a default English message for development/debugging, 
     },
     {
       "code": "CALCULATION_ERROR",
-      "title": "Tonnage calculation differs from expected",
       "source": { "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/12" },
       "meta": {
         "type": "BUSINESS_ERROR",
