@@ -39,6 +39,9 @@ const fileSchema = Joi.object({
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
   failureReason: Joi.string().optional(),
+  validation: Joi.object({
+    issues: Joi.array().items(Joi.object()).optional()
+  }).optional(),
   file: fileSchema.required(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()
@@ -47,6 +50,9 @@ export const summaryLogInsertSchema = Joi.object({
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
   failureReason: Joi.string().optional(),
+  validation: Joi.object({
+    issues: Joi.array().items(Joi.object()).optional()
+  }).optional(),
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()

@@ -30,11 +30,14 @@ describe('SummaryLogsValidator', () => {
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
         meta: {
-          WASTE_REGISTRATION_NUMBER: {
+          REGISTRATION: {
             value: 'WRN12345'
           },
-          SUMMARY_LOG_TYPE: {
+          PROCESSING_TYPE: {
             value: 'REPROCESSOR'
+          },
+          TEMPLATE_VERSION: {
+            value: 1
           },
           MATERIAL: {
             value: 'Aluminium'
@@ -137,7 +140,10 @@ describe('SummaryLogsValidator', () => {
       'summary-log-123',
       1,
       {
-        status: SUMMARY_LOG_STATUS.VALIDATED
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        validation: {
+          issues: []
+        }
       }
     )
   })
@@ -154,6 +160,16 @@ describe('SummaryLogsValidator', () => {
       1,
       {
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: {
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'Something went wrong while retrieving your file upload',
+              context: {}
+            }
+          ]
+        },
         failureReason: 'Something went wrong while retrieving your file upload'
       }
     )
@@ -171,6 +187,16 @@ describe('SummaryLogsValidator', () => {
       1,
       {
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: {
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'Registration with id reg-123 not found',
+              context: {}
+            }
+          ]
+        },
         failureReason: 'Registration with id reg-123 not found'
       }
     )
@@ -179,8 +205,17 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when waste registration number validation fails', async () => {
     summaryLogExtractor.extract.mockResolvedValue({
       meta: {
-        WASTE_REGISTRATION_NUMBER: {
+        REGISTRATION: {
           value: 'WRN99999'
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR'
+        },
+        TEMPLATE_VERSION: {
+          value: 1
+        },
+        MATERIAL: {
+          value: 'Aluminium'
         }
       },
       data: {}
@@ -193,6 +228,17 @@ describe('SummaryLogsValidator', () => {
       1,
       {
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: {
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'business',
+              message:
+                "Summary log's waste registration number does not match this registration",
+              context: expect.any(Object)
+            }
+          ]
+        },
         failureReason:
           "Summary log's waste registration number does not match this registration"
       }
@@ -202,22 +248,29 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when extraction causes an unexpected exception', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
-    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
-
-    expect(result).toBeInstanceOf(Error)
-    expect(result.message).toBe('S3 access denied')
+    await validateSummaryLog(summaryLogId)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
       {
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: {
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'S3 access denied',
+              context: {}
+            }
+          ]
+        },
         failureReason: 'S3 access denied'
       }
     )
   })
 
-  it('should log as expected when extraction fails', async () => {
+  it('should log as expected when validation fails', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
@@ -225,7 +278,7 @@ describe('SummaryLogsValidator', () => {
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Failed to extract summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
+          'Failed to validate summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
         event: expect.objectContaining({
           category: 'server',
           action: 'process_failure'
@@ -271,11 +324,14 @@ describe('SummaryLogsValidator', () => {
 
     expect(brokenRepository.update).toHaveBeenCalledTimes(1)
     expect(brokenRepository.update).toHaveBeenCalledWith('summary-log-123', 1, {
-      status: SUMMARY_LOG_STATUS.VALIDATED
+      status: SUMMARY_LOG_STATUS.VALIDATED,
+      validation: {
+        issues: []
+      }
     })
   })
 
-  it('should log error and rethrow original error if repository update fails during failure handler', async () => {
+  it('should throw database error if repository update fails when marking as invalid', async () => {
     const extractionError = new Error('S3 access denied')
     const databaseError = new Error('Database error')
 
@@ -284,18 +340,6 @@ describe('SummaryLogsValidator', () => {
 
     const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    expect(result).toBe(extractionError)
-
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        error: databaseError,
-        message:
-          'Failed to handle validation failure: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
-        event: expect.objectContaining({
-          category: 'server',
-          action: 'process_failure'
-        })
-      })
-    )
+    expect(result).toBe(databaseError)
   })
 })
