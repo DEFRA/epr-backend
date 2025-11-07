@@ -70,7 +70,7 @@
     "joi": "17.13.3",
     "joi-to-json": "5.0.0",
     "mongo-locks": "3.0.2",
-    "mongodb": "6.20.0",
+    "mongodb": "7.0.0",
     "notifications-node-client": "8.2.1",
     "obfuscate-mail": "1.5.1",
     "pino": "10.1.0",
