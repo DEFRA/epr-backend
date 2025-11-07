@@ -2,6 +2,10 @@
 
 Date: 2025-11-06
 
+## Status
+
+Proposed
+
 ## Context
 
 ### Current Setup
