@@ -5,15 +5,9 @@ async function getOidcConfigs() {
   const getEntraIdOidcConfig = () =>
     fetchJson(config.get('oidc.entraId.oidcWellKnownConfigurationUrl'))
 
-  const getDefraIdOidcConfig = () =>
-    fetchJson(config.get('oidc.defraId.oidcWellKnownConfigurationUrl'))
+  const [entraIdOidcConfig] = await Promise.all([getEntraIdOidcConfig()])
 
-  const [entraIdOidcConfig, defraIdOidcConfig] = await Promise.all([
-    getEntraIdOidcConfig(),
-    getDefraIdOidcConfig()
-  ])
-
-  return { entraIdOidcConfig, defraIdOidcConfig }
+  return { entraIdOidcConfig }
 }
 
 export { getOidcConfigs }

@@ -3,15 +3,12 @@ import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { config } from '../../../config.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
-  const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
+  const { entraIdOidcConfig } = oidcConfigs
 
   return {
     keys: [
       {
         uri: entraIdOidcConfig.jwks_uri
-      },
-      {
-        uri: defraIdOidcConfig.jwks_uri
       }
     ],
     verify: {

@@ -1,52 +1,16 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
-/**
- * Generate mock OIDC configuration response for Defra Id provider
- * Matches the structure returned by cdp-defra-id-stub
- * @param {string} baseUrl - Base URL for the OIDC provider (e.g., 'http://localhost:3200/cdp-defra-id-stub')
- * @returns {object} OIDC configuration object
- */
-const createDefraIdMockOidcConfiguration = (baseUrl) => ({
-  issuer: baseUrl,
-  authorization_endpoint: `${baseUrl}/authorize`,
-  token_endpoint: `${baseUrl}/token`,
-  userinfo_endpoint: `${baseUrl}/userinfo`,
-  end_session_endpoint: `${baseUrl}/logout`,
-  jwks_uri: `${new URL(baseUrl).origin}/.well-known/jwks.json`,
-  response_types_supported: ['code'],
-  subject_types_supported: ['public'],
-  id_token_signing_alg_values_supported: ['RS256'],
-  scopes_supported: ['openid', 'offline_access'],
-  token_endpoint_auth_methods_supported: ['client_secret_post'],
-  claims_supported: [
-    'sub',
-    'correlationId',
-    'sessionId',
-    'contactId',
-    'serviceId',
-    'firstName',
-    'lastName',
-    'email',
-    'uniqueReference',
-    'loa',
-    'aal',
-    'enrolmentCount',
-    'enrolmentRequestCount',
-    'currentRelationshipId',
-    'relationships',
-    'roles'
-  ],
-  code_challenge_methods_supported: ['plain', 'S256']
-})
+const entraIdBaseUrl =
+  'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0'
 
 /**
- * Generate mock OIDC configuration response
- * Matches the structure returned by epr-re-ex-ebtra-stub
+ * Generate mock OIDC configuration response for Entra Id provider
+ * Matches the structure returned by epr-re-ex-entra-stub
  * @param {string} baseUrl - Base URL for the OIDC provider (e.g., 'http://localhost:3010')
  * @returns {object} OIDC configuration object
  */
-const createEntraIdMockOidcConfiguration = (baseUrl) => ({
+const createEntraIdMockOidcResponse = (baseUrl) => ({
   token_endpoint: `${baseUrl}/token`,
   token_endpoint_auth_methods_supported: [
     'client_secret_post',
@@ -102,33 +66,41 @@ const createEntraIdMockOidcConfiguration = (baseUrl) => ({
 })
 
 /**
- * Create MSW request handlers for OIDC endpoints
- * @param {string} baseUrl - Base URL for the OIDC provider
- * @returns {Array} MSW request handlers
+ * Generate mock JWKS (JSON Web Key Set) response
+ * @returns {object} JWKS object with mock public keys
  */
-const createEntraIdOidcHandler = (baseUrl) => {
-  const config = createEntraIdMockOidcConfiguration(baseUrl)
-
-  return [
-    // OIDC discovery endpoint
-    http.get(`${baseUrl}/.well-known/openid-configuration`, () => {
-      return HttpResponse.json(config)
-    })
+const createMockJwksResponse = () => ({
+  keys: [
+    {
+      kty: 'RSA',
+      use: 'sig',
+      kid: 'test-key-id',
+      n: 'xGOr-H7A-PWbPyHHKLogFB-kh3J-KLcZKJb8VyOENiFoNkEG-wFPcB8-sxC6L7CW5q9qEMIjHBDlFbqQbHSKqwk',
+      e: 'AQAB',
+      alg: 'RS256'
+    }
   ]
-}
+})
 
 /**
  * Create MSW request handlers for OIDC endpoints
  * @param {string} baseUrl - Base URL for the OIDC provider
+ * @param {object} oidcResponse - OIDC configuration response
  * @returns {Array} MSW request handlers
  */
-const createDefraIdOidcHandler = (baseUrl) => {
-  const config = createDefraIdMockOidcConfiguration(baseUrl)
+const createOidcHandler = (baseUrl, oidcResponse) => {
+  const wellKnownUrl = `${baseUrl}/.well-known/openid-configuration`
+  const jwksUrl = `${baseUrl}/jwks`
+  const jwksResponse = createMockJwksResponse()
 
   return [
     // OIDC discovery endpoint
-    http.get(`${baseUrl}/.well-known/openid-configuration`, () => {
-      return HttpResponse.json(config)
+    http.get(wellKnownUrl, () => {
+      return HttpResponse.json(oidcResponse)
+    }),
+    // JWKS endpoint
+    http.get(jwksUrl, () => {
+      return HttpResponse.json(jwksResponse)
     })
   ]
 }
@@ -138,17 +110,17 @@ const createDefraIdOidcHandler = (baseUrl) => {
  * @param {string} [baseUrl] - Base URL for the OIDC provider (defaults to 'http://localhost:3200/cdp-defra-id-stub')
  * @returns {import('msw/node').SetupServer}
  */
-const createMockOidcServers = (
-  entraIdBaseUrl = 'http://localhost:3010',
-  defraIdBaseUrl = 'http://localhost:3200/cdp-defra-id-stub'
-) => {
-  const entraIdOidcHandler = createEntraIdOidcHandler(entraIdBaseUrl)
-  const defraIdOidcHandler = createDefraIdOidcHandler(defraIdBaseUrl)
-  return setupServer(...entraIdOidcHandler, ...defraIdOidcHandler)
+const createMockOidcServers = () => {
+  const entraOidcResponse = createEntraIdMockOidcResponse(entraIdBaseUrl)
+  const entraIdOidcHandler = createOidcHandler(
+    entraIdBaseUrl,
+    entraOidcResponse
+  )
+
+  return setupServer(...entraIdOidcHandler)
 }
 
 export {
   createMockOidcServers,
-  createDefraIdMockOidcConfiguration,
-  createEntraIdMockOidcConfiguration
+  createEntraIdMockOidcResponse as createEntraIdMockOidcConfiguration
 }
