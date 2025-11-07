@@ -167,6 +167,71 @@ const performFindById = (staleCache) => (id) => {
   return enrichWithCurrentStatus(structuredClone(found))
 }
 
+const performFindByIdWithRetry =
+  (findByIdFromCache) => async (id, minimumVersion) => {
+    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+      try {
+        const result = findByIdFromCache(id)
+
+        // No version expectation - return immediately (may be stale)
+        if (minimumVersion === undefined) {
+          return result
+        }
+
+        // Version matches - consistency achieved
+        if (result.version >= minimumVersion) {
+          return result
+        }
+      } catch (error) {
+        // Document not found - retry in case it's propagating
+        if (i === MAX_CONSISTENCY_RETRIES - 1) {
+          throw error
+        }
+      }
+
+      // Wait before retry
+      if (i < MAX_CONSISTENCY_RETRIES - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+        )
+      }
+    }
+
+    // Timeout - throw error
+    throw Boom.internal('Consistency timeout waiting for minimum version')
+  }
+
+const performFindAll = (staleCache) => async () => {
+  return structuredClone(staleCache).map((org) =>
+    enrichWithCurrentStatus({ ...org })
+  )
+}
+
+const performFindRegistrationById =
+  (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
+    const org = await findById(organisationId, minimumOrgVersion)
+    const registration = org.registrations?.find((r) => r.id === registrationId)
+
+    if (!registration) {
+      throw Boom.notFound(`Registration with id ${registrationId} not found`)
+    }
+
+    // Hydrate with accreditation if accreditationId exists
+    if (registration.accreditationId) {
+      const accreditation = org.accreditations?.find(
+        (a) => a.id === registration.accreditationId
+      )
+      if (accreditation) {
+        return structuredClone({
+          ...registration,
+          accreditation
+        })
+      }
+    }
+
+    return structuredClone(registration)
+  }
+
 /**
  * Create an in-memory organisations repository.
  * Ensures data isolation by deep-cloning on store and on read.
@@ -185,39 +250,7 @@ export const createInMemoryOrganisationsRepository = (
   const findByIdFromCache = performFindById(staleCache)
 
   return () => {
-    const findById = async (id, minimumVersion) => {
-      for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-        try {
-          const result = findByIdFromCache(id)
-
-          // No version expectation - return immediately (may be stale)
-          if (minimumVersion === undefined) {
-            return result
-          }
-
-          // Version matches - consistency achieved
-          if (result.version >= minimumVersion) {
-            return result
-          }
-        } catch (error) {
-          // Document not found - retry in case it's propagating
-          if (i === MAX_CONSISTENCY_RETRIES - 1) {
-            throw error
-          }
-        }
-
-        // Wait before retry
-        if (i < MAX_CONSISTENCY_RETRIES - 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-          )
-        }
-      }
-
-      // Timeout - throw error
-      throw Boom.internal('Consistency timeout waiting for minimum version')
-    }
-
+    const findById = performFindByIdWithRetry(findByIdFromCache)
     const insertFn = performInsert(storage, staleCache)
     const updateFn = performUpdate(storage, staleCache, pendingSyncRef)
 
@@ -231,46 +264,9 @@ export const createInMemoryOrganisationsRepository = (
         insertFn,
         updateFn
       ),
-
-      async findAll() {
-        return structuredClone(staleCache).map((org) =>
-          enrichWithCurrentStatus({ ...org })
-        )
-      },
-
+      findAll: performFindAll(staleCache),
       findById,
-
-      async findRegistrationById(
-        organisationId,
-        registrationId,
-        minimumOrgVersion
-      ) {
-        const org = await findById(organisationId, minimumOrgVersion)
-        const registration = org.registrations?.find(
-          (r) => r.id === registrationId
-        )
-
-        if (!registration) {
-          throw Boom.notFound(
-            `Registration with id ${registrationId} not found`
-          )
-        }
-
-        // Hydrate with accreditation if accreditationId exists
-        if (registration.accreditationId) {
-          const accreditation = org.accreditations?.find(
-            (a) => a.id === registration.accreditationId
-          )
-          if (accreditation) {
-            return structuredClone({
-              ...registration,
-              accreditation
-            })
-          }
-        }
-
-        return structuredClone(registration)
-      }
+      findRegistrationById: performFindRegistrationById(findById)
     }
   }
 }
