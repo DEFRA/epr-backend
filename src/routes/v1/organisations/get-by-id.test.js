@@ -3,24 +3,19 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createMockOidcServers } from '#test/helpers/mock-oidc.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 
 describe('GET /v1/organisations/{id}', () => {
+  setupAuthContext()
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
-  let mockOidcServer
   const mockCredentials = {
     scope: [ROLES.serviceMaintainer]
   }
 
   beforeEach(async () => {
-    // Disable fetch mock to allow MSW to intercept requests
-    global.fetchMock?.disableMocks()
-
-    mockOidcServer = createMockOidcServers()
-    mockOidcServer.listen({ onUnhandledRequest: 'bypass' })
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
     const featureFlags = createInMemoryFeatureFlags({ organisations: true })
@@ -29,13 +24,6 @@ describe('GET /v1/organisations/{id}', () => {
       repositories: { organisationsRepository: organisationsRepositoryFactory },
       featureFlags
     })
-  })
-
-  afterEach(() => {
-    mockOidcServer.resetHandlers()
-    mockOidcServer.close()
-    // Re-enable fetch mock for other tests
-    global.fetchMock?.enableMocks()
   })
 
   describe('happy path', () => {
