@@ -15,8 +15,10 @@ import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 
-const organisationId = 'org-123'
-const registrationId = 'reg-456'
+import { ObjectId } from 'mongodb'
+
+const organisationId = new ObjectId().toString()
+const registrationId = new ObjectId().toString()
 
 const createUploadPayload = (
   fileStatus,
@@ -57,6 +59,7 @@ const buildPostUrl = (summaryLogId) =>
 
 describe('Summary logs integration', () => {
   let server
+  let summaryLogsRepository
 
   beforeEach(async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
@@ -67,7 +70,7 @@ describe('Summary logs integration', () => {
       debug: vi.fn()
     }
     const uploadsRepository = createInMemoryUploadsRepository()
-    const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+    summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
     const testOrg = buildOrganisation({
       registrations: [
@@ -90,17 +93,21 @@ describe('Summary logs integration', () => {
     const summaryLogExtractor = createInMemorySummaryLogExtractor({
       'file-123': {
         meta: {
-          WASTE_REGISTRATION_NUMBER: {
+          REGISTRATION: {
             value: 'WRN-123',
             location: { sheet: 'Data', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          PROCESSING_TYPE: {
             value: 'REPROCESSOR',
             location: { sheet: 'Data', row: 2, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
             location: { sheet: 'Data', row: 3, column: 'B' }
+          },
+          TEMPLATE_VERSION: {
+            value: 1,
+            location: { sheet: 'Data', row: 4, column: 'B' }
           }
         },
         data: {}
@@ -219,6 +226,14 @@ describe('Summary logs integration', () => {
         expect(JSON.parse(response.payload)).toEqual({
           status: SUMMARY_LOG_STATUS.VALIDATED
         })
+      })
+
+      it('persists validation issues in database', async () => {
+        const { summaryLog } =
+          await summaryLogsRepository.findById(summaryLogId)
+        expect(summaryLog.validation).toBeDefined()
+        expect(summaryLog.validation.issues).toBeDefined()
+        expect(summaryLog.validation.issues).toEqual([])
       })
     })
   })

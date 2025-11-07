@@ -6,6 +6,7 @@ import {
   buildPendingFile,
   buildSummaryLog
 } from './test-data.js'
+import { waitForVersion } from './test-helpers.js'
 
 export const testUpdateBehaviour = (it) => {
   describe('update', () => {
@@ -34,7 +35,7 @@ export const testUpdateBehaviour = (it) => {
           })
         })
 
-        const found = await repository.findById(id)
+        const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('validating')
         expect(found.summaryLog.file.status).toBe('complete')
         expect(found.summaryLog.file.s3.bucket).toBe(TEST_S3_BUCKET)
@@ -67,7 +68,7 @@ export const testUpdateBehaviour = (it) => {
           status: 'rejected'
         })
 
-        const found = await repository.findById(id)
+        const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('rejected')
         expect(found.summaryLog.organisationId).toBe('org-123')
         expect(found.summaryLog.registrationId).toBe('reg-456')
@@ -120,7 +121,7 @@ export const testUpdateBehaviour = (it) => {
             evilField: 'rm -rf /'
           })
 
-          const found = await repository.findById(id)
+          const found = await waitForVersion(repository, id, 2)
           expect(found.summaryLog.hackerField).toBeUndefined()
           expect(found.summaryLog.evilField).toBeUndefined()
           expect(found.summaryLog.status).toBe('validating')
@@ -166,6 +167,183 @@ export const testUpdateBehaviour = (it) => {
               file: { name: 'test.xlsx' }
             })
           ).rejects.toThrow(/id/)
+        })
+      })
+
+      describe('validation field', () => {
+        it('updates and retrieves validation issues', async () => {
+          const id = `contract-validation-${randomUUID()}`
+          const summaryLog = buildSummaryLog({ status: 'validating' })
+
+          await repository.insert(id, summaryLog)
+          const current = await repository.findById(id)
+
+          await repository.update(id, current.version, {
+            status: 'invalid',
+            validation: {
+              issues: [
+                {
+                  severity: 'fatal',
+                  category: 'technical',
+                  message: 'Test error',
+                  context: { field: 'PROCESSING_TYPE' }
+                }
+              ]
+            }
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+          expect(found.summaryLog.validation.issues).toHaveLength(1)
+          expect(found.summaryLog.validation.issues[0]).toMatchObject({
+            severity: 'fatal',
+            category: 'technical',
+            message: 'Test error',
+            context: { field: 'PROCESSING_TYPE' }
+          })
+        })
+
+        it('updates and retrieves validation with empty issues array', async () => {
+          const id = `contract-validation-empty-${randomUUID()}`
+          const summaryLog = buildSummaryLog({ status: 'validating' })
+
+          await repository.insert(id, summaryLog)
+          const current = await repository.findById(id)
+
+          await repository.update(id, current.version, {
+            status: 'validated',
+            validation: {
+              issues: []
+            }
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+          expect(found.summaryLog.validation.issues).toEqual([])
+        })
+
+        it('updates and retrieves validation with multiple issues', async () => {
+          const id = `contract-validation-multiple-${randomUUID()}`
+          const summaryLog = buildSummaryLog({ status: 'validating' })
+
+          await repository.insert(id, summaryLog)
+          const current = await repository.findById(id)
+
+          await repository.update(id, current.version, {
+            status: 'invalid',
+            validation: {
+              issues: [
+                {
+                  severity: 'fatal',
+                  category: 'business',
+                  message: 'Type mismatch',
+                  context: { path: 'meta.PROCESSING_TYPE' }
+                },
+                {
+                  severity: 'fatal',
+                  category: 'technical',
+                  message: 'Invalid format',
+                  context: { path: 'meta.MATERIAL' }
+                }
+              ]
+            }
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+          expect(found.summaryLog.validation.issues).toHaveLength(2)
+          expect(found.summaryLog.validation.issues[0].category).toBe(
+            'business'
+          )
+          expect(found.summaryLog.validation.issues[1].category).toBe(
+            'technical'
+          )
+        })
+
+        it('updates and retrieves validation issues with optional code field', async () => {
+          const id = `contract-validation-code-${randomUUID()}`
+          const summaryLog = buildSummaryLog({ status: 'validating' })
+
+          await repository.insert(id, summaryLog)
+          const current = await repository.findById(id)
+
+          await repository.update(id, current.version, {
+            status: 'invalid',
+            validation: {
+              issues: [
+                {
+                  severity: 'fatal',
+                  category: 'technical',
+                  message: 'Missing required field',
+                  code: 'MISSING_REQUIRED_FIELD',
+                  context: { field: 'REGISTRATION' }
+                }
+              ]
+            }
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+          expect(found.summaryLog.validation.issues[0]).toMatchObject({
+            severity: 'fatal',
+            category: 'technical',
+            message: 'Missing required field',
+            code: 'MISSING_REQUIRED_FIELD',
+            context: { field: 'REGISTRATION' }
+          })
+        })
+
+        it('preserves validation issues when updating other fields', async () => {
+          const id = `contract-preserve-validation-${randomUUID()}`
+          const summaryLog = buildSummaryLog({ status: 'validating' })
+
+          await repository.insert(id, summaryLog)
+          let current = await repository.findById(id)
+
+          // First update: add validation issues
+          await repository.update(id, current.version, {
+            status: 'invalid',
+            validation: {
+              issues: [
+                {
+                  severity: 'fatal',
+                  category: 'business',
+                  message: 'Original error',
+                  context: {}
+                }
+              ]
+            }
+          })
+
+          current = await waitForVersion(repository, id, current.version + 1)
+
+          // Second update: update failureReason only
+          await repository.update(id, current.version, {
+            failureReason: 'Updated failure reason'
+          })
+
+          const found = await waitForVersion(
+            repository,
+            id,
+            current.version + 1
+          )
+          expect(found.summaryLog.failureReason).toBe('Updated failure reason')
+          expect(found.summaryLog.validation.issues).toHaveLength(1)
+          expect(found.summaryLog.validation.issues[0].message).toBe(
+            'Original error'
+          )
         })
       })
     })

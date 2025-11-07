@@ -7,5 +7,11 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isOrganisationRoutesEnabled() {
     return config.get('featureFlags.organisations')
+  },
+  isFormsDataMigrationEnabled() {
+    return config.get('featureFlags.formsDataMigration')
+  },
+  isLogFileUploadsFromFormsEnabled() {
+    return config.get('featureFlags.logFileUploadsFromForms')
   }
 })

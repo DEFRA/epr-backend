@@ -3,6 +3,7 @@ import { describe, vi, expect, it as base } from 'vitest'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
+import { waitForVersion } from './contract/test-helpers.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -86,7 +87,7 @@ describe('In-memory summary logs repository', () => {
       updates.file.name = 'mutated.xlsx'
       updates.file.s3.bucket = 'evil-bucket'
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 2)
       expect(retrieved.summaryLog.file.name).toBe('updated.xlsx')
       expect(retrieved.summaryLog.file.s3.bucket).toBe('test-bucket')
     })

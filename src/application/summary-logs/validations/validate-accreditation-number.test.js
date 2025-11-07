@@ -13,128 +13,159 @@ describe('validateAccreditationNumber', () => {
     vi.resetAllMocks()
   })
 
-  it('throws error when registration has accreditation but spreadsheet is missing', () => {
+  it('returns fatal issue when registration has accreditation but spreadsheet is missing', () => {
     const registration = {
       id: 'reg-123',
       accreditation: {
         id: 'acc-123',
-        accreditationNumber: 12345678
+        accreditationNumber: '12345678'
       }
     }
     const parsed = {
       meta: {}
     }
 
-    expect(() =>
-      validateAccreditationNumber({
-        parsed,
-        registration,
-        loggingContext: 'test-msg'
-      })
-    ).toThrow('Invalid summary log: missing accreditation number')
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()).toHaveLength(1)
+    expect(issues.getAllIssues()[0]).toMatchObject({
+      severity: 'fatal',
+      category: 'business',
+      message: 'Invalid summary log: missing accreditation number'
+    })
   })
 
-  it('throws error when registration has accreditation but spreadsheet value is undefined', () => {
+  it('returns fatal issue when registration has accreditation but spreadsheet value is undefined', () => {
     const registration = {
       id: 'reg-123',
       accreditation: {
         id: 'acc-123',
-        accreditationNumber: 12345678
+        accreditationNumber: '12345678'
       }
     }
     const parsed = {
       meta: {
-        ACCREDITATION_NUMBER: {
+        ACCREDITATION: {
           value: undefined
         }
       }
     }
 
-    expect(() =>
-      validateAccreditationNumber({
-        parsed,
-        registration,
-        loggingContext: 'test-msg'
-      })
-    ).toThrow('Invalid summary log: missing accreditation number')
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()).toHaveLength(1)
+    expect(issues.getAllIssues()[0]).toMatchObject({
+      severity: 'fatal',
+      category: 'business',
+      message: 'Invalid summary log: missing accreditation number'
+    })
   })
 
-  it('throws error when accreditation numbers do not match', () => {
+  it('returns fatal issue when accreditation numbers do not match', () => {
     const registration = {
       id: 'reg-123',
       accreditation: {
         id: 'acc-123',
-        accreditationNumber: 12345678
+        accreditationNumber: '12345678'
       }
     }
     const parsed = {
       meta: {
-        ACCREDITATION_NUMBER: {
-          value: 99999999
+        ACCREDITATION: {
+          value: '99999999'
         }
       }
     }
 
-    expect(() =>
-      validateAccreditationNumber({
-        parsed,
-        registration,
-        loggingContext: 'test-msg'
-      })
-    ).toThrow(
-      "Summary log's accreditation number does not match this registration"
-    )
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()).toHaveLength(1)
+    expect(issues.getAllIssues()[0]).toMatchObject({
+      severity: 'fatal',
+      category: 'business',
+      message:
+        "Summary log's accreditation number does not match this registration",
+      context: {
+        expected: '12345678',
+        actual: '99999999'
+      }
+    })
   })
 
-  it('throws error when registration has no accreditation but spreadsheet has value', () => {
+  it('returns fatal issue when registration has no accreditation but spreadsheet has value', () => {
     const registration = {
       id: 'reg-123'
     }
     const parsed = {
       meta: {
-        ACCREDITATION_NUMBER: {
-          value: 12345678
+        ACCREDITATION: {
+          value: '12345678'
         }
       }
     }
 
-    expect(() =>
-      validateAccreditationNumber({
-        parsed,
-        registration,
-        loggingContext: 'test-msg'
-      })
-    ).toThrow(
-      'Invalid summary log: accreditation number provided but registration has no accreditation'
-    )
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    expect(issues.getAllIssues()).toHaveLength(1)
+    expect(issues.getAllIssues()[0]).toMatchObject({
+      severity: 'fatal',
+      category: 'business',
+      message:
+        'Invalid summary log: accreditation number provided but registration has no accreditation',
+      context: {
+        actual: '12345678'
+      }
+    })
   })
 
-  it('does not throw when accreditation numbers match', () => {
+  it('returns no issues when accreditation numbers match', () => {
     const registration = {
       id: 'reg-123',
       accreditation: {
         id: 'acc-123',
-        accreditationNumber: 12345678
+        accreditationNumber: '12345678'
       }
     }
     const parsed = {
       meta: {
-        ACCREDITATION_NUMBER: {
-          value: 12345678
+        ACCREDITATION: {
+          value: '12345678'
         }
       }
     }
 
-    expect(() =>
-      validateAccreditationNumber({
-        parsed,
-        registration,
-        loggingContext: 'test-msg'
-      })
-    ).not.toThrow()
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
 
     expect(mockLoggerInfo).toHaveBeenCalledWith({
-      message: 'Accreditation number validated: test-msg',
+      message:
+        'Accreditation number validated: test-msg, accreditationNumber=12345678',
       event: {
         category: 'server',
         action: 'process_success'
@@ -142,7 +173,7 @@ describe('validateAccreditationNumber', () => {
     })
   })
 
-  it('does not throw when registration has no accreditation and spreadsheet is blank', () => {
+  it('returns no issues when registration has no accreditation and spreadsheet is blank', () => {
     const registration = {
       id: 'reg-123'
     }
@@ -150,16 +181,18 @@ describe('validateAccreditationNumber', () => {
       meta: {}
     }
 
-    expect(() =>
-      validateAccreditationNumber({
-        parsed,
-        registration,
-        loggingContext: 'test-msg'
-      })
-    ).not.toThrow()
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(false)
+    expect(issues.getAllIssues()).toHaveLength(0)
 
     expect(mockLoggerInfo).toHaveBeenCalledWith({
-      message: 'Accreditation number validated: test-msg',
+      message:
+        'Accreditation number validated: test-msg, accreditationNumber=none',
       event: {
         category: 'server',
         action: 'process_success'

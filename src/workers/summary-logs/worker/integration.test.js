@@ -8,6 +8,7 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 
@@ -109,7 +110,7 @@ describe('SummaryLogsValidator integration', () => {
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    const updated = await summaryLogsRepository.findById(summaryLogId)
+    const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
     return {
       updated,
@@ -122,17 +123,25 @@ describe('SummaryLogsValidator integration', () => {
       registrationType: 'reprocessor',
       registrationWRN: 'WRN-123',
       metadata: {
-        WASTE_REGISTRATION_NUMBER: {
+        REGISTRATION: {
           value: 'WRN-123',
           location: { sheet: 'Data', row: 1, column: 'B' }
         },
-        SUMMARY_LOG_TYPE: {
+        PROCESSING_TYPE: {
           value: 'REPROCESSOR',
           location: { sheet: 'Data', row: 2, column: 'B' }
         },
         MATERIAL: {
           value: 'Paper_and_board',
-          location: { sheet: 'Data', row: 3, column: 'B' }
+          location: { sheet: 'Data', row: 3, column: 'B' },
+          TEMPLATE_VERSION: {
+            value: 1,
+            location: { sheet: 'Data', row: 4, column: 'B' }
+          }
+        },
+        TEMPLATE_VERSION: {
+          value: 1,
+          location: { sheet: 'Data', row: 4, column: 'B' }
         }
       }
     })
@@ -141,7 +150,10 @@ describe('SummaryLogsValidator integration', () => {
       version: 2,
       summaryLog: {
         ...summaryLog,
-        status: SUMMARY_LOG_STATUS.VALIDATED
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        validation: {
+          issues: []
+        }
       }
     })
   })
@@ -163,6 +175,16 @@ describe('SummaryLogsValidator integration', () => {
       summaryLog: {
         ...summaryLog,
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: {
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: errorMessage,
+              context: {}
+            }
+          ]
+        },
         failureReason: errorMessage
       }
     })
@@ -188,17 +210,21 @@ describe('SummaryLogsValidator integration', () => {
             registrationType,
             registrationWRN,
             metadata: {
-              WASTE_REGISTRATION_NUMBER: {
+              REGISTRATION: {
                 value: registrationWRN,
                 location: { sheet: 'Data', row: 1, column: 'B' }
               },
-              SUMMARY_LOG_TYPE: {
+              PROCESSING_TYPE: {
                 value: spreadsheetType,
                 location: { sheet: 'Data', row: 2, column: 'B' }
               },
               MATERIAL: {
                 value: 'Paper_and_board',
                 location: { sheet: 'Data', row: 3, column: 'B' }
+              },
+              TEMPLATE_VERSION: {
+                value: 1,
+                location: { sheet: 'Data', row: 4, column: 'B' }
               }
             }
           })
@@ -207,7 +233,10 @@ describe('SummaryLogsValidator integration', () => {
             version: 2,
             summaryLog: {
               ...summaryLog,
-              status: SUMMARY_LOG_STATUS.VALIDATED
+              status: SUMMARY_LOG_STATUS.VALIDATED,
+              validation: {
+                issues: []
+              }
             }
           })
         })
@@ -235,13 +264,21 @@ describe('SummaryLogsValidator integration', () => {
             registrationType,
             registrationWRN,
             metadata: {
-              WASTE_REGISTRATION_NUMBER: {
+              REGISTRATION: {
                 value: registrationWRN,
                 location: { sheet: 'Data', row: 1, column: 'B' }
               },
-              SUMMARY_LOG_TYPE: {
+              PROCESSING_TYPE: {
                 value: spreadsheetType,
                 location: { sheet: 'Data', row: 2, column: 'B' }
+              },
+              MATERIAL: {
+                value: 'Paper_and_board',
+                location: { sheet: 'Data', row: 3, column: 'B' }
+              },
+              TEMPLATE_VERSION: {
+                value: 1,
+                location: { sheet: 'Data', row: 4, column: 'B' }
               }
             }
           })
@@ -251,7 +288,19 @@ describe('SummaryLogsValidator integration', () => {
             summaryLog: {
               ...summaryLog,
               status: SUMMARY_LOG_STATUS.INVALID,
-              failureReason: 'Summary log type does not match registration type'
+              validation: {
+                issues: [
+                  {
+                    severity: 'fatal',
+                    category: 'business',
+                    message:
+                      'Summary log processing type does not match registration processing type',
+                    context: expect.any(Object)
+                  }
+                ]
+              },
+              failureReason:
+                'Summary log processing type does not match registration processing type'
             }
           })
         })
@@ -265,9 +314,17 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'reprocessor',
         registrationWRN: 'WRN-123',
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
+          REGISTRATION: {
             value: 'WRN-123',
             location: { sheet: 'Data', row: 1, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          },
+          TEMPLATE_VERSION: {
+            value: 1,
+            location: { sheet: 'Data', row: 4, column: 'B' }
           }
         }
       })
@@ -277,7 +334,17 @@ describe('SummaryLogsValidator integration', () => {
         summaryLog: {
           ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: 'Invalid summary log: missing summary log type'
+          validation: {
+            issues: [
+              {
+                severity: 'fatal',
+                category: 'technical',
+                message: "Invalid meta field 'PROCESSING_TYPE': is required",
+                context: expect.any(Object)
+              }
+            ]
+          },
+          failureReason: "Invalid meta field 'PROCESSING_TYPE': is required"
         }
       })
     })
@@ -287,13 +354,21 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'reprocessor',
         registrationWRN: 'WRN-123',
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
+          REGISTRATION: {
             value: 'WRN-123',
             location: { sheet: 'Data', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          PROCESSING_TYPE: {
             value: 'INVALID_TYPE',
             location: { sheet: 'Data', row: 2, column: 'B' }
+          },
+          MATERIAL: {
+            value: 'Paper_and_board',
+            location: { sheet: 'Data', row: 3, column: 'B' }
+          },
+          TEMPLATE_VERSION: {
+            value: 1,
+            location: { sheet: 'Data', row: 4, column: 'B' }
           }
         }
       })
@@ -303,7 +378,19 @@ describe('SummaryLogsValidator integration', () => {
         summaryLog: {
           ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: 'Summary log type does not match registration type'
+          validation: {
+            issues: [
+              {
+                severity: 'fatal',
+                category: 'business',
+                message:
+                  'Summary log processing type does not match registration processing type',
+                context: expect.any(Object)
+              }
+            ]
+          },
+          failureReason:
+            'Summary log processing type does not match registration processing type'
         }
       })
     })
@@ -311,28 +398,32 @@ describe('SummaryLogsValidator integration', () => {
 
   describe('accreditation number validation', () => {
     it('should validate successfully when registration has accreditation and numbers match', async () => {
-      const accreditationNumber = 87654321
+      const accreditationNumber = '87654321'
 
       const { updated, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'WRN-123',
         accreditationNumber,
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+          TEMPLATE_VERSION: {
+            value: '1.0',
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          REGISTRATION: {
+            value: 'WRN-123',
+            location: { sheet: 'Cover', row: 2, column: 'B' }
+          },
+          PROCESSING_TYPE: {
             value: 'REPROCESSOR',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION_NUMBER: {
+          ACCREDITATION: {
             value: accreditationNumber,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+            location: { sheet: 'Cover', row: 5, column: 'B' }
           }
         }
       })
@@ -341,40 +432,46 @@ describe('SummaryLogsValidator integration', () => {
         version: 2,
         summaryLog: {
           ...summaryLog,
-          status: SUMMARY_LOG_STATUS.VALIDATED
+          status: SUMMARY_LOG_STATUS.VALIDATED,
+          validation: {
+            issues: []
+          }
         }
       })
     })
 
     it('should fail validation when registration has accreditation but spreadsheet number does not match', async () => {
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'WRN-123',
-        accreditationNumber: 87654321,
+        accreditationNumber: '87654321',
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+          TEMPLATE_VERSION: {
+            value: '1.0',
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          REGISTRATION: {
+            value: 'WRN-123',
+            location: { sheet: 'Cover', row: 2, column: 'B' }
+          },
+          PROCESSING_TYPE: {
             value: 'REPROCESSOR',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION_NUMBER: {
-            value: 99999999,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+          ACCREDITATION: {
+            value: '99999999',
+            location: { sheet: 'Cover', row: 5, column: 'B' }
           }
         }
       })
 
-      expect(updated).toEqual({
+      expect(updated).toMatchObject({
         version: 2,
         summaryLog: {
-          ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
           failureReason:
             "Summary log's accreditation number does not match this registration"
@@ -383,30 +480,33 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should fail validation when registration has accreditation but spreadsheet is missing accreditation number', async () => {
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'WRN-123',
-        accreditationNumber: 87654321,
+        accreditationNumber: '87654321',
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+          TEMPLATE_VERSION: {
+            value: '1.0',
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          REGISTRATION: {
+            value: 'WRN-123',
+            location: { sheet: 'Cover', row: 2, column: 'B' }
+          },
+          PROCESSING_TYPE: {
             value: 'REPROCESSOR',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           }
         }
       })
 
-      expect(updated).toEqual({
+      expect(updated).toMatchObject({
         version: 2,
         summaryLog: {
-          ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
           failureReason: 'Invalid summary log: missing accreditation number'
         }
@@ -418,17 +518,21 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'exporter',
         registrationWRN: 'WRN-456',
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-456',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+          TEMPLATE_VERSION: {
+            value: '1.0',
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          REGISTRATION: {
+            value: 'WRN-456',
+            location: { sheet: 'Cover', row: 2, column: 'B' }
+          },
+          PROCESSING_TYPE: {
             value: 'EXPORTER',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           }
         }
       })
@@ -437,39 +541,45 @@ describe('SummaryLogsValidator integration', () => {
         version: 2,
         summaryLog: {
           ...summaryLog,
-          status: SUMMARY_LOG_STATUS.VALIDATED
+          status: SUMMARY_LOG_STATUS.VALIDATED,
+          validation: {
+            issues: []
+          }
         }
       })
     })
 
     it('should fail validation when registration has no accreditation but spreadsheet provides number', async () => {
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'WRN-456',
         metadata: {
-          WASTE_REGISTRATION_NUMBER: {
-            value: 'WRN-456',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+          TEMPLATE_VERSION: {
+            value: '1.0',
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          SUMMARY_LOG_TYPE: {
+          REGISTRATION: {
+            value: 'WRN-456',
+            location: { sheet: 'Cover', row: 2, column: 'B' }
+          },
+          PROCESSING_TYPE: {
             value: 'EXPORTER',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION_NUMBER: {
-            value: 12345678,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+          ACCREDITATION: {
+            value: '12345678',
+            location: { sheet: 'Cover', row: 5, column: 'B' }
           }
         }
       })
 
-      expect(updated).toEqual({
+      expect(updated).toMatchObject({
         version: 2,
         summaryLog: {
-          ...summaryLog,
           status: SUMMARY_LOG_STATUS.INVALID,
           failureReason:
             'Invalid summary log: accreditation number provided but registration has no accreditation'

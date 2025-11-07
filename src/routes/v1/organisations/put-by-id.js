@@ -52,10 +52,10 @@ export const organisationsPutById = {
 
     try {
       await organisationsRepository.update(id, version, sanitisedFragment)
+      const updated = await organisationsRepository.findById(id, version + 1)
+      return h.response(updated).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)
     }
-
-    return h.response(null).code(StatusCodes.NO_CONTENT)
   }
 }

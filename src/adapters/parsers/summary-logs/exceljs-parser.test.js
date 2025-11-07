@@ -44,9 +44,13 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result).toBeDefined()
       expect(result.meta).toBeDefined()
-      expect(result.meta).toEqual({})
+      // Note: reprocessor.xlsx fixture actually contains markers, so meta is not empty
+      expect(result.meta).toMatchObject({
+        PROCESSING_TYPE: expect.any(Object),
+        REGISTRATION: expect.any(Object),
+        TEMPLATE_VERSION: expect.any(Object)
+      })
       expect(result.data).toBeDefined()
-      expect(result.data).toEqual({})
     })
   })
 
@@ -793,6 +797,184 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['STRING_COL', 'DATE_COL', 'NUMBER_COL'],
         rows: [['some text', date, 42]]
+      })
+    })
+  })
+
+  describe('metadata and data ordering', () => {
+    it('should allow metadata after complete data section', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [null, 98765432100, '2025-05-26'],
+          [null, '', ''],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_MATERIAL', 'Paper and board']
+        ]
+      })
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [
+          [12345678910, '2025-05-25'],
+          [98765432100, '2025-05-26']
+        ]
+      })
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 5, column: 'B' }
+      })
+
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Test', row: 6, column: 'B' }
+      })
+    })
+
+    it('should allow metadata interspersed with data rows in separate columns', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [
+            null,
+            98765432100,
+            '2025-05-26',
+            null,
+            '__EPR_META_PROCESSING_TYPE',
+            'REPROCESSOR'
+          ],
+          [null, 11122233344, '2025-05-27'],
+          [null, '', '']
+        ]
+      })
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [
+          [12345678910, '2025-05-25'],
+          [98765432100, '2025-05-26'],
+          [11122233344, '2025-05-27']
+        ]
+      })
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 3, column: 'F' }
+      })
+    })
+
+    it('should handle multiple metadata markers after data section', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_SUPPLIER_INFO', 'SUPPLIER_NAME', 'SUPPLIER_REF'],
+          [null, 'ABC Ltd', 'ABC123'],
+          [null, 'XYZ Corp', 'XYZ789'],
+          [null, '', ''],
+          [],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_MATERIAL', 'Paper and board'],
+          ['__EPR_META_SUBMISSION_DATE', '2025-05-25']
+        ]
+      })
+
+      expect(result.data.SUPPLIER_INFO).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['SUPPLIER_NAME', 'SUPPLIER_REF'],
+        rows: [
+          ['ABC Ltd', 'ABC123'],
+          ['XYZ Corp', 'XYZ789']
+        ]
+      })
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 6, column: 'B' }
+      })
+
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Test', row: 7, column: 'B' }
+      })
+
+      expect(result.meta.SUBMISSION_DATE).toEqual({
+        value: '2025-05-25',
+        location: { sheet: 'Test', row: 8, column: 'B' }
+      })
+    })
+
+    it('should handle data-metadata-data sandwich pattern', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_FIRST_SECTION', 'COLUMN_A', 'COLUMN_B'],
+          [null, 'value_a1', 'value_b1'],
+          [null, '', ''],
+          [],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_MATERIAL', 'Paper and board'],
+          [],
+          ['__EPR_DATA_SECOND_SECTION', 'COLUMN_X', 'COLUMN_Y'],
+          [null, 'value_x1', 'value_y1'],
+          [null, 'value_x2', 'value_y2'],
+          [null, '', '']
+        ]
+      })
+
+      expect(result.data.FIRST_SECTION).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['COLUMN_A', 'COLUMN_B'],
+        rows: [['value_a1', 'value_b1']]
+      })
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 5, column: 'B' }
+      })
+
+      expect(result.meta.MATERIAL).toEqual({
+        value: 'Paper and board',
+        location: { sheet: 'Test', row: 6, column: 'B' }
+      })
+
+      expect(result.data.SECOND_SECTION).toEqual({
+        location: { sheet: 'Test', row: 8, column: 'B' },
+        headers: ['COLUMN_X', 'COLUMN_Y'],
+        rows: [
+          ['value_x1', 'value_y1'],
+          ['value_x2', 'value_y2']
+        ]
+      })
+    })
+
+    it('should handle metadata in same row as data marker', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_BALANCE',
+            'OUR_REFERENCE',
+            'DATE_RECEIVED',
+            null,
+            '__EPR_META_PROCESSING_TYPE',
+            'REPROCESSOR'
+          ],
+          [null, 12345678910, '2025-05-25'],
+          [null, '', '']
+        ]
+      })
+
+      expect(result.data.WASTE_BALANCE).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        rows: [[12345678910, '2025-05-25']]
+      })
+
+      expect(result.meta.PROCESSING_TYPE).toEqual({
+        value: 'REPROCESSOR',
+        location: { sheet: 'Test', row: 1, column: 'F' }
       })
     })
   })

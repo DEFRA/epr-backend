@@ -22,7 +22,9 @@ const CollectionState = {
  */
 const columnToLetter = (colNumber) => {
   const toLetterRecursive = (n, acc = '') => {
-    if (n <= 0) return acc
+    if (n <= 0) {
+      return acc
+    }
     const remainder = (n - 1) % ALPHABET_SIZE
     const letter = String.fromCodePoint(ASCII_CODE_OFFSET + remainder)
     return toLetterRecursive(Math.floor((n - 1) / ALPHABET_SIZE), letter + acc)
@@ -74,6 +76,8 @@ const processCellForMetadata = (
       }
     }
     draftState.metadataContext = null
+  } else {
+    // Cell is not related to metadata
   }
 }
 
@@ -135,6 +139,8 @@ const updateCollectionWithCell = (
     draftCollection.state === CollectionState.ROWS
   ) {
     processRowCell(draftCollection, cellValue)
+  } else {
+    // Cell is outside collection boundaries
   }
 }
 
@@ -153,6 +159,8 @@ const finalizeRowForCollection = (draftCollection) => {
       draftCollection.rows.push(draftCollection.currentRow)
       draftCollection.currentRow = []
     }
+  } else {
+    // Current row is empty, nothing to finalize
   }
 }
 

@@ -17,3 +17,5 @@
 * [15. Use Joi + MongoDB Native Driver for epr-organisations Schema](0015-joi-for-epr-organisations.md)
 * [16. Admin UI Authorisation MVP](0016-admin-ui-authorisation-mvp.md)
 * [17. Decouple spreadsheet data extraction from layout using markers](0017-decouple-spreadsheet-data-extraction-from-layout-using-markers.md)
+* [18. Log File Uploads from DEFRA Forms for Manual S3 Migration](0018-form-file-uploads-logging.md)
+* [19. Layered Transformation Strategy for Summary Log to Waste Records](0019-waste-record-transformation-pipeline.md)

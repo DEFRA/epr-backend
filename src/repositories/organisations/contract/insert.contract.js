@@ -17,8 +17,11 @@ export const testInsertBehaviour = (it) => {
 
         const result = await repository.findById(orgData.id)
 
+        const { statusHistory: _orgStatusHistory, ...orgWithoutStatusHistory } =
+          orgData
+
         const expectedData = {
-          ...orgData,
+          ...orgWithoutStatusHistory,
           formSubmissionTime: new Date(orgData.formSubmissionTime),
           registrations: orgData.registrations.map((reg) => {
             const { statusHistory, ...regWithoutStatusHistory } = reg
@@ -95,15 +98,6 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('rejects insert with missing reprocessingNations', async () => {
-          const orgWithoutNations = buildOrganisation({
-            reprocessingNations: undefined
-          })
-          await expect(repository.insert(orgWithoutNations)).rejects.toThrow(
-            /Invalid organisation data.*reprocessingNations/
-          )
-        })
-
         it('rejects insert with missing submitterContactDetails', async () => {
           const orgWithoutContact = buildOrganisation({
             submitterContactDetails: undefined
@@ -146,15 +140,6 @@ export const testInsertBehaviour = (it) => {
           })
           await expect(repository.insert(orgWithEmptyArray)).rejects.toThrow(
             /Invalid organisation data.*At least one waste processing type/
-          )
-        })
-
-        it('rejects insert with empty reprocessingNations array', async () => {
-          const orgWithEmptyNations = buildOrganisation({
-            reprocessingNations: []
-          })
-          await expect(repository.insert(orgWithEmptyNations)).rejects.toThrow(
-            /Invalid organisation data.*At least one reprocessing nation/
           )
         })
       })

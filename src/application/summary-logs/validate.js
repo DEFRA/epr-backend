@@ -4,9 +4,15 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { validateWasteRegistrationNumber } from './validations/waste-registration-number.js'
-import { validateSummaryLogType } from './validations/summary-log-type.js'
-import { validateSummaryLogMaterialType } from './validations/summary-log-material-type.js'
+import {
+  createValidationIssues,
+  VALIDATION_CATEGORY
+} from '#common/validation/validation-issues.js'
+
+import { validateMetaSyntax } from './validations/summary-log-meta-syntax.js'
+import { validateRegistrationNumber } from './validations/waste-registration-number.js'
+import { validateProcessingType } from './validations/summary-log-type.js'
+import { validateMaterialType } from './validations/summary-log-material-type.js'
 import { validateAccreditationNumber } from './validations/validate-accreditation-number.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
@@ -26,12 +32,6 @@ const fetchRegistration = async ({
     registrationId
   )
 
-  if (!registration) {
-    throw new Error(
-      `Registration not found: organisationId=${organisationId}, registrationId=${registrationId}`
-    )
-  }
-
   logger.info({
     message: `Fetched registration: ${loggingContext}`,
     event: {
@@ -43,94 +43,76 @@ const fetchRegistration = async ({
   return registration
 }
 
+/**
+ * Performs all validation checks on a summary log
+ *
+ * Extracts the summary log, validates syntax first, then performs business
+ * validations if syntax is valid. Converts any exceptions to fatal technical issues.
+ *
+ * @param {Object} params
+ * @param {SummaryLog} params.summaryLog - The summary log to validate
+ * @param {string} params.loggingContext - Context string for logging (e.g., "summaryLogId=123, fileId=456")
+ * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
+ * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
+ * @returns {Promise<Object>} Validation issues object with methods like getAllIssues(), isFatal()
+ */
 const performValidationChecks = async ({
   summaryLog,
   loggingContext,
   summaryLogExtractor,
   organisationsRepository
 }) => {
-  const parsed = await summaryLogExtractor.extract(summaryLog)
+  const issues = createValidationIssues()
 
-  logger.info({
-    message: `Extracted summary log file: ${loggingContext}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  try {
+    const parsed = await summaryLogExtractor.extract(summaryLog)
 
-  const registration = await fetchRegistration({
-    organisationsRepository,
-    organisationId: summaryLog.organisationId,
-    registrationId: summaryLog.registrationId,
-    loggingContext
-  })
-
-  const validators = [
-    validateWasteRegistrationNumber,
-    validateSummaryLogType,
-    validateAccreditationNumber,
-    validateSummaryLogMaterialType
-  ]
-
-  for (const validate of validators) {
-    validate({
-      parsed,
-      registration,
-      loggingContext
+    logger.info({
+      message: `Extracted summary log file: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
     })
+
+    /**
+     * TODO:
+     *  - validateDataSyntax
+     */
+    const syntaxIssues = validateMetaSyntax({ parsed })
+    issues.merge(syntaxIssues)
+
+    if (!syntaxIssues.isFatal()) {
+      const registration = await fetchRegistration({
+        organisationsRepository,
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId,
+        loggingContext
+      })
+
+      ;[
+        validateRegistrationNumber,
+        validateProcessingType,
+        validateAccreditationNumber,
+        validateMaterialType
+      ].forEach((validate) => {
+        issues.merge(validate({ parsed, registration, loggingContext }))
+      })
+    }
+  } catch (error) {
+    logger.error({
+      error,
+      message: `Failed to validate summary log file: ${loggingContext}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+      }
+    })
+
+    issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message)
   }
 
-  return parsed
-}
-
-const handleValidationSuccess = async ({
-  summaryLogId,
-  version,
-  loggingContext,
-  summaryLogsRepository
-}) => {
-  await summaryLogsRepository.update(summaryLogId, version, {
-    status: SUMMARY_LOG_STATUS.VALIDATED
-  })
-
-  logger.info({
-    message: `Summary log updated: ${loggingContext}, status=${SUMMARY_LOG_STATUS.VALIDATED}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
-}
-
-const handleValidationFailure = async ({
-  summaryLogId,
-  version,
-  loggingContext,
-  error,
-  summaryLogsRepository
-}) => {
-  logger.error({
-    error,
-    message: `Failed to extract summary log file: ${loggingContext}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-    }
-  })
-
-  await summaryLogsRepository.update(summaryLogId, version, {
-    status: SUMMARY_LOG_STATUS.INVALID,
-    failureReason: error.message
-  })
-
-  logger.info({
-    message: `Summary log updated: ${loggingContext}, status=${SUMMARY_LOG_STATUS.INVALID}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  return issues
 }
 
 /**
@@ -166,39 +148,32 @@ export const createSummaryLogsValidator =
       }
     })
 
-    try {
-      await performValidationChecks({
-        summaryLog,
-        loggingContext,
-        summaryLogExtractor,
-        organisationsRepository
-      })
-    } catch (error) {
-      try {
-        await handleValidationFailure({
-          summaryLogId,
-          version,
-          loggingContext,
-          error,
-          summaryLogsRepository
-        })
-      } catch (failureHandlingError) {
-        logger.error({
-          error: failureHandlingError,
-          message: `Failed to handle validation failure: ${loggingContext}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-          }
-        })
-      }
-      throw error
-    }
-
-    await handleValidationSuccess({
-      summaryLogId,
-      version,
+    const issues = await performValidationChecks({
+      summaryLog,
       loggingContext,
-      summaryLogsRepository
+      summaryLogExtractor,
+      organisationsRepository
+    })
+
+    const status = issues.isFatal()
+      ? SUMMARY_LOG_STATUS.INVALID
+      : SUMMARY_LOG_STATUS.VALIDATED
+
+    await summaryLogsRepository.update(summaryLogId, version, {
+      status,
+      validation: {
+        issues: issues.getAllIssues()
+      },
+      ...(issues.isFatal() && {
+        failureReason: issues.getAllIssues()[0].message
+      })
+    })
+
+    logger.info({
+      message: `Summary log updated: ${loggingContext}, status=${status}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.SERVER,
+        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+      }
     })
   }
