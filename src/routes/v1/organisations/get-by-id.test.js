@@ -123,4 +123,26 @@ describe('GET /v1/organisations/{id}', () => {
       )
     })
   })
+
+  describe('user has wrong credentials', () => {
+    it('returns 403 for user without the service maintainer role', async () => {
+      const org1 = buildOrganisation()
+
+      await organisationsRepository.insert(org1)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${org1.id}`,
+        auth: {
+          strategy: 'access-token',
+          credentials: []
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
+    })
+  })
 })
