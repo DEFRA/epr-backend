@@ -20,7 +20,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
       maxAgeSec: 3600, // 60 minutes
       timeSkewSec: 15
     },
-    validate: async (artifacts, request) => {
+    validate: async (artifacts) => {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
@@ -32,7 +32,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.badRequest('Invalid audience for Entra ID token')
         }
 
-        const scope = await getEntraUserRoles(tokenPayload, request)
+        const scope = await getEntraUserRoles(tokenPayload)
 
         return {
           isValid: true,
