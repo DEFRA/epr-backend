@@ -36,6 +36,8 @@ Implement a **four-layer transformation architecture** with explicit extension p
 
 Route summary logs to appropriate table transformers based on `PROCESSING_TYPE` metadata via a dispatch map.
 
+A **dispatch map** is a nested object that maps keys (processing types and table names) to functions. Instead of using conditional logic (if/else or switch statements), we look up the appropriate function in the map: `PROCESSING_TYPES[processingType][tableName]`. This makes the routing logic data rather than code, enabling extension by adding map entries rather than modifying logic.
+
 Note: The summary log's `SPREADSHEET_TYPE` is validated against the registration's `wasteProcessingType` upstream before transformation.
 
 ```javascript
