@@ -1,12 +1,15 @@
 /**
  * @param {Object[]} [initialAccreditations=[]]
  * @param {Object[]} [initialRegistrations=[]]
+ * @param {Object[]} [initialOrganisations=[]]
  * @returns {import('./port.js').FormSubmissionsRepositoryFactory}
  */
 export const createFormSubmissionsRepository = (
   initialAccreditations = [],
-  initialRegistrations = []
+  initialRegistrations = [],
+  initialOrganisations = []
 ) => {
+  const organisations = structuredClone(initialOrganisations)
   const accreditations = structuredClone(initialAccreditations)
   const registrations = structuredClone(initialRegistrations)
 
@@ -14,7 +17,9 @@ export const createFormSubmissionsRepository = (
     async findAllAccreditations() {
       return structuredClone(accreditations)
     },
-
+    async findAllOrganisations() {
+      return structuredClone(organisations)
+    },
     async findAllRegistrations() {
       return structuredClone(registrations)
     }
