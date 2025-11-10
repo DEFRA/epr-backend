@@ -336,4 +336,211 @@ describe('Summary logs integration', () => {
       )
     })
   })
+
+  describe('data syntax validation with invalid cell values', () => {
+    const summaryLogId = 'summary-data-syntax'
+    const fileId = 'file-data-invalid'
+    const filename = 'invalid-data.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      // Create a new server with extractor that returns invalid data
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            wasteRegistrationNumber: 'WRN-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Mock extractor with invalid data values
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION: {
+              value: 'WRN-123',
+              location: { sheet: 'Data', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR',
+              location: { sheet: 'Data', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Data', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Data', row: 4, column: 'B' }
+            }
+          },
+          data: {
+            UPDATE_WASTE_BALANCE: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: [
+                'OUR_REFERENCE',
+                'DATE_RECEIVED',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE',
+                'HOW_CALCULATE_RECYCLABLE',
+                'WEIGHT_OF_NON_TARGET',
+                'RECYCLABLE_PROPORTION',
+                'TONNAGE_RECEIVED_FOR_EXPORT'
+              ],
+              rows: [
+                [
+                  10000,
+                  '2025-05-28T00:00:00.000Z',
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  true,
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ], // Valid row
+                [
+                  9999,
+                  'invalid-date',
+                  'bad-code',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  true,
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ] // Invalid row - first 3 cells invalid
+              ]
+            }
+          }
+        }
+      })
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsValidator: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with data errors', () => {
+      let response
+
+      beforeEach(async () => {
+        // Poll for validation to complete
+        let attempts = 0
+        const maxAttempts = 10
+        let status = SUMMARY_LOG_STATUS.VALIDATING
+
+        while (
+          status === SUMMARY_LOG_STATUS.VALIDATING &&
+          attempts < maxAttempts
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 50))
+
+          const checkResponse = await server.inject({
+            method: 'GET',
+            url: buildGetUrl(summaryLogId)
+          })
+
+          status = JSON.parse(checkResponse.payload).status
+          attempts++
+        }
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns validated status (not invalid) because data errors are not fatal', () => {
+        expect(JSON.parse(response.payload)).toEqual({
+          status: SUMMARY_LOG_STATUS.VALIDATED
+        })
+      })
+
+      it('persists data validation errors with row context', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        expect(summaryLog.validation).toBeDefined()
+        expect(summaryLog.validation.issues).toHaveLength(3)
+
+        // All 3 errors should be from row 2
+        expect(
+          summaryLog.validation.issues.every((i) => i.context.row === 2)
+        ).toBe(true)
+
+        // Should have errors for all 3 invalid cells
+        const errorFields = summaryLog.validation.issues.map(
+          (i) => i.context.field
+        )
+        expect(errorFields).toContain('OUR_REFERENCE')
+        expect(errorFields).toContain('DATE_RECEIVED')
+        expect(errorFields).toContain('EWC_CODE')
+
+        // All should be error severity (not fatal)
+        expect(
+          summaryLog.validation.issues.every((i) => i.severity === 'error')
+        ).toBe(true)
+      })
+    })
+  })
 })
