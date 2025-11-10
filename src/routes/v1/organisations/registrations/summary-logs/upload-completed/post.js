@@ -27,7 +27,7 @@ const buildFileData = (upload, existingFile) => {
     : { id: fileId, name: filename, status: fileStatus }
 
   if (fileStatus === UPLOAD_STATUS.COMPLETE) {
-    fileData.s3 = { bucket: s3Bucket, key: s3Key }
+    fileData.uri = `s3://${s3Bucket}/${s3Key}`
   }
 
   return fileData

@@ -35,10 +35,7 @@ describe('SummaryLogExtractor', () => {
 
     summaryLog = {
       file: {
-        s3: {
-          bucket: 'test-bucket',
-          key: 'test-key'
-        }
+        uri: 's3://test-bucket/test-key'
       }
     }
   })
@@ -50,10 +47,9 @@ describe('SummaryLogExtractor', () => {
   it('should fetch file from uploads repository', async () => {
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(uploadsRepository.findByLocation).toHaveBeenCalledWith({
-      bucket: 'test-bucket',
-      key: 'test-key'
-    })
+    expect(uploadsRepository.findByLocation).toHaveBeenCalledWith(
+      's3://test-bucket/test-key'
+    )
   })
 
   it('should throw error when file not found', async () => {

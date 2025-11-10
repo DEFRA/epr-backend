@@ -15,9 +15,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {Object} summaryLog - The summary log to process
    * @param {Object} summaryLog.file - The file information
    * @param {string} summaryLog.file.id - The file ID
-   * @param {Object} summaryLog.file.s3 - The S3 location
-   * @param {string} summaryLog.file.s3.bucket - The S3 bucket name
-   * @param {string} summaryLog.file.s3.key - The S3 object key
+   * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - Optional accreditation ID
@@ -45,7 +43,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const summaryLogContext = {
       summaryLog: {
         id: summaryLog.file.id,
-        uri: `s3://${summaryLog.file.s3.bucket}/${summaryLog.file.s3.key}`
+        uri: summaryLog.file.uri
       },
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,

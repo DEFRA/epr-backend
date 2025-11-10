@@ -71,10 +71,7 @@ describe('SummaryLogsValidator integration', () => {
         id: `file-${randomUUID()}`,
         name: 'test.xlsx',
         status: UPLOAD_STATUS.COMPLETE,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'path/to/summary-log.xlsx'
-        }
+        uri: 's3://test-bucket/path/to/summary-log.xlsx'
       }
     }
   }

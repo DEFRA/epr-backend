@@ -1,15 +1,20 @@
 /**
- * @typedef {Object} S3Location
- * @property {string} bucket
- * @property {string} key
+ * @typedef {Object} FileUpload
+ * @property {string} id
+ * @property {string} name
+ * @property {'pending'|'rejected'} status
  */
 
 /**
- * @typedef {Object} SummaryLogFile
+ * @typedef {Object} StoredFile
  * @property {string} id
  * @property {string} name
- * @property {'complete'|'pending'|'rejected'} [status]
- * @property {S3Location} [s3]
+ * @property {'complete'} status
+ * @property {string} uri - S3 URI (e.g., s3://bucket/key)
+ */
+
+/**
+ * @typedef {FileUpload | StoredFile} SummaryLogFile
  */
 
 /**

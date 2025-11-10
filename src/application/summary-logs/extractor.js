@@ -88,15 +88,10 @@ export const createSummaryLogExtractor = ({ uploadsRepository, logger }) => {
      */
     extract: async (summaryLog) => {
       const {
-        file: {
-          s3: { bucket, key }
-        }
+        file: { uri }
       } = summaryLog
 
-      const summaryLogBuffer = await uploadsRepository.findByLocation({
-        bucket,
-        key
-      })
+      const summaryLogBuffer = await uploadsRepository.findByLocation(uri)
 
       if (!summaryLogBuffer) {
         throw new Error(

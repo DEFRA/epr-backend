@@ -1,11 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import {
-  TEST_S3_BUCKET,
-  buildFile,
-  buildPendingFile,
-  buildSummaryLog
-} from './test-data.js'
+import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
 export const testUpdateBehaviour = (it) => {
@@ -38,7 +33,7 @@ export const testUpdateBehaviour = (it) => {
         const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.status).toBe('validating')
         expect(found.summaryLog.file.status).toBe('complete')
-        expect(found.summaryLog.file.s3.bucket).toBe(TEST_S3_BUCKET)
+        expect(found.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
       })
 
       it('throws not found error when updating non-existent ID', async () => {
