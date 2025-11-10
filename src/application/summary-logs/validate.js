@@ -11,10 +11,10 @@ import {
 
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateDataSyntax } from './validations/data-syntax.js'
+import { validateAccreditationNumber } from './validations/accreditation-number.js'
 import { validateRegistrationNumber } from './validations/registration-number.js'
 import { validateProcessingType } from './validations/processing-type.js'
 import { validateMaterialType } from './validations/material-type.js'
-import { validateAccreditationNumber } from './validations/validate-accreditation-number.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
