@@ -21,6 +21,16 @@ import { removeUndefinedValues } from './transform-utils.js'
  */
 
 /**
+ * @typedef {Object} MigrationStatistics
+ * @property {number} totalSubmissions
+ * @property {number} transformedCount
+ * @property {number} insertedCount
+ * @property {number} updatedCount
+ * @property {number} unchangedCount
+ * @property {number} failedCount
+ */
+
+/**
  * Type predicate to narrow MigrationResult to SuccessResult
  * @param {MigrationResult} result
  * @returns {result is SuccessResult}
@@ -52,7 +62,7 @@ function isTransformFailure(result) {
  * @async
  * @param {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} formsSubmissionRepository - Repository for form submissions
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository - Repository for organisations
- * @returns {Promise<{totalSubmissions: number, transformedCount: number, insertedCount: number, updatedCount: number, unchangedCount: number, failedCount: number}>} Migration statistics
+ * @returns {Promise<MigrationStatistics>} Migration statistics
  */
 export async function migrateFormsData(
   formsSubmissionRepository,
