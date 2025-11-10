@@ -48,61 +48,62 @@ const validateHeaders = ({
 }
 
 /**
- * Validates a single cell value against its column schema
+ * Processes validation errors for a single row
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table
- * @param {string} params.headerName - Name of the column/header
- * @param {*} params.cellValue - The cell value to validate
  * @param {number} params.rowIndex - Zero-based row index
- * @param {number} params.colIndex - Zero-based column index
- * @param {Object} params.tableLocation - Table origin location in spreadsheet
- * @param {Object} params.columnSchema - Joi schema for the column
+ * @param {Object} params.error - Joi validation error object
+ * @param {Map} params.headerToIndexMap - Map of header names to column indices
+ * @param {Object} params.tableLocation - Table location in spreadsheet
  * @param {Object} params.issues - Validation issues collector
  */
-const validateCell = ({
+const processRowErrors = ({
   tableName,
-  headerName,
-  cellValue,
   rowIndex,
-  colIndex,
+  error,
+  headerToIndexMap,
   tableLocation,
-  columnSchema,
   issues
 }) => {
-  const { error } = columnSchema.validate(cellValue)
+  for (const detail of error.details) {
+    const fieldName = detail.path[0]
+    const colIndex = headerToIndexMap.get(fieldName)
 
-  if (error) {
-    const cellLocation = tableLocation?.column
-      ? {
-          sheet: tableLocation.sheet,
-          row: tableLocation.row + rowIndex + 1,
-          column: offsetColumn(tableLocation.column, colIndex)
-        }
-      : undefined
+    const cellLocation =
+      tableLocation?.column && colIndex !== undefined
+        ? {
+            sheet: tableLocation.sheet,
+            row: tableLocation.row + rowIndex + 1,
+            column: offsetColumn(tableLocation.column, colIndex)
+          }
+        : undefined
 
     issues.addError(
       VALIDATION_CATEGORY.TECHNICAL,
-      `Invalid value in column '${headerName}': ${error.message}`,
+      `Invalid value in column '${fieldName}': ${detail.message}`,
       {
-        path: `data.${tableName}.rows[${rowIndex}].${headerName}`,
+        path: `data.${tableName}.rows[${rowIndex}].${fieldName}`,
         location: cellLocation,
-        field: headerName,
-        row: rowIndex + 1, // 1-based for user display
-        actual: cellValue
+        field: fieldName,
+        row: rowIndex + 1,
+        actual: detail.context.value
       }
     )
   }
 }
 
 /**
- * Validates data rows against column schemas
+ * Validates data rows using row-level schema validation
+ *
+ * This validates each row as a complete object, which is more efficient than
+ * cell-by-cell validation and enables cross-field validation rules.
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table
  * @param {Array<string>} params.headers - Array of header names
  * @param {Array<Array<*>>} params.rows - Array of data rows
- * @param {Object} params.columnValidation - Map of header name -> Joi schema
+ * @param {Object} params.rowSchema - Pre-compiled Joi object schema for rows
  * @param {Object} params.tableLocation - Table location in spreadsheet
  * @param {Object} params.issues - Validation issues collector
  */
@@ -110,31 +111,34 @@ const validateRows = ({
   tableName,
   headers,
   rows,
-  columnValidation,
+  rowSchema,
   tableLocation,
   issues
 }) => {
   const headerToIndexMap = new Map()
 
   for (const [index, header] of headers.entries()) {
-    if (header !== null && columnValidation[header]) {
+    if (header !== null && !isEprMarker(header)) {
       headerToIndexMap.set(header, index)
     }
   }
 
   for (const [rowIndex, row] of rows.entries()) {
-    for (const [headerName, colIndex] of headerToIndexMap) {
-      const cellValue = row[colIndex]
-      const columnSchema = columnValidation[headerName]
+    const rowObject = {}
 
-      validateCell({
+    for (const [headerName, colIndex] of headerToIndexMap) {
+      rowObject[headerName] = row[colIndex]
+    }
+
+    const { error } = rowSchema.validate(rowObject)
+
+    if (error) {
+      processRowErrors({
         tableName,
-        headerName,
-        cellValue,
         rowIndex,
-        colIndex,
+        error,
+        headerToIndexMap,
         tableLocation,
-        columnSchema,
         issues
       })
     }
@@ -152,7 +156,7 @@ const validateRows = ({
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
   const { headers, rows, location } = tableData
-  const { requiredHeaders, columnValidation } = schema
+  const { requiredHeaders, rowSchema } = schema
 
   validateHeaders({
     tableName,
@@ -167,7 +171,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
       tableName,
       headers,
       rows,
-      columnValidation,
+      rowSchema,
       tableLocation: location,
       issues
     })
@@ -179,12 +183,15 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  *
  * Validates each table in parsed.data that has a defined schema:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
- * - Validates each cell value against its column's Joi schema (ERROR severity - row-level issues)
- * - Reports precise error locations
+ * - Validates each row as a complete object using pre-compiled Joi schemas (ERROR severity)
+ * - Reports precise error locations for all validation failures
+ *
+ * Row-level validation is more efficient than cell-by-cell validation and enables
+ * cross-field validation rules (e.g., ensuring related fields have consistent values).
  *
  * Severity levels:
  * - FATAL: Missing required headers prevent processing the entire table
- * - ERROR: Invalid cell values mark specific rows as invalid but don't block
+ * - ERROR: Invalid row values mark specific rows as invalid but don't block
  *          submission of the entire spreadsheet - other valid rows can still be processed
  *
  * @param {Object} params

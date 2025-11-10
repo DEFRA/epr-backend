@@ -166,6 +166,80 @@ const createIssueQueries = (issues) => {
 }
 
 /**
+ * Calculates issue counts by severity
+ *
+ * @param {ValidationIssue[]} issues - The issues array
+ * @param {Function} getIssuesBySeverity - Function to get issues by severity
+ * @returns {Object} Counts by severity
+ */
+const calculateIssueCounts = (issues, getIssuesBySeverity) => ({
+  fatal: getIssuesBySeverity(VALIDATION_SEVERITY.FATAL).length,
+  error: getIssuesBySeverity(VALIDATION_SEVERITY.ERROR).length,
+  warning: getIssuesBySeverity(VALIDATION_SEVERITY.WARNING).length,
+  total: issues.length
+})
+
+/**
+ * Generates a human-readable validation summary
+ *
+ * @param {Object} counts - Issue counts by severity
+ * @returns {string} Summary message
+ */
+const generateSummaryMessage = (counts) => {
+  if (counts.total === 0) {
+    return 'Validation passed with no issues'
+  }
+
+  const parts = []
+  if (counts.fatal > 0) {
+    parts.push(`${counts.fatal} fatal`)
+  }
+  if (counts.error > 0) {
+    parts.push(`${counts.error} error${counts.error === 1 ? '' : 's'}`)
+  }
+  if (counts.warning > 0) {
+    parts.push(`${counts.warning} warning${counts.warning === 1 ? '' : 's'}`)
+  }
+
+  return `Validation completed with ${parts.join(', ')}`
+}
+
+/**
+ * Generates summary metadata for validation issues
+ *
+ * @param {ValidationIssue[]} issues - The issues array
+ * @param {Object} counts - Issue counts by severity
+ * @returns {Object} Summary metadata including row statistics
+ */
+const generateSummaryMetadata = (issues, counts) => {
+  const issuesByRow = new Map()
+
+  for (const issue of issues) {
+    if (issue.context?.row !== undefined) {
+      const row = issue.context.row
+      if (!issuesByRow.has(row)) {
+        issuesByRow.set(row, [])
+      }
+      issuesByRow.get(row).push(issue)
+    }
+  }
+
+  const rowNumbers = Array.from(issuesByRow.keys()).sort((a, b) => a - b)
+
+  return {
+    totalIssues: counts.total,
+    issuesBySeverity: {
+      fatal: counts.fatal,
+      error: counts.error,
+      warning: counts.warning
+    },
+    rowsWithIssues: issuesByRow.size,
+    firstIssueRow: rowNumbers.length > 0 ? rowNumbers[0] : null,
+    lastIssueRow: rowNumbers.length > 0 ? rowNumbers.at(-1) : null
+  }
+}
+
+/**
  * Creates methods for transforming validation issues
  *
  * @param {ValidationIssue[]} issues - The issues array
@@ -180,38 +254,23 @@ const createIssueTransformers = (
   getIssuesBySeverity,
   result
 ) => {
-  const getCounts = () => ({
-    fatal: getIssuesBySeverity(VALIDATION_SEVERITY.FATAL).length,
-    error: getIssuesBySeverity(VALIDATION_SEVERITY.ERROR).length,
-    warning: getIssuesBySeverity(VALIDATION_SEVERITY.WARNING).length,
-    total: issues.length
-  })
+  const getCounts = () => calculateIssueCounts(issues, getIssuesBySeverity)
 
   const getSummary = () => {
     const counts = getCounts()
-    if (counts.total === 0) {
-      return 'Validation passed with no issues'
-    }
+    return generateSummaryMessage(counts)
+  }
 
-    const parts = []
-    if (counts.fatal > 0) {
-      parts.push(`${counts.fatal} fatal`)
-    }
-    if (counts.error > 0) {
-      parts.push(`${counts.error} error${counts.error === 1 ? '' : 's'}`)
-    }
-    if (counts.warning > 0) {
-      parts.push(`${counts.warning} warning${counts.warning === 1 ? '' : 's'}`)
-    }
-
-    return `Validation completed with ${parts.join(', ')}`
+  const getSummaryMetadata = () => {
+    const counts = getCounts()
+    return generateSummaryMetadata(issues, counts)
   }
 
   const merge = (otherIssues) => {
     if (!otherIssues || typeof otherIssues.getAllIssues !== 'function') {
       throw new TypeError('Can only merge validation issues objects')
     }
-    otherIssues.getAllIssues().forEach((issue) => {
+    for (const issue of otherIssues.getAllIssues()) {
       addIssue(
         issue.severity,
         issue.category,
@@ -219,7 +278,7 @@ const createIssueTransformers = (
         issue.context,
         issue.code
       )
-    })
+    }
     return result
   }
 
@@ -227,6 +286,7 @@ const createIssueTransformers = (
     merge,
     getCounts,
     getSummary,
+    getSummaryMetadata,
     toErrorResponse: () => ({
       errors: issues.map((issue) => issueToErrorObject(issue))
     })

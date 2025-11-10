@@ -257,13 +257,10 @@ export const createInMemoryOrganisationsRepository = (
     return {
       insert: insertFn,
       update: updateFn,
-      upsert: performUpsert(
-        storage,
-        staleCache,
-        pendingSyncRef,
-        insertFn,
-        updateFn
-      ),
+      upsert:
+        /** @type {(organisation: Object) => Promise<import('./port.js').UpsertResult>} */ (
+          performUpsert(storage, staleCache, pendingSyncRef, insertFn, updateFn)
+        ),
       findAll: performFindAll(staleCache),
       findById,
       findRegistrationById: performFindRegistrationById(findById)

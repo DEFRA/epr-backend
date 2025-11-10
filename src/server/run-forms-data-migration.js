@@ -6,16 +6,16 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 export const runFormsDataMigration = async (server, options = {}) => {
   try {
     const featureFlagsInstance = options.featureFlags || server.featureFlags
-    logger.info(
-      `Starting form data migration. Feature flag enabled: ${featureFlagsInstance.isFormsDataMigrationEnabled()}`
-    )
+    logger.info({
+      message: `Starting form data migration. Feature flag enabled: ${featureFlagsInstance.isFormsDataMigrationEnabled()}`
+    })
 
     if (featureFlagsInstance.isFormsDataMigrationEnabled()) {
       const lock = await server.locker.lock('forms-data-migration')
       if (!lock) {
-        logger.info(
-          'Unable to obtain lock, skipping running form data migration'
-        )
+        logger.info({
+          message: 'Unable to obtain lock, skipping running form data migration'
+        })
         return
       }
       try {
@@ -26,12 +26,12 @@ export const runFormsDataMigration = async (server, options = {}) => {
           server.db
         )()
 
-        const stats = await migrateFormsData(
+        await migrateFormsData(
           formSubmissionsRepository,
           organisationsRepository
         )
 
-        logger.info('Form data migration completed successfully', stats)
+        logger.info({ message: `Form data migration completed successfully` })
       } finally {
         await lock.free()
       }
