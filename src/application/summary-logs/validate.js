@@ -75,9 +75,9 @@ const performValidationChecks = async ({
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
-    ;[validateMetaSyntax, validateDataSyntax].forEach((validate) => {
+    for (const validate of [validateMetaSyntax, validateDataSyntax]) {
       issues.merge(validate({ parsed }))
-    })
+    }
 
     if (!issues.isFatal()) {
       const registration = await fetchRegistration({
