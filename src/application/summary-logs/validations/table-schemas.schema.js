@@ -89,3 +89,26 @@ export const UPDATE_WASTE_BALANCE_SCHEMA = {
     'any.required': IS_REQUIRED
   })
 }
+
+/**
+ * Row-level schema for UPDATE_WASTE_BALANCE table
+ *
+ * This validates an entire row object at once, which is more efficient than
+ * validating individual cells and enables cross-field validation.
+ *
+ * Optimizations applied:
+ * - Schema reuse: Single schema object shared across all row validations
+ * - Preferences pre-set: abortEarly=false configured once on schema
+ * - Pattern extraction: Common validation patterns (e.g., positive numbers) reused
+ * - Unknown fields: .unknown(true) allows extra spreadsheet columns
+ *
+ * These optimizations eliminate overhead from:
+ * - Recreating validation options objects on every call
+ * - Duplicating schema definitions
+ * - Early validation termination (we want all errors per row)
+ */
+export const UPDATE_WASTE_BALANCE_ROW_SCHEMA = Joi.object(
+  UPDATE_WASTE_BALANCE_SCHEMA
+)
+  .unknown(true)
+  .prefs({ abortEarly: false })

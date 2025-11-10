@@ -1015,4 +1015,105 @@ describe('Validation Issues', () => {
       expect(result1.getAllIssues()).toHaveLength(2)
     })
   })
+
+  describe('getSummaryMetadata', () => {
+    it('returns empty metadata when there are no issues', () => {
+      const result = createValidationIssues()
+
+      expect(result.getSummaryMetadata()).toEqual({
+        totalIssues: 0,
+        issuesBySeverity: {
+          fatal: 0,
+          error: 0,
+          warning: 0
+        },
+        rowsWithIssues: 0,
+        firstIssueRow: null,
+        lastIssueRow: null
+      })
+    })
+
+    it('returns metadata with issue counts', () => {
+      const result = createValidationIssues()
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+
+      const metadata = result.getSummaryMetadata()
+
+      expect(metadata.totalIssues).toBe(4)
+      expect(metadata.issuesBySeverity).toEqual({
+        fatal: 1,
+        error: 2,
+        warning: 1
+      })
+    })
+
+    it('tracks rows with issues when context includes row numbers', () => {
+      const result = createValidationIssues()
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 5', {
+        row: 5
+      })
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 10', {
+        row: 10
+      })
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Another error in row 5', {
+        row: 5
+      })
+
+      const metadata = result.getSummaryMetadata()
+
+      expect(metadata.rowsWithIssues).toBe(2)
+      expect(metadata.firstIssueRow).toBe(5)
+      expect(metadata.lastIssueRow).toBe(10)
+    })
+
+    it('handles non-sequential row numbers correctly', () => {
+      const result = createValidationIssues()
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 15', {
+        row: 15
+      })
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 3', {
+        row: 3
+      })
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 8', {
+        row: 8
+      })
+
+      const metadata = result.getSummaryMetadata()
+
+      expect(metadata.rowsWithIssues).toBe(3)
+      expect(metadata.firstIssueRow).toBe(3)
+      expect(metadata.lastIssueRow).toBe(15)
+    })
+
+    it('ignores issues without row context', () => {
+      const result = createValidationIssues()
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error with row', {
+        row: 5
+      })
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error without row')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal without row')
+
+      const metadata = result.getSummaryMetadata()
+
+      expect(metadata.totalIssues).toBe(3)
+      expect(metadata.rowsWithIssues).toBe(1)
+      expect(metadata.firstIssueRow).toBe(5)
+      expect(metadata.lastIssueRow).toBe(5)
+    })
+
+    it('returns null for row bounds when no issues have row context', () => {
+      const result = createValidationIssues()
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
+
+      const metadata = result.getSummaryMetadata()
+
+      expect(metadata.rowsWithIssues).toBe(0)
+      expect(metadata.firstIssueRow).toBeNull()
+      expect(metadata.lastIssueRow).toBeNull()
+    })
+  })
 })
