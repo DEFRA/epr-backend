@@ -16,6 +16,7 @@ import nonRegisteredOutsideUk from '#data/fixtures/ea/organisation/non-registere
 import unincorporatedSeparateControl from '#data/fixtures/ea/organisation/unincorporated-separate-control.json'
 import soleTraderSeparateControl from '#data/fixtures/ea/organisation/sole-trader-separate-contro.json'
 import nonUkSeparateControl from '#data/fixtures/ea/organisation/non-uk-separate-control.json'
+import { validateOrganisationInsert } from '#repositories/organisations/validation.js'
 
 describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
   it('should parse registered limited partnership organisation from fixture', async () => {
@@ -25,10 +26,12 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       registeredLtdPartnership.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: registeredLtdPartnership._id.$oid,
       orgId: registeredLtdPartnership.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
+      reprocessingNations: [],
+      businessType: undefined,
       companyDetails: {
         name: 'Green Recycling Solutions Ltd',
         tradingName: 'Green',
@@ -36,8 +39,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         registeredAddress: {
           line1: 'Unit 15',
           postcode: 'M1 5JG',
-          fullAddress: 'Unit 15, Innovation Park,Manchester,M1 5JG'
-        }
+          fullAddress: 'Unit 15, Innovation Park,Manchester,M1 5JG',
+          country: 'UK'
+        },
+        address: undefined
       },
       submitterContactDetails: {
         fullName: 'James Patterson',
@@ -45,6 +50,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '020 7946 0123',
         title: 'Sustainability Director'
       },
+      managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:14:15.390Z'),
       submittedToRegulator: 'ea',
       partnership: {
@@ -61,6 +67,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         ]
       }
     })
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse registered limited liability partnership organisation from fixture', async () => {
@@ -70,7 +77,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       registeredLtdLiability.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: registeredLtdLiability._id.$oid,
       orgId: registeredLtdLiability.orgId,
       wasteProcessingTypes: [
@@ -78,6 +85,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         WASTE_PROCESSING_TYPE.EXPORTER
       ],
       reprocessingNations: [NATION.ENGLAND, NATION.SCOTLAND],
+      businessType: undefined,
       companyDetails: {
         name: 'Green Recycling Solutions Ltd',
         tradingName: 'Green',
@@ -88,7 +96,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
           fullAddress:
             'Unit 15, Innovation Park,Technology Way,Manchester,Greater Manchester,M1 5JG',
           country: 'UK'
-        }
+        },
+        address: undefined
       },
       submitterContactDetails: {
         fullName: 'James Patterson',
@@ -96,12 +105,15 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '0121 496 8574',
         title: 'Sustainability Director'
       },
+      managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:13:16.313Z'),
       submittedToRegulator: 'ea',
       partnership: {
-        type: PARTNERSHIP_TYPE.LTD_LIABILITY
+        type: PARTNERSHIP_TYPE.LTD_LIABILITY,
+        partners: []
       }
     })
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse registered organisation with no partnership from fixture', async () => {
@@ -111,7 +123,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       registeredNoPartnership.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: registeredNoPartnership._id.$oid,
       orgId: registeredNoPartnership.orgId,
       wasteProcessingTypes: [
@@ -124,9 +136,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         NATION.WALES,
         NATION.NORTHERN_IRELAND
       ],
+      businessType: undefined,
       companyDetails: {
         name: 'Green Recycling Solutions Ltd',
-        tradingName: '',
+        tradingName: undefined,
         registrationNumber: '11223344',
         registeredAddress: {
           line1: 'Unit 15',
@@ -134,7 +147,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
           fullAddress:
             'Unit 15, Innovation Park,Technology Way,Manchester,Greater Manchester,M1 5JG',
           country: 'UK'
-        }
+        },
+        address: undefined
       },
       submitterContactDetails: {
         fullName: 'James Patterson',
@@ -142,11 +156,12 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '020 7946 0123',
         title: 'Director'
       },
+      managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:19:54.601Z'),
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      partnership: undefined
     })
-
-    expect(result.partnership).toBeUndefined()
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse non-registered UK sole trader organisation from fixture', async () => {
@@ -156,7 +171,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       nonRegisteredUkSoleTrader.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: nonRegisteredUkSoleTrader._id.$oid,
       orgId: nonRegisteredUkSoleTrader.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
@@ -165,10 +180,13 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'British Beverage Distributors Ltd',
         tradingName: 'British Beverage Distributors Ltd',
+        registrationNumber: undefined,
+        registeredAddress: undefined,
         address: {
           line1: '45 High Street',
           town: 'Birmingham',
-          postcode: 'B2 4AA'
+          postcode: 'B2 4AA',
+          country: 'UK'
         }
       },
       submitterContactDetails: {
@@ -177,14 +195,17 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '020 7946 0123',
         title: 'Sustainability Director'
       },
-
+      managementContactDetails: {
+        fullName: 'Joe Hamiliton',
+        email: 'reexserviceteam@defra.gov.uk',
+        phone: '0123456789',
+        title: 'Director'
+      },
       formSubmissionTime: new Date('2025-10-08T16:25:35.824Z'),
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      partnership: undefined
     })
-
-    expect(result.companyDetails.registrationNumber).toBeUndefined()
-    expect(result.companyDetails.registeredAddress).toBeUndefined()
-    expect(result.partnership).toBeUndefined()
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse non-registered organisation with outside UK address from fixture', async () => {
@@ -194,7 +215,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       nonRegisteredOutsideUk.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: nonRegisteredOutsideUk._id.$oid,
       orgId: nonRegisteredOutsideUk.orgId,
       wasteProcessingTypes: [
@@ -202,12 +223,15 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         WASTE_PROCESSING_TYPE.EXPORTER
       ],
       reprocessingNations: [NATION.WALES],
+      businessType: undefined,
       companyDetails: {
         name: 'EuroPack GmbH',
         tradingName: 'EuroPack GmbH',
+        registrationNumber: undefined,
+        registeredAddress: undefined,
         address: {
           line1: '125 Avenue des Champs-Élysées',
-          line2: '',
+          line2: undefined,
           town: 'Paris',
           country: 'France',
           region: 'Paris',
@@ -220,13 +244,12 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         phone: '020 7946 0123',
         title: 'Sustainability Director'
       },
+      managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:28:18.572Z'),
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      partnership: undefined
     })
-
-    expect(result.companyDetails.registrationNumber).toBeUndefined()
-    expect(result.companyDetails.registeredAddress).toBeUndefined()
-    expect(result.partnership).toBeUndefined()
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse unincorporated association with separate management contact from fixture', async () => {
@@ -236,18 +259,22 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       unincorporatedSeparateControl.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: unincorporatedSeparateControl._id.$oid,
       orgId: unincorporatedSeparateControl.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
+      reprocessingNations: [],
       businessType: BUSINESS_TYPE.UNINCORPORATED,
       companyDetails: {
         name: 'What is the name of your business?',
         tradingName: 'British Beverage Distributors Ltd',
+        registrationNumber: undefined,
+        registeredAddress: undefined,
         address: {
           line1: '45 High Street',
           postcode: 'B2 4AA',
-          fullAddress: '45 High Street,Birmingham,Birmingham,B2 4AA'
+          fullAddress: '45 High Street,Birmingham,Birmingham,B2 4AA',
+          country: 'UK'
         }
       },
       submitterContactDetails: {
@@ -263,12 +290,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         title: 'Sustainability master'
       },
       formSubmissionTime: new Date('2025-10-23T13:35:37.874Z'),
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      partnership: undefined
     })
-
-    expect(result.companyDetails.registrationNumber).toBeUndefined()
-    expect(result.companyDetails.registeredAddress).toBeUndefined()
-    expect(result.partnership).toBeUndefined()
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse sole trader with separate management contact from fixture', async () => {
@@ -278,17 +303,22 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       soleTraderSeparateControl.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(result).toStrictEqual({
       id: soleTraderSeparateControl._id.$oid,
       orgId: soleTraderSeparateControl.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
+      reprocessingNations: [],
       businessType: BUSINESS_TYPE.INDIVIDUAL,
       companyDetails: {
         name: 'British Beverage Distributors Ltd',
         tradingName: 'British Beverage Distributors Ltd',
+        registrationNumber: undefined,
+        registeredAddress: undefined,
         address: {
           line1: '45 High Street',
-          postcode: 'B2 4AA'
+          town: 'Birmingham',
+          postcode: 'B2 4AA',
+          country: 'UK'
         }
       },
       submitterContactDetails: {
@@ -304,12 +334,10 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         title: 'Director'
       },
       formSubmissionTime: new Date('2025-10-23T13:39:07.408Z'),
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      partnership: undefined
     })
-
-    expect(result.companyDetails.registrationNumber).toBeUndefined()
-    expect(result.companyDetails.registeredAddress).toBeUndefined()
-    expect(result.partnership).toBeUndefined()
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
   })
 
   it('should parse non-UK organisation with separate management contact from fixture', async () => {
@@ -319,21 +347,25 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       nonUkSeparateControl.rawSubmissionData
     )
 
-    expect(result).toMatchObject({
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    expect(result).toStrictEqual({
       id: nonUkSeparateControl._id.$oid,
       orgId: nonUkSeparateControl.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
       reprocessingNations: [NATION.ENGLAND],
+      businessType: undefined,
       companyDetails: {
         name: '01234567',
-        tradingName: '',
+        tradingName: undefined,
+        registrationNumber: undefined,
+        registeredAddress: undefined,
         address: {
           line1: 'Address line 1',
-          line2: '',
+          line2: undefined,
           town: 'Test',
           country: 'France',
-          region: 'Paris',
-          postcode: ''
+          postcode: undefined,
+          region: 'Paris'
         }
       },
       submitterContactDetails: {
@@ -349,12 +381,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         title: 'Director'
       },
       formSubmissionTime: new Date('2025-10-23T13:42:35.918Z'),
-      submittedToRegulator: 'ea'
+      submittedToRegulator: 'ea',
+      partnership: undefined
     })
-
-    expect(result.companyDetails.registrationNumber).toBeUndefined()
-    expect(result.companyDetails.registeredAddress).toBeUndefined()
-    expect(result.partnership).toBeUndefined()
   })
 })
 

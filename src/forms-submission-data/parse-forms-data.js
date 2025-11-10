@@ -86,7 +86,8 @@ export function extractAnswers(rawSubmissionData) {
         (component) =>
           component.shortDescription &&
           component.name &&
-          mainData[component.name] !== undefined
+          mainData[component.name]?.trim() &&
+          mainData[component.name].trim().length > 0
       )
       .reduce((acc, component) => {
         const { shortDescription, name } = component
