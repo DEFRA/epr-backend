@@ -211,7 +211,7 @@ const baseConfig = {
         format: String,
         env: 'ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL',
         default:
-          'https://login.microsoftonline.com/bd06da51-53f6-46d0-a9f0-ac562864c887/v2.0/.well-known/openid-configuration'
+          'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration'
       },
       audience: {
         doc: 'Admin UI app as audience',

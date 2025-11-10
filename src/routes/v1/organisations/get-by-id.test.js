@@ -3,17 +3,14 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
 import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
+import { generateEntraIdToken } from '#test/helpers/create-test-tokens.js'
 
 describe('GET /v1/organisations/{id}', () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
-  const mockCredentials = {
-    scope: [ROLES.serviceMaintainer]
-  }
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
@@ -30,6 +27,7 @@ describe('GET /v1/organisations/{id}', () => {
     it('returns 200 and the organisation when found', async () => {
       const org1 = buildOrganisation()
       const org2 = buildOrganisation()
+      const token = generateEntraIdToken()
 
       await organisationsRepository.insert(org1)
       await organisationsRepository.insert(org2)
@@ -37,9 +35,8 @@ describe('GET /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${org1.id}`,
-        auth: {
-          strategy: 'access-token',
-          credentials: mockCredentials
+        headers: {
+          Authorization: `Bearer ${token}`
         }
       })
 
@@ -55,11 +52,7 @@ describe('GET /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org.id}`,
-        auth: {
-          strategy: 'access-token',
-          credentials: mockCredentials
-        }
+        url: `/v1/organisations/${org.id}`
       })
 
       expect(response.headers['cache-control']).toBe(
@@ -72,11 +65,7 @@ describe('GET /v1/organisations/{id}', () => {
     it('returns 404 for orgId that does not exist', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/999999',
-        auth: {
-          strategy: 'access-token',
-          credentials: mockCredentials
-        }
+        url: '/v1/organisations/999999'
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -85,11 +74,7 @@ describe('GET /v1/organisations/{id}', () => {
     it('returns 404 when orgId is missing (whitespace-only path segment)', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/%20%20%20',
-        auth: {
-          strategy: 'access-token',
-          credentials: mockCredentials
-        }
+        url: '/v1/organisations/%20%20%20'
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -98,11 +83,7 @@ describe('GET /v1/organisations/{id}', () => {
     it('includes Cache-Control header in error response', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/999999',
-        auth: {
-          strategy: 'access-token',
-          credentials: mockCredentials
-        }
+        url: '/v1/organisations/999999'
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -120,11 +101,7 @@ describe('GET /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org1.id}`,
-        auth: {
-          strategy: 'access-token',
-          credentials: []
-        }
+        url: `/v1/organisations/${org1.id}`
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)

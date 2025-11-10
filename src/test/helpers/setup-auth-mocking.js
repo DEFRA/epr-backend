@@ -4,7 +4,7 @@ export function setupAuthContext() {
   beforeEach((context) => {
     global.fetchMock?.disableMocks()
     context.mockOidcServer = createMockOidcServers()
-    context.mockOidcServer.listen({ onUnhandledRequest: 'bypass' })
+    context.mockOidcServer.listen({ onUnhandledRequest: 'warn' })
   })
 
   afterEach((context) => {

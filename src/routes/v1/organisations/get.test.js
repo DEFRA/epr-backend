@@ -4,8 +4,12 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
+import { mockCredentialsAsServiceMaintainer } from '#test/helpers/mock-credentials.js'
 
 describe('GET /v1/organisations', () => {
+  setupAuthContext()
+
   it('returns 200 and all organisations', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
@@ -25,7 +29,10 @@ describe('GET /v1/organisations', () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: '/v1/organisations'
+      url: '/v1/organisations',
+      auth: {
+        credentials: mockCredentialsAsServiceMaintainer
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.OK)
