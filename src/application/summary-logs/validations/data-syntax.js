@@ -73,14 +73,13 @@ const validateCell = ({
   const { error } = columnSchema.validate(cellValue)
 
   if (error) {
-    const cellLocation =
-      tableLocation && tableLocation.column
-        ? {
-            sheet: tableLocation.sheet,
-            row: tableLocation.row + rowIndex + 1,
-            column: offsetColumn(tableLocation.column, colIndex)
-          }
-        : undefined
+    const cellLocation = tableLocation?.column
+      ? {
+          sheet: tableLocation.sheet,
+          row: tableLocation.row + rowIndex + 1,
+          column: offsetColumn(tableLocation.column, colIndex)
+        }
+      : undefined
 
     issues.addError(
       VALIDATION_CATEGORY.TECHNICAL,
