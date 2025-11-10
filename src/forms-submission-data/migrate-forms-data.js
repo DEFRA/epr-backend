@@ -1,5 +1,6 @@
 import { parseOrgSubmission } from './transform-organisation-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { removeUndefinedValues } from './transform-utils.js'
 
 /**
  * Migrates form submission data to organisations collection
@@ -20,7 +21,7 @@ export async function migrateFormsData(
     return parseOrgSubmission(id, orgId, rawSubmissionData)
       .then((transformedOrg) =>
         organisationsRepository
-          .upsert(transformedOrg)
+          .upsert(removeUndefinedValues(transformedOrg))
           .then((result) => ({
             success: true,
             id,

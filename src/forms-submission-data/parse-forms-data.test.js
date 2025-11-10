@@ -12,6 +12,8 @@ import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-
 import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json' with { type: 'json' }
 import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json' with { type: 'json' }
+import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-no-partnership.json'
+
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { REGULATOR } from '#domain/organisations.js'
@@ -190,6 +192,16 @@ describe('extractAnswers', () => {
     expect(result[orgDetails.title][orgDetails.fields.SYSTEM_REFERENCE]).toBe(
       '68e6912278f83083f0f17a7b'
     )
+  })
+
+  it('should not extract answers with empty answer', () => {
+    const result = extractAnswers(registeredNoPartnership.rawSubmissionData)
+
+    expect(
+      result['Companies House details'][
+        FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.TRADING_NAME
+      ]
+    ).toBeUndefined()
   })
 
   it('should handle duplicate field names across different pages', () => {

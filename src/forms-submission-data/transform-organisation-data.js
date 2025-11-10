@@ -37,7 +37,7 @@ function extractReprocessingNations(answersByShortDescription) {
     ]
 
   if (!value) {
-    return undefined
+    return []
   }
 
   return value.split(',').map((v) => mapNation(v))
@@ -51,7 +51,7 @@ function getAddress(answersByShortDescription) {
   if (orgAddress) {
     return parseUkAddress(orgAddress)
   } else {
-    return {
+    const address = {
       line1:
         answersByShortDescription[
           FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.ADDRESS_LINE_1
@@ -76,6 +76,11 @@ function getAddress(answersByShortDescription) {
           FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.REGION
         ]
     }
+
+    const hasAnyValue = Object.values(address).some(
+      (value) => value !== undefined
+    )
+    return hasAnyValue ? address : undefined
   }
 }
 
