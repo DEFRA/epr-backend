@@ -218,7 +218,10 @@ export const createOrganisationsRepository =
     return {
       insert: performInsert(db),
       update: performUpdate(db),
-      upsert: performUpsert(db),
+      upsert:
+        /** @type {(organisation: Object) => Promise<import('./port.js').UpsertResult>} */ (
+          performUpsert(db)
+        ),
       findById,
       findAll: performFindAll(db),
 

@@ -3,11 +3,66 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from './transform-utils.js'
 
 /**
+ * @typedef {Object} SuccessResult
+ * @property {true} success
+ * @property {string} id
+ * @property {'inserted' | 'updated' | 'unchanged'} action
+ */
+
+/**
+ * @typedef {Object} FailureResult
+ * @property {false} success
+ * @property {string} id
+ * @property {string} phase
+ */
+
+/**
+ * @typedef {SuccessResult | FailureResult} MigrationResult
+ */
+
+/**
+ * @typedef {Object} MigrationStatistics
+ * @property {number} totalSubmissions
+ * @property {number} transformedCount
+ * @property {number} insertedCount
+ * @property {number} updatedCount
+ * @property {number} unchangedCount
+ * @property {number} failedCount
+ */
+
+/**
+ * Type predicate to narrow MigrationResult to SuccessResult
+ * @param {MigrationResult} result
+ * @returns {result is SuccessResult}
+ */
+function isSuccessResult(result) {
+  return result.success === true
+}
+
+/**
+ * Type predicate to narrow MigrationResult to FailureResult
+ * @param {MigrationResult} result
+ * @returns {result is FailureResult}
+ */
+function isFailureResult(result) {
+  return result.success === false
+}
+
+/**
+ * Check if a result failed during transformation phase
+ * @param {MigrationResult} result
+ * @returns {boolean}
+ */
+function isTransformFailure(result) {
+  return isFailureResult(result) && result.phase === 'transform'
+}
+
+/**
  * Migrates form submission data to organisations collection
  * @async
  * @param {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} formsSubmissionRepository - Repository for form submissions
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository - Repository for organisations
- * @returns {Promise<{totalSubmissions: number, transformedCount: number, insertedCount: number, updatedCount: number, unchangedCount: number}>} Migration statistics
+ * @returns {Promise<MigrationStatistics>} Migration statistics
  */
 export async function migrateFormsData(
   formsSubmissionRepository,
@@ -46,10 +101,9 @@ export async function migrateFormsData(
 
   const results = await Promise.all(migrationPromises)
 
-  const successful = results.filter((result) => result.success === true)
-  const failedCount = results.filter(
-    (result) => result.success === false
-  ).length
+  const successful = results.filter(isSuccessResult)
+  const failed = results.filter(isFailureResult)
+  const transformFailures = results.filter(isTransformFailure)
 
   const insertedCount = successful.filter((r) => r.action === 'inserted').length
   const updatedCount = successful.filter((r) => r.action === 'updated').length
@@ -57,16 +111,16 @@ export async function migrateFormsData(
     (r) => r.action === 'unchanged'
   ).length
 
-  logger.info(
-    `Migration completed: ${successful.length}/${submissions.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${unchangedCount} unchanged, ${failedCount} failed)`
-  )
+  logger.info({
+    message: `Migration completed: ${successful.length}/${submissions.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${unchangedCount} unchanged, ${transformFailures.length} transform failed, ${failed.length} failed)`
+  })
 
   return {
     totalSubmissions: submissions.length,
-    transformedCount: results.filter((r) => r.phase !== 'transform').length,
+    transformedCount: submissions.length - transformFailures.length,
     insertedCount,
     updatedCount,
     unchangedCount,
-    failedCount
+    failedCount: failed.length
   }
 }
