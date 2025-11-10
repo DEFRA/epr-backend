@@ -16,7 +16,7 @@ export async function getEntraUserRoles(tokenPayload, request) {
       }
     }
   } catch (e) {
-    Boom.badImplementation('Error parsing user roles configuration')
+    throw Boom.badImplementation('Error parsing user roles configuration')
   }
 
   return thisUserRoles
