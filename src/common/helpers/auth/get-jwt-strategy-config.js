@@ -29,7 +29,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
         // This audience may not need to be a secret, only an env var
         const adminUiAsAudience = config.get('oidc.entraId.audience')
         if (audience !== adminUiAsAudience) {
-          throw Boom.badRequest('Invalid audience for Entra ID token')
+          throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
         const scope = await getEntraUserRoles(tokenPayload)
