@@ -116,14 +116,14 @@ const validateRows = ({
 }) => {
   const headerToIndexMap = new Map()
 
-  headers.forEach((header, index) => {
+  for (const [index, header] of headers.entries()) {
     if (header !== null && columnValidation[header]) {
       headerToIndexMap.set(header, index)
     }
-  })
+  }
 
-  rows.forEach((row, rowIndex) => {
-    headerToIndexMap.forEach((colIndex, headerName) => {
+  for (const [rowIndex, row] of rows.entries()) {
+    for (const [headerName, colIndex] of headerToIndexMap) {
       const cellValue = row[colIndex]
       const columnSchema = columnValidation[headerName]
 
@@ -137,8 +137,8 @@ const validateRows = ({
         columnSchema,
         issues
       })
-    })
-  })
+    }
+  }
 }
 
 /**

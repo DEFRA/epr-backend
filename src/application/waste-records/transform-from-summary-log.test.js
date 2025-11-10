@@ -157,11 +157,12 @@ describe('transformFromSummaryLog', () => {
         uri: 's3://bucket/key2'
       },
       data: {
-        ROW_ID: FIRST_ROW_ID,
         DATE_RECEIVED_FOR_REPROCESSING: UPDATED_DATE,
         GROSS_WEIGHT: UPDATED_WEIGHT
       }
     })
+    // Verify ROW_ID is not in the delta (it's an immutable identifier)
+    expect(result[0].versions[1].data).not.toHaveProperty('ROW_ID')
     expect(result[0].versions[1].createdAt).toBeTruthy()
   })
 

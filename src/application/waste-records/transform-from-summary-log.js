@@ -73,12 +73,25 @@ const transformTable = (
       existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
 
     if (existingRecord) {
-      // Add new version to existing record
+      // Calculate delta: find fields that changed (excluding ROW_ID)
+      const delta = {}
+      for (const [key, value] of Object.entries(data)) {
+        if (key !== 'ROW_ID' && existingRecord.data[key] !== value) {
+          delta[key] = value
+        }
+      }
+
+      // If nothing changed, return existing record unchanged
+      if (Object.keys(delta).length === 0) {
+        return existingRecord
+      }
+
+      // Add new version with only changed fields
       const newVersion = {
         createdAt: new Date().toISOString(),
         status: VERSION_STATUS.UPDATED,
         summaryLog,
-        data
+        data: delta
       }
 
       return {

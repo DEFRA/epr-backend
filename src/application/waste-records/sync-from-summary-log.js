@@ -13,8 +13,11 @@ export const syncFromSummaryLog = (dependencies) => {
 
   /**
    * @param {Object} summaryLog - The summary log to process
-   * @param {string} summaryLog.id - The summary log ID
-   * @param {string} summaryLog.uri - The S3 URI for the summary log
+   * @param {Object} summaryLog.file - The file information
+   * @param {string} summaryLog.file.id - The file ID
+   * @param {Object} summaryLog.file.s3 - The S3 location
+   * @param {string} summaryLog.file.s3.bucket - The S3 bucket name
+   * @param {string} summaryLog.file.s3.key - The S3 object key
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - Optional accreditation ID
@@ -22,7 +25,7 @@ export const syncFromSummaryLog = (dependencies) => {
    */
   return async (summaryLog) => {
     // 1. Extract/parse the summary log
-    const parsedData = await extractor.extract(summaryLog.uri)
+    const parsedData = await extractor.extract(summaryLog)
 
     // 2. Load all existing waste records for this org/reg
     const existingRecordsArray = await wasteRecordRepository.findByRegistration(
@@ -41,8 +44,8 @@ export const syncFromSummaryLog = (dependencies) => {
     // 4. Transform to waste records
     const summaryLogContext = {
       summaryLog: {
-        id: summaryLog.id,
-        uri: summaryLog.uri
+        id: summaryLog.file.id,
+        uri: `s3://${summaryLog.file.s3.bucket}/${summaryLog.file.s3.key}`
       },
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
