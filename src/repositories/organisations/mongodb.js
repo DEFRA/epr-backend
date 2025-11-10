@@ -238,6 +238,19 @@ export const createOrganisationsRepository =
           )
         }
 
+        // Hydrate with accreditation if accreditationId exists
+        if (registration.accreditationId) {
+          const accreditation = org.accreditations?.find(
+            (a) => a.id === registration.accreditationId
+          )
+          if (accreditation) {
+            return {
+              ...registration,
+              accreditation
+            }
+          }
+        }
+
         return registration
       }
     }

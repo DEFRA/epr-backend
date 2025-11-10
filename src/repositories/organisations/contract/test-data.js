@@ -15,6 +15,27 @@ function initializeStatusForItems(items) {
   }
 }
 
+export const buildRegistration = (overrides = {}) => ({
+  id: new ObjectId().toString(),
+  orgName: 'Test Org',
+  material: 'glass',
+  wasteProcessingType: 'reprocessor',
+  wasteRegistrationNumber: 'CBDU111111',
+  formSubmissionTime: '2025-08-20T19:34:44.944Z',
+  submittedToRegulator: 'ea',
+  ...overrides
+})
+
+export const buildAccreditation = (overrides = {}) => ({
+  id: new ObjectId().toString(),
+  accreditationNumber: '87654321',
+  material: 'glass',
+  wasteProcessingType: 'reprocessor',
+  formSubmissionTime: '2025-08-19T19:34:44.944Z',
+  submittedToRegulator: 'ea',
+  ...overrides
+})
+
 export const buildOrganisation = (overrides = {}) => {
   const { statusHistory: _statusHistory, ...baseOrg } = org1
 

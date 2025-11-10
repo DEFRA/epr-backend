@@ -13,6 +13,7 @@ import { validateMetaSyntax } from './validations/summary-log-meta-syntax.js'
 import { validateRegistrationNumber } from './validations/waste-registration-number.js'
 import { validateProcessingType } from './validations/summary-log-type.js'
 import { validateMaterialType } from './validations/summary-log-material-type.js'
+import { validateAccreditationNumber } from './validations/validate-accreditation-number.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -92,6 +93,7 @@ const performValidationChecks = async ({
       ;[
         validateRegistrationNumber,
         validateProcessingType,
+        validateAccreditationNumber,
         validateMaterialType
       ].forEach((validate) => {
         issues.merge(validate({ parsed, registration, loggingContext }))
