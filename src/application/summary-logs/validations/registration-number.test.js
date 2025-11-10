@@ -1,4 +1,4 @@
-import { validateRegistrationNumber } from './waste-registration-number.js'
+import { validateRegistrationNumber } from './registration-number.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY

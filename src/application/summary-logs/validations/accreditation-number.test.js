@@ -1,4 +1,4 @@
-import { validateAccreditationNumber } from './validate-accreditation-number.js'
+import { validateAccreditationNumber } from './accreditation-number.js'
 
 const mockLoggerInfo = vi.fn()
 

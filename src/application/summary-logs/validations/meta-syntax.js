@@ -2,7 +2,7 @@ import {
   createValidationIssues,
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
-import { metaSchema } from './summary-log-meta-syntax.schema.js'
+import { metaSchema } from './meta-syntax.schema.js'
 
 /**
  * Validates the syntax and format of meta section fields

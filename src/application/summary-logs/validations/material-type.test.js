@@ -1,4 +1,4 @@
-import { validateProcessingType } from './summary-log-type.js'
+import { validateMaterialType } from './material-type.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
@@ -12,23 +12,23 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
-describe('validateProcessingType', () => {
+describe('validateMaterialType', () => {
   afterEach(() => {
     vi.resetAllMocks()
   })
 
-  it('returns fatal business error when registration has unexpected waste processing type', () => {
+  it('returns fatal business error when registration has unexpected material', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+        MATERIAL: { value: 'Aluminium' }
       }
     }
     const registration = {
-      wasteProcessingType: 'invalid-unexpected-type'
+      material: 'invalid-unexpected-material'
     }
 
-    const result = validateProcessingType({
+    const result = validateMaterialType({
       parsed,
       registration,
       loggingContext: 'test'
@@ -40,24 +40,24 @@ describe('validateProcessingType', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Invalid summary log: registration has unexpected waste processing type'
+      'Invalid summary log: registration has unexpected material'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.actual).toBe('invalid-unexpected-type')
+    expect(fatals[0].context.actual).toBe('invalid-unexpected-material')
   })
 
-  it('returns fatal business error when types do not match', () => {
+  it('returns fatal business error when materials do not match', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+        MATERIAL: { value: 'Aluminium' }
       }
     }
     const registration = {
-      wasteProcessingType: 'exporter'
+      material: 'plastic'
     }
 
-    const result = validateProcessingType({
+    const result = validateMaterialType({
       parsed,
       registration,
       loggingContext: 'test'
@@ -69,26 +69,26 @@ describe('validateProcessingType', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Summary log processing type does not match registration processing type'
+      'Material does not match registration material'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.path).toBe('meta.PROCESSING_TYPE')
-    expect(fatals[0].context.expected).toBe('reprocessor')
-    expect(fatals[0].context.actual).toBe('exporter')
+    expect(fatals[0].context.path).toBe('meta.MATERIAL')
+    expect(fatals[0].context.expected).toBe('aluminium')
+    expect(fatals[0].context.actual).toBe('plastic')
   })
 
-  it('returns valid result when types match - REPROCESSOR', () => {
+  it('returns valid result when materials match - Aluminium', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+        MATERIAL: { value: 'Aluminium' }
       }
     }
     const registration = {
-      wasteProcessingType: 'reprocessor'
+      material: 'aluminium'
     }
 
-    const result = validateProcessingType({
+    const result = validateMaterialType({
       parsed,
       registration,
       loggingContext: 'test'
@@ -100,23 +100,23 @@ describe('validateProcessingType', () => {
     expect(mockLoggerInfo).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Summary log type validated: test, spreadsheetType=REPROCESSOR, wasteProcessingType=reprocessor'
+          'Validated material: test, spreadsheetMaterial=Aluminium, registrationMaterial=aluminium'
       })
     )
   })
 
-  it('returns valid result when types match - EXPORTER', () => {
+  it('returns valid result when materials match - Plastic', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'EXPORTER' }
+        MATERIAL: { value: 'Plastic' }
       }
     }
     const registration = {
-      wasteProcessingType: 'exporter'
+      material: 'plastic'
     }
 
-    const result = validateProcessingType({
+    const result = validateMaterialType({
       parsed,
       registration,
       loggingContext: 'test'
@@ -128,17 +128,48 @@ describe('validateProcessingType', () => {
     expect(mockLoggerInfo).toHaveBeenCalled()
   })
 
-  it('categorizes type mismatch as fatal business error', () => {
+  it('returns valid result for all valid material mappings', () => {
+    const materials = [
+      ['Aluminium', 'aluminium'],
+      ['Fibre_based_composite', 'fibre'],
+      ['Glass', 'glass'],
+      ['Paper_and_board', 'paper'],
+      ['Plastic', 'plastic'],
+      ['Steel', 'steel'],
+      ['Wood', 'wood']
+    ]
+
+    materials.forEach(([spreadsheet, registration]) => {
+      const parsed = {
+        meta: {
+          MATERIAL: { value: spreadsheet }
+        }
+      }
+      const reg = {
+        material: registration
+      }
+
+      const result = validateMaterialType({
+        parsed,
+        registration: reg,
+        loggingContext: 'test'
+      })
+
+      expect(result.isValid()).toBe(true)
+    })
+  })
+
+  it('categorizes material mismatch as fatal business error', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'EXPORTER' }
+        MATERIAL: { value: 'Glass' }
       }
     }
     const registration = {
-      wasteProcessingType: 'reprocessor'
+      material: 'plastic'
     }
 
-    const result = validateProcessingType({
+    const result = validateMaterialType({
       parsed,
       registration,
       loggingContext: 'test'

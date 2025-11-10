@@ -9,11 +9,12 @@ import {
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
 
-import { validateMetaSyntax } from './validations/summary-log-meta-syntax.js'
-import { validateRegistrationNumber } from './validations/waste-registration-number.js'
-import { validateProcessingType } from './validations/summary-log-type.js'
-import { validateMaterialType } from './validations/summary-log-material-type.js'
-import { validateAccreditationNumber } from './validations/validate-accreditation-number.js'
+import { validateMetaSyntax } from './validations/meta-syntax.js'
+import { validateDataSyntax } from './validations/data-syntax.js'
+import { validateAccreditationNumber } from './validations/accreditation-number.js'
+import { validateRegistrationNumber } from './validations/registration-number.js'
+import { validateProcessingType } from './validations/processing-type.js'
+import { validateMaterialType } from './validations/material-type.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -74,15 +75,11 @@ const performValidationChecks = async ({
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
+    ;[validateMetaSyntax, validateDataSyntax].forEach((validate) => {
+      issues.merge(validate({ parsed }))
+    })
 
-    /**
-     * TODO:
-     *  - validateDataSyntax
-     */
-    const syntaxIssues = validateMetaSyntax({ parsed })
-    issues.merge(syntaxIssues)
-
-    if (!syntaxIssues.isFatal()) {
+    if (!issues.isFatal()) {
       const registration = await fetchRegistration({
         organisationsRepository,
         organisationId: summaryLog.organisationId,

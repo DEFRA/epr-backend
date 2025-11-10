@@ -1,4 +1,4 @@
-import { validateMetaSyntax } from './summary-log-meta-syntax.js'
+import { validateMetaSyntax } from './meta-syntax.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
