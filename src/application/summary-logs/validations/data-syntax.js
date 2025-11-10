@@ -48,6 +48,52 @@ const validateHeaders = ({
 }
 
 /**
+ * Processes validation errors for a single row
+ *
+ * @param {Object} params
+ * @param {string} params.tableName - Name of the table
+ * @param {number} params.rowIndex - Zero-based row index
+ * @param {Object} params.error - Joi validation error object
+ * @param {Map} params.headerToIndexMap - Map of header names to column indices
+ * @param {Object} params.tableLocation - Table location in spreadsheet
+ * @param {Object} params.issues - Validation issues collector
+ */
+const processRowErrors = ({
+  tableName,
+  rowIndex,
+  error,
+  headerToIndexMap,
+  tableLocation,
+  issues
+}) => {
+  for (const detail of error.details) {
+    const fieldName = detail.path[0]
+    const colIndex = headerToIndexMap.get(fieldName)
+
+    const cellLocation =
+      tableLocation?.column && colIndex !== undefined
+        ? {
+            sheet: tableLocation.sheet,
+            row: tableLocation.row + rowIndex + 1,
+            column: offsetColumn(tableLocation.column, colIndex)
+          }
+        : undefined
+
+    issues.addError(
+      VALIDATION_CATEGORY.TECHNICAL,
+      `Invalid value in column '${fieldName}': ${detail.message}`,
+      {
+        path: `data.${tableName}.rows[${rowIndex}].${fieldName}`,
+        location: cellLocation,
+        field: fieldName,
+        row: rowIndex + 1,
+        actual: detail.context.value
+      }
+    )
+  }
+}
+
+/**
  * Validates data rows using row-level schema validation
  *
  * This validates each row as a complete object, which is more efficient than
@@ -87,31 +133,14 @@ const validateRows = ({
     const { error } = rowSchema.validate(rowObject)
 
     if (error) {
-      for (const detail of error.details) {
-        const fieldName = detail.path[0]
-        const colIndex = headerToIndexMap.get(fieldName)
-
-        const cellLocation =
-          tableLocation?.column && colIndex !== undefined
-            ? {
-                sheet: tableLocation.sheet,
-                row: tableLocation.row + rowIndex + 1,
-                column: offsetColumn(tableLocation.column, colIndex)
-              }
-            : undefined
-
-        issues.addError(
-          VALIDATION_CATEGORY.TECHNICAL,
-          `Invalid value in column '${fieldName}': ${detail.message}`,
-          {
-            path: `data.${tableName}.rows[${rowIndex}].${fieldName}`,
-            location: cellLocation,
-            field: fieldName,
-            row: rowIndex + 1, // 1-based for user display
-            actual: detail.context.value
-          }
-        )
-      }
+      processRowErrors({
+        tableName,
+        rowIndex,
+        error,
+        headerToIndexMap,
+        tableLocation,
+        issues
+      })
     }
   }
 }

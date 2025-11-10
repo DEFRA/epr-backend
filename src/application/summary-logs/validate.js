@@ -75,6 +75,7 @@ const performValidationChecks = async ({
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
       }
     })
+
     for (const validate of [validateMetaSyntax, validateDataSyntax]) {
       issues.merge(validate({ parsed }))
     }
@@ -87,14 +88,14 @@ const performValidationChecks = async ({
         loggingContext
       })
 
-      ;[
+      for (const validate of [
         validateRegistrationNumber,
         validateProcessingType,
         validateAccreditationNumber,
         validateMaterialType
-      ].forEach((validate) => {
+      ]) {
         issues.merge(validate({ parsed, registration, loggingContext }))
-      })
+      }
     }
   } catch (error) {
     logger.error({
