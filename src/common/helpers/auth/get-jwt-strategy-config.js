@@ -24,12 +24,6 @@ export function getJwtStrategyConfig(oidcConfigs) {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
-      console.log(
-        '\n\n\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- '
-      )
-      console.log('issuer', issuer)
-      console.log('audience', audience)
-
       if (issuer === entraIdOidcConfig.issuer) {
         // Entra Id is not providing an audience in the token, so we need to supply it
         // This audience may not need to be a secret, only an env var

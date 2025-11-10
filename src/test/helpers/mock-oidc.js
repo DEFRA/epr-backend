@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
+import { getTestPublicKey } from '#test/helpers/create-test-tokens.js'
 
 const entraIdBaseUrl =
   'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007'
@@ -18,20 +19,11 @@ const createEntraIdMockOidcResponse = (baseUrl) => ({
 })
 
 /**
- * Generate mock JWKS (JSON Web Key Set) response
- * @returns {object} JWKS object with mock public keys
+ * Generate mock JWKS (JSON Web Key Set) response using the actual test public key
+ * @returns {object} JWKS object with the public key from create-test-tokens.js
  */
 const createMockJwksResponse = () => ({
-  keys: [
-    {
-      kty: 'RSA',
-      use: 'sig',
-      kid: 'test-key-id',
-      n: 'xGOr-H7A-PWbPyHHKLogFB-kh3J-KLcZKJb8VyOENiFoNkEG-wFPcB8-sxC6L7CW5q9qEMIjHBDlFbqQbHSKqwk',
-      e: 'AQAB',
-      alg: 'RS256'
-    }
-  ]
+  keys: [getTestPublicKey()]
 })
 
 /**

@@ -233,7 +233,7 @@ const baseConfig = {
     doc: 'Stringified object defining user roles',
     format: String,
     env: 'SECRET_USER_ROLES',
-    default: "{ 'service_maintainers': ['me@example.com', 'you@example.com']}"
+    default: '{ "service-maintainer": ["me@example.com", "you@example.com"]}'
   },
   featureFlags: {
     summaryLogs: {

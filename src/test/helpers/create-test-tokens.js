@@ -1,23 +1,31 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'crypto'
 
-export const generateEntraIdToken = () => {
-  const { privateKey, publicKey } = generateKeyPairSync('rsa', {
-    modulusLength: 4096,
-    publicKeyEncoding: {
-      type: 'spki',
-      format: 'jwk'
-    },
-    privateKeyEncoding: {
-      type: 'pkcs8',
-      format: 'pem'
-    }
-  })
+// Generate key pair once at module load time
+const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+  modulusLength: 4096,
+  publicKeyEncoding: {
+    type: 'spki',
+    format: 'jwk'
+  },
+  privateKeyEncoding: {
+    type: 'pkcs8',
+    format: 'pem'
+  }
+})
 
+// Add JWKS-required fields to the public key
+publicKey.kid = 'test-key-id'
+publicKey.use = 'sig'
+publicKey.alg = 'RS256'
+
+export const generateEntraIdToken = () => {
   const mockEntraIdToken = Jwt.token.generate(
     {
       name: 'John Doe',
-      aud: 'bd06da51-53f6-46d0-a9f0-ac562864c887',
+      email: 'me@example.com', // Must be in the service-maintainer list in config.js
+      id: 'test-contact-id', // Contact ID for the user
+      aud: 'test', // Must match the audience in config.js (SECRET_ADMIN_UI_AS_AUDIENCE)
       iss: `https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0`,
       nbf: new Date().getTime() / 1000,
       exp: new Date().getTime() / 1000 + 3600
@@ -28,10 +36,8 @@ export const generateEntraIdToken = () => {
     { header: { kid: 'test-key-id' } }
   )
 
-  // Add JWKS-required fields to the public key
-  publicKey.kid = 'test-key-id'
-  publicKey.use = 'sig'
-  publicKey.alg = 'RS256'
-
-  return { token: mockEntraIdToken, publicKey }
+  return mockEntraIdToken
 }
+
+// Export the public key so it can be used in JWKS responses
+export const getTestPublicKey = () => publicKey
