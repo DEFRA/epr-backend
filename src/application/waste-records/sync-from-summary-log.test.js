@@ -5,6 +5,7 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -20,9 +21,15 @@ describe('syncFromSummaryLog', () => {
   })
 
   it('extracts, transforms, and saves waste records from summary log', async () => {
+    const fileId = 'test-file-123'
     const summaryLog = {
-      id: 'summary-log-1',
-      uri: 's3://bucket/key',
+      file: {
+        id: fileId,
+        s3: {
+          bucket: 'test-bucket',
+          key: 'test-key'
+        }
+      },
       organisationId: 'org-1',
       registrationId: 'reg-1'
     }
@@ -49,15 +56,12 @@ describe('syncFromSummaryLog', () => {
       }
     }
 
-    const extractorStub = {
-      extract: async (summaryLogUri) => {
-        expect(summaryLogUri).toBe('s3://bucket/key')
-        return parsedData
-      }
-    }
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
 
     const sync = syncFromSummaryLog({
-      extractor: extractorStub,
+      extractor,
       wasteRecordRepository
     })
 
@@ -100,7 +104,7 @@ describe('syncFromSummaryLog', () => {
           createdAt: '2025-01-15T10:00:00.000Z',
           status: VERSION_STATUS.CREATED,
           summaryLog: {
-            id: 'summary-log-1',
+            id: 'test-file-initial',
             uri: 's3://bucket/key'
           },
           data: {
@@ -114,9 +118,15 @@ describe('syncFromSummaryLog', () => {
 
     await wasteRecordRepository.upsertWasteRecords([existingRecord])
 
+    const fileId = 'test-file-456'
     const summaryLog = {
-      id: 'summary-log-2',
-      uri: 's3://bucket/key2',
+      file: {
+        id: fileId,
+        s3: {
+          bucket: 'test-bucket',
+          key: 'test-key-2'
+        }
+      },
       organisationId: 'org-1',
       registrationId: 'reg-1'
     }
@@ -140,12 +150,12 @@ describe('syncFromSummaryLog', () => {
       }
     }
 
-    const extractorStub = {
-      extract: async () => parsedData
-    }
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
 
     const sync = syncFromSummaryLog({
-      extractor: extractorStub,
+      extractor,
       wasteRecordRepository
     })
 
