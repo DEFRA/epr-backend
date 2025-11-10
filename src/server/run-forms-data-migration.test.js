@@ -57,9 +57,9 @@ describe('runFormsDataMigration', () => {
 
     await runFormsDataMigration(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      'Starting form data migration. Feature flag enabled: true'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Starting form data migration. Feature flag enabled: true'
+    })
     expect(mockServer.locker.lock).toHaveBeenCalledWith('forms-data-migration')
     expect(createFormSubmissionsRepository).toHaveBeenCalledWith(mockServer.db)
     expect(createOrganisationsRepository).toHaveBeenCalledWith(mockServer.db)
@@ -67,10 +67,9 @@ describe('runFormsDataMigration', () => {
       mockFormSubmissionsRepository,
       mockOrganisationsRepository
     )
-    expect(logger.info).toHaveBeenCalledWith(
-      'Form data migration completed successfully',
-      mockStats
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Form data migration completed successfully'
+    })
     expect(mockLock.free).toHaveBeenCalled()
   })
 
@@ -79,9 +78,9 @@ describe('runFormsDataMigration', () => {
 
     await runFormsDataMigration(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      'Starting form data migration. Feature flag enabled: false'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Starting form data migration. Feature flag enabled: false'
+    })
     expect(migrateFormsData).not.toHaveBeenCalled()
   })
 
@@ -133,9 +132,9 @@ describe('runFormsDataMigration', () => {
 
     await runFormsDataMigration(mockServer)
 
-    expect(logger.info).toHaveBeenCalledWith(
-      'Unable to obtain lock, skipping running form data migration'
-    )
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Unable to obtain lock, skipping running form data migration'
+    })
     expect(migrateFormsData).not.toHaveBeenCalled()
   })
 })

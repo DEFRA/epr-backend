@@ -87,9 +87,16 @@ describe('migrateFormsData', () => {
 
   it('counts transform failures', async () => {
     formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
-      validSubmission
+      validSubmission,
+      { ...validSubmission, id: 'sub-2' },
+      { ...validSubmission, id: 'sub-3' }
     ])
-    parseOrgSubmission.mockRejectedValue(new Error('Transform failed'))
+    // First two succeed transformation, third fails
+    parseOrgSubmission
+      .mockResolvedValueOnce(transformedOrg)
+      .mockResolvedValueOnce(transformedOrg)
+      .mockRejectedValueOnce(new Error('Transform failed'))
+    organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
 
     const result = await migrateFormsData(
       formsSubmissionRepository,
@@ -97,19 +104,14 @@ describe('migrateFormsData', () => {
     )
 
     expect(result).toEqual({
-      totalSubmissions: 1,
-      transformedCount: 0,
-      insertedCount: 0,
+      totalSubmissions: 3,
+      transformedCount: 2,
+      insertedCount: 2,
       updatedCount: 0,
       unchangedCount: 0,
       failedCount: 1
     })
-    expect(parseOrgSubmission).toHaveBeenCalledWith(
-      validSubmission.id,
-      validSubmission.orgId,
-      validSubmission.rawSubmissionData
-    )
-    expect(organisationsRepository.upsert).not.toHaveBeenCalled()
+    expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)
   })
 
   it('counts upsert failures', async () => {
