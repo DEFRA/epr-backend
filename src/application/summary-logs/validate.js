@@ -159,6 +159,7 @@ export const createSummaryLogsValidator =
     await summaryLogsRepository.update(summaryLogId, version, {
       status,
       validation: {
+        summary: issues.getSummaryMetadata(),
         issues: issues.getAllIssues()
       },
       ...(issues.isFatal() && {

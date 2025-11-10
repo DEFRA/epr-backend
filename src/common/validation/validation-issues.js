@@ -207,6 +207,37 @@ const createIssueTransformers = (
     return `Validation completed with ${parts.join(', ')}`
   }
 
+  const getSummaryMetadata = () => {
+    const counts = getCounts()
+    const issuesByRow = new Map()
+
+    for (const issue of issues) {
+      if (issue.context?.row !== undefined) {
+        const row = issue.context.row
+        if (!issuesByRow.has(row)) {
+          issuesByRow.set(row, [])
+        }
+        issuesByRow.get(row).push(issue)
+      }
+    }
+
+    const rowsWithIssues = issuesByRow.size
+    const rowNumbers = Array.from(issuesByRow.keys()).sort((a, b) => a - b)
+
+    return {
+      totalIssues: counts.total,
+      issuesBySeverity: {
+        fatal: counts.fatal,
+        error: counts.error,
+        warning: counts.warning
+      },
+      rowsWithIssues,
+      firstIssueRow: rowNumbers.length > 0 ? rowNumbers[0] : null,
+      lastIssueRow:
+        rowNumbers.length > 0 ? rowNumbers[rowNumbers.length - 1] : null
+    }
+  }
+
   const merge = (otherIssues) => {
     if (!otherIssues || typeof otherIssues.getAllIssues !== 'function') {
       throw new TypeError('Can only merge validation issues objects')
@@ -227,6 +258,7 @@ const createIssueTransformers = (
     merge,
     getCounts,
     getSummary,
+    getSummaryMetadata,
     toErrorResponse: () => ({
       errors: issues.map((issue) => issueToErrorObject(issue))
     })

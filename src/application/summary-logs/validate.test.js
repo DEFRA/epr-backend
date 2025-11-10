@@ -139,12 +139,15 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.VALIDATED,
-        validation: {
-          issues: []
-        }
-      }
+        validation: expect.objectContaining({
+          issues: [],
+          summary: expect.objectContaining({
+            totalIssues: 0
+          })
+        })
+      })
     )
   })
 
@@ -158,9 +161,9 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
-        validation: {
+        validation: expect.objectContaining({
           issues: [
             {
               severity: 'fatal',
@@ -168,10 +171,13 @@ describe('SummaryLogsValidator', () => {
               message: 'Something went wrong while retrieving your file upload',
               context: {}
             }
-          ]
-        },
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason: 'Something went wrong while retrieving your file upload'
-      }
+      })
     )
   })
 
@@ -185,9 +191,9 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
-        validation: {
+        validation: expect.objectContaining({
           issues: [
             {
               severity: 'fatal',
@@ -195,10 +201,13 @@ describe('SummaryLogsValidator', () => {
               message: 'Registration with id reg-123 not found',
               context: {}
             }
-          ]
-        },
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason: 'Registration with id reg-123 not found'
-      }
+      })
     )
   })
 
@@ -226,9 +235,9 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
-        validation: {
+        validation: expect.objectContaining({
           issues: [
             {
               severity: 'fatal',
@@ -237,11 +246,14 @@ describe('SummaryLogsValidator', () => {
                 "Summary log's waste registration number does not match this registration",
               context: expect.any(Object)
             }
-          ]
-        },
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason:
           "Summary log's waste registration number does not match this registration"
-      }
+      })
     )
   })
 
@@ -253,9 +265,9 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
-        validation: {
+        validation: expect.objectContaining({
           issues: [
             {
               severity: 'fatal',
@@ -263,10 +275,13 @@ describe('SummaryLogsValidator', () => {
               message: 'S3 access denied',
               context: {}
             }
-          ]
-        },
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason: 'S3 access denied'
-      }
+      })
     )
   })
 
@@ -323,12 +338,19 @@ describe('SummaryLogsValidator', () => {
     expect(result.message).toBe('Database error')
 
     expect(brokenRepository.update).toHaveBeenCalledTimes(1)
-    expect(brokenRepository.update).toHaveBeenCalledWith('summary-log-123', 1, {
-      status: SUMMARY_LOG_STATUS.VALIDATED,
-      validation: {
-        issues: []
-      }
-    })
+    expect(brokenRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        validation: expect.objectContaining({
+          issues: [],
+          summary: expect.objectContaining({
+            totalIssues: 0
+          })
+        })
+      })
+    )
   })
 
   it('should throw database error if repository update fails when marking as invalid', async () => {
@@ -408,12 +430,15 @@ describe('SummaryLogsValidator', () => {
       expect(summaryLogsRepository.update).toHaveBeenCalledWith(
         'summary-log-123',
         1,
-        {
+        expect.objectContaining({
           status: SUMMARY_LOG_STATUS.VALIDATED,
-          validation: {
-            issues: []
-          }
-        }
+          validation: expect.objectContaining({
+            issues: [],
+            summary: expect.objectContaining({
+              totalIssues: 0
+            })
+          })
+        })
       )
     })
 
@@ -497,7 +522,7 @@ describe('SummaryLogsValidator', () => {
         1,
         expect.objectContaining({
           status: SUMMARY_LOG_STATUS.VALIDATED,
-          validation: {
+          validation: expect.objectContaining({
             issues: expect.arrayContaining([
               expect.objectContaining({
                 severity: 'error',
@@ -514,8 +539,11 @@ describe('SummaryLogsValidator', () => {
                 category: 'technical',
                 message: expect.stringContaining('EWC_CODE')
               })
-            ])
-          }
+            ]),
+            summary: expect.objectContaining({
+              totalIssues: 3
+            })
+          })
         })
       )
 
@@ -550,7 +578,7 @@ describe('SummaryLogsValidator', () => {
         1,
         expect.objectContaining({
           status: SUMMARY_LOG_STATUS.INVALID,
-          validation: {
+          validation: expect.objectContaining({
             issues: expect.arrayContaining([
               expect.objectContaining({
                 severity: 'fatal',
@@ -563,8 +591,11 @@ describe('SummaryLogsValidator', () => {
                   expected: 'EWC_CODE'
                 })
               })
-            ])
-          },
+            ]),
+            summary: expect.objectContaining({
+              totalIssues: expect.any(Number)
+            })
+          }),
           failureReason: expect.stringContaining('Missing required header')
         })
       )
@@ -694,12 +725,15 @@ describe('SummaryLogsValidator', () => {
       expect(summaryLogsRepository.update).toHaveBeenCalledWith(
         'summary-log-123',
         1,
-        {
+        expect.objectContaining({
           status: SUMMARY_LOG_STATUS.VALIDATED,
-          validation: {
-            issues: []
-          }
-        }
+          validation: expect.objectContaining({
+            issues: [],
+            summary: expect.objectContaining({
+              totalIssues: 0
+            })
+          })
+        })
       )
     })
   })

@@ -1,15 +1,19 @@
-import { UPDATE_WASTE_BALANCE_SCHEMA } from './table-schemas.schema.js'
+import {
+  UPDATE_WASTE_BALANCE_SCHEMA,
+  UPDATE_WASTE_BALANCE_ROW_SCHEMA
+} from './table-schemas.schema.js'
 
 /**
  * Schema registry for data table validation
  *
  * Each schema defines:
  * - requiredHeaders: Array of header names that must be present (order-independent)
- * - columnValidation: Map of header name -> Joi schema for that column's cells
+ * - columnValidation: Map of header name -> Joi schema for that column's cells (legacy/reference)
+ * - rowSchema: Joi object schema for validating entire rows at once
  *
  * The validation engine will:
  * 1. Check that all required headers exist (allowing extras and different ordering)
- * 2. Validate each cell value against its column's Joi schema
+ * 2. Validate each row as a complete object using the rowSchema
  * 3. Report errors with precise location information
  */
 
@@ -32,7 +36,8 @@ const UPDATE_WASTE_BALANCE_TABLE_SCHEMA = {
     'RECYCLABLE_PROPORTION',
     'TONNAGE_RECEIVED_FOR_EXPORT'
   ],
-  columnValidation: UPDATE_WASTE_BALANCE_SCHEMA
+  columnValidation: UPDATE_WASTE_BALANCE_SCHEMA,
+  rowSchema: UPDATE_WASTE_BALANCE_ROW_SCHEMA
 }
 
 /**
