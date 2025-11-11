@@ -1,15 +1,25 @@
 import { createMockOidcServers } from '#test/helpers/mock-oidc.js'
 
-export function setupAuthContext() {
-  beforeEach((context) => {
-    global.fetchMock?.disableMocks()
-    context.mockOidcServer = createMockOidcServers()
-    context.mockOidcServer.listen({ onUnhandledRequest: 'warn' })
+export function setupAuthContext(disabledMocks) {
+  let mockOidcServer
+
+  // Set up in beforeAll so it's available for createServer calls in beforeAll hooks
+  beforeAll(({}) => {
+    if (disabledMocks) {
+      global.fetchMock?.disableMocks()
+    }
+    mockOidcServer = createMockOidcServers()
+    mockOidcServer.listen({ onUnhandledRequest: 'warn' })
   })
 
-  afterEach((context) => {
-    context.mockOidcServer?.resetHandlers()
-    context.mockOidcServer?.close()
-    global.fetchMock?.enableMocks()
+  afterEach(({}) => {
+    mockOidcServer?.resetHandlers()
+  })
+
+  afterAll(({}) => {
+    mockOidcServer?.close()
+    if (disabledMocks) {
+      global.fetchMock?.enableMocks()
+    }
   })
 }

@@ -3,12 +3,14 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 
 const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
   let server
+  setupAuthContext()
 
   beforeAll(async () => {
     server = await createServer({

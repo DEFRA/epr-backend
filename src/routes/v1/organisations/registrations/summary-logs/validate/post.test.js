@@ -7,6 +7,7 @@ import { summaryLogsValidatePath } from './post.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 
 const url = summaryLogsValidatePath
 const payload = {
@@ -18,6 +19,8 @@ const payload = {
 let server
 
 describe(`${url} route`, () => {
+  setupAuthContext()
+
   beforeEach(async () => {
     server = await createTestServer({
       repositories: {

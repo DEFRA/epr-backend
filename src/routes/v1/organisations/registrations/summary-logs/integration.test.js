@@ -14,6 +14,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
@@ -57,6 +58,7 @@ const buildPostUrl = (summaryLogId) =>
 
 describe('Summary logs integration', () => {
   let server
+  setupAuthContext()
 
   beforeEach(async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()

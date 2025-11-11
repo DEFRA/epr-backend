@@ -1,5 +1,6 @@
 import { vi, describe, expect, beforeEach, beforeAll, afterAll } from 'vitest'
 import hapi from '@hapi/hapi'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 
 import {
   LOGGING_EVENT_ACTIONS,
@@ -101,6 +102,7 @@ describe('#startServer', () => {
   let startServerImport
   let createServerImport
   let server
+  setupAuthContext()
 
   beforeAll(async () => {
     createServerImport = await import('#server/server.js')

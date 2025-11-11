@@ -7,6 +7,7 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 
@@ -86,6 +87,7 @@ const createCompletePayload = (fileId = 'file-complete-123') =>
   })
 
 describe(`${summaryLogsUploadCompletedPath} route`, () => {
+  setupAuthContext()
   let server
   let payload
 
