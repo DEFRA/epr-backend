@@ -42,7 +42,7 @@
           "authorisedMaterials": [
             {
               "material": "plastic",
-              "authorisedWeight": "30",
+              "authorisedWeight": 30,
               "timeScale": "yearly"
             }
           ]

@@ -5,16 +5,16 @@ import {
   extractTimestamp,
   findFirstValue,
   flattenAnswersByShortDesc
-} from './parse-forms-data.js'
-import { FORM_PAGES } from './form-field-constants.js'
+} from '#formsubmission/parsing-common/parse-forms-data.js'
+import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.js'
 import {
   mapBusinessType,
   mapNation,
   mapPartnershipType,
   mapPartnerType,
   mapWasteProcessingType
-} from './form-data-mapper.js'
-import { parseUkAddress } from './parse-address.js'
+} from '#formsubmission/parsing-common/form-data-mapper.js'
+import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 
 function extractWasteProcessingTypes(answersByShortDescription) {
   const value =

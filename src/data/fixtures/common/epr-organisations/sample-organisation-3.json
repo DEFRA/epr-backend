@@ -42,7 +42,7 @@
         "siteCapacity": [
           {
             "material": "steel",
-            "siteCapacityWeight": "18",
+            "siteCapacityWeight": 18,
             "siteCapacityTimescale": "yearly"
           }
         ]
@@ -58,7 +58,7 @@
           "authorisedMaterials": [
             {
               "material": "steel",
-              "authorisedWeight": "15",
+              "authorisedWeight": 15,
               "timeScale": "yearly"
             }
           ]
@@ -99,7 +99,7 @@
           "authorisedMaterials": [
             {
               "material": "aluminium",
-              "authorisedWeight": "15",
+              "authorisedWeight": 15,
               "timeScale": "yearly"
             }
           ]

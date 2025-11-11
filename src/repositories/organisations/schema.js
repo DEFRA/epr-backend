@@ -104,7 +104,21 @@ const partnershipSchema = Joi.object({
 
 const wasteExemptionSchema = Joi.object({
   reference: Joi.string().required(),
-  exemptionCode: Joi.string().required()
+  exemptionCode: Joi.string().required(),
+  materials: Joi.array()
+    .items(
+      Joi.valid(
+        MATERIAL.ALUMINIUM,
+        MATERIAL.FIBRE,
+        MATERIAL.GLASS,
+        MATERIAL.PAPER,
+        MATERIAL.PLASTIC,
+        MATERIAL.STEEL,
+        MATERIAL.WOOD
+      )
+    )
+    .min(1)
+    .required()
 })
 
 const authorisedMaterialSchema = Joi.object({
@@ -119,7 +133,7 @@ const authorisedMaterialSchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
-  authorisedWeight: Joi.string().optional(),
+  authorisedWeight: Joi.number().optional(),
   timeScale: Joi.string()
     .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
     .optional()
@@ -150,7 +164,7 @@ const siteCapacitySchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
-  siteCapacityWeight: Joi.string().optional(),
+  siteCapacityWeight: Joi.number().optional(),
   siteCapacityTimescale: Joi.string()
     .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
     .optional()
@@ -244,7 +258,7 @@ const formFileUploadSchema = Joi.object({
   s3Uri: Joi.string().optional()
 })
 
-const registrationSchema = Joi.object({
+export const registrationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
     .valid(

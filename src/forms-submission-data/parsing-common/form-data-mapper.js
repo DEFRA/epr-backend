@@ -4,7 +4,10 @@ import {
   BUSINESS_TYPE,
   REGULATOR,
   PARTNER_TYPE,
-  PARTNERSHIP_TYPE
+  PARTNERSHIP_TYPE,
+  MATERIAL,
+  RECYCLING_PROCESS,
+  TIME_SCALE
 } from '#domain/organisations.js'
 
 const WASTE_PROCESSING_TYPES_MAPPING = {
@@ -143,4 +146,92 @@ export function mapPartnershipType(value) {
   }
 
   return result
+}
+
+const MATERIAL_MAPPING = {
+  'Glass (R5)': MATERIAL.GLASS,
+  'Paper or board (R3)': MATERIAL.PAPER,
+  'Plastic (R3)': MATERIAL.PLASTIC,
+  'Steel (R4)': MATERIAL.STEEL,
+  'Wood (R3)': MATERIAL.WOOD,
+  'Fibre-based composite material (R3)': MATERIAL.FIBRE,
+  'Aluminium (R4)': MATERIAL.ALUMINIUM
+}
+
+const RECYCLING_PROCESS_MAPPING = {
+  'Glass re-melt': RECYCLING_PROCESS.GLASS_RE_MELT,
+  'Glass other': RECYCLING_PROCESS.GLASS_OTHER,
+  Both: [RECYCLING_PROCESS.GLASS_RE_MELT, RECYCLING_PROCESS.GLASS_OTHER]
+}
+
+const TIME_SCALE_MAPPING = {
+  Yearly: TIME_SCALE.YEARLY,
+  Monthly: TIME_SCALE.MONTHLY,
+  Weekly: TIME_SCALE.WEEKLY
+}
+
+export function mapMaterial(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = MATERIAL_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(`Invalid material: "${value}"`)
+  }
+
+  return result
+}
+
+export function mapRecyclingProcess(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = RECYCLING_PROCESS_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(`Invalid recycling process: "${value}"`)
+  }
+
+  return result
+}
+
+export function mapTimeScale(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = TIME_SCALE_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid time scale: "${value}". Expected "Yearly", "Monthly", or "Weekly"`
+    )
+  }
+
+  return result
+}
+
+export function convertToNumber(value, fieldName = 'value') {
+  if (value == null) {
+    return undefined
+  }
+
+  const num = Number(value)
+
+  if (Number.isNaN(num)) {
+    throw new TypeError(
+      `Invalid ${fieldName}: "${value}". Expected a valid number`
+    )
+  }
+
+  return num
 }

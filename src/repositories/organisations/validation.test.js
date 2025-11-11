@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { validateStatusHistory } from './validation.js'
+import { describe, expect, it } from 'vitest'
+import { validateRegistration, validateStatusHistory } from './validation.js'
 import { STATUS } from '#domain/organisations.js'
 
 describe('validateStatusHistory', () => {
@@ -31,5 +31,19 @@ describe('validateStatusHistory', () => {
     const result = validateStatusHistory(statusHistory)
 
     expect(result).toEqual(statusHistory)
+  })
+})
+
+describe('validateRegistration', () => {
+  it('throws badData when required fields are missing', () => {
+    const invalidRegistration = {
+      id: 'invalid-id',
+      // Missing required fields: formSubmissionTime, submittedToRegulator, material, wasteProcessingType
+      orgName: 'Test Org'
+    }
+
+    expect(() => validateRegistration(invalidRegistration)).toThrow(
+      /Invalid registration data/
+    )
   })
 })

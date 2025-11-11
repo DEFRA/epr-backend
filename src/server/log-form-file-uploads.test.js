@@ -18,7 +18,7 @@ vi.mock('#repositories/form-submissions/mongodb.js', () => ({
     mockCreateFormSubmissionsRepository(...args)
 }))
 
-vi.mock('../forms-submission-data/get-file-upload-details.js', () => ({
+vi.mock('#formsubmission/parsing-common/get-file-upload-details.js', () => ({
   getUploadedFileInfo: (...args) => mockGetUploadedFileInfo(...args)
 }))
 
