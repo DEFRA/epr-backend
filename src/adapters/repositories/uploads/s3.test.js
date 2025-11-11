@@ -60,10 +60,8 @@ describe('S3 uploads repository', () => {
 
       const repository = createUploadsRepository(mockS3Client)
 
-      await expect(
-        repository.findByLocation({ bucket: 'test', key: 'test' })
-      ).rejects.toThrow(
-        'S3 GetObject returned no body for bucket=test, key=test'
+      await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
+        'S3 GetObject returned no body for s3://test/test'
       )
     })
 
@@ -74,9 +72,9 @@ describe('S3 uploads repository', () => {
 
       const repository = createUploadsRepository(mockS3Client)
 
-      await expect(
-        repository.findByLocation({ bucket: 'test', key: 'test' })
-      ).rejects.toThrow('Network error')
+      await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
+        'Network error'
+      )
     })
   })
 })

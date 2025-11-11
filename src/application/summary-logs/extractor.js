@@ -3,7 +3,7 @@ import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
-/** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
+/** @typedef {import('#domain/summary-logs/model.js').StoredSummaryLog} StoredSummaryLog */
 
 const FILE_PROCESSING_CATEGORY = 'file-processing'
 
@@ -83,20 +83,15 @@ const logParsingSummary = (logger, parsedData) => {
 export const createSummaryLogExtractor = ({ uploadsRepository, logger }) => {
   return {
     /**
-     * @param {SummaryLog} summaryLog
+     * @param {StoredSummaryLog} summaryLog
      * @returns {Promise<ParsedSummaryLog>}
      */
     extract: async (summaryLog) => {
       const {
-        file: {
-          s3: { bucket, key }
-        }
+        file: { uri }
       } = summaryLog
 
-      const summaryLogBuffer = await uploadsRepository.findByLocation({
-        bucket,
-        key
-      })
+      const summaryLogBuffer = await uploadsRepository.findByLocation(uri)
 
       if (!summaryLogBuffer) {
         throw new Error(

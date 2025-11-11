@@ -25,10 +25,7 @@ describe('syncFromSummaryLog', () => {
     const summaryLog = {
       file: {
         id: fileId,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'test-key'
-        }
+        uri: 's3://test-bucket/test-key'
       },
       organisationId: 'org-1',
       registrationId: 'reg-1'
@@ -122,10 +119,7 @@ describe('syncFromSummaryLog', () => {
     const summaryLog = {
       file: {
         id: fileId,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'test-key-2'
-        }
+        uri: 's3://test-bucket/test-key-2'
       },
       organisationId: 'org-1',
       registrationId: 'reg-1'
@@ -208,10 +202,7 @@ describe('syncFromSummaryLog', () => {
     const summaryLog = {
       file: {
         id: fileId,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'test-key-unchanged'
-        }
+        uri: 's3://test-bucket/test-key-unchanged'
       },
       organisationId: 'org-1',
       registrationId: 'reg-1'
@@ -296,10 +287,7 @@ describe('syncFromSummaryLog', () => {
     const summaryLog = {
       file: {
         id: fileId,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'test-key-delta'
-        }
+        uri: 's3://test-bucket/test-key-delta'
       },
       organisationId: 'org-1',
       registrationId: 'reg-1'
@@ -393,10 +381,7 @@ describe('syncFromSummaryLog', () => {
     const summaryLog = {
       file: {
         id: fileId,
-        s3: {
-          bucket: 'test-bucket',
-          key: 'test-key-multi'
-        }
+        uri: 's3://test-bucket/test-key-multi'
       },
       organisationId: 'org-1',
       registrationId: 'reg-1'

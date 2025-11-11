@@ -25,14 +25,10 @@ const statusSchema = Joi.string().valid(
 const fileSchema = Joi.object({
   id: Joi.string().required(),
   name: Joi.string().required(),
-  status: Joi.string().valid('complete', 'pending', 'rejected').optional(),
-  s3: Joi.object({
-    bucket: Joi.string().required(),
-    key: Joi.string().required()
-  }).when('status', {
+  status: Joi.string().valid('pending', 'rejected', 'complete').optional(),
+  uri: Joi.when('status', {
     is: 'complete',
-    then: Joi.required(),
-    otherwise: Joi.optional()
+    then: Joi.string().required()
   })
 })
 

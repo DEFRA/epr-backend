@@ -1,7 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import {
-  TEST_S3_BUCKET,
   generateFileId,
   buildFile,
   buildPendingFile,
@@ -66,14 +65,14 @@ export const testInsertBehaviour = (it) => {
           organisationId: 'org-A',
           file: buildFile({
             name: 'testA.xlsx',
-            s3: { bucket: TEST_S3_BUCKET, key: 'test-key-A' }
+            uri: 's3://test-bucket/test-key-A'
           })
         })
         const summaryLogB = buildSummaryLog({
           organisationId: 'org-B',
           file: buildFile({
             name: 'testB.xlsx',
-            s3: { bucket: TEST_S3_BUCKET, key: 'test-key-B' }
+            uri: 's3://test-bucket/test-key-B'
           })
         })
 
@@ -120,24 +119,14 @@ export const testInsertBehaviour = (it) => {
           ).rejects.toThrow(/Invalid summary log data.*name/)
         })
 
-        it('rejects insert with missing file.s3.bucket', async () => {
+        it('rejects insert with missing URI when file status is complete', async () => {
           const id = `contract-validation-${randomUUID()}`
-          const logWithMissingBucket = buildSummaryLog({
-            file: buildFile({ s3: { bucket: null, key: 'key' } })
+          const logWithMissingUri = buildSummaryLog({
+            file: buildFile({ uri: undefined })
           })
           await expect(
-            repository.insert(id, logWithMissingBucket)
-          ).rejects.toThrow(/Invalid summary log data.*bucket/)
-        })
-
-        it('rejects insert with missing file.s3.key', async () => {
-          const id = `contract-validation-${randomUUID()}`
-          const logWithMissingKey = buildSummaryLog({
-            file: buildFile({ s3: { bucket: TEST_S3_BUCKET, key: null } })
-          })
-          await expect(
-            repository.insert(id, logWithMissingKey)
-          ).rejects.toThrow(/Invalid summary log data.*key/)
+            repository.insert(id, logWithMissingUri)
+          ).rejects.toThrow(/Invalid summary log data.*uri/)
         })
       })
 
@@ -211,12 +200,12 @@ export const testInsertBehaviour = (it) => {
 
           const found = await repository.findById(id)
           expect(found.summaryLog.file.status).toBe('rejected')
-          expect(found.summaryLog.file.s3).toBeUndefined()
+          expect(found.summaryLog.file.uri).toBeUndefined()
         })
 
-        it('requires S3 info when file status is complete', async () => {
-          const id = `contract-complete-no-s3-${randomUUID()}`
-          const completeLogWithoutS3 = buildSummaryLog({
+        it('requires URI when file status is complete', async () => {
+          const id = `contract-complete-no-uri-${randomUUID()}`
+          const completeLogWithoutUri = buildSummaryLog({
             file: {
               id: generateFileId(),
               name: 'test.xlsx',
@@ -225,8 +214,8 @@ export const testInsertBehaviour = (it) => {
           })
 
           await expect(
-            repository.insert(id, completeLogWithoutS3)
-          ).rejects.toThrow(/Invalid summary log data.*s3/)
+            repository.insert(id, completeLogWithoutUri)
+          ).rejects.toThrow(/Invalid summary log data.*uri/)
         })
 
         it('accepts pending file without S3 info', async () => {

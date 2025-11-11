@@ -9,7 +9,7 @@ const it = base.extend({
 
     // Set up test data
     repository.put(
-      { bucket: 'test-bucket', key: 'path/to/summary-log.xlsx' },
+      's3://test-bucket/path/to/summary-log.xlsx',
       Buffer.from('test file content')
     )
 

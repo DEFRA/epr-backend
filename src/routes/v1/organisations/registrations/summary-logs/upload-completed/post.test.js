@@ -195,10 +195,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         id: fileId,
         name: filename,
         status: fileStatus,
-        s3: {
-          bucket: s3Bucket,
-          key: s3Key
-        }
+        uri: `s3://${s3Bucket}/${s3Key}`
       }
     })
   })
