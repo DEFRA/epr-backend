@@ -13,6 +13,8 @@ import { getConfig } from './config.js'
 
 async function startServer() {
   const config = getConfig()
+
+  // We want the server to break early if the configuration is invalid
   validateConfig(config)
   const auditConfig = config.get('audit')
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'

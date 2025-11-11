@@ -16,6 +16,7 @@ export async function getEntraUserRoles(tokenPayload) {
       }
     }
   } catch (e) {
+    // This should never happen as the config is validated at startup
     throw Boom.badImplementation('Error parsing user roles configuration')
   }
 

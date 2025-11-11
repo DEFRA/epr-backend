@@ -44,7 +44,7 @@ vi.mock('./config.js', async (importOriginal) => {
             case 'port':
               return configOverrides.port
             default:
-              originalConfig.get(item)
+              return originalConfig.get(item)
           }
         }
       }
@@ -159,7 +159,7 @@ describe('#startServer', () => {
             case 'port':
               return configOverrides.port
             default:
-              config.get(item)
+              return config.get(item)
           }
         }
       }))
