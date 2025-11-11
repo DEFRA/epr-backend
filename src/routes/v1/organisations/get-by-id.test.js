@@ -4,7 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
-import { generateMockEntraIdTokens } from '#test/helpers/create-test-tokens.js'
+import { testTokens } from '#test/helpers/create-test-tokens.js'
 
 const {
   validToken,
@@ -12,7 +12,7 @@ const {
   wrongIssuerToken,
   wrongAudienceToken,
   unauthorisedUserToken
-} = generateMockEntraIdTokens()
+} = testTokens
 
 describe('GET /v1/organisations/{id}', () => {
   setupAuthContext()

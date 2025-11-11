@@ -102,7 +102,7 @@ const generateEntraIdTokenForUnauthorisedUser = () => {
   return mockEntraIdToken
 }
 
-export const generateMockEntraIdTokens = () => {
+const generateMockEntraIdTokens = () => {
   const validToken = generateValidEntraIdToken()
   const wrongSignatureToken = generateEntraIdTokenWithWrongSignature()
   const wrongIssuerToken = generateEntraIdTokenWithWrongIssuer()
@@ -117,6 +117,8 @@ export const generateMockEntraIdTokens = () => {
     unauthorisedUserToken
   }
 }
+
+export const testTokens = generateMockEntraIdTokens()
 
 // Export the public key so it can be used in JWKS responses
 export const getTestPublicKey = () => publicKey

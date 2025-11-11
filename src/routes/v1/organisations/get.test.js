@@ -5,7 +5,9 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
-import { mockCredentialsAsServiceMaintainer } from '#test/helpers/mock-credentials.js'
+import { testTokens } from '#test/helpers/create-test-tokens.js'
+
+const { validToken } = testTokens
 
 describe('GET /v1/organisations', () => {
   setupAuthContext()
@@ -30,8 +32,8 @@ describe('GET /v1/organisations', () => {
     const response = await server.inject({
       method: 'GET',
       url: '/v1/organisations',
-      auth: {
-        credentials: mockCredentialsAsServiceMaintainer
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
