@@ -7,7 +7,7 @@ import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 /** @typedef {import('#domain/summary-logs/model.js').StoredFile} StoredFile */
 
 /**
- * @typedef {Object} CompletedSummaryLog
+ * @typedef {Object} StoredSummaryLog
  * @property {import('#domain/summary-logs/status.js').SummaryLogStatus} status
  * @property {StoredFile} file
  * @property {string} [failureReason]
@@ -94,7 +94,7 @@ const logParsingSummary = (logger, parsedData) => {
 export const createSummaryLogExtractor = ({ uploadsRepository, logger }) => {
   return {
     /**
-     * @param {CompletedSummaryLog} summaryLog
+     * @param {StoredSummaryLog} summaryLog
      * @returns {Promise<ParsedSummaryLog>}
      */
     extract: async (summaryLog) => {
