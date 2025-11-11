@@ -216,16 +216,11 @@ flowchart TD
     M --> N[Return wasteRecords + stats]
 ```
 
-**Key Insight:** Passing `versionTimestamp` as a parameter ensures identical results in both phases:
-
-- Validation: `versionTimestamp = validatedAt` (new Date())
-- Submission: `versionTimestamp = validatedAt` (from summary log)
-
 **Rationale:**
 
 - Single source of truth for transformation logic
-- Deterministic timestamp parameter ensures identical versions
 - Both phases use identical code path - no divergence possible
+- Reusing `validatedAt` timestamp keeps times consistent across rows
 - Returns both waste records (for submission) and stats (for preview)
 
 ### 4. Validation Phase
@@ -259,7 +254,7 @@ flowchart TD
     B --> C{Still current?}
     C -->|No| D[Error: Newer upload exists]
     C -->|Yes| E[Transition to submitting]
-    E --> F[Transform using SAME validatedAt timestamp]
+    E --> F[Transform using validatedAt timestamp]
     F --> G[Filter: only versions from this summary log]
     G --> H[Build versionsByKey Map]
     H --> I[Bulk append versions to waste records]
@@ -267,10 +262,10 @@ flowchart TD
     J --> K[Complete]
 ```
 
-**Critical Behavior:**
+**Key Points:**
 
-- Reuses `validatedAt` timestamp from validation phase
-- Produces **identical versions** to what user saw in preview
+- Uses same transformation logic as validation phase
+- Reuses `validatedAt` timestamp for consistent times across rows
 - Org/reg constraint check prevents stale submissions
 - Bulk operation handles up to 15k records efficiently
 - On failure, leaves in 'submitting' state for recovery
@@ -349,7 +344,7 @@ flowchart TD
 - **User confirmation**: Preview during validation allows users to review changes before committing
 - **Handles large scale**: Efficiently processes up to 15,000+ waste records
 - **Prevents race conditions**: Org/reg constraint + optimistic locking on summary log status
-- **Deterministic recalculation**: Using `validatedAt` timestamp ensures submitted versions match preview
+- **Consistent recalculation**: Shared transformation logic ensures submitted versions match preview
 - **Crash-safe**: Idempotency allows safe retry after partial failure
 - **No transactions required**: Works within MongoDB's practical limits
 - **Forward recovery**: Simple, predictable recovery mechanism
@@ -378,7 +373,7 @@ flowchart TD
 
 ### Implementation Notes
 
-1. The `validatedAt` timestamp enables deterministic version creation (same versions in preview and submit)
+1. Reusing `validatedAt` timestamp keeps version timestamps consistent across all rows
 2. The `submissionStartedAt` timestamp on the summary log enables stuck submission detection
 3. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
 4. Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
