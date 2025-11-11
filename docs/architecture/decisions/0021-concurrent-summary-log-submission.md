@@ -36,13 +36,14 @@ This operation presents several challenges:
 
 ### Key Constraint
 
-**One unsubmitted summary log per organisation/registration**: The system enforces that only one summary log in an unsubmitted state (`validated`, `validating`, `preprocessing`) can exist for a given organisation/registration pair at any time. When a new summary log is uploaded:
+**One active summary log per organisation/registration**: The system enforces that only one summary log in an active state can exist for a given organisation/registration pair at any time. When a new summary log is uploaded:
 
-1. Any existing unsubmitted summary logs for that org/reg are superseded
-2. The new upload becomes the current unsubmitted summary log
-3. On submit, the system verifies the summary log ID matches the current one for that org/reg
+1. If an existing summary log is in `submitting` state for that org/reg, the upload is **rejected** with an error message
+2. Any existing summary logs in unsubmitted states (`validated`, `validating`, `preprocessing`) for that org/reg are superseded
+3. The new upload becomes the current active summary log
+4. On submit, the system verifies the summary log ID matches the current one for that org/reg
 
-This constraint eliminates stale preview issues: if another summary log is uploaded while a user views a preview, their submit will fail with a clear message that a newer upload exists.
+This constraint eliminates stale preview issues and prevents partial data from superseded submissions. Uploads are blocked during submission (typically 10-30 seconds for 15k records) to ensure clean state transitions.
 
 ## Decision
 
@@ -108,14 +109,16 @@ stateDiagram-v2
     end note
 
     note right of submitting
-        If stuck, manual
-        intervention required
+        Blocks new uploads
+        for same org/reg.
+        Manual intervention
+        if stuck.
     end note
 ```
 
-### 1. Organisation/Registration Level Constraint (Prevents Stale Previews)
+### 1. Organisation/Registration Level Constraint
 
-The system enforces that only one unsubmitted summary log can exist per organisation/registration pair. This "last upload wins" policy eliminates stale previews.
+The system enforces that only one active summary log can exist per organisation/registration pair. Uploads are blocked during submission, and "last upload wins" for unsubmitted logs.
 
 ```mermaid
 sequenceDiagram
@@ -142,10 +145,20 @@ sequenceDiagram
 
 **Key Operations:**
 
-On upload, supersede existing unsubmitted logs:
+On upload, check for active submission and supersede unsubmitted logs:
 
 ```javascript
-// Mark all unsubmitted logs for this org/reg as superseded
+// 1. Block if submission in progress
+const submitting = await findOne({
+  organisationId,
+  registrationId,
+  status: 'submitting'
+})
+if (submitting) {
+  throw Boom.conflict('A submission is in progress. Please wait.')
+}
+
+// 2. Supersede unsubmitted logs
 status: { $in: ['preprocessing', 'validating', 'validated'] }
   → status: 'superseded'
 ```
@@ -161,9 +174,10 @@ if (currentValidatedLog.id !== submittedLogId) {
 
 **Rationale:**
 
-- Last upload wins - simple mental model
+- Blocks uploads during submission to prevent partial data from superseded logs
+- Last upload wins for unsubmitted logs - simple mental model
 - Eliminates stale preview problem entirely
-- Clear error message if user attempts to submit superseded log
+- Clear error messages guide users
 - Atomic operations ensure constraint is enforced reliably
 
 ### 2. Repository Port Design
@@ -299,7 +313,8 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 ### Positive
 
 - **No stale previews**: Org/reg constraint ensures preview is always for current unsubmitted summary log
-- **Simple mental model**: Last upload wins - easy for users to understand
+- **Clean submissions**: Blocking uploads during submission prevents partial data from superseded logs
+- **Simple mental model**: Last upload wins for unsubmitted logs, blocked during submission
 - **User confirmation**: Preview during validation allows users to review changes before committing
 - **Handles large scale**: Efficiently processes up to 15,000+ waste records
 - **Prevents race conditions**: Org/reg constraint + optimistic locking on summary log status
@@ -317,6 +332,9 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - **Last upload wins**: Users who are reviewing a preview will get an error if someone uploads a newer summary log
   - Trade-off: Simpler than allowing multiple concurrent previews and dealing with merge conflicts
   - Clear error message guides user to review the newer upload
+- **Uploads blocked during submission**: Users must wait (10-30 seconds for 15k records) if a submission is in progress
+  - Trade-off: Prevents partial data from superseded logs, ensures clean state transitions
+  - Short wait time makes this acceptable
 - **Two-phase overhead**: Calculates transformations twice (validation + submit)
   - Trade-off: User confidence and confirmation outweighs computational cost
   - Org/reg constraint prevents wasted work (only one summary log being worked on at a time)
