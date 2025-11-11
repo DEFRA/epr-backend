@@ -32,7 +32,7 @@ This operation presents several challenges:
 - **Last upload wins**: Only one unsubmitted summary log per organisation/registration at a time. New uploads supersede previous unsubmitted ones.
 - **Partial visibility is acceptable**: Users can see updates in progress via the summary log "submitting" status
 - **Eventual consistency is acceptable**: Brief periods where some waste records are updated before others
-- **Forward recovery preferred**: On failure, complete the submission rather than roll back
+- **Manual recovery initially**: Stuck submissions require manual investigation and retry rather than automated recovery
 
 ### Key Constraint
 
@@ -46,7 +46,7 @@ This constraint eliminates stale preview issues: if another summary log is uploa
 
 ## Decision
 
-We will implement a **multi-layered strategy** combining org/reg level constraints, optimistic locking, two-phase workflow (validate/preview then submit), idempotent operations, batch processing, and forward recovery.
+We will implement a **multi-layered strategy** combining org/reg level constraints, optimistic locking, two-phase workflow (validate/preview then submit), idempotent operations, and bulk processing.
 
 ### Overall Workflow
 
@@ -57,7 +57,6 @@ sequenceDiagram
     participant API
     participant SummaryLogs
     participant WasteRecords
-    participant BackgroundJob
 
     User->>CDPUploader: Upload summary log
     CDPUploader->>API: Upload complete
@@ -81,10 +80,6 @@ sequenceDiagram
     API->>WasteRecords: Bulk append versions
     API->>SummaryLogs: Mark as submitted
     API-->>User: Submission complete
-
-    Note over BackgroundJob: Every 5 minutes
-    BackgroundJob->>SummaryLogs: Find stuck submissions (>5 min)
-    BackgroundJob->>API: Retry submission (idempotent)
 ```
 
 ### Summary Log Status Transitions
@@ -101,7 +96,6 @@ stateDiagram-v2
     preprocessing --> superseded: New upload for org/reg
     validating --> superseded: New upload for org/reg
     validated --> superseded: New upload for org/reg
-    submitting --> superseded: New upload during recovery
 
     invalid --> [*]
     superseded --> [*]
@@ -114,8 +108,8 @@ stateDiagram-v2
     end note
 
     note right of submitting
-        Recovery job retries
-        if stuck >5 minutes
+        If stuck, manual
+        intervention required
     end note
 ```
 
@@ -300,42 +294,6 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - `upsert: true`: Create document if doesn't exist
 - `ordered: false`: Continue processing if one operation fails
 
-### 7. Forward Recovery via Background Job
-
-Background job recovers stuck submissions (runs every 5 minutes):
-
-```mermaid
-flowchart TD
-    A[Background Job] --> B[Find submissions stuck >5 min]
-    B --> C{Any stuck?}
-    C -->|No| D[Done]
-    C -->|Yes| E[For each stuck submission]
-    E --> F[Re-run submitSummaryLog]
-    F --> G{Success?}
-    G -->|Yes| H[Mark as submitted]
-    G -->|Superseded| I[Mark as superseded]
-    G -->|Other error| J[Log & alert]
-    H --> K[Next submission]
-    I --> K
-    J --> K
-    K --> E
-```
-
-**Recovery Strategy:**
-
-- Forward recovery only (complete the submission, don't roll back)
-- Leverages idempotency - safe to retry partial completions
-- Handles superseded logs gracefully
-- No need to track partial progress
-- Alerts on repeated failures
-
-**Query:**
-
-```javascript
-// Find stuck submissions
-{ status: 'submitting', submissionStartedAt: { $lt: fiveMinutesAgo } }
-```
-
 ## Consequences
 
 ### Positive
@@ -348,7 +306,6 @@ flowchart TD
 - **Consistent recalculation**: Shared transformation logic ensures submitted versions match preview
 - **Crash-safe**: Idempotency allows safe retry after partial failure
 - **No transactions required**: Works within MongoDB's practical limits
-- **Forward recovery**: Simple, predictable recovery mechanism
 - **Performance**: Minimal database round-trips per phase
   - Validation: 1 bulk read (existing records) + calculation + store stats
   - Submit: 1 bulk read (existing records) + 1 bulk write (all version appends)
@@ -368,28 +325,24 @@ flowchart TD
   - If this becomes a constraint, can batch the Map building and writes
 - **Application complexity**: Delta calculation and status logic in application layer
   - Trade-off: simpler repository, clearer separation of concerns
-- **Recovery delay**: Stuck submissions detected after 5 minutes
-  - Forward recovery completes them
-  - Acceptable trade-off vs. immediate detection complexity
+- **Manual recovery required**: Stuck submissions require manual intervention
+  - Trade-off: Simpler initial implementation, addresses real failures rather than transient issues
 
 ### Implementation Notes
 
 1. Reusing `validatedAt` timestamp keeps version timestamps consistent across all rows
-2. The `submissionStartedAt` timestamp on the summary log enables stuck submission detection
-3. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
-4. Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
-5. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
-6. Map key format `"type:rowId"` naturally groups versions by waste record
-7. The recovery job should include alerting if operations repeatedly fail
-8. The recovery job should use exponential backoff if an operation continues to fail
-9. New uploads must supersede existing unsubmitted summary logs for the same org/reg
-10. Submit must verify the summary log is still current before processing
-11. The `superseded` status is a terminal state (no further transitions allowed)
-12. If memory usage becomes a concern with >15k records, batch the Map building and multiple `appendVersions` calls
+2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
+3. Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
+4. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
+5. Map key format `"type:rowId"` naturally groups versions by waste record
+6. New uploads must supersede existing unsubmitted summary logs for the same org/reg
+7. Submit must verify the summary log is still current before processing
+8. The `superseded` status is a terminal state (no further transitions allowed)
+9. If memory usage becomes a concern with >15k records, batch the Map building and multiple `appendVersions` calls
 
 ### Future Considerations
 
-- If waste records need to support concurrent updates from multiple sources (not just summary logs), add a `version` field to waste records for optimistic locking
-- If recovery time needs to be faster, reduce the stuck threshold or implement active monitoring
-- If memory usage exceeds infrastructure limits, implement batched processing (multiple smaller Maps and `appendVersions` calls)
-- If processing time exceeds acceptable limits, consider async processing via queue worker
+- **Automated recovery**: Implement a background job to detect and recover stuck submissions (status: `submitting`, older than threshold). The job would re-run the submission leveraging idempotency to handle partial completions. This could reduce manual intervention but adds operational complexity.
+- **Concurrent updates**: If waste records need to support concurrent updates from multiple sources (not just summary logs), add a `version` field to waste records for optimistic locking
+- **Batched processing**: If memory usage exceeds infrastructure limits, implement batched processing (multiple smaller Maps and `appendVersions` calls)
+- **Async processing**: If processing time exceeds acceptable limits, consider async processing via queue worker
