@@ -397,7 +397,7 @@ export const testUpdateBehaviour = (it) => {
           repository.update(organisation.id, 1, {
             status: 'invalid'
           })
-        ).rejects.toThrow(/Invalid organisation data/)
+        ).rejects.toThrow('Invalid organisation data: status: any.only')
       })
     })
 
@@ -413,7 +413,7 @@ export const testUpdateBehaviour = (it) => {
             id: newId,
             wasteProcessingTypes: ['exporter']
           })
-        ).rejects.toThrow(/Invalid organisation data.*id.*not allowed/)
+        ).rejects.toThrow('Invalid organisation data: id: any.unknown')
       })
 
       it('rejects updates to version field', async () => {
@@ -425,7 +425,7 @@ export const testUpdateBehaviour = (it) => {
             version: 99,
             wasteProcessingTypes: ['exporter']
           })
-        ).rejects.toThrow(/Invalid organisation data.*version.*not allowed/)
+        ).rejects.toThrow('Invalid organisation data: version: any.unknown')
       })
 
       it('rejects updates to schemaVersion field', async () => {
@@ -438,7 +438,26 @@ export const testUpdateBehaviour = (it) => {
             wasteProcessingTypes: ['exporter']
           })
         ).rejects.toThrow(
-          /Invalid organisation data.*schemaVersion.*not allowed/
+          'Invalid organisation data: schemaVersion: any.unknown'
+        )
+      })
+
+      it('does not leak PII data in error messages', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        // Verify error message contains only field path and error type, not actual PII values
+        await expect(
+          repository.update(organisation.id, 1, {
+            submitterContactDetails: {
+              fullName: 'Jane Smith',
+              email: 'jane.smith', // Invalid email format
+              phone: '1234567890',
+              title: 'Director'
+            }
+          })
+        ).rejects.toThrow(
+          'Invalid organisation data: submitterContactDetails.email: string.email'
         )
       })
     })

@@ -24,7 +24,9 @@ export const validateOrganisationInsert = (data) => {
   })
 
   if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
+    const details = error.details
+      .map((d) => `${d.path.join('.')}: ${d.type}`)
+      .join('; ')
     throw Boom.badData(`Invalid organisation data: ${details}`)
   }
 
@@ -38,7 +40,9 @@ export const validateOrganisationUpdate = (data) => {
   })
 
   if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
+    const details = error.details
+      .map((d) => `${d.path.join('.')}: ${d.type}`)
+      .join('; ')
     throw Boom.badData(`Invalid organisation data: ${details}`)
   }
 
@@ -50,7 +54,9 @@ export const validateStatusHistory = (statusHistory) => {
   const { error, value } = schema.validate(statusHistory)
 
   if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
+    const details = error.details
+      .map((d) => `${d.path.join('.')}: ${d.type}`)
+      .join('; ')
     throw Boom.badImplementation(
       `Invalid statusHistory: ${details}. This is a system error.`
     )
