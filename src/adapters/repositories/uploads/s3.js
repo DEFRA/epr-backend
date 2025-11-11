@@ -42,13 +42,8 @@ const parseS3Uri = (uri) => {
  */
 export const createUploadsRepository = (s3Client) => ({
   async findByLocation(uri) {
-    const { Bucket: bucket, Key: key } = parseS3Uri(uri)
-
     try {
-      const command = new GetObjectCommand({
-        Bucket: bucket,
-        Key: key
-      })
+      const command = new GetObjectCommand(parseS3Uri(uri))
 
       const response = await s3Client.send(command)
 
