@@ -78,9 +78,7 @@ export async function parseRegistrationSubmission(id, rawSubmissionData) {
     suppliers: answersByShortDescription[FORM_PAGES.REGISTRATION.SUPPLIERS],
     exportPorts: getExportPorts(answersByShortDescription),
     plantEquipmentDetails:
-      answersByShortDescription[
-        FORM_PAGES.REGISTRATION.PLANT_EQUIPMENT_DETAILS
-      ],
+      answersByShortDescription[FORM_PAGES.REGISTRATION.PLANT_EQUIMENT_DETAILS],
     wasteProcessingType,
     wasteManagementPermits: getWasteManagementPermits(
       rawSubmissionData,
