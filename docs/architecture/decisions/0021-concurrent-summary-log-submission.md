@@ -64,7 +64,6 @@ sequenceDiagram
     API->>SummaryLogs: Supersede existing unsubmitted logs for org/reg
     API->>SummaryLogs: Create new
 
-    Note over API,WasteRecords: Validation Phase (async)
     API->>SummaryLogs: Extract & validate file
     API->>WasteRecords: Read existing records
     API->>API: Calculate preview stats (create/update/unchanged)
