@@ -4,6 +4,17 @@ import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
+/** @typedef {import('#domain/summary-logs/model.js').StoredFile} StoredFile */
+
+/**
+ * @typedef {Object} CompletedSummaryLog
+ * @property {import('#domain/summary-logs/status.js').SummaryLogStatus} status
+ * @property {StoredFile} file
+ * @property {string} [failureReason]
+ * @property {import('#domain/summary-logs/model.js').Validation} [validation]
+ * @property {string} [organisationId]
+ * @property {string} [registrationId]
+ */
 
 const FILE_PROCESSING_CATEGORY = 'file-processing'
 
@@ -83,7 +94,7 @@ const logParsingSummary = (logger, parsedData) => {
 export const createSummaryLogExtractor = ({ uploadsRepository, logger }) => {
   return {
     /**
-     * @param {SummaryLog} summaryLog
+     * @param {CompletedSummaryLog} summaryLog
      * @returns {Promise<ParsedSummaryLog>}
      */
     extract: async (summaryLog) => {
