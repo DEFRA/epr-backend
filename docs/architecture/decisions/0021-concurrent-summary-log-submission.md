@@ -53,15 +53,16 @@ We will implement a **multi-layered strategy** combining org/reg level constrain
 ```mermaid
 sequenceDiagram
     actor User
+    participant CDPUploader
     participant API
     participant SummaryLogs
     participant WasteRecords
     participant BackgroundJob
 
-    User->>API: Upload summary log file
+    User->>CDPUploader: Upload summary log
+    CDPUploader->>API: Upload complete
     API->>SummaryLogs: Supersede existing unsubmitted logs for org/reg
-    API->>SummaryLogs: Create new (status: preprocessing)
-    API-->>User: Upload accepted
+    API->>SummaryLogs: Create new
 
     Note over API,WasteRecords: Validation Phase (async)
     API->>SummaryLogs: Extract & validate file
