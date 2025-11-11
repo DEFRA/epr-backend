@@ -68,111 +68,157 @@ async transitionToSubmitting(summaryLogId, expectedVersion) {
 
 **Rationale**: Atomic check-and-set operation prevents race conditions without separate locking infrastructure.
 
-### 2. Idempotent Waste Record Version Updates
+### 2. Repository Port Design
 
-Each version in a waste record's version history includes `summaryLog.id`. Before applying updates, check if the summary log has already been processed:
+The waste records repository provides a focused interface for version management:
 
 ```javascript
-// Read existing records in bulk (per batch)
-const existingRecords = await db.collection('epr-waste-records')
-  .find({ _compositeKey: { $in: compositeKeys } })
-  .toArray()
-
-// Check each record for existing version with same summaryLog.id
-const versionExists = existing?.versions.some(
-  v => v.summaryLog.id === summaryLogId
-)
-
-if (versionExists) {
-  // Skip - already processed
-  continue
-}
-
-// Otherwise, append new version
+/**
+ * @typedef {Object} WasteRecordsRepository
+ * @property {(organisationId, registrationId) => Promise<WasteRecord[]>} findByRegistration
+ * @property {(organisationId, registrationId, accreditationId, versionsByKey) => Promise<void>} appendVersions
+ */
 ```
 
-**Rationale**: Natural deduplication using existing data structure. Safe to retry entire operation.
-
-### 3. Batch Processing
-
-Process waste records in batches to manage memory and provide progress visibility:
+Where `versionsByKey` is a `Map<string, VersionAppend>` keyed by `"type:rowId"`, containing:
 
 ```javascript
-const BATCH_SIZE = 100 // Example size - tune based on record size and performance
+/**
+ * @typedef {Object} VersionAppend
+ * @property {WasteRecordVersion} version - Complete version (status, summaryLog, data)
+ * @property {Object} currentData - Top-level data after this version applied
+ */
+```
 
-for (let i = 0; i < wasteRecords.length; i += BATCH_SIZE) {
-  const batch = wasteRecords.slice(i, i + BATCH_SIZE)
+**Rationale**:
 
-  // Idempotent upsert
-  await wasteRecordsRepo.upsertWasteRecords(batch)
+- Application layer handles business logic (delta calculation, change detection)
+- Repository layer handles persistence (version appending, idempotency)
+- Single Map parameter groups all updates for one org/registration batch
+- Map key `"type:rowId"` handles multiple waste record types in one summary log
 
-  // Optional: Track progress on summary log
-  await summaryLogsRepo.updateProgress(
-    summaryLogId,
-    i + batch.length,
-    wasteRecords.length
-  )
+### 3. Application Layer Processing
+
+The application layer orchestrates the submission workflow:
+
+```javascript
+async submitSummaryLog(organisationId, registrationId, summaryLogId) {
+  // 1. Acquire lock via summary log status transition
+  const summaryLog = await summaryLogsRepo.transitionToSubmitting(summaryLogId, version)
+
+  try {
+    // 2. Read ALL existing waste records for this org/registration (one query)
+    const existingRecords = await wasteRecordsRepo.findByRegistration(
+      organisationId,
+      registrationId
+    )
+
+    // 3. Build lookup Map
+    const existingByKey = new Map(
+      existingRecords.map(r => [`${r.type}:${r.rowId}`, r])
+    )
+
+    // 4. Transform summary log data, calculating deltas
+    const versionsByKey = new Map()
+    for (const row of summaryLogRows) {
+      const key = `${row.type}:${row.rowId}`
+      const existing = existingByKey.get(key)
+
+      // Calculate delta, determine status (CREATED vs UPDATED)
+      const version = buildVersion(row, existing, summaryLog)
+      const currentData = row.data
+
+      // Check idempotency: skip if this summaryLog.id already in versions
+      if (!existing?.versions.some(v => v.summaryLog.id === summaryLog.id)) {
+        versionsByKey.set(key, { version, currentData })
+      }
+    }
+
+    // 5. Append all versions in one call
+    await wasteRecordsRepo.appendVersions(
+      organisationId,
+      registrationId,
+      accreditationId,
+      versionsByKey
+    )
+
+    // 6. Mark as completed
+    await summaryLogsRepo.markAsSubmitted(summaryLogId)
+  } catch (error) {
+    // Leave in 'submitting' state for recovery
+    throw error
+  }
 }
 ```
 
 **Rationale**:
 
-- Limits memory usage
-- Provides progress visibility
-- Reduces blast radius of transient failures
-- Bulk read operation per batch is efficient
-- Batch size should be tuned based on actual record sizes and database performance
+- Single read of all existing records (efficient bulk query)
+- Application layer owns business logic (delta calculation, status determination)
+- Idempotency check in application layer (can skip unnecessary writes)
+- Repository receives clean instructions: "append these versions"
+- If processing 15k records becomes a memory concern, this can be batched
 
 ### 4. MongoDB Adapter Implementation
 
-The waste records MongoDB adapter implements idempotent upserts:
-
-1. Reads existing records for the batch in a single query
-2. Checks each record for version idempotency
-3. Merges existing versions with new version
-4. Uses `bulkWrite` with upsert for efficient updates
+The waste records MongoDB adapter implements `appendVersions`:
 
 ```javascript
-const performUpsertWasteRecords = (db) => async (wasteRecords) => {
-  // Read existing records
-  const compositeKeys = wasteRecords.map(r => getCompositeKey(...))
-  const existingRecords = await db.collection('epr-waste-records')
-    .find({ _compositeKey: { $in: compositeKeys } })
-    .toArray()
+const performAppendVersions =
+  (db) =>
+  async (organisationId, registrationId, accreditationId, versionsByKey) => {
+    if (versionsByKey.size === 0) return
 
-  const existingByKey = new Map(existingRecords.map(r => [r._compositeKey, r]))
+    const bulkOps = []
 
-  // Build bulk operations with idempotency checks
-  const bulkOps = wasteRecords.map((record) => {
-    const existing = existingByKey.get(compositeKey)
-    const latestVersion = record.versions[record.versions.length - 1]
+    for (const [key, { version, currentData }] of versionsByKey) {
+      const [type, rowId] = key.split(':')
+      const compositeKey = getCompositeKey(
+        organisationId,
+        registrationId,
+        type,
+        rowId
+      )
 
-    // Check if version already exists
-    const versionExists = existing?.versions.some(
-      v => v.summaryLog.id === latestVersion.summaryLog.id
-    )
-
-    if (versionExists) return null // Skip
-
-    // Merge versions
-    const mergedVersions = existing
-      ? [...existing.versions, latestVersion]
-      : [latestVersion]
-
-    return {
-      updateOne: {
-        filter: { _compositeKey: compositeKey },
-        update: { $set: { ...record, versions: mergedVersions } },
-        upsert: true
-      }
+      bulkOps.push({
+        updateOne: {
+          filter: { _compositeKey: compositeKey },
+          update: {
+            $setOnInsert: {
+              _compositeKey: compositeKey,
+              schemaVersion: SCHEMA_VERSION,
+              organisationId,
+              registrationId,
+              ...(accreditationId && { accreditationId }),
+              type,
+              rowId
+            },
+            $set: {
+              data: currentData
+            },
+            $push: {
+              versions: version
+            }
+          },
+          upsert: true
+        }
+      })
     }
-  }).filter(op => op !== null)
 
-  if (bulkOps.length > 0) {
-    await db.collection('epr-waste-records').bulkWrite(bulkOps, { ordered: false })
+    await db
+      .collection('epr-waste-records')
+      .bulkWrite(bulkOps, { ordered: false })
   }
-}
 ```
+
+**Key behaviors**:
+
+- `$setOnInsert`: Sets static fields only when creating new document
+- `$set`: Updates top-level data on every operation
+- `$push`: Appends version to versions array
+- `upsert: true`: Creates document if it doesn't exist
+- `ordered: false`: Continues processing if one operation fails
+- No explicit idempotency check (application layer already filtered)
 
 ### 5. Forward Recovery via Background Job
 
@@ -205,17 +251,18 @@ async recoverStuckSubmissions() {
 - **Crash-safe**: Idempotency allows safe retry after partial failure
 - **No transactions required**: Works within MongoDB's practical limits
 - **Forward recovery**: Simple, predictable recovery mechanism
-- **Performance**: Bulk operations minimize database round-trips
-  - Estimated time for 15k records: 30-60 seconds
-  - Database operations: With batch size of 100, approximately 150 read queries + 150 bulk writes = 300 ops total
+- **Performance**: Minimal database round-trips
+  - Estimated time for 15k records: 10-30 seconds
+  - Database operations: 1 bulk read (all existing records) + 1 bulk write (all version appends) = 2 ops total
+  - Application memory: Holds all records in memory during processing (manageable for 15k records)
 
 ### Negative
 
-- **Eventual consistency**: Brief period where waste records are partially updated
-  - Mitigated by showing "submitting" status to users
-- **Read overhead**: Must read existing records before update to check idempotency
-  - Mitigated by bulk reads (one query per batch)
-- **Complexity**: Multiple components (lock, idempotency, batching, recovery) must work together
+- **Memory usage**: Application holds all existing records in memory during processing
+  - For 15k records: acceptable on modern infrastructure
+  - If this becomes a constraint, can batch the Map building and writes
+- **Application complexity**: Delta calculation and status logic in application layer
+  - Trade-off: simpler repository, clearer separation of concerns
 - **Recovery delay**: Stuck submissions detected after 5 minutes
   - Acceptable trade-off vs. immediate detection complexity
 
@@ -223,13 +270,15 @@ async recoverStuckSubmissions() {
 
 1. The `submissionStartedAt` timestamp on the summary log enables stuck submission detection
 2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
-3. Progress tracking is optional but recommended for user visibility
-4. The recovery job should include alerting if submissions repeatedly fail
-5. Consider tuning `BATCH_SIZE` based on actual record sizes and MongoDB performance
+3. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
+4. Map key format `"type:rowId"` naturally groups versions by waste record
+5. The recovery job should include alerting if submissions repeatedly fail
 6. The recovery job should use exponential backoff if a submission continues to fail
+7. If memory usage becomes a concern with >15k records, batch the Map building and multiple `appendVersions` calls
 
 ### Future Considerations
 
 - If waste records need to support concurrent updates from multiple sources (not just summary logs), add a `version` field to waste records for optimistic locking
 - If recovery time needs to be faster, reduce the stuck threshold or implement active monitoring
-- If 15k+ records become too slow, consider processing asynchronously via a queue worker
+- If memory usage exceeds infrastructure limits, implement batched processing (multiple smaller Maps and `appendVersions` calls)
+- If processing time exceeds acceptable limits, consider async processing via queue worker
