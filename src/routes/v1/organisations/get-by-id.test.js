@@ -1,5 +1,5 @@
-import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -10,7 +10,8 @@ const {
   validToken,
   wrongSignatureToken,
   wrongIssuerToken,
-  wrongAudienceToken
+  wrongAudienceToken,
+  unauthorisedUserToken
 } = generateMockEntraIdTokens()
 
 describe('GET /v1/organisations/{id}', () => {
@@ -192,7 +193,10 @@ describe('GET /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org1.id}`
+        url: `/v1/organisations/${org1.id}`,
+        headers: {
+          Authorization: `Bearer ${unauthorisedUserToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
