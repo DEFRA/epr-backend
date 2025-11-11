@@ -24,6 +24,7 @@ export default defineConfig({
         'src/domain/**/model.js',
         'src/repositories/**/port.js',
         'src/test',
+        '.vite/fixtures/**',
         '**/*.sh',
         '**/*.md',
         '**/*.xlsx',
