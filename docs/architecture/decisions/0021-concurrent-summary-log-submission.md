@@ -57,7 +57,7 @@ Enforce that only one unsubmitted summary log can exist per organisation/registr
 ```javascript
 async createSummaryLog(organisationId, registrationId, fileUri) {
   // Supersede any existing unsubmitted summary logs for this org/reg
-  await db.collection('epr-summary-logs').updateMany(
+  await db.collection('summary-logs').updateMany(
     {
       organisationId,
       registrationId,
@@ -82,7 +82,7 @@ async createSummaryLog(organisationId, registrationId, fileUri) {
     version: 0
   }
 
-  const result = await db.collection('epr-summary-logs').insertOne(summaryLog)
+  const result = await db.collection('summary-logs').insertOne(summaryLog)
   return { ...summaryLog, id: result.insertedId.toHexString() }
 }
 ```
@@ -92,7 +92,7 @@ async createSummaryLog(organisationId, registrationId, fileUri) {
 ```javascript
 async transitionToSubmitting(summaryLogId, organisationId, registrationId, expectedVersion) {
   // Verify this is still the current unsubmitted summary log for org/reg
-  const current = await db.collection('epr-summary-logs').findOne({
+  const current = await db.collection('summary-logs').findOne({
     organisationId,
     registrationId,
     status: 'validated'
@@ -105,7 +105,7 @@ async transitionToSubmitting(summaryLogId, organisationId, registrationId, expec
   }
 
   // Transition to submitting
-  const result = await db.collection('epr-summary-logs').findOneAndUpdate(
+  const result = await db.collection('summary-logs').findOneAndUpdate(
     {
       _id: ObjectId.createFromHexString(summaryLogId),
       status: 'validated',
