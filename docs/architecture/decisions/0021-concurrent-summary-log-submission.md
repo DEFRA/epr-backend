@@ -43,7 +43,7 @@ This operation presents several challenges:
 3. The new upload becomes the current active summary log
 4. On submit, the system verifies the summary log ID matches the current one for that org/reg
 
-This constraint eliminates stale preview issues and prevents partial data from superseded submissions. Uploads are blocked during submission (typically 10-30 seconds for 15k records) to ensure clean state transitions.
+This constraint eliminates stale preview issues and prevents partial data from superseded submissions. Uploads are blocked during submission to ensure clean state transitions.
 
 ## Decision
 
@@ -324,7 +324,6 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - **Performance**: Minimal database round-trips per phase
   - Validation: 1 bulk read (existing records) + calculation + store stats
   - Submit: 1 bulk read (existing records) + 1 bulk write (all version appends)
-  - Estimated time for 15k records: 10-30 seconds per phase
   - Application memory: Holds all records in memory during processing (manageable for 15k records)
 
 ### Negative
@@ -332,9 +331,9 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - **Last upload wins**: Users who are reviewing a preview will get an error if someone uploads a newer summary log
   - Trade-off: Simpler than allowing multiple concurrent previews and dealing with merge conflicts
   - Clear error message guides user to review the newer upload
-- **Uploads blocked during submission**: Users must wait (10-30 seconds for 15k records) if a submission is in progress
+- **Uploads blocked during submission**: Users must wait if a submission is in progress
   - Trade-off: Prevents partial data from superseded logs, ensures clean state transitions
-  - Short wait time makes this acceptable
+  - Wait time expected to be short for typical workloads
 - **Two-phase overhead**: Calculates transformations twice (validation + submit)
   - Trade-off: User confidence and confirmation outweighs computational cost
   - Org/reg constraint prevents wasted work (only one summary log being worked on at a time)
