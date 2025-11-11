@@ -242,8 +242,8 @@ describe('PUT /v1/organisations/{id}', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(
-      /At least one waste processing type is required/
+    expect(body.message).toBe(
+      'Invalid organisation data: wasteProcessingTypes: array.min'
     )
   })
 })

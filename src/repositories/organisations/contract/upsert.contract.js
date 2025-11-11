@@ -79,7 +79,7 @@ export const testUpsertBehaviour = (it) => {
         })
 
         await expect(repository.upsert(invalidOrg)).rejects.toThrow(
-          /Invalid organisation data.*At least one waste processing type/
+          'Invalid organisation data: wasteProcessingTypes: array.min'
         )
       })
 
@@ -89,7 +89,7 @@ export const testUpsertBehaviour = (it) => {
         })
 
         await expect(repository.upsert(invalidOrg)).rejects.toThrow(
-          /Invalid organisation data.*submitterContactDetails/
+          'Invalid organisation data: submitterContactDetails: any.required'
         )
       })
     })
