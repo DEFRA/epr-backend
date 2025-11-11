@@ -13,6 +13,7 @@
     * [Consultants](#consultants)
     * [Regulators](#regulators)
     * [Service Maintainers](#service-maintainers)
+  * [How do users access this service?](#how-do-users-access-this-service)
   * [What can these users do?](#what-can-these-users-do)
   * [What are the statuses of each entity?](#what-are-the-statuses-of-each-entity)
     * [Organisation](#organisation)
@@ -196,6 +197,14 @@ The regulators are the authorities responsible for the regulation of waste mater
 ### Service Maintainers
 
 The Defra team(s) responsible for maintaining the service used by operators, consultants and regulators.
+
+## How do users access this service?
+
+Operators & consultants access this service via [this auth mechanism](./pepr-lld-auth-ui.md).
+
+Service Maintainers and Regulators access this service via [this auth mechanism](./pepr-lld-auth-admin-ui.md).
+
+All requests to the EPR Backend API are verified with [this auth mechanism](./pepr-lld-auth-api.md).
 
 ## What can these users do?
 
