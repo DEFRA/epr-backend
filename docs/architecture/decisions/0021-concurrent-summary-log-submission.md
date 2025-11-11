@@ -46,418 +46,299 @@ This constraint eliminates stale preview issues: if another summary log is uploa
 
 ## Decision
 
-We will implement a **multi-layered strategy** combining org/reg level constraints, optimistic locking, two-phase workflow (validate/preview then submit), idempotent operations, batch processing, and forward recovery:
+We will implement a **multi-layered strategy** combining org/reg level constraints, optimistic locking, two-phase workflow (validate/preview then submit), idempotent operations, batch processing, and forward recovery.
+
+### Overall Workflow
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant API
+    participant SummaryLogs
+    participant WasteRecords
+    participant BackgroundJob
+
+    User->>API: Upload summary log file
+    API->>SummaryLogs: Supersede existing unsubmitted logs for org/reg
+    API->>SummaryLogs: Create new (status: preprocessing)
+    API-->>User: Upload accepted
+
+    Note over API,WasteRecords: Validation Phase (async)
+    API->>SummaryLogs: Extract & validate file
+    API->>WasteRecords: Read existing records
+    API->>API: Calculate preview stats (create/update/unchanged)
+    API->>SummaryLogs: Store stats (status: validated)
+
+    User->>API: View preview
+    API-->>User: Show stats from summary log
+
+    User->>API: Submit (confirm)
+    API->>SummaryLogs: Verify still current for org/reg
+    API->>SummaryLogs: Transition to submitting
+    API->>WasteRecords: Read existing records
+    API->>API: Recalculate using same timestamp
+    API->>WasteRecords: Bulk append versions
+    API->>SummaryLogs: Mark as submitted
+    API-->>User: Submission complete
+
+    Note over BackgroundJob: Every 5 minutes
+    BackgroundJob->>SummaryLogs: Find stuck submissions (>5 min)
+    BackgroundJob->>API: Retry submission (idempotent)
+```
+
+### Summary Log Status Transitions
+
+```mermaid
+stateDiagram-v2
+    [*] --> preprocessing: Upload
+    preprocessing --> validating: Start validation
+    validating --> validated: Validation passes
+    validating --> invalid: Validation fails
+    validated --> submitting: User confirms submit
+    submitting --> submitted: Submission complete
+
+    preprocessing --> superseded: New upload for org/reg
+    validating --> superseded: New upload for org/reg
+    validated --> superseded: New upload for org/reg
+    submitting --> superseded: New upload during recovery
+
+    invalid --> [*]
+    superseded --> [*]
+    submitted --> [*]
+
+    note right of superseded
+        Terminal state:
+        Another upload
+        for same org/reg
+    end note
+
+    note right of submitting
+        Recovery job retries
+        if stuck >5 minutes
+    end note
+```
 
 ### 1. Organisation/Registration Level Constraint (Prevents Stale Previews)
 
-Enforce that only one unsubmitted summary log can exist per organisation/registration pair:
+The system enforces that only one unsubmitted summary log can exist per organisation/registration pair. This "last upload wins" policy eliminates stale previews.
 
-**On Upload:**
+```mermaid
+sequenceDiagram
+    participant User1
+    participant User2
+    participant API
+    participant DB
+
+    User1->>API: Upload summary log A
+    API->>DB: Supersede existing unsubmitted (org1/reg1)
+    API->>DB: Create log A (org1/reg1, status: validated)
+
+    User1->>API: View preview for log A
+
+    User2->>API: Upload summary log B (same org1/reg1)
+    API->>DB: Supersede log A
+    API->>DB: Create log B (org1/reg1, status: validated)
+
+    User1->>API: Submit log A
+    API->>DB: Check current log for org1/reg1
+    DB-->>API: Current is log B
+    API-->>User1: Error: Newer upload exists
+```
+
+**Key Operations:**
+
+On upload, supersede existing unsubmitted logs:
 
 ```javascript
-async createSummaryLog(organisationId, registrationId, fileUri) {
-  // Supersede any existing unsubmitted summary logs for this org/reg
-  await db.collection('summary-logs').updateMany(
-    {
-      organisationId,
-      registrationId,
-      status: { $in: ['preprocessing', 'validating', 'validated'] }
-    },
-    {
-      $set: {
-        status: 'superseded',
-        supersededAt: new Date(),
-        supersededReason: 'Newer summary log uploaded'
-      }
-    }
-  )
+// Mark all unsubmitted logs for this org/reg as superseded
+status: { $in: ['preprocessing', 'validating', 'validated'] }
+  → status: 'superseded'
+```
 
-  // Create new summary log
-  const summaryLog = {
-    organisationId,
-    registrationId,
-    status: 'preprocessing',
-    file: { uri: fileUri },
-    createdAt: new Date(),
-    version: 0
-  }
+On submit, verify still current:
 
-  const result = await db.collection('summary-logs').insertOne(summaryLog)
-  return { ...summaryLog, id: result.insertedId.toHexString() }
+```javascript
+// Ensure this log is still the current validated one
+if (currentValidatedLog.id !== submittedLogId) {
+  throw Boom.conflict('A newer summary log has been uploaded')
 }
 ```
 
-**On Submit (Validation Check):**
+**Rationale:**
 
-```javascript
-async transitionToSubmitting(summaryLogId, organisationId, registrationId, expectedVersion) {
-  // Verify this is still the current unsubmitted summary log for org/reg
-  const current = await db.collection('summary-logs').findOne({
-    organisationId,
-    registrationId,
-    status: 'validated'
-  })
-
-  if (!current || current._id.toHexString() !== summaryLogId) {
-    throw Boom.conflict(
-      'A newer summary log has been uploaded. Please review the latest upload.'
-    )
-  }
-
-  // Transition to submitting
-  const result = await db.collection('summary-logs').findOneAndUpdate(
-    {
-      _id: ObjectId.createFromHexString(summaryLogId),
-      status: 'validated',
-      version: expectedVersion
-    },
-    {
-      $set: {
-        status: 'submitting',
-        submissionStartedAt: new Date()
-      },
-      $inc: { version: 1 }
-    },
-    { returnDocument: 'after' }
-  )
-
-  if (!result.value) {
-    throw Boom.conflict('Summary log is not in validated state or version conflict')
-  }
-
-  return result.value
-}
-```
-
-**Rationale**:
-
-- Last upload wins - simpler mental model for users
+- Last upload wins - simple mental model
 - Eliminates stale preview problem entirely
-- No preview can become outdated (new upload supersedes old one)
-- Clear error message if user attempts to submit superseded summary log
+- Clear error message if user attempts to submit superseded log
 - Atomic operations ensure constraint is enforced reliably
 
 ### 2. Repository Port Design
 
-The waste records repository provides a focused interface for version management:
+The waste records repository provides a focused interface:
 
 ```javascript
-/**
- * @typedef {Object} WasteRecordsRepository
- * @property {(organisationId, registrationId) => Promise<WasteRecord[]>} findByRegistration
- * @property {(organisationId, registrationId, accreditationId, versionsByKey) => Promise<void>} appendVersions
- */
+interface WasteRecordsRepository {
+  // Read all waste records for an organisation/registration
+  findByRegistration(organisationId, registrationId): Promise<WasteRecord[]>
+
+  // Append versions in bulk (Map keyed by "type:rowId")
+  appendVersions(organisationId, registrationId, accreditationId,
+                 versionsByKey: Map<string, VersionAppend>): Promise<void>
+}
 ```
 
-Where `versionsByKey` is a `Map<string, VersionAppend>` keyed by `"type:rowId"`, containing:
+**Rationale:**
 
-```javascript
-/**
- * @typedef {Object} VersionAppend
- * @property {WasteRecordVersion} version - Complete version (status, summaryLog, data)
- * @property {Object} currentData - Top-level data after this version applied
- */
-```
-
-**Rationale**:
-
-- Application layer handles business logic (delta calculation, change detection)
-- Repository layer handles persistence (version appending, idempotency)
+- Application layer: business logic (delta calculation, change detection)
+- Repository layer: persistence (version appending, bulk operations)
 - Single Map parameter groups all updates for one org/registration batch
 - Map key `"type:rowId"` handles multiple waste record types in one summary log
 
 ### 3. Shared Transformation Logic
 
-Both validation and submission phases use the same transformation logic to ensure deterministic results:
+Both validation and submission use identical transformation logic to ensure deterministic results.
 
-```javascript
-/**
- * Transforms summary log into waste record versions with preview statistics.
- * This function is used in both validation (to calculate preview) and submission (to persist changes).
- * Using the same versionTimestamp ensures identical results in both phases.
- */
-async function transformSummaryLogToWasteRecords(
-  summaryLog,
-  versionTimestamp,
-  summaryLogExtractor,
-  wasteRecordsRepo
-) {
-  // 1. Extract and parse the summary log file
-  const parsedData = await summaryLogExtractor.extract(summaryLog)
-
-  // 2. Read ALL existing waste records for this org/registration (one query)
-  const existingRecords = await wasteRecordsRepo.findByRegistration(
-    summaryLog.organisationId,
-    summaryLog.registrationId
-  )
-
-  // 3. Build lookup Map
-  const existingByKey = new Map(
-    existingRecords.map((r) => [`${r.type}:${r.rowId}`, r])
-  )
-
-  // 4. Transform summary log data, calculating deltas
-  const wasteRecords = transformFromSummaryLog(
-    parsedData,
-    {
-      summaryLog: { id: summaryLog.id, uri: summaryLog.file.uri },
-      organisationId: summaryLog.organisationId,
-      registrationId: summaryLog.registrationId,
-      accreditationId: summaryLog.accreditationId,
-      versionTimestamp // Deterministic timestamp ensures identical results
-    },
-    existingByKey
-  )
-
-  // 5. Calculate summary statistics
-  const stats = {
-    created: 0,
-    updated: 0,
-    unchanged: 0
-  }
-
-  for (const record of wasteRecords) {
-    const lastVersion = record.versions[record.versions.length - 1]
-    if (lastVersion.summaryLog.id === summaryLog.id) {
-      if (lastVersion.status === 'CREATED') {
-        stats.created++
-      } else if (lastVersion.status === 'UPDATED') {
-        stats.updated++
-      }
-    } else {
-      stats.unchanged++
-    }
-  }
-
-  return { wasteRecords, stats }
-}
+```mermaid
+flowchart TD
+    A[Transform Summary Log] --> B[Extract & parse file]
+    B --> C[Read existing waste records]
+    C --> D[Build lookup Map by type:rowId]
+    D --> E[Calculate deltas for each row]
+    E --> F{Record exists?}
+    F -->|Yes| G{Data changed?}
+    F -->|No| H[Status: CREATED]
+    G -->|Yes| I[Status: UPDATED]
+    G -->|No| J[Status: UNCHANGED]
+    H --> K[Build version with versionTimestamp]
+    I --> K
+    J --> L[No new version]
+    K --> M[Calculate stats]
+    L --> M
+    M --> N[Return wasteRecords + stats]
 ```
 
-**Rationale**:
+**Key Insight:** Passing `versionTimestamp` as a parameter ensures identical results in both phases:
+
+- Validation: `versionTimestamp = validatedAt` (new Date())
+- Submission: `versionTimestamp = validatedAt` (from summary log)
+
+**Rationale:**
 
 - Single source of truth for transformation logic
-- Passing `versionTimestamp` as parameter ensures deterministic recalculation
-- Both phases use identical code path, eliminating possibility of divergence
+- Deterministic timestamp parameter ensures identical versions
+- Both phases use identical code path - no divergence possible
 - Returns both waste records (for submission) and stats (for preview)
 
-### 4. Validation Phase (Calculate Preview Statistics)
+### 4. Validation Phase
 
-During validation, the system calculates preview statistics for the user to review:
+During validation, calculate preview statistics for user review:
 
-```javascript
-async validateSummaryLog(summaryLogId) {
-  // Get the summary log (status: 'validating')
-  const summaryLog = await summaryLogsRepo.findById(summaryLogId)
-
-  // 1. Extract and parse the summary log file for business rule validation
-  const parsedData = await summaryLogExtractor.extract(summaryLog)
-
-  // 2. Validate the parsed data against business rules
-  const validationErrors = await validateParsedData(parsedData)
-
-  if (validationErrors.length > 0) {
-    // Mark as invalid with errors
-    await summaryLogsRepo.update(summaryLogId, {
-      status: 'invalid',
-      validationErrors
-    })
-    return
-  }
-
-  // 3. Transform using shared logic with validation timestamp
-  const validatedAt = new Date()
-  const { stats } = await transformSummaryLogToWasteRecords(
-    summaryLog,
-    validatedAt, // This timestamp will be reused during submission
-    summaryLogExtractor,
-    wasteRecordsRepo
-  )
-
-  // 4. Mark as validated with preview stats
-  await summaryLogsRepo.update(summaryLogId, {
-    status: 'validated',
-    validatedAt,
-    previewStats: stats
-  })
-}
+```mermaid
+flowchart LR
+    A[Summary Log<br/>status: validating] --> B[Extract & validate file]
+    B --> C{Valid?}
+    C -->|No| D[Mark invalid<br/>Store errors]
+    C -->|Yes| E[Transform with validatedAt timestamp]
+    E --> F[Calculate stats:<br/>created/updated/unchanged]
+    F --> G[Store stats in summary log<br/>status: validated]
 ```
 
-**Rationale**:
+**Key Points:**
 
-- Preview calculation happens during validation workflow
-- Summary stats stored in summary log document (small, well within 16MB limit)
-- Uses `validatedAt` timestamp for version creation to enable deterministic recalculation on submit
-- Full waste records not stored (would exceed 16MB limit for 15k records)
-- User views preview page which simply displays the stored `previewStats`
+- Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
+- Full waste records NOT stored (would exceed 16MB for 15k records)
+- Uses `validatedAt` timestamp for deterministic version creation
+- User views preview page showing the stored `previewStats`
 
-### 5. Submission Phase (Persist Changes)
+### 5. Submission Phase
 
-After user confirms the preview, the application layer orchestrates the submission workflow:
+After user confirms preview, persist the changes:
 
-```javascript
-async submitSummaryLog(organisationId, registrationId, summaryLogId) {
-  // 1. Verify summary log is still current and transition to submitting
-  const summaryLog = await summaryLogsRepo.transitionToSubmitting(
-    summaryLogId,
-    organisationId,
-    registrationId,
-    version
-  )
-
-  try {
-    // 2. Transform using shared logic with SAME timestamp as validation
-    // This produces identical versions to what user saw in preview
-    const { wasteRecords } = await transformSummaryLogToWasteRecords(
-      summaryLog,
-      summaryLog.validatedAt, // Reuse timestamp from validation - deterministic!
-      summaryLogExtractor,
-      wasteRecordsRepo
-    )
-
-    // 3. Build versionsByKey Map for repository
-    const versionsByKey = new Map()
-    for (const record of wasteRecords) {
-      const lastVersion = record.versions[record.versions.length - 1]
-
-      // Only append if this summary log added a new version
-      if (lastVersion.summaryLog.id === summaryLog.id) {
-        const key = `${record.type}:${record.rowId}`
-        versionsByKey.set(key, {
-          version: lastVersion,
-          currentData: record.data
-        })
-      }
-    }
-
-    // 4. Append all versions in one call
-    await wasteRecordsRepo.appendVersions(
-      organisationId,
-      registrationId,
-      summaryLog.accreditationId,
-      versionsByKey
-    )
-
-    // 5. Mark as completed
-    await summaryLogsRepo.markAsSubmitted(summaryLogId)
-  } catch (error) {
-    // Leave in 'submitting' state for recovery
-    throw error
-  }
-}
+```mermaid
+flowchart TD
+    A[User confirms submit] --> B[Verify log still current for org/reg]
+    B --> C{Still current?}
+    C -->|No| D[Error: Newer upload exists]
+    C -->|Yes| E[Transition to submitting]
+    E --> F[Transform using SAME validatedAt timestamp]
+    F --> G[Filter: only versions from this summary log]
+    G --> H[Build versionsByKey Map]
+    H --> I[Bulk append versions to waste records]
+    I --> J[Mark summary log as submitted]
+    J --> K[Complete]
 ```
 
-**Rationale**:
+**Critical Behavior:**
 
-- Verifies summary log is still current for org/reg before starting (prevents stale submissions)
-- Uses shared transformation logic with same `validatedAt` timestamp as validation phase
-- Produces identical versions to what user saw in preview (deterministic and guaranteed)
-- Org/reg constraint ensures waste records may have changed but calculations remain valid
-- Application layer owns business logic (delta calculation, status determination)
-- Repository receives clean instructions: "append these versions"
-- If processing 15k records becomes a memory concern, this can be batched
+- Reuses `validatedAt` timestamp from validation phase
+- Produces **identical versions** to what user saw in preview
+- Org/reg constraint check prevents stale submissions
+- Bulk operation handles up to 15k records efficiently
+- On failure, leaves in 'submitting' state for recovery
 
 ### 6. MongoDB Adapter Implementation
 
-The waste records MongoDB adapter implements `appendVersions`:
+The MongoDB adapter uses bulk operations for efficient version appending:
 
 ```javascript
-const performAppendVersions =
-  (db) =>
-  async (organisationId, registrationId, accreditationId, versionsByKey) => {
-    if (versionsByKey.size === 0) return
-
-    const bulkOps = []
-
-    for (const [key, { version, currentData }] of versionsByKey) {
-      const [type, rowId] = key.split(':')
-      const compositeKey = getCompositeKey(
-        organisationId,
-        registrationId,
-        type,
-        rowId
-      )
-
-      bulkOps.push({
-        updateOne: {
-          filter: { _compositeKey: compositeKey },
-          update: {
-            $setOnInsert: {
-              _compositeKey: compositeKey,
-              schemaVersion: SCHEMA_VERSION,
-              organisationId,
-              registrationId,
-              ...(accreditationId && { accreditationId }),
-              type,
-              rowId
-            },
-            $set: {
-              data: currentData
-            },
-            $push: {
-              versions: version
-            }
-          },
-          upsert: true
-        }
-      })
-    }
-
-    await db
-      .collection('epr-waste-records')
-      .bulkWrite(bulkOps, { ordered: false })
+// For each waste record in versionsByKey Map:
+{
+  updateOne: {
+    filter: { _compositeKey: "org:reg:type:rowId" },
+    update: {
+      $setOnInsert: { /* static fields (only on create) */ },
+      $set: { data: currentData },
+      $push: { versions: version }
+    },
+    upsert: true
   }
+}
+
+// Execute with: bulkWrite(ops, { ordered: false })
 ```
 
-**Key behaviors**:
+**Key MongoDB Operations:**
 
-- `$setOnInsert`: Sets static fields only when creating new document
-- `$set`: Updates top-level data on every operation
-- `$push`: Appends version to versions array
-- `upsert: true`: Creates document if it doesn't exist
-- `ordered: false`: Continues processing if one operation fails
-- No explicit idempotency check (application layer already filtered)
+- `$setOnInsert`: Static fields only when creating new document
+- `$set`: Update top-level data on every operation
+- `$push`: Append version to versions array
+- `upsert: true`: Create document if doesn't exist
+- `ordered: false`: Continue processing if one operation fails
 
 ### 7. Forward Recovery via Background Job
 
-A background job runs periodically (e.g., every minute) to detect and recover stuck submissions:
+Background job recovers stuck submissions (runs every 5 minutes):
 
-```javascript
-async recoverStuckSubmissions() {
-  const STUCK_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes
-
-  // Recover stuck submissions - complete the submission
-  const stuckSubmissions = await summaryLogsRepo.find({
-    status: 'submitting',
-    submissionStartedAt: { $lt: new Date(Date.now() - STUCK_THRESHOLD_MS) }
-  })
-
-  for (const log of stuckSubmissions) {
-    try {
-      // Re-run submission - idempotency handles partial completion
-      await submitSummaryLog(log.organisationId, log.registrationId, log.id)
-    } catch (error) {
-      // If this summary log has been superseded, mark it and continue
-      if (error.message.includes('newer summary log')) {
-        await summaryLogsRepo.update(log.id, {
-          status: 'superseded',
-          supersededAt: new Date(),
-          supersededReason: 'Superseded during recovery'
-        })
-      } else {
-        // Log and alert for other errors
-        logger.error({ error, summaryLogId: log.id }, 'Failed to recover stuck submission')
-      }
-    }
-  }
-}
+```mermaid
+flowchart TD
+    A[Background Job] --> B[Find submissions stuck >5 min]
+    B --> C{Any stuck?}
+    C -->|No| D[Done]
+    C -->|Yes| E[For each stuck submission]
+    E --> F[Re-run submitSummaryLog]
+    F --> G{Success?}
+    G -->|Yes| H[Mark as submitted]
+    G -->|Superseded| I[Mark as superseded]
+    G -->|Other error| J[Log & alert]
+    H --> K[Next submission]
+    I --> K
+    J --> K
+    K --> E
 ```
 
-**Rationale**:
+**Recovery Strategy:**
 
-- Stuck submissions use forward recovery leveraging idempotency
-- Handles case where summary log was superseded during submission
-- No need to track partial progress or implement rollback logic
-- Stuck validations don't need recovery (they're just background jobs that can restart)
+- Forward recovery only (complete the submission, don't roll back)
+- Leverages idempotency - safe to retry partial completions
+- Handles superseded logs gracefully
+- No need to track partial progress
+- Alerts on repeated failures
+
+**Query:**
+
+```javascript
+// Find stuck submissions
+{ status: 'submitting', submissionStartedAt: { $lt: fiveMinutesAgo } }
+```
 
 ## Consequences
 
