@@ -5,7 +5,7 @@ import { generateKeyPairSync } from 'crypto'
 const VALID_ENTRA_AUDIENCE = 'test'
 
 // Must match one of the configured service maintainer email in the app config env var
-const SERVICE_MAINTAINER_EMAIL = 'me@email.com'
+const SERVICE_MAINTAINER_EMAIL = 'me@example.com'
 
 // Generate key pair once at module load time
 const { privateKey, publicKey } = generateKeyPairSync('rsa', {
