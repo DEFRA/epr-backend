@@ -166,43 +166,37 @@ Where `versionsByKey` is a `Map<string, VersionAppend>` keyed by `"type:rowId"`,
 - Single Map parameter groups all updates for one org/registration batch
 - Map key `"type:rowId"` handles multiple waste record types in one summary log
 
-### 3. Validation Phase (Calculate Preview Statistics)
+### 3. Shared Transformation Logic
 
-During validation, the system calculates preview statistics for the user to review:
+Both validation and submission phases use the same transformation logic to ensure deterministic results:
 
 ```javascript
-async validateSummaryLog(summaryLogId) {
-  // Get the summary log (status: 'validating')
-  const summaryLog = await summaryLogsRepo.findById(summaryLogId)
-
+/**
+ * Transforms summary log into waste record versions with preview statistics.
+ * This function is used in both validation (to calculate preview) and submission (to persist changes).
+ * Using the same versionTimestamp ensures identical results in both phases.
+ */
+async function transformSummaryLogToWasteRecords(
+  summaryLog,
+  versionTimestamp,
+  summaryLogExtractor,
+  wasteRecordsRepo
+) {
   // 1. Extract and parse the summary log file
   const parsedData = await summaryLogExtractor.extract(summaryLog)
 
-  // 2. Validate the parsed data against business rules
-  const validationErrors = await validateParsedData(parsedData)
-
-  if (validationErrors.length > 0) {
-    // Mark as invalid with errors
-    await summaryLogsRepo.update(summaryLogId, {
-      status: 'invalid',
-      validationErrors
-    })
-    return
-  }
-
-  // 3. Read ALL existing waste records for this org/registration (one query)
+  // 2. Read ALL existing waste records for this org/registration (one query)
   const existingRecords = await wasteRecordsRepo.findByRegistration(
     summaryLog.organisationId,
     summaryLog.registrationId
   )
 
-  // 4. Build lookup Map
+  // 3. Build lookup Map
   const existingByKey = new Map(
-    existingRecords.map(r => [`${r.type}:${r.rowId}`, r])
+    existingRecords.map((r) => [`${r.type}:${r.rowId}`, r])
   )
 
-  // 5. Transform summary log data, calculating deltas
-  // Uses validatedAt timestamp for determinism
+  // 4. Transform summary log data, calculating deltas
   const wasteRecords = transformFromSummaryLog(
     parsedData,
     {
@@ -210,12 +204,12 @@ async validateSummaryLog(summaryLogId) {
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
       accreditationId: summaryLog.accreditationId,
-      versionTimestamp: new Date() // Will be stored as validatedAt
+      versionTimestamp // Deterministic timestamp ensures identical results
     },
     existingByKey
   )
 
-  // 6. Calculate summary statistics
+  // 5. Calculate summary statistics
   const stats = {
     created: 0,
     updated: 0,
@@ -235,10 +229,54 @@ async validateSummaryLog(summaryLogId) {
     }
   }
 
-  // 7. Mark as validated with preview stats
+  return { wasteRecords, stats }
+}
+```
+
+**Rationale**:
+
+- Single source of truth for transformation logic
+- Passing `versionTimestamp` as parameter ensures deterministic recalculation
+- Both phases use identical code path, eliminating possibility of divergence
+- Returns both waste records (for submission) and stats (for preview)
+
+### 4. Validation Phase (Calculate Preview Statistics)
+
+During validation, the system calculates preview statistics for the user to review:
+
+```javascript
+async validateSummaryLog(summaryLogId) {
+  // Get the summary log (status: 'validating')
+  const summaryLog = await summaryLogsRepo.findById(summaryLogId)
+
+  // 1. Extract and parse the summary log file for business rule validation
+  const parsedData = await summaryLogExtractor.extract(summaryLog)
+
+  // 2. Validate the parsed data against business rules
+  const validationErrors = await validateParsedData(parsedData)
+
+  if (validationErrors.length > 0) {
+    // Mark as invalid with errors
+    await summaryLogsRepo.update(summaryLogId, {
+      status: 'invalid',
+      validationErrors
+    })
+    return
+  }
+
+  // 3. Transform using shared logic with validation timestamp
+  const validatedAt = new Date()
+  const { stats } = await transformSummaryLogToWasteRecords(
+    summaryLog,
+    validatedAt, // This timestamp will be reused during submission
+    summaryLogExtractor,
+    wasteRecordsRepo
+  )
+
+  // 4. Mark as validated with preview stats
   await summaryLogsRepo.update(summaryLogId, {
     status: 'validated',
-    validatedAt: new Date(),
+    validatedAt,
     previewStats: stats
   })
 }
@@ -252,7 +290,7 @@ async validateSummaryLog(summaryLogId) {
 - Full waste records not stored (would exceed 16MB limit for 15k records)
 - User views preview page which simply displays the stored `previewStats`
 
-### 4. Submission Phase (Persist Changes)
+### 5. Submission Phase (Persist Changes)
 
 After user confirms the preview, the application layer orchestrates the submission workflow:
 
@@ -267,35 +305,16 @@ async submitSummaryLog(organisationId, registrationId, summaryLogId) {
   )
 
   try {
-    // 2. Extract and parse the summary log file (same as validation)
-    const parsedData = await summaryLogExtractor.extract(summaryLog)
-
-    // 3. Read ALL existing waste records for this org/registration (one query)
-    const existingRecords = await wasteRecordsRepo.findByRegistration(
-      organisationId,
-      registrationId
-    )
-
-    // 4. Build lookup Map
-    const existingByKey = new Map(
-      existingRecords.map(r => [`${r.type}:${r.rowId}`, r])
-    )
-
-    // 5. Transform summary log data using SAME timestamp as validation
+    // 2. Transform using shared logic with SAME timestamp as validation
     // This produces identical versions to what user saw in preview
-    const wasteRecords = transformFromSummaryLog(
-      parsedData,
-      {
-        summaryLog: { id: summaryLog.id, uri: summaryLog.file.uri },
-        organisationId,
-        registrationId,
-        accreditationId,
-        versionTimestamp: summaryLog.validatedAt  // Deterministic!
-      },
-      existingByKey
+    const { wasteRecords } = await transformSummaryLogToWasteRecords(
+      summaryLog,
+      summaryLog.validatedAt, // Reuse timestamp from validation - deterministic!
+      summaryLogExtractor,
+      wasteRecordsRepo
     )
 
-    // 6. Build versionsByKey Map for repository
+    // 3. Build versionsByKey Map for repository
     const versionsByKey = new Map()
     for (const record of wasteRecords) {
       const lastVersion = record.versions[record.versions.length - 1]
@@ -310,15 +329,15 @@ async submitSummaryLog(organisationId, registrationId, summaryLogId) {
       }
     }
 
-    // 7. Append all versions in one call
+    // 4. Append all versions in one call
     await wasteRecordsRepo.appendVersions(
       organisationId,
       registrationId,
-      accreditationId,
+      summaryLog.accreditationId,
       versionsByKey
     )
 
-    // 8. Mark as completed
+    // 5. Mark as completed
     await summaryLogsRepo.markAsSubmitted(summaryLogId)
   } catch (error) {
     // Leave in 'submitting' state for recovery
@@ -330,14 +349,14 @@ async submitSummaryLog(organisationId, registrationId, summaryLogId) {
 **Rationale**:
 
 - Verifies summary log is still current for org/reg before starting (prevents stale submissions)
-- Recalculates transformations using same `validatedAt` timestamp as validation phase
-- Org/reg constraint ensures waste records may have changed but preview stats are still accurate
-- Produces identical versions to what user saw in preview (deterministic)
+- Uses shared transformation logic with same `validatedAt` timestamp as validation phase
+- Produces identical versions to what user saw in preview (deterministic and guaranteed)
+- Org/reg constraint ensures waste records may have changed but calculations remain valid
 - Application layer owns business logic (delta calculation, status determination)
 - Repository receives clean instructions: "append these versions"
 - If processing 15k records becomes a memory concern, this can be batched
 
-### 5. MongoDB Adapter Implementation
+### 6. MongoDB Adapter Implementation
 
 The waste records MongoDB adapter implements `appendVersions`:
 
@@ -398,7 +417,7 @@ const performAppendVersions =
 - `ordered: false`: Continues processing if one operation fails
 - No explicit idempotency check (application layer already filtered)
 
-### 6. Forward Recovery via Background Job
+### 7. Forward Recovery via Background Job
 
 A background job runs periodically (e.g., every minute) to detect and recover stuck submissions:
 
