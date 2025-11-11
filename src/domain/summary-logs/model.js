@@ -40,3 +40,13 @@
  * @property {string} [organisationId]
  * @property {string} [registrationId]
  */
+
+/**
+ * @typedef {Object} StoredSummaryLog
+ * @property {import('./status.js').SummaryLogStatus} status
+ * @property {StoredFile} file
+ * @property {string} [failureReason]
+ * @property {Validation} [validation]
+ * @property {string} [organisationId]
+ * @property {string} [registrationId]
+ */
