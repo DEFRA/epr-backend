@@ -12,11 +12,12 @@ When a user submits a summary log, the system must update potentially thousands 
 
 This operation presents several challenges:
 
-1. **Concurrency Control**: Multiple users might attempt to submit summary logs for the same organisation/registration simultaneously
-2. **Partial Failure Recovery**: The system could crash mid-submission, leaving some waste records updated and others not
-3. **Data Consistency**: Users need to see consistent data, but full atomic transactions are not practical
-4. **Performance**: Processing 15,000 records must complete in reasonable time
-5. **Idempotency**: Retrying a failed submission must not create duplicate versions
+1. **Stale Previews**: If a user views a preview and another summary log is uploaded before they submit, the preview becomes incorrect
+2. **Concurrency Control**: Multiple users might attempt to submit summary logs for the same organisation/registration simultaneously
+3. **Partial Failure Recovery**: The system could crash mid-submission, leaving some waste records updated and others not
+4. **Data Consistency**: Users need to see consistent data, but full atomic transactions are not practical
+5. **Performance**: Processing 15,000 records must complete in reasonable time
+6. **Idempotency**: Retrying a failed submission must not create duplicate versions
 
 ### Scale Constraints
 
@@ -28,20 +29,82 @@ This operation presents several challenges:
 
 ### Acceptable Trade-offs
 
+- **Last upload wins**: Only one unsubmitted summary log per organisation/registration at a time. New uploads supersede previous unsubmitted ones.
 - **Partial visibility is acceptable**: Users can see updates in progress via the summary log "submitting" status
 - **Eventual consistency is acceptable**: Brief periods where some waste records are updated before others
 - **Forward recovery preferred**: On failure, complete the submission rather than roll back
 
+### Key Constraint
+
+**One unsubmitted summary log per organisation/registration**: The system enforces that only one summary log in an unsubmitted state (`validated`, `validating`, `preprocessing`) can exist for a given organisation/registration pair at any time. When a new summary log is uploaded:
+
+1. Any existing unsubmitted summary logs for that org/reg are superseded
+2. The new upload becomes the current unsubmitted summary log
+3. On submit, the system verifies the summary log ID matches the current one for that org/reg
+
+This constraint eliminates stale preview issues: if another summary log is uploaded while a user views a preview, their submit will fail with a clear message that a newer upload exists.
+
 ## Decision
 
-We will implement a **multi-layered strategy** combining optimistic locking, idempotent operations, batch processing, and forward recovery:
+We will implement a **multi-layered strategy** combining org/reg level constraints, optimistic locking, two-phase workflow (validate/preview then submit), idempotent operations, batch processing, and forward recovery:
 
-### 1. Summary Log Status-Based Lock (Optimistic Concurrency)
+### 1. Organisation/Registration Level Constraint (Prevents Stale Previews)
 
-Use the summary log's `status` field and `version` field as an optimistic lock to prevent concurrent submissions:
+Enforce that only one unsubmitted summary log can exist per organisation/registration pair:
+
+**On Upload:**
 
 ```javascript
-async transitionToSubmitting(summaryLogId, expectedVersion) {
+async createSummaryLog(organisationId, registrationId, fileUri) {
+  // Supersede any existing unsubmitted summary logs for this org/reg
+  await db.collection('epr-summary-logs').updateMany(
+    {
+      organisationId,
+      registrationId,
+      status: { $in: ['preprocessing', 'validating', 'validated'] }
+    },
+    {
+      $set: {
+        status: 'superseded',
+        supersededAt: new Date(),
+        supersededReason: 'Newer summary log uploaded'
+      }
+    }
+  )
+
+  // Create new summary log
+  const summaryLog = {
+    organisationId,
+    registrationId,
+    status: 'preprocessing',
+    file: { uri: fileUri },
+    createdAt: new Date(),
+    version: 0
+  }
+
+  const result = await db.collection('epr-summary-logs').insertOne(summaryLog)
+  return { ...summaryLog, id: result.insertedId.toHexString() }
+}
+```
+
+**On Submit (Validation Check):**
+
+```javascript
+async transitionToSubmitting(summaryLogId, organisationId, registrationId, expectedVersion) {
+  // Verify this is still the current unsubmitted summary log for org/reg
+  const current = await db.collection('epr-summary-logs').findOne({
+    organisationId,
+    registrationId,
+    status: 'validated'
+  })
+
+  if (!current || current._id.toHexString() !== summaryLogId) {
+    throw Boom.conflict(
+      'A newer summary log has been uploaded. Please review the latest upload.'
+    )
+  }
+
+  // Transition to submitting
   const result = await db.collection('epr-summary-logs').findOneAndUpdate(
     {
       _id: ObjectId.createFromHexString(summaryLogId),
@@ -66,7 +129,13 @@ async transitionToSubmitting(summaryLogId, expectedVersion) {
 }
 ```
 
-**Rationale**: Atomic check-and-set operation prevents race conditions without separate locking infrastructure.
+**Rationale**:
+
+- Last upload wins - simpler mental model for users
+- Eliminates stale preview problem entirely
+- No preview can become outdated (new upload supersedes old one)
+- Clear error message if user attempts to submit superseded summary log
+- Atomic operations ensure constraint is enforced reliably
 
 ### 2. Repository Port Design
 
@@ -97,44 +166,151 @@ Where `versionsByKey` is a `Map<string, VersionAppend>` keyed by `"type:rowId"`,
 - Single Map parameter groups all updates for one org/registration batch
 - Map key `"type:rowId"` handles multiple waste record types in one summary log
 
-### 3. Application Layer Processing
+### 3. Validation Phase (Calculate Preview Statistics)
 
-The application layer orchestrates the submission workflow:
+During validation, the system calculates preview statistics for the user to review:
+
+```javascript
+async validateSummaryLog(summaryLogId) {
+  // Get the summary log (status: 'validating')
+  const summaryLog = await summaryLogsRepo.findById(summaryLogId)
+
+  // 1. Extract and parse the summary log file
+  const parsedData = await summaryLogExtractor.extract(summaryLog)
+
+  // 2. Validate the parsed data against business rules
+  const validationErrors = await validateParsedData(parsedData)
+
+  if (validationErrors.length > 0) {
+    // Mark as invalid with errors
+    await summaryLogsRepo.update(summaryLogId, {
+      status: 'invalid',
+      validationErrors
+    })
+    return
+  }
+
+  // 3. Read ALL existing waste records for this org/registration (one query)
+  const existingRecords = await wasteRecordsRepo.findByRegistration(
+    summaryLog.organisationId,
+    summaryLog.registrationId
+  )
+
+  // 4. Build lookup Map
+  const existingByKey = new Map(
+    existingRecords.map(r => [`${r.type}:${r.rowId}`, r])
+  )
+
+  // 5. Transform summary log data, calculating deltas
+  // Uses validatedAt timestamp for determinism
+  const wasteRecords = transformFromSummaryLog(
+    parsedData,
+    {
+      summaryLog: { id: summaryLog.id, uri: summaryLog.file.uri },
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      accreditationId: summaryLog.accreditationId,
+      versionTimestamp: new Date() // Will be stored as validatedAt
+    },
+    existingByKey
+  )
+
+  // 6. Calculate summary statistics
+  const stats = {
+    created: 0,
+    updated: 0,
+    unchanged: 0
+  }
+
+  for (const record of wasteRecords) {
+    const lastVersion = record.versions[record.versions.length - 1]
+    if (lastVersion.summaryLog.id === summaryLog.id) {
+      if (lastVersion.status === 'CREATED') {
+        stats.created++
+      } else if (lastVersion.status === 'UPDATED') {
+        stats.updated++
+      }
+    } else {
+      stats.unchanged++
+    }
+  }
+
+  // 7. Mark as validated with preview stats
+  await summaryLogsRepo.update(summaryLogId, {
+    status: 'validated',
+    validatedAt: new Date(),
+    previewStats: stats
+  })
+}
+```
+
+**Rationale**:
+
+- Preview calculation happens during validation workflow
+- Summary stats stored in summary log document (small, well within 16MB limit)
+- Uses `validatedAt` timestamp for version creation to enable deterministic recalculation on submit
+- Full waste records not stored (would exceed 16MB limit for 15k records)
+- User views preview page which simply displays the stored `previewStats`
+
+### 4. Submission Phase (Persist Changes)
+
+After user confirms the preview, the application layer orchestrates the submission workflow:
 
 ```javascript
 async submitSummaryLog(organisationId, registrationId, summaryLogId) {
-  // 1. Acquire lock via summary log status transition
-  const summaryLog = await summaryLogsRepo.transitionToSubmitting(summaryLogId, version)
+  // 1. Verify summary log is still current and transition to submitting
+  const summaryLog = await summaryLogsRepo.transitionToSubmitting(
+    summaryLogId,
+    organisationId,
+    registrationId,
+    version
+  )
 
   try {
-    // 2. Read ALL existing waste records for this org/registration (one query)
+    // 2. Extract and parse the summary log file (same as validation)
+    const parsedData = await summaryLogExtractor.extract(summaryLog)
+
+    // 3. Read ALL existing waste records for this org/registration (one query)
     const existingRecords = await wasteRecordsRepo.findByRegistration(
       organisationId,
       registrationId
     )
 
-    // 3. Build lookup Map
+    // 4. Build lookup Map
     const existingByKey = new Map(
       existingRecords.map(r => [`${r.type}:${r.rowId}`, r])
     )
 
-    // 4. Transform summary log data, calculating deltas
+    // 5. Transform summary log data using SAME timestamp as validation
+    // This produces identical versions to what user saw in preview
+    const wasteRecords = transformFromSummaryLog(
+      parsedData,
+      {
+        summaryLog: { id: summaryLog.id, uri: summaryLog.file.uri },
+        organisationId,
+        registrationId,
+        accreditationId,
+        versionTimestamp: summaryLog.validatedAt  // Deterministic!
+      },
+      existingByKey
+    )
+
+    // 6. Build versionsByKey Map for repository
     const versionsByKey = new Map()
-    for (const row of summaryLogRows) {
-      const key = `${row.type}:${row.rowId}`
-      const existing = existingByKey.get(key)
+    for (const record of wasteRecords) {
+      const lastVersion = record.versions[record.versions.length - 1]
 
-      // Calculate delta, determine status (CREATED vs UPDATED)
-      const version = buildVersion(row, existing, summaryLog)
-      const currentData = row.data
-
-      // Check idempotency: skip if this summaryLog.id already in versions
-      if (!existing?.versions.some(v => v.summaryLog.id === summaryLog.id)) {
-        versionsByKey.set(key, { version, currentData })
+      // Only append if this summary log added a new version
+      if (lastVersion.summaryLog.id === summaryLog.id) {
+        const key = `${record.type}:${record.rowId}`
+        versionsByKey.set(key, {
+          version: lastVersion,
+          currentData: record.data
+        })
       }
     }
 
-    // 5. Append all versions in one call
+    // 7. Append all versions in one call
     await wasteRecordsRepo.appendVersions(
       organisationId,
       registrationId,
@@ -142,7 +318,7 @@ async submitSummaryLog(organisationId, registrationId, summaryLogId) {
       versionsByKey
     )
 
-    // 6. Mark as completed
+    // 8. Mark as completed
     await summaryLogsRepo.markAsSubmitted(summaryLogId)
   } catch (error) {
     // Leave in 'submitting' state for recovery
@@ -153,13 +329,15 @@ async submitSummaryLog(organisationId, registrationId, summaryLogId) {
 
 **Rationale**:
 
-- Single read of all existing records (efficient bulk query)
+- Verifies summary log is still current for org/reg before starting (prevents stale submissions)
+- Recalculates transformations using same `validatedAt` timestamp as validation phase
+- Org/reg constraint ensures waste records may have changed but preview stats are still accurate
+- Produces identical versions to what user saw in preview (deterministic)
 - Application layer owns business logic (delta calculation, status determination)
-- Idempotency check in application layer (can skip unnecessary writes)
 - Repository receives clean instructions: "append these versions"
 - If processing 15k records becomes a memory concern, this can be batched
 
-### 4. MongoDB Adapter Implementation
+### 5. MongoDB Adapter Implementation
 
 The waste records MongoDB adapter implements `appendVersions`:
 
@@ -220,7 +398,7 @@ const performAppendVersions =
 - `ordered: false`: Continues processing if one operation fails
 - No explicit idempotency check (application layer already filtered)
 
-### 5. Forward Recovery via Background Job
+### 6. Forward Recovery via Background Job
 
 A background job runs periodically (e.g., every minute) to detect and recover stuck submissions:
 
@@ -228,53 +406,90 @@ A background job runs periodically (e.g., every minute) to detect and recover st
 async recoverStuckSubmissions() {
   const STUCK_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes
 
-  const stuckLogs = await summaryLogsRepo.find({
+  // Recover stuck submissions - complete the submission
+  const stuckSubmissions = await summaryLogsRepo.find({
     status: 'submitting',
     submissionStartedAt: { $lt: new Date(Date.now() - STUCK_THRESHOLD_MS) }
   })
 
-  for (const log of stuckLogs) {
-    // Re-run submission - idempotency handles partial completion
-    await submitSummaryLog(log.organisationId, log.registrationId, log.id)
+  for (const log of stuckSubmissions) {
+    try {
+      // Re-run submission - idempotency handles partial completion
+      await submitSummaryLog(log.organisationId, log.registrationId, log.id)
+    } catch (error) {
+      // If this summary log has been superseded, mark it and continue
+      if (error.message.includes('newer summary log')) {
+        await summaryLogsRepo.update(log.id, {
+          status: 'superseded',
+          supersededAt: new Date(),
+          supersededReason: 'Superseded during recovery'
+        })
+      } else {
+        // Log and alert for other errors
+        logger.error({ error, summaryLogId: log.id }, 'Failed to recover stuck submission')
+      }
+    }
   }
 }
 ```
 
-**Rationale**: Simple forward recovery leverages idempotency. No need to track partial progress or implement rollback logic.
+**Rationale**:
+
+- Stuck submissions use forward recovery leveraging idempotency
+- Handles case where summary log was superseded during submission
+- No need to track partial progress or implement rollback logic
+- Stuck validations don't need recovery (they're just background jobs that can restart)
 
 ## Consequences
 
 ### Positive
 
+- **No stale previews**: Org/reg constraint ensures preview is always for current unsubmitted summary log
+- **Simple mental model**: Last upload wins - easy for users to understand
+- **User confirmation**: Preview during validation allows users to review changes before committing
 - **Handles large scale**: Efficiently processes up to 15,000+ waste records
-- **Prevents concurrent conflicts**: Optimistic lock on summary log prevents race conditions
+- **Prevents race conditions**: Org/reg constraint + optimistic locking on summary log status
+- **Deterministic recalculation**: Using `validatedAt` timestamp ensures submitted versions match preview
 - **Crash-safe**: Idempotency allows safe retry after partial failure
 - **No transactions required**: Works within MongoDB's practical limits
 - **Forward recovery**: Simple, predictable recovery mechanism
-- **Performance**: Minimal database round-trips
-  - Estimated time for 15k records: 10-30 seconds
-  - Database operations: 1 bulk read (all existing records) + 1 bulk write (all version appends) = 2 ops total
+- **Performance**: Minimal database round-trips per phase
+  - Validation: 1 bulk read (existing records) + calculation + store stats
+  - Submit: 1 bulk read (existing records) + 1 bulk write (all version appends)
+  - Estimated time for 15k records: 10-30 seconds per phase
   - Application memory: Holds all records in memory during processing (manageable for 15k records)
 
 ### Negative
 
+- **Last upload wins**: Users who are reviewing a preview will get an error if someone uploads a newer summary log
+  - Trade-off: Simpler than allowing multiple concurrent previews and dealing with merge conflicts
+  - Clear error message guides user to review the newer upload
+- **Two-phase overhead**: Calculates transformations twice (validation + submit)
+  - Trade-off: User confidence and confirmation outweighs computational cost
+  - Org/reg constraint prevents wasted work (only one summary log being worked on at a time)
 - **Memory usage**: Application holds all existing records in memory during processing
   - For 15k records: acceptable on modern infrastructure
   - If this becomes a constraint, can batch the Map building and writes
 - **Application complexity**: Delta calculation and status logic in application layer
   - Trade-off: simpler repository, clearer separation of concerns
 - **Recovery delay**: Stuck submissions detected after 5 minutes
+  - Forward recovery completes them
   - Acceptable trade-off vs. immediate detection complexity
 
 ### Implementation Notes
 
-1. The `submissionStartedAt` timestamp on the summary log enables stuck submission detection
-2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
-3. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
-4. Map key format `"type:rowId"` naturally groups versions by waste record
-5. The recovery job should include alerting if submissions repeatedly fail
-6. The recovery job should use exponential backoff if a submission continues to fail
-7. If memory usage becomes a concern with >15k records, batch the Map building and multiple `appendVersions` calls
+1. The `validatedAt` timestamp enables deterministic version creation (same versions in preview and submit)
+2. The `submissionStartedAt` timestamp on the summary log enables stuck submission detection
+3. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
+4. Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
+5. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
+6. Map key format `"type:rowId"` naturally groups versions by waste record
+7. The recovery job should include alerting if operations repeatedly fail
+8. The recovery job should use exponential backoff if an operation continues to fail
+9. New uploads must supersede existing unsubmitted summary logs for the same org/reg
+10. Submit must verify the summary log is still current before processing
+11. The `superseded` status is a terminal state (no further transitions allowed)
+12. If memory usage becomes a concern with >15k records, batch the Map building and multiple `appendVersions` calls
 
 ### Future Considerations
 
