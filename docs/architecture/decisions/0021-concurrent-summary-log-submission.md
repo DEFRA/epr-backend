@@ -73,7 +73,7 @@ async transitionToSubmitting(summaryLogId, expectedVersion) {
 Each version in a waste record's version history includes `summaryLog.id`. Before applying updates, check if the summary log has already been processed:
 
 ```javascript
-// Read existing records in bulk (per batch of 100)
+// Read existing records in bulk (per batch)
 const existingRecords = await db.collection('epr-waste-records')
   .find({ _compositeKey: { $in: compositeKeys } })
   .toArray()
@@ -95,10 +95,10 @@ if (versionExists) {
 
 ### 3. Batch Processing
 
-Process waste records in batches of 100:
+Process waste records in batches to manage memory and provide progress visibility:
 
 ```javascript
-const BATCH_SIZE = 100
+const BATCH_SIZE = 100 // Example size - tune based on record size and performance
 
 for (let i = 0; i < wasteRecords.length; i += BATCH_SIZE) {
   const batch = wasteRecords.slice(i, i + BATCH_SIZE)
@@ -120,16 +120,17 @@ for (let i = 0; i < wasteRecords.length; i += BATCH_SIZE) {
 - Limits memory usage
 - Provides progress visibility
 - Reduces blast radius of transient failures
-- Bulk read operation per batch (1 query per 100 records) is efficient
+- Bulk read operation per batch is efficient
+- Batch size should be tuned based on actual record sizes and database performance
 
-### 4. Modified MongoDB Adapter
+### 4. MongoDB Adapter Implementation
 
-The waste records MongoDB adapter is modified to:
+The waste records MongoDB adapter implements idempotent upserts:
 
-1. Read existing records for the batch in a single query
-2. Check each record for version idempotency
-3. Merge existing versions with new version
-4. Use `bulkWrite` with upsert for efficient updates
+1. Reads existing records for the batch in a single query
+2. Checks each record for version idempotency
+3. Merges existing versions with new version
+4. Uses `bulkWrite` with upsert for efficient updates
 
 ```javascript
 const performUpsertWasteRecords = (db) => async (wasteRecords) => {
@@ -206,14 +207,14 @@ async recoverStuckSubmissions() {
 - **Forward recovery**: Simple, predictable recovery mechanism
 - **Performance**: Bulk operations minimize database round-trips
   - Estimated time for 15k records: 30-60 seconds
-  - Database operations: ~150 read queries + ~150 bulk writes = 300 ops total
+  - Database operations: With batch size of 100, approximately 150 read queries + 150 bulk writes = 300 ops total
 
 ### Negative
 
 - **Eventual consistency**: Brief period where waste records are partially updated
   - Mitigated by showing "submitting" status to users
 - **Read overhead**: Must read existing records before update to check idempotency
-  - Mitigated by bulk reads (1 query per 100 records)
+  - Mitigated by bulk reads (one query per batch)
 - **Complexity**: Multiple components (lock, idempotency, batching, recovery) must work together
 - **Recovery delay**: Stuck submissions detected after 5 minutes
   - Acceptable trade-off vs. immediate detection complexity
