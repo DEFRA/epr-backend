@@ -9,74 +9,53 @@ export { VALIDATION_SEVERITY, VALIDATION_CATEGORY }
  * Represents a single validation issue
  *
  * @typedef {Object} ValidationIssue
- * @property {string} severity - One of VALIDATION_SEVERITY
- * @property {string} category - One of VALIDATION_CATEGORY
- * @property {string} message - Human-readable description of the issue (for developers/logging)
- * @property {string} [code] - Specific error code for i18n/translation mapping
+ * @property {string} severity - One of VALIDATION_SEVERITY (fatal, error, warning)
+ * @property {string} category - One of VALIDATION_CATEGORY (technical, business, parsing)
+ * @property {string} message - Human-readable description for developers/logging (not sent to clients)
+ * @property {string} code - Specific error code for i18n/translation (e.g., 'MISSING_REQUIRED_HEADER')
  * @property {Object} [context] - Additional context about the issue
- * @property {string} [context.path] - JSON path to the field that failed validation (e.g., 'meta.REGISTRATION')
- * @property {Object} [context.location] - Spreadsheet location information (sheet, row, column)
- * @property {*} [context.expected] - The expected value
- * @property {*} [context.actual] - The actual value that was provided
- * @property {number} [context.row] - Row number where issue occurred
- * @property {string} [context.field] - Field/cell name
- * @property {string} [context.section] - Section of the document
- * @property {*} [context.value] - The problematic value
- * @property {string} [context.reason] - Additional reason/explanation
- */
-
-/**
- * Builds a source pointer path from context information
+ * @property {Object} [context.location] - Spreadsheet location information
+ * @property {string} [context.location.sheet] - Sheet name (e.g., 'Cover', 'Received')
+ * @property {string} [context.location.table] - Data table name (e.g., 'UPDATE_WASTE_BALANCE')
+ * @property {number} [context.location.row] - Spreadsheet row number (1-based)
+ * @property {string} [context.location.column] - Excel column letter (e.g., 'B', 'AA')
+ * @property {string} [context.location.field] - Meta field name (e.g., 'REGISTRATION', 'MATERIAL')
+ * @property {string} [context.location.header] - Data table column header (e.g., 'DATE_RECEIVED', 'TONNAGE')
+ * @property {*} [context.expected] - The expected value (for mismatch errors)
+ * @property {*} [context.actual] - The actual value that was provided (for validation errors)
  *
- * Handles both flat and nested field paths:
- * - 'SITE_NAME' → '/data/SITE_NAME'
- * - 'meta.WASTE_REGISTRATION_NUMBER' → '/data/meta/WASTE_REGISTRATION_NUMBER'
- * - Row 5, 'SITE_NAME' → '/data/rows/4/SITE_NAME'
- *
- * @param {Object} context - Issue context
- * @returns {string|null} Source pointer or null if no location info
+ * Note: All other context fields are preserved and copied to HTTP response meta.
+ * See ADR 0020 for HTTP response format mapping.
  */
-const buildSourcePointer = (context) => {
-  const parts = []
-
-  if (context.row !== undefined || context.field !== undefined) {
-    parts.push('/data')
-  }
-
-  if (context.row !== undefined) {
-    parts.push(`rows/${context.row - 1}`)
-  }
-
-  if (context.field) {
-    const fieldParts = context.field.split('.')
-    parts.push(...fieldParts)
-  }
-
-  return parts.length > 0 ? parts.join('/') : null
-}
 
 /**
  * Converts a validation issue to an error object suitable for HTTP responses
  *
+ * Follows the format defined in ADR 0020: Summary Log Validation Output Formats
+ *
  * @param {ValidationIssue} issue - The validation issue
- * @returns {Object} Error object with code, source, and meta
+ * @returns {Object} Error object with type and meta
+ *
+ * @example
+ * const httpIssues = summaryLog.validation.issues.map(issueToErrorObject)
  */
-const issueToErrorObject = (issue) => {
+export const issueToErrorObject = (issue) => {
   const errorObj = {
-    code:
-      issue.code ||
-      `${issue.category.toUpperCase()}_${issue.severity.toUpperCase()}`
+    type: `${issue.category.toUpperCase()}_${issue.severity.toUpperCase()}`
   }
 
   if (issue.context) {
-    const pointer = buildSourcePointer(issue.context)
-    if (pointer) {
-      errorObj.source = { pointer }
-    }
-  }
+    const meta = {}
 
-  if (issue.context && Object.keys(issue.context).length > 0) {
-    errorObj.meta = { ...issue.context }
+    for (const [key, value] of Object.entries(issue.context)) {
+      if (value !== undefined) {
+        meta[key] = value
+      }
+    }
+
+    if (Object.keys(meta).length > 0) {
+      errorObj.meta = meta
+    }
   }
 
   return errorObj
@@ -90,23 +69,28 @@ const issueToErrorObject = (issue) => {
  * @returns {Object} Methods for adding issues
  */
 const createIssueAdders = (issues, result) => {
-  const addIssue = (severity, category, message, context = {}, code = null) => {
-    const issue = { severity, category, message, context }
-    if (code) {
-      issue.code = code
+  const addIssue = (severity, category, message, code, context = {}) => {
+    if (!code) {
+      throw new Error('Validation issue code is required')
     }
+    const issue = { severity, category, message, code }
+
+    if (context && Object.keys(context).length > 0) {
+      issue.context = context
+    }
+
     issues.push(issue)
     return result
   }
 
   return {
     addIssue,
-    addFatal: (category, message, context, code) =>
-      addIssue(VALIDATION_SEVERITY.FATAL, category, message, context, code),
-    addError: (category, message, context, code) =>
-      addIssue(VALIDATION_SEVERITY.ERROR, category, message, context, code),
-    addWarning: (category, message, context, code) =>
-      addIssue(VALIDATION_SEVERITY.WARNING, category, message, context, code)
+    addFatal: (category, message, code, context = {}) =>
+      addIssue(VALIDATION_SEVERITY.FATAL, category, message, code, context),
+    addError: (category, message, code, context = {}) =>
+      addIssue(VALIDATION_SEVERITY.ERROR, category, message, code, context),
+    addWarning: (category, message, code, context = {}) =>
+      addIssue(VALIDATION_SEVERITY.WARNING, category, message, code, context)
   }
 }
 
@@ -125,15 +109,19 @@ const createIssueQueries = (issues) => {
 
   const getIssuesByRow = () => {
     const byRow = new Map()
+
     for (const issue of issues) {
-      if (issue.context?.row !== undefined) {
-        const row = issue.context.row
+      const row = issue.context?.location?.row
+
+      if (row !== undefined) {
         if (!byRow.has(row)) {
           byRow.set(row, [])
         }
+
         byRow.get(row).push(issue)
       }
     }
+
     return byRow
   }
 
@@ -205,41 +193,6 @@ const generateSummaryMessage = (counts) => {
 }
 
 /**
- * Generates summary metadata for validation issues
- *
- * @param {ValidationIssue[]} issues - The issues array
- * @param {Object} counts - Issue counts by severity
- * @returns {Object} Summary metadata including row statistics
- */
-const generateSummaryMetadata = (issues, counts) => {
-  const issuesByRow = new Map()
-
-  for (const issue of issues) {
-    if (issue.context?.row !== undefined) {
-      const row = issue.context.row
-      if (!issuesByRow.has(row)) {
-        issuesByRow.set(row, [])
-      }
-      issuesByRow.get(row).push(issue)
-    }
-  }
-
-  const rowNumbers = Array.from(issuesByRow.keys()).sort((a, b) => a - b)
-
-  return {
-    totalIssues: counts.total,
-    issuesBySeverity: {
-      fatal: counts.fatal,
-      error: counts.error,
-      warning: counts.warning
-    },
-    rowsWithIssues: issuesByRow.size,
-    firstIssueRow: rowNumbers.length > 0 ? rowNumbers[0] : null,
-    lastIssueRow: rowNumbers.length > 0 ? rowNumbers.at(-1) : null
-  }
-}
-
-/**
  * Creates methods for transforming validation issues
  *
  * @param {ValidationIssue[]} issues - The issues array
@@ -261,11 +214,6 @@ const createIssueTransformers = (
     return generateSummaryMessage(counts)
   }
 
-  const getSummaryMetadata = () => {
-    const counts = getCounts()
-    return generateSummaryMetadata(issues, counts)
-  }
-
   const merge = (otherIssues) => {
     if (!otherIssues || typeof otherIssues.getAllIssues !== 'function') {
       throw new TypeError('Can only merge validation issues objects')
@@ -275,8 +223,8 @@ const createIssueTransformers = (
         issue.severity,
         issue.category,
         issue.message,
-        issue.context,
-        issue.code
+        issue.code,
+        issue.context
       )
     }
     return result
@@ -286,9 +234,8 @@ const createIssueTransformers = (
     merge,
     getCounts,
     getSummary,
-    getSummaryMetadata,
     toErrorResponse: () => ({
-      errors: issues.map((issue) => issueToErrorObject(issue))
+      issues: issues.map((issue) => issueToErrorObject(issue))
     })
   }
 }

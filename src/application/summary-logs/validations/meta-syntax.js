@@ -30,15 +30,16 @@ export const validateMetaSyntax = ({ parsed }) => {
   if (error) {
     for (const detail of error.details) {
       const fieldName = detail.path[0]
-      const location = metaLocations[fieldName]
-        ? { ...metaLocations[fieldName] }
-        : undefined
+      const location = {
+        ...metaLocations[fieldName],
+        field: fieldName
+      }
 
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
         `Invalid meta field '${fieldName}': ${detail.message}`,
+        'INVALID_META_FIELD',
         {
-          path: `meta.${fieldName}`,
           location,
           actual: metaValues[fieldName]
         }

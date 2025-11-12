@@ -44,11 +44,11 @@ Store validation results in the summary log document with the following structur
         "code": "MISSING_REQUIRED_FIELD",
         "message": "Invalid meta field 'REGISTRATION': is required",
         "context": {
-          "path": "meta.REGISTRATION",
           "location": {
             "sheet": "Cover",
             "row": 12,
-            "column": "F"
+            "column": "F",
+            "field": "REGISTRATION"
           }
         }
       }
@@ -77,45 +77,57 @@ Store validation results in the summary log document with the following structur
 
 **Context structure varies by error type:**
 
-For missing fields:
+For meta field errors (missing or invalid):
 
 ```javascript
 {
-  "path": "meta.REGISTRATION",
-  "location": { "sheet": "Cover", "row": 12, "column": "F" }
+  "location": {
+    "sheet": "Cover",
+    "row": 12,
+    "column": "F",
+    "field": "REGISTRATION"
+  }
 }
 ```
 
-For value mismatches:
+For meta field value mismatches:
 
 ```javascript
 {
-  "path": "meta.MATERIAL",
-  "location": { "sheet": "Cover", "row": 8, "column": "B" },
+  "location": {
+    "sheet": "Cover",
+    "row": 8,
+    "column": "B",
+    "field": "MATERIAL"
+  },
   "expected": "Plastic",
   "actual": "Aluminium"
 }
 ```
 
-For row-level errors:
+For data row errors:
 
 ```javascript
 {
-  "path": "data.UPDATE_WASTE_BALANCE.rows[0][1]",
   "location": {
-    "sheet": "Reprocessed",
+    "sheet": "Received",
+    "table": "UPDATE_WASTE_BALANCE",
+    "row": 9,
+    "column": "D",
     "header": "DATE_RECEIVED"
   }
 }
 ```
 
-For calculation errors:
+For data row value mismatches:
 
 ```javascript
 {
-  "path": "data.UPDATE_WASTE_BALANCE.rows[0][12]",
   "location": {
     "sheet": "Received",
+    "table": "UPDATE_WASTE_BALANCE",
+    "row": 15,
+    "column": "M",
     "header": "TONNAGE_RECEIVED_FOR_EXPORT"
   },
   "actual": 123.45,
@@ -123,75 +135,128 @@ For calculation errors:
 }
 ```
 
+**Location structure:**
+
+- `sheet` - The worksheet name (e.g., "Cover", "Received")
+- `table` - The data table name (e.g., "UPDATE_WASTE_BALANCE") - only for data rows, not meta fields
+- `row` - The 1-based row number in the spreadsheet
+- `column` - The Excel column letter (e.g., "B", "AA")
+- `field` - Used for meta fields (e.g., "PROCESSING_TYPE", "REGISTRATION")
+- `header` - Used for data table columns (e.g., "TONNAGE", "DATE_RECEIVED")
+
+All location information is grouped together for clarity and to avoid duplication. The `path` field is no longer used as it was internal-only and not surfaced to clients.
+
 ### 2. HTTP Response Format
 
-Map domain validation results to a standardized HTTP response format that are loosely based on [JSON:API error objects](https://jsonapi.org/examples/#error-objects).
+The HTTP response uses a **table-keyed structure** that groups validation issues by their nature and location:
 
-For invalid submissions (FATAL errors):
+- **`failures`** - Array of fatal meta-level errors that block submission (XOR with concerns)
+- **`concerns`** - Object with table-keyed row-level errors and warnings (XOR with failures)
 
-```javascript
-{
-  "issues": [
-    {
-      "code": "MISSING_REQUIRED_FIELD",
-      "source": {
-        "pointer": "/meta/REGISTRATION"
-      },
-      "meta": {
-        "type": "TECHNICAL_ERROR",
-        "sheet": "Cover",
-        "row": 12,
-        "column": "F"
-      }
-    }
-  ]
-}
-```
-
-For validated submissions (no FATAL errors, may have ERROR/WARNING):
+For invalid submissions (FATAL errors - meta-level validation failures):
 
 ```javascript
 {
-  "issues": [
-    {
-      "code": "MISSING_REQUIRED_FIELD",
-      "source": {
-        "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/1"
-      },
-      "meta": {
-        "type": "TECHNICAL_ERROR",
-        "sheet": "Received",
-        "header": "DATE_RECEIVED"
+  "status": "invalid",
+  "validation": {
+    "failures": [
+      {
+        "code": "MISSING_REQUIRED_FIELD",
+        "location": {
+          "sheet": "Cover",
+          "row": 12,
+          "column": "F",
+          "field": "REGISTRATION"
+        }
       }
-    },
-    {
-      "code": "CALCULATION_FAILURE",
-      "source": {
-        "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/12"
-      },
-      "meta": {
-        "type": "BUSINESS_ERROR",
-        "sheet": "Received",
-        "header": "TONNAGE_RECEIVED_FOR_EXPORT",
-        "actual": 123.45,
-        "expected": 234.56
-      }
-    }
-  ]
+    ],
+    "concerns": {}  // Empty when fatal errors present
+  },
+  "failureReason": "Invalid meta field 'REGISTRATION': is required"
 }
 ```
 
-**Mapping rules:**
+For validated submissions (no FATAL errors, may have data-level ERROR/WARNING):
 
-| Domain Field            | HTTP Field                       | Transformation                                                        |
-| ----------------------- | -------------------------------- | --------------------------------------------------------------------- |
-| `severity` + `category` | `meta.type`                      | `{severity}_{category}` (e.g., "FATAL_TECHNICAL" → "TECHNICAL_ERROR") |
-| `message`               | `title`                          | Direct copy                                                           |
-| `code`                  | `code`                           | Direct copy                                                           |
-| `context.path`          | `source.pointer`                 | Convert to JSON Pointer format (dots → slashes, prepend `/`)          |
-| `context.location`      | `meta.{sheet,row,column,header}` | Flatten location object                                               |
-| `context.expected`      | `meta.expected`                  | Direct copy (if present)                                              |
-| `context.actual`        | `meta.actual`                    | Direct copy (if present)                                              |
+```javascript
+{
+  "status": "validated",
+  "validation": {
+    "failures": [],  // Empty when no fatal errors
+    "concerns": {
+      "UPDATE_WASTE_BALANCE": {
+        "sheet": "Received",
+        "rows": [
+          {
+            "row": 8,
+            "issues": [
+              {
+                "type": "error",
+                "code": "INVALID_DATE",
+                "header": "DATE_RECEIVED",
+                "column": "B"
+              },
+              {
+                "type": "error",
+                "code": "VALUE_OUT_OF_RANGE",
+                "header": "TONNAGE_RECEIVED_FOR_EXPORT",
+                "column": "M",
+                "actual": 123.45,
+                "expected": 120.00
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
+```
+
+For submissions with no validation issues:
+
+```javascript
+{
+  "status": "validated",
+  "validation": {
+    "failures": [],
+    "concerns": {}
+  }
+}
+```
+
+**Mapping rules for fatal errors (meta-level):**
+
+| Domain Field       | HTTP Field       | Notes                                                       |
+| ------------------ | ---------------- | ----------------------------------------------------------- |
+| `code`             | `code`           | Error code (e.g., "REGISTRATION_MISMATCH")                  |
+| `context.location` | `location`       | Location object with sheet/row/column/field                 |
+| `context.actual`   | `actual`         | Included if present                                         |
+| `context.expected` | `expected`       | Included if present                                         |
+| `severity`         | _(not included)_ | Fatal errors always appear in `failures` array              |
+| `category`         | _(not included)_ | Not exposed in HTTP response                                |
+| `message`          | _(not included)_ | Used for logging and `failureReason`, not in failures array |
+
+**Mapping rules for data errors (row-level):**
+
+| Domain Field       | HTTP Field       | Notes                                                   |
+| ------------------ | ---------------- | ------------------------------------------------------- |
+| `severity`         | `type`           | "error" for ERROR severity, "warning" for WARNING       |
+| `code`             | `code`           | Error code (e.g., "INVALID_DATE", "VALUE_OUT_OF_RANGE") |
+| `context.location` | Grouped by       | `table` → top-level key, `sheet` → table property,      |
+|                    | location         | `row` → row grouping, `header`+`column` → issue fields  |
+| `context.actual`   | `actual`         | Included if present                                     |
+| `context.expected` | `expected`       | Included if present                                     |
+| `category`         | _(not included)_ | Not exposed in HTTP response                            |
+| `message`          | _(not included)_ | Used for logging, not sent to clients                   |
+
+**Key design principles:**
+
+1. **XOR structure**: Either `failures` (fatal) OR `concerns` (data), never both
+2. **Table-keyed**: Data issues grouped by table name for easier client navigation
+3. **Row-grouped**: Issues within a table grouped by row number
+4. **Minimal**: Only essential fields exposed (`code`, `type`, location, actual/expected)
+5. **Client-friendly**: Structure matches how users think about spreadsheet errors
 
 ## Rationale
 
@@ -206,11 +271,11 @@ For validated submissions (no FATAL errors, may have ERROR/WARNING):
 
 **HTTP format:**
 
-- Optimized for client consumption
-- Follows JSON:API conventions for familiarity
-- Uses JSON Pointer for source references (standard format)
-- Flattens nested structures for easier client parsing
-- Hides internal categorization details (severity + category → type)
+- Optimized for client consumption (spreadsheet users)
+- Uses spreadsheet location references (sheet/row/column) directly
+- Preserves structured context (e.g., nested location object)
+- Combines severity + category into a single type field for classification
+- Excludes internal implementation details (no JSON paths exposed)
 
 ### Why Store validationResult in Database?
 
@@ -219,34 +284,54 @@ For validated submissions (no FATAL errors, may have ERROR/WARNING):
 3. **Reprocessing** - Can re-evaluate business rules without re-parsing spreadsheet
 4. **Client polling** - GET endpoint needs access to validation results
 
-### Why JSON:API-Inspired Format?
-
-1. **Industry standard** - Developers are familiar with JSON:API error format
-2. **Consistent structure** - All errors follow same shape
-3. **Rich context** - `source` and `meta` provide flexible error details
-4. **Tooling support** - Many client libraries understand JSON:API
-
-### Why Include Error Codes?
+### Error Codes for Internationalization
 
 The `code` field enables **internationalization (i18n)** and consistent error handling:
 
 1. **Client-side localization** - Clients can map error codes to translated messages in the user's language
 2. **Consistent identification** - Same error type always has the same code, regardless of message wording
 3. **Custom messaging** - Clients can provide context-specific error messages based on codes
-4. **Error handling** - Programmatic handling of specific error types (e.g., retry on `CALCULATION_FAILURE`)
+4. **Error handling** - Programmatic handling of specific error types (e.g., retry on specific validation failures)
 
-Example i18n usage:
+**Implemented Error Codes:**
+
+Meta-level validation:
+
+- `VALIDATION_FAILED` - General validation failure
+- `REGISTRATION_MISMATCH` - Registration number doesn't match
+- `PROCESSING_TYPE_MISMATCH` - Processing type doesn't match registration
+- `UNEXPECTED_PROCESSING_TYPE` - Unrecognized processing type value
+- `MISSING_ACCREDITATION_NUMBER` - Missing required accreditation
+- `ACCREDITATION_MISMATCH` - Accreditation doesn't match registration
+- `UNEXPECTED_ACCREDITATION_NUMBER` - Unexpected accreditation present
+- `UNEXPECTED_MATERIAL` - Unrecognized material type
+- `MATERIAL_MISMATCH` - Material doesn't match registration
+- `INVALID_META_FIELD` - Invalid or missing meta field
+
+Data-level validation:
+
+- `MISSING_REQUIRED_HEADER` - Required table header is missing
+- `FIELD_REQUIRED` - Required cell value is missing (Joi 'any.required')
+- `INVALID_TYPE` - Cell value has wrong type (Joi 'number.base', 'string.base')
+- `VALUE_OUT_OF_RANGE` - Cell value outside valid range (Joi 'number.min', 'number.max', 'number.greater', 'number.less')
+- `INVALID_FORMAT` - Cell value doesn't match required pattern (Joi 'string.pattern.base')
+- `INVALID_DATE` - Cell value is not a valid date (Joi 'date.base')
+- `VALIDATION_ERROR` - Fallback for unmapped Joi error types
+
+Example client-side i18n usage:
 
 ```javascript
 // Client-side translation mapping
 const errorMessages = {
   en: {
-    MISSING_REQUIRED_FIELD: 'This field is required',
-    MATERIAL_MISMATCH: "The material type doesn't match your registration"
+    FIELD_REQUIRED: 'This field is required',
+    MATERIAL_MISMATCH: "The material type doesn't match your registration",
+    INVALID_DATE: 'Please enter a valid date'
   },
   cy: {
-    MISSING_REQUIRED_FIELD: 'Mae angen y maes hwn',
-    MATERIAL_MISMATCH: "Nid yw'r math o ddeunydd yn cyd-fynd â'ch cofrestriad"
+    FIELD_REQUIRED: 'Mae angen y maes hwn',
+    MATERIAL_MISMATCH: "Nid yw'r math o ddeunydd yn cyd-fynd â'ch cofrestriad",
+    INVALID_DATE: 'Rhowch ddyddiad dilys'
   }
 }
 ```
@@ -258,8 +343,6 @@ const errorMessages = {
 ✅ **Clear contracts** - Domain and HTTP formats are well-defined
 
 ✅ **Flexible error context** - `meta` object can include any relevant fields
-
-✅ **Client-friendly** - JSON:API format is familiar and well-documented
 
 ✅ **Queryable** - Domain format supports database queries on status, severity, category
 
@@ -287,11 +370,15 @@ const errorMessages = {
       {
         "severity": "FATAL",
         "category": "TECHNICAL",
-        "code": "INVALID_FORMAT",
+        "code": "INVALID_META_FIELD",
         "message": "Invalid meta field 'PROCESSING_TYPE': must be in SCREAMING_SNAKE_CASE format",
         "context": {
-          "path": "meta.PROCESSING_TYPE",
-          "location": { "sheet": "Cover", "row": 5, "column": "B" },
+          "location": {
+            "sheet": "Cover",
+            "row": 5,
+            "column": "B",
+            "field": "PROCESSING_TYPE"
+          },
           "actual": "reprocessor"
         }
       }
@@ -305,19 +392,22 @@ const errorMessages = {
 ```javascript
 {
   "status": "invalid",
-  "issues": [
-    {
-      "code": "INVALID_FORMAT",
-      "source": { "pointer": "/meta/PROCESSING_TYPE" },
-      "meta": {
-        "type": "TECHNICAL_FATAL",
-        "sheet": "Cover",
-        "row": 5,
-        "column": "B",
+  "validation": {
+    "failures": [
+      {
+        "code": "INVALID_META_FIELD",
+        "location": {
+          "sheet": "Cover",
+          "row": 5,
+          "column": "B",
+          "field": "PROCESSING_TYPE"
+        },
         "actual": "reprocessor"
       }
-    }
-  ]
+    ],
+    "concerns": {}
+  },
+  "failureReason": "Invalid meta field 'PROCESSING_TYPE': must be in SCREAMING_SNAKE_CASE format"
 }
 ```
 
@@ -333,23 +423,33 @@ const errorMessages = {
       {
         "severity": "ERROR",
         "category": "TECHNICAL",
-        "code": "MISSING_REQUIRED_FIELD",
-        "message": "Missing required field",
+        "code": "INVALID_DATE",
+        "message": "Invalid value in column 'DATE_RECEIVED': must be a valid date",
         "context": {
-          "path": "data.UPDATE_WASTE_BALANCE.rows[0][1]",
-          "location": { "sheet": "Reprocessed", "header": "DATE_RECEIVED" }
+          "location": {
+            "sheet": "Received",
+            "table": "UPDATE_WASTE_BALANCE",
+            "row": 8,
+            "column": "B",
+            "header": "DATE_RECEIVED"
+          },
+          "actual": "invalid-date"
         }
       },
       {
         "severity": "ERROR",
-        "category": "BUSINESS",
-        "code": "CALCULATION_ERROR",
-        "message": "Tonnage calculation differs from expected",
+        "category": "TECHNICAL",
+        "code": "VALUE_OUT_OF_RANGE",
+        "message": "Invalid value in column 'TONNAGE_RECEIVED_FOR_EXPORT': must be at least 0",
         "context": {
-          "path": "data.UPDATE_WASTE_BALANCE.rows[0][12]",
-          "location": { "sheet": "Received", "header": "TONNAGE_RECEIVED_FOR_EXPORT" },
-          "actual": 123.45,
-          "expected": 120.00
+          "location": {
+            "sheet": "Received",
+            "table": "UPDATE_WASTE_BALANCE",
+            "row": 8,
+            "column": "M",
+            "header": "TONNAGE_RECEIVED_FOR_EXPORT"
+          },
+          "actual": -10
         }
       }
     ]
@@ -362,32 +462,38 @@ const errorMessages = {
 ```javascript
 {
   "status": "validated",
-  "issues": [
-    {
-      "code": "MISSING_REQUIRED_FIELD",
-      "source": { "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/1" },
-      "meta": {
-        "type": "TECHNICAL_ERROR",
-        "sheet": "Reprocessed",
-        "header": "DATE_RECEIVED"
-      }
-    },
-    {
-      "code": "CALCULATION_ERROR",
-      "source": { "pointer": "/data/UPDATE_WASTE_BALANCE/rows/0/12" },
-      "meta": {
-        "type": "BUSINESS_ERROR",
+  "validation": {
+    "failures": [],
+    "concerns": {
+      "UPDATE_WASTE_BALANCE": {
         "sheet": "Received",
-        "header": "TONNAGE_RECEIVED_FOR_EXPORT",
-        "actual": 123.45,
-        "expected": 120.00
+        "rows": [
+          {
+            "row": 8,
+            "issues": [
+              {
+                "type": "error",
+                "code": "INVALID_DATE",
+                "header": "DATE_RECEIVED",
+                "column": "B",
+                "actual": "invalid-date"
+              },
+              {
+                "type": "error",
+                "code": "VALUE_OUT_OF_RANGE",
+                "header": "TONNAGE_RECEIVED_FOR_EXPORT",
+                "column": "M",
+                "actual": -10
+              }
+            ]
+          }
+        ]
       }
     }
-  ]
+  }
 }
 ```
 
 ## Related
 
-- [JSON:API Error Objects Specification](https://jsonapi.org/examples/#error-objects)
 - [RFC 6901 - JSON Pointer](https://tools.ietf.org/html/rfc6901)

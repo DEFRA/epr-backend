@@ -50,7 +50,10 @@ describe('validateMaterialType', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'WRN12345' },
-        MATERIAL: { value: 'Aluminium' }
+        MATERIAL: {
+          value: 'Aluminium',
+          location: { sheet: 'Cover', row: 8, column: 'B' }
+        }
       }
     }
     const registration = {
@@ -72,7 +75,12 @@ describe('validateMaterialType', () => {
       'Material does not match registration material'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.path).toBe('meta.MATERIAL')
+    expect(fatals[0].context.location).toEqual({
+      sheet: 'Cover',
+      row: 8,
+      column: 'B',
+      field: 'MATERIAL'
+    })
     expect(fatals[0].context.expected).toBe('aluminium')
     expect(fatals[0].context.actual).toBe('plastic')
   })
@@ -179,5 +187,28 @@ describe('validateMaterialType', () => {
     const issues = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
     expect(issues).toHaveLength(1)
     expect(issues[0].severity).toBe(VALIDATION_SEVERITY.FATAL)
+  })
+
+  it('handles missing location gracefully by including only field', () => {
+    const parsed = {
+      meta: {
+        MATERIAL: { value: 'Glass' } // No location provided
+      }
+    }
+    const registration = {
+      material: 'plastic'
+    }
+
+    const result = validateMaterialType({
+      parsed,
+      registration,
+      loggingContext: 'test'
+    })
+
+    expect(result.isFatal()).toBe(true)
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals[0].context.location).toEqual({
+      field: 'MATERIAL' // Only field is set when location is missing
+    })
   })
 })

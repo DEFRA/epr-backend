@@ -34,7 +34,7 @@ describe('validateDataSyntax', () => {
         100,
         50,
         850,
-        true,
+        'YES',
         'WEIGHT',
         50,
         0.85,
@@ -48,7 +48,7 @@ describe('validateDataSyntax', () => {
         200,
         100,
         1700,
-        false,
+        'NO',
         'VISUAL',
         100,
         0.9,
@@ -62,7 +62,7 @@ describe('validateDataSyntax', () => {
         150,
         75,
         1275,
-        true,
+        'YES',
         'SAMPLE',
         75,
         0.8,
@@ -114,7 +114,7 @@ describe('validateDataSyntax', () => {
                 100,
                 50,
                 850,
-                true,
+                'YES',
                 'WEIGHT',
                 50,
                 0.85,
@@ -128,7 +128,7 @@ describe('validateDataSyntax', () => {
                 200,
                 100,
                 1700,
-                false,
+                'NO',
                 'VISUAL',
                 100,
                 0.9,
@@ -175,7 +175,7 @@ describe('validateDataSyntax', () => {
                 100,
                 50,
                 850,
-                true,
+                'YES',
                 'WEIGHT',
                 50,
                 0.85,
@@ -225,7 +225,7 @@ describe('validateDataSyntax', () => {
                 100,
                 50,
                 850,
-                true,
+                'YES',
                 'WEIGHT',
                 50,
                 0.85,
@@ -272,7 +272,7 @@ describe('validateDataSyntax', () => {
                 100,
                 50,
                 850,
-                true,
+                'YES',
                 'WEIGHT',
                 50,
                 0.85,
@@ -356,7 +356,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -377,7 +377,13 @@ describe('validateDataSyntax', () => {
         expect(errors[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
         expect(errors[0].message).toContain('OUR_REFERENCE')
         expect(errors[0].message).toContain('must be a number')
-        expect(errors[0].context.row).toBe(1)
+        expect(errors[0].context.location).toEqual({
+          sheet: 'Received (sections 1, 2, 3)',
+          table: 'UPDATE_WASTE_BALANCE',
+          row: 8, // Row 7 (headers) + 1 (first data row)
+          column: 'B', // First column (OUR_REFERENCE)
+          header: 'OUR_REFERENCE'
+        })
         expect(errors[0].context.actual).toBe('not-a-number')
       })
 
@@ -395,7 +401,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -433,7 +439,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -471,7 +477,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -507,7 +513,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -540,7 +546,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -554,7 +560,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -568,7 +574,7 @@ describe('validateDataSyntax', () => {
                   200,
                   100,
                   1700,
-                  false,
+                  'NO',
                   'VISUAL',
                   100,
                   0.9,
@@ -586,7 +592,7 @@ describe('validateDataSyntax', () => {
 
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors.length).toBe(3) // All 3 errors from row 2
-        expect(errors.every((e) => e.context.row === 2)).toBe(true)
+        expect(errors.every((e) => e.context.location?.row === 9)).toBe(true) // Row 7 (headers) + 2 (second data row)
       })
     })
 
@@ -623,7 +629,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -637,12 +643,13 @@ describe('validateDataSyntax', () => {
         const result = validateDataSyntax({ parsed })
 
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
-        expect(errors[0].context.location).toBeDefined()
-        expect(errors[0].context.location.sheet).toBe(
-          'Received (sections 1, 2, 3)'
-        )
-        expect(errors[0].context.location.row).toBe(8) // 7 + 1 (for data row)
-        expect(errors[0].context.location.column).toBe('B') // Column B for OUR_REFERENCE
+        expect(errors[0].context.location).toEqual({
+          sheet: 'Received (sections 1, 2, 3)',
+          table: 'UPDATE_WASTE_BALANCE',
+          row: 8, // 7 + 1 (for data row)
+          column: 'B', // Column B for OUR_REFERENCE
+          header: 'OUR_REFERENCE'
+        })
       })
 
       it('calculates correct column letters for multiple errors', () => {
@@ -677,7 +684,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -693,12 +700,16 @@ describe('validateDataSyntax', () => {
 
         expect(errors).toHaveLength(3)
 
-        // Find errors by field to check their columns
-        const refError = errors.find((e) => e.context.field === 'OUR_REFERENCE')
-        const dateError = errors.find(
-          (e) => e.context.field === 'DATE_RECEIVED'
+        // Find errors by checking header to determine which field
+        const refError = errors.find(
+          (e) => e.context.location?.header === 'OUR_REFERENCE'
         )
-        const ewcError = errors.find((e) => e.context.field === 'EWC_CODE')
+        const dateError = errors.find(
+          (e) => e.context.location?.header === 'DATE_RECEIVED'
+        )
+        const ewcError = errors.find(
+          (e) => e.context.location?.header === 'EWC_CODE'
+        )
 
         expect(refError.context.location.column).toBe('B') // First column
         expect(dateError.context.location.column).toBe('C') // Second column
@@ -737,7 +748,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -751,11 +762,15 @@ describe('validateDataSyntax', () => {
         const result = validateDataSyntax({ parsed })
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
 
-        const refError = errors.find((e) => e.context.field === 'OUR_REFERENCE')
-        const dateError = errors.find(
-          (e) => e.context.field === 'DATE_RECEIVED'
+        const refError = errors.find(
+          (e) => e.context.location?.header === 'OUR_REFERENCE'
         )
-        const ewcError = errors.find((e) => e.context.field === 'EWC_CODE')
+        const dateError = errors.find(
+          (e) => e.context.location?.header === 'DATE_RECEIVED'
+        )
+        const ewcError = errors.find(
+          (e) => e.context.location?.header === 'EWC_CODE'
+        )
 
         expect(refError.context.location.column).toBe('Z') // Column 26
         expect(dateError.context.location.column).toBe('AA') // Column 27
@@ -790,7 +805,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -804,7 +819,10 @@ describe('validateDataSyntax', () => {
         const result = validateDataSyntax({ parsed })
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
 
-        expect(errors[0].context.location).toBeUndefined()
+        // Location now always includes header name, even without spreadsheet coordinates
+        expect(errors[0].context.location.header).toBe('OUR_REFERENCE')
+        expect(errors[0].context.location.row).toBeUndefined()
+        expect(errors[0].context.location.column).toBeUndefined()
       })
     })
 
@@ -823,7 +841,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -858,7 +876,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -879,7 +897,7 @@ describe('validateDataSyntax', () => {
     })
 
     describe('cell validation errors - BAILING_WIRE', () => {
-      it('returns error when BAILING_WIRE is not a boolean', () => {
+      it('returns error when BAILING_WIRE is not a string', () => {
         const parsed = {
           data: {
             UPDATE_WASTE_BALANCE: {
@@ -893,7 +911,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  'yes',
+                  true,
                   'WEIGHT',
                   50,
                   0.85,
@@ -910,12 +928,12 @@ describe('validateDataSyntax', () => {
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('BAILING_WIRE')
-        expect(errors[0].message).toContain('must be a boolean')
+        expect(errors[0].message).toContain('must be a string')
       })
     })
 
     describe('cell validation errors - HOW_CALCULATE_RECYCLABLE', () => {
-      it('returns error when HOW_CALCULATE_RECYCLABLE contains lowercase letters', () => {
+      it('returns error when HOW_CALCULATE_RECYCLABLE is not a string', () => {
         const parsed = {
           data: {
             UPDATE_WASTE_BALANCE: {
@@ -929,8 +947,8 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
-                  'weight',
+                  'YES',
+                  123,
                   50,
                   0.85,
                   850
@@ -944,42 +962,9 @@ describe('validateDataSyntax', () => {
         expect(result.isValid()).toBe(false)
 
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('HOW_CALCULATE_RECYCLABLE')
-        expect(errors[0].message).toContain(
-          'must contain only uppercase letters'
-        )
-      })
-
-      it('returns error when HOW_CALCULATE_RECYCLABLE contains numbers', () => {
-        const parsed = {
-          data: {
-            UPDATE_WASTE_BALANCE: {
-              ...createValidUpdateWasteBalanceTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  true,
-                  'WEIGHT123',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
-
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
-        expect(errors[0].message).toContain('HOW_CALCULATE_RECYCLABLE')
+        expect(errors[0].message).toContain('must be a string')
       })
     })
 
@@ -998,7 +983,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   'invalid',
@@ -1031,7 +1016,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0,
@@ -1064,7 +1049,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   1.0,
@@ -1099,7 +1084,7 @@ describe('validateDataSyntax', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
