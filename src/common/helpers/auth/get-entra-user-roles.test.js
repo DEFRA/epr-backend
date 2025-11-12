@@ -62,14 +62,34 @@ describe('#getEntraUserRoles', () => {
       expect(result).toEqual([ROLES.serviceMaintainer])
     })
 
-    test('handles case-sensitive email matching', async () => {
+    test('handles case-insensitive email matching - uppercase', async () => {
       const tokenPayload = {
         email: 'MAINTAINER1@EXAMPLE.COM'
       }
 
       const result = await getEntraUserRoles(tokenPayload)
 
-      expect(result).toEqual([])
+      expect(result).toEqual([ROLES.serviceMaintainer])
+    })
+
+    test('handles case-insensitive email matching - mixed case', async () => {
+      const tokenPayload = {
+        email: 'MaInTaInEr1@ExAmPlE.cOm'
+      }
+
+      const result = await getEntraUserRoles(tokenPayload)
+
+      expect(result).toEqual([ROLES.serviceMaintainer])
+    })
+
+    test('handles case-insensitive email matching - preferred_username uppercase', async () => {
+      const tokenPayload = {
+        preferred_username: 'MAINTAINER2@EXAMPLE.COM'
+      }
+
+      const result = await getEntraUserRoles(tokenPayload)
+
+      expect(result).toEqual([ROLES.serviceMaintainer])
     })
 
     test('returns service maintainer role for last email in list', async () => {

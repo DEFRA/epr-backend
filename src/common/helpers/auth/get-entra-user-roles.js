@@ -12,7 +12,7 @@ export async function getEntraUserRoles(tokenPayload) {
   // This should never thrown an error as the config is validated when the server is started
   const serviceMaintainersList = JSON.parse(stringifiedServiceMaintainersList)
 
-  if (serviceMaintainersList.includes(userEmail)) {
+  if (serviceMaintainersList.some(email => email.toLowerCase() === userEmail?.toLowerCase())) {
     thisUserRoles.push(ROLES.serviceMaintainer)
   }
 
