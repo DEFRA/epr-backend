@@ -1,4 +1,10 @@
 const TIMESCALE_ALUMINIUM = 'Timescale (Aluminium)'
+const TIMESCALE_FIBRE = 'Timescale (Fibre-based composite material)'
+const TIMESCALE_GLASS = 'Timescale (Glass)'
+const TIMESCALE_PAPER = 'Timescale (Paper or board)'
+const TIMESCALE_PLASTIC = 'Timescale (Plastic)'
+const TIMESCALE_STEEL = 'Timescale (Steel)'
+const TIMESCALE_WOOD = 'Timescale (Wood)'
 
 export const FORM_PAGES = {
   ORGANISATION: {
@@ -167,7 +173,7 @@ export const FORM_PAGES = {
         'Aluminium - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Aluminium)',
-        TIMESCALE: 'Timescale (Aluminium)'
+        TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
     ENV_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE: {
@@ -175,14 +181,14 @@ export const FORM_PAGES = {
         'Fibre-based composite material - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Fibre-based composite material)',
-        TIMESCALE: 'Timescale (Fibre-based composite material)'
+        TIMESCALE: TIMESCALE_FIBRE
       }
     },
     ENV_PERMIT_DETAILS_GLASS: {
       title: 'Glass - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Glass)',
-        TIMESCALE: 'Timescale (Glass)'
+        TIMESCALE: TIMESCALE_GLASS
       }
     },
     ENV_PERMIT_DETAILS_PAPER_OR_BOARD: {
@@ -190,7 +196,7 @@ export const FORM_PAGES = {
         'Paper or board - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Paper or board)',
-        TIMESCALE: 'Timescale (Paper or board)'
+        TIMESCALE: TIMESCALE_PAPER
       }
     },
     ENV_PERMIT_DETAILS_PLASTIC: {
@@ -198,21 +204,21 @@ export const FORM_PAGES = {
         'Plastic - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Plastic)',
-        TIMESCALE: 'Timescale (Plastic)'
+        TIMESCALE: TIMESCALE_PLASTIC
       }
     },
     ENV_PERMIT_DETAILS_STEEL: {
       title: 'Steel - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Steel)',
-        TIMESCALE: 'Timescale (Steel)'
+        TIMESCALE: TIMESCALE_STEEL
       }
     },
     ENV_PERMIT_DETAILS_WOOD: {
       title: 'Wood - environmental permit or waste management licence details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Wood)',
-        TIMESCALE: 'Timescale (Wood)'
+        TIMESCALE: TIMESCALE_WOOD
       }
     },
     INSTALLATION_PERMIT_DETAILS: {
@@ -226,49 +232,49 @@ export const FORM_PAGES = {
       title: 'Aluminium - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Aluminium)',
-        TIMESCALE: 'Timescale (Aluminium)'
+        TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
     INSTALLATION_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE: {
       title: 'Fibre-based composite material - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Fibre-based composite material)',
-        TIMESCALE: 'Timescale (Fibre-based composite material)'
+        TIMESCALE: TIMESCALE_FIBRE
       }
     },
     INSTALLATION_PERMIT_DETAILS_GLASS: {
       title: 'Glass - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Glass)',
-        TIMESCALE: 'Timescale (Glass)'
+        TIMESCALE: TIMESCALE_GLASS
       }
     },
     INSTALLATION_PERMIT_DETAILS_PAPER_OR_BOARD: {
       title: 'Paper or board - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Paper or board)',
-        TIMESCALE: 'Timescale (Paper or board)'
+        TIMESCALE: TIMESCALE_PAPER
       }
     },
     INSTALLATION_PERMIT_DETAILS_PLASTIC: {
       title: 'Plastic - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Plastic)',
-        TIMESCALE: 'Timescale (Plastic)'
+        TIMESCALE: TIMESCALE_PLASTIC
       }
     },
     INSTALLATION_PERMIT_DETAILS_STEEL: {
       title: 'Steel - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Steel)',
-        TIMESCALE: 'Timescale (Steel)'
+        TIMESCALE: TIMESCALE_STEEL
       }
     },
     INSTALLATION_PERMIT_DETAILS_WOOD: {
       title: 'Wood - installation permit details',
       fields: {
         AUTHORISED_WEIGHT: 'Authorised weight (Wood)',
-        TIMESCALE: 'Timescale (Wood)'
+        TIMESCALE: TIMESCALE_WOOD
       }
     },
     WASTE_EXEMPTION: {
@@ -283,49 +289,49 @@ export const FORM_PAGES = {
       title: 'Site capacity for aluminium recycling',
       fields: {
         CAPACITY: 'Capacity (Aluminium)',
-        TIMESCALE: 'Timescale (Aluminium)'
+        TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
     SITE_CAPACITY_FIBRE_BASED_COMPOSITE: {
       title: 'Site capacity for fibre-based composite material recycling',
       fields: {
         CAPACITY: 'Capacity (Fibre-based composite material)',
-        TIMESCALE: 'Timescale (Fibre-based composite material)'
+        TIMESCALE: TIMESCALE_FIBRE
       }
     },
     SITE_CAPACITY_GLASS: {
       title: 'Site capacity for glass recycling',
       fields: {
         CAPACITY: 'Capacity (Glass)',
-        TIMESCALE: 'Timescale (Glass)'
+        TIMESCALE: TIMESCALE_GLASS
       }
     },
     SITE_CAPACITY_PAPER_OR_BOARD: {
       title: 'Site capacity for paper or board recycling',
       fields: {
         CAPACITY: 'Capacity (Paper or board)',
-        TIMESCALE: 'Timescale (Paper or board)'
+        TIMESCALE: TIMESCALE_PAPER
       }
     },
     SITE_CAPACITY_PLASTIC: {
       title: 'Site capacity for plastic recycling',
       fields: {
         CAPACITY: 'Capacity (Plastic)',
-        TIMESCALE: 'Timescale (Plastic)'
+        TIMESCALE: TIMESCALE_PLASTIC
       }
     },
     SITE_CAPACITY_STEEL: {
       title: 'Site capacity for steel recycling',
       fields: {
         CAPACITY: 'Capacity (Steel)',
-        TIMESCALE: 'Timescale (Steel)'
+        TIMESCALE: TIMESCALE_STEEL
       }
     },
     SITE_CAPACITY_WOOD: {
       title: 'Site capacity for wood recycling',
       fields: {
         CAPACITY: 'Capacity (Wood)',
-        TIMESCALE: 'Timescale (Wood)'
+        TIMESCALE: TIMESCALE_WOOD
       }
     },
     SIP_FILE_UPLOAD: 'Sampling and inspection plan',
