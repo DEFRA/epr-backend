@@ -78,13 +78,15 @@ function getEnvironmentPermitDetails(answersByPages) {
 
   return permitNumber
     ? {
-        type: WASTE_PERMIT_TYPE.WML,
+        type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
         permitNumber,
         authorisedMaterials: ENV_PERMIT_BY_MATERIALS.map(
           ({ config, material }) => {
             const pageData = answersByPages[config.title]
 
-            if (!pageData?.[config.fields.TIMESCALE]) return undefined
+            if (!pageData?.[config.fields.TIMESCALE]) {
+              return undefined
+            }
 
             return {
               material,
@@ -136,13 +138,15 @@ function getInstallationPermitDetails(answersByPages) {
 
   return permitNumber
     ? {
-        type: WASTE_PERMIT_TYPE.PPC,
+        type: WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
         permitNumber,
         authorisedMaterials: INSTALLATION_PERMIT_BY_MATERIALS.map(
           ({ config, material }) => {
             const pageData = answersByPages[config.title]
 
-            if (!pageData?.[config.fields.TIMESCALE]) return undefined
+            if (!pageData?.[config.fields.TIMESCALE]) {
+              return undefined
+            }
 
             return {
               material,

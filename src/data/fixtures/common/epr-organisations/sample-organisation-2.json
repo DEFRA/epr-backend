@@ -37,7 +37,7 @@
       "wasteRegistrationNumber": "CBDU789012",
       "wasteManagementPermits": [
         {
-          "type": "wml",
+          "type": "environmental_permit",
           "permitNumber": "WML789012",
           "authorisedMaterials": [
             {

@@ -142,8 +142,8 @@ const authorisedMaterialSchema = Joi.object({
 const wasteManagementPermitSchema = Joi.object({
   type: Joi.string()
     .valid(
-      WASTE_PERMIT_TYPE.WML,
-      WASTE_PERMIT_TYPE.PPC,
+      WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
+      WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
       WASTE_PERMIT_TYPE.WASTE_EXEMPTION
     )
     .required(),

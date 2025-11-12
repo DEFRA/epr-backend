@@ -96,7 +96,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       wasteRegistrationNumber: 'CBDU123456',
       wasteManagementPermits: [
         {
-          type: WASTE_PERMIT_TYPE.WML,
+          type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
           permitNumber: 'EPR/AB1234CD/A001',
           authorisedMaterials: [
             {
@@ -112,7 +112,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           ]
         },
         {
-          type: WASTE_PERMIT_TYPE.PPC,
+          type: WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
           permitNumber: '1232',
           authorisedMaterials: [
             {

@@ -59,8 +59,8 @@ export const TIME_SCALE = {
 }
 
 export const WASTE_PERMIT_TYPE = {
-  WML: 'wml',
-  PPC: 'ppc',
+  ENVIRONMENTAL_PERMIT: 'environmental_permit',
+  INSTALLATION_PERMIT: 'installation_permit',
   WASTE_EXEMPTION: 'waste_exemption'
 }
 
