@@ -6,6 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
 import { testTokens } from '#test/helpers/create-test-tokens.js'
 import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
+import { testAuthScenarios } from '#test/helpers/test-auth-scenarios.js'
 
 const { validToken } = testTokens
 
@@ -275,5 +276,22 @@ describe('PUT /v1/organisations/{id}', () => {
     expect(body.message).toMatch(
       /At least one waste processing type is required/
     )
+  })
+
+  testAuthScenarios({
+    server: () => server,
+    makeRequest: async () => {
+      const org1 = buildOrganisation()
+      await organisationsRepository.insert(org1)
+      return {
+        method: 'PUT',
+        url: `/v1/organisations/${org1.id}`
+      }
+    },
+    additionalExpectations: (response) => {
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
+    }
   })
 })

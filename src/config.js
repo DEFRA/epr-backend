@@ -216,7 +216,7 @@ const baseConfig = {
       audience: {
         doc: 'Admin UI app as audience',
         format: String,
-        env: 'SECRET_ADMIN_UI_AS_AUDIENCE',
+        env: 'ADMIN_UI_AS_AUDIENCE',
         default: 'test'
       }
     },
@@ -232,7 +232,7 @@ const baseConfig = {
   userRoles: {
     doc: 'Stringified object defining user roles',
     format: String,
-    env: 'SECRET_USER_ROLES',
+    env: 'USER_ROLES',
     default: '{ "service-maintainer": ["me@example.com", "you@example.com"]}'
   },
   featureFlags: {

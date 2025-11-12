@@ -1,7 +1,7 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'crypto'
 
-// Must match the audience in config.js (SECRET_ADMIN_UI_AS_AUDIENCE)
+// Must match the audience in config.js (ADMIN_UI_AS_AUDIENCE)
 const VALID_ENTRA_AUDIENCE = 'test'
 
 // Must match one of the configured service maintainer email in the app config env var
