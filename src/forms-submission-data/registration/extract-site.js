@@ -51,7 +51,9 @@ function getSiteCapacity(answersByPages) {
     ({ config, material }) => {
       const pageData = answersByPages[config.title]
 
-      if (!pageData[config.fields.TIMESCALE]) return undefined
+      if (!pageData[config.fields.TIMESCALE]) {
+        return undefined
+      }
 
       return {
         material,
