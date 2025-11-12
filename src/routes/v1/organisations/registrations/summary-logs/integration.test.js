@@ -14,8 +14,8 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
-import { testTokens } from '#test/helpers/create-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
 
 import { ObjectId } from 'mongodb'
 

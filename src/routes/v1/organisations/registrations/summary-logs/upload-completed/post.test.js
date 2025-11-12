@@ -7,8 +7,8 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
-import { testTokens } from '#test/helpers/create-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 

@@ -3,8 +3,8 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
-import { testTokens } from '#test/helpers/create-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
 
 const { validToken } = testTokens
 

@@ -4,9 +4,9 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
-import { testTokens } from '#test/helpers/create-test-tokens.js'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
-import { testAuthScenarios } from '#test/helpers/test-auth-scenarios.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
 
 const { validToken } = testTokens
 

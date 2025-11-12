@@ -5,7 +5,7 @@ import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createMockConfig } from '#test/helpers/mock-config.js'
+import { createMockConfig } from '#vite/helpers/mock-config.js'
 
 import summaryLogsValidatorWorkerThread from './worker-thread.js'
 

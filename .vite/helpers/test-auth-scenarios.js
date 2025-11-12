@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
-import { testTokens } from '#test/helpers/create-test-tokens.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
 
 const {
   wrongSignatureToken,

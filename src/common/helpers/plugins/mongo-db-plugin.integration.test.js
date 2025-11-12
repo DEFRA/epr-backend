@@ -3,7 +3,7 @@ import { setup as setupMongo, teardown as teardownMongo } from 'vitest-mongodb'
 import { Db, MongoClient } from 'mongodb'
 import { LockManager } from 'mongo-locks'
 import { randomUUID } from 'node:crypto'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 describe('MongoDB plugin', () => {
   let server

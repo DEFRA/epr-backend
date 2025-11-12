@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { getTestPublicKey } from '#test/helpers/create-test-tokens.js'
+import { getTestPublicKey } from '#vite/helpers/create-test-tokens.js'
 
 const entraIdBaseUrl =
   'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007'

@@ -1,6 +1,6 @@
 import { vi, describe, expect, beforeEach, beforeAll, afterAll } from 'vitest'
 import hapi from '@hapi/hapi'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
   LOGGING_EVENT_ACTIONS,

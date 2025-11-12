@@ -1,4 +1,4 @@
-import { createMockOidcServers } from '#test/helpers/mock-oidc.js'
+import { createMockOidcServers } from '#vite/helpers/mock-oidc.js'
 
 export function setupAuthContext(disabledMocks) {
   let mockOidcServer

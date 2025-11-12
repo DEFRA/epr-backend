@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { describe, it, expect } from 'vitest'
 import { createTestServer } from '#test/create-test-server.js'
-import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 describe('GET /health', () => {
   setupAuthContext()
