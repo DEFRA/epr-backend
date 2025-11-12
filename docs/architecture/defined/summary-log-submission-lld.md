@@ -1,59 +1,56 @@
-# 21. Concurrent Summary Log Submission and Waste Record Versioning
+# Summary Log Submission: Low Level Design
 
-Date: 2025-01-11
+This document describes the implementation approach for submitting summary logs with idempotent operations and retry mechanisms.
 
-## Status
+For the architectural decision and rationale, see [ADR 21: Idempotent Operations and Retry Mechanisms for Resilient Data Processing](../decisions/0021-idempotent-operations-and-retry-mechanisms.md).
 
-Proposed
+<!-- prettier-ignore-start -->
+<!-- TOC -->
+- [Summary Log Submission: Low Level Design](#summary-log-submission-low-level-design)
+  - [Project scope](#project-scope)
+    - [Functional requirements](#functional-requirements)
+    - [Non-functional requirements](#non-functional-requirements)
+  - [Technical approach](#technical-approach)
+    - [Overall workflow](#overall-workflow)
+    - [Summary log status transitions](#summary-log-status-transitions)
+    - [Organisation/registration level constraint](#organisationregistration-level-constraint)
+    - [Repository port design](#repository-port-design)
+    - [Shared transformation logic](#shared-transformation-logic)
+    - [Validation phase](#validation-phase)
+    - [Submission phase](#submission-phase)
+    - [MongoDB adapter implementation](#mongodb-adapter-implementation)
+  - [Incremental delivery](#incremental-delivery)
+    - [Phase 1: Core submission (MVP)](#phase-1-core-submission-mvp)
+    - [Phase 2: Robust retry mechanism](#phase-2-robust-retry-mechanism)
+    - [Phase 3: Detectable failure handling](#phase-3-detectable-failure-handling)
+    - [Recommended approach](#recommended-approach)
+<!-- TOC -->
 
-## Context
+<!-- prettier-ignore-end -->
 
-When a user submits a summary log, the system must update potentially thousands of waste records by appending new versions to each record's version history. A typical summary log may contain up to 15,000 rows, with tens of values per row.
+## Project scope
 
-This operation presents several challenges:
+### Functional requirements
 
-1. **Stale Previews**: If a user views a preview and another summary log is uploaded before they submit, the preview becomes incorrect
-2. **Concurrency Control**: Multiple users might attempt to submit summary logs for the same organisation/registration simultaneously
-3. **Partial Failure Recovery**: The system could crash mid-submission, leaving some waste records updated and others not
-4. **Data Consistency**: Users need to see consistent data, but full atomic transactions are not practical
-5. **Performance**: Processing 15,000 records must complete in reasonable time
-6. **Idempotency**: Retrying a failed submission must not create duplicate versions
+1. Accept summary log uploads containing up to 15,000 waste records
+2. Validate uploaded data and calculate preview statistics (created/updated/unchanged records) and summary
+3. Allow users to review preview before confirming submission
+4. Submit validated data by appending new versions to waste record version history
+5. Handle or prevent concurrent submissions for the same organisation/registration pair
+6. Prevent stale previews when new uploads supersede previous ones
 
-### Scale Constraints
+### Non-functional requirements
 
-- Up to 15,000 waste records per summary log
-- Each record contains multiple fields (tens of values)
-- MongoDB transaction size limit: 16MB
-- MongoDB transaction time limit: 60 seconds
-- These constraints make multi-document transactions impractical for this use case
+1. **Scale**: Process up to 15,000 waste records per summary log
+2. **Performance**: Complete submission within reasonable time
+3. **Consistency**: Avoid ambiguous state in production to reduce need for accessing sensitive data during investigation
+4. **Resilience**: Recover from partial failures through idempotent retry mechanisms
+5. **Operational clarity**: Clear status transitions and error states for support investigation
+6. **MongoDB constraints**: Work within 16MB transaction size limit and 60 second transaction time limit
 
-### Primary Goal
+## Technical approach
 
-The primary goal is **avoiding ambiguous state in production** to reduce the number of times we need to access sensitive data for investigation. This is not a scalability concern - it's about operational clarity and data protection.
-
-### Acceptable Trade-offs
-
-- **Last upload wins**: Only one unsubmitted summary log per organisation/registration at a time. New uploads supersede previous unsubmitted ones.
-- **Partial visibility is acceptable**: Users can see updates in progress via the summary log "submitting" status
-- **Eventual consistency is acceptable**: Brief periods where some waste records are updated before others
-- **Manual recovery initially**: Stuck submissions require manual investigation and retry rather than automated recovery
-
-### Key Constraint
-
-**One active summary log per organisation/registration**: The system enforces that only one summary log in an active state can exist for a given organisation/registration pair at any time. When a new summary log is uploaded:
-
-1. If an existing summary log is in `submitting` state for that org/reg, the upload is **rejected** with an error message
-2. Any existing summary logs in unsubmitted states (`validated`, `validating`, `preprocessing`) for that org/reg are superseded
-3. The new upload becomes the current active summary log
-4. On submit, the system verifies the summary log ID matches the current one for that org/reg
-
-This constraint eliminates stale preview issues and prevents partial data from superseded submissions. Uploads are blocked during submission to ensure clean state transitions.
-
-## Decision
-
-We will implement a **multi-layered strategy** combining org/reg level constraints, optimistic locking, two-phase workflow (validate/preview then submit), idempotent operations, and bulk processing.
-
-### Overall Workflow
+### Overall workflow
 
 ```mermaid
 sequenceDiagram
@@ -86,7 +83,7 @@ sequenceDiagram
     API-->>User: Submission complete
 ```
 
-### Summary Log Status Transitions
+### Summary log status transitions
 
 ```mermaid
 stateDiagram-v2
@@ -129,7 +126,7 @@ stateDiagram-v2
     end note
 ```
 
-### 1. Organisation/Registration Level Constraint
+### Organisation/registration level constraint
 
 The system enforces that only one active summary log can exist per organisation/registration pair. Uploads are blocked during submission, and "last upload wins" for unsubmitted logs.
 
@@ -156,7 +153,7 @@ sequenceDiagram
     API-->>User1: Error: Newer upload exists
 ```
 
-**Key Operations:**
+**Key operations:**
 
 On upload, check for active submission and supersede unsubmitted logs:
 
@@ -191,9 +188,8 @@ if (currentValidatedLog.id !== submittedLogId) {
 - Last upload wins for unsubmitted logs - simple mental model
 - Eliminates stale preview problem entirely
 - Clear error messages guide users
-- Atomic operations ensure constraint is enforced reliably
 
-### 2. Repository Port Design
+### Repository port design
 
 The waste records repository provides a focused interface:
 
@@ -215,7 +211,7 @@ interface WasteRecordsRepository {
 - Single Map parameter groups all updates for one org/registration batch
 - Map key `"type:rowId"` handles multiple waste record types in one summary log
 
-### 3. Shared Transformation Logic
+### Shared transformation logic
 
 Both validation and submission use identical transformation logic to ensure deterministic results.
 
@@ -244,10 +240,11 @@ flowchart TD
 - Both phases use identical code path - no divergence possible
 - Reusing `validatedAt` timestamp keeps times consistent across rows
 - Returns both waste records (for submission) and stats (for preview)
+- Recalculation prevents possiblity of partially-stored preview data
 
-### 4. Validation Phase
+### Validation phase
 
-During validation, calculate preview statistics for user review:
+During validation, calculate preview statistics and summary for user review:
 
 ```mermaid
 flowchart LR
@@ -259,14 +256,13 @@ flowchart LR
     F --> G[Store stats in summary log<br/>status: validated]
 ```
 
-**Key Points:**
+**Key points:**
 
-- Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
-- Full waste records NOT stored (would exceed 16MB for 15k records)
-- Uses `validatedAt` timestamp for deterministic version creation
+- Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89, ... } }`
+- Full waste records NOT stored (would exceed 16MB for 15k records, or could be partially stored if split up)
 - User views preview page showing the stored `previewStats`
 
-### 5. Submission Phase
+### Submission phase
 
 After user confirms preview, persist the changes:
 
@@ -284,7 +280,7 @@ flowchart TD
     J --> K[Complete]
 ```
 
-**Key Points:**
+**Key points:**
 
 - Uses same transformation logic as validation phase
 - Reuses `validatedAt` timestamp for consistent times across rows
@@ -292,7 +288,31 @@ flowchart TD
 - Bulk operation handles up to 15k records efficiently
 - On failure, leaves in 'submitting' state for recovery
 
-### 6. MongoDB Adapter Implementation
+**Idempotency implementation:**
+
+```javascript
+// Before appending version, check if it already exists
+const existingVersionFromThisSummaryLog = wasteRecord.versions.find(
+  v => v.summaryLogId === currentSummaryLog.id
+)
+
+if (existingVersionFromThisSummaryLog) {
+  // Skip - already processed
+  continue
+}
+
+// Otherwise, append the new version
+versionsByKey.set(`${type}:${rowId}`, {
+  data: newData,
+  version: {
+    summaryLogId: currentSummaryLog.id,
+    versionTimestamp: currentSummaryLog.validatedAt,
+    // ... other version fields
+  }
+})
+```
+
+### MongoDB adapter implementation
 
 The MongoDB adapter uses bulk operations for efficient version appending:
 
@@ -313,7 +333,7 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 // Execute with: bulkWrite(ops, { ordered: false })
 ```
 
-**Key MongoDB Operations:**
+**Key MongoDB operations:**
 
 - `$setOnInsert`: Static fields only when creating new document
 - `$set`: Update top-level data on every operation
@@ -321,50 +341,7 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - `upsert: true`: Create document if doesn't exist
 - `ordered: false`: Continue processing if one operation fails
 
-## Consequences
-
-### Positive
-
-- **No stale previews**: Org/reg constraint ensures preview is always for current unsubmitted summary log
-- **Clean submissions**: Blocking uploads during submission prevents partial data from superseded logs
-- **Simple mental model**: Last upload wins for unsubmitted logs, blocked during submission
-- **User confirmation**: Preview during validation allows users to review changes before committing
-- **Handles large scale**: Efficiently processes up to 15,000+ waste records
-- **Prevents race conditions**: Org/reg constraint + optimistic locking on summary log status
-- **Consistent recalculation**: Shared transformation logic ensures submitted versions match preview
-- **Crash-safe**: Idempotency allows safe retry after partial failure
-- **No transactions required**: Works within MongoDB's practical limits
-- **Performance**: Minimal database round-trips per phase
-  - Validation: 1 bulk read (existing records) + calculation + store stats
-  - Submit: 1 bulk read (existing records) + 1 bulk write (all version appends)
-  - Application memory: Holds all records in memory during processing (manageable for 15k records)
-
-### Negative
-
-- **Last upload wins**: Users who are reviewing a preview will get an error if someone uploads a newer summary log
-  - Trade-off: Simpler than allowing multiple concurrent previews and dealing with merge conflicts
-  - Clear error message guides user to review the newer upload
-- **Uploads blocked during submission**: Users must wait if a submission is in progress
-  - Trade-off: Prevents partial data from superseded logs, ensures clean state transitions
-  - Wait time expected to be short for typical workloads
-- **Two-phase overhead**: Calculates transformations twice (validation + submit)
-  - Trade-off: User confidence and confirmation outweighs computational cost
-  - Org/reg constraint prevents wasted work (only one summary log being worked on at a time)
-- **Memory usage**: Application holds all existing records in memory during processing
-  - For 15k records: acceptable on modern infrastructure
-  - If this becomes a constraint, can batch the Map building and writes
-- **Application complexity**: Delta calculation and status logic in application layer
-  - Trade-off: simpler repository, clearer separation of concerns
-- **Manual recovery required**: Stuck submissions require manual intervention
-  - Trade-off: Simpler initial implementation, addresses real failures rather than transient issues
-- **Partial failure scenarios**: If submission fails partway through, waste records may be partially updated
-  - Some waste records will have the new version appended, others won't
-  - Re-submitting is safe (idempotent) - missing records get updated, existing ones are skipped
-  - A successful re-upload and re-submit will bring all waste records to the correct state
-  - Downstream operations must handle `submission_failed` state (e.g. can't issue PRN until fixed)
-  - Infrastructure failures where we don't know submission failed leave the summary log stuck in `submitting` state
-
-### Implementation Notes
+**Implementation notes:**
 
 1. Reusing `validatedAt` timestamp keeps version timestamps consistent across all rows
 2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
@@ -376,43 +353,9 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 8. The `superseded` status is a terminal state (no further transitions allowed)
 9. If memory usage becomes a concern with >15k records, batch the Map building and multiple `appendVersions` calls
 
-### Future Considerations
+## Incremental delivery
 
-#### Recovery Approaches
-
-**Queue + Dead Letter Queue (DLQ)**
-
-- Add a message queue for submission processing to enable robust retries with exponential backoff
-- Failed submissions move to DLQ after retry exhaustion for manual investigation
-- Benefits: Handles transient failures automatically, reduces manual intervention
-- Trade-off: Additional infrastructure complexity (queue management, monitoring)
-
-**submission_failed State**
-
-- Transition to `submission_failed` for detectable failures where we can update the summary log state
-- Distinct from infrastructure failures (e.g. MongoDB connectivity issues) that prevent state updates, leaving the log stuck in `submitting`
-- Enables user self-service recovery via re-upload/re-submit
-- Improves UX compared to stuck `submitting` state requiring support intervention
-- Requires downstream operations to check for this state (e.g. PRN issuance must wait for successful submission)
-
-**Partial Update Handling**
-
-- Queue retry mechanism (Phase 2) automatically handles partial failures by retrying the entire submission
-- Idempotent operations ensure safe retries - already-updated records are skipped
-- If queue retries are exhausted, message moves to DLQ for manual investigation
-- A successful re-upload and re-submit will bring all waste records to the correct state
-- Consider logging which waste records were successfully updated during partial failures to aid investigation
-- Monitor for patterns in partial failures to identify systemic issues
-
-#### Other Enhancements
-
-- **Concurrent updates**: If waste records need to support concurrent updates from multiple sources (not just summary logs), add a `version` field to waste records for optimistic locking
-- **Batched processing**: If memory usage exceeds infrastructure limits, implement batched processing (multiple smaller Maps and `appendVersions` calls)
-- **Async processing**: If processing time exceeds acceptable limits, consider async processing via queue worker
-
-## Incremental Delivery
-
-### Phase 1: Core Submission (MVP)
+### Phase 1: Core submission (MVP)
 
 **Goal**: Deliver basic submission workflow with clear error states
 
@@ -434,15 +377,15 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 
 **Limitations**:
 
-- Stuck submissions require manual intervention
+- All errors require manual intervention
 - No distinction between failure types
 - No automated recovery
 
-**Delivery Risk**: Low - well-defined scope, no external dependencies
+**Delivery risk**: Low - well-defined scope, no external dependencies
 
 ---
 
-### Phase 2: Robust Retry Mechanism
+### Phase 2: Robust retry mechanism
 
 **Goal**: Handle transient failures automatically
 
@@ -465,11 +408,11 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - Phase 1 complete
 - Queue infrastructure provisioned
 
-**Delivery Risk**: Medium - additional infrastructure complexity, but no domain changes
+**Delivery risk**: Medium - additional infrastructure complexity, but no domain changes
 
 ---
 
-### Phase 3: Detectable Failure Handling
+### Phase 3: Detectable failure handling
 
 **Goal**: Enable user self-service recovery for detectable failures
 
@@ -483,6 +426,7 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 
 **Benefits**:
 
+- Minimal - persistent failures are unlikely to be fixable by users, and transient failures are handled in Phase 2
 - Improved UX - users can fix and retry themselves
 - Reduced support burden for detectable failure scenarios
 - Better operational clarity (stuck in `submitting` vs marked as `submission_failed`)
@@ -492,17 +436,16 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 - Phase 1 complete
 - Downstream operations updated (e.g. PRN issuance checks)
 
-**Delivery Risk**: Low - clear scope, but requires coordination with downstream operations
+**Delivery risk**: Low - clear scope, but requires coordination with downstream operations
 
 ---
 
-### Recommended Approach
+### Recommended approach
 
 1. **Start with Phase 1** - delivers core value, low risk
-2. **Monitor production** - understand actual failure patterns and frequency
-3. **Implement Phase 2 (Queue)** - purely infrastructure, no domain changes, handles transient failures and automatic retries
-4. **Evaluate Phase 3 based on data**:
-   - If detectable failures are common and causing support burden → implement `submission_failed` state
+2. **Implement Phase 2 (Queue)** - purely infrastructure, no domain changes, handles transient failures and automatic retries
+3. **Evaluate Phase 3 based on data**:
+   - If unfixable, detectable failures are common and causing support burden → implement `submission_failed` state
    - Phase 3 can be skipped if most failures are transient (handled by Phase 2)
 
 **Note**: Phase 2 and Phase 3 are independent and could be delivered in parallel if desired. Phase 2 is simpler (infrastructure only) whilst Phase 3 requires coordination with downstream operations.
