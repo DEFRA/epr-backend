@@ -216,7 +216,10 @@ describe('Summary logs integration', () => {
 
           const checkResponse = await server.inject({
             method: 'GET',
-            url: buildGetUrl(summaryLogId)
+            url: buildGetUrl(summaryLogId),
+            headers: {
+              Authorization: `Bearer ${validToken}`
+            }
           })
 
           status = JSON.parse(checkResponse.payload).status
@@ -267,7 +270,10 @@ describe('Summary logs integration', () => {
           fileId,
           filename,
           false
-        )
+        ),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -516,7 +522,10 @@ describe('Summary logs integration', () => {
 
           const checkResponse = await server.inject({
             method: 'GET',
-            url: buildGetUrl(summaryLogId)
+            url: buildGetUrl(summaryLogId),
+            headers: {
+              Authorization: `Bearer ${validToken}`
+            }
           })
 
           status = JSON.parse(checkResponse.payload).status

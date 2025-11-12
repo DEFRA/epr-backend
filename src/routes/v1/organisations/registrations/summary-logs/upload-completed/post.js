@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import { ROLES } from '#common/helpers/auth/constants.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -132,7 +133,9 @@ export const summaryLogsUploadCompleted = {
   method: 'POST',
   path: summaryLogsUploadCompletedPath,
   options: {
-    auth: false,
+    auth: {
+      scope: [ROLES.serviceMaintainer]
+    },
     validate: {
       payload: uploadCompletedPayloadSchema,
       failAction: (_request, _h, err) => {
