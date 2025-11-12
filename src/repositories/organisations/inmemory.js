@@ -132,7 +132,8 @@ const performUpsert =
   (storage, staleCache, pendingSyncRef, insertFn, updateFn) =>
   async (organisation) => {
     const validated = validateOrganisationInsert(organisation)
-    const { id, version, schemaVersion, ...updateData } = validated
+    const { id, version, schemaVersion, statusHistory, ...updateData } =
+      validated
 
     const existing = storage.find((o) => o.id === id)
 

@@ -47,6 +47,7 @@ export const organisationsPutById = {
       version: _v,
       id: _,
       schemaVersion: _s,
+      statusHistory: _sh,
       ...sanitisedFragment
     } = updateFragment
 

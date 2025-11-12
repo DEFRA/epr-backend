@@ -117,7 +117,7 @@ const performUpdate = (db) => async (id, version, updates) => {
 
 const performUpsert = (db) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
-  const { id, version, schemaVersion, ...updateData } = validated
+  const { id, version, schemaVersion, statusHistory, ...updateData } = validated
 
   const existing = await db
     .collection(COLLECTION_NAME)
