@@ -12,7 +12,7 @@
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'created'|'rejected'|'suspended'|'archived'}} NonApprovedAccreditation
+ * @typedef {AccreditationBase & {status: 'created'|'rejected'|'suspended'|'archived', accreditationNumber?: string}} NonApprovedAccreditation
  */
 
 /**
@@ -37,7 +37,7 @@
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'created'|'rejected'|'suspended'|'archived'}} NonApprovedRegistration
+ * @typedef {RegistrationBase & {status: 'created'|'rejected'|'suspended'|'archived', registrationNumber?: string}} NonApprovedRegistration
  */
 
 /**
