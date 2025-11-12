@@ -12,6 +12,9 @@ import {
   TIME_SCALE,
   WASTE_PERMIT_TYPE,
   RECYCLING_PROCESS,
+  TONNAGE_BAND,
+  VALUE_TYPE
+} from '#domain/organisations/model.js'
   TONNAGE_BAND
 } from '#domain/organisations.js'
 
@@ -133,7 +136,7 @@ const authorisedMaterialSchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
-  authorisedWeight: Joi.number().optional(),
+  authorisedWeightInTonnes: Joi.number().optional(),
   timeScale: Joi.string()
     .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
     .optional()
@@ -164,7 +167,7 @@ const siteCapacitySchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
-  siteCapacityWeight: Joi.number().optional(),
+  siteCapacityInTonnes: Joi.number().optional(),
   siteCapacityTimescale: Joi.string()
     .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
     .optional()
@@ -177,31 +180,33 @@ const siteSchema = Joi.object({
 })
 
 const inputSchema = Joi.object({
-  type: Joi.string().valid('actual', 'estimated').optional(),
-  ukPackagingWaste: Joi.string().optional(),
-  nonUkPackagingWaste: Joi.string().optional(),
-  nonPackagingWaste: Joi.string().optional()
+  type: Joi.string().valid(VALUE_TYPE.ACTUAL, VALUE_TYPE.ESTIMATED).optional(),
+  ukPackagingWasteInTonnes: Joi.number().optional(),
+  nonUkPackagingWasteInTonnes: Joi.number().optional(),
+  nonPackagingWasteInTonnes: Joi.number().optional()
 })
 
 const rawMaterialInputsSchema = Joi.object({
-  material: Joi.string().optional(),
-  tonnage: Joi.string().optional()
+  material: Joi.number().optional(),
+  tonnage: Joi.number().optional()
 })
 
 const outputSchema = Joi.object({
-  type: Joi.string().valid('actual', 'estimated').optional(),
-  sentToAnotherSite: Joi.string().optional(),
-  contaminants: Joi.string().optional(),
-  processLoss: Joi.string().optional()
+  type: Joi.string().valid(VALUE_TYPE.ACTUAL, VALUE_TYPE.ESTIMATED).optional(),
+  sentToAnotherSiteInTonnes: Joi.number().optional(),
+  contaminantsInTonnes: Joi.number().optional(),
+  processLossInTonnes: Joi.number().optional()
 })
 
 const productsMadeFromRecyclingSchema = Joi.object({
   name: Joi.string().optional(),
-  weight: Joi.string().optional()
+  weightInTonnes: Joi.number().optional()
 })
 
+const yearSchema = Joi.number().integer().min(1900).max(2100).required()
+
 const yearlyMetricsSchema = Joi.object({
-  year: Joi.string().required(),
+  year: yearSchema,
   input: inputSchema.optional(),
   rawMaterialInputs: rawMaterialInputsSchema.optional(),
   output: outputSchema.optional(),

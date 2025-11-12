@@ -7,8 +7,9 @@ import {
   PARTNERSHIP_TYPE,
   MATERIAL,
   RECYCLING_PROCESS,
-  TIME_SCALE
-} from '#domain/organisations.js'
+  TIME_SCALE,
+  VALUE_TYPE
+} from '#domain/organisations/model.js'
 
 const WASTE_PROCESSING_TYPES_MAPPING = {
   'Reprocessor and exporter': [
@@ -214,6 +215,29 @@ export function mapTimeScale(value) {
   if (!result) {
     throw new Error(
       `Invalid time scale: "${value}". Expected "Yearly", "Monthly", or "Weekly"`
+    )
+  }
+
+  return result
+}
+
+const VALUE_TYPE_MAPPING = {
+  'Actual figures': VALUE_TYPE.ACTUAL,
+  'Estimated figures': VALUE_TYPE.ESTIMATED
+}
+
+export function mapValueType(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = VALUE_TYPE_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid value type: "${value}". Expected "Actual figures" or "Estimated figures"`
     )
   }
 

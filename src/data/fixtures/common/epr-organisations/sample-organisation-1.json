@@ -42,7 +42,7 @@
         "siteCapacity": [
           {
             "material": "glass",
-            "siteCapacityWeight": 15,
+            "siteCapacityInTonnes": 15,
             "siteCapacityTimescale": "yearly"
           }
         ]
@@ -58,7 +58,7 @@
           "authorisedMaterials": [
             {
               "material": "glass",
-              "authorisedWeight": 10,
+              "authorisedWeightInTonnes": 10,
               "timeScale": "yearly"
             }
           ]
@@ -99,7 +99,7 @@
           "authorisedMaterials": [
             {
               "material": "plastic",
-              "authorisedWeight": 10,
+              "authorisedWeightInTonnes": 10,
               "timeScale": "yearly"
             }
           ]

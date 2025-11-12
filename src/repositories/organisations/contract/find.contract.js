@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildOrganisation } from './test-data.js'
-import { STATUS } from '#domain/organisations.js'
+import { STATUS } from '#domain/organisations/model.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
