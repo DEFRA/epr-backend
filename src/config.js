@@ -239,10 +239,10 @@ const baseConfig = {
         default:
           'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration'
       },
-      audience: {
+      clientId: {
         doc: 'Admin UI app as audience',
         format: String,
-        env: 'ADMIN_UI_AS_AUDIENCE',
+        env: 'ADMIN_UI_ENTRA_CLIENT_ID',
         default: 'test'
       }
     }

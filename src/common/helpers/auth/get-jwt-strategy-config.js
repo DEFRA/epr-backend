@@ -27,8 +27,8 @@ export function getJwtStrategyConfig(oidcConfigs) {
       if (issuer === entraIdOidcConfig.issuer) {
         // Entra Id is not providing an audience in the token, so we need to supply it
         // This audience may not need to be a secret, only an env var
-        const adminUiAsAudience = config.get('oidc.entraId.audience')
-        if (audience !== adminUiAsAudience) {
+        const adminUiEntraClientId = config.get('oidc.entraId.clientId')
+        if (audience !== adminUiEntraClientId) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
