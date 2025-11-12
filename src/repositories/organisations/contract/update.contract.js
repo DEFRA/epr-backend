@@ -19,7 +19,7 @@ export const testUpdateBehaviour = (it) => {
           wasteProcessingTypes: ['reprocessor']
         })
 
-        const result = await repository.findById(orgData.id)
+        const result = await repository.findById(orgData.id, 2)
         expect(result).toMatchObject({
           id: orgData.id,
           orgId: orgData.orgId,
@@ -63,7 +63,7 @@ export const testUpdateBehaviour = (it) => {
           registrations: [registrationToUpdate]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         const updatedReg = result.registrations.find(
           (r) => r.id === registrationToUpdate.id
         )
@@ -100,7 +100,7 @@ export const testUpdateBehaviour = (it) => {
           accreditations: [accreditationToUpdate]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         const updatedAcc = result.accreditations.find(
           (a) => a.id === accreditationToUpdate.id
         )
@@ -138,7 +138,7 @@ export const testUpdateBehaviour = (it) => {
           registrations: [newRegistration]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
 
         expect(result.registrations).toHaveLength(
           organisation.registrations.length + 1
@@ -179,7 +179,7 @@ export const testUpdateBehaviour = (it) => {
           accreditations: [newAccreditation]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
 
         expect(result.accreditations).toHaveLength(
           organisation.accreditations.length + 1
@@ -232,7 +232,7 @@ export const testUpdateBehaviour = (it) => {
           output: { statusCode: 409 }
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         expect(result.version).toBe(2)
         expect(result.wasteProcessingTypes).toEqual(['exporter'])
         expect(result.reprocessingNations).toEqual(
@@ -250,7 +250,7 @@ export const testUpdateBehaviour = (it) => {
           status: STATUS.APPROVED
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         expect(result.status).toBe(STATUS.APPROVED)
         expect(result.statusHistory).toHaveLength(2)
         expect(result.statusHistory[0].status).toBe(STATUS.CREATED)
@@ -266,7 +266,7 @@ export const testUpdateBehaviour = (it) => {
           wasteProcessingTypes: ['exporter']
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         expect(result.status).toBe(STATUS.CREATED)
         expect(result.statusHistory).toHaveLength(1)
         expect(result.statusHistory[0].status).toBe(STATUS.CREATED)
@@ -282,7 +282,7 @@ export const testUpdateBehaviour = (it) => {
           status: STATUS.SUSPENDED
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 4)
         expect(result.status).toBe(STATUS.SUSPENDED)
         expect(result.statusHistory).toHaveLength(4)
         expect(result.statusHistory[0].status).toBe(STATUS.CREATED)
@@ -303,7 +303,7 @@ export const testUpdateBehaviour = (it) => {
           registrations: [registrationToUpdate]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         const updatedReg = result.registrations.find(
           (r) => r.id === registrationToUpdate.id
         )
@@ -331,7 +331,7 @@ export const testUpdateBehaviour = (it) => {
           ]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 3)
         const updatedReg = result.registrations.find((r) => r.id === regId)
         expect(updatedReg.status).toBe(STATUS.REJECTED)
         expect(updatedReg.statusHistory).toHaveLength(3)
@@ -352,7 +352,7 @@ export const testUpdateBehaviour = (it) => {
           accreditations: [accreditationToUpdate]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 2)
         const updatedAcc = result.accreditations.find(
           (a) => a.id === accreditationToUpdate.id
         )
@@ -380,7 +380,7 @@ export const testUpdateBehaviour = (it) => {
           ]
         })
 
-        const result = await repository.findById(organisation.id)
+        const result = await repository.findById(organisation.id, 3)
         const updatedAcc = result.accreditations.find((a) => a.id === accId)
         expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
         expect(updatedAcc.statusHistory).toHaveLength(3)
@@ -397,7 +397,7 @@ export const testUpdateBehaviour = (it) => {
           repository.update(organisation.id, 1, {
             status: 'invalid'
           })
-        ).rejects.toThrow(/Invalid organisation data/)
+        ).rejects.toThrow('Invalid organisation data: status: any.only')
       })
     })
 
@@ -413,7 +413,7 @@ export const testUpdateBehaviour = (it) => {
             id: newId,
             wasteProcessingTypes: ['exporter']
           })
-        ).rejects.toThrow(/Invalid organisation data.*id.*not allowed/)
+        ).rejects.toThrow('Invalid organisation data: id: any.unknown')
       })
 
       it('rejects updates to version field', async () => {
@@ -425,7 +425,7 @@ export const testUpdateBehaviour = (it) => {
             version: 99,
             wasteProcessingTypes: ['exporter']
           })
-        ).rejects.toThrow(/Invalid organisation data.*version.*not allowed/)
+        ).rejects.toThrow('Invalid organisation data: version: any.unknown')
       })
 
       it('rejects updates to schemaVersion field', async () => {
@@ -438,7 +438,26 @@ export const testUpdateBehaviour = (it) => {
             wasteProcessingTypes: ['exporter']
           })
         ).rejects.toThrow(
-          /Invalid organisation data.*schemaVersion.*not allowed/
+          'Invalid organisation data: schemaVersion: any.unknown'
+        )
+      })
+
+      it('does not leak PII data in error messages', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        // Verify error message contains only field path and error type, not actual PII values
+        await expect(
+          repository.update(organisation.id, 1, {
+            submitterContactDetails: {
+              fullName: 'Jane Smith',
+              email: 'jane.smith', // Invalid email format
+              phone: '1234567890',
+              title: 'Director'
+            }
+          })
+        ).rejects.toThrow(
+          'Invalid organisation data: submitterContactDetails.email: string.email'
         )
       })
     })

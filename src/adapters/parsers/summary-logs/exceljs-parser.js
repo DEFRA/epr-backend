@@ -1,33 +1,18 @@
 import ExcelJS from 'exceljs'
 import { produce } from 'immer'
+import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
+import {
+  META_PREFIX,
+  DATA_PREFIX,
+  SKIP_COLUMN
+} from '#domain/summary-logs/markers.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
 
-const ALPHABET_SIZE = 26
-const ASCII_CODE_OFFSET = 65
-
-const META_PREFIX = '__EPR_META_'
-const DATA_PREFIX = '__EPR_DATA_'
-const SKIP_COLUMN = '__EPR_SKIP_COLUMN'
-
 const CollectionState = {
   HEADERS: 'HEADERS',
   ROWS: 'ROWS'
-}
-
-/**
- * @param {number} colNumber
- * @returns {string}
- */
-const columnToLetter = (colNumber) => {
-  const toLetterRecursive = (n, acc = '') => {
-    if (n <= 0) return acc
-    const remainder = (n - 1) % ALPHABET_SIZE
-    const letter = String.fromCodePoint(ASCII_CODE_OFFSET + remainder)
-    return toLetterRecursive(Math.floor((n - 1) / ALPHABET_SIZE), letter + acc)
-  }
-  return toLetterRecursive(colNumber)
 }
 
 const extractCellValue = (cellValue) => {
@@ -70,10 +55,12 @@ const processCellForMetadata = (
       location: {
         sheet: worksheet.name,
         row: rowNumber,
-        column: columnToLetter(colNumber)
+        column: columnNumberToLetter(colNumber)
       }
     }
     draftState.metadataContext = null
+  } else {
+    // Cell is not related to metadata
   }
 }
 
@@ -95,7 +82,7 @@ const processDataMarker = (
       location: {
         sheet: worksheet.name,
         row: rowNumber,
-        column: columnToLetter(colNumber + 1)
+        column: columnNumberToLetter(colNumber + 1)
       }
     })
   }
@@ -135,6 +122,8 @@ const updateCollectionWithCell = (
     draftCollection.state === CollectionState.ROWS
   ) {
     processRowCell(draftCollection, cellValue)
+  } else {
+    // Cell is outside collection boundaries
   }
 }
 
@@ -153,6 +142,8 @@ const finalizeRowForCollection = (draftCollection) => {
       draftCollection.rows.push(draftCollection.currentRow)
       draftCollection.currentRow = []
     }
+  } else {
+    // Current row is empty, nothing to finalize
   }
 }
 

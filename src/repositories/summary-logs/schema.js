@@ -25,20 +25,19 @@ const statusSchema = Joi.string().valid(
 const fileSchema = Joi.object({
   id: Joi.string().required(),
   name: Joi.string().required(),
-  status: Joi.string().valid('complete', 'pending', 'rejected').optional(),
-  s3: Joi.object({
-    bucket: Joi.string().required(),
-    key: Joi.string().required()
-  }).when('status', {
+  status: Joi.string().valid('pending', 'rejected', 'complete').optional(),
+  uri: Joi.when('status', {
     is: 'complete',
-    then: Joi.required(),
-    otherwise: Joi.optional()
+    then: Joi.string().required()
   })
 })
 
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
   failureReason: Joi.string().optional(),
+  validation: Joi.object({
+    issues: Joi.array().items(Joi.object()).optional()
+  }).optional(),
   file: fileSchema.required(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()
@@ -47,6 +46,9 @@ export const summaryLogInsertSchema = Joi.object({
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
   failureReason: Joi.string().optional(),
+  validation: Joi.object({
+    issues: Joi.array().items(Joi.object()).optional()
+  }).optional(),
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()

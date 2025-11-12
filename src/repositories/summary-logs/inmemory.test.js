@@ -3,6 +3,7 @@ import { describe, vi, expect, it as base } from 'vitest'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { buildSummaryLog, buildFile } from './contract/test-data.js'
+import { waitForVersion } from './contract/test-helpers.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -42,11 +43,13 @@ describe('In-memory summary logs repository', () => {
 
       const retrieved = await repository.findById(id)
       retrieved.summaryLog.file.name = 'modified.xlsx'
-      retrieved.summaryLog.file.s3.bucket = 'hacked-bucket'
+      retrieved.summaryLog.file.uri = 's3://hacked-bucket/hacked-key'
 
       const retrievedAgain = await repository.findById(id)
       expect(retrievedAgain.summaryLog.file.name).toBe('original.xlsx')
-      expect(retrievedAgain.summaryLog.file.s3.bucket).toBe('test-bucket')
+      expect(retrievedAgain.summaryLog.file.uri).toBe(
+        's3://test-bucket/test-key'
+      )
     })
 
     it('stores independent copies that cannot be modified by input mutation', async () => {
@@ -61,11 +64,11 @@ describe('In-memory summary logs repository', () => {
       await repository.insert(id, summaryLog)
 
       summaryLog.file.name = 'mutated.xlsx'
-      summaryLog.file.s3.key = 'mutated-key'
+      summaryLog.file.uri = 's3://mutated-bucket/mutated-key'
 
       const retrieved = await repository.findById(id)
       expect(retrieved.summaryLog.file.name).toBe('original.xlsx')
-      expect(retrieved.summaryLog.file.s3.key).toBe('test-key')
+      expect(retrieved.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
     })
 
     it('stores independent copies on update', async () => {
@@ -84,11 +87,11 @@ describe('In-memory summary logs repository', () => {
       await repository.update(id, 1, updates)
 
       updates.file.name = 'mutated.xlsx'
-      updates.file.s3.bucket = 'evil-bucket'
+      updates.file.uri = 's3://evil-bucket/evil-key'
 
-      const retrieved = await repository.findById(id)
+      const retrieved = await waitForVersion(repository, id, 2)
       expect(retrieved.summaryLog.file.name).toBe('updated.xlsx')
-      expect(retrieved.summaryLog.file.s3.bucket).toBe('test-bucket')
+      expect(retrieved.summaryLog.file.uri).toBe('s3://test-bucket/test-key')
     })
   })
 })

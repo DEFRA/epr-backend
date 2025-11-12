@@ -1,0 +1,1423 @@
+{
+  "_id": {
+    "$oid": "68fa2ffb769046677049ce35"
+  },
+  "schemaVersion": 1,
+  "answers": [
+    {
+      "shortDescription": "Registered charity?",
+      "title": "Is your organisation a registered charity?",
+      "type": "YesNoField",
+      "value": "false"
+    },
+    {
+      "shortDescription": "Currently operational?",
+      "title": "Are you currently reprocessing or exporting packaging waste to be recycled?",
+      "type": "RadiosField",
+      "value": "Exporter"
+    },
+    {
+      "shortDescription": "On Companies House?",
+      "title": "Is your business registered with Companies House?",
+      "type": "YesNoField",
+      "value": "false"
+    },
+    {
+      "shortDescription": "Main address in UK?",
+      "title": "Does your business have a main address in the UK?",
+      "type": "YesNoField",
+      "value": "true"
+    },
+    {
+      "shortDescription": "Organisation name",
+      "title": "What is the name of your business?",
+      "type": "TextField",
+      "value": "British Beverage Distributors Ltd"
+    },
+    {
+      "shortDescription": "Trading name",
+      "title": "What is the trading name of your business?",
+      "type": "TextField",
+      "value": "British Beverage Distributors Ltd"
+    },
+    {
+      "shortDescription": "Organisation address",
+      "title": "What is the address of your business?",
+      "type": "UkAddressField",
+      "value": "45 High Street,,Birmingham,B2 4AA"
+    },
+    {
+      "shortDescription": "Organisation type",
+      "title": "What type of business are you registering?",
+      "type": "RadiosField",
+      "value": "An individual"
+    },
+    {
+      "shortDescription": "Submitter name",
+      "title": "What is your full name?",
+      "type": "TextField",
+      "value": "James Patterson"
+    },
+    {
+      "shortDescription": "Submitter email address",
+      "title": "What is your email address?",
+      "type": "EmailAddressField",
+      "value": "reexserviceteam@defra.gov.uk"
+    },
+    {
+      "shortDescription": "Submitter telephone number",
+      "title": "What is your telephone number?",
+      "type": "TelephoneNumberField",
+      "value": "020 7946 0123"
+    },
+    {
+      "shortDescription": "Submitter job title",
+      "title": "What is your job title?",
+      "type": "TextField",
+      "value": "Director"
+    },
+    {
+      "shortDescription": "Sole trader - in charge?",
+      "title": "Sole trader - are you the individual in charge of the business?",
+      "type": "YesNoField",
+      "value": "false"
+    },
+    {
+      "shortDescription": "Sole trader - in charge name",
+      "title": "What is their full name?",
+      "type": "TextField",
+      "value": "Joe Hamiliton"
+    },
+    {
+      "shortDescription": "Sole trader - in charge email",
+      "title": "What is their email address?",
+      "type": "EmailAddressField",
+      "value": "joe.hamilton@gmail.com"
+    },
+    {
+      "shortDescription": "Sole trader - in charge phone",
+      "title": "What is their telephone number?",
+      "type": "TelephoneNumberField",
+      "value": "0123456789"
+    },
+    {
+      "shortDescription": "Sole trader - in charge job title",
+      "title": "What is their job title?",
+      "type": "TextField",
+      "value": "Director"
+    }
+  ],
+  "rawSubmissionData": {
+    "meta": {
+      "schemaVersion": "1",
+      "timestamp": "2025-10-23T13:39:07.408Z",
+      "referenceNumber": "196-CC0-0F6",
+      "definition": {
+        "name": "Demo for pEPR - Extended Producer Responsibilities: provide your organisation details (EA)",
+        "engine": "V2",
+        "schema": 2,
+        "startPage": "/summary",
+        "pages": [
+          {
+            "title": "Form guidance",
+            "path": "/form-guidance",
+            "components": [
+              {
+                "id": "c345f555-fea1-44ed-a9c9-f19e33850458",
+                "type": "Markdown",
+                "content": "Use this form to submit your organisation details, which will allow you to register with the Environment Agency (EA) as a reprocessor or exporter of packaging waste.\r\n\r\nIt may take around 15 minutes to complete the form. [Read what information you should have ready before you start.](https://www.gov.uk/guidance/packaging-waste-2026-registration-and-accreditation-process-for-reprocessors-and-exporters#submit-your-organisation-details)\r\n\r\nFor information on how Defra and the environmental regulators (EA, NRW, DAERA, SEPA) process your personal data, please visit the [privacy notice on GOV.UK](https://www.gov.uk/guidance/extended-producer-responsibility-for-packaging-privacy-policy).",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "9ede5af3-77a0-498d-8649-f6c997d7a209"
+          },
+          {
+            "title": "Is your organisation a registered charity?",
+            "path": "/is-your-organisation-a-registered-charity",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Is your organisation a registered charity?",
+                "name": "FAxvwq",
+                "shortDescription": "Registered charity?",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "8846c78d-d35a-4b91-bbf9-8a262f6fc887"
+              }
+            ],
+            "next": [],
+            "id": "15a59f52-0d8c-4a7f-8554-dc8051e06980"
+          },
+          {
+            "title": "Charities do not need to register",
+            "controller": "TerminalPageController",
+            "path": "/charities-do-not-need-to-register",
+            "components": [
+              {
+                "id": "7ecd7374-76f6-4bf9-a15f-2e8a701832b1",
+                "type": "Markdown",
+                "content": "Registered charities are exempt and do not need to register as a reprocessor or exporter of packaging waste under the Producer Responsibility Obligations (Packaging and Packaging Waste) Regulations 2024.",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "1b1270dc-131e-4aa8-9618-bb9a590be1b4",
+            "condition": "a1df7634-07f9-4996-8519-5864e36dfc3f"
+          },
+          {
+            "title": "Are you currently reprocessing or exporting packaging waste to be recycled?",
+            "path": "/are-you-currently-reprocessing-or-exporting-packaging-waste-to-be-recycled",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "Are you currently reprocessing or exporting packaging waste to be recycled?",
+                "name": "WVADkQ",
+                "shortDescription": "Currently operational?",
+                "hint": "",
+                "list": "f67242eb-d50a-4d4f-8282-6271400affb2",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "50222099-1fb2-4886-a697-642081d712b1"
+              }
+            ],
+            "next": [],
+            "id": "ac2d3c98-45d5-4b9f-91af-48d9c5d01749"
+          },
+          {
+            "title": "You do not need to register",
+            "controller": "TerminalPageController",
+            "path": "/you-do-not-need-to-register",
+            "components": [
+              {
+                "id": "b87ba1f6-5506-4078-ad17-ac0751f1e5df",
+                "type": "Markdown",
+                "content": "Registration is only mandatory if you are a reprocessor or exporter of packaging waste.\r\n\r\nIf you are a reprocessor or exporter of packaging waste, you must apply for registration by 1 October 2025. This is so you can meet the new mandatory requirement to be registered for the year starting 1 January 2026, subject to approval.",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "next": [],
+            "id": "16630779-1d7e-4f66-b990-82653e78d0e0",
+            "condition": "9c0a44d1-6fe3-467b-8497-77268b553b98"
+          },
+          {
+            "title": "Which UK nations do you have a reprocessing site based in?",
+            "path": "/which-uk-nations-do-you-have-a-reprocessing-site-based-in",
+            "components": [
+              {
+                "type": "CheckboxesField",
+                "title": "Which UK nations do you have a reprocessing site based in?",
+                "name": "VcdRNr",
+                "shortDescription": "Nations with sites",
+                "hint": "Tick all that apply",
+                "list": "4ac95eda-8547-43ac-9b44-19fe94c3ce76",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "a93ea4e0-4515-4d23-a7b0-335b7cf95c5d"
+              }
+            ],
+            "next": [],
+            "id": "36264c9d-0500-4278-934b-5925f99a8bc8",
+            "condition": "f387e311-5b1c-4713-9a53-2cae825cb8fa"
+          },
+          {
+            "title": "Is your business registered with Companies House?",
+            "path": "/is-your-business-registered-with-companies-house",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Is your business registered with Companies House?",
+                "name": "hNTczg",
+                "shortDescription": "On Companies House?",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "1895b792-d20f-4e04-b0f0-c619d628c5bb"
+              }
+            ],
+            "next": [],
+            "id": "42f1e39a-af38-4c5e-88ed-584db45a0869"
+          },
+          {
+            "title": "Companies House details",
+            "path": "/companies-house-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the name of your company, as registered with Companies House?",
+                "name": "RUKDyH",
+                "shortDescription": "Organisation name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "b973128e-4f4d-4af7-a140-41f636947e49"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the trading name of your business?",
+                "name": "XcvvZV",
+                "shortDescription": "Trading name",
+                "hint": "You may trade under your own name, or a name you have given to your business - leave blank if this is the same as your company name",
+                "options": {
+                  "required": false
+                },
+                "schema": {},
+                "id": "04b89c5e-fb7b-4ac0-99c0-758a30c154b0"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your company registration number?",
+                "name": "VZLTnn",
+                "shortDescription": "Companies House number",
+                "hint": "This is also known as your Companies House number - it should be 8 characters, for example: 01234567 or AC012345",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {
+                  "min": 8,
+                  "max": 8,
+                  "regex": "[a-zA-Z0-9]{2}[0-9]{6}"
+                },
+                "id": "241cb877-4e5b-4f03-9ee0-3d282233d37b"
+              },
+              {
+                "type": "UkAddressField",
+                "title": "What is your registered office address?",
+                "name": "GNVlAd",
+                "shortDescription": "Registered office address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8815385c-7db7-4558-9fe1-e3fb8f2c4211"
+              }
+            ],
+            "next": [],
+            "id": "1c703530-a911-4407-9359-ffd10742e1d1",
+            "condition": "3f9c1b23-f550-4ca3-b931-a4231965a068"
+          },
+          {
+            "title": "Does your business have a main address in the UK?",
+            "path": "/does-your-business-have-a-main-address-in-the-uk",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Does your business have a main address in the UK?",
+                "name": "lEnwLd",
+                "shortDescription": "Main address in UK?",
+                "hint": "This means a head office or principal place of business in the UK",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "d4eee51c-9d77-4400-a856-55f649ce79b4"
+              }
+            ],
+            "next": [],
+            "id": "684d2db5-3553-4f43-9aa7-e6bff34f2a82",
+            "condition": "41a91179-ca00-41ed-8636-59d7f498969a"
+          },
+          {
+            "title": "Non-UK company details",
+            "path": "/non-uk-company-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the name of your business?",
+                "name": "WkWBWB",
+                "shortDescription": "Organisation name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "cdefda0c-eba1-4a72-be6d-b058682b35fc"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the trading name of your business?",
+                "name": "xsDMEE",
+                "shortDescription": "Trading name",
+                "hint": "",
+                "options": {
+                  "required": false
+                },
+                "schema": {},
+                "id": "0132f0e5-90b3-4140-a2a7-1a55343edb1f"
+              },
+              {
+                "type": "TextField",
+                "title": "Address line 1",
+                "name": "yhEOvK",
+                "shortDescription": "Address line 1",
+                "hint": "This is the registered office or head office or principal place of business address",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "677bd61b-7b57-4b8f-9fcb-a9ef4dc6e386"
+              },
+              {
+                "type": "TextField",
+                "title": "Address line 2",
+                "name": "HXsuSR",
+                "shortDescription": "Address line 2",
+                "hint": "",
+                "options": {
+                  "required": false
+                },
+                "schema": {},
+                "id": "576cc9e2-7167-48ef-9d4d-6840ec6ff5e0"
+              },
+              {
+                "type": "TextField",
+                "title": "Town or city",
+                "name": "TUmXzj",
+                "shortDescription": "Town or city",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "480e30a2-c15b-4647-b939-48adf301a215"
+              },
+              {
+                "type": "TextField",
+                "title": "Country",
+                "name": "PdFoDo",
+                "shortDescription": "Country",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "54d5860b-1be9-42e2-9783-3e5f6befed31"
+              },
+              {
+                "type": "TextField",
+                "title": "State, province or region",
+                "name": "oyAQgP",
+                "shortDescription": "State, province or region",
+                "hint": "Leave blank if the address does not have a state, province or region",
+                "options": {
+                  "required": false
+                },
+                "schema": {},
+                "id": "cfc7152f-aacb-4836-9930-36b5d52eb5c2"
+              },
+              {
+                "type": "TextField",
+                "title": "Postcode or equivalent",
+                "name": "pAzIoG",
+                "shortDescription": "Postcode or equivalent",
+                "hint": "",
+                "options": {
+                  "required": false,
+                  "classes": "govuk-input govuk-input--width-10"
+                },
+                "schema": {},
+                "id": "908a4b92-b486-4e8a-b664-53006d297584"
+              }
+            ],
+            "next": [],
+            "id": "3dd0528f-b2ba-4018-9ff8-62586db86cbf",
+            "condition": "e9c001e7-3cee-4d73-91e0-34f951cc128a"
+          },
+          {
+            "title": "Company details",
+            "path": "/company-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is the name of your business?",
+                "name": "JbEBvr",
+                "shortDescription": "Organisation name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "6fc46be4-8e4b-4fe3-90b2-89c9882897ad"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the trading name of your business?",
+                "name": "QdhMJS",
+                "shortDescription": "Trading name",
+                "hint": "",
+                "options": {
+                  "required": false
+                },
+                "schema": {},
+                "id": "dfa06dd9-61a1-4e70-ad33-0d33d940c461"
+              },
+              {
+                "type": "UkAddressField",
+                "title": "What is the address of your business?",
+                "name": "VATjEi",
+                "shortDescription": "Organisation address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "e7a14064-0933-4857-b76c-071d6016b133"
+              }
+            ],
+            "next": [],
+            "id": "0cf82114-c019-4510-bced-ad35a9fa53c7",
+            "condition": "e670e8b2-7b56-4b89-a2e4-44cbb2fbf226"
+          },
+          {
+            "title": "Is your organisation a partnership?",
+            "path": "/is-your-organisation-a-partnership",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "Is your organisation a partnership?",
+                "name": "hnwFjT",
+                "shortDescription": "Are you a partnership?",
+                "hint": "",
+                "list": "e418f33d-a5c7-4177-a7bf-eba772b3d7e0",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "0ec52e66-6846-41a6-ad73-6a2f50fd9b4f"
+              }
+            ],
+            "next": [],
+            "id": "df7a5778-6305-4705-b4ca-ef7c9f4a748e",
+            "condition": "3f9c1b23-f550-4ca3-b931-a4231965a068"
+          },
+          {
+            "title": "Names of partners in your limited partnership",
+            "path": "/names-of-partners-in-your-limited-partnership",
+            "components": [
+              {
+                "type": "Markdown",
+                "content": "If you have more than one partner in your limited partnership, enter the details of one of them on this page. You will be able to add another on the next page.",
+                "options": {},
+                "schema": {},
+                "id": "e4d0f760-0903-4b62-81cd-4738f4306ba2"
+              },
+              {
+                "type": "TextField",
+                "title": "What is the full name of the company or individual partner?",
+                "name": "RXPSft",
+                "shortDescription": "Partner names",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "06634b80-2a3c-4528-9b0e-a1debf494eb7"
+              },
+              {
+                "type": "RadiosField",
+                "title": "What is the type of partner?",
+                "name": "PEWtSm",
+                "shortDescription": "Partner type",
+                "hint": "",
+                "list": "c3b9a1ee-bb15-48de-a341-2e7395bbd814",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "fc2f7942-ec71-4cc9-b05c-b1a1f1dc950f"
+              }
+            ],
+            "next": [],
+            "id": "c737b446-022a-43de-892e-ced2e61f62de",
+            "condition": "8b7c0312-442b-40f7-9696-767bc6f7e1fe",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "CZFqEV",
+                "title": "Partner"
+              },
+              "schema": {
+                "min": 1,
+                "max": 25
+              }
+            }
+          },
+          {
+            "title": "What type of business are you registering?",
+            "path": "/what-type-of-business-are-you-registering",
+            "components": [
+              {
+                "type": "RadiosField",
+                "title": "What type of business are you registering?",
+                "name": "uNBiGz",
+                "shortDescription": "Organisation type",
+                "hint": "",
+                "list": "f8b79bf7-679e-492c-bafb-26de5d487a49",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "b186ebbb-3dd1-404c-b10f-f61540dfee9c"
+              }
+            ],
+            "next": [],
+            "id": "ddd50ad2-8412-44c8-a907-ec0189f2f370",
+            "condition": "e670e8b2-7b56-4b89-a2e4-44cbb2fbf226"
+          },
+          {
+            "title": "Names of partners in your partnership",
+            "path": "/names-of-partners-in-your-partnership",
+            "components": [
+              {
+                "id": "c31ca1ca-3796-4944-b30d-58836a1bdd60",
+                "type": "Markdown",
+                "content": "This means any company entity partners and corporate partners, which are listed as partners within your partnership, that is not registered on Companies House. \r\n\r\nIf you have more than one partner in your partnership, enter the details of one of them on this page. You will be able to add another on the next page.",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "What is the full name of the company or corporate partner?",
+                "name": "LJnaYW",
+                "shortDescription": "Partner name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "997671f5-2f6a-420d-8114-5d22d77dcb9a"
+              },
+              {
+                "type": "RadiosField",
+                "title": "What is the type of partner?",
+                "name": "Jisacy",
+                "shortDescription": "Type of partner",
+                "hint": "",
+                "list": "50e8f9b5-c043-4f2f-9ce0-e45f881f6127",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "f4119ba4-a601-4263-ab5b-7c2905d46506"
+              }
+            ],
+            "next": [],
+            "id": "9e882a1b-989c-43d5-921f-f8256ccac515",
+            "condition": "ab17a7c5-2242-49f7-a0e5-8a22a595932b",
+            "controller": "RepeatPageController",
+            "repeat": {
+              "options": {
+                "name": "koGncx",
+                "title": "Partner"
+              },
+              "schema": {
+                "min": 1,
+                "max": 25
+              }
+            }
+          },
+          {
+            "title": "Your contact details",
+            "path": "/your-contact-details",
+            "components": [
+              {
+                "type": "TextField",
+                "title": "What is your full name?",
+                "name": "BYtjnh",
+                "shortDescription": "Submitter name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "56e29ef0-bfc0-48ae-8374-e379857664d5"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is your email address?",
+                "name": "aSoxDO",
+                "shortDescription": "Submitter email address",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8b11f43b-3f74-4ffb-97db-00374d69c8d7"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is your telephone number?",
+                "name": "aIFHXo",
+                "shortDescription": "Submitter telephone number",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "a3ebc594-54e3-462e-b1ef-a032c158f5c7"
+              },
+              {
+                "type": "TextField",
+                "title": "What is your job title?",
+                "name": "LyeSzH",
+                "shortDescription": "Submitter job title",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "1b664e8d-2375-4fb5-bb7b-c29dfd9e43c6"
+              }
+            ],
+            "next": [],
+            "id": "1231c365-9524-4842-bf5e-9486e9c54d96"
+          },
+          {
+            "title": "Unincorporated association - do you manage or control the organisation?",
+            "path": "/unincorporated-association-do-you-manage-or-control-the-organisation",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Unincorporated association - do you manage or control the organisation?",
+                "name": "kvWEbQ",
+                "shortDescription": "Unincorporated association - manage or control?",
+                "hint": "This means control or management of an unincorporated association which has a registered office, head office or principle place of business within the UK",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "8aef08e2-623e-4420-b511-c67cd620a617"
+              }
+            ],
+            "next": [],
+            "id": "e672d310-18cd-4255-8da8-a6048bc45052",
+            "condition": "61fea882-b69c-47aa-bc1a-0266ade98d5d"
+          },
+          {
+            "title": "Unincorporated association - who manages or controls the organisation?",
+            "path": "/unincorporated-association-who-manages-or-controls-the-organisation",
+            "components": [
+              {
+                "id": "c4b3f6c9-d200-4ec7-8645-bf3142cabdec",
+                "type": "Markdown",
+                "content": "This means control or management of an unincorporated association which has a registered office, head office or principle place of business within the UK",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "What is their full name?",
+                "name": "EWkvxp",
+                "shortDescription": "Unincorporated association - manage or control name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "1ea4f697-be84-4bef-949d-bdca51d9708d"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is their email address?",
+                "name": "AJrKrM",
+                "shortDescription": "Unincorporated association - manage or control email",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "8d0e1814-2713-491d-a4f0-b6f7c5ff7c0b"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is their telephone number?",
+                "name": "EWQqCI",
+                "shortDescription": "Unincorporated association - manage or control phone",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "f09ceecb-fd7d-42e7-ab58-0033f98dcec4"
+              },
+              {
+                "type": "TextField",
+                "title": "What is their job title?",
+                "name": "SBtdjf",
+                "shortDescription": "Unincorporated association - manage or control job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "74478745-030c-4ef4-bf19-48cc46d51e64"
+              }
+            ],
+            "next": [],
+            "id": "96b2c1a5-5127-45d4-a4c2-b782706d29a9",
+            "condition": "642d0e87-8fef-4357-a12d-d0d3564b8cc2"
+          },
+          {
+            "title": "Sole trader - are you the individual in charge of the business?",
+            "path": "/sole-trader-are-you-the-individual-in-charge-of-the-business",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Sole trader - are you the individual in charge of the business?",
+                "name": "DmOeEY",
+                "shortDescription": "Sole trader - in charge?",
+                "hint": "This means you make all the business decisions and you have the responsibility for the allocation of profits after tax",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "933e8c2e-9a18-4cd1-b049-0babe6d20d2b"
+              }
+            ],
+            "next": [],
+            "id": "5f28ac4d-049d-4a50-b830-2a90a004a080",
+            "condition": "2615ed47-65dd-40a3-ad3b-ce2a66dcce9e"
+          },
+          {
+            "title": "Sole trader - who is the individual in charge of the business?",
+            "path": "/sole-trader-who-is-the-individual-in-charge-of-the-business",
+            "components": [
+              {
+                "id": "f6ca6e97-bc6e-4c42-bd80-a81d942590eb",
+                "type": "Markdown",
+                "content": "This means they make all the business decisions and they have the responsibility for the allocation of profits after tax",
+                "options": {},
+                "schema": {}
+              },
+              {
+                "type": "TextField",
+                "title": "What is their full name?",
+                "name": "JiSlkT",
+                "shortDescription": "Sole trader - in charge name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "4727037b-2682-4c46-9098-b965bebe51b8"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is their email address?",
+                "name": "urKjHd",
+                "shortDescription": "Sole trader - in charge email",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "19dc5d27-652d-4f5c-b837-3ef621502847"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is their telephone number?",
+                "name": "YXSHOs",
+                "shortDescription": "Sole trader - in charge phone",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "1a83b4e0-2d2c-4234-a732-76f3cd1c801f"
+              },
+              {
+                "type": "TextField",
+                "title": "What is their job title?",
+                "name": "bCwGVt",
+                "shortDescription": "Sole trader - in charge job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "d6a2f144-682c-487f-9280-dfef8636493b"
+              }
+            ],
+            "next": [],
+            "id": "ea39e396-2207-40e0-a9bb-ff6a3556e33d",
+            "condition": "e6e2b7bb-d654-44d3-9b34-cecf4e62f81f"
+          },
+          {
+            "title": "Non-UK organisation - do you manage or control the organisation?",
+            "path": "/non-uk-organisation-do-you-manage-or-control-the-organisation",
+            "components": [
+              {
+                "type": "YesNoField",
+                "title": "Non-UK organisation - do you manage or control the organisation?",
+                "name": "usmyPh",
+                "shortDescription": "Non-UK - manage or control?",
+                "hint": "This means legal liability for a business which does not have a registered office, head office or principle place of business in the UK",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-radios--inline"
+                },
+                "schema": {},
+                "id": "bed67056-4381-478c-9f88-b35ce6af5bd9"
+              }
+            ],
+            "next": [],
+            "id": "02f1dda1-9aba-4f6d-b26f-72e0f76195f4",
+            "condition": "e9c001e7-3cee-4d73-91e0-34f951cc128a"
+          },
+          {
+            "title": "Non-UK organisation - who manages or controls the organisation?",
+            "path": "/non-uk-organisation-who-manages-or-controls-the-organisation",
+            "components": [
+              {
+                "type": "Markdown",
+                "content": "This means legal liability for a business which does not have a registered office, head office or principle place of business in the UK",
+                "options": {},
+                "schema": {},
+                "id": "466a3f14-eaa5-4e13-9da1-fd3915f5df8d"
+              },
+              {
+                "type": "TextField",
+                "title": "What is their full name?",
+                "name": "ltYedw",
+                "shortDescription": "Non-UK - manage or control name",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "9b9bd40c-f6c9-44e3-8d7d-353796b5bb3e"
+              },
+              {
+                "type": "EmailAddressField",
+                "title": "What is their email address?",
+                "name": "aTDspl",
+                "shortDescription": "Non-UK - manage or control email",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "f9e14b7c-07cd-43a3-ad87-14db93ef8c0b"
+              },
+              {
+                "type": "TelephoneNumberField",
+                "title": "What is their telephone number?",
+                "name": "ItokGu",
+                "shortDescription": "Non-UK - manage or control phone",
+                "hint": "",
+                "options": {
+                  "required": true,
+                  "classes": "govuk-input--width-20"
+                },
+                "schema": {},
+                "id": "a88b1d83-4e8b-4b91-aa64-54f608dab0d7"
+              },
+              {
+                "type": "TextField",
+                "title": "What is their job title?",
+                "name": "niPSQc",
+                "shortDescription": "Non-UK - manage or control job title",
+                "hint": "",
+                "options": {
+                  "required": true
+                },
+                "schema": {},
+                "id": "450ed4fc-2470-4e94-a2f3-fbceb63f9959"
+              }
+            ],
+            "next": [],
+            "id": "d2b96856-aad0-44f5-b773-ad5354353169",
+            "condition": "0fec6841-629d-4d21-acea-334e3c10de77"
+          },
+          {
+            "id": "449a45f6-4541-4a46-91bd-8b8931b07b50",
+            "title": "Summary",
+            "path": "/summary",
+            "controller": "SummaryPageController",
+            "next": [],
+            "components": [
+              {
+                "id": "46a53871-dbc2-42fa-a959-d85272bdbbdb",
+                "type": "Markdown",
+                "content": "If you want to keep a record of your submitted answers please print this page.\r\n\r\n**By submitting this application you confirm the information you provided is accurate.**",
+                "options": {},
+                "schema": {}
+              }
+            ],
+            "events": {
+              "onSave": {
+                "type": "http",
+                "options": {
+                  "method": "POST",
+                  "url": "https://epr-backend.test.cdp-int.defra.cloud/v1/apply/organisation"
+                }
+              }
+            }
+          }
+        ],
+        "conditions": [
+          {
+            "items": [
+              {
+                "id": "0e63031a-e1e9-4fb0-a2a3-5aae772fa035",
+                "componentId": "8846c78d-d35a-4b91-bbf9-8a262f6fc887",
+                "operator": "is",
+                "value": true,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is charity",
+            "id": "a1df7634-07f9-4996-8519-5864e36dfc3f"
+          },
+          {
+            "items": [
+              {
+                "id": "52faa20b-7b0e-4fcd-8bf4-9b973ec99534",
+                "componentId": "1895b792-d20f-4e04-b0f0-c619d628c5bb",
+                "operator": "is",
+                "value": true,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is registered on Companies House",
+            "id": "3f9c1b23-f550-4ca3-b931-a4231965a068"
+          },
+          {
+            "items": [
+              {
+                "id": "f63df74e-9a72-4c2a-859d-600326d77f8c",
+                "componentId": "0ec52e66-6846-41a6-ad73-6a2f50fd9b4f",
+                "operator": "is",
+                "value": {
+                  "itemId": "a1e6b872-814d-4d6e-812d-87f4f1d37576",
+                  "listId": "e418f33d-a5c7-4177-a7bf-eba772b3d7e0"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is a limited partnership",
+            "id": "8b7c0312-442b-40f7-9696-767bc6f7e1fe"
+          },
+          {
+            "items": [
+              {
+                "id": "87f3df68-127c-4c55-b2aa-d93be72d9631",
+                "componentId": "1895b792-d20f-4e04-b0f0-c619d628c5bb",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is not on Companies House",
+            "id": "41a91179-ca00-41ed-8636-59d7f498969a"
+          },
+          {
+            "items": [
+              {
+                "id": "8307c059-b0ed-403f-9a8c-db10e49ffb30",
+                "componentId": "d4eee51c-9d77-4400-a856-55f649ce79b4",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is not in the UK",
+            "id": "e9c001e7-3cee-4d73-91e0-34f951cc128a"
+          },
+          {
+            "items": [
+              {
+                "id": "0798eb5a-ed3b-44b4-97a2-c06cf4932a95",
+                "componentId": "d4eee51c-9d77-4400-a856-55f649ce79b4",
+                "operator": "is",
+                "value": true,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is in UK",
+            "id": "e670e8b2-7b56-4b89-a2e4-44cbb2fbf226"
+          },
+          {
+            "items": [
+              {
+                "id": "244742a1-da47-4da9-ac20-5571014ffb42",
+                "componentId": "b186ebbb-3dd1-404c-b10f-f61540dfee9c",
+                "operator": "is",
+                "value": {
+                  "itemId": "fe32a690-4d2b-40d0-905a-6c748b7e0bd1",
+                  "listId": "f8b79bf7-679e-492c-bafb-26de5d487a49"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is partnership (1890)",
+            "id": "ab17a7c5-2242-49f7-a0e5-8a22a595932b"
+          },
+          {
+            "items": [
+              {
+                "id": "02b3cf3b-7afa-47f8-8d57-0a976a0d1532",
+                "componentId": "0ec52e66-6846-41a6-ad73-6a2f50fd9b4f",
+                "operator": "is",
+                "value": {
+                  "itemId": "943bfabf-e3b4-4057-b548-e6eca193e031",
+                  "listId": "e418f33d-a5c7-4177-a7bf-eba772b3d7e0"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is not CH Partnership",
+            "id": "abe21944-c7e9-42f3-8468-10830f83ef31"
+          },
+          {
+            "items": [
+              {
+                "id": "37411d51-cfec-4a1a-b209-08c3418199b6",
+                "componentId": "50222099-1fb2-4886-a697-642081d712b1",
+                "operator": "is",
+                "value": {
+                  "itemId": "5c6017e3-3669-4455-9d03-dc8f73df09d2",
+                  "listId": "f67242eb-d50a-4d4f-8282-6271400affb2"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is not operational",
+            "id": "9c0a44d1-6fe3-467b-8497-77268b553b98"
+          },
+          {
+            "items": [
+              {
+                "id": "2a0c6f38-13ed-4183-ac77-8263d8f25ebe",
+                "componentId": "0ec52e66-6846-41a6-ad73-6a2f50fd9b4f",
+                "operator": "is",
+                "value": {
+                  "itemId": "6e4898d3-8dbc-4735-b682-dd47fd52c524",
+                  "listId": "e418f33d-a5c7-4177-a7bf-eba772b3d7e0"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is an LLP",
+            "id": "fe011b2f-954e-4fd2-8e8b-fd2ed292c28b"
+          },
+          {
+            "items": [
+              {
+                "id": "cb91414c-edbb-42ae-bca7-cda91c7223fa",
+                "componentId": "50222099-1fb2-4886-a697-642081d712b1",
+                "operator": "is not",
+                "value": {
+                  "itemId": "8f2611e3-d936-4a76-9e8a-3e883e27d8de",
+                  "listId": "f67242eb-d50a-4d4f-8282-6271400affb2"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is not an exporter",
+            "id": "f387e311-5b1c-4713-9a53-2cae825cb8fa"
+          },
+          {
+            "items": [
+              {
+                "id": "a063562e-ad88-4b0b-a32f-c75f443aa523",
+                "componentId": "b186ebbb-3dd1-404c-b10f-f61540dfee9c",
+                "operator": "is",
+                "value": {
+                  "itemId": "214c10a1-0803-4a8b-b80f-830d898d0d44",
+                  "listId": "f8b79bf7-679e-492c-bafb-26de5d487a49"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is Unicorp Assoc",
+            "id": "61fea882-b69c-47aa-bc1a-0266ade98d5d"
+          },
+          {
+            "items": [
+              {
+                "id": "2d81941d-17f3-49a3-8585-42cb545789bc",
+                "componentId": "b186ebbb-3dd1-404c-b10f-f61540dfee9c",
+                "operator": "is",
+                "value": {
+                  "itemId": "1644d1ca-2e71-4a43-86b4-777d3468733c",
+                  "listId": "f8b79bf7-679e-492c-bafb-26de5d487a49"
+                },
+                "type": "ListItemRef"
+              }
+            ],
+            "displayName": "Is sole trader",
+            "id": "2615ed47-65dd-40a3-ad3b-ce2a66dcce9e"
+          },
+          {
+            "items": [
+              {
+                "id": "bf30b3d2-6cd2-4bf9-9a69-fa18a93922bc",
+                "componentId": "933e8c2e-9a18-4cd1-b049-0babe6d20d2b",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is not in charge - Sole Trader",
+            "id": "e6e2b7bb-d654-44d3-9b34-cecf4e62f81f"
+          },
+          {
+            "items": [
+              {
+                "id": "a38089ab-f9f4-464d-96b0-d283ec84b5d2",
+                "componentId": "8aef08e2-623e-4420-b511-c67cd620a617",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is not in charge - Unicorp asso",
+            "id": "642d0e87-8fef-4357-a12d-d0d3564b8cc2"
+          },
+          {
+            "items": [
+              {
+                "id": "fb92cb20-1ed0-4216-aad7-d38cdfdfa694",
+                "componentId": "bed67056-4381-478c-9f88-b35ce6af5bd9",
+                "operator": "is",
+                "value": false,
+                "type": "BooleanValue"
+              }
+            ],
+            "displayName": "Is not in charge - Non-UK",
+            "id": "0fec6841-629d-4d21-acea-334e3c10de77"
+          }
+        ],
+        "sections": [],
+        "lists": [
+          {
+            "name": "ySZpNT",
+            "title": "List for question hnwFjT",
+            "type": "string",
+            "items": [
+              {
+                "id": "a1e6b872-814d-4d6e-812d-87f4f1d37576",
+                "text": "Yes - a limited partnership",
+                "value": "A limited partnership"
+              },
+              {
+                "id": "6e4898d3-8dbc-4735-b682-dd47fd52c524",
+                "text": "Yes - a limited liability partnership",
+                "value": "A limited liability partnership"
+              },
+              {
+                "id": "943bfabf-e3b4-4057-b548-e6eca193e031",
+                "text": "No",
+                "value": "No"
+              }
+            ],
+            "id": "e418f33d-a5c7-4177-a7bf-eba772b3d7e0"
+          },
+          {
+            "name": "NLSwig",
+            "title": "List for question PEWtSm",
+            "type": "string",
+            "items": [
+              {
+                "id": "236350ae-95de-44f3-a4e9-7bfbd361f792",
+                "text": "Company partner",
+                "value": "Company partner"
+              },
+              {
+                "id": "50206f48-5b94-4545-a094-65b3c68878ed",
+                "text": "Individual partner",
+                "value": "Individual partner"
+              }
+            ],
+            "id": "c3b9a1ee-bb15-48de-a341-2e7395bbd814"
+          },
+          {
+            "name": "XtBfQS",
+            "title": "List for question uNBiGz",
+            "type": "string",
+            "items": [
+              {
+                "id": "1644d1ca-2e71-4a43-86b4-777d3468733c",
+                "text": "An individual",
+                "value": "An individual",
+                "hint": {
+                  "text": "For example, a sole trader",
+                  "id": "3a74a51d-2424-4b6e-9894-085d40eee4eb"
+                }
+              },
+              {
+                "id": "214c10a1-0803-4a8b-b80f-830d898d0d44",
+                "text": "Unincorporated association",
+                "value": "Unincorporated association",
+                "hint": {
+                  "text": "A group of individuals not incorporated",
+                  "id": "b1e79842-cbed-40bb-8867-28e7df13bac6"
+                }
+              },
+              {
+                "id": "fe32a690-4d2b-40d0-905a-6c748b7e0bd1",
+                "text": "A partnership under the Partnership Act 1890",
+                "value": "A partnership under the Partnership Act 1890",
+                "hint": {
+                  "text": "Often called a general partnership",
+                  "id": "e1f5b554-b78e-47e8-9ea5-6792f0c4fe7f"
+                }
+              }
+            ],
+            "id": "f8b79bf7-679e-492c-bafb-26de5d487a49"
+          },
+          {
+            "name": "NikYav",
+            "title": "List for question Jisacy",
+            "type": "string",
+            "items": [
+              {
+                "id": "de7817a1-19e6-40cd-9834-ee21bfae887f",
+                "text": "Company partner",
+                "value": "Company partner"
+              },
+              {
+                "id": "2bd9ebe1-daad-42de-9a0b-5f9b817c8826",
+                "text": "Corporate partner",
+                "value": "Corporate partner"
+              }
+            ],
+            "id": "50e8f9b5-c043-4f2f-9ce0-e45f881f6127"
+          },
+          {
+            "name": "ktBLpv",
+            "title": "List for question WVADkQ",
+            "type": "string",
+            "items": [
+              {
+                "id": "0c06031d-9d61-40e0-a9b8-ec51055a6e58",
+                "text": "Reprocessing",
+                "value": "Reprocessor"
+              },
+              {
+                "id": "8f2611e3-d936-4a76-9e8a-3e883e27d8de",
+                "text": "Exporting",
+                "value": "Exporter"
+              },
+              {
+                "id": "49d45d31-a217-487c-9bf5-cca65bc007bc",
+                "text": "Reprocessing and exporting",
+                "value": "Reprocessor and exporter"
+              },
+              {
+                "id": "5c6017e3-3669-4455-9d03-dc8f73df09d2",
+                "text": "I am not reprocessing or exporting packaging waste to be recycled",
+                "value": "None of the above"
+              }
+            ],
+            "id": "f67242eb-d50a-4d4f-8282-6271400affb2"
+          },
+          {
+            "name": "hcyuad",
+            "title": "List for question VcdRNr",
+            "type": "string",
+            "items": [
+              {
+                "id": "babc1638-da3c-4395-891b-e5fba0d210fe",
+                "text": "England",
+                "value": "England"
+              },
+              {
+                "id": "e7cff5c1-3e2b-41d8-9f7a-bd8869538a4f",
+                "text": "Scotland",
+                "value": "Scotland"
+              },
+              {
+                "id": "6d5a9ee0-4f8e-4b97-a07a-98154afca3f7",
+                "text": "Wales",
+                "value": "Wales"
+              },
+              {
+                "id": "001700cf-fddb-423b-8de9-fa6956743e0b",
+                "text": "Northern Ireland",
+                "value": "Northern Ireland"
+              }
+            ],
+            "id": "4ac95eda-8547-43ac-9b44-19fe94c3ce76"
+          },
+          {
+            "id": "3167ecb5-61f9-4918-b7d0-6793b56aa814",
+            "name": "__yesNo",
+            "title": "Yes/No",
+            "type": "boolean",
+            "items": [
+              {
+                "id": "02900d42-83d1-4c72-a719-c4e8228952fa",
+                "text": "Yes",
+                "value": true
+              },
+              {
+                "id": "f39000eb-c51b-4019-8f82-bbda0423f04d",
+                "text": "No",
+                "value": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "data": {
+      "main": {
+        "FAxvwq": "false",
+        "WVADkQ": "Exporter",
+        "hNTczg": "false",
+        "lEnwLd": "true",
+        "JbEBvr": "British Beverage Distributors Ltd",
+        "QdhMJS": "British Beverage Distributors Ltd",
+        "VATjEi": "45 High Street,,Birmingham,B2 4AA",
+        "uNBiGz": "An individual",
+        "BYtjnh": "James Patterson",
+        "aSoxDO": "reexserviceteam@defra.gov.uk",
+        "aIFHXo": "020 7946 0123",
+        "LyeSzH": "Director",
+        "DmOeEY": "false",
+        "JiSlkT": "Joe Hamiliton",
+        "urKjHd": "joe.hamilton@gmail.com",
+        "YXSHOs": "0123456789",
+        "bCwGVt": "Director"
+      },
+      "repeaters": {},
+      "files": {}
+    }
+  },
+  "createdAt": {
+    "$date": "2025-10-23T13:39:07.468Z"
+  },
+  "orgId": 503287,
+  "orgName": "British Beverage Distributors Ltd",
+  "email": "reexserviceteam@defra.gov.uk",
+  "nations": null
+}

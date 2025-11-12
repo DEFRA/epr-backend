@@ -1,3 +1,5 @@
+import { mapRegulator } from './form-data-mapper.js'
+
 /**
  * Extract repeater field data from raw form submission
  * @param {Object} rawFormSubmissionObject - The raw form submission object
@@ -21,8 +23,14 @@ export function extractRepeaters(
   const repeaterName = repeaterPage.repeat.options.name
   const repeaterData = rawFormSubmissionObject?.data?.repeaters?.[repeaterName]
 
-  if (!Array.isArray(repeaterData)) {
+  if (repeaterData == null) {
     return []
+  }
+
+  if (!Array.isArray(repeaterData)) {
+    throw new TypeError(
+      `Invalid repeater data for "${pageTitle}": expected array but got ${typeof repeaterData}`
+    )
   }
 
   const componentMap = new Map(
@@ -44,16 +52,22 @@ export function extractRepeaters(
 
 /**
  * Extract all non-repeatable answers from form submission
- * @param {Object} rawFormSubmission - The raw form submission object
+ * @param {Object} rawSubmissionData - The raw submission data object
  * @returns {Object} Nested object grouped by page title with shortDescription as keys
  * @throws {Error} If required fields are missing, duplicate page title or shortDescription are detected within the same page
  */
-export function extractAnswers(rawFormSubmission) {
-  const pages = rawFormSubmission?.rawSubmissionData?.meta?.definition?.pages
-  const mainData = rawFormSubmission?.rawSubmissionData?.data?.main
+export function extractAnswers(rawSubmissionData) {
+  const pages = rawSubmissionData?.meta?.definition?.pages
+  const mainData = rawSubmissionData?.data?.main
 
-  if (!pages || !Array.isArray(pages)) {
-    throw new Error('extractAnswers: Missing or invalid pages definition')
+  if (!pages) {
+    throw new Error('extractAnswers: Missing pages definition')
+  }
+
+  if (!Array.isArray(pages)) {
+    throw new TypeError(
+      `extractAnswers: pages must be an array, got ${typeof pages}`
+    )
   }
 
   if (!mainData) {
@@ -72,7 +86,8 @@ export function extractAnswers(rawFormSubmission) {
         (component) =>
           component.shortDescription &&
           component.name &&
-          mainData[component.name] !== undefined
+          mainData[component.name]?.trim() &&
+          mainData[component.name].trim().length > 0
       )
       .reduce((acc, component) => {
         const { shortDescription, name } = component
@@ -135,13 +150,13 @@ export function flattenAnswersByShortDesc(answers) {
 
 /**
  * Retrieve file upload details by shortDescription
- * @param {Object} rawFormSubmission - The raw form submission object
+ * @param {Object} rawSubmissionData - The raw submission data object
  * @param {string} shortDescription - The shortDescription of the file upload field
  * @returns {Array<Object>} Array of file upload details with transformed keys
  */
-export function retrieveFileUploadDetails(rawFormSubmission, shortDescription) {
-  const pages = rawFormSubmission?.rawSubmissionData?.meta?.definition?.pages
-  const files = rawFormSubmission?.rawSubmissionData?.data?.files
+export function retrieveFileUploadDetails(rawSubmissionData, shortDescription) {
+  const pages = rawSubmissionData?.meta?.definition?.pages
+  const files = rawSubmissionData?.data?.files
 
   const component = pages
     ?.flatMap((page) => page.components || [])
@@ -166,4 +181,44 @@ export function retrieveFileUploadDetails(rawFormSubmission, shortDescription) {
     defraFormUploadedFileId: file.fileId,
     defraFormUserDownloadLink: file.userDownloadLink
   }))
+}
+
+export function extractTimestamp(rawSubmissionData) {
+  const timestamp = rawSubmissionData?.meta?.timestamp?.trim()
+
+  if (!timestamp) {
+    return undefined
+  }
+
+  const resultDate = new Date(timestamp)
+
+  if (Number.isNaN(resultDate.getTime())) {
+    return null
+  }
+
+  return resultDate
+}
+
+export function extractAgencyFromDefinitionName(rawSubmissionData) {
+  const definitionName = rawSubmissionData?.meta?.definition?.name
+
+  if (!definitionName) {
+    return undefined
+  }
+
+  // Match pattern like "(EA)" or "(SEPA)" at the end of the name
+  const match = definitionName.match(/\(([A-Z]+)\)\s*$/)
+
+  return match ? mapRegulator(match[1]) : undefined
+}
+
+/**
+ * Find the first field that exists in answers and return its value
+ * @param {Object} answers - Object containing answer values
+ * @param {Array<string>} fieldNames - Array of field names to check
+ * @returns {*} Value of the first field that exists, or undefined
+ */
+export function findFirstValue(answers, fieldNames) {
+  const field = fieldNames.find((f) => answers?.[f])
+  return field ? answers[field] : undefined
 }

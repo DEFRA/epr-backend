@@ -2,6 +2,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'
 
@@ -29,11 +30,14 @@ describe('SummaryLogsValidator', () => {
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
         meta: {
-          WASTE_REGISTRATION_NUMBER: {
+          REGISTRATION: {
             value: 'WRN12345'
           },
-          SUMMARY_LOG_TYPE: {
+          PROCESSING_TYPE: {
             value: 'REPROCESSOR'
+          },
+          TEMPLATE_VERSION: {
+            value: 1
           },
           MATERIAL: {
             value: 'Aluminium'
@@ -135,9 +139,15 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
-        status: SUMMARY_LOG_STATUS.VALIDATED
-      }
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        validation: expect.objectContaining({
+          issues: [],
+          summary: expect.objectContaining({
+            totalIssues: 0
+          })
+        })
+      })
     )
   })
 
@@ -151,34 +161,70 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'Something went wrong while retrieving your file upload',
+              context: {}
+            }
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason: 'Something went wrong while retrieving your file upload'
-      }
+      })
     )
   })
 
   it('should update status as expected when registration not found', async () => {
-    organisationsRepository.findRegistrationById.mockResolvedValue(null)
+    organisationsRepository.findRegistrationById.mockRejectedValue(
+      Boom.notFound('Registration with id reg-123 not found')
+    )
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
-        failureReason:
-          'Registration not found: organisationId=org-123, registrationId=reg-123'
-      }
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'Registration with id reg-123 not found',
+              context: {}
+            }
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
+        failureReason: 'Registration with id reg-123 not found'
+      })
     )
   })
 
   it('should update status as expected when waste registration number validation fails', async () => {
     summaryLogExtractor.extract.mockResolvedValue({
       meta: {
-        WASTE_REGISTRATION_NUMBER: {
+        REGISTRATION: {
           value: 'WRN99999'
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR'
+        },
+        TEMPLATE_VERSION: {
+          value: 1
+        },
+        MATERIAL: {
+          value: 'Aluminium'
         }
       },
       data: {}
@@ -189,33 +235,57 @@ describe('SummaryLogsValidator', () => {
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'business',
+              message:
+                "Summary log's waste registration number does not match this registration",
+              context: expect.any(Object)
+            }
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason:
           "Summary log's waste registration number does not match this registration"
-      }
+      })
     )
   })
 
   it('should update status as expected when extraction causes an unexpected exception', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
-    const result = await validateSummaryLog(summaryLogId).catch((err) => err)
-
-    expect(result).toBeInstanceOf(Error)
-    expect(result.message).toBe('S3 access denied')
+    await validateSummaryLog(summaryLogId)
 
     expect(summaryLogsRepository.update).toHaveBeenCalledWith(
       'summary-log-123',
       1,
-      {
+      expect.objectContaining({
         status: SUMMARY_LOG_STATUS.INVALID,
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'S3 access denied',
+              context: {}
+            }
+          ],
+          summary: expect.objectContaining({
+            totalIssues: 1
+          })
+        }),
         failureReason: 'S3 access denied'
-      }
+      })
     )
   })
 
-  it('should log as expected when extraction fails', async () => {
+  it('should log as expected when validation fails', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
@@ -223,7 +293,7 @@ describe('SummaryLogsValidator', () => {
     expect(mockLoggerError).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Failed to extract summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
+          'Failed to validate summary log file: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
         event: expect.objectContaining({
           category: 'server',
           action: 'process_failure'
@@ -268,12 +338,22 @@ describe('SummaryLogsValidator', () => {
     expect(result.message).toBe('Database error')
 
     expect(brokenRepository.update).toHaveBeenCalledTimes(1)
-    expect(brokenRepository.update).toHaveBeenCalledWith('summary-log-123', 1, {
-      status: SUMMARY_LOG_STATUS.VALIDATED
-    })
+    expect(brokenRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        validation: expect.objectContaining({
+          issues: [],
+          summary: expect.objectContaining({
+            totalIssues: 0
+          })
+        })
+      })
+    )
   })
 
-  it('should log error and rethrow original error if repository update fails during failure handler', async () => {
+  it('should throw database error if repository update fails when marking as invalid', async () => {
     const extractionError = new Error('S3 access denied')
     const databaseError = new Error('Database error')
 
@@ -282,18 +362,379 @@ describe('SummaryLogsValidator', () => {
 
     const result = await validateSummaryLog(summaryLogId).catch((err) => err)
 
-    expect(result).toBe(extractionError)
+    expect(result).toBe(databaseError)
+  })
 
-    expect(mockLoggerError).toHaveBeenCalledWith(
-      expect.objectContaining({
-        error: databaseError,
-        message:
-          'Failed to handle validation failure: summaryLogId=summary-log-123, fileId=file-123, filename=test.xlsx',
-        event: expect.objectContaining({
-          category: 'server',
-          action: 'process_failure'
-        })
+  describe('data syntax validation integration', () => {
+    it('should pass validation when data syntax is valid', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION: { value: 'WRN12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          UPDATE_WASTE_BALANCE: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'OUR_REFERENCE',
+              'DATE_RECEIVED',
+              'EWC_CODE',
+              'GROSS_WEIGHT',
+              'TARE_WEIGHT',
+              'PALLET_WEIGHT',
+              'NET_WEIGHT',
+              'BAILING_WIRE',
+              'HOW_CALCULATE_RECYCLABLE',
+              'WEIGHT_OF_NON_TARGET',
+              'RECYCLABLE_PROPORTION',
+              'TONNAGE_RECEIVED_FOR_EXPORT'
+            ],
+            rows: [
+              [
+                10000,
+                '2025-05-28T00:00:00.000Z',
+                '03 03 08',
+                1000,
+                100,
+                50,
+                850,
+                true,
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ],
+              [
+                10001,
+                '2025-08-01T00:00:00.000Z',
+                '16 03 10',
+                2000,
+                200,
+                100,
+                1700,
+                false,
+                'VISUAL',
+                100,
+                0.9,
+                1700
+              ]
+            ]
+          }
+        }
       })
-    )
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.VALIDATED,
+          validation: expect.objectContaining({
+            issues: [],
+            summary: expect.objectContaining({
+              totalIssues: 0
+            })
+          })
+        })
+      )
+    })
+
+    it('should mark as invalid with errors when cell values are invalid (but not fatal)', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION: { value: 'WRN12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          UPDATE_WASTE_BALANCE: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'OUR_REFERENCE',
+              'DATE_RECEIVED',
+              'EWC_CODE',
+              'GROSS_WEIGHT',
+              'TARE_WEIGHT',
+              'PALLET_WEIGHT',
+              'NET_WEIGHT',
+              'BAILING_WIRE',
+              'HOW_CALCULATE_RECYCLABLE',
+              'WEIGHT_OF_NON_TARGET',
+              'RECYCLABLE_PROPORTION',
+              'TONNAGE_RECEIVED_FOR_EXPORT'
+            ],
+            rows: [
+              [
+                10000,
+                '2025-05-28T00:00:00.000Z',
+                '03 03 08',
+                1000,
+                100,
+                50,
+                850,
+                true,
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ], // Valid
+              [
+                9999,
+                'invalid-date',
+                'bad-code',
+                1000,
+                100,
+                50,
+                850,
+                true,
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ], // Row with 3 invalid cells
+              [
+                10001,
+                '2025-08-01T00:00:00.000Z',
+                '16 03 10',
+                2000,
+                200,
+                100,
+                1700,
+                false,
+                'VISUAL',
+                100,
+                0.9,
+                1700
+              ] // Valid
+            ]
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.VALIDATED,
+          validation: expect.objectContaining({
+            issues: expect.arrayContaining([
+              expect.objectContaining({
+                severity: 'error',
+                category: 'technical',
+                message: expect.stringContaining('OUR_REFERENCE')
+              }),
+              expect.objectContaining({
+                severity: 'error',
+                category: 'technical',
+                message: expect.stringContaining('DATE_RECEIVED')
+              }),
+              expect.objectContaining({
+                severity: 'error',
+                category: 'technical',
+                message: expect.stringContaining('EWC_CODE')
+              })
+            ]),
+            summary: expect.objectContaining({
+              totalIssues: 3
+            })
+          })
+        })
+      )
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.validation.issues).toHaveLength(3)
+      expect(
+        updateCall.validation.issues.every((i) => i.context.row === 2)
+      ).toBe(true)
+    })
+
+    it('should mark as invalid when required headers are missing (fatal)', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION: { value: 'WRN12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          UPDATE_WASTE_BALANCE: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: ['OUR_REFERENCE', 'DATE_RECEIVED'], // Missing EWC_CODE
+            rows: [[10000, '2025-05-28T00:00:00.000Z']]
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.INVALID,
+          validation: expect.objectContaining({
+            issues: expect.arrayContaining([
+              expect.objectContaining({
+                severity: 'fatal',
+                category: 'technical',
+                message:
+                  "Missing required header 'EWC_CODE' in table 'UPDATE_WASTE_BALANCE'",
+                context: expect.objectContaining({
+                  path: 'data.UPDATE_WASTE_BALANCE.headers',
+                  field: 'EWC_CODE',
+                  expected: 'EWC_CODE'
+                })
+              })
+            ]),
+            summary: expect.objectContaining({
+              totalIssues: expect.any(Number)
+            })
+          }),
+          failureReason: expect.stringContaining('Missing required header')
+        })
+      )
+    })
+
+    it('should combine meta syntax and data syntax validation issues', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          // Missing REGISTRATION (fatal meta error)
+          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          UPDATE_WASTE_BALANCE: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'OUR_REFERENCE',
+              'DATE_RECEIVED',
+              'EWC_CODE',
+              'GROSS_WEIGHT',
+              'TARE_WEIGHT',
+              'PALLET_WEIGHT',
+              'NET_WEIGHT',
+              'BAILING_WIRE',
+              'HOW_CALCULATE_RECYCLABLE',
+              'WEIGHT_OF_NON_TARGET',
+              'RECYCLABLE_PROPORTION',
+              'TONNAGE_RECEIVED_FOR_EXPORT'
+            ],
+            rows: [
+              [
+                9999,
+                '2025-05-28T00:00:00.000Z',
+                'invalid',
+                1000,
+                100,
+                50,
+                850,
+                true,
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ]
+            ] // Invalid data
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+
+      // Should have both meta and data validation issues
+      const issues = updateCall.validation.issues
+      expect(issues.some((i) => i.message.includes('REGISTRATION'))).toBe(true)
+      expect(issues.some((i) => i.message.includes('OUR_REFERENCE'))).toBe(true)
+      expect(issues.some((i) => i.message.includes('EWC_CODE'))).toBe(true)
+
+      // Meta error should be fatal
+      const metaIssue = issues.find((i) => i.message.includes('REGISTRATION'))
+      expect(metaIssue.severity).toBe('fatal')
+
+      // Data errors should be error severity
+      const dataIssues = issues.filter(
+        (i) =>
+          i.message.includes('OUR_REFERENCE') || i.message.includes('EWC_CODE')
+      )
+      expect(dataIssues.every((i) => i.severity === 'error')).toBe(true)
+    })
+
+    it('should validate with tables that have no schema defined (skipped)', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION: { value: 'WRN12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          UPDATE_WASTE_BALANCE: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'OUR_REFERENCE',
+              'DATE_RECEIVED',
+              'EWC_CODE',
+              'GROSS_WEIGHT',
+              'TARE_WEIGHT',
+              'PALLET_WEIGHT',
+              'NET_WEIGHT',
+              'BAILING_WIRE',
+              'HOW_CALCULATE_RECYCLABLE',
+              'WEIGHT_OF_NON_TARGET',
+              'RECYCLABLE_PROPORTION',
+              'TONNAGE_RECEIVED_FOR_EXPORT'
+            ],
+            rows: [
+              [
+                10000,
+                '2025-05-28T00:00:00.000Z',
+                '03 03 08',
+                1000,
+                100,
+                50,
+                850,
+                true,
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ]
+            ]
+          },
+          UNKNOWN_TABLE: {
+            // No schema defined - should be ignored
+            location: { sheet: 'Unknown', row: 1, column: 'A' },
+            headers: ['ANYTHING'],
+            rows: [['goes']]
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        'summary-log-123',
+        1,
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.VALIDATED,
+          validation: expect.objectContaining({
+            issues: [],
+            summary: expect.objectContaining({
+              totalIssues: 0
+            })
+          })
+        })
+      )
+    })
   })
 })

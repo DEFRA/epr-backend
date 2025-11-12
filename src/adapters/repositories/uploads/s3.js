@@ -1,5 +1,6 @@
 import { GetObjectCommand } from '@aws-sdk/client-s3'
 import { StatusCodes } from 'http-status-codes'
+import { parseS3Uri } from './s3-uri.js'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
 
@@ -8,19 +9,16 @@ import { StatusCodes } from 'http-status-codes'
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository}
  */
 export const createUploadsRepository = (s3Client) => ({
-  async findByLocation({ bucket, key }) {
+  async findByLocation(uri) {
+    const s3Location = parseS3Uri(uri)
+
     try {
-      const command = new GetObjectCommand({
-        Bucket: bucket,
-        Key: key
-      })
+      const command = new GetObjectCommand(s3Location)
 
       const response = await s3Client.send(command)
 
       if (!response.Body) {
-        throw new Error(
-          `S3 GetObject returned no body for bucket=${bucket}, key=${key}`
-        )
+        throw new Error(`S3 GetObject returned no body for ${uri}`)
       }
 
       const buffer = await response.Body.transformToByteArray()

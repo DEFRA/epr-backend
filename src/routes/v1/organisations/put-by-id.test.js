@@ -28,7 +28,7 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 
   describe('happy path', () => {
-    it('returns 204 and no content when the org Id exists, the version is correct and the fragment is valid', async () => {
+    it('returns 200 and the updated organisation when the org Id exists, the version is correct and the fragment is valid', async () => {
       const org = buildOrganisation()
 
       await organisationsRepository.insert(org)
@@ -45,8 +45,12 @@ describe('PUT /v1/organisations/{id}', () => {
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.NO_CONTENT)
-      expect(response.payload).toBe('')
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      // returned organisation should have the same id and an incremented version
+      expect(body.id).toBe(org.id)
+      expect(body.version).toBe(org.version + 1)
+      expect(body.wasteProcessingTypes).toEqual(['reprocessor'])
     })
 
     it('includes Cache-Control header in successful response', async () => {
@@ -58,6 +62,10 @@ describe('PUT /v1/organisations/{id}', () => {
         url: `/v1/organisations/${org.id}`,
         headers: {
           Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: org.version,
+          updateFragment: { wasteProcessingTypes: org.wasteProcessingTypes }
         }
       })
 
@@ -273,8 +281,8 @@ describe('PUT /v1/organisations/{id}', () => {
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(
-      /At least one waste processing type is required/
+    expect(body.message).toBe(
+      'Invalid organisation data: wasteProcessingTypes: array.min'
     )
   })
 
