@@ -25,7 +25,9 @@ describe('#validateConfig', () => {
       const mockConfig = {
         get: vi
           .fn()
-          .mockReturnValue('[{"id": 1, "name": "user1"}, {"id": 2, "name": "user2"}]')
+          .mockReturnValue(
+            '[{"id": 1, "name": "user1"}, {"id": 2, "name": "user2"}]'
+          )
       }
 
       expect(() => validateConfig(mockConfig)).not.toThrow()
@@ -144,7 +146,9 @@ describe('#validateConfig', () => {
   describe('edge cases', () => {
     test('handles array with nested arrays', () => {
       const mockConfig = {
-        get: vi.fn().mockReturnValue('[["nested", "array"], ["another", "one"]]')
+        get: vi
+          .fn()
+          .mockReturnValue('[["nested", "array"], ["another", "one"]]')
       }
 
       expect(() => validateConfig(mockConfig)).not.toThrow()
