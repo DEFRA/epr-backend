@@ -47,14 +47,16 @@ export const validateMaterialType = ({
   const materialField = parsed?.meta?.[SUMMARY_LOG_META_FIELDS.MATERIAL]
   const spreadsheetMaterial = materialField?.value
 
-  const location = materialField?.location
-    ? { ...materialField.location }
-    : undefined
+  const location = {
+    ...materialField?.location,
+    field: SUMMARY_LOG_META_FIELDS.MATERIAL
+  }
 
   if (!VALID_REGISTRATION_MATERIALS.includes(material)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: registration has unexpected material',
+      'UNEXPECTED_MATERIAL',
       {
         expected: VALID_REGISTRATION_MATERIALS,
         actual: material
@@ -69,8 +71,8 @@ export const validateMaterialType = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Material does not match registration material',
+      'MATERIAL_MISMATCH',
       {
-        path: `meta.${SUMMARY_LOG_META_FIELDS.MATERIAL}`,
         location,
         expected: expectedMaterial,
         actual: material

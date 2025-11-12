@@ -122,23 +122,23 @@ describe('SummaryLogsValidator integration', () => {
       metadata: {
         REGISTRATION: {
           value: 'WRN-123',
-          location: { sheet: 'Data', row: 1, column: 'B' }
+          location: { sheet: 'Cover', row: 1, column: 'B' }
         },
         PROCESSING_TYPE: {
           value: 'REPROCESSOR',
-          location: { sheet: 'Data', row: 2, column: 'B' }
+          location: { sheet: 'Cover', row: 2, column: 'B' }
         },
         MATERIAL: {
           value: 'Paper_and_board',
-          location: { sheet: 'Data', row: 3, column: 'B' },
+          location: { sheet: 'Cover', row: 3, column: 'B' },
           TEMPLATE_VERSION: {
             value: 1,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           }
         },
         TEMPLATE_VERSION: {
           value: 1,
-          location: { sheet: 'Data', row: 4, column: 'B' }
+          location: { sheet: 'Cover', row: 4, column: 'B' }
         }
       }
     })
@@ -178,7 +178,7 @@ describe('SummaryLogsValidator integration', () => {
               severity: 'fatal',
               category: 'technical',
               message: errorMessage,
-              context: {}
+              code: 'VALIDATION_FAILED'
             }
           ]
         },
@@ -209,19 +209,19 @@ describe('SummaryLogsValidator integration', () => {
             metadata: {
               REGISTRATION: {
                 value: registrationWRN,
-                location: { sheet: 'Data', row: 1, column: 'B' }
+                location: { sheet: 'Cover', row: 1, column: 'B' }
               },
               PROCESSING_TYPE: {
                 value: spreadsheetType,
-                location: { sheet: 'Data', row: 2, column: 'B' }
+                location: { sheet: 'Cover', row: 2, column: 'B' }
               },
               MATERIAL: {
                 value: 'Paper_and_board',
-                location: { sheet: 'Data', row: 3, column: 'B' }
+                location: { sheet: 'Cover', row: 3, column: 'B' }
               },
               TEMPLATE_VERSION: {
                 value: 1,
-                location: { sheet: 'Data', row: 4, column: 'B' }
+                location: { sheet: 'Cover', row: 4, column: 'B' }
               }
             }
           })
@@ -263,19 +263,19 @@ describe('SummaryLogsValidator integration', () => {
             metadata: {
               REGISTRATION: {
                 value: registrationWRN,
-                location: { sheet: 'Data', row: 1, column: 'B' }
+                location: { sheet: 'Cover', row: 1, column: 'B' }
               },
               PROCESSING_TYPE: {
                 value: spreadsheetType,
-                location: { sheet: 'Data', row: 2, column: 'B' }
+                location: { sheet: 'Cover', row: 2, column: 'B' }
               },
               MATERIAL: {
                 value: 'Paper_and_board',
-                location: { sheet: 'Data', row: 3, column: 'B' }
+                location: { sheet: 'Cover', row: 3, column: 'B' }
               },
               TEMPLATE_VERSION: {
                 value: 1,
-                location: { sheet: 'Data', row: 4, column: 'B' }
+                location: { sheet: 'Cover', row: 4, column: 'B' }
               }
             }
           })
@@ -292,7 +292,17 @@ describe('SummaryLogsValidator integration', () => {
                     category: 'business',
                     message:
                       'Summary log processing type does not match registration processing type',
-                    context: expect.any(Object)
+                    code: 'PROCESSING_TYPE_MISMATCH',
+                    context: {
+                      location: {
+                        sheet: 'Cover',
+                        row: 2,
+                        column: 'B',
+                        field: 'PROCESSING_TYPE'
+                      },
+                      expected: spreadsheetType.toLowerCase(),
+                      actual: registrationType
+                    }
                   }
                 ]
               },
@@ -313,15 +323,15 @@ describe('SummaryLogsValidator integration', () => {
         metadata: {
           REGISTRATION: {
             value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           TEMPLATE_VERSION: {
             value: 1,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           }
         }
       })
@@ -337,7 +347,11 @@ describe('SummaryLogsValidator integration', () => {
                 severity: 'fatal',
                 category: 'technical',
                 message: "Invalid meta field 'PROCESSING_TYPE': is required",
-                context: expect.any(Object)
+                code: 'INVALID_META_FIELD',
+                context: {
+                  location: { field: 'PROCESSING_TYPE' },
+                  actual: undefined
+                }
               }
             ]
           },
@@ -353,19 +367,19 @@ describe('SummaryLogsValidator integration', () => {
         metadata: {
           REGISTRATION: {
             value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
             value: 'INVALID_TYPE',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           TEMPLATE_VERSION: {
             value: 1,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           }
         }
       })
@@ -382,7 +396,17 @@ describe('SummaryLogsValidator integration', () => {
                 category: 'business',
                 message:
                   'Summary log processing type does not match registration processing type',
-                context: expect.any(Object)
+                code: 'PROCESSING_TYPE_MISMATCH',
+                context: {
+                  location: {
+                    sheet: 'Cover',
+                    row: 2,
+                    column: 'B',
+                    field: 'PROCESSING_TYPE'
+                  },
+                  expected: undefined,
+                  actual: 'reprocessor'
+                }
               }
             ]
           },

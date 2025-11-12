@@ -30,9 +30,10 @@ export const validateAccreditationNumber = ({
     parsed?.meta?.[SUMMARY_LOG_META_FIELDS.ACCREDITATION]
   const spreadsheetAccreditationNumber = accreditationField?.value
 
-  const location = accreditationField?.location
-    ? { ...accreditationField.location }
-    : undefined
+  const location = {
+    ...accreditationField?.location,
+    field: SUMMARY_LOG_META_FIELDS.ACCREDITATION
+  }
 
   // Case 1: Registration has accreditation → spreadsheet MUST match
   if (accreditationNumber) {
@@ -40,8 +41,8 @@ export const validateAccreditationNumber = ({
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         'Invalid summary log: missing accreditation number',
+        'MISSING_ACCREDITATION_NUMBER',
         {
-          path: `meta.${SUMMARY_LOG_META_FIELDS.ACCREDITATION}`,
           location
         }
       )
@@ -52,8 +53,8 @@ export const validateAccreditationNumber = ({
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         "Summary log's accreditation number does not match this registration",
+        'ACCREDITATION_MISMATCH',
         {
-          path: `meta.${SUMMARY_LOG_META_FIELDS.ACCREDITATION}`,
           location,
           expected: accreditationNumber,
           actual: spreadsheetAccreditationNumber
@@ -68,8 +69,8 @@ export const validateAccreditationNumber = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: accreditation number provided but registration has no accreditation',
+      'UNEXPECTED_ACCREDITATION_NUMBER',
       {
-        path: `meta.${SUMMARY_LOG_META_FIELDS.ACCREDITATION}`,
         location,
         actual: spreadsheetAccreditationNumber
       }
