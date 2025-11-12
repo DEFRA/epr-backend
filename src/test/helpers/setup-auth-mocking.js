@@ -4,7 +4,7 @@ export function setupAuthContext(disabledMocks) {
   let mockOidcServer
 
   // Set up in beforeAll so it's available for createServer calls in beforeAll hooks
-  beforeAll(({}) => {
+  beforeAll(() => {
     if (disabledMocks) {
       global.fetchMock?.disableMocks()
     }
@@ -12,11 +12,11 @@ export function setupAuthContext(disabledMocks) {
     mockOidcServer.listen({ onUnhandledRequest: 'warn' })
   })
 
-  afterEach(({}) => {
+  afterEach(() => {
     mockOidcServer?.resetHandlers()
   })
 
-  afterAll(({}) => {
+  afterAll(() => {
     mockOidcServer?.close()
     if (disabledMocks) {
       global.fetchMock?.enableMocks()
