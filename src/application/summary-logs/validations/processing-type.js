@@ -42,14 +42,16 @@ export const validateProcessingType = ({
   const processingTypeField = parsed?.meta?.PROCESSING_TYPE
   const spreadsheetProcessingType = processingTypeField?.value
 
-  const location = processingTypeField?.location
-    ? { ...processingTypeField.location }
-    : undefined
+  const location = {
+    ...processingTypeField?.location,
+    field: SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE
+  }
 
   if (!VALID_REGISTRATION_TYPES.includes(wasteProcessingType)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: registration has unexpected waste processing type',
+      'UNEXPECTED_PROCESSING_TYPE',
       {
         expected: VALID_REGISTRATION_TYPES,
         actual: wasteProcessingType
@@ -64,8 +66,8 @@ export const validateProcessingType = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Summary log processing type does not match registration processing type',
+      'PROCESSING_TYPE_MISMATCH',
       {
-        path: `meta.${SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE}`,
         location,
         expected: expectedProcessingType,
         actual: wasteProcessingType

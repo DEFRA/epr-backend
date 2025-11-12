@@ -50,7 +50,10 @@ describe('validateProcessingType', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR',
+          location: { sheet: 'Cover', row: 5, column: 'B' }
+        }
       }
     }
     const registration = {
@@ -72,7 +75,12 @@ describe('validateProcessingType', () => {
       'Summary log processing type does not match registration processing type'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.path).toBe('meta.PROCESSING_TYPE')
+    expect(fatals[0].context.location).toEqual({
+      sheet: 'Cover',
+      row: 5,
+      column: 'B',
+      field: 'PROCESSING_TYPE'
+    })
     expect(fatals[0].context.expected).toBe('reprocessor')
     expect(fatals[0].context.actual).toBe('exporter')
   })
@@ -148,5 +156,28 @@ describe('validateProcessingType', () => {
     const issues = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
     expect(issues).toHaveLength(1)
     expect(issues[0].severity).toBe(VALIDATION_SEVERITY.FATAL)
+  })
+
+  it('handles missing location gracefully by including only field', () => {
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'EXPORTER' } // No location provided
+      }
+    }
+    const registration = {
+      wasteProcessingType: 'reprocessor'
+    }
+
+    const result = validateProcessingType({
+      parsed,
+      registration,
+      loggingContext: 'test'
+    })
+
+    expect(result.isFatal()).toBe(true)
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals[0].context.location).toEqual({
+      field: 'PROCESSING_TYPE' // Only field is set when location is missing
+    })
   })
 })

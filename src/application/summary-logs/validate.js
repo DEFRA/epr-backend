@@ -47,8 +47,31 @@ const fetchRegistration = async ({
 /**
  * Performs all validation checks on a summary log
  *
- * Extracts the summary log, validates syntax first, then performs business
- * validations if syntax is valid. Converts any exceptions to fatal technical issues.
+ * Implements a four-level short-circuit validation strategy:
+ *
+ * Level 1: Meta Syntax (FATAL)
+ *   - Validates structural correctness of meta fields
+ *   - Stops on fatal errors
+ *
+ * Level 2: Meta Business (FATAL/ERROR)
+ *   - Validates meta fields against registration business rules
+ *   - Stops on fatal errors
+ *
+ * Level 3: Data Syntax (ERROR/WARNING)
+ *   - Validates structural correctness of data table rows
+ *   - Continues even with errors (non-fatal)
+ *
+ * Level 4: Data Business (ERROR/WARNING)
+ *   - Validates data table rows against business rules (e.g., waste balance calculations)
+ *   - Currently placeholder - to be implemented
+ *
+ * This approach provides:
+ * - Better performance (stops early on fatal errors)
+ * - Clearer user feedback (fixes meta issues before seeing data errors)
+ * - Reduced noise in validation output
+ * - Logical separation between meta and data validation phases
+ *
+ * Converts any exceptions to fatal technical issues.
  *
  * @param {Object} params
  * @param {SummaryLog} params.summaryLog - The summary log to validate
@@ -76,27 +99,33 @@ const performValidationChecks = async ({
       }
     })
 
-    for (const validate of [validateMetaSyntax, validateDataSyntax]) {
-      issues.merge(validate({ parsed }))
+    issues.merge(validateMetaSyntax({ parsed }))
+
+    if (issues.isFatal()) {
+      return issues
     }
 
-    if (!issues.isFatal()) {
-      const registration = await fetchRegistration({
-        organisationsRepository,
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        loggingContext
-      })
+    const registration = await fetchRegistration({
+      organisationsRepository,
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      loggingContext
+    })
 
-      for (const validate of [
-        validateRegistrationNumber,
-        validateProcessingType,
-        validateAccreditationNumber,
-        validateMaterialType
-      ]) {
-        issues.merge(validate({ parsed, registration, loggingContext }))
-      }
+    for (const validate of [
+      validateRegistrationNumber,
+      validateProcessingType,
+      validateAccreditationNumber,
+      validateMaterialType
+    ]) {
+      issues.merge(validate({ parsed, registration, loggingContext }))
     }
+
+    if (issues.isFatal()) {
+      return issues
+    }
+
+    issues.merge(validateDataSyntax({ parsed }))
   } catch (error) {
     logger.error({
       error,
@@ -107,7 +136,11 @@ const performValidationChecks = async ({
       }
     })
 
-    issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message)
+    issues.addFatal(
+      VALIDATION_CATEGORY.TECHNICAL,
+      error.message,
+      'VALIDATION_FAILED'
+    )
   }
 
   return issues
@@ -160,7 +193,6 @@ export const createSummaryLogsValidator =
     await summaryLogsRepository.update(summaryLogId, version, {
       status,
       validation: {
-        summary: issues.getSummaryMetadata(),
         issues: issues.getAllIssues()
       },
       ...(issues.isFatal() && {

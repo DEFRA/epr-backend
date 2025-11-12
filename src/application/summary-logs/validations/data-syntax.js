@@ -7,6 +7,29 @@ import { isEprMarker } from '#domain/summary-logs/markers.js'
 import { getTableSchema } from './table-schemas.js'
 
 /**
+ * Maps Joi validation error types to application error codes
+ *
+ * @param {string} joiType - The Joi error type (e.g., 'number.min', 'string.pattern.base')
+ * @returns {string} The application error code
+ */
+const mapJoiTypeToErrorCode = (joiType) => {
+  const typeMapping = {
+    'any.required': 'FIELD_REQUIRED',
+    'number.base': 'INVALID_TYPE',
+    'number.min': 'VALUE_OUT_OF_RANGE',
+    'number.max': 'VALUE_OUT_OF_RANGE',
+    'number.greater': 'VALUE_OUT_OF_RANGE',
+    'number.less': 'VALUE_OUT_OF_RANGE',
+    'string.base': 'INVALID_TYPE',
+    'string.pattern.base': 'INVALID_FORMAT',
+    'date.base': 'INVALID_DATE'
+  }
+
+  /* istanbul ignore next - Defensive fallback for unmapped Joi error types */
+  return typeMapping[joiType] || 'VALIDATION_ERROR'
+}
+
+/**
  * Validates that required headers are present in the table
  *
  * Missing headers are FATAL because without them we cannot map cell values
@@ -35,10 +58,9 @@ const validateHeaders = ({
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
         `Missing required header '${requiredHeader}' in table '${tableName}'`,
+        'MISSING_REQUIRED_HEADER',
         {
-          path: `data.${tableName}.headers`,
           location,
-          field: requiredHeader,
           expected: requiredHeader,
           actual: actualHeaders
         }
@@ -51,11 +73,11 @@ const validateHeaders = ({
  * Processes validation errors for a single row
  *
  * @param {Object} params
- * @param {string} params.tableName - Name of the table
+ * @param {string} params.tableName - Name of the table being validated
  * @param {number} params.rowIndex - Zero-based row index
  * @param {Object} params.error - Joi validation error object
  * @param {Map} params.headerToIndexMap - Map of header names to column indices
- * @param {Object} params.tableLocation - Table location in spreadsheet
+ * @param {Object} params.location - Table location in spreadsheet
  * @param {Object} params.issues - Validation issues collector
  */
 const processRowErrors = ({
@@ -63,7 +85,7 @@ const processRowErrors = ({
   rowIndex,
   error,
   headerToIndexMap,
-  tableLocation,
+  location,
   issues
 }) => {
   for (const detail of error.details) {
@@ -71,22 +93,22 @@ const processRowErrors = ({
     const colIndex = headerToIndexMap.get(fieldName)
 
     const cellLocation =
-      tableLocation?.column && colIndex !== undefined
+      location?.column && colIndex !== undefined
         ? {
-            sheet: tableLocation.sheet,
-            row: tableLocation.row + rowIndex + 1,
-            column: offsetColumn(tableLocation.column, colIndex)
+            sheet: location.sheet,
+            table: tableName,
+            row: location.row + rowIndex + 1,
+            column: offsetColumn(location.column, colIndex),
+            header: fieldName
           }
-        : undefined
+        : { table: tableName, header: fieldName }
 
     issues.addError(
       VALIDATION_CATEGORY.TECHNICAL,
       `Invalid value in column '${fieldName}': ${detail.message}`,
+      mapJoiTypeToErrorCode(detail.type),
       {
-        path: `data.${tableName}.rows[${rowIndex}].${fieldName}`,
         location: cellLocation,
-        field: fieldName,
-        row: rowIndex + 1,
         actual: detail.context.value
       }
     )
@@ -100,11 +122,11 @@ const processRowErrors = ({
  * cell-by-cell validation and enables cross-field validation rules.
  *
  * @param {Object} params
- * @param {string} params.tableName - Name of the table
+ * @param {string} params.tableName - Name of the table being validated
  * @param {Array<string>} params.headers - Array of header names
  * @param {Array<Array<*>>} params.rows - Array of data rows
  * @param {Object} params.rowSchema - Pre-compiled Joi object schema for rows
- * @param {Object} params.tableLocation - Table location in spreadsheet
+ * @param {Object} params.location - Table location in spreadsheet
  * @param {Object} params.issues - Validation issues collector
  */
 const validateRows = ({
@@ -112,7 +134,7 @@ const validateRows = ({
   headers,
   rows,
   rowSchema,
-  tableLocation,
+  location,
   issues
 }) => {
   const headerToIndexMap = new Map()
@@ -138,7 +160,7 @@ const validateRows = ({
         rowIndex,
         error,
         headerToIndexMap,
-        tableLocation,
+        location,
         issues
       })
     }
@@ -172,7 +194,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
       headers,
       rows,
       rowSchema,
-      tableLocation: location,
+      location,
       issues
     })
   }

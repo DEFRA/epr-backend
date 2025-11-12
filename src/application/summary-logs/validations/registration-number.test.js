@@ -54,7 +54,8 @@ describe('validateRegistrationNumber', () => {
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN99999'
+          value: 'WRN99999',
+          location: { sheet: 'Cover', row: 12, column: 'F' }
         }
       }
     }
@@ -74,7 +75,12 @@ describe('validateRegistrationNumber', () => {
       "Summary log's waste registration number does not match this registration"
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.path).toBe('meta.REGISTRATION')
+    expect(fatals[0].context.location).toEqual({
+      sheet: 'Cover',
+      row: 12,
+      column: 'F',
+      field: 'REGISTRATION'
+    })
     expect(fatals[0].context.expected).toBe('WRN12345')
     expect(fatals[0].context.actual).toBe('WRN99999')
   })
@@ -112,7 +118,8 @@ describe('validateRegistrationNumber', () => {
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN99999'
+          value: 'WRN99999',
+          location: { sheet: 'Cover', row: 12, column: 'F' }
         }
       }
     }
@@ -124,7 +131,12 @@ describe('validateRegistrationNumber', () => {
     })
 
     const error = result.getAllIssues()[0]
-    expect(error.context.path).toBe('meta.REGISTRATION')
+    expect(error.context.location).toEqual({
+      sheet: 'Cover',
+      row: 12,
+      column: 'F',
+      field: 'REGISTRATION'
+    })
     expect(error.context.expected).toBe('WRN12345')
     expect(error.context.actual).toBe('WRN99999')
   })
@@ -152,5 +164,31 @@ describe('validateRegistrationNumber', () => {
     const issues = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
     expect(issues).toHaveLength(1)
     expect(issues[0].severity).toBe(VALIDATION_SEVERITY.FATAL)
+  })
+
+  it('handles missing location gracefully by including only field', () => {
+    const registration = {
+      id: 'reg-123',
+      wasteRegistrationNumber: 'WRN12345'
+    }
+    const parsed = {
+      meta: {
+        REGISTRATION: {
+          value: 'WRN99999' // No location provided
+        }
+      }
+    }
+
+    const result = validateRegistrationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(result.isFatal()).toBe(true)
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals[0].context.location).toEqual({
+      field: 'REGISTRATION' // Only field is set when location is missing
+    })
   })
 })

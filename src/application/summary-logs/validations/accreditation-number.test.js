@@ -82,7 +82,8 @@ describe('validateAccreditationNumber', () => {
     const parsed = {
       meta: {
         ACCREDITATION: {
-          value: '99999999'
+          value: '99999999',
+          location: { sheet: 'Cover', row: 15, column: 'F' }
         }
       }
     }
@@ -101,6 +102,12 @@ describe('validateAccreditationNumber', () => {
       message:
         "Summary log's accreditation number does not match this registration",
       context: {
+        location: {
+          sheet: 'Cover',
+          row: 15,
+          column: 'F',
+          field: 'ACCREDITATION'
+        },
         expected: '12345678',
         actual: '99999999'
       }
@@ -197,6 +204,35 @@ describe('validateAccreditationNumber', () => {
         category: 'server',
         action: 'process_success'
       }
+    })
+  })
+
+  it('handles missing location gracefully by including only field', () => {
+    const registration = {
+      id: 'reg-123',
+      accreditation: {
+        id: 'acc-123',
+        accreditationNumber: '12345678'
+      }
+    }
+    const parsed = {
+      meta: {
+        ACCREDITATION: {
+          value: '99999999' // No location provided
+        }
+      }
+    }
+
+    const issues = validateAccreditationNumber({
+      parsed,
+      registration,
+      loggingContext: 'test-msg'
+    })
+
+    expect(issues.isFatal()).toBe(true)
+    const allIssues = issues.getAllIssues()
+    expect(allIssues[0].context.location).toEqual({
+      field: 'ACCREDITATION' // Only field is set when location is missing
     })
   })
 })
