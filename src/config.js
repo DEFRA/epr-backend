@@ -221,11 +221,13 @@ const baseConfig = {
       }
     }
   },
-  userRoles: {
-    doc: 'Stringified object defining user roles',
-    format: String,
-    env: 'USER_ROLES',
-    default: '{ "service-maintainer": ["me@example.com", "you@example.com"]}'
+  roles: {
+    serviceMaintainers: {
+      doc: 'Stringified object defining user roles',
+      format: String,
+      env: 'SERVICE_MAINTAINER_EMAILS',
+      default: '["me@example.com", "you@example.com"]'
+    }
   },
   featureFlags: {
     summaryLogs: {

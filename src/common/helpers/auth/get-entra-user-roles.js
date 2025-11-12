@@ -1,23 +1,19 @@
-import Boom from '@hapi/boom'
+import { ROLES } from '#common/helpers/auth/constants.js'
 import { getConfig } from '../../../config.js'
 
 export async function getEntraUserRoles(tokenPayload) {
   const userEmail = tokenPayload.email || tokenPayload.preferred_username
 
-  const stringifiedUserRoles = getConfig().get('userRoles')
+  const stringifiedServiceMaintainersList = getConfig().get(
+    'roles.serviceMaintainers'
+  )
 
-  let userRoles = {}
   const thisUserRoles = []
-  try {
-    userRoles = JSON.parse(stringifiedUserRoles)
-    for (const userGroup of Object.keys(userRoles)) {
-      if (userRoles[userGroup].includes(userEmail)) {
-        thisUserRoles.push(userGroup)
-      }
-    }
-  } catch (e) {
-    // This should never happen as the config is validated at startup
-    throw Boom.badImplementation('Error parsing user roles configuration')
+  // This should never thrown an error as the config is validated when the server is started
+  const serviceMaintainersList = JSON.parse(stringifiedServiceMaintainersList)
+
+  if (serviceMaintainersList.includes(userEmail)) {
+    thisUserRoles.push(ROLES.serviceMaintainer)
   }
 
   return thisUserRoles
