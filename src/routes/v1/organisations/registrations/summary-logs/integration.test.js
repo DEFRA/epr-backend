@@ -57,6 +57,28 @@ const buildGetUrl = (summaryLogId) =>
 const buildPostUrl = (summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
+/**
+ * Polls for validation to complete by checking status endpoint
+ * Retries up to 10 times with 50ms delay between attempts (max 500ms total)
+ */
+const pollForValidation = async (server, summaryLogId) => {
+  let attempts = 0
+  const maxAttempts = 10
+  let status = SUMMARY_LOG_STATUS.VALIDATING
+
+  while (status === SUMMARY_LOG_STATUS.VALIDATING && attempts < maxAttempts) {
+    await new Promise((resolve) => setTimeout(resolve, 50))
+
+    const checkResponse = await server.inject({
+      method: 'GET',
+      url: buildGetUrl(summaryLogId)
+    })
+
+    status = JSON.parse(checkResponse.payload).status
+    attempts++
+  }
+}
+
 describe('Summary logs integration', () => {
   let server
   let summaryLogsRepository
@@ -95,19 +117,19 @@ describe('Summary logs integration', () => {
         meta: {
           REGISTRATION: {
             value: 'WRN-123',
-            location: { sheet: 'Data', row: 1, column: 'B' }
+            location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
             value: 'REPROCESSOR',
-            location: { sheet: 'Data', row: 2, column: 'B' }
+            location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
-            location: { sheet: 'Data', row: 3, column: 'B' }
+            location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           TEMPLATE_VERSION: {
             value: 1,
-            location: { sheet: 'Data', row: 4, column: 'B' }
+            location: { sheet: 'Cover', row: 4, column: 'B' }
           }
         },
         data: {}
@@ -191,26 +213,7 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        // Poll for validation to complete (inline validator is fire-and-forget)
-        // Retry up to 10 times with 50ms delay between attempts (max 500ms total)
-        let attempts = 0
-        const maxAttempts = 10
-        let status = SUMMARY_LOG_STATUS.VALIDATING
-
-        while (
-          status === SUMMARY_LOG_STATUS.VALIDATING &&
-          attempts < maxAttempts
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 50))
-
-          const checkResponse = await server.inject({
-            method: 'GET',
-            url: buildGetUrl(summaryLogId)
-          })
-
-          status = JSON.parse(checkResponse.payload).status
-          attempts++
-        }
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
@@ -222,9 +225,14 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns validated status', () => {
-        expect(JSON.parse(response.payload)).toEqual({
-          status: SUMMARY_LOG_STATUS.VALIDATED
+      it('returns complete validation response with no issues', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload).toEqual({
+          status: SUMMARY_LOG_STATUS.VALIDATED,
+          validation: {
+            failures: [],
+            concerns: {}
+          }
         })
       })
 
@@ -380,19 +388,19 @@ describe('Summary logs integration', () => {
           meta: {
             REGISTRATION: {
               value: 'WRN-123',
-              location: { sheet: 'Data', row: 1, column: 'B' }
+              location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
               value: 'REPROCESSOR',
-              location: { sheet: 'Data', row: 2, column: 'B' }
+              location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
               value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
+              location: { sheet: 'Cover', row: 3, column: 'B' }
             },
             TEMPLATE_VERSION: {
               value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
+              location: { sheet: 'Cover', row: 4, column: 'B' }
             }
           },
           data: {
@@ -421,7 +429,7 @@ describe('Summary logs integration', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -435,7 +443,7 @@ describe('Summary logs integration', () => {
                   100,
                   50,
                   850,
-                  true,
+                  'YES',
                   'WEIGHT',
                   50,
                   0.85,
@@ -480,25 +488,7 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        // Poll for validation to complete
-        let attempts = 0
-        const maxAttempts = 10
-        let status = SUMMARY_LOG_STATUS.VALIDATING
-
-        while (
-          status === SUMMARY_LOG_STATUS.VALIDATING &&
-          attempts < maxAttempts
-        ) {
-          await new Promise((resolve) => setTimeout(resolve, 50))
-
-          const checkResponse = await server.inject({
-            method: 'GET',
-            url: buildGetUrl(summaryLogId)
-          })
-
-          status = JSON.parse(checkResponse.payload).status
-          attempts++
-        }
+        await pollForValidation(server, summaryLogId)
 
         response = await server.inject({
           method: 'GET',
@@ -511,9 +501,16 @@ describe('Summary logs integration', () => {
       })
 
       it('returns validated status (not invalid) because data errors are not fatal', () => {
-        expect(JSON.parse(response.payload)).toEqual({
+        const payload = JSON.parse(response.payload)
+        expect(payload).toMatchObject({
           status: SUMMARY_LOG_STATUS.VALIDATED
         })
+        expect(payload.validation).toBeDefined()
+        expect(payload.validation.concerns).toBeDefined()
+        expect(payload.validation.concerns.UPDATE_WASTE_BALANCE).toBeDefined()
+        expect(
+          payload.validation.concerns.UPDATE_WASTE_BALANCE.rows.length
+        ).toBeGreaterThan(0)
       })
 
       it('persists data validation errors with row context', async () => {
@@ -523,14 +520,16 @@ describe('Summary logs integration', () => {
         expect(summaryLog.validation).toBeDefined()
         expect(summaryLog.validation.issues).toHaveLength(3)
 
-        // All 3 errors should be from row 2
+        // All 3 errors should be from row 9 (headers at row 7 + second data row)
         expect(
-          summaryLog.validation.issues.every((i) => i.context.row === 2)
+          summaryLog.validation.issues.every(
+            (i) => i.context.location?.row === 9
+          )
         ).toBe(true)
 
         // Should have errors for all 3 invalid cells
         const errorFields = summaryLog.validation.issues.map(
-          (i) => i.context.field
+          (i) => i.context.location?.header
         )
         expect(errorFields).toContain('OUR_REFERENCE')
         expect(errorFields).toContain('DATE_RECEIVED')
@@ -540,6 +539,809 @@ describe('Summary logs integration', () => {
         expect(
           summaryLog.validation.issues.every((i) => i.severity === 'error')
         ).toBe(true)
+      })
+
+      it('returns issues in HTTP response format matching ADR 0020', () => {
+        const payload = JSON.parse(response.payload)
+
+        // Should have table-keyed concerns structure
+        expect(payload.validation.concerns.UPDATE_WASTE_BALANCE).toBeDefined()
+        expect(payload.validation.concerns.UPDATE_WASTE_BALANCE.sheet).toBe(
+          'Received'
+        )
+        expect(
+          payload.validation.concerns.UPDATE_WASTE_BALANCE.rows
+        ).toHaveLength(1)
+
+        const rowWithIssues =
+          payload.validation.concerns.UPDATE_WASTE_BALANCE.rows[0]
+        expect(rowWithIssues.row).toBe(9)
+        expect(rowWithIssues.issues).toHaveLength(3)
+
+        // Spot check one issue has the complete structure per ADR 0020
+        const ourReferenceIssue = rowWithIssues.issues.find(
+          (issue) => issue.header === 'OUR_REFERENCE'
+        )
+        expect(ourReferenceIssue).toMatchObject({
+          type: 'error',
+          code: expect.any(String),
+          header: 'OUR_REFERENCE',
+          column: 'B',
+          actual: 9999
+        })
+
+        // All issues should have consistent structure
+        rowWithIssues.issues.forEach((issue) => {
+          expect(issue).toHaveProperty('type')
+          expect(issue).toHaveProperty('code')
+          expect(issue).toHaveProperty('header')
+          expect(issue).toHaveProperty('column')
+        })
+      })
+
+      it('returns rowsWithIssues calculated on-the-fly in HTTP response', () => {
+        const payload = JSON.parse(response.payload)
+
+        // In new format, rowsWithIssues is calculated from concerns structure
+        const rowsWithIssues = Object.values(
+          payload.validation.concerns
+        ).reduce((total, table) => total + table.rows.length, 0)
+
+        // All 3 errors are from row 9, so rowsWithIssues should be 1
+        expect(rowsWithIssues).toBe(1)
+      })
+    })
+  })
+
+  describe('data syntax validation with missing required headers', () => {
+    const summaryLogId = 'summary-missing-headers'
+    const fileId = 'file-missing-headers'
+    const filename = 'missing-headers.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      // Create a new server with extractor that returns data with missing headers
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            wasteRegistrationNumber: 'WRN-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Mock extractor with missing required headers (fatal error)
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION: {
+              value: 'WRN-123',
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR',
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
+          },
+          data: {
+            UPDATE_WASTE_BALANCE: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: [
+                'OUR_REFERENCE',
+                'DATE_RECEIVED'
+                // Missing EWC_CODE and other required headers
+              ],
+              rows: [[10000, '2025-05-28T00:00:00.000Z']]
+            }
+          }
+        }
+      })
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsValidator: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with fatal header errors', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns invalid status with failure reason due to fatal errors', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload).toMatchObject({
+          status: SUMMARY_LOG_STATUS.INVALID
+        })
+        expect(payload.failureReason).toBeDefined()
+        expect(payload.failureReason).toContain('Missing required header')
+      })
+
+      it('persists fatal validation errors in database', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        expect(summaryLog.validation).toBeDefined()
+        expect(summaryLog.validation.issues.length).toBeGreaterThan(0)
+
+        // Should have at least one fatal error
+        const fatalErrors = summaryLog.validation.issues.filter(
+          (i) => i.severity === 'fatal'
+        )
+        expect(fatalErrors.length).toBeGreaterThan(0)
+        expect(fatalErrors[0].message).toContain('Missing required header')
+        expect(fatalErrors[0].context.location).toBeDefined()
+      })
+
+      it('returns fatal issues in HTTP response format', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.validation).toBeDefined()
+        expect(payload.validation.failures).toBeDefined()
+        expect(payload.validation.failures.length).toBeGreaterThan(0)
+
+        // Check that fatal errors are properly formatted
+        payload.validation.failures.forEach((failure) => {
+          expect(failure).toHaveProperty('code')
+          // Fatal issues should have location for missing headers
+          expect(failure).toHaveProperty('location')
+        })
+
+        // Should have empty concerns (no data-level issues when there are fatal errors)
+        expect(payload.validation.concerns).toEqual({})
+      })
+    })
+  })
+
+  describe('combined meta and data syntax validation', () => {
+    const summaryLogId = 'summary-combined-errors'
+    const fileId = 'file-combined-errors'
+    const filename = 'combined-errors.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      // Create a new server with extractor that returns both meta and data errors
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            wasteRegistrationNumber: 'WRN-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Mock extractor with missing meta field (fatal) AND invalid data (error)
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            // Missing REGISTRATION - fatal meta error
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR',
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
+          },
+          data: {
+            UPDATE_WASTE_BALANCE: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: [
+                'OUR_REFERENCE',
+                'DATE_RECEIVED',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE',
+                'HOW_CALCULATE_RECYCLABLE',
+                'WEIGHT_OF_NON_TARGET',
+                'RECYCLABLE_PROPORTION',
+                'TONNAGE_RECEIVED_FOR_EXPORT'
+              ],
+              rows: [
+                [
+                  9999, // Invalid OUR_REFERENCE
+                  'invalid-date', // Invalid DATE_RECEIVED
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  true,
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            }
+          }
+        }
+      })
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsValidator: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with combined errors', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns invalid status due to fatal meta error', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload).toMatchObject({
+          status: SUMMARY_LOG_STATUS.INVALID
+        })
+      })
+
+      it('persists only meta errors due to short-circuit validation', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        expect(summaryLog.validation).toBeDefined()
+        expect(summaryLog.validation.issues.length).toBeGreaterThan(0)
+
+        // Should have meta error (fatal)
+        const metaErrors = summaryLog.validation.issues.filter(
+          (i) => i.context.location?.field !== undefined
+        )
+        expect(metaErrors.length).toBeGreaterThan(0)
+        expect(metaErrors[0].severity).toBe('fatal')
+
+        // Should NOT have data errors - validation short-circuits on fatal meta errors
+        const dataErrors = summaryLog.validation.issues.filter(
+          (i) => i.context.location?.header !== undefined
+        )
+        expect(dataErrors.length).toBe(0)
+      })
+
+      it('demonstrates short-circuit validation stops at fatal meta errors', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        // This test documents that validate.js implements short-circuit validation:
+        // When fatal meta errors are found, data validation is skipped entirely.
+        // This provides better performance and clearer user feedback.
+        const issues = summaryLog.validation.issues
+
+        // Should only have meta field issues, no data table issues
+        expect(
+          issues.every((i) => i.context.location?.field !== undefined)
+        ).toBe(true)
+        expect(
+          issues.some((i) => i.context.location?.header !== undefined)
+        ).toBe(false)
+      })
+    })
+  })
+
+  describe('Level 1 validation (meta syntax) short-circuits entire pipeline', () => {
+    const summaryLogId = 'summary-meta-syntax-fatal'
+    const fileId = 'file-meta-syntax-fatal'
+    const filename = 'meta-syntax-fatal.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      // Create test infrastructure
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            wasteRegistrationNumber: 'WRN12345',
+            material: 'aluminium',
+            wasteProcessingType: 'reprocessor',
+            accreditation: null
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION: {
+              value: 'WRN12345',
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR',
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Aluminium',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            }
+            // TEMPLATE_VERSION missing - fatal meta syntax error!
+          },
+          data: {
+            // Even though we have invalid data, it should NOT be validated
+            UPDATE_WASTE_BALANCE: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: ['INVALID_HEADER'], // Missing required headers
+              rows: [
+                [
+                  9999, // Below minimum OUR_REFERENCE
+                  'invalid-date',
+                  'bad-code',
+                  'not-a-number',
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            }
+          }
+        }
+      })
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsValidator: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with meta syntax fatal error', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns invalid status due to fatal meta syntax error', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload).toMatchObject({
+          status: SUMMARY_LOG_STATUS.INVALID,
+          failureReason: expect.stringContaining('TEMPLATE_VERSION')
+        })
+      })
+
+      it('returns only meta syntax error (no meta business or data errors)', () => {
+        const payload = JSON.parse(response.payload)
+
+        expect(payload.validation).toBeDefined()
+        expect(payload.validation.failures).toBeDefined()
+        expect(payload.validation.failures.length).toBeGreaterThan(0)
+
+        // Should only have meta syntax error for TEMPLATE_VERSION
+        const metaSyntaxErrors = payload.validation.failures.filter(
+          (f) => f.location?.field === 'TEMPLATE_VERSION'
+        )
+        expect(metaSyntaxErrors.length).toBeGreaterThan(0)
+
+        // Should NOT have any data errors (data validation was skipped)
+        expect(payload.validation.concerns).toEqual({})
+      })
+
+      it('demonstrates Level 1 short-circuit: only meta syntax validation ran', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        // This test documents that validate.js implements Level 1 short-circuit:
+        // When fatal meta syntax errors are found, all subsequent validation
+        // (meta business, data syntax, data business) is skipped entirely.
+
+        const issues = summaryLog.validation.issues
+
+        // Should only have meta field issues (Level 1)
+        expect(
+          issues.every((i) => i.context.location?.field !== undefined)
+        ).toBe(true)
+
+        // Should NOT have any data table issues (Level 3 was skipped)
+        expect(
+          issues.some((i) => i.context.location?.header !== undefined)
+        ).toBe(false)
+
+        // All issues should be fatal technical errors
+        expect(issues.every((i) => i.severity === 'fatal')).toBe(true)
+        expect(issues.every((i) => i.category === 'technical')).toBe(true)
+      })
+    })
+  })
+
+  describe('validation with tables that have no schema defined', () => {
+    const summaryLogId = 'summary-no-schema'
+    const fileId = 'file-no-schema'
+    const filename = 'no-schema.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      // Create a new server with extractor that returns unknown table
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            wasteRegistrationNumber: 'WRN-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Mock extractor with valid known table AND unknown table without schema
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION: {
+              value: 'WRN-123',
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR',
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
+          },
+          data: {
+            UPDATE_WASTE_BALANCE: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: [
+                'OUR_REFERENCE',
+                'DATE_RECEIVED',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE',
+                'HOW_CALCULATE_RECYCLABLE',
+                'WEIGHT_OF_NON_TARGET',
+                'RECYCLABLE_PROPORTION',
+                'TONNAGE_RECEIVED_FOR_EXPORT'
+              ],
+              rows: [
+                [
+                  10000,
+                  '2025-05-28T00:00:00.000Z',
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            },
+            UNKNOWN_FUTURE_TABLE: {
+              // No schema defined - should be gracefully skipped
+              location: { sheet: 'Unknown', row: 1, column: 'A' },
+              headers: ['ANYTHING', 'GOES', 'HERE'],
+              rows: [
+                ['foo', 'bar', 'baz'],
+                ['invalid', 123, true]
+              ]
+            }
+          }
+        }
+      })
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsValidator: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with unknown tables', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId)
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns validated status with no errors', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        expect(payload.validation).toBeDefined()
+        expect(payload.validation.failures).toEqual([])
+        expect(payload.validation.concerns).toEqual({})
+      })
+
+      it('gracefully ignores tables without schemas', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        // Should have no validation issues
+        expect(summaryLog.validation.issues).toEqual([])
+
+        // This documents defensive programming: tables without schemas
+        // are skipped rather than causing validation failures.
+        // This future-proofs against new table types being added to
+        // spreadsheets before validation schemas are implemented.
+      })
+    })
+  })
+
+  describe('edge case: validation object without issues array', () => {
+    const summaryLogId = 'summary-no-issues-array'
+    let summaryLogsRepositoryFactory
+    let summaryLogsRepository
+    let server
+
+    beforeEach(async () => {
+      summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      // Create a summary log with validation object but no issues array
+      // This covers the defensive || [] in get.js line 34
+      await summaryLogsRepository.insert(summaryLogId, {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        organisationId,
+        registrationId,
+        file: {
+          id: 'file-123',
+          name: 'test.xlsx',
+          status: UPLOAD_STATUS.COMPLETE,
+          uri: '/uploads/file-123',
+          s3: {
+            bucket: 'test-bucket',
+            key: 'test-key'
+          }
+        },
+        validation: {} // No issues array
+      })
+
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory
+        },
+        featureFlags
+      })
+    })
+
+    it('returns OK with empty issues array when validation.issues is undefined', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(summaryLogId)
+      })
+
+      expect(response.statusCode).toBe(200)
+      const payload = JSON.parse(response.payload)
+      expect(payload.validation).toEqual({
+        failures: [],
+        concerns: {}
       })
     })
   })

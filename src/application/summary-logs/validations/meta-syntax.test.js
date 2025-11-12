@@ -275,7 +275,9 @@ describe('validateMetaSyntax', () => {
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
-    expect(fatals[0].context.location).toBeUndefined()
+    expect(fatals[0].context.location).toEqual({
+      field: 'TEMPLATE_VERSION'
+    })
   })
 
   it('categorizes all validation errors as fatal technical errors', () => {
@@ -301,7 +303,7 @@ describe('validateMetaSyntax', () => {
         PROCESSING_TYPE: { value: 'REPROCESSOR' },
         TEMPLATE_VERSION: {
           value: -1,
-          location: { row: 2, col: 5 }
+          location: { row: 2, column: 'E' }
         },
         MATERIAL: { value: 'Aluminium' },
         REGISTRATION: { value: 'WRN12345' }
@@ -315,6 +317,10 @@ describe('validateMetaSyntax', () => {
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
-    expect(fatals[0].context.location).toEqual({ row: 2, col: 5 })
+    expect(fatals[0].context.location).toEqual({
+      row: 2,
+      column: 'E',
+      field: 'TEMPLATE_VERSION'
+    })
   })
 })

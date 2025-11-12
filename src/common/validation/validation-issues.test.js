@@ -1,5 +1,6 @@
 import {
   createValidationIssues,
+  issueToErrorObject,
   VALIDATION_SEVERITY,
   VALIDATION_CATEGORY
 } from './validation-issues.js'
@@ -12,7 +13,10 @@ describe('Validation Issues', () => {
         VALIDATION_SEVERITY.ERROR,
         VALIDATION_CATEGORY.TECHNICAL,
         'Missing required field',
-        { row: 5, field: 'SITE_NAME' }
+        'ERR_MISSING_FIELD',
+        {
+          location: { row: 5, field: 'PROCESSING_TYPE' }
+        }
       )
 
       expect(result.getAllIssues()).toHaveLength(1)
@@ -20,7 +24,10 @@ describe('Validation Issues', () => {
         severity: VALIDATION_SEVERITY.ERROR,
         category: VALIDATION_CATEGORY.TECHNICAL,
         message: 'Missing required field',
-        context: { row: 5, field: 'SITE_NAME' }
+        code: 'ERR_MISSING_FIELD',
+        context: {
+          location: { row: 5, field: 'PROCESSING_TYPE' }
+        }
       })
     })
 
@@ -29,11 +36,12 @@ describe('Validation Issues', () => {
       result.addIssue(
         VALIDATION_SEVERITY.FATAL,
         VALIDATION_CATEGORY.PARSING,
-        'Could not parse file'
+        'Could not parse file',
+        'ERR_PARSE_FAILED'
       )
 
       expect(result.getAllIssues()).toHaveLength(1)
-      expect(result.getAllIssues()[0].context).toEqual({})
+      expect(result.getAllIssues()[0].context).toBeUndefined()
     })
 
     it('returns this for chaining', () => {
@@ -41,19 +49,57 @@ describe('Validation Issues', () => {
       const returned = result.addIssue(
         VALIDATION_SEVERITY.WARNING,
         VALIDATION_CATEGORY.BUSINESS,
-        'Test'
+        'Test',
+        'ERR_TEST'
       )
 
       expect(returned).toBe(result)
+    })
+
+    it('throws error when code is missing', () => {
+      const result = createValidationIssues()
+
+      expect(() => {
+        result.addIssue(
+          VALIDATION_SEVERITY.ERROR,
+          VALIDATION_CATEGORY.TECHNICAL,
+          'Missing code'
+        )
+      }).toThrow('Validation issue code is required')
+    })
+
+    it('adds an issue with a code', () => {
+      const result = createValidationIssues()
+      result.addIssue(
+        VALIDATION_SEVERITY.ERROR,
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Invalid value',
+        'ERR_INVALID_DATE',
+        { row: 10, field: 'DATE' }
+      )
+
+      expect(result.getAllIssues()).toHaveLength(1)
+      expect(result.getAllIssues()[0]).toEqual({
+        severity: VALIDATION_SEVERITY.ERROR,
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: 'Invalid value',
+        code: 'ERR_INVALID_DATE',
+        context: { row: 10, field: 'DATE' }
+      })
     })
   })
 
   describe('addFatal', () => {
     it('adds a fatal issue', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Could not locate marker', {
-        marker: 'WASTE_REGISTRATION_NUMBER'
-      })
+      result.addFatal(
+        VALIDATION_CATEGORY.PARSING,
+        'Could not locate marker',
+        'TEST_CODE',
+        {
+          marker: 'WASTE_REGISTRATION_NUMBER'
+        }
+      )
 
       expect(result.getAllIssues()).toHaveLength(1)
       expect(result.getAllIssues()[0].severity).toBe(VALIDATION_SEVERITY.FATAL)
@@ -68,19 +114,47 @@ describe('Validation Issues', () => {
 
     it('returns this for chaining', () => {
       const result = createValidationIssues()
-      const returned = result.addFatal(VALIDATION_CATEGORY.PARSING, 'Test')
+      const returned = result.addFatal(
+        VALIDATION_CATEGORY.PARSING,
+        'Test',
+        'TEST_CODE'
+      )
 
       expect(returned).toBe(result)
+    })
+
+    it('adds a fatal issue with a code', () => {
+      const result = createValidationIssues()
+      result.addFatal(
+        VALIDATION_CATEGORY.PARSING,
+        'Could not parse file',
+        'ERR_PARSE_FAILED',
+        { sheet: 'Received' }
+      )
+
+      expect(result.getAllIssues()).toHaveLength(1)
+      expect(result.getAllIssues()[0]).toEqual({
+        severity: VALIDATION_SEVERITY.FATAL,
+        category: VALIDATION_CATEGORY.PARSING,
+        message: 'Could not parse file',
+        context: { sheet: 'Received' },
+        code: 'ERR_PARSE_FAILED'
+      })
     })
   })
 
   describe('addError', () => {
     it('adds an error issue', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Invalid format', {
-        row: 10,
-        field: 'DATE'
-      })
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Invalid format',
+        'TEST_CODE',
+        {
+          row: 10,
+          field: 'DATE'
+        }
+      )
 
       expect(result.getAllIssues()).toHaveLength(1)
       expect(result.getAllIssues()[0].severity).toBe(VALIDATION_SEVERITY.ERROR)
@@ -91,9 +165,32 @@ describe('Validation Issues', () => {
 
     it('returns this for chaining', () => {
       const result = createValidationIssues()
-      const returned = result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Test')
+      const returned = result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Test',
+        'TEST_CODE'
+      )
 
       expect(returned).toBe(result)
+    })
+
+    it('adds an error issue with a code', () => {
+      const result = createValidationIssues()
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Missing required field',
+        'ERR_REQUIRED_FIELD',
+        { row: 15, field: 'TONNAGE' }
+      )
+
+      expect(result.getAllIssues()).toHaveLength(1)
+      expect(result.getAllIssues()[0]).toEqual({
+        severity: VALIDATION_SEVERITY.ERROR,
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        message: 'Missing required field',
+        context: { row: 15, field: 'TONNAGE' },
+        code: 'ERR_REQUIRED_FIELD'
+      })
     })
   })
 
@@ -103,6 +200,7 @@ describe('Validation Issues', () => {
       result.addWarning(
         VALIDATION_CATEGORY.BUSINESS,
         'Load will not be added to balance',
+        'TEST_CODE',
         {
           row: 15,
           reason: 'Missing section 1 information'
@@ -120,19 +218,42 @@ describe('Validation Issues', () => {
 
     it('returns this for chaining', () => {
       const result = createValidationIssues()
-      const returned = result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Test')
+      const returned = result.addWarning(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Test',
+        'TEST_CODE'
+      )
 
       expect(returned).toBe(result)
+    })
+
+    it('adds a warning issue with a code', () => {
+      const result = createValidationIssues()
+      result.addWarning(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Value below threshold',
+        'WARN_LOW_VALUE',
+        { row: 20, field: 'TONNAGE', value: 0.001 }
+      )
+
+      expect(result.getAllIssues()).toHaveLength(1)
+      expect(result.getAllIssues()[0]).toEqual({
+        severity: VALIDATION_SEVERITY.WARNING,
+        category: VALIDATION_CATEGORY.BUSINESS,
+        message: 'Value below threshold',
+        context: { row: 20, field: 'TONNAGE', value: 0.001 },
+        code: 'WARN_LOW_VALUE'
+      })
     })
   })
 
   describe('chaining', () => {
     it('allows method chaining', () => {
       const result = createValidationIssues()
-        .addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error')
-        .addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-        .addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-        .addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+        .addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
+        .addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+        .addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
+        .addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       expect(result.getAllIssues()).toHaveLength(4)
     })
@@ -141,32 +262,32 @@ describe('Validation Issues', () => {
   describe('isFatal', () => {
     it('returns true when there is a fatal issue', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
 
       expect(result.isFatal()).toBe(true)
     })
 
     it('returns true when there are multiple fatal issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error 1')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error 2')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error 2', 'TEST_CODE')
 
       expect(result.isFatal()).toBe(true)
     })
 
     it('returns true when there are fatal and non-fatal issues', () => {
       const result = createValidationIssues()
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
 
       expect(result.isFatal()).toBe(true)
     })
 
     it('returns false when there are no fatal issues', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
       expect(result.isFatal()).toBe(false)
     })
@@ -187,39 +308,39 @@ describe('Validation Issues', () => {
 
     it('returns true when there are only warnings', () => {
       const result = createValidationIssues()
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2', 'TEST_CODE')
 
       expect(result.isValid()).toBe(true)
     })
 
     it('returns false when there is a fatal issue', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
 
       expect(result.isValid()).toBe(false)
     })
 
     it('returns false when there is an error issue', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
 
       expect(result.isValid()).toBe(false)
     })
 
     it('returns false when there are errors and warnings', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
       expect(result.isValid()).toBe(false)
     })
 
     it('returns false when there are fatal, error, and warning issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
       expect(result.isValid()).toBe(false)
     })
@@ -234,7 +355,7 @@ describe('Validation Issues', () => {
 
     it('returns true when there is at least one issue', () => {
       const result = createValidationIssues()
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
       expect(result.hasIssues()).toBe(true)
     })
@@ -242,15 +363,18 @@ describe('Validation Issues', () => {
     it('returns true for any type of issue', () => {
       const resultFatal = createValidationIssues().addFatal(
         VALIDATION_CATEGORY.PARSING,
-        'Fatal'
+        'Fatal',
+        'TEST_CODE'
       )
       const resultError = createValidationIssues().addError(
         VALIDATION_CATEGORY.TECHNICAL,
-        'Error'
+        'Error',
+        'TEST_CODE'
       )
       const resultWarning = createValidationIssues().addWarning(
         VALIDATION_CATEGORY.BUSINESS,
-        'Warning'
+        'Warning',
+        'TEST_CODE'
       )
 
       expect(resultFatal.hasIssues()).toBe(true)
@@ -262,10 +386,10 @@ describe('Validation Issues', () => {
   describe('getIssuesBySeverity', () => {
     it('returns only fatal issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
 
@@ -276,10 +400,10 @@ describe('Validation Issues', () => {
 
     it('returns only error issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
 
@@ -290,10 +414,10 @@ describe('Validation Issues', () => {
 
     it('returns only warning issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2', 'TEST_CODE')
 
       const warnings = result.getIssuesBySeverity(VALIDATION_SEVERITY.WARNING)
 
@@ -304,7 +428,7 @@ describe('Validation Issues', () => {
 
     it('returns empty array when no issues of that severity', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
 
@@ -315,9 +439,9 @@ describe('Validation Issues', () => {
   describe('getIssuesByCategory', () => {
     it('returns only parsing issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 2')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 2', 'TEST_CODE')
 
       const parsing = result.getIssuesByCategory(VALIDATION_CATEGORY.PARSING)
 
@@ -328,9 +452,9 @@ describe('Validation Issues', () => {
 
     it('returns only technical issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 2')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 2', 'TEST_CODE')
 
       const technical = result.getIssuesByCategory(
         VALIDATION_CATEGORY.TECHNICAL
@@ -343,9 +467,9 @@ describe('Validation Issues', () => {
 
     it('returns only business issues', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Business 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Business 2')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Business 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Business 2', 'TEST_CODE')
 
       const business = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
 
@@ -356,7 +480,7 @@ describe('Validation Issues', () => {
 
     it('returns empty array when no issues of that category', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
 
       const parsing = result.getIssuesByCategory(VALIDATION_CATEGORY.PARSING)
 
@@ -367,15 +491,30 @@ describe('Validation Issues', () => {
   describe('getIssuesByRow', () => {
     it('groups issues by row number', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error on row 5', {
-        row: 5
-      })
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning on row 5', {
-        row: 5
-      })
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error on row 10', {
-        row: 10
-      })
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Error on row 5',
+        'TEST_CODE',
+        {
+          location: { row: 5 }
+        }
+      )
+      result.addWarning(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Warning on row 5',
+        'TEST_CODE',
+        {
+          location: { row: 5 }
+        }
+      )
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Error on row 10',
+        'TEST_CODE',
+        {
+          location: { row: 10 }
+        }
+      )
 
       const byRow = result.getIssuesByRow()
 
@@ -389,10 +528,15 @@ describe('Validation Issues', () => {
 
     it('ignores issues without row context', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Global error')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error on row 5', {
-        row: 5
-      })
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Global error', 'TEST_CODE')
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Error on row 5',
+        'TEST_CODE',
+        {
+          location: { row: 5 }
+        }
+      )
 
       const byRow = result.getIssuesByRow()
 
@@ -403,7 +547,7 @@ describe('Validation Issues', () => {
 
     it('returns empty map when no issues have row context', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Global error')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Global error', 'TEST_CODE')
 
       const byRow = result.getIssuesByRow()
 
@@ -422,11 +566,11 @@ describe('Validation Issues', () => {
   describe('groupBySeverity', () => {
     it('groups all issues by severity', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2', 'TEST_CODE')
 
       const grouped = result.groupBySeverity()
 
@@ -437,7 +581,7 @@ describe('Validation Issues', () => {
 
     it('returns empty arrays for severities with no issues', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       const grouped = result.groupBySeverity()
 
@@ -450,9 +594,9 @@ describe('Validation Issues', () => {
   describe('getAllIssues', () => {
     it('returns all issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
       const all = result.getAllIssues()
 
@@ -461,14 +605,13 @@ describe('Validation Issues', () => {
 
     it('returns a copy of the issues array', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
 
       const all = result.getAllIssues()
       all.push({
         severity: VALIDATION_SEVERITY.WARNING,
         category: VALIDATION_CATEGORY.BUSINESS,
-        message: 'Added',
-        context: {}
+        message: 'Added'
       })
 
       expect(result.getAllIssues()).toHaveLength(1)
@@ -484,12 +627,12 @@ describe('Validation Issues', () => {
   describe('getCounts', () => {
     it('returns counts for all severity levels', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 3')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 3', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       const counts = result.getCounts()
 
@@ -524,48 +667,48 @@ describe('Validation Issues', () => {
 
     it('returns summary with fatal count', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
 
       expect(result.getSummary()).toBe('Validation completed with 2 fatal')
     })
 
     it('returns summary with single error', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       expect(result.getSummary()).toBe('Validation completed with 1 error')
     })
 
     it('returns summary with multiple errors', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
 
       expect(result.getSummary()).toBe('Validation completed with 2 errors')
     })
 
     it('returns summary with single warning', () => {
       const result = createValidationIssues()
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       expect(result.getSummary()).toBe('Validation completed with 1 warning')
     })
 
     it('returns summary with multiple warnings', () => {
       const result = createValidationIssues()
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2', 'TEST_CODE')
 
       expect(result.getSummary()).toBe('Validation completed with 2 warnings')
     })
 
     it('returns summary with all severity types', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       expect(result.getSummary()).toBe(
         'Validation completed with 1 fatal, 2 errors, 1 warning'
@@ -574,8 +717,8 @@ describe('Validation Issues', () => {
 
     it('returns summary with only fatal and errors', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
 
       expect(result.getSummary()).toBe(
         'Validation completed with 1 fatal, 1 error'
@@ -584,8 +727,8 @@ describe('Validation Issues', () => {
 
     it('returns summary with only errors and warnings', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1')
+      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       expect(result.getSummary()).toBe(
         'Validation completed with 1 error, 1 warning'
@@ -596,13 +739,18 @@ describe('Validation Issues', () => {
   describe('context properties', () => {
     it('stores all context properties', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Complex error', {
-        row: 42,
-        field: 'TONNAGE',
-        section: 'Section 1',
-        value: 'invalid',
-        reason: 'Must be a number'
-      })
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Complex error',
+        'TEST_CODE',
+        {
+          row: 42,
+          field: 'TONNAGE',
+          section: 'Section 1',
+          value: 'invalid',
+          reason: 'Must be a number'
+        }
+      )
 
       const issue = result.getAllIssues()[0]
       expect(issue.context.row).toBe(42)
@@ -614,268 +762,164 @@ describe('Validation Issues', () => {
   })
 
   describe('toErrorResponse', () => {
-    it('returns empty errors array when no issues', () => {
+    it('returns empty issues array when no issues', () => {
       const result = createValidationIssues()
       const response = result.toErrorResponse()
 
-      expect(response).toEqual({ errors: [] })
+      expect(response).toEqual({ issues: [] })
     })
 
-    it('converts single error to response format', () => {
+    it('converts error with location to response format', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Missing required field', {
-        row: 5,
-        field: 'SITE_NAME',
-        section: 'Section 1'
-      })
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Missing required field',
+        'TEST_CODE',
+        {
+          location: {
+            sheet: 'Received',
+            row: 7,
+            column: 'B',
+            header: 'OUR_REFERENCE'
+          },
+          actual: null
+        }
+      )
 
       const response = result.toErrorResponse()
 
-      expect(response.errors).toHaveLength(1)
-      expect(response.errors[0]).toEqual({
-        code: 'TECHNICAL_ERROR',
-        source: { pointer: '/data/rows/4/SITE_NAME' },
-        meta: { row: 5, field: 'SITE_NAME', section: 'Section 1' }
+      expect(response.issues).toHaveLength(1)
+      expect(response.issues[0]).toEqual({
+        type: 'TECHNICAL_ERROR',
+        meta: {
+          location: {
+            sheet: 'Received',
+            row: 7,
+            column: 'B',
+            header: 'OUR_REFERENCE'
+          },
+          actual: null
+        }
       })
     })
 
     it('converts multiple errors to response format', () => {
       const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Missing site name', {
-        row: 5,
-        field: 'SITE_NAME'
-      })
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Below threshold', {
-        row: 10,
-        field: 'TONNAGE',
-        value: 0.001
-      })
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Could not parse file')
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors).toHaveLength(3)
-      expect(response.errors[0].code).toBe('TECHNICAL_ERROR')
-      expect(response.errors[1].code).toBe('BUSINESS_WARNING')
-      expect(response.errors[2].code).toBe('PARSING_FATAL')
-    })
-
-    it('converts row number to 0-based index in pointer', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 1', {
-        row: 1,
-        field: 'FIELD'
-      })
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].source.pointer).toBe('/data/rows/0/FIELD')
-    })
-
-    it('omits source when no row or field context', () => {
-      const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Could not locate marker', {
-        marker: 'WASTE_REGISTRATION_NUMBER'
-      })
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0]).not.toHaveProperty('source')
-      expect(response.errors[0].meta).toEqual({
-        marker: 'WASTE_REGISTRATION_NUMBER'
-      })
-    })
-
-    it('builds pointer with only row when field is missing', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.BUSINESS, 'Row has issues', {
-        row: 15,
-        reason: 'Multiple missing fields'
-      })
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].source.pointer).toBe('/data/rows/14')
-    })
-
-    it('builds pointer with only field when row is missing', () => {
-      const result = createValidationIssues()
       result.addError(
         VALIDATION_CATEGORY.TECHNICAL,
-        'Invalid registration number',
+        'Missing reference',
+        'TEST_CODE',
         {
-          field: 'WASTE_REGISTRATION_NUMBER'
+          location: { row: 5, header: 'OUR_REFERENCE' }
         }
-      )
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].source.pointer).toBe(
-        '/data/WASTE_REGISTRATION_NUMBER'
-      )
-    })
-
-    it('handles nested field paths with dots', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Missing nested field', {
-        field: 'meta.WASTE_REGISTRATION_NUMBER'
-      })
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].source.pointer).toBe(
-        '/data/meta/WASTE_REGISTRATION_NUMBER'
-      )
-    })
-
-    it('handles nested field paths with row', () => {
-      const result = createValidationIssues()
-      result.addError(
-        VALIDATION_CATEGORY.TECHNICAL,
-        'Missing nested field in row',
-        {
-          row: 5,
-          field: 'details.siteName'
-        }
-      )
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].source.pointer).toBe(
-        '/data/rows/4/details/siteName'
-      )
-    })
-
-    it('handles deeply nested field paths', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Deep nesting', {
-        field: 'level1.level2.level3.field'
-      })
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].source.pointer).toBe(
-        '/data/level1/level2/level3/field'
-      )
-    })
-
-    it('includes all context in meta', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Value mismatch', {
-        row: 5,
-        field: 'TONNAGE',
-        expected: 10,
-        actual: 5,
-        section: 'Section 2'
-      })
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].meta).toEqual({
-        row: 5,
-        field: 'TONNAGE',
-        expected: 10,
-        actual: 5,
-        section: 'Section 2'
-      })
-    })
-
-    it('generates correct codes for all severity/category combinations', () => {
-      const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal parsing')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical error')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Business warning')
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].code).toBe('PARSING_FATAL')
-      expect(response.errors[1].code).toBe('TECHNICAL_ERROR')
-      expect(response.errors[2].code).toBe('BUSINESS_WARNING')
-    })
-
-    it('handles empty context gracefully', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Generic error')
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0]).toEqual({
-        code: 'TECHNICAL_ERROR'
-      })
-    })
-
-    it('uses custom error code when provided', () => {
-      const result = createValidationIssues()
-      result.addError(
-        VALIDATION_CATEGORY.TECHNICAL,
-        'Missing required field',
-        { row: 5, field: 'SITE_NAME' },
-        'MISSING_REQUIRED_FIELD'
-      )
-
-      const response = result.toErrorResponse()
-
-      expect(response.errors[0].code).toBe('MISSING_REQUIRED_FIELD')
-    })
-
-    it('uses multiple custom codes', () => {
-      const result = createValidationIssues()
-      result.addError(
-        VALIDATION_CATEGORY.TECHNICAL,
-        'Missing site name',
-        { row: 5, field: 'SITE_NAME' },
-        'MISSING_REQUIRED_FIELD'
-      )
-      result.addError(
-        VALIDATION_CATEGORY.TECHNICAL,
-        'Invalid material',
-        { row: 10, field: 'MATERIAL' },
-        'INVALID_MATERIAL_TYPE'
       )
       result.addWarning(
         VALIDATION_CATEGORY.BUSINESS,
         'Below threshold',
-        { row: 15, field: 'TONNAGE' },
-        'TONNAGE_BELOW_THRESHOLD'
+        'TEST_CODE',
+        {
+          location: { row: 10, header: 'TONNAGE' },
+          actual: 0.001
+        }
+      )
+      result.addFatal(
+        VALIDATION_CATEGORY.PARSING,
+        'Could not parse file',
+        'TEST_CODE'
       )
 
       const response = result.toErrorResponse()
 
-      expect(response.errors[0].code).toBe('MISSING_REQUIRED_FIELD')
-      expect(response.errors[1].code).toBe('INVALID_MATERIAL_TYPE')
-      expect(response.errors[2].code).toBe('TONNAGE_BELOW_THRESHOLD')
+      expect(response.issues).toHaveLength(3)
+      expect(response.issues[0].type).toBe('TECHNICAL_ERROR')
+      expect(response.issues[1].type).toBe('BUSINESS_WARNING')
+      expect(response.issues[2].type).toBe('PARSING_FATAL')
     })
 
-    it('falls back to generated code when custom code not provided', () => {
+    it('includes meta when context provided', () => {
+      const result = createValidationIssues()
+      result.addFatal(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Processing type does not match',
+        'TEST_CODE',
+        {
+          location: { field: 'PROCESSING_TYPE' },
+          expected: 'REPROCESSOR',
+          actual: 'EXPORTER'
+        }
+      )
+
+      const response = result.toErrorResponse()
+
+      expect(response.issues[0]).toEqual({
+        type: 'BUSINESS_FATAL',
+        meta: {
+          location: { field: 'PROCESSING_TYPE' },
+          expected: 'REPROCESSOR',
+          actual: 'EXPORTER'
+        }
+      })
+    })
+
+    it('includes all context in meta', () => {
       const result = createValidationIssues()
       result.addError(
         VALIDATION_CATEGORY.TECHNICAL,
-        'Some error',
-        { field: 'TEST' },
-        'CUSTOM_CODE'
+        'Value mismatch',
+        'TEST_CODE',
+        {
+          location: { sheet: 'Sheet1', row: 6, column: 'C', header: 'TONNAGE' },
+          expected: 10,
+          actual: 5
+        }
       )
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Another error', {
-        field: 'OTHER'
-      })
 
       const response = result.toErrorResponse()
 
-      expect(response.errors[0].code).toBe('CUSTOM_CODE')
-      expect(response.errors[1].code).toBe('TECHNICAL_ERROR')
+      expect(response.issues[0]).toEqual({
+        type: 'TECHNICAL_ERROR',
+        meta: {
+          location: { sheet: 'Sheet1', row: 6, column: 'C', header: 'TONNAGE' },
+          expected: 10,
+          actual: 5
+        }
+      })
     })
 
-    it('supports custom codes with fatal errors', () => {
+    it('generates correct types for all severity/category combinations', () => {
       const result = createValidationIssues()
-      result.addFatal(
-        VALIDATION_CATEGORY.PARSING,
-        'Marker not found',
-        { marker: 'WASTE_REGISTRATION_NUMBER' },
-        'MARKER_NOT_FOUND'
+      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal parsing', 'TEST_CODE')
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Technical error',
+        'TEST_CODE'
+      )
+      result.addWarning(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Business warning',
+        'TEST_CODE'
       )
 
       const response = result.toErrorResponse()
 
-      expect(response.errors[0].code).toBe('MARKER_NOT_FOUND')
+      expect(response.issues[0].type).toBe('PARSING_FATAL')
+      expect(response.issues[1].type).toBe('TECHNICAL_ERROR')
+      expect(response.issues[2].type).toBe('BUSINESS_WARNING')
+    })
+
+    it('handles empty context gracefully', () => {
+      const result = createValidationIssues()
+      result.addError(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Generic error',
+        'TEST_CODE'
+      )
+
+      const response = result.toErrorResponse()
+
+      expect(response.issues[0]).toEqual({
+        type: 'TECHNICAL_ERROR'
+      })
     })
 
     it('handles issues with explicitly null context', () => {
@@ -884,27 +928,121 @@ describe('Validation Issues', () => {
         VALIDATION_SEVERITY.FATAL,
         VALIDATION_CATEGORY.TECHNICAL,
         'System error',
+        'TEST_CODE',
         null
       )
 
       const response = result.toErrorResponse()
 
-      expect(response.errors).toHaveLength(1)
-      expect(response.errors[0]).toEqual({
-        code: 'TECHNICAL_FATAL'
+      expect(response.issues).toHaveLength(1)
+      expect(response.issues[0]).toEqual({
+        type: 'TECHNICAL_FATAL'
       })
-      expect(response.errors[0].source).toBeUndefined()
-      expect(response.errors[0].meta).toBeUndefined()
+      expect(response.issues[0].meta).toBeUndefined()
+    })
+  })
+
+  describe('issueToErrorObject', () => {
+    it('transforms a domain issue to HTTP format', () => {
+      const domainIssue = {
+        severity: 'ERROR',
+        category: 'TECHNICAL',
+        message: 'Invalid value',
+        context: {
+          location: {
+            sheet: 'Received',
+            row: 9,
+            column: 'B',
+            header: 'OUR_REFERENCE'
+          },
+          actual: 9999
+        }
+      }
+
+      const httpIssue = issueToErrorObject(domainIssue)
+
+      expect(httpIssue).toEqual({
+        type: 'TECHNICAL_ERROR',
+        meta: {
+          location: {
+            sheet: 'Received',
+            row: 9,
+            column: 'B',
+            header: 'OUR_REFERENCE'
+          },
+          actual: 9999
+        }
+      })
+    })
+
+    it('creates correct type from severity and category', () => {
+      expect(
+        issueToErrorObject({
+          severity: 'FATAL',
+          category: 'PARSING',
+          message: 'Cannot parse'
+        })
+      ).toEqual({
+        type: 'PARSING_FATAL'
+      })
+
+      expect(
+        issueToErrorObject({
+          severity: 'WARNING',
+          category: 'BUSINESS',
+          message: 'Low value',
+          context: { field: 'TONNAGE' }
+        })
+      ).toEqual({
+        type: 'BUSINESS_WARNING',
+        meta: { field: 'TONNAGE' }
+      })
+    })
+
+    it('includes all context fields in meta', () => {
+      const httpIssue = issueToErrorObject({
+        severity: 'ERROR',
+        category: 'TECHNICAL',
+        message: 'Invalid',
+        context: {
+          location: { header: 'FIELD' },
+          actual: 'bad',
+          expected: 'good'
+        }
+      })
+
+      expect(httpIssue).toEqual({
+        type: 'TECHNICAL_ERROR',
+        meta: {
+          location: { header: 'FIELD' },
+          actual: 'bad',
+          expected: 'good'
+        }
+      })
+    })
+
+    it('omits meta when context only contains undefined values', () => {
+      const httpIssue = issueToErrorObject({
+        severity: 'ERROR',
+        category: 'TECHNICAL',
+        message: 'Invalid',
+        context: { field: undefined, value: undefined }
+      })
+
+      expect(httpIssue).toEqual({
+        type: 'TECHNICAL_ERROR'
+      })
+      expect(httpIssue).not.toHaveProperty('meta')
     })
   })
 
   describe('merge', () => {
     it('merges issues from another ValidationResult', () => {
       const result1 = createValidationIssues()
-      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       const result2 = createValidationIssues()
-      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
+      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
 
       result1.merge(result2)
 
@@ -918,9 +1056,9 @@ describe('Validation Issues', () => {
       const result2 = createValidationIssues()
       const result3 = createValidationIssues()
 
-      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-      result3.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 3')
+      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
+      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
+      result3.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 3', 'TEST_CODE')
 
       const returned = result1.merge(result2).merge(result3)
 
@@ -928,15 +1066,17 @@ describe('Validation Issues', () => {
       expect(result1.getAllIssues()).toHaveLength(3)
     })
 
-    it('preserves all issue properties including custom codes', () => {
+    it('preserves all issue properties when merging', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
       result2.addError(
         VALIDATION_CATEGORY.TECHNICAL,
         'Missing field',
-        { row: 5, field: 'SITE_NAME' },
-        'MISSING_REQUIRED_FIELD'
+        'TEST_CODE',
+        {
+          location: { row: 5, field: 'PROCESSING_TYPE' }
+        }
       )
 
       result1.merge(result2)
@@ -945,14 +1085,13 @@ describe('Validation Issues', () => {
       expect(issue.severity).toBe('error')
       expect(issue.category).toBe(VALIDATION_CATEGORY.TECHNICAL)
       expect(issue.message).toBe('Missing field')
-      expect(issue.code).toBe('MISSING_REQUIRED_FIELD')
-      expect(issue.context.row).toBe(5)
-      expect(issue.context.field).toBe('SITE_NAME')
+      expect(issue.context.location.row).toBe(5)
+      expect(issue.context.location.field).toBe('PROCESSING_TYPE')
     })
 
     it('merges empty result without errors', () => {
       const result1 = createValidationIssues()
-      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       const result2 = createValidationIssues()
 
@@ -965,7 +1104,7 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       result1.merge(result2)
 
@@ -977,9 +1116,9 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
-      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error')
-      result2.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
+      result2.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
+      result2.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
       result1.merge(result2)
 
@@ -1002,118 +1141,17 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
+      result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
 
       result1.merge(result2)
 
       expect(result2.getAllIssues()).toHaveLength(1)
       expect(result1.getAllIssues()).toHaveLength(1)
 
-      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
+      result1.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
 
       expect(result2.getAllIssues()).toHaveLength(1)
       expect(result1.getAllIssues()).toHaveLength(2)
-    })
-  })
-
-  describe('getSummaryMetadata', () => {
-    it('returns empty metadata when there are no issues', () => {
-      const result = createValidationIssues()
-
-      expect(result.getSummaryMetadata()).toEqual({
-        totalIssues: 0,
-        issuesBySeverity: {
-          fatal: 0,
-          error: 0,
-          warning: 0
-        },
-        rowsWithIssues: 0,
-        firstIssueRow: null,
-        lastIssueRow: null
-      })
-    })
-
-    it('returns metadata with issue counts', () => {
-      const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning')
-
-      const metadata = result.getSummaryMetadata()
-
-      expect(metadata.totalIssues).toBe(4)
-      expect(metadata.issuesBySeverity).toEqual({
-        fatal: 1,
-        error: 2,
-        warning: 1
-      })
-    })
-
-    it('tracks rows with issues when context includes row numbers', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 5', {
-        row: 5
-      })
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 10', {
-        row: 10
-      })
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Another error in row 5', {
-        row: 5
-      })
-
-      const metadata = result.getSummaryMetadata()
-
-      expect(metadata.rowsWithIssues).toBe(2)
-      expect(metadata.firstIssueRow).toBe(5)
-      expect(metadata.lastIssueRow).toBe(10)
-    })
-
-    it('handles non-sequential row numbers correctly', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 15', {
-        row: 15
-      })
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 3', {
-        row: 3
-      })
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error in row 8', {
-        row: 8
-      })
-
-      const metadata = result.getSummaryMetadata()
-
-      expect(metadata.rowsWithIssues).toBe(3)
-      expect(metadata.firstIssueRow).toBe(3)
-      expect(metadata.lastIssueRow).toBe(15)
-    })
-
-    it('ignores issues without row context', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error with row', {
-        row: 5
-      })
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error without row')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal without row')
-
-      const metadata = result.getSummaryMetadata()
-
-      expect(metadata.totalIssues).toBe(3)
-      expect(metadata.rowsWithIssues).toBe(1)
-      expect(metadata.firstIssueRow).toBe(5)
-      expect(metadata.lastIssueRow).toBe(5)
-    })
-
-    it('returns null for row bounds when no issues have row context', () => {
-      const result = createValidationIssues()
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2')
-
-      const metadata = result.getSummaryMetadata()
-
-      expect(metadata.rowsWithIssues).toBe(0)
-      expect(metadata.firstIssueRow).toBeNull()
-      expect(metadata.lastIssueRow).toBeNull()
     })
   })
 })
