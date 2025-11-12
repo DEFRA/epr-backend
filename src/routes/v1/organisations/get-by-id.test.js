@@ -5,14 +5,9 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#test/helpers/setup-auth-mocking.js'
 import { testTokens } from '#test/helpers/create-test-tokens.js'
+import { testAuthScenarios } from '#test/helpers/test-auth-scenarios.js'
 
-const {
-  validToken,
-  wrongSignatureToken,
-  wrongIssuerToken,
-  wrongAudienceToken,
-  unauthorisedUserToken
-} = testTokens
+const { validToken } = testTokens
 
 describe('GET /v1/organisations/{id}', () => {
   setupAuthContext()
@@ -112,142 +107,20 @@ describe('GET /v1/organisations/{id}', () => {
     })
   })
 
-  describe('user has wrong credentials', () => {
-    const authScenarios = [
-      {
-        token: wrongSignatureToken,
-        description: 'made-up token',
-        expectedStatus: StatusCodes.UNAUTHORIZED
-      },
-      {
-        token: wrongIssuerToken,
-        description: 'token from an unknown Identity Provider',
-        expectedStatus: StatusCodes.UNAUTHORIZED
-      },
-      {
-        token: wrongAudienceToken,
-        description: 'token from an unknown Audience (client)',
-        expectedStatus: StatusCodes.UNAUTHORIZED
-      },
-      {
-        token: unauthorisedUserToken,
-        description: 'user without the service maintainer role',
-        expectedStatus: StatusCodes.FORBIDDEN
-      }
-    ]
-
-    it.each(authScenarios)(
-      'returns $expectedStatus for user with $description',
-      async ({ token, expectedStatus }) => {
-        const org1 = buildOrganisation()
-
-        await organisationsRepository.insert(org1)
-
-        const response = await server.inject({
-          method: 'GET',
-          url: `/v1/organisations/${org1.id}`,
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-
-        expect(response.statusCode).toBe(expectedStatus)
-        expect(response.headers['cache-control']).toBe(
-          'no-cache, no-store, must-revalidate'
-        )
-      }
-    )
-
-    it('returns 401 for user without an authorization header', async () => {
+  testAuthScenarios({
+    server: () => server,
+    makeRequest: async () => {
       const org1 = buildOrganisation()
-
       await organisationsRepository.insert(org1)
-
-      const response = await server.inject({
+      return {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      }
+    },
+    additionalExpectations: (response) => {
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
-    })
-
-    it('returns 401 for user with a made-up token', async () => {
-      const org1 = buildOrganisation()
-
-      await organisationsRepository.insert(org1)
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`,
-        headers: {
-          Authorization: `Bearer ${wrongSignatureToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    })
-
-    it('returns 401 for user with a token from an unknown Identity Provider', async () => {
-      const org1 = buildOrganisation()
-
-      await organisationsRepository.insert(org1)
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`,
-        headers: {
-          Authorization: `Bearer ${wrongIssuerToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    })
-
-    it('returns 401 for user with a token from an unknown Audience (client)', async () => {
-      const org1 = buildOrganisation()
-
-      await organisationsRepository.insert(org1)
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`,
-        headers: {
-          Authorization: `Bearer ${wrongAudienceToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    })
-
-    it('returns 403 for user without the service maintainer role', async () => {
-      const org1 = buildOrganisation()
-
-      await organisationsRepository.insert(org1)
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${org1.id}`,
-        headers: {
-          Authorization: `Bearer ${unauthorisedUserToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
-      expect(response.headers['cache-control']).toBe(
-        'no-cache, no-store, must-revalidate'
-      )
-    })
+    }
   })
 })
