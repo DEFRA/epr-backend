@@ -9,9 +9,10 @@ import {
   RECYCLING_PROCESS,
   REGULATOR,
   TIME_SCALE,
+  VALUE_TYPE,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations.js'
+} from '#domain/organisations/model.js'
 
 describe('parseRegistrationSubmission - Integration Tests with Fixture Data', () => {
   it('should parse exporter registration from fixture', async () => {
@@ -73,7 +74,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           defraFormUserDownloadLink:
             'https://forms-designer.test.cdp-int.defra.cloud/file-download/92133d12-b525-412a-8328-860dfeaa0718'
         }
-      ]
+      ],
+      yearlyMetrics: []
     })
   })
 
@@ -101,12 +103,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           authorisedMaterials: [
             {
               material: MATERIAL.ALUMINIUM,
-              authorisedWeight: 10,
+              authorisedWeightInTonnes: 10,
               timeScale: TIME_SCALE.YEARLY
             },
             {
               material: MATERIAL.FIBRE,
-              authorisedWeight: 10,
+              authorisedWeightInTonnes: 10,
               timeScale: TIME_SCALE.YEARLY
             }
           ]
@@ -117,17 +119,17 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           authorisedMaterials: [
             {
               material: MATERIAL.PLASTIC,
-              authorisedWeight: 10,
+              authorisedWeightInTonnes: 10,
               timeScale: TIME_SCALE.YEARLY
             },
             {
               material: MATERIAL.STEEL,
-              authorisedWeight: 11,
+              authorisedWeightInTonnes: 11,
               timeScale: TIME_SCALE.YEARLY
             },
             {
               material: MATERIAL.WOOD,
-              authorisedWeight: 11,
+              authorisedWeightInTonnes: 11,
               timeScale: TIME_SCALE.MONTHLY
             }
           ]
@@ -172,37 +174,37 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           {
             material: MATERIAL.ALUMINIUM,
             siteCapacityTimescale: TIME_SCALE.MONTHLY,
-            siteCapacityWeight: 10
+            siteCapacityInTonnes: 10
           },
           {
             material: MATERIAL.FIBRE,
             siteCapacityTimescale: TIME_SCALE.MONTHLY,
-            siteCapacityWeight: 111
+            siteCapacityInTonnes: 111
           },
           {
             material: MATERIAL.GLASS,
             siteCapacityTimescale: TIME_SCALE.YEARLY,
-            siteCapacityWeight: 10
+            siteCapacityInTonnes: 10
           },
           {
             material: MATERIAL.PAPER,
             siteCapacityTimescale: TIME_SCALE.YEARLY,
-            siteCapacityWeight: 11
+            siteCapacityInTonnes: 11
           },
           {
             material: MATERIAL.PLASTIC,
             siteCapacityTimescale: TIME_SCALE.WEEKLY,
-            siteCapacityWeight: 10
+            siteCapacityInTonnes: 10
           },
           {
             material: MATERIAL.STEEL,
             siteCapacityTimescale: TIME_SCALE.WEEKLY,
-            siteCapacityWeight: 1
+            siteCapacityInTonnes: 1
           },
           {
             material: MATERIAL.WOOD,
             siteCapacityTimescale: TIME_SCALE.WEEKLY,
-            siteCapacityWeight: 1
+            siteCapacityInTonnes: 1
           }
         ]
       },
@@ -227,7 +229,38 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
             'https://forms-designer.test.cdp-int.defra.cloud/file-download/be506501-273f-4770-9d0a-169f4c513465'
         }
       ],
-      orsFileUploads: undefined
+      orsFileUploads: undefined,
+      yearlyMetrics: [
+        {
+          input: {
+            nonPackagingWasteInTonnes: 10,
+            nonUkPackagingWasteInTonnes: 10,
+            type: VALUE_TYPE.ESTIMATED,
+            ukPackagingWasteInTonnes: 12
+          },
+          output: {
+            contaminantsInTonnes: 11,
+            processLossInTonnes: 11,
+            sentToAnotherSiteInTonnes: 11,
+            type: VALUE_TYPE.ESTIMATED
+          },
+          productsMadeFromRecycling: [
+            {
+              name: 'Utensils',
+              weightInTonnes: 1
+            },
+            {
+              name: 'Plates',
+              weightInTonnes: 1
+            }
+          ],
+          rawMaterialInputs: {
+            material: undefined,
+            tonnage: undefined
+          },
+          year: 2024
+        }
+      ]
     })
   })
 
@@ -284,32 +317,32 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       {
         material: MATERIAL.ALUMINIUM,
         siteCapacityTimescale: TIME_SCALE.MONTHLY,
-        siteCapacityWeight: 10
+        siteCapacityInTonnes: 10
       },
       {
         material: MATERIAL.FIBRE,
         siteCapacityTimescale: TIME_SCALE.MONTHLY,
-        siteCapacityWeight: 111
+        siteCapacityInTonnes: 111
       },
       {
         material: MATERIAL.GLASS,
         siteCapacityTimescale: TIME_SCALE.YEARLY,
-        siteCapacityWeight: 10
+        siteCapacityInTonnes: 10
       },
       {
         material: MATERIAL.PAPER,
         siteCapacityTimescale: TIME_SCALE.YEARLY,
-        siteCapacityWeight: 11
+        siteCapacityInTonnes: 11
       },
       {
         material: MATERIAL.PLASTIC,
         siteCapacityTimescale: TIME_SCALE.WEEKLY,
-        siteCapacityWeight: 10
+        siteCapacityInTonnes: 10
       },
       {
         material: MATERIAL.STEEL,
         siteCapacityTimescale: TIME_SCALE.WEEKLY,
-        siteCapacityWeight: 1
+        siteCapacityInTonnes: 1
       }
     ])
   })

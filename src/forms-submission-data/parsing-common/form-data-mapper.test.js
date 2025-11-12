@@ -8,6 +8,7 @@ import {
   mapMaterial,
   mapRecyclingProcess,
   mapTimeScale,
+  mapValueType,
   convertToNumber
 } from './form-data-mapper.js'
 import {
@@ -19,8 +20,9 @@ import {
   PARTNERSHIP_TYPE,
   MATERIAL,
   RECYCLING_PROCESS,
-  TIME_SCALE
-} from '#domain/organisations.js'
+  TIME_SCALE,
+  VALUE_TYPE
+} from '#domain/organisations/model.js'
 
 describe('mapWasteProcessingType', () => {
   it('should return both types for "Reprocessor and exporter"', () => {
@@ -347,6 +349,29 @@ describe('mapTimeScale', () => {
 
   it.each([null, undefined, ''])('should return undefined for %s', (input) => {
     expect(mapTimeScale(input)).toBeUndefined()
+  })
+})
+
+describe('mapValueType', () => {
+  it.each([
+    ['Actual figures', VALUE_TYPE.ACTUAL],
+    ['Estimated figures', VALUE_TYPE.ESTIMATED]
+  ])('should map %s to %s', (input, expected) => {
+    expect(mapValueType(input)).toBe(expected)
+  })
+
+  it('should handle whitespace', () => {
+    expect(mapValueType('  Actual figures  ')).toBe(VALUE_TYPE.ACTUAL)
+  })
+
+  it('should throw error for invalid value type', () => {
+    expect(() => mapValueType('INVALID')).toThrow(
+      'Invalid value type: "INVALID". Expected "Actual figures" or "Estimated figures"'
+    )
+  })
+
+  it.each([null, undefined, ''])('should return undefined for %s', (input) => {
+    expect(mapValueType(input)).toBeUndefined()
   })
 })
 

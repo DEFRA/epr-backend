@@ -11,14 +11,19 @@ import {
   mapMaterial,
   mapRecyclingProcess
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getWasteManagementPermits } from '#formsubmission/registration/extract-permits.js'
 import { getSiteDetails } from '#formsubmission/registration/extract-site.js'
 import {
   getSubmitterDetails,
   getApprovedPersons
 } from '#formsubmission/registration/extract-contacts.js'
+import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
 
+/**
+ * @param {Object} answersByShortDescription
+ * @returns {import('#domain/organisations/model.js').WasteProcessingTypeValue}
+ */
 function getWasteProcessingType(answersByShortDescription) {
   return answersByShortDescription[
     FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
@@ -63,7 +68,10 @@ export async function parseRegistrationSubmission(id, rawSubmissionData) {
         FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),
-    site: getSiteDetails(answersByShortDescription, answersByPages),
+    site:
+      wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+        ? getSiteDetails(answersByShortDescription, answersByPages)
+        : undefined,
     noticeAddress: getNoticeAddress(answersByShortDescription),
     wasteRegistrationNumber:
       answersByShortDescription[
@@ -95,6 +103,11 @@ export async function parseRegistrationSubmission(id, rawSubmissionData) {
             rawSubmissionData,
             FORM_PAGES.REGISTRATION.ORS_FILE_UPLOAD
           )
-        : undefined
+        : undefined,
+    yearlyMetrics: getYearlyMetrics(
+      wasteProcessingType,
+      rawSubmissionData,
+      answersByPages
+    )
   }
 }

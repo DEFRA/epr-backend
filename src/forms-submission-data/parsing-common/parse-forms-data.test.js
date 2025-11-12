@@ -16,7 +16,7 @@ import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-n
 
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { REGULATOR } from '#domain/organisations.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 
 describe('extractRepeaters', () => {
   const ltdPartnershipPage = FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS
