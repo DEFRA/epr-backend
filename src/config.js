@@ -219,14 +219,6 @@ const baseConfig = {
         env: 'ADMIN_UI_AS_AUDIENCE',
         default: 'test'
       }
-    },
-    defraId: {
-      oidcWellKnownConfigurationUrl: {
-        doc: 'Defra OIDC .well-known configuration URL',
-        format: String,
-        env: 'DEFRA_OIDC_WELL_KNOWN_CONFIGURATION_URL',
-        default: 'test1'
-      }
     }
   },
   userRoles: {
