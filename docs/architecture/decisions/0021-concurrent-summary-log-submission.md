@@ -27,6 +27,10 @@ This operation presents several challenges:
 - MongoDB transaction time limit: 60 seconds
 - These constraints make multi-document transactions impractical for this use case
 
+### Primary Goal
+
+The primary goal is **avoiding ambiguous state in production** to reduce the number of times we need to access sensitive data for investigation. This is not a scalability concern - it's about operational clarity and data protection.
+
 ### Acceptable Trade-offs
 
 - **Last upload wins**: Only one unsubmitted summary log per organisation/registration at a time. New uploads supersede previous unsubmitted ones.
@@ -92,6 +96,7 @@ stateDiagram-v2
     validating --> invalid: Validation fails
     validated --> submitting: User confirms submit
     submitting --> submitted: Submission complete
+    submitting --> submission_failed: Known failure
 
     preprocessing --> superseded: New upload for org/reg
     validating --> superseded: New upload for org/reg
@@ -100,6 +105,7 @@ stateDiagram-v2
     invalid --> [*]
     superseded --> [*]
     submitted --> [*]
+    submission_failed --> [*]
 
     note right of superseded
         Terminal state:
@@ -112,6 +118,14 @@ stateDiagram-v2
         for same org/reg.
         Manual intervention
         if stuck.
+    end note
+
+    note right of submission_failed
+        Terminal state:
+        User can re-upload/re-submit
+        to recover.
+        Downstream operations
+        must check for this state.
     end note
 ```
 
@@ -343,6 +357,12 @@ The MongoDB adapter uses bulk operations for efficient version appending:
   - Trade-off: simpler repository, clearer separation of concerns
 - **Manual recovery required**: Stuck submissions require manual intervention
   - Trade-off: Simpler initial implementation, addresses real failures rather than transient issues
+- **Partial failure scenarios**: If submission fails partway through, waste records may be partially updated
+  - Some waste records will have the new version appended, others won't
+  - Re-submitting is safe (idempotent) - missing records get updated, existing ones are skipped
+  - A successful re-upload and re-submit will bring all waste records to the correct state
+  - Downstream operations must handle `submission_failed` state (e.g. can't issue PRN until fixed)
+  - Infrastructure failures where we don't know submission failed leave the summary log stuck in `submitting` state
 
 ### Implementation Notes
 
@@ -358,7 +378,133 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 
 ### Future Considerations
 
-- **Automated recovery**: Implement a background job to detect and recover stuck submissions (status: `submitting`, older than threshold). The job would re-run the submission leveraging idempotency to handle partial completions. This could reduce manual intervention but adds operational complexity.
+#### Recovery Approaches
+
+**Queue + Dead Letter Queue (DLQ)**
+
+- Add a message queue for submission processing to enable robust retries with exponential backoff
+- Failed submissions move to DLQ after retry exhaustion for manual investigation
+- Benefits: Handles transient failures automatically, reduces manual intervention
+- Trade-off: Additional infrastructure complexity (queue management, monitoring)
+
+**submission_failed State**
+
+- Transition to `submission_failed` for detectable failures where we can update the summary log state
+- Distinct from infrastructure failures (e.g. MongoDB connectivity issues) that prevent state updates, leaving the log stuck in `submitting`
+- Enables user self-service recovery via re-upload/re-submit
+- Improves UX compared to stuck `submitting` state requiring support intervention
+- Requires downstream operations to check for this state (e.g. PRN issuance must wait for successful submission)
+
+**Partial Update Handling**
+
+- Queue retry mechanism (Phase 2) automatically handles partial failures by retrying the entire submission
+- Idempotent operations ensure safe retries - already-updated records are skipped
+- If queue retries are exhausted, message moves to DLQ for manual investigation
+- A successful re-upload and re-submit will bring all waste records to the correct state
+- Consider logging which waste records were successfully updated during partial failures to aid investigation
+- Monitor for patterns in partial failures to identify systemic issues
+
+#### Other Enhancements
+
 - **Concurrent updates**: If waste records need to support concurrent updates from multiple sources (not just summary logs), add a `version` field to waste records for optimistic locking
 - **Batched processing**: If memory usage exceeds infrastructure limits, implement batched processing (multiple smaller Maps and `appendVersions` calls)
 - **Async processing**: If processing time exceeds acceptable limits, consider async processing via queue worker
+
+## Incremental Delivery
+
+### Phase 1: Core Submission (MVP)
+
+**Goal**: Deliver basic submission workflow with clear error states
+
+**Scope**:
+
+- Org/reg level locking to prevent concurrent submissions
+- Two-phase workflow (validate/preview + submit)
+- Idempotent version appending
+- Summary log status transitions: `preprocessing` → `validating` → `validated` → `submitting` → `submitted`
+- `superseded` state for uploads that are replaced
+- Manual recovery for stuck submissions (left in `submitting` state)
+
+**Benefits**:
+
+- Eliminates stale preview problem
+- Prevents race conditions
+- Handles 15k+ records efficiently
+- Safe retry on failure
+
+**Limitations**:
+
+- Stuck submissions require manual intervention
+- No distinction between failure types
+- No automated recovery
+
+**Delivery Risk**: Low - well-defined scope, no external dependencies
+
+---
+
+### Phase 2: Robust Retry Mechanism
+
+**Goal**: Handle transient failures automatically
+
+**Scope**:
+
+- Add message queue for submission processing
+- Implement retry logic with exponential backoff
+- Dead Letter Queue (DLQ) for exhausted retries
+- Monitoring and alerting for DLQ items
+
+**Benefits**:
+
+- Automatic recovery for transient failures
+- Reduced manual intervention
+- Better visibility into failure patterns
+- No domain changes - purely infrastructure enhancement
+
+**Dependencies**:
+
+- Phase 1 complete
+- Queue infrastructure provisioned
+
+**Delivery Risk**: Medium - additional infrastructure complexity, but no domain changes
+
+---
+
+### Phase 3: Detectable Failure Handling
+
+**Goal**: Enable user self-service recovery for detectable failures
+
+**Scope**:
+
+- Add `submission_failed` terminal state
+- Transition to `submission_failed` for detectable failures where we can update the summary log state
+- Distinct from infrastructure failures (e.g. MongoDB connectivity issues) that leave the log stuck in `submitting`
+- Clear error messages to guide user to re-upload/re-submit
+- Update downstream operations to check for `submission_failed` state
+
+**Benefits**:
+
+- Improved UX - users can fix and retry themselves
+- Reduced support burden for detectable failure scenarios
+- Better operational clarity (stuck in `submitting` vs marked as `submission_failed`)
+
+**Dependencies**:
+
+- Phase 1 complete
+- Downstream operations updated (e.g. PRN issuance checks)
+
+**Delivery Risk**: Low - clear scope, but requires coordination with downstream operations
+
+---
+
+### Recommended Approach
+
+1. **Start with Phase 1** - delivers core value, low risk
+2. **Monitor production** - understand actual failure patterns and frequency
+3. **Implement Phase 2 (Queue)** - purely infrastructure, no domain changes, handles transient failures and automatic retries
+4. **Evaluate Phase 3 based on data**:
+   - If detectable failures are common and causing support burden → implement `submission_failed` state
+   - Phase 3 can be skipped if most failures are transient (handled by Phase 2)
+
+**Note**: Phase 2 and Phase 3 are independent and could be delivered in parallel if desired. Phase 2 is simpler (infrastructure only) whilst Phase 3 requires coordination with downstream operations.
+
+This approach balances delivering value early whilst learning from production behaviour before committing to complex recovery mechanisms.
