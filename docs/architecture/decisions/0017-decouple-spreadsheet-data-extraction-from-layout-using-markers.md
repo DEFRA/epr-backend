@@ -219,7 +219,7 @@ For validation error reporting, specific cell locations can be calculated from t
   - Template evolution doesn't require coordinated parser releases
 - **Version tolerance**: Multiple template versions can be supported by the same parsing logic, as long as they use the same marker conventions
 - **Maintainability**: Parsing logic focuses on marker patterns and extraction rules rather than hardcoded cell positions
-- **Flexibility**: Users can customize non-data areas of the spreadsheet without breaking the parser
+- **Flexibility**: Users can customise non-data areas of the spreadsheet without breaking the parser
   - Tables can be arranged vertically (stacked) or horizontally (side-by-side) as needed
   - Single logical tables can be visually broken into sections using `__EPR_SKIP_COLUMN` markers for improved readability
   - Data can be organized across multiple worksheets for user convenience
