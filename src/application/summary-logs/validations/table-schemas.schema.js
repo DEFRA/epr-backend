@@ -4,19 +4,15 @@ import Joi from 'joi'
  * Constants for SONAR...
  */
 const EWC_CODE_REGEX = /^\d{2} \d{2} \d{2}$/
-const HOW_CALCULATE_RECYCLABLE_REGEX = /^[A-Z]+$/
 const MIN_OUR_REFERENCE = 10000
 const ZERO = 0
 
 const IS_REQUIRED = 'is required'
 const MUST_BE_A_VALID_DATE = 'must be a valid date'
-const MUST_BE_A_BOOLEAN = 'must be a boolean'
 const MUST_BE_A_NUMBER = 'must be a number'
 const MUST_BE_A_STRING = 'must be a string'
 const MUST_BE_GREATER_THAN_ZERO = 'must be greater than 0'
 const MUST_BE_LESS_THAN_ONE = 'must be less than 1'
-const MUST_ONLY_CONTAIN_UPPERCASE_LETTERS =
-  'must contain only uppercase letters'
 
 /**
  * Joi schema for UPDATE_WASTE_BALANCE table columns
@@ -57,18 +53,14 @@ export const UPDATE_WASTE_BALANCE_SCHEMA = {
     'number.greater': MUST_BE_GREATER_THAN_ZERO,
     'any.required': IS_REQUIRED
   }),
-  BAILING_WIRE: Joi.boolean().required().messages({
-    'boolean.base': MUST_BE_A_BOOLEAN,
+  BAILING_WIRE: Joi.string().required().messages({
+    'string.base': MUST_BE_A_STRING,
     'any.required': IS_REQUIRED
   }),
-  HOW_CALCULATE_RECYCLABLE: Joi.string()
-    .required()
-    .pattern(HOW_CALCULATE_RECYCLABLE_REGEX)
-    .messages({
-      'string.base': MUST_BE_A_STRING,
-      'string.pattern.base': MUST_ONLY_CONTAIN_UPPERCASE_LETTERS,
-      'any.required': IS_REQUIRED
-    }),
+  HOW_CALCULATE_RECYCLABLE: Joi.string().required().messages({
+    'string.base': MUST_BE_A_STRING,
+    'any.required': IS_REQUIRED
+  }),
   WEIGHT_OF_NON_TARGET: Joi.number().required().greater(ZERO).messages({
     'number.base': MUST_BE_A_NUMBER,
     'number.greater': MUST_BE_GREATER_THAN_ZERO,

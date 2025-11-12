@@ -1,5 +1,6 @@
 import { StatusCodes } from 'http-status-codes'
 import { getDefaultStatus } from '#domain/summary-logs/status.js'
+import { transformValidationResponse } from './transform-validation-response.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
@@ -23,7 +24,11 @@ export const summaryLogsGet = {
     }
 
     const { summaryLog } = result
-    const response = { status: summaryLog.status }
+
+    const response = {
+      status: summaryLog.status,
+      ...transformValidationResponse(summaryLog.validation)
+    }
 
     if (summaryLog.failureReason) {
       response.failureReason = summaryLog.failureReason

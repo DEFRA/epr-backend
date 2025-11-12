@@ -30,14 +30,16 @@ export const validateRegistrationNumber = ({
   const registrationField = parsed?.meta?.[SUMMARY_LOG_META_FIELDS.REGISTRATION]
   const spreadsheetRegistrationNumber = registrationField?.value
 
-  const location = registrationField?.location
-    ? { ...registrationField.location }
-    : undefined
+  const location = {
+    ...registrationField?.location,
+    field: SUMMARY_LOG_META_FIELDS.REGISTRATION
+  }
 
   if (!wasteRegistrationNumber) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has no waste registration number'
+      'Invalid summary log: registration has no waste registration number',
+      'MISSING_REGISTRATION_NUMBER'
     )
     return issues
   }
@@ -46,8 +48,8 @@ export const validateRegistrationNumber = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       "Summary log's waste registration number does not match this registration",
+      'REGISTRATION_MISMATCH',
       {
-        path: `meta.${SUMMARY_LOG_META_FIELDS.REGISTRATION}`,
         location,
         expected: wasteRegistrationNumber,
         actual: spreadsheetRegistrationNumber
