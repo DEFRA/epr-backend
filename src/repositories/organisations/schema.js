@@ -243,7 +243,11 @@ const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  registrationNumber: Joi.string().optional(),
+  registrationNumber: Joi.string().when('status', {
+    is: STATUS.APPROVED,
+    then: Joi.required(),
+    otherwise: Joi.optional()
+  }),
   validFrom: Joi.date().optional(),
   validTo: Joi.date().optional(),
   formSubmissionTime: Joi.date().required(),
@@ -294,7 +298,11 @@ const registrationSchema = Joi.object({
 
 const accreditationSchema = Joi.object({
   id: idSchema,
-  accreditationNumber: Joi.string().optional(),
+  accreditationNumber: Joi.string().when('status', {
+    is: STATUS.APPROVED,
+    then: Joi.required(),
+    otherwise: Joi.optional()
+  }),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
