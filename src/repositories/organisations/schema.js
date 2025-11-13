@@ -255,7 +255,10 @@ const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  registrationNumber: Joi.string().optional(),
+  registrationNumber: Joi.string().when(
+    'status',
+    requiredWhenApprovedOrSuspended
+  ),
   validFrom: Joi.date().when('status', requiredWhenApprovedOrSuspended),
   validTo: Joi.date().when('status', requiredWhenApprovedOrSuspended),
   formSubmissionTime: Joi.date().required(),
@@ -288,10 +291,7 @@ const registrationSchema = Joi.object({
     )
     .optional(),
   noticeAddress: addressSchema.optional(),
-  wasteRegistrationNumber: Joi.string().when(
-    'status',
-    requiredWhenApprovedOrSuspended
-  ),
+  wasteRegistrationNumber: Joi.string().optional(),
   wasteManagementPermits: Joi.array()
     .items(wasteManagementPermitSchema)
     .optional(),

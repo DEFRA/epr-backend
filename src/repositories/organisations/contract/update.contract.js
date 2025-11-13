@@ -298,6 +298,7 @@ export const testUpdateBehaviour = (it) => {
         const registrationToUpdate = {
           ...organisation.registrations[0],
           status: STATUS.APPROVED,
+          registrationNumber: 'WRN12345',
           wasteRegistrationNumber: 'CBDU12345',
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31')
@@ -328,6 +329,7 @@ export const testUpdateBehaviour = (it) => {
             {
               ...organisation.registrations[0],
               status: STATUS.APPROVED,
+              registrationNumber: 'WRN12345',
               wasteRegistrationNumber: 'CBDU12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
@@ -426,15 +428,16 @@ export const testUpdateBehaviour = (it) => {
     })
 
     describe('conditional field validation', () => {
-      describe('wasteRegistrationNumber', () => {
-        it('rejects update when registration status changes to approved without wasteRegistrationNumber', async () => {
+      describe('registrationNumber', () => {
+        it('rejects update when registration status changes to approved without registrationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
-            wasteRegistrationNumber: undefined,
+            registrationNumber: undefined,
+            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -444,17 +447,18 @@ export const testUpdateBehaviour = (it) => {
               registrations: [registrationToUpdate]
             })
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.wasteRegistrationNumber: any.required'
+            'Invalid organisation data: registrations.0.registrationNumber: any.required'
           )
         })
 
-        it('allows update when registration status changes to approved with wasteRegistrationNumber', async () => {
+        it('allows update when registration status changes to approved with registrationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
@@ -470,17 +474,19 @@ export const testUpdateBehaviour = (it) => {
           )
 
           expect(updatedReg.status).toBe(STATUS.APPROVED)
+          expect(updatedReg.registrationNumber).toBe('WRN12345')
           expect(updatedReg.wasteRegistrationNumber).toBe('CBDU12345')
         })
 
-        it('rejects update when registration status changes to suspended without wasteRegistrationNumber', async () => {
+        it('rejects update when registration status changes to suspended without registrationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
-            wasteRegistrationNumber: undefined,
+            registrationNumber: undefined,
+            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -490,7 +496,7 @@ export const testUpdateBehaviour = (it) => {
               registrations: [registrationToUpdate]
             })
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.wasteRegistrationNumber: any.required'
+            'Invalid organisation data: registrations.0.registrationNumber: any.required'
           )
         })
 
@@ -649,6 +655,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom: undefined,
             validTo: new Date('2025-12-31')
@@ -670,6 +677,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: undefined
@@ -694,6 +702,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom,
             validTo
@@ -720,6 +729,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom: undefined,
             validTo: new Date('2025-12-31')
@@ -741,6 +751,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: undefined
@@ -765,6 +776,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
+            registrationNumber: 'WRN12345',
             wasteRegistrationNumber: 'CBDU12345',
             validFrom,
             validTo
