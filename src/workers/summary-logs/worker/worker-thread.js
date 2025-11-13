@@ -8,7 +8,7 @@ import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
@@ -100,7 +100,7 @@ export default async function summaryLogsWorkerThread(command) {
       const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
       const uploadsRepository = createUploadsRepository(s3Client)
       const organisationsRepository = createOrganisationsRepository(db)()
-      const wasteRecordsRepository = createWasteRecordsRepository(db)()
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,
