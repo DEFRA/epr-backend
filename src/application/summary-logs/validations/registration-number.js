@@ -1,16 +1,16 @@
 import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import {
   createValidationIssues,
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  buildMetaFieldLocation,
+  extractMetaField,
+  logValidationSuccess
+} from './helpers.js'
 
 /**
- * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
+ * Validates that the registration number in the spreadsheet matches the registration's registration number
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
@@ -25,46 +25,45 @@ export const validateRegistrationNumber = ({
 }) => {
   const issues = createValidationIssues()
 
-  const { wasteRegistrationNumber } = registration
+  const { registrationNumber } = registration
 
-  const registrationField = parsed?.meta?.[SUMMARY_LOG_META_FIELDS.REGISTRATION]
+  const registrationField = extractMetaField(
+    parsed,
+    SUMMARY_LOG_META_FIELDS.REGISTRATION
+  )
   const spreadsheetRegistrationNumber = registrationField?.value
 
-  const location = {
-    ...registrationField?.location,
-    field: SUMMARY_LOG_META_FIELDS.REGISTRATION
-  }
+  const location = buildMetaFieldLocation(
+    registrationField,
+    SUMMARY_LOG_META_FIELDS.REGISTRATION
+  )
 
-  if (!wasteRegistrationNumber) {
+  if (!registrationNumber) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has no waste registration number',
+      'Invalid summary log: registration has no registration number',
       'MISSING_REGISTRATION_NUMBER'
     )
     return issues
   }
 
-  if (spreadsheetRegistrationNumber !== wasteRegistrationNumber) {
+  if (spreadsheetRegistrationNumber !== registrationNumber) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      "Summary log's waste registration number does not match this registration",
+      "Summary log's registration number does not match this registration",
       'REGISTRATION_MISMATCH',
       {
         location,
-        expected: wasteRegistrationNumber,
+        expected: registrationNumber,
         actual: spreadsheetRegistrationNumber
       }
     )
     return issues
   }
 
-  logger.info({
-    message: `Registration number validated: ${loggingContext}, registrationNumber=${wasteRegistrationNumber}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  logValidationSuccess(
+    `Registration number validated: ${loggingContext}, registrationNumber=${registrationNumber}`
+  )
 
   return issues
 }

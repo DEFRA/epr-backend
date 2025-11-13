@@ -1,20 +1,46 @@
 /**
- * @typedef {Object} Accreditation
+ * @typedef {Object} AccreditationBase
  * @property {string} id
- * @property {number} accreditationNumber
  * @property {string} material
  * @property {string} wasteProcessingType
+ * @property {Date} formSubmissionTime
+ * @property {string} submittedToRegulator
  */
 
 /**
- * @typedef {Object} Registration
+ * @typedef {AccreditationBase & {status: 'approved'|'suspended', accreditationNumber: string, validFrom: Date, validTo: Date}} AccreditationApproved
+ */
+
+/**
+ * @typedef {AccreditationBase & {status: 'created'|'rejected'|'archived', accreditationNumber?: string, validFrom?: Date, validTo?: Date}} AccreditationOther
+ */
+
+/**
+ * @typedef {AccreditationApproved | AccreditationOther} Accreditation
+ */
+
+/**
+ * @typedef {Object} RegistrationBase
  * @property {string} id
  * @property {string} orgName
  * @property {string} material
  * @property {string} wasteProcessingType
- * @property {string} wasteRegistrationNumber
+ * @property {Date} formSubmissionTime
+ * @property {string} submittedToRegulator
  * @property {string} [accreditationId]
  * @property {Accreditation} [accreditation] - Hydrated accreditation object when accreditationId exists
+ */
+
+/**
+ * @typedef {RegistrationBase & {status: 'approved'|'suspended', wasteRegistrationNumber: string, validFrom: Date, validTo: Date}} RegistrationApproved
+ */
+
+/**
+ * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', wasteRegistrationNumber?: string, validFrom?: Date, validTo?: Date}} RegistrationOther
+ */
+
+/**
+ * @typedef {RegistrationApproved | RegistrationOther} Registration
  */
 
 /**

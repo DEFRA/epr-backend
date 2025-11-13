@@ -111,7 +111,7 @@ describe('Summary logs integration', () => {
       registrations: [
         {
           id: registrationId,
-          wasteRegistrationNumber: 'WRN-123',
+          registrationNumber: 'REG-123',
           material: 'paper',
           wasteProcessingType: 'reprocessor',
           formSubmissionTime: new Date(),
@@ -129,7 +129,7 @@ describe('Summary logs integration', () => {
       'file-123': {
         meta: {
           REGISTRATION: {
-            value: 'WRN-123',
+            value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
@@ -399,7 +399,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -418,7 +418,7 @@ describe('Summary logs integration', () => {
         [fileId]: {
           meta: {
             REGISTRATION: {
-              value: 'WRN-123',
+              value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
@@ -653,7 +653,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -672,7 +672,7 @@ describe('Summary logs integration', () => {
         [fileId]: {
           meta: {
             REGISTRATION: {
-              value: 'WRN-123',
+              value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
@@ -820,7 +820,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -1012,7 +1012,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN12345',
+            registrationNumber: 'REG12345',
             material: 'aluminium',
             wasteProcessingType: 'reprocessor',
             accreditation: null
@@ -1029,7 +1029,7 @@ describe('Summary logs integration', () => {
         [fileId]: {
           meta: {
             REGISTRATION: {
-              value: 'WRN12345',
+              value: 'REG12345',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
@@ -1191,7 +1191,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -1210,7 +1210,7 @@ describe('Summary logs integration', () => {
         [fileId]: {
           meta: {
             REGISTRATION: {
-              value: 'WRN-123',
+              value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {

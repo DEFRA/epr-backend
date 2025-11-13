@@ -21,7 +21,7 @@ describe('SummaryLogsValidator integration', () => {
 
   const createTestOrg = (
     wasteProcessingType,
-    wasteRegistrationNumber,
+    registrationNumber,
     accreditationNumber
   ) => {
     const registrationId = randomUUID()
@@ -39,7 +39,7 @@ describe('SummaryLogsValidator integration', () => {
 
     const registration = {
       id: registrationId,
-      wasteRegistrationNumber,
+      registrationNumber,
       material: 'paper',
       wasteProcessingType,
       formSubmissionTime: new Date(),
@@ -118,10 +118,10 @@ describe('SummaryLogsValidator integration', () => {
   it('should update status as expected when validation succeeds', async () => {
     const { updated, summaryLog } = await runValidation({
       registrationType: 'reprocessor',
-      registrationWRN: 'WRN-123',
+      registrationWRN: 'REG-123',
       metadata: {
         REGISTRATION: {
-          value: 'WRN-123',
+          value: 'REG-123',
           location: { sheet: 'Cover', row: 1, column: 'B' }
         },
         PROCESSING_TYPE: {
@@ -159,7 +159,7 @@ describe('SummaryLogsValidator integration', () => {
     const errorMessage = 'Test extraction error'
     const { updated, summaryLog } = await runValidation({
       registrationType: 'reprocessor',
-      registrationWRN: 'WRN-123',
+      registrationWRN: 'REG-123',
       summaryLogExtractor: {
         extract: async () => {
           throw new Error(errorMessage)
@@ -191,12 +191,12 @@ describe('SummaryLogsValidator integration', () => {
     describe.each([
       {
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         spreadsheetType: 'REPROCESSOR'
       },
       {
         registrationType: 'exporter',
-        registrationWRN: 'WRN-456',
+        registrationWRN: 'REG-456',
         spreadsheetType: 'EXPORTER'
       }
     ])(
@@ -245,12 +245,12 @@ describe('SummaryLogsValidator integration', () => {
     describe.each([
       {
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         spreadsheetType: 'EXPORTER'
       },
       {
         registrationType: 'exporter',
-        registrationWRN: 'WRN-456',
+        registrationWRN: 'REG-456',
         spreadsheetType: 'REPROCESSOR'
       }
     ])(
@@ -319,10 +319,10 @@ describe('SummaryLogsValidator integration', () => {
     it('should fail validation when type is missing', async () => {
       const { updated, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         metadata: {
           REGISTRATION: {
-            value: 'WRN-123',
+            value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           MATERIAL: {
@@ -363,10 +363,10 @@ describe('SummaryLogsValidator integration', () => {
     it('should fail validation when type is unrecognized', async () => {
       const { updated, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         metadata: {
           REGISTRATION: {
-            value: 'WRN-123',
+            value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
@@ -423,7 +423,7 @@ describe('SummaryLogsValidator integration', () => {
 
       const { updated, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         accreditationNumber,
         metadata: {
           TEMPLATE_VERSION: {
@@ -431,7 +431,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION: {
-            value: 'WRN-123',
+            value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
@@ -464,7 +464,7 @@ describe('SummaryLogsValidator integration', () => {
     it('should fail validation when registration has accreditation but spreadsheet number does not match', async () => {
       const { updated } = await runValidation({
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         accreditationNumber: '87654321',
         metadata: {
           TEMPLATE_VERSION: {
@@ -472,7 +472,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION: {
-            value: 'WRN-123',
+            value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
@@ -503,7 +503,7 @@ describe('SummaryLogsValidator integration', () => {
     it('should fail validation when registration has accreditation but spreadsheet is missing accreditation number', async () => {
       const { updated } = await runValidation({
         registrationType: 'reprocessor',
-        registrationWRN: 'WRN-123',
+        registrationWRN: 'REG-123',
         accreditationNumber: '87654321',
         metadata: {
           TEMPLATE_VERSION: {
@@ -511,7 +511,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION: {
-            value: 'WRN-123',
+            value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
@@ -537,14 +537,14 @@ describe('SummaryLogsValidator integration', () => {
     it('should validate successfully when registration has no accreditation and spreadsheet is blank', async () => {
       const { updated, summaryLog } = await runValidation({
         registrationType: 'exporter',
-        registrationWRN: 'WRN-456',
+        registrationWRN: 'REG-456',
         metadata: {
           TEMPLATE_VERSION: {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION: {
-            value: 'WRN-456',
+            value: 'REG-456',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
@@ -573,14 +573,14 @@ describe('SummaryLogsValidator integration', () => {
     it('should fail validation when registration has no accreditation but spreadsheet provides number', async () => {
       const { updated } = await runValidation({
         registrationType: 'exporter',
-        registrationWRN: 'WRN-456',
+        registrationWRN: 'REG-456',
         metadata: {
           TEMPLATE_VERSION: {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION: {
-            value: 'WRN-456',
+            value: 'REG-456',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {

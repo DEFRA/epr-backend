@@ -51,7 +51,6 @@ const createOidcHandlers = (baseUrl, oidcResponse) => {
 
 /**
  * Create and configure MSW server for OIDC tests
- * @param {string} [baseUrl] - Base URL for the OIDC provider (defaults to 'http://localhost:3200/cdp-defra-id-stub')
  * @returns {import('msw/node').SetupServer}
  */
 const createMockOidcServers = () => {

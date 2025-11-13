@@ -1,10 +1,12 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
+ * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
@@ -83,6 +85,22 @@ export const repositories = {
             options?.eventualConsistency
           )
           registerPerRequest('organisationsRepository', productionFactory)
+        })
+      }
+
+      if (options?.formSubmissionsRepository) {
+        registerPerRequest(
+          'formSubmissionsRepository',
+          options.formSubmissionsRepository
+        )
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
+      } else {
+        server.dependency('mongodb', () => {
+          const productionFactory = createFormSubmissionsRepository(
+            /** @type {import('mongodb').Db} */ (server.db)
+          )
+          registerPerRequest('formSubmissionsRepository', productionFactory)
         })
       }
     }
