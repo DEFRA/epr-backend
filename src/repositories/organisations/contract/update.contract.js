@@ -299,7 +299,6 @@ export const testUpdateBehaviour = (it) => {
           ...organisation.registrations[0],
           status: STATUS.APPROVED,
           registrationNumber: 'WRN12345',
-          wasteRegistrationNumber: 'CBDU12345',
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31')
         }
@@ -330,7 +329,6 @@ export const testUpdateBehaviour = (it) => {
               ...organisation.registrations[0],
               status: STATUS.APPROVED,
               registrationNumber: 'WRN12345',
-              wasteRegistrationNumber: 'CBDU12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
             }
@@ -437,7 +435,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
             registrationNumber: undefined,
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -459,7 +456,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -475,7 +471,6 @@ export const testUpdateBehaviour = (it) => {
 
           expect(updatedReg.status).toBe(STATUS.APPROVED)
           expect(updatedReg.registrationNumber).toBe('WRN12345')
-          expect(updatedReg.wasteRegistrationNumber).toBe('CBDU12345')
         })
 
         it('rejects update when registration status changes to suspended without registrationNumber', async () => {
@@ -486,7 +481,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
             registrationNumber: undefined,
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -656,7 +650,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: undefined,
             validTo: new Date('2025-12-31')
           }
@@ -678,7 +671,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: undefined
           }
@@ -703,7 +695,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom,
             validTo
           }
@@ -730,7 +721,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: undefined,
             validTo: new Date('2025-12-31')
           }
@@ -752,7 +742,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom: new Date('2025-01-01'),
             validTo: undefined
           }
@@ -777,7 +766,6 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
             registrationNumber: 'WRN12345',
-            wasteRegistrationNumber: 'CBDU12345',
             validFrom,
             validTo
           }
