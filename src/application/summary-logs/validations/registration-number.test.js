@@ -17,7 +17,7 @@ describe('validateRegistrationNumber', () => {
     vi.resetAllMocks()
   })
 
-  it('returns fatal business error when registration has no wasteRegistrationNumber', () => {
+  it('returns fatal business error when registration has no registrationNumber', () => {
     const registration = {
       id: 'reg-123'
     }
@@ -41,7 +41,7 @@ describe('validateRegistrationNumber', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Invalid summary log: registration has no waste registration number'
+      'Invalid summary log: registration has no registration number'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
   })
@@ -49,7 +49,7 @@ describe('validateRegistrationNumber', () => {
   it('returns fatal business error when registration numbers do not match', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'WRN12345'
     }
     const parsed = {
       meta: {
@@ -72,7 +72,7 @@ describe('validateRegistrationNumber', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      "Summary log's waste registration number does not match this registration"
+      "Summary log's registration number does not match this registration"
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     expect(fatals[0].context.location).toEqual({
@@ -88,7 +88,7 @@ describe('validateRegistrationNumber', () => {
   it('returns valid result when registration numbers match', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'WRN12345'
     }
     const parsed = {
       meta: {
@@ -113,7 +113,7 @@ describe('validateRegistrationNumber', () => {
   it('includes helpful context in error messages', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'WRN12345'
     }
     const parsed = {
       meta: {
@@ -144,7 +144,7 @@ describe('validateRegistrationNumber', () => {
   it('categorizes mismatched numbers as fatal business error', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'WRN12345'
     }
     const parsed = {
       meta: {
@@ -169,7 +169,7 @@ describe('validateRegistrationNumber', () => {
   it('handles missing location gracefully by including only field', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'WRN12345'
     }
     const parsed = {
       meta: {

@@ -255,6 +255,7 @@ const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
+  registrationNumber: Joi.string().optional(),
   validFrom: Joi.date().when('status', requiredWhenApprovedOrSuspended),
   validTo: Joi.date().when('status', requiredWhenApprovedOrSuspended),
   formSubmissionTime: Joi.date().required(),

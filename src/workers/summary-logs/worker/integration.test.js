@@ -21,7 +21,7 @@ describe('SummaryLogsValidator integration', () => {
 
   const createTestOrg = (
     wasteProcessingType,
-    wasteRegistrationNumber,
+    registrationNumber,
     accreditationNumber
   ) => {
     const registrationId = randomUUID()
@@ -39,7 +39,7 @@ describe('SummaryLogsValidator integration', () => {
 
     const registration = {
       id: registrationId,
-      wasteRegistrationNumber,
+      registrationNumber,
       material: 'paper',
       wasteProcessingType,
       formSubmissionTime: new Date(),

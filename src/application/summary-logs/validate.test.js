@@ -50,7 +50,7 @@ describe('SummaryLogsValidator', () => {
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
-        wasteRegistrationNumber: 'WRN12345',
+        registrationNumber: 'WRN12345',
         wasteProcessingType: 'reprocessor',
         material: 'aluminium'
       })
@@ -234,7 +234,7 @@ describe('SummaryLogsValidator', () => {
               severity: 'fatal',
               category: 'business',
               message:
-                "Summary log's waste registration number does not match this registration",
+                "Summary log's registration number does not match this registration",
               code: 'REGISTRATION_MISMATCH',
               context: {
                 location: { field: 'REGISTRATION' },
@@ -245,7 +245,7 @@ describe('SummaryLogsValidator', () => {
           ]
         }),
         failureReason:
-          "Summary log's waste registration number does not match this registration"
+          "Summary log's registration number does not match this registration"
       })
     )
   })
@@ -420,7 +420,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.validation.issues[0]).toMatchObject({
         severity: 'fatal',
         category: 'business',
-        message: expect.stringContaining('waste registration number')
+        message: expect.stringContaining('registration number')
       })
 
       // Verify no data syntax errors present

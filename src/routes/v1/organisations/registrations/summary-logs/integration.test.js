@@ -106,7 +106,7 @@ describe('Summary logs integration', () => {
       registrations: [
         {
           id: registrationId,
-          wasteRegistrationNumber: 'WRN-123',
+          registrationNumber: 'WRN-123',
           material: 'paper',
           wasteProcessingType: 'reprocessor',
           formSubmissionTime: new Date(),
@@ -394,7 +394,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'WRN-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -648,7 +648,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'WRN-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -815,7 +815,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'WRN-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
@@ -1007,7 +1007,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN12345',
+            registrationNumber: 'WRN12345',
             material: 'aluminium',
             wasteProcessingType: 'reprocessor',
             accreditation: null
@@ -1186,7 +1186,7 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'WRN-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),

@@ -10,7 +10,7 @@ import {
 } from './helpers.js'
 
 /**
- * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
+ * Validates that the registration number in the spreadsheet matches the registration's registration number
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure from the parser
@@ -25,7 +25,7 @@ export const validateRegistrationNumber = ({
 }) => {
   const issues = createValidationIssues()
 
-  const { wasteRegistrationNumber } = registration
+  const { registrationNumber } = registration
 
   const registrationField = extractMetaField(
     parsed,
@@ -38,23 +38,23 @@ export const validateRegistrationNumber = ({
     SUMMARY_LOG_META_FIELDS.REGISTRATION
   )
 
-  if (!wasteRegistrationNumber) {
+  if (!registrationNumber) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has no waste registration number',
+      'Invalid summary log: registration has no registration number',
       'MISSING_REGISTRATION_NUMBER'
     )
     return issues
   }
 
-  if (spreadsheetRegistrationNumber !== wasteRegistrationNumber) {
+  if (spreadsheetRegistrationNumber !== registrationNumber) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      "Summary log's waste registration number does not match this registration",
+      "Summary log's registration number does not match this registration",
       'REGISTRATION_MISMATCH',
       {
         location,
-        expected: wasteRegistrationNumber,
+        expected: registrationNumber,
         actual: spreadsheetRegistrationNumber
       }
     )
@@ -62,7 +62,7 @@ export const validateRegistrationNumber = ({
   }
 
   logValidationSuccess(
-    `Registration number validated: ${loggingContext}, registrationNumber=${wasteRegistrationNumber}`
+    `Registration number validated: ${loggingContext}, registrationNumber=${registrationNumber}`
   )
 
   return issues
