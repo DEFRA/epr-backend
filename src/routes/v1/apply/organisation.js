@@ -52,6 +52,7 @@ export const organisation = {
   method: 'POST',
   path: organisationPath,
   options: {
+    auth: false,
     validate: {
       payload: (data, _options) => {
         if (!data || typeof data !== 'object') {

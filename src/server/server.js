@@ -1,4 +1,5 @@
 import Hapi from '@hapi/hapi'
+import Jwt from '@hapi/jwt'
 
 import { secureContext } from '@defra/hapi-secure-context'
 
@@ -8,6 +9,7 @@ import { router } from '#plugins/router.js'
 import { workers } from '#plugins/workers.js'
 import { repositories } from '#plugins/repositories.js'
 import { featureFlags } from '#plugins/feature-flags.js'
+import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
 import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { failAction } from '#common/helpers/fail-action.js'
@@ -58,12 +60,16 @@ async function createServer(options = {}) {
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // workers        - sets up worker thread pools and attaches to `request` objects
   // router         - routes used in the app
+  // Jwt            - JWT authentication plugin
+  // authPlugin     - sets up authentication strategies
   const plugins = [
     requestLogger,
     requestTracing,
     cacheControl,
     secureContext,
-    pulse
+    pulse,
+    Jwt,
+    authPlugin
   ]
 
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)

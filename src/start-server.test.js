@@ -1,5 +1,6 @@
 import { vi, describe, expect, beforeEach, beforeAll, afterAll } from 'vitest'
 import hapi from '@hapi/hapi'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import {
   LOGGING_EVENT_ACTIONS,
@@ -43,7 +44,7 @@ vi.mock('./config.js', async (importOriginal) => {
             case 'port':
               return configOverrides.port
             default:
-              originalConfig.get(item)
+              return originalConfig.get(item)
           }
         }
       }
@@ -101,6 +102,7 @@ describe('#startServer', () => {
   let startServerImport
   let createServerImport
   let server
+  setupAuthContext()
 
   beforeAll(async () => {
     createServerImport = await import('#server/server.js')
@@ -157,7 +159,7 @@ describe('#startServer', () => {
             case 'port':
               return configOverrides.port
             default:
-              config.get(item)
+              return config.get(item)
           }
         }
       }))
