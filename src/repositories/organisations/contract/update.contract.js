@@ -298,7 +298,9 @@ export const testUpdateBehaviour = (it) => {
         const registrationToUpdate = {
           ...organisation.registrations[0],
           status: STATUS.APPROVED,
-          registrationNumber: 'REG12345'
+          wasteRegistrationNumber: 'CBDU12345',
+          validFrom: new Date('2025-01-01'),
+          validTo: new Date('2025-12-31')
         }
         await repository.update(organisation.id, 1, {
           registrations: [registrationToUpdate]
@@ -326,7 +328,9 @@ export const testUpdateBehaviour = (it) => {
             {
               ...organisation.registrations[0],
               status: STATUS.APPROVED,
-              registrationNumber: 'REG12345'
+              wasteRegistrationNumber: 'CBDU12345',
+              validFrom: new Date('2025-01-01'),
+              validTo: new Date('2025-12-31')
             }
           ]
         })
@@ -352,7 +356,9 @@ export const testUpdateBehaviour = (it) => {
         const accreditationToUpdate = {
           ...organisation.accreditations[0],
           status: STATUS.APPROVED,
-          accreditationNumber: 'ACC12345'
+          accreditationNumber: 'ACC12345',
+          validFrom: new Date('2025-01-01'),
+          validTo: new Date('2025-12-31')
         }
         await repository.update(organisation.id, 1, {
           accreditations: [accreditationToUpdate]
@@ -380,7 +386,9 @@ export const testUpdateBehaviour = (it) => {
             {
               ...organisation.accreditations[0],
               status: STATUS.APPROVED,
-              accreditationNumber: 'ACC12345'
+              accreditationNumber: 'ACC12345',
+              validFrom: new Date('2025-01-01'),
+              validTo: new Date('2025-12-31')
             }
           ]
         })
@@ -389,7 +397,9 @@ export const testUpdateBehaviour = (it) => {
             {
               ...organisation.accreditations[0],
               status: STATUS.SUSPENDED,
-              accreditationNumber: 'ACC12345'
+              accreditationNumber: 'ACC12345',
+              validFrom: new Date('2025-01-01'),
+              validTo: new Date('2025-12-31')
             }
           ]
         })
@@ -424,7 +434,9 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
-            wasteRegistrationNumber: undefined
+            wasteRegistrationNumber: undefined,
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await expect(
@@ -443,7 +455,9 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
-            wasteRegistrationNumber: 'CBDU12345'
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await repository.update(organisation.id, 1, {
@@ -466,7 +480,9 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.SUSPENDED,
-            wasteRegistrationNumber: undefined
+            wasteRegistrationNumber: undefined,
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await expect(
@@ -513,7 +529,9 @@ export const testUpdateBehaviour = (it) => {
           const accreditationToUpdate = {
             ...organisation.accreditations[0],
             status: STATUS.APPROVED,
-            accreditationNumber: undefined
+            accreditationNumber: undefined,
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await expect(
@@ -532,7 +550,9 @@ export const testUpdateBehaviour = (it) => {
           const accreditationToUpdate = {
             ...organisation.accreditations[0],
             status: STATUS.APPROVED,
-            accreditationNumber: 'ACC12345'
+            accreditationNumber: 'ACC12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await repository.update(organisation.id, 1, {
@@ -555,7 +575,9 @@ export const testUpdateBehaviour = (it) => {
           const accreditationToUpdate = {
             ...organisation.accreditations[0],
             status: STATUS.SUSPENDED,
-            accreditationNumber: undefined
+            accreditationNumber: undefined,
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await expect(
@@ -574,7 +596,9 @@ export const testUpdateBehaviour = (it) => {
           const accreditationToUpdate = {
             ...organisation.accreditations[0],
             status: STATUS.SUSPENDED,
-            accreditationNumber: 'ACC12345'
+            accreditationNumber: 'ACC12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
 
           await repository.update(organisation.id, 1, {
@@ -613,6 +637,352 @@ export const testUpdateBehaviour = (it) => {
           expect(
             updatedAcc.accreditationNumber === null ||
               updatedAcc.accreditationNumber === undefined
+          ).toBe(true)
+        })
+      })
+
+      describe('validFrom and validTo for registrations', () => {
+        it('rejects update when registration status changes to approved without validFrom', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.APPROVED,
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom: undefined,
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              registrations: [registrationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: registrations.0.validFrom: any.required'
+          )
+        })
+
+        it('rejects update when registration status changes to approved without validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.APPROVED,
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: undefined
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              registrations: [registrationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: registrations.0.validTo: any.required'
+          )
+        })
+
+        it('allows update when registration status changes to approved with validFrom and validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const validFrom = new Date('2025-01-01')
+          const validTo = new Date('2025-12-31')
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.APPROVED,
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom,
+            validTo
+          }
+
+          await repository.update(organisation.id, 1, {
+            registrations: [registrationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg = result.registrations.find(
+            (r) => r.id === registrationToUpdate.id
+          )
+
+          expect(updatedReg.status).toBe(STATUS.APPROVED)
+          expect(updatedReg.validFrom).toEqual(validFrom)
+          expect(updatedReg.validTo).toEqual(validTo)
+        })
+
+        it('rejects update when registration status changes to suspended without validFrom', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.SUSPENDED,
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom: undefined,
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              registrations: [registrationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: registrations.0.validFrom: any.required'
+          )
+        })
+
+        it('rejects update when registration status changes to suspended without validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.SUSPENDED,
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: undefined
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              registrations: [registrationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: registrations.0.validTo: any.required'
+          )
+        })
+
+        it('allows update when registration status changes to suspended with validFrom and validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const validFrom = new Date('2025-01-01')
+          const validTo = new Date('2025-12-31')
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.SUSPENDED,
+            wasteRegistrationNumber: 'CBDU12345',
+            validFrom,
+            validTo
+          }
+
+          await repository.update(organisation.id, 1, {
+            registrations: [registrationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg = result.registrations.find(
+            (r) => r.id === registrationToUpdate.id
+          )
+
+          expect(updatedReg.status).toBe(STATUS.SUSPENDED)
+          expect(updatedReg.validFrom).toEqual(validFrom)
+          expect(updatedReg.validTo).toEqual(validTo)
+        })
+
+        it('allows update when registration status is not approved or suspended without validFrom and validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            material: 'plastic',
+            validFrom: undefined,
+            validTo: undefined
+          }
+
+          await repository.update(organisation.id, 1, {
+            registrations: [registrationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg = result.registrations.find(
+            (r) => r.id === registrationToUpdate.id
+          )
+
+          expect(updatedReg.material).toBe('plastic')
+          expect(
+            updatedReg.validFrom === null || updatedReg.validFrom === undefined
+          ).toBe(true)
+          expect(
+            updatedReg.validTo === null || updatedReg.validTo === undefined
+          ).toBe(true)
+        })
+      })
+
+      describe('validFrom and validTo for accreditations', () => {
+        it('rejects update when accreditation status changes to approved without validFrom', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.APPROVED,
+            accreditationNumber: 'ACC12345',
+            validFrom: undefined,
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              accreditations: [accreditationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: accreditations.0.validFrom: any.required'
+          )
+        })
+
+        it('rejects update when accreditation status changes to approved without validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.APPROVED,
+            accreditationNumber: 'ACC12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: undefined
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              accreditations: [accreditationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: accreditations.0.validTo: any.required'
+          )
+        })
+
+        it('allows update when accreditation status changes to approved with validFrom and validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const validFrom = new Date('2025-01-01')
+          const validTo = new Date('2025-12-31')
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.APPROVED,
+            accreditationNumber: 'ACC12345',
+            validFrom,
+            validTo
+          }
+
+          await repository.update(organisation.id, 1, {
+            accreditations: [accreditationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditationToUpdate.id
+          )
+
+          expect(updatedAcc.status).toBe(STATUS.APPROVED)
+          expect(updatedAcc.validFrom).toEqual(validFrom)
+          expect(updatedAcc.validTo).toEqual(validTo)
+        })
+
+        it('rejects update when accreditation status changes to suspended without validFrom', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.SUSPENDED,
+            accreditationNumber: 'ACC12345',
+            validFrom: undefined,
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              accreditations: [accreditationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: accreditations.0.validFrom: any.required'
+          )
+        })
+
+        it('rejects update when accreditation status changes to suspended without validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.SUSPENDED,
+            accreditationNumber: 'ACC12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: undefined
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              accreditations: [accreditationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: accreditations.0.validTo: any.required'
+          )
+        })
+
+        it('allows update when accreditation status changes to suspended with validFrom and validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const validFrom = new Date('2025-01-01')
+          const validTo = new Date('2025-12-31')
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.SUSPENDED,
+            accreditationNumber: 'ACC12345',
+            validFrom,
+            validTo
+          }
+
+          await repository.update(organisation.id, 1, {
+            accreditations: [accreditationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditationToUpdate.id
+          )
+
+          expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
+          expect(updatedAcc.validFrom).toEqual(validFrom)
+          expect(updatedAcc.validTo).toEqual(validTo)
+        })
+
+        it('allows update when accreditation status is not approved or suspended without validFrom and validTo', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            material: 'plastic',
+            validFrom: undefined,
+            validTo: undefined
+          }
+
+          await repository.update(organisation.id, 1, {
+            accreditations: [accreditationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditationToUpdate.id
+          )
+
+          expect(updatedAcc.material).toBe('plastic')
+          expect(
+            updatedAcc.validFrom === null || updatedAcc.validFrom === undefined
+          ).toBe(true)
+          expect(
+            updatedAcc.validTo === null || updatedAcc.validTo === undefined
           ).toBe(true)
         })
       })

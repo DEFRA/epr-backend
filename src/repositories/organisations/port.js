@@ -8,11 +8,11 @@
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'approved'|'suspended', accreditationNumber: string}} AccreditationApproved
+ * @typedef {AccreditationBase & {status: 'approved'|'suspended', accreditationNumber: string, validFrom: Date, validTo: Date}} AccreditationApproved
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'created'|'rejected'|'archived', accreditationNumber?: string}} AccreditationOther
+ * @typedef {AccreditationBase & {status: 'created'|'rejected'|'archived', accreditationNumber?: string, validFrom?: Date, validTo?: Date}} AccreditationOther
  */
 
 /**
@@ -32,11 +32,11 @@
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'approved'|'suspended', wasteRegistrationNumber: string}} RegistrationApproved
+ * @typedef {RegistrationBase & {status: 'approved'|'suspended', wasteRegistrationNumber: string, validFrom: Date, validTo: Date}} RegistrationApproved
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', wasteRegistrationNumber?: string}} RegistrationOther
+ * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', wasteRegistrationNumber?: string, validFrom?: Date, validTo?: Date}} RegistrationOther
  */
 
 /**

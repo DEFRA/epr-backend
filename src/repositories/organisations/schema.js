@@ -243,8 +243,20 @@ const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  validFrom: Joi.date().optional(),
-  validTo: Joi.date().optional(),
+  validFrom: Joi.date().when('status', {
+    switch: [
+      { is: STATUS.APPROVED, then: Joi.required() },
+      { is: STATUS.SUSPENDED, then: Joi.required() }
+    ],
+    otherwise: Joi.optional()
+  }),
+  validTo: Joi.date().when('status', {
+    switch: [
+      { is: STATUS.APPROVED, then: Joi.required() },
+      { is: STATUS.SUSPENDED, then: Joi.required() }
+    ],
+    otherwise: Joi.optional()
+  }),
   formSubmissionTime: Joi.date().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
@@ -315,8 +327,20 @@ const accreditationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  validFrom: Joi.date().optional(),
-  validTo: Joi.date().optional(),
+  validFrom: Joi.date().when('status', {
+    switch: [
+      { is: STATUS.APPROVED, then: Joi.required() },
+      { is: STATUS.SUSPENDED, then: Joi.required() }
+    ],
+    otherwise: Joi.optional()
+  }),
+  validTo: Joi.date().when('status', {
+    switch: [
+      { is: STATUS.APPROVED, then: Joi.required() },
+      { is: STATUS.SUSPENDED, then: Joi.required() }
+    ],
+    otherwise: Joi.optional()
+  }),
   formSubmissionTime: Joi.date().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
