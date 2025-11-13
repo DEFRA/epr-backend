@@ -102,6 +102,59 @@ describe('createSummaryLogsValidator', () => {
       summaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
+
+  describe('submit', () => {
+    it('has submit method', () => {
+      expect(summaryLogsValidator.submit).toBeInstanceOf(Function)
+    })
+
+    it('runs worker with submit command object', async () => {
+      await summaryLogsValidator.submit(summaryLogId)
+
+      expect(mockRun).toHaveBeenCalledWith({
+        command: 'submit',
+        summaryLogId
+      })
+    })
+
+    it('logs success when submit worker completes', async () => {
+      await summaryLogsValidator.submit(summaryLogId)
+
+      // Wait for promise chain to complete
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message:
+            'Summary log submit worker completed: summaryLogId=summary-log-123',
+          event: {
+            category: 'server',
+            action: 'process_success'
+          }
+        })
+      )
+    })
+
+    it('logs error when submit worker fails', async () => {
+      const error = new Error('Submit worker failed')
+      mockRun.mockRejectedValue(error)
+
+      await summaryLogsValidator.submit(summaryLogId)
+
+      // Wait for promise chain to complete
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(logger.error).toHaveBeenCalledWith({
+        error,
+        message:
+          'Summary log submit worker failed: summaryLogId=summary-log-123',
+        event: {
+          category: 'server',
+          action: 'process_failure'
+        }
+      })
+    })
+  })
 })
 
 describe('closeWorkerPool', () => {
