@@ -3,7 +3,7 @@ import Boom from '@hapi/boom'
 /**
  * Fetch JSON from a given url
  * @param {string} url -
- * @param {RequestInit} options - Fetch API options (method, headers, body, etc.)
+ * @param {RequestInit} [options] - Fetch API options (method, headers, body, etc.)
  * @returns {Promise<*>} The parsed JSON response or throws a Boom error
  */
 export const fetchJson = async (url, options) => {
