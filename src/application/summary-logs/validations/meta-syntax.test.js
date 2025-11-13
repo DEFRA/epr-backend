@@ -10,7 +10,7 @@ describe('validateMetaSyntax', () => {
     TEMPLATE_VERSION: { value: 1 },
     MATERIAL: { value: 'Aluminium' },
     ACCREDITATION: { value: 'ACC123' },
-    REGISTRATION: { value: 'WRN12345' }
+    REGISTRATION: { value: 'REG12345' }
   })
 
   it('returns valid result when all meta fields are syntactically correct', () => {
@@ -31,7 +31,7 @@ describe('validateMetaSyntax', () => {
         PROCESSING_TYPE: { value: 'REPROCESSOR' },
         TEMPLATE_VERSION: { value: 1 },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'WRN12345' }
+        REGISTRATION: { value: 'REG12345' }
       }
     }
 
@@ -60,7 +60,7 @@ describe('validateMetaSyntax', () => {
       meta: {
         TEMPLATE_VERSION: { value: 1 },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'WRN12345' }
+        REGISTRATION: { value: 'REG12345' }
       }
     }
 
@@ -119,7 +119,7 @@ describe('validateMetaSyntax', () => {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR' },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'WRN12345' }
+        REGISTRATION: { value: 'REG12345' }
       }
     }
 
@@ -158,7 +158,7 @@ describe('validateMetaSyntax', () => {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR' },
         TEMPLATE_VERSION: { value: 1 },
-        REGISTRATION: { value: 'WRN12345' }
+        REGISTRATION: { value: 'REG12345' }
       }
     }
 
@@ -264,7 +264,7 @@ describe('validateMetaSyntax', () => {
         PROCESSING_TYPE: { value: 'REPROCESSOR' }, // No location property
         TEMPLATE_VERSION: { value: 0 }, // Invalid value, no location
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'WRN12345' }
+        REGISTRATION: { value: 'REG12345' }
       }
     }
 
@@ -306,7 +306,7 @@ describe('validateMetaSyntax', () => {
           location: { row: 2, column: 'E' }
         },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'WRN12345' }
+        REGISTRATION: { value: 'REG12345' }
       }
     }
 

@@ -17,14 +17,14 @@ describe('validateRegistrationNumber', () => {
     vi.resetAllMocks()
   })
 
-  it('returns fatal business error when registration has no wasteRegistrationNumber', () => {
+  it('returns fatal business error when registration has no registrationNumber', () => {
     const registration = {
       id: 'reg-123'
     }
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN12345'
+          value: 'REG12345'
         }
       }
     }
@@ -41,7 +41,7 @@ describe('validateRegistrationNumber', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Invalid summary log: registration has no waste registration number'
+      'Invalid summary log: registration has no registration number'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
   })
@@ -49,12 +49,12 @@ describe('validateRegistrationNumber', () => {
   it('returns fatal business error when registration numbers do not match', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'REG12345'
     }
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN99999',
+          value: 'REG99999',
           location: { sheet: 'Cover', row: 12, column: 'F' }
         }
       }
@@ -72,7 +72,7 @@ describe('validateRegistrationNumber', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      "Summary log's waste registration number does not match this registration"
+      "Summary log's registration number does not match this registration"
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     expect(fatals[0].context.location).toEqual({
@@ -81,19 +81,19 @@ describe('validateRegistrationNumber', () => {
       column: 'F',
       field: 'REGISTRATION'
     })
-    expect(fatals[0].context.expected).toBe('WRN12345')
-    expect(fatals[0].context.actual).toBe('WRN99999')
+    expect(fatals[0].context.expected).toBe('REG12345')
+    expect(fatals[0].context.actual).toBe('REG99999')
   })
 
   it('returns valid result when registration numbers match', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'REG12345'
     }
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN12345'
+          value: 'REG12345'
         }
       }
     }
@@ -113,12 +113,12 @@ describe('validateRegistrationNumber', () => {
   it('includes helpful context in error messages', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'REG12345'
     }
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN99999',
+          value: 'REG99999',
           location: { sheet: 'Cover', row: 12, column: 'F' }
         }
       }
@@ -137,19 +137,19 @@ describe('validateRegistrationNumber', () => {
       column: 'F',
       field: 'REGISTRATION'
     })
-    expect(error.context.expected).toBe('WRN12345')
-    expect(error.context.actual).toBe('WRN99999')
+    expect(error.context.expected).toBe('REG12345')
+    expect(error.context.actual).toBe('REG99999')
   })
 
   it('categorizes mismatched numbers as fatal business error', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'REG12345'
     }
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN99999'
+          value: 'REG99999'
         }
       }
     }
@@ -169,12 +169,12 @@ describe('validateRegistrationNumber', () => {
   it('handles missing location gracefully by including only field', () => {
     const registration = {
       id: 'reg-123',
-      wasteRegistrationNumber: 'WRN12345'
+      registrationNumber: 'REG12345'
     }
     const parsed = {
       meta: {
         REGISTRATION: {
-          value: 'WRN99999' // No location provided
+          value: 'REG99999' // No location provided
         }
       }
     }

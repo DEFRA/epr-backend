@@ -1,13 +1,13 @@
 import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import {
   createValidationIssues,
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  buildMetaFieldLocation,
+  extractMetaField,
+  logValidationSuccess
+} from './helpers.js'
 
 /**
  * Validates that the accreditation number in the spreadsheet matches the registration's accreditation number
@@ -26,14 +26,16 @@ export const validateAccreditationNumber = ({
   const issues = createValidationIssues()
 
   const accreditationNumber = registration.accreditation?.accreditationNumber
-  const accreditationField =
-    parsed?.meta?.[SUMMARY_LOG_META_FIELDS.ACCREDITATION]
+  const accreditationField = extractMetaField(
+    parsed,
+    SUMMARY_LOG_META_FIELDS.ACCREDITATION
+  )
   const spreadsheetAccreditationNumber = accreditationField?.value
 
-  const location = {
-    ...accreditationField?.location,
-    field: SUMMARY_LOG_META_FIELDS.ACCREDITATION
-  }
+  const location = buildMetaFieldLocation(
+    accreditationField,
+    SUMMARY_LOG_META_FIELDS.ACCREDITATION
+  )
 
   // Case 1: Registration has accreditation → spreadsheet MUST match
   if (accreditationNumber) {
@@ -78,13 +80,9 @@ export const validateAccreditationNumber = ({
     return issues
   }
 
-  logger.info({
-    message: `Accreditation number validated: ${loggingContext}, accreditationNumber=${accreditationNumber || 'none'}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  logValidationSuccess(
+    `Accreditation number validated: ${loggingContext}, accreditationNumber=${accreditationNumber || 'none'}`
+  )
 
   return issues
 }

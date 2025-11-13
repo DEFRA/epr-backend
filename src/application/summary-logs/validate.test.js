@@ -31,7 +31,7 @@ describe('SummaryLogsValidator', () => {
       extract: vi.fn().mockResolvedValue({
         meta: {
           REGISTRATION: {
-            value: 'WRN12345'
+            value: 'REG12345'
           },
           PROCESSING_TYPE: {
             value: 'REPROCESSOR'
@@ -50,7 +50,7 @@ describe('SummaryLogsValidator', () => {
     organisationsRepository = {
       findRegistrationById: vi.fn().mockResolvedValue({
         id: 'reg-123',
-        wasteRegistrationNumber: 'WRN12345',
+        registrationNumber: 'REG12345',
         wasteProcessingType: 'reprocessor',
         material: 'aluminium'
       })
@@ -206,7 +206,7 @@ describe('SummaryLogsValidator', () => {
     summaryLogExtractor.extract.mockResolvedValue({
       meta: {
         REGISTRATION: {
-          value: 'WRN99999'
+          value: 'REG99999'
         },
         PROCESSING_TYPE: {
           value: 'REPROCESSOR'
@@ -234,18 +234,18 @@ describe('SummaryLogsValidator', () => {
               severity: 'fatal',
               category: 'business',
               message:
-                "Summary log's waste registration number does not match this registration",
+                "Summary log's registration number does not match this registration",
               code: 'REGISTRATION_MISMATCH',
               context: {
                 location: { field: 'REGISTRATION' },
-                expected: 'WRN12345',
-                actual: 'WRN99999'
+                expected: 'REG12345',
+                actual: 'REG99999'
               }
             }
           ]
         }),
         failureReason:
-          "Summary log's waste registration number does not match this registration"
+          "Summary log's registration number does not match this registration"
       })
     )
   })
@@ -357,7 +357,7 @@ describe('SummaryLogsValidator', () => {
       // Meta syntax error: missing TEMPLATE_VERSION
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
-          REGISTRATION: { value: 'WRN12345' },
+          REGISTRATION: { value: 'REG12345' },
           PROCESSING_TYPE: { value: 'REPROCESSOR' },
           MATERIAL: { value: 'Aluminium' }
           // TEMPLATE_VERSION missing - fatal syntax error
@@ -397,7 +397,7 @@ describe('SummaryLogsValidator', () => {
       // Data syntax error: invalid data table structure that should NOT be validated
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
-          REGISTRATION: { value: 'WRN99999' }, // Wrong registration - fatal business error
+          REGISTRATION: { value: 'REG99999' }, // Wrong registration - fatal business error
           PROCESSING_TYPE: { value: 'REPROCESSOR' },
           TEMPLATE_VERSION: { value: 1 },
           MATERIAL: { value: 'Aluminium' }
@@ -420,7 +420,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.validation.issues[0]).toMatchObject({
         severity: 'fatal',
         category: 'business',
-        message: expect.stringContaining('waste registration number')
+        message: expect.stringContaining('registration number')
       })
 
       // Verify no data syntax errors present
@@ -434,7 +434,7 @@ describe('SummaryLogsValidator', () => {
       // Valid meta, but invalid data (row-level errors, not fatal)
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
-          REGISTRATION: { value: 'WRN12345' },
+          REGISTRATION: { value: 'REG12345' },
           PROCESSING_TYPE: { value: 'REPROCESSOR' },
           TEMPLATE_VERSION: { value: 1 },
           MATERIAL: { value: 'Aluminium' }

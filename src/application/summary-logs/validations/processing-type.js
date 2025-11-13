@@ -1,13 +1,13 @@
 import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import {
   createValidationIssues,
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  buildMetaFieldLocation,
+  extractMetaField,
+  logValidationSuccess
+} from './helpers.js'
 
 /**
  * Mapping between spreadsheet type values and registration waste processing types
@@ -39,13 +39,16 @@ export const validateProcessingType = ({
 
   const { wasteProcessingType } = registration
 
-  const processingTypeField = parsed?.meta?.PROCESSING_TYPE
+  const processingTypeField = extractMetaField(
+    parsed,
+    SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE
+  )
   const spreadsheetProcessingType = processingTypeField?.value
 
-  const location = {
-    ...processingTypeField?.location,
-    field: SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE
-  }
+  const location = buildMetaFieldLocation(
+    processingTypeField,
+    SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE
+  )
 
   if (!VALID_REGISTRATION_TYPES.includes(wasteProcessingType)) {
     issues.addFatal(
@@ -76,13 +79,9 @@ export const validateProcessingType = ({
     return issues
   }
 
-  logger.info({
-    message: `Summary log type validated: ${loggingContext}, spreadsheetType=${spreadsheetProcessingType}, wasteProcessingType=${wasteProcessingType}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  logValidationSuccess(
+    `Summary log type validated: ${loggingContext}, spreadsheetType=${spreadsheetProcessingType}, wasteProcessingType=${wasteProcessingType}`
+  )
 
   return issues
 }
