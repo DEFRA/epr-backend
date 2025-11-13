@@ -27,21 +27,25 @@ function getInputData(answersByPages) {
   }
 }
 
-function getRawMaterialInputs(answersByPages) {
+function getRawMaterialInputs(rawSubmissionData) {
   const rawMaterialPage =
     FORM_PAGES.REGISTRATION.INPUT_TO_RECYLING.INPUT_RAW_MATERIAL
-  const rawMaterialData = answersByPages[rawMaterialPage.title]
+  const rawMaterials = extractRepeaters(
+    rawSubmissionData,
+    rawMaterialPage.title,
+    {
+      [rawMaterialPage.fields.MATERIAL]: 'material',
+      [rawMaterialPage.fields.TONNAGE]: 'weightInTonnes'
+    }
+  )
 
-  return {
-    material: convertToNumber(
-      rawMaterialData[rawMaterialPage.fields.MATERIAL],
-      'material'
-    ),
-    tonnage: convertToNumber(
-      rawMaterialData[rawMaterialPage.fields.TONNAGE],
-      'tonnage'
+  return rawMaterials.map((rawMaterial) => ({
+    material: rawMaterial.material,
+    weightInTonnes: convertToNumber(
+      rawMaterial.weightInTonnes,
+      'rawMaterials.tonnage'
     )
-  }
+  }))
 }
 
 function getOutputData(answersByPages) {
@@ -97,11 +101,11 @@ export function getYearlyMetrics(
         {
           year: 2024,
           input: getInputData(answersByPages),
-          rawMaterialInputs: getRawMaterialInputs(answersByPages),
+          rawMaterialInputs: getRawMaterialInputs(rawSubmissionData),
           output: getOutputData(answersByPages),
           productsMadeFromRecycling:
             getProductsMadeFromRecycling(rawSubmissionData)
         }
       ]
-    : []
+    : undefined
 }

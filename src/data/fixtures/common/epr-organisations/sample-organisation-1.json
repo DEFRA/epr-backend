@@ -12,6 +12,19 @@
   "wasteProcessingTypes": ["reprocessor", "exporter"],
   "reprocessingNations": ["england", "wales"],
   "businessType": "partnership",
+  "partnership": {
+    "type": "ltd",
+    "partners": [
+      {
+        "name": "Luke Skywalker",
+        "type": "individual"
+      },
+      {
+        "name": "Darth Vader Inc",
+        "type": "company"
+      }
+    ]
+  },
   "submittedToRegulator": "ea",
   "formSubmissionTime": "2025-08-22T19:34:44.944Z",
   "submitterContactDetails": {
@@ -50,7 +63,8 @@
       "material": "glass",
       "wasteProcessingType": "reprocessor",
       "accreditationId": "68f6a147c117aec8a1ab7495",
-      "wasteRegistrationNumber": "CBDU123456",
+      "glassRecyclingProcess": ["glass_re_melt"],
+      "cbduNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
           "type": "environmental_permit",
@@ -72,6 +86,49 @@
           "phone": "1234567890"
         }
       ],
+      "suppliers": "Local glass suppliers",
+      "plantEquipmentDetails": "Glass processing equipment",
+      "yearlyMetrics": [
+        {
+          "year": 2024,
+          "input": {
+            "type": "actual",
+            "ukPackagingWasteInTonnes": 100,
+            "nonUkPackagingWasteInTonnes": 20,
+            "nonPackagingWasteInTonnes": 10
+          },
+          "rawMaterialInputs": [
+            {
+              "material": "Cullet",
+              "weightInTonnes": 80
+            }
+          ],
+          "output": {
+            "type": "actual",
+            "sentToAnotherSiteInTonnes": 5,
+            "contaminantsInTonnes": 3,
+            "processLossInTonnes": 2
+          },
+          "productsMadeFromRecycling": [
+            {
+              "name": "Recycled glass bottles",
+              "weightInTonnes": 90
+            }
+          ]
+        }
+      ],
+      "submitterContactDetails": {
+        "fullName": "Luke Skywalker",
+        "email": "luke.skywalker@starwars.com",
+        "title": "Director",
+        "phone": "1234567890"
+      },
+      "samplingInspectionPlanPart1FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-123",
+          "defraFormUserDownloadLink": "https://example.com/file-123"
+        }
+      ],
       "noticeAddress": {
         "line1": "7 Glass processing site",
         "town": "London",
@@ -91,26 +148,33 @@
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "wasteRegistrationNumber": "CBDU123456",
-      "wasteManagementPermits": [
-        {
-          "type": "environmental_permit",
-          "permitNumber": "WML123456",
-          "authorisedMaterials": [
-            {
-              "material": "plastic",
-              "authorisedWeightInTonnes": 10,
-              "timeScale": "yearly"
-            }
-          ]
-        }
-      ],
+      "cbduNumber": "CBDU123456",
       "approvedPersons": [
         {
           "fullName": "Luke Skywalker",
           "email": "anakin.skywalker@starwars.com",
           "title": "Partner",
           "phone": "823456789"
+        }
+      ],
+      "suppliers": "Plastic packaging suppliers",
+      "exportPorts": ["Dover", "Southampton"],
+      "submitterContactDetails": {
+        "fullName": "Luke Skywalker",
+        "email": "anakin.skywalker@starwars.com",
+        "title": "Partner",
+        "phone": "823456789"
+      },
+      "samplingInspectionPlanPart1FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-456",
+          "defraFormUserDownloadLink": "https://example.com/file-456"
+        }
+      ],
+      "orsFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-456-ors",
+          "defraFormUserDownloadLink": "https://example.com/file-456-ors"
         }
       ],
       "noticeAddress": {
@@ -133,10 +197,8 @@
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
       "site": {
-        "address": {
-          "line1": "7 Glass processing site",
-          "postcode": "SW2A 0AA"
-        }
+        "line1": "7 Glass processing site",
+        "postcode": "SW2A 0AA"
       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
@@ -150,7 +212,7 @@
             "phone": "1234567890"
           }
         ],
-        "prnIncomeBusinessPlan": [
+        "incomeBusinessPlan": [
           {
             "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
             "detailedExplanation": "Investing on buying to machine to separate glass from waste",
@@ -158,11 +220,18 @@
           }
         ]
       },
-      "noticeAddress": {
-        "line1": "7 Glass processing site",
-        "town": "London",
-        "postcode": "SW2A 0AA"
-      }
+      "submitterContactDetails": {
+        "fullName": "Yoda",
+        "email": "yoda@starwars.com",
+        "title": "PRN signatory",
+        "phone": "1234567890"
+      },
+      "samplingInspectionPlanPart2FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-123-part2",
+          "defraFormUserDownloadLink": "https://example.com/file-123-part2"
+        }
+      ]
     },
     {
       "id": "68f6a147c117aec8a1ab7496",
@@ -176,10 +245,8 @@
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
       "site": {
-        "address": {
-          "line1": "7",
-          "postcode": "SW2A 0AA"
-        }
+        "line1": "7",
+        "postcode": "SW2A 0AA"
       },
       "material": "glass",
       "wasteProcessingType": "reprocessor",
@@ -193,7 +260,7 @@
             "phone": "1234567890"
           }
         ],
-        "prnIncomeBusinessPlan": [
+        "incomeBusinessPlan": [
           {
             "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
             "detailedExplanation": "Investing on buying to machine to separate glass from waste",
@@ -201,11 +268,18 @@
           }
         ]
       },
-      "noticeAddress": {
-        "line1": "7a",
-        "town": "London",
-        "postcode": "SW2A 0AA"
-      }
+      "submitterContactDetails": {
+        "fullName": "Yoda",
+        "email": "yoda@starwars.com",
+        "title": "PRN signatory",
+        "phone": "1234567890"
+      },
+      "samplingInspectionPlanPart2FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-124-part2",
+          "defraFormUserDownloadLink": "https://example.com/file-124-part2"
+        }
+      ]
     },
     {
       "id": "68f6a147c117aec8a1ab7494",
@@ -220,7 +294,7 @@
       "orgName": "ACME ltd",
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "pernIssuance": {
+      "prnIssuance": {
         "tonnageBand": "up_to_500",
         "signatories": [
           {
@@ -230,18 +304,32 @@
             "phone": "7234567890"
           }
         ],
-        "pernIncomeBusinessPlan": [
+        "incomeBusinessPlan": [
           {
             "usageDescription": "New vehicle to transport",
+            "detailedExplanation": "Expand export capabilities",
             "percentIncomeSpent": 10
           }
         ]
       },
-      "noticeAddress": {
-        "line1": "7a",
-        "town": "London",
-        "postcode": "SW2A 0AA"
-      }
+      "submitterContactDetails": {
+        "fullName": "Princess Leia",
+        "email": "princess.leia@starwars.com",
+        "title": "PRN signatory",
+        "phone": "7234567890"
+      },
+      "samplingInspectionPlanPart2FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-125-part2",
+          "defraFormUserDownloadLink": "https://example.com/file-125-part2"
+        }
+      ],
+      "orsFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-125-ors",
+          "defraFormUserDownloadLink": "https://example.com/file-125-ors"
+        }
+      ]
     }
   ],
   "companyDetails": {
