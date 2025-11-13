@@ -18,7 +18,7 @@ const router = {
 
         const organisationRoutesBehindFeatureFlag =
           featureFlags.isOrganisationRoutesEnabled()
-            ? [...Object.values(organisationRoutes)]
+            ? Object.values(organisationRoutes)
             : []
 
         server.route([
