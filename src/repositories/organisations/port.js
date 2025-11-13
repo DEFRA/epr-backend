@@ -8,11 +8,11 @@
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'approved', accreditationNumber: string}} AccreditationApproved
+ * @typedef {AccreditationBase & {status: 'approved'|'suspended', accreditationNumber: string}} AccreditationApproved
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'created'|'rejected'|'suspended'|'archived', accreditationNumber?: string}} AccreditationOther
+ * @typedef {AccreditationBase & {status: 'created'|'rejected'|'archived', accreditationNumber?: string}} AccreditationOther
  */
 
 /**

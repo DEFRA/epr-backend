@@ -300,8 +300,10 @@ const registrationSchema = Joi.object({
 const accreditationSchema = Joi.object({
   id: idSchema,
   accreditationNumber: Joi.string().when('status', {
-    is: STATUS.APPROVED,
-    then: Joi.required(),
+    switch: [
+      { is: STATUS.APPROVED, then: Joi.required() },
+      { is: STATUS.SUSPENDED, then: Joi.required() }
+    ],
     otherwise: Joi.optional()
   }),
   status: Joi.string()

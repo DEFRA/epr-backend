@@ -386,7 +386,11 @@ export const testUpdateBehaviour = (it) => {
         })
         await repository.update(organisation.id, 2, {
           accreditations: [
-            { ...organisation.accreditations[0], status: STATUS.SUSPENDED }
+            {
+              ...organisation.accreditations[0],
+              status: STATUS.SUSPENDED,
+              accreditationNumber: 'ACC12345'
+            }
           ]
         })
 
@@ -544,7 +548,49 @@ export const testUpdateBehaviour = (it) => {
           expect(updatedAcc.accreditationNumber).toBe('ACC12345')
         })
 
-        it('allows update when accreditation status is not approved without accreditationNumber', async () => {
+        it('rejects update when accreditation status changes to suspended without accreditationNumber', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.SUSPENDED,
+            accreditationNumber: undefined
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              accreditations: [accreditationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: accreditations.0.accreditationNumber: any.required'
+          )
+        })
+
+        it('allows update when accreditation status changes to suspended with accreditationNumber', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.SUSPENDED,
+            accreditationNumber: 'ACC12345'
+          }
+
+          await repository.update(organisation.id, 1, {
+            accreditations: [accreditationToUpdate]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditationToUpdate.id
+          )
+
+          expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
+          expect(updatedAcc.accreditationNumber).toBe('ACC12345')
+        })
+
+        it('allows update when accreditation status is not approved or suspended without accreditationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
