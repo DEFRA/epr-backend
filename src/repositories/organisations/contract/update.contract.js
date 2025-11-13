@@ -412,15 +412,15 @@ export const testUpdateBehaviour = (it) => {
     })
 
     describe('conditional field validation', () => {
-      describe('registrationNumber', () => {
-        it('rejects update when registration status changes to approved without registrationNumber', async () => {
+      describe('wasteRegistrationNumber', () => {
+        it('rejects update when registration status changes to approved without wasteRegistrationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
-            registrationNumber: undefined
+            wasteRegistrationNumber: undefined
           }
 
           await expect(
@@ -428,18 +428,18 @@ export const testUpdateBehaviour = (it) => {
               registrations: [registrationToUpdate]
             })
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.registrationNumber: any.required'
+            'Invalid organisation data: registrations.0.wasteRegistrationNumber: any.required'
           )
         })
 
-        it('allows update when registration status changes to approved with registrationNumber', async () => {
+        it('allows update when registration status changes to approved with wasteRegistrationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
           const registrationToUpdate = {
             ...organisation.registrations[0],
             status: STATUS.APPROVED,
-            registrationNumber: 'REG12345'
+            wasteRegistrationNumber: 'CBDU12345'
           }
 
           await repository.update(organisation.id, 1, {
@@ -452,17 +452,36 @@ export const testUpdateBehaviour = (it) => {
           )
 
           expect(updatedReg.status).toBe(STATUS.APPROVED)
-          expect(updatedReg.registrationNumber).toBe('REG12345')
+          expect(updatedReg.wasteRegistrationNumber).toBe('CBDU12345')
         })
 
-        it('allows update when registration status is not approved without registrationNumber', async () => {
+        it('rejects update when registration status changes to suspended without wasteRegistrationNumber', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const registrationToUpdate = {
+            ...organisation.registrations[0],
+            status: STATUS.SUSPENDED,
+            wasteRegistrationNumber: undefined
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              registrations: [registrationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Invalid organisation data: registrations.0.wasteRegistrationNumber: any.required'
+          )
+        })
+
+        it('allows update when registration status is not approved or suspended without wasteRegistrationNumber', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
           const registrationToUpdate = {
             ...organisation.registrations[0],
             material: 'plastic',
-            registrationNumber: undefined
+            wasteRegistrationNumber: undefined
           }
 
           await repository.update(organisation.id, 1, {
@@ -476,8 +495,8 @@ export const testUpdateBehaviour = (it) => {
 
           expect(updatedReg.material).toBe('plastic')
           expect(
-            updatedReg.registrationNumber === null ||
-              updatedReg.registrationNumber === undefined
+            updatedReg.wasteRegistrationNumber === null ||
+              updatedReg.wasteRegistrationNumber === undefined
           ).toBe(true)
         })
       })

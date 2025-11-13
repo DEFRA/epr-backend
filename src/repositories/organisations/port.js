@@ -25,7 +25,6 @@
  * @property {string} orgName
  * @property {string} material
  * @property {string} wasteProcessingType
- * @property {string} [wasteRegistrationNumber]
  * @property {Date} formSubmissionTime
  * @property {string} submittedToRegulator
  * @property {string} [accreditationId]
@@ -33,11 +32,11 @@
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'approved', registrationNumber: string}} RegistrationApproved
+ * @typedef {RegistrationBase & {status: 'approved'|'suspended', wasteRegistrationNumber: string}} RegistrationApproved
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'created'|'rejected'|'suspended'|'archived', registrationNumber?: string}} RegistrationOther
+ * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', wasteRegistrationNumber?: string}} RegistrationOther
  */
 
 /**

@@ -62,7 +62,7 @@ describe('hasChanges', () => {
       id: org1.id,
       orgId: org1.orgId,
       registrations: [
-        { ...org1.registrations[0], registrationNumber: 'CHANGED123' }
+        { ...org1.registrations[0], wasteRegistrationNumber: 'CHANGED123' }
       ]
     })
 
