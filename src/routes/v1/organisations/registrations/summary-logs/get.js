@@ -1,6 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
 import { getDefaultStatus } from '#domain/summary-logs/status.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
 import { transformValidationResponse } from './transform-validation-response.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
@@ -12,9 +11,7 @@ export const summaryLogsGet = {
   method: 'GET',
   path: summaryLogsGetPath,
   options: {
-    auth: {
-      scope: [ROLES.serviceMaintainer]
-    }
+    auth: false
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
