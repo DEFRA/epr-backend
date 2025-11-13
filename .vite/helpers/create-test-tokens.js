@@ -8,7 +8,8 @@ const VALID_ENTRA_AUDIENCE = 'test'
 const SERVICE_MAINTAINER_EMAIL = 'me@example.com'
 
 // Generate key pair once at module load time
-const { privateKey, publicKey } = generateKeyPairSync('rsa', {
+// @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
+const keyPair = generateKeyPairSync('rsa', {
   modulusLength: 4096,
   publicKeyEncoding: {
     type: 'spki',
@@ -19,6 +20,10 @@ const { privateKey, publicKey } = generateKeyPairSync('rsa', {
     format: 'pem'
   }
 })
+
+const privateKey = keyPair.privateKey
+/** @type {import('crypto').JsonWebKey & {kid: string, use: string, alg: string}} */
+const publicKey = /** @type {*} */ (keyPair.publicKey)
 
 // Add JWKS-required fields to the public key
 publicKey.kid = 'test-key-id'
@@ -37,6 +42,7 @@ const baseValidObject = {
   timeSkewSec: 15
 }
 
+/** @type {{key: string, algorithm: 'RS256'}} */
 const validJwtSecretObject = { key: privateKey, algorithm: 'RS256' }
 const validGenerateTokenOptions = { header: { kid: publicKey.kid } }
 
