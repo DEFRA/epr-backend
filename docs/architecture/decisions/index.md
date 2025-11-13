@@ -20,3 +20,4 @@
 * [18. Log File Uploads from DEFRA Forms for Manual S3 Migration](0018-form-file-uploads-logging.md)
 * [19. Layered Transformation Strategy for Summary Log to Waste Records](0019-waste-record-transformation-pipeline.md)
 * [20. Summary Log Validation Output Formats](0020-summary-log-validation-output-formats.md)
+* [21. Idempotent Operations and Retry Mechanisms for Resilient Data Processing](0021-idempotent-operations-and-retry-mechanisms.md)
