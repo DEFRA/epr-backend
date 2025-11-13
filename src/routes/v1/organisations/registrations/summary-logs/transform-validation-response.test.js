@@ -48,8 +48,8 @@ describe('transformValidationResponse', () => {
             code: 'REGISTRATION_MISMATCH',
             context: {
               location: { field: 'REGISTRATION' },
-              actual: 'WRN99999',
-              expected: 'WRN12345'
+              actual: 'REG99999',
+              expected: 'REG12345'
             }
           }
         ]
@@ -63,8 +63,8 @@ describe('transformValidationResponse', () => {
             {
               code: 'REGISTRATION_MISMATCH',
               location: { field: 'REGISTRATION' },
-              actual: 'WRN99999',
-              expected: 'WRN12345'
+              actual: 'REG99999',
+              expected: 'REG12345'
             }
           ],
           concerns: {}

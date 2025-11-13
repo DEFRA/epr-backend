@@ -20,7 +20,7 @@ describe('validateProcessingType', () => {
   it('returns fatal business error when registration has unexpected waste processing type', () => {
     const parsed = {
       meta: {
-        REGISTRATION: { value: 'WRN12345' },
+        REGISTRATION: { value: 'REG12345' },
         PROCESSING_TYPE: { value: 'REPROCESSOR' }
       }
     }
@@ -49,7 +49,7 @@ describe('validateProcessingType', () => {
   it('returns fatal business error when types do not match', () => {
     const parsed = {
       meta: {
-        REGISTRATION: { value: 'WRN12345' },
+        REGISTRATION: { value: 'REG12345' },
         PROCESSING_TYPE: {
           value: 'REPROCESSOR',
           location: { sheet: 'Cover', row: 5, column: 'B' }
@@ -93,7 +93,7 @@ describe('validateProcessingType', () => {
     (spreadsheetType, registrationType) => {
       const parsed = {
         meta: {
-          REGISTRATION: { value: 'WRN12345' },
+          REGISTRATION: { value: 'REG12345' },
           PROCESSING_TYPE: { value: spreadsheetType }
         }
       }

@@ -20,7 +20,7 @@ describe('validateMaterialType', () => {
   it('returns fatal business error when registration has unexpected material', () => {
     const parsed = {
       meta: {
-        REGISTRATION: { value: 'WRN12345' },
+        REGISTRATION: { value: 'REG12345' },
         MATERIAL: { value: 'Aluminium' }
       }
     }
@@ -49,7 +49,7 @@ describe('validateMaterialType', () => {
   it('returns fatal business error when materials do not match', () => {
     const parsed = {
       meta: {
-        REGISTRATION: { value: 'WRN12345' },
+        REGISTRATION: { value: 'REG12345' },
         MATERIAL: {
           value: 'Aluminium',
           location: { sheet: 'Cover', row: 8, column: 'B' }
@@ -93,7 +93,7 @@ describe('validateMaterialType', () => {
     (spreadsheetMaterial, registrationMaterial) => {
       const parsed = {
         meta: {
-          REGISTRATION: { value: 'WRN12345' },
+          REGISTRATION: { value: 'REG12345' },
           MATERIAL: { value: spreadsheetMaterial }
         }
       }
