@@ -42,7 +42,7 @@
         "siteCapacity": [
           {
             "material": "glass",
-            "siteCapacityWeight": "15",
+            "siteCapacityWeight": 15,
             "siteCapacityTimescale": "yearly"
           }
         ]
@@ -53,12 +53,12 @@
       "wasteRegistrationNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
-          "type": "wml",
+          "type": "environmental_permit",
           "permitNumber": "WML123456",
           "authorisedMaterials": [
             {
               "material": "glass",
-              "authorisedWeight": "10",
+              "authorisedWeight": 10,
               "timeScale": "yearly"
             }
           ]
@@ -94,12 +94,12 @@
       "wasteRegistrationNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
-          "type": "wml",
+          "type": "environmental_permit",
           "permitNumber": "WML123456",
           "authorisedMaterials": [
             {
               "material": "plastic",
-              "authorisedWeight": "10",
+              "authorisedWeight": 10,
               "timeScale": "yearly"
             }
           ]

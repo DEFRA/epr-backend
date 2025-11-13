@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { migrateFormsData } from './migrate-forms-data.js'
-import { parseOrgSubmission } from './transform-organisation-data.js'
+import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 
-vi.mock('./transform-organisation-data.js')
-
+vi.mock('#formsubmission/organisation/transform-organisation.js', () => ({
+  parseOrgSubmission: vi.fn()
+}))
 const validSubmission = {
   id: 'sub-1',
   orgId: 500001,

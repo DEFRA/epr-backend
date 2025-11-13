@@ -17,7 +17,8 @@
     "#server/*": "./src/server/*",
     "#feature-flags/*": "./src/feature-flags/*",
     "#test/*": "./src/test/*",
-    "#vite/*": "./.vite/*"
+    "#vite/*": "./.vite/*",
+    "#formsubmission/*": "./src/forms-submission-data/*"
   },
   "engines": {
     "node": ">=24.11.0"

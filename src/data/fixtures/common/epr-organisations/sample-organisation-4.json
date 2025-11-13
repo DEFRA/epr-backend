@@ -42,7 +42,7 @@
         "siteCapacity": [
           {
             "material": "paper",
-            "siteCapacityWeight": "25",
+            "siteCapacityWeight": 25,
             "siteCapacityTimescale": "yearly"
           }
         ]
@@ -58,7 +58,7 @@
           "authorisedMaterials": [
             {
               "material": "paper",
-              "authorisedWeight": "20",
+              "authorisedWeight": 20,
               "timeScale": "yearly"
             }
           ]
@@ -99,7 +99,7 @@
           "authorisedMaterials": [
             {
               "material": "paper",
-              "authorisedWeight": "20",
+              "authorisedWeight": 20,
               "timeScale": "yearly"
             }
           ]

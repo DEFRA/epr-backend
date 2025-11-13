@@ -37,12 +37,12 @@
       "wasteRegistrationNumber": "CBDU789012",
       "wasteManagementPermits": [
         {
-          "type": "wml",
+          "type": "environmental_permit",
           "permitNumber": "WML789012",
           "authorisedMaterials": [
             {
               "material": "plastic",
-              "authorisedWeight": "30",
+              "authorisedWeight": 30,
               "timeScale": "yearly"
             }
           ]

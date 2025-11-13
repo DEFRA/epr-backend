@@ -1,6 +1,6 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
-import { getUploadedFileInfo } from '../forms-submission-data/get-file-upload-details.js'
+import { getUploadedFileInfo } from '#formsubmission/parsing-common/get-file-upload-details.js'
 
 const logFileDetails = async (server) => {
   const formSubmissionsRepository = createFormSubmissionsRepository(server.db)()
