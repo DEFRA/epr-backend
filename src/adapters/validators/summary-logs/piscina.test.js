@@ -1,4 +1,4 @@
-import { closeWorkerPool, createSummaryLogsValidator } from './piscina.js'
+import { closeWorkerPool, createSummaryLogsCommandExecutor } from './piscina.js'
 
 const { mockRun, mockDestroy } = vi.hoisted(() => ({
   mockRun: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock('piscina', () => ({
   })
 }))
 
-describe('createSummaryLogsValidator', () => {
+describe('createSummaryLogsCommandExecutor', () => {
   let summaryLogsValidator
   let summaryLogId
   let logger
@@ -28,7 +28,7 @@ describe('createSummaryLogsValidator', () => {
       error: vi.fn()
     }
 
-    summaryLogsValidator = createSummaryLogsValidator(logger)
+    summaryLogsValidator = createSummaryLogsCommandExecutor(logger)
 
     summaryLogId = 'summary-log-123'
   })
@@ -37,7 +37,7 @@ describe('createSummaryLogsValidator', () => {
     vi.resetAllMocks()
   })
 
-  it('creates validator instance', () => {
+  it('creates command executor instance', () => {
     expect(summaryLogsValidator).toBeDefined()
     expect(summaryLogsValidator.validate).toBeInstanceOf(Function)
   })

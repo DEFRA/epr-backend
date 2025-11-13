@@ -1,6 +1,6 @@
 import {
   closeWorkerPool,
-  createSummaryLogsValidator
+  createSummaryLogsCommandExecutor
 } from '#adapters/validators/summary-logs/piscina.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -14,7 +14,7 @@ export const workers = {
     register: (server, options) => {
       const summaryLogsValidator =
         options?.summaryLogsValidator ??
-        createSummaryLogsValidator(server.logger)
+        createSummaryLogsCommandExecutor(server.logger)
 
       server.decorate(
         'request',

@@ -141,7 +141,7 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsValidator}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsCommandExecutor}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

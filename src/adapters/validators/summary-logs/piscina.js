@@ -22,7 +22,7 @@ const pool = new Piscina({
   idleTimeout: ONE_MINUTE
 })
 
-/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 
 /**
  * @returns {Promise<void>}
@@ -49,7 +49,7 @@ const runCommandInWorker = async (command, summaryLogId, logger) => {
   }
 }
 
-export const createSummaryLogsValidator = (logger) => {
+export const createSummaryLogsCommandExecutor = (logger) => {
   return {
     validate: async (summaryLogId) => {
       // Fire-and-forget: validation runs asynchronously in worker thread, request returns immediately
