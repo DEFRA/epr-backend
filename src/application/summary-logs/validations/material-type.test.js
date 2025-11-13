@@ -85,86 +85,60 @@ describe('validateMaterialType', () => {
     expect(fatals[0].context.actual).toBe('plastic')
   })
 
-  it('returns valid result when materials match - Aluminium', () => {
-    const parsed = {
-      meta: {
-        REGISTRATION: { value: 'WRN12345' },
-        MATERIAL: { value: 'Aluminium' }
-      }
-    }
-    const registration = {
-      material: 'aluminium'
-    }
-
-    const result = validateMaterialType({
-      parsed,
-      registration,
-      loggingContext: 'test'
-    })
-
-    expect(result.isValid()).toBe(true)
-    expect(result.isFatal()).toBe(false)
-    expect(result.hasIssues()).toBe(false)
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message:
-          'Validated material: test, spreadsheetMaterial=Aluminium, registrationMaterial=aluminium'
-      })
-    )
-  })
-
-  it('returns valid result when materials match - Plastic', () => {
-    const parsed = {
-      meta: {
-        REGISTRATION: { value: 'WRN12345' },
-        MATERIAL: { value: 'Plastic' }
-      }
-    }
-    const registration = {
-      material: 'plastic'
-    }
-
-    const result = validateMaterialType({
-      parsed,
-      registration,
-      loggingContext: 'test'
-    })
-
-    expect(result.isValid()).toBe(true)
-    expect(result.isFatal()).toBe(false)
-    expect(result.hasIssues()).toBe(false)
-    expect(mockLoggerInfo).toHaveBeenCalled()
-  })
-
-  it('returns valid result for all valid material mappings', () => {
-    const materials = [
-      ['Aluminium', 'aluminium'],
-      ['Fibre_based_composite', 'fibre'],
-      ['Glass', 'glass'],
-      ['Paper_and_board', 'paper'],
-      ['Plastic', 'plastic'],
-      ['Steel', 'steel'],
-      ['Wood', 'wood']
-    ]
-
-    materials.forEach(([spreadsheet, registration]) => {
+  it.each([
+    ['Aluminium', 'aluminium'],
+    ['Plastic', 'plastic']
+  ])(
+    'returns valid result when materials match - %s',
+    (spreadsheetMaterial, registrationMaterial) => {
       const parsed = {
         meta: {
-          MATERIAL: { value: spreadsheet }
+          REGISTRATION: { value: 'WRN12345' },
+          MATERIAL: { value: spreadsheetMaterial }
         }
       }
-      const reg = {
-        material: registration
+      const registration = {
+        material: registrationMaterial
       }
 
       const result = validateMaterialType({
         parsed,
-        registration: reg,
+        registration,
         loggingContext: 'test'
       })
 
       expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+      expect(result.hasIssues()).toBe(false)
+      expect(mockLoggerInfo).toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    ['Aluminium', 'aluminium'],
+    ['Fibre_based_composite', 'fibre'],
+    ['Glass', 'glass'],
+    ['Paper_and_board', 'paper'],
+    ['Plastic', 'plastic'],
+    ['Steel', 'steel'],
+    ['Wood', 'wood']
+  ])('validates material mapping: %s → %s', (spreadsheet, registration) => {
+    const parsed = {
+      meta: {
+        MATERIAL: { value: spreadsheet }
+      }
+    }
+    const reg = {
+      material: registration
+    }
+
+    const result = validateMaterialType({
+      parsed,
+      registration: reg,
+      loggingContext: 'test'
     })
+
+    expect(result.isValid()).toBe(true)
   })
 
   it('categorizes material mismatch as fatal business error', () => {

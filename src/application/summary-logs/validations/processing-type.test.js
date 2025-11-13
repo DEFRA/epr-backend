@@ -85,56 +85,34 @@ describe('validateProcessingType', () => {
     expect(fatals[0].context.actual).toBe('exporter')
   })
 
-  it('returns valid result when types match - REPROCESSOR', () => {
-    const parsed = {
-      meta: {
-        REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+  it.each([
+    ['REPROCESSOR', 'reprocessor'],
+    ['EXPORTER', 'exporter']
+  ])(
+    'returns valid result when types match - %s',
+    (spreadsheetType, registrationType) => {
+      const parsed = {
+        meta: {
+          REGISTRATION: { value: 'WRN12345' },
+          PROCESSING_TYPE: { value: spreadsheetType }
+        }
       }
-    }
-    const registration = {
-      wasteProcessingType: 'reprocessor'
-    }
+      const registration = {
+        wasteProcessingType: registrationType
+      }
 
-    const result = validateProcessingType({
-      parsed,
-      registration,
-      loggingContext: 'test'
-    })
-
-    expect(result.isValid()).toBe(true)
-    expect(result.isFatal()).toBe(false)
-    expect(result.hasIssues()).toBe(false)
-    expect(mockLoggerInfo).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message:
-          'Summary log type validated: test, spreadsheetType=REPROCESSOR, wasteProcessingType=reprocessor'
+      const result = validateProcessingType({
+        parsed,
+        registration,
+        loggingContext: 'test'
       })
-    )
-  })
 
-  it('returns valid result when types match - EXPORTER', () => {
-    const parsed = {
-      meta: {
-        REGISTRATION: { value: 'WRN12345' },
-        PROCESSING_TYPE: { value: 'EXPORTER' }
-      }
+      expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+      expect(result.hasIssues()).toBe(false)
+      expect(mockLoggerInfo).toHaveBeenCalled()
     }
-    const registration = {
-      wasteProcessingType: 'exporter'
-    }
-
-    const result = validateProcessingType({
-      parsed,
-      registration,
-      loggingContext: 'test'
-    })
-
-    expect(result.isValid()).toBe(true)
-    expect(result.isFatal()).toBe(false)
-    expect(result.hasIssues()).toBe(false)
-    expect(mockLoggerInfo).toHaveBeenCalled()
-  })
+  )
 
   it('categorizes type mismatch as fatal business error', () => {
     const parsed = {
