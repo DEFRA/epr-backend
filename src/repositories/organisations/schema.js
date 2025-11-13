@@ -58,7 +58,7 @@ export const statusHistoryItemSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .required(),
-  updatedAt: Joi.date().required(),
+  updatedAt: Joi.date().iso().required(),
   updatedBy: idSchema.optional()
 })
 
@@ -66,7 +66,7 @@ const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),
   tradingName: Joi.string().optional(),
   registrationNumber: Joi.string()
-    .regex(/^[A-Z0-9]{8}$/i)
+    .regex(/^[a-zA-Z0-9]{8}$/)
     .messages({
       'string.pattern.base':
         'Registration number must be 8 characters (e.g., 01234567 or AC012345)'
@@ -234,6 +234,7 @@ const formFileUploadSchema = Joi.object({
 
 const registrationSchema = Joi.object({
   id: idSchema,
+  statusHistory: Joi.array().items(statusHistoryItemSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -246,7 +247,7 @@ const registrationSchema = Joi.object({
   registrationNumber: Joi.string().optional(),
   validFrom: Joi.date().optional(),
   validTo: Joi.date().optional(),
-  formSubmissionTime: Joi.date().required(),
+  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -295,6 +296,7 @@ const registrationSchema = Joi.object({
 const accreditationSchema = Joi.object({
   id: idSchema,
   accreditationNumber: Joi.string().optional(),
+  statusHistory: Joi.array().items(statusHistoryItemSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -306,7 +308,7 @@ const accreditationSchema = Joi.object({
     .forbidden(),
   validFrom: Joi.date().optional(),
   validTo: Joi.date().optional(),
-  formSubmissionTime: Joi.date().required(),
+  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -349,6 +351,7 @@ const accreditationUpdateSchema = accreditationSchema.fork(
 export const organisationInsertSchema = Joi.object({
   id: idSchema,
   orgId: Joi.number().required(),
+  statusHistory: Joi.array().items(statusHistoryItemSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -393,7 +396,7 @@ export const organisationInsertSchema = Joi.object({
   partnership: partnershipSchema.optional(),
   submitterContactDetails: userSchema.required(),
   managementContactDetails: userSchema.optional(),
-  formSubmissionTime: Joi.date().required(),
+  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -401,7 +404,12 @@ export const organisationInsertSchema = Joi.object({
   accreditations: Joi.array().items(accreditationSchema).optional()
 })
 
-const NON_UPDATABLE_FIELDS = ['id', 'version', 'schemaVersion']
+export const NON_UPDATABLE_FIELDS = [
+  'id',
+  'version',
+  'schemaVersion',
+  'statusHistory'
+]
 
 const insertSchemaKeys = Object.keys(organisationInsertSchema.describe().keys)
 const updatableFields = insertSchemaKeys.filter(
