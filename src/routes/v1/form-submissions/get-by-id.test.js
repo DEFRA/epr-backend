@@ -1,5 +1,4 @@
 import { StatusCodes } from 'http-status-codes'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -28,13 +27,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
       [ORG_A, ORG_B]
     )
 
-    const featureFlags = createInMemoryFeatureFlags({ organisations: true })
-
     server = await createTestServer({
       repositories: {
         formSubmissionsRepository: formSubmissionsRepositoryFactory
-      },
-      featureFlags
+      }
     })
   })
 

@@ -1,1 +1,3 @@
-export { submissionDataGet } from './get-by-id.js'
+import { formSubmissionsDataGet } from './get-by-id.js'
+
+export const formSubmissionsRoutes = [formSubmissionsDataGet]

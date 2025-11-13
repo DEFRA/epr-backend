@@ -3,7 +3,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} FormSubmissionsRepository */
 
-export const submissionDataGet = {
+export const formSubmissionsDataGet = {
   method: 'GET',
   path: '/v1/form-submissions/{documentId}',
   options: {
