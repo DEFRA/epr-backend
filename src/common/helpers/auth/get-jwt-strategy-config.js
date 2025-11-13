@@ -25,7 +25,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
-        // Entra Id is not providing an audience in the OIDC config, so we need to supply it as an env var
+        // For Entra Id tokens, we only accept them if they were signed for Admin UI
         const adminUiEntraClientId = config.get('oidc.entraId.clientId')
         if (audience !== adminUiEntraClientId) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
