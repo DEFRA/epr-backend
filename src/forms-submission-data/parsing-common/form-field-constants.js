@@ -151,7 +151,7 @@ export const FORM_PAGES = {
     GLASS_RECYCLING_PROCESS: 'Glass process',
     SUPPLIERS: 'Suppliers',
     EXPORT_PORTS: 'Port name',
-    PLANT_EQUIMENT_DETAILS: 'Plant and equipment',
+    PLANT_EQUIPMENT_DETAILS: 'Plant and equipment',
     APPROVED_PERSON: {
       fields: {
         NAME: 'App contact name',
@@ -348,7 +348,7 @@ export const FORM_PAGES = {
         title: 'Raw material inputs for calendar year 2024',
         fields: {
           MATERIAL: 'Input raw material',
-          TONNAGE: 'Raw material tonnage'
+          TONNAGE: 'Input raw material tonnage'
         }
       },
       OUTPUT_FROM_RECYCLING: {

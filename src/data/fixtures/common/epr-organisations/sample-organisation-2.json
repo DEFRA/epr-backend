@@ -56,6 +56,20 @@
           "phone": "2223334444"
         }
       ],
+      "suppliers": "International plastic suppliers",
+      "exportPorts": ["Cardiff", "Bristol"],
+      "submitterContactDetails": {
+        "fullName": "Carol White",
+        "email": "carol.white@export.com",
+        "title": "Owner",
+        "phone": "2223334444"
+      },
+      "samplingInspectionPlanFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789",
+          "defraFormUserDownloadLink": "https://example.com/file-789"
+        }
+      ],
       "noticeAddress": {
         "line1": "22 Export Lane",
         "town": "Cardiff",

@@ -1,14 +1,14 @@
 import {
-  WASTE_PROCESSING_TYPE,
-  NATION,
   BUSINESS_TYPE,
-  REGULATOR,
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  NATION,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
-  MATERIAL,
-  RECYCLING_PROCESS,
+  REGULATOR,
   TIME_SCALE,
-  VALUE_TYPE
+  VALUE_TYPE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
 const WASTE_PROCESSING_TYPES_MAPPING = {
@@ -159,10 +159,13 @@ const MATERIAL_MAPPING = {
   'Aluminium (R4)': MATERIAL.ALUMINIUM
 }
 
-const RECYCLING_PROCESS_MAPPING = {
-  'Glass re-melt': RECYCLING_PROCESS.GLASS_RE_MELT,
-  'Glass other': RECYCLING_PROCESS.GLASS_OTHER,
-  Both: [RECYCLING_PROCESS.GLASS_RE_MELT, RECYCLING_PROCESS.GLASS_OTHER]
+const GLASS_RECYCLING_PROCESS_MAPPING = {
+  'Glass re-melt': [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+  'Glass other': [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
+  Both: [
+    GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+    GLASS_RECYCLING_PROCESS.GLASS_OTHER
+  ]
 }
 
 const TIME_SCALE_MAPPING = {
@@ -187,14 +190,14 @@ export function mapMaterial(value) {
   return result
 }
 
-export function mapRecyclingProcess(value) {
+export function mapGlassRecyclingProcess(value) {
   const trimmedValue = value?.trim()
 
   if (!trimmedValue) {
     return undefined
   }
 
-  const result = RECYCLING_PROCESS_MAPPING[trimmedValue]
+  const result = GLASS_RECYCLING_PROCESS_MAPPING[trimmedValue]
 
   if (!result) {
     throw new Error(`Invalid recycling process: "${value}"`)

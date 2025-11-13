@@ -128,15 +128,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws 404 when registration does not exist in organisation', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]
@@ -154,23 +146,9 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws 404 when registration is from different organisation', async () => {
-      const registration1 = {
-        id: new ObjectId().toString(),
-        orgName: 'Org 1',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration1 = buildRegistration()
 
-      const registration2 = buildRegistration({
-        orgName: 'Org 2',
-        material: 'plastic',
-        wasteProcessingType: 'exporter',
-        wasteRegistrationNumber: 'CBDU222222',
-        formSubmissionTime: '2025-08-21T19:34:44.944Z'
-      })
+      const registration2 = buildRegistration()
 
       const org1 = buildOrganisation({ registrations: [registration1] })
       const org2 = buildOrganisation({ registrations: [registration2] })
@@ -195,15 +173,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws timeout error when minimumOrgVersion never arrives', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]
@@ -222,15 +192,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('waits for minimumOrgVersion and returns registration when version arrives', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]
@@ -258,15 +220,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('waits for minimumOrgVersion and throws 404 when registration does not exist', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]

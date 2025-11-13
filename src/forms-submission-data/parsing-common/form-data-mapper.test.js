@@ -1,27 +1,27 @@
 import {
-  mapWasteProcessingType,
-  mapNation,
+  convertToNumber,
   mapBusinessType,
-  mapRegulator,
-  mapPartnerType,
-  mapPartnershipType,
+  mapGlassRecyclingProcess,
   mapMaterial,
-  mapRecyclingProcess,
+  mapNation,
+  mapPartnershipType,
+  mapPartnerType,
+  mapRegulator,
   mapTimeScale,
   mapValueType,
-  convertToNumber
+  mapWasteProcessingType
 } from './form-data-mapper.js'
 import {
-  WASTE_PROCESSING_TYPE,
-  NATION,
   BUSINESS_TYPE,
-  REGULATOR,
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  NATION,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
-  MATERIAL,
-  RECYCLING_PROCESS,
+  REGULATOR,
   TIME_SCALE,
-  VALUE_TYPE
+  VALUE_TYPE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
 describe('mapWasteProcessingType', () => {
@@ -296,35 +296,35 @@ describe('mapMaterial', () => {
   })
 })
 
-describe('mapRecyclingProcess', () => {
+describe('mapGlassRecyclingProcess', () => {
   it.each([
-    ['Glass re-melt', RECYCLING_PROCESS.GLASS_RE_MELT],
-    ['Glass other', RECYCLING_PROCESS.GLASS_OTHER]
+    ['Glass re-melt', [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]],
+    ['Glass other', [GLASS_RECYCLING_PROCESS.GLASS_OTHER]]
   ])('should map %s to %s', (input, expected) => {
-    expect(mapRecyclingProcess(input)).toBe(expected)
+    expect(mapGlassRecyclingProcess(input)).toEqual(expected)
   })
 
   it('should map Both to array of both processes', () => {
-    expect(mapRecyclingProcess('Both')).toEqual([
-      RECYCLING_PROCESS.GLASS_RE_MELT,
-      RECYCLING_PROCESS.GLASS_OTHER
+    expect(mapGlassRecyclingProcess('Both')).toEqual([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      GLASS_RECYCLING_PROCESS.GLASS_OTHER
     ])
   })
 
   it('should handle whitespace', () => {
-    expect(mapRecyclingProcess('  Glass re-melt  ')).toBe(
-      RECYCLING_PROCESS.GLASS_RE_MELT
-    )
+    expect(mapGlassRecyclingProcess('  Glass re-melt  ')).toEqual([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+    ])
   })
 
   it('should throw error for invalid recycling process', () => {
-    expect(() => mapRecyclingProcess('INVALID')).toThrow(
+    expect(() => mapGlassRecyclingProcess('INVALID')).toThrow(
       'Invalid recycling process: "INVALID"'
     )
   })
 
   it.each([null, undefined, ''])('should return undefined for %s', (input) => {
-    expect(mapRecyclingProcess(input)).toBeUndefined()
+    expect(mapGlassRecyclingProcess(input)).toBeUndefined()
   })
 })
 
