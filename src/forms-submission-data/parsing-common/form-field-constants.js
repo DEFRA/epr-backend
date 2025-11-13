@@ -151,7 +151,7 @@ export const FORM_PAGES = {
     GLASS_RECYCLING_PROCESS: 'Glass process',
     SUPPLIERS: 'Suppliers',
     EXPORT_PORTS: 'Port name',
-    PLANT_EQUIMENT_DETAILS: 'Plant and equipment',
+    PLANT_EQUIPMENT_DETAILS: 'Plant and equipment',
     APPROVED_PERSON: {
       fields: {
         NAME: 'App contact name',
