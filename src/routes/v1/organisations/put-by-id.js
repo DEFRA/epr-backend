@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import { stripNonUpdatableFieldsFromItems } from '#repositories/organisations/helpers.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const organisationsPutByIdPath = '/v1/organisations/{id}'
@@ -48,11 +49,23 @@ export const organisationsPutById = {
       id: _,
       schemaVersion: _s,
       statusHistory,
+      registrations,
+      accreditations,
       ...sanitisedFragment
     } = updateFragment
 
+    const fullySanitisedPayload = {
+      ...sanitisedFragment,
+      ...(registrations && {
+        registrations: stripNonUpdatableFieldsFromItems(registrations)
+      }),
+      ...(accreditations && {
+        accreditations: stripNonUpdatableFieldsFromItems(accreditations)
+      })
+    }
+
     try {
-      await organisationsRepository.update(id, version, sanitisedFragment)
+      await organisationsRepository.update(id, version, fullySanitisedPayload)
       const updated = await organisationsRepository.findById(id, version + 1)
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {

@@ -66,7 +66,7 @@ const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),
   tradingName: Joi.string().optional(),
   registrationNumber: Joi.string()
-    .regex(/^[a-zA-Z0-9]{8}$/)
+    .regex(/^[a-zA-Z0-9]{2}[0-9]{6}$/)
     .messages({
       'string.pattern.base':
         'Registration number must be 8 characters (e.g., 01234567 or AC012345)'
@@ -339,14 +339,13 @@ const accreditationSchema = Joi.object({
   orsFileUploads: Joi.array().items(formFileUploadSchema).optional()
 })
 
-const registrationUpdateSchema = registrationSchema.fork(['status'], (schema) =>
-  schema.optional()
-)
+const registrationUpdateSchema = registrationSchema
+  .fork(['statusHistory'], (schema) => schema.forbidden())
+  .fork(['status'], (schema) => schema.optional())
 
-const accreditationUpdateSchema = accreditationSchema.fork(
-  ['status'],
-  (schema) => schema.optional()
-)
+const accreditationUpdateSchema = accreditationSchema
+  .fork(['statusHistory'], (schema) => schema.forbidden())
+  .fork(['status'], (schema) => schema.optional())
 
 export const organisationInsertSchema = Joi.object({
   id: idSchema,

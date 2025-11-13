@@ -3,6 +3,10 @@ import equal from 'fast-deep-equal'
 
 export const SCHEMA_VERSION = 1
 
+export const stripNonUpdatableFieldsFromItems = (items) => {
+  return items?.map(({ statusHistory: _sh, ...rest }) => rest)
+}
+
 export const createStatusHistoryEntry = (status) => ({
   status,
   updatedAt: new Date()

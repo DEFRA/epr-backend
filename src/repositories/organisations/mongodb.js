@@ -9,7 +9,8 @@ import {
   getCurrentStatus,
   statusHistoryWithChanges,
   mergeSubcollection,
-  hasChanges
+  hasChanges,
+  stripNonUpdatableFieldsFromItems
 } from './helpers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
@@ -71,7 +72,19 @@ const performInsert = (db) => async (organisation) => {
 
 const performUpdate = (db) => async (id, version, updates) => {
   const validatedId = validateId(id)
-  const validatedUpdates = validateOrganisationUpdate(updates)
+
+  // Strip statusHistory from nested arrays BEFORE validation
+  const sanitizedUpdates = {
+    ...updates,
+    ...(updates.registrations && {
+      registrations: stripNonUpdatableFieldsFromItems(updates.registrations)
+    }),
+    ...(updates.accreditations && {
+      accreditations: stripNonUpdatableFieldsFromItems(updates.accreditations)
+    })
+  }
+
+  const validatedUpdates = validateOrganisationUpdate(sanitizedUpdates)
 
   const existing = await db
     .collection(COLLECTION_NAME)
