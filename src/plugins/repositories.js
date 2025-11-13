@@ -6,6 +6,7 @@ import { createFormSubmissionsRepository } from '#repositories/form-submissions/
  * @typedef {Object} RepositoriesPluginOptions
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
+ * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
@@ -97,8 +98,7 @@ export const repositories = {
       } else {
         server.dependency('mongodb', () => {
           const productionFactory = createFormSubmissionsRepository(
-            /** @type {import('mongodb').Db} */ (server.db),
-            options?.eventualConsistency
+            /** @type {import('mongodb').Db} */ (server.db)
           )
           registerPerRequest('formSubmissionsRepository', productionFactory)
         })
