@@ -1,5 +1,6 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
@@ -83,6 +84,23 @@ export const repositories = {
             options?.eventualConsistency
           )
           registerPerRequest('organisationsRepository', productionFactory)
+        })
+      }
+
+      if (options?.formSubmissionsRepository) {
+        registerPerRequest(
+          'formSubmissionsRepository',
+          options.formSubmissionsRepository
+        )
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
+      } else {
+        server.dependency('mongodb', () => {
+          const productionFactory = createFormSubmissionsRepository(
+            /** @type {import('mongodb').Db} */ (server.db),
+            options?.eventualConsistency
+          )
+          registerPerRequest('formSubmissionsRepository', productionFactory)
         })
       }
     }
