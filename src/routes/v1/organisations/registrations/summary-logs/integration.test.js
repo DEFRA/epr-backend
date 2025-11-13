@@ -1433,11 +1433,14 @@ describe('Summary logs integration', () => {
         registrations: [
           {
             id: registrationId,
-            wasteRegistrationNumber: 'WRN-123',
+            registrationNumber: 'REG-12345',
+            status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
             formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
+            submittedToRegulator: 'ea',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
           }
         ]
       })
@@ -1452,7 +1455,7 @@ describe('Summary logs integration', () => {
         [fileId]: {
           meta: {
             REGISTRATION: {
-              value: 'WRN-123',
+              value: 'REG-12345',
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
@@ -1477,7 +1480,7 @@ describe('Summary logs integration', () => {
         [fileId]: {
           meta: {
             REGISTRATION: {
-              value: 'WRN-123',
+              value: 'REG-12345',
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
