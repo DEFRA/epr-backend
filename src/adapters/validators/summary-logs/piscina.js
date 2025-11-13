@@ -27,7 +27,7 @@ const pool = new Piscina({
 /**
  * @returns {Promise<void>}
  */
-const runCommandInWorker = async (command, summaryLogId, logger, action) => {
+const runCommandInWorker = async (command, summaryLogId, logger) => {
   try {
     await pool.run({ command, summaryLogId })
     logger.info({
