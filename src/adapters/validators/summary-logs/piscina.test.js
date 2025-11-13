@@ -42,10 +42,13 @@ describe('createSummaryLogsValidator', () => {
     expect(summaryLogsValidator.validate).toBeInstanceOf(Function)
   })
 
-  it('runs worker with summary log id', async () => {
+  it('runs worker with command object', async () => {
     await summaryLogsValidator.validate(summaryLogId)
 
-    expect(mockRun).toHaveBeenCalledWith(summaryLogId)
+    expect(mockRun).toHaveBeenCalledWith({
+      command: 'validate',
+      summaryLogId
+    })
   })
 
   it('logs success when worker completes', async () => {
@@ -57,7 +60,7 @@ describe('createSummaryLogsValidator', () => {
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Summary log validation worker completed: summaryLogId=summary-log-123',
+          'Summary log validate worker completed: summaryLogId=summary-log-123',
         event: {
           category: 'server',
           action: 'process_success'
@@ -78,7 +81,7 @@ describe('createSummaryLogsValidator', () => {
     expect(logger.error).toHaveBeenCalledWith({
       error,
       message:
-        'Summary log validation worker failed: summaryLogId=summary-log-123',
+        'Summary log validate worker failed: summaryLogId=summary-log-123',
       event: {
         category: 'server',
         action: 'process_failure'

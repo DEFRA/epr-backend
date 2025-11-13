@@ -8,6 +8,7 @@ import { cacheControl } from '#plugins/cache-control.js'
 import { router } from '#plugins/router.js'
 import { workers } from '#plugins/workers.js'
 import { repositories } from '#plugins/repositories.js'
+import { services } from '#plugins/services.js'
 import { featureFlags } from '#plugins/feature-flags.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { requestLogger } from '#common/helpers/logging/request-logger.js'
@@ -99,6 +100,10 @@ async function createServer(options = {}) {
     {
       plugin: workers,
       options: options.workers
+    },
+    {
+      plugin: services,
+      options: options.services
     },
     router
   )
