@@ -6,7 +6,7 @@ import { vi } from 'vitest'
  *
  * @example
  * ```javascript
- * import { createMockConfig } from '#test/helpers/mock-config.js'
+ * import { createMockConfig } from '#vite/helpers/mock-config.js'
  *
  * vi.mock('../config.js', () => createMockConfig())
  * ```
@@ -14,7 +14,7 @@ import { vi } from 'vitest'
  * @example
  * ```javascript
  * // With custom config values
- * import { createMockConfig } from '#test/helpers/mock-config.js'
+ * import { createMockConfig } from '#vite/helpers/mock-config.js'
  *
  * vi.mock('../config.js', () => createMockConfig({
  *   customKey: { customValue: 'test' }

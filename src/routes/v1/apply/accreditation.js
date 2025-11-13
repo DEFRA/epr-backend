@@ -12,6 +12,7 @@ export const accreditation = {
   method: 'POST',
   path: accreditationPath,
   options: {
+    auth: false,
     validate: {
       payload: registrationAndAccreditationPayload
     }

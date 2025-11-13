@@ -14,8 +14,12 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
 
 import { ObjectId } from 'mongodb'
+
+const { validToken } = testTokens
 
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()
@@ -71,7 +75,10 @@ const pollForValidation = async (server, summaryLogId) => {
 
     const checkResponse = await server.inject({
       method: 'GET',
-      url: buildGetUrl(summaryLogId)
+      url: buildGetUrl(summaryLogId),
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
     })
 
     status = JSON.parse(checkResponse.payload).status
@@ -81,6 +88,7 @@ const pollForValidation = async (server, summaryLogId) => {
 
 describe('Summary logs integration', () => {
   let server
+  setupAuthContext()
   let summaryLogsRepository
 
   beforeEach(async () => {
@@ -163,7 +171,10 @@ describe('Summary logs integration', () => {
 
       response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(summaryLogId)
+        url: buildGetUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -188,7 +199,10 @@ describe('Summary logs integration', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -217,7 +231,10 @@ describe('Summary logs integration', () => {
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -261,7 +278,10 @@ describe('Summary logs integration', () => {
           fileId,
           filename,
           false
-        )
+        ),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -288,7 +308,10 @@ describe('Summary logs integration', () => {
       beforeEach(async () => {
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -323,7 +346,10 @@ describe('Summary logs integration', () => {
           fileId,
           filename,
           false
-        )
+        ),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -476,7 +502,10 @@ describe('Summary logs integration', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -492,7 +521,10 @@ describe('Summary logs integration', () => {
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -686,7 +718,10 @@ describe('Summary logs integration', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -702,7 +737,10 @@ describe('Summary logs integration', () => {
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -868,7 +906,10 @@ describe('Summary logs integration', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -884,7 +925,10 @@ describe('Summary logs integration', () => {
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -1037,7 +1081,10 @@ describe('Summary logs integration', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -1053,7 +1100,10 @@ describe('Summary logs integration', () => {
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -1239,7 +1289,10 @@ describe('Summary logs integration', () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
     })
 
@@ -1255,7 +1308,10 @@ describe('Summary logs integration', () => {
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId)
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
         })
       })
 
@@ -1334,7 +1390,10 @@ describe('Summary logs integration', () => {
     it('returns OK with empty issues array when validation.issues is undefined', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(summaryLogId)
+        url: buildGetUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(200)
