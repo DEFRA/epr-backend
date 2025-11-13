@@ -4,61 +4,95 @@ import {
   validateWasteRecord
 } from './validation.js'
 
-/**
- * @typedef {import('./port.js').WasteRecord} WasteRecord
- */
+const COLLECTION_NAME = 'waste-records'
+const SCHEMA_VERSION = 1
 
 /**
- * Create a MongoDB waste records repository
- *
- * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {import('./port.js').WasteRecordsRepositoryFactory}
+ * Maps MongoDB document to domain model by removing internal MongoDB fields
+ * and ensuring data isolation through deep cloning
+ * @param {Object} doc - MongoDB document
+ * @returns {import('./port.js').WasteRecord} Domain waste record
  */
-export const createWasteRecordsRepository = (db) => {
-  return () => ({
-    async findByRegistration(organisationId, registrationId) {
-      const validatedOrgId = validateOrganisationId(organisationId)
-      const validatedRegId = validateRegistrationId(registrationId)
+const mapDocumentToDomain = (doc) => {
+  const { _id, schemaVersion, ...domainFields } = doc
+  return structuredClone(domainFields)
+}
 
-      const collection = db.collection('waste-records')
+/**
+ * Generates a composite key for waste record uniqueness
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} type
+ * @param {string} rowId
+ * @returns {string} Composite key
+ */
+const getCompositeKey = (organisationId, registrationId, type, rowId) => {
+  return `${organisationId}:${registrationId}:${type}:${rowId}`
+}
 
-      const records = await collection
-        .find({
-          organisationId: validatedOrgId,
-          registrationId: validatedRegId
-        })
-        .toArray()
+const performFindByRegistration =
+  (db) => async (organisationId, registrationId) => {
+    const validatedOrgId = validateOrganisationId(organisationId)
+    const validatedRegId = validateRegistrationId(registrationId)
 
-      return records.map((record) => {
-        const { _id, ...rest } = record
-        return /** @type {WasteRecord} */ (rest)
+    const docs = await db
+      .collection(COLLECTION_NAME)
+      .find({
+        organisationId: validatedOrgId,
+        registrationId: validatedRegId
       })
-    },
+      .toArray()
 
-    async upsertWasteRecords(wasteRecords) {
-      const collection = db.collection('waste-records')
+    return docs.map(mapDocumentToDomain)
+  }
 
-      for (const record of wasteRecords) {
-        const validatedRecord = validateWasteRecord(record)
+const performUpsertWasteRecords = (db) => async (wasteRecords) => {
+  if (wasteRecords.length === 0) {
+    return
+  }
 
-        const { organisationId, registrationId, type, rowId, ...updateData } =
-          validatedRecord
+  // Validate all records first
+  const validatedRecords = wasteRecords.map((record) =>
+    validateWasteRecord(record)
+  )
 
-        await collection.updateOne(
-          {
-            organisationId,
-            registrationId,
-            type,
-            rowId
-          },
-          {
-            $set: updateData
-          },
-          {
-            upsert: true
+  // Build bulk write operations
+  const bulkOps = validatedRecords.map((record) => {
+    const compositeKey = getCompositeKey(
+      record.organisationId,
+      record.registrationId,
+      record.type,
+      record.rowId
+    )
+
+    return {
+      updateOne: {
+        filter: {
+          _compositeKey: compositeKey
+        },
+        update: {
+          $set: {
+            _compositeKey: compositeKey,
+            schemaVersion: SCHEMA_VERSION,
+            ...structuredClone(record)
           }
-        )
+        },
+        upsert: true
       }
     }
   })
+
+  await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
+}
+
+/**
+ * Creates a MongoDB-backed waste records repository
+ * @param {import('mongodb').Db} db - MongoDB database instance
+ * @returns {import('./port.js').WasteRecordsRepositoryFactory}
+ */
+export const createWasteRecordsRepository = (db) => () => {
+  return {
+    findByRegistration: performFindByRegistration(db),
+    upsertWasteRecords: performUpsertWasteRecords(db)
+  }
 }
