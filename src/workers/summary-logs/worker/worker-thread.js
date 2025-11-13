@@ -75,13 +75,7 @@ const handleSubmitCommand = async ({
   })
 }
 
-export default async function summaryLogsWorkerThread(commandOrSummaryLogId) {
-  // Backward compatibility: support string summaryLogId (validate command)
-  const command =
-    typeof commandOrSummaryLogId === 'string'
-      ? { command: 'validate', summaryLogId: commandOrSummaryLogId }
-      : commandOrSummaryLogId
-
+export default async function summaryLogsWorkerThread(command) {
   const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
 
   const awsRegion = config.get('awsRegion')
