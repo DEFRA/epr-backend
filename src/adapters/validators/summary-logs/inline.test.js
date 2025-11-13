@@ -107,4 +107,10 @@ describe('createInlineSummaryLogsValidator', () => {
       inlineSummaryLogsValidator.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
+
+  it('should throw error when submit is called', async () => {
+    await expect(
+      inlineSummaryLogsValidator.submit(summaryLogId)
+    ).rejects.toThrow('Inline validator does not support submit operation')
+  })
 })

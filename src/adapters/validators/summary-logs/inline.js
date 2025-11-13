@@ -47,6 +47,9 @@ export const createInlineSummaryLogsValidator = (
       // Fire-and-forget: validation runs asynchronously, request returns immediately
       // Intentionally not awaiting as the HTTP response completes before validation finishes
       runValidationInline(summaryLogId, validateSummaryLog)
+    },
+    submit: async () => {
+      throw new Error('Inline validator does not support submit operation')
     }
   }
 }

@@ -5,6 +5,10 @@ import {
 } from './validation.js'
 
 /**
+ * @typedef {import('./port.js').WasteRecord} WasteRecord
+ */
+
+/**
  * Create a MongoDB waste records repository
  *
  * @param {import('mongodb').Db} db - MongoDB database instance
@@ -25,10 +29,10 @@ export const createWasteRecordsRepository = (db) => {
         })
         .toArray()
 
-      return records.map((record) => ({
-        ...record,
-        _id: undefined
-      }))
+      return records.map((record) => {
+        const { _id, ...rest } = record
+        return /** @type {WasteRecord} */ (rest)
+      })
     },
 
     async upsertWasteRecords(wasteRecords) {
