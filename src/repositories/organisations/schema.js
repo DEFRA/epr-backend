@@ -14,6 +14,18 @@ import {
   RECYCLING_PROCESS,
   TONNAGE_BAND
 } from '#domain/organisations.js'
+
+/**
+ * Joi conditional validation requiring a field when status is approved or suspended
+ */
+const requiredWhenApprovedOrSuspended = {
+  switch: [
+    { is: STATUS.APPROVED, then: Joi.required() },
+    { is: STATUS.SUSPENDED, then: Joi.required() }
+  ],
+  otherwise: Joi.optional()
+}
+
 export const idSchema = Joi.string()
   .required()
   .custom((value, helpers) => {
@@ -243,20 +255,8 @@ const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  validFrom: Joi.date().when('status', {
-    switch: [
-      { is: STATUS.APPROVED, then: Joi.required() },
-      { is: STATUS.SUSPENDED, then: Joi.required() }
-    ],
-    otherwise: Joi.optional()
-  }),
-  validTo: Joi.date().when('status', {
-    switch: [
-      { is: STATUS.APPROVED, then: Joi.required() },
-      { is: STATUS.SUSPENDED, then: Joi.required() }
-    ],
-    otherwise: Joi.optional()
-  }),
+  validFrom: Joi.date().when('status', requiredWhenApprovedOrSuspended),
+  validTo: Joi.date().when('status', requiredWhenApprovedOrSuspended),
   formSubmissionTime: Joi.date().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
@@ -287,13 +287,10 @@ const registrationSchema = Joi.object({
     )
     .optional(),
   noticeAddress: addressSchema.optional(),
-  wasteRegistrationNumber: Joi.string().when('status', {
-    switch: [
-      { is: STATUS.APPROVED, then: Joi.required() },
-      { is: STATUS.SUSPENDED, then: Joi.required() }
-    ],
-    otherwise: Joi.optional()
-  }),
+  wasteRegistrationNumber: Joi.string().when(
+    'status',
+    requiredWhenApprovedOrSuspended
+  ),
   wasteManagementPermits: Joi.array()
     .items(wasteManagementPermitSchema)
     .optional(),
@@ -311,13 +308,10 @@ const registrationSchema = Joi.object({
 
 const accreditationSchema = Joi.object({
   id: idSchema,
-  accreditationNumber: Joi.string().when('status', {
-    switch: [
-      { is: STATUS.APPROVED, then: Joi.required() },
-      { is: STATUS.SUSPENDED, then: Joi.required() }
-    ],
-    otherwise: Joi.optional()
-  }),
+  accreditationNumber: Joi.string().when(
+    'status',
+    requiredWhenApprovedOrSuspended
+  ),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -327,20 +321,8 @@ const accreditationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  validFrom: Joi.date().when('status', {
-    switch: [
-      { is: STATUS.APPROVED, then: Joi.required() },
-      { is: STATUS.SUSPENDED, then: Joi.required() }
-    ],
-    otherwise: Joi.optional()
-  }),
-  validTo: Joi.date().when('status', {
-    switch: [
-      { is: STATUS.APPROVED, then: Joi.required() },
-      { is: STATUS.SUSPENDED, then: Joi.required() }
-    ],
-    otherwise: Joi.optional()
-  }),
+  validFrom: Joi.date().when('status', requiredWhenApprovedOrSuspended),
+  validTo: Joi.date().when('status', requiredWhenApprovedOrSuspended),
   formSubmissionTime: Joi.date().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
