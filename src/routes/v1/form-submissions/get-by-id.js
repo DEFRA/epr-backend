@@ -1,10 +1,16 @@
 import { StatusCodes } from 'http-status-codes'
+import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} FormSubmissionsRepository */
 
 export const submissionDataGet = {
   method: 'GET',
   path: '/v1/form-submissions/{documentId}',
+  options: {
+    auth: {
+      scope: [ROLES.serviceMaintainer]
+    }
+  },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {formSubmissionsRepository: FormSubmissionsRepository}} request
    * @param {Object} h - Hapi response toolkit

@@ -2,6 +2,11 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
+
+const { validToken } = testTokens
 
 const ORG_A = { id: 'org-a' }
 const ORG_B = { id: 'org-b' }
@@ -13,6 +18,7 @@ const ACC_B = { id: 'acc-b', referenceNumber: ORG_B.id }
 const ACC_C = { id: 'acc-c', referenceNumber: 'xyz' }
 
 describe('GET /v1/form-submissions/{documentId}', () => {
+  setupAuthContext()
   let server
 
   beforeEach(async () => {
@@ -36,7 +42,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('returns 200 with organisation when supplied ID is for an organisation', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/form-submissions/${ORG_A.id}`
+        url: `/v1/form-submissions/${ORG_A.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -51,7 +60,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('returns 200 with organisation and linked registrations/accreditations when supplied ID is for an organisation', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/form-submissions/${ORG_B.id}`
+        url: `/v1/form-submissions/${ORG_B.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -67,7 +79,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('returns 200 with registrations when supplied ID is for a registration', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/form-submissions/${REG_C.id}`
+        url: `/v1/form-submissions/${REG_C.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -83,7 +98,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('returns 200 with accreditations when supplied ID is for an accreditation', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/form-submissions/${ACC_C.id}`
+        url: `/v1/form-submissions/${ACC_C.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -99,7 +117,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('includes Cache-Control header in successful response', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/form-submissions/${ORG_A.id}`
+        url: `/v1/form-submissions/${ORG_A.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.headers['cache-control']).toBe(
@@ -112,7 +133,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('returns 404 for documentId that does not exist', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/form-submissions/999999'
+        url: '/v1/form-submissions/999999',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -128,7 +152,10 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('returns 404 when documentId is missing (whitespace-only path segment)', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/form-submissions/%20%20%20'
+        url: '/v1/form-submissions/%20%20%20',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -144,12 +171,30 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     it('includes Cache-Control header in error response', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/form-submissions/999999'
+        url: '/v1/form-submissions/999999',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
     })
+  })
+
+  testAuthScenarios({
+    server: () => server,
+    makeRequest: async () => {
+      return {
+        method: 'GET',
+        url: '/v1/form-submissions/999999'
+      }
+    },
+    additionalExpectations: (response) => {
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
+    }
   })
 })
