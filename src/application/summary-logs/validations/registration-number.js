@@ -1,13 +1,13 @@
 import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import {
   createValidationIssues,
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  buildMetaFieldLocation,
+  extractMetaField,
+  logValidationSuccess
+} from './helpers.js'
 
 /**
  * Validates that the waste registration number in the spreadsheet matches the registration's waste registration number
@@ -27,13 +27,16 @@ export const validateRegistrationNumber = ({
 
   const { wasteRegistrationNumber } = registration
 
-  const registrationField = parsed?.meta?.[SUMMARY_LOG_META_FIELDS.REGISTRATION]
+  const registrationField = extractMetaField(
+    parsed,
+    SUMMARY_LOG_META_FIELDS.REGISTRATION
+  )
   const spreadsheetRegistrationNumber = registrationField?.value
 
-  const location = {
-    ...registrationField?.location,
-    field: SUMMARY_LOG_META_FIELDS.REGISTRATION
-  }
+  const location = buildMetaFieldLocation(
+    registrationField,
+    SUMMARY_LOG_META_FIELDS.REGISTRATION
+  )
 
   if (!wasteRegistrationNumber) {
     issues.addFatal(
@@ -58,13 +61,9 @@ export const validateRegistrationNumber = ({
     return issues
   }
 
-  logger.info({
-    message: `Registration number validated: ${loggingContext}, registrationNumber=${wasteRegistrationNumber}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  logValidationSuccess(
+    `Registration number validated: ${loggingContext}, registrationNumber=${wasteRegistrationNumber}`
+  )
 
   return issues
 }

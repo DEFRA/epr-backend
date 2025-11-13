@@ -1,13 +1,13 @@
 import {
-  LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
-} from '#common/enums/index.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import {
   createValidationIssues,
   VALIDATION_CATEGORY
 } from '#common/validation/validation-issues.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  buildMetaFieldLocation,
+  extractMetaField,
+  logValidationSuccess
+} from './helpers.js'
 
 /**
  * Mapping between spreadsheet material values and registration material types
@@ -44,13 +44,16 @@ export const validateMaterialType = ({
 
   const { material } = registration
 
-  const materialField = parsed?.meta?.[SUMMARY_LOG_META_FIELDS.MATERIAL]
+  const materialField = extractMetaField(
+    parsed,
+    SUMMARY_LOG_META_FIELDS.MATERIAL
+  )
   const spreadsheetMaterial = materialField?.value
 
-  const location = {
-    ...materialField?.location,
-    field: SUMMARY_LOG_META_FIELDS.MATERIAL
-  }
+  const location = buildMetaFieldLocation(
+    materialField,
+    SUMMARY_LOG_META_FIELDS.MATERIAL
+  )
 
   if (!VALID_REGISTRATION_MATERIALS.includes(material)) {
     issues.addFatal(
@@ -81,13 +84,9 @@ export const validateMaterialType = ({
     return issues
   }
 
-  logger.info({
-    message: `Validated material: ${loggingContext}, spreadsheetMaterial=${spreadsheetMaterial}, registrationMaterial=${material}`,
-    event: {
-      category: LOGGING_EVENT_CATEGORIES.SERVER,
-      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-    }
-  })
+  logValidationSuccess(
+    `Validated material: ${loggingContext}, spreadsheetMaterial=${spreadsheetMaterial}, registrationMaterial=${material}`
+  )
 
   return issues
 }
