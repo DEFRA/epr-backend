@@ -10,3 +10,4 @@ coverage
 .cache
 .eslintcache
 mongodb-backups
+.env
