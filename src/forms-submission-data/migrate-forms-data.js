@@ -1,6 +1,6 @@
-import { parseOrgSubmission } from './transform-organisation-data.js'
+import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { removeUndefinedValues } from './transform-utils.js'
+import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 
 /**
  * @typedef {Object} SuccessResult

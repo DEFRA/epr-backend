@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseOrgSubmission } from './transform-organisation-data.js'
+import { parseOrgSubmission } from './transform-organisation.js'
 import {
   WASTE_PROCESSING_TYPE,
   PARTNERSHIP_TYPE,
