@@ -20,13 +20,14 @@ const mapDocumentToDomain = (doc) => {
 
 /**
  * Generates a composite key for waste record uniqueness
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} type
- * @param {string} rowId
+ * @param {Object} key - Composite key components
+ * @param {string} key.organisationId
+ * @param {string} key.registrationId
+ * @param {string} key.type
+ * @param {string} key.rowId
  * @returns {string} Composite key
  */
-const getCompositeKey = (organisationId, registrationId, type, rowId) => {
+const getCompositeKey = ({ organisationId, registrationId, type, rowId }) => {
   return `${organisationId}:${registrationId}:${type}:${rowId}`
 }
 
@@ -52,12 +53,12 @@ const performFindByRegistration =
  * @returns {Object} MongoDB bulk write operation
  */
 const buildUpsertOperation = (record) => {
-  const compositeKey = getCompositeKey(
-    record.organisationId,
-    record.registrationId,
-    record.type,
-    record.rowId
-  )
+  const compositeKey = getCompositeKey({
+    organisationId: record.organisationId,
+    registrationId: record.registrationId,
+    type: record.type,
+    rowId: record.rowId
+  })
 
   return {
     updateOne: {
@@ -192,12 +193,12 @@ const performAppendVersions =
 
     for (const [type, versionsByRowId] of versionsByType) {
       for (const [rowId, versionData] of versionsByRowId) {
-        const compositeKey = getCompositeKey(
-          validatedOrgId,
-          validatedRegId,
+        const compositeKey = getCompositeKey({
+          organisationId: validatedOrgId,
+          registrationId: validatedRegId,
           type,
           rowId
-        )
+        })
 
         bulkOps.push(
           buildAppendVersionOperation(

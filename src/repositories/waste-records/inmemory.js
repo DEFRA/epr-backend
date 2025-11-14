@@ -7,18 +7,16 @@ import {
 /**
  * Finds the index of a record matching the composite key
  * @param {Array} storage - Storage array
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} type
- * @param {string} rowId
+ * @param {Object} key - Composite key identifying the record
+ * @param {string} key.organisationId
+ * @param {string} key.registrationId
+ * @param {string} key.type
+ * @param {string} key.rowId
  * @returns {number} Index of matching record, or -1 if not found
  */
 const findRecordIndex = (
   storage,
-  organisationId,
-  registrationId,
-  type,
-  rowId
+  { organisationId, registrationId, type, rowId }
 ) => {
   return storage.findIndex(
     (r) =>
@@ -32,27 +30,24 @@ const findRecordIndex = (
 /**
  * Appends a version to an existing record or creates a new record
  * @param {Array} storage - Storage array
- * @param {string} validatedOrgId
- * @param {string} validatedRegId
- * @param {string} type
- * @param {string} rowId
+ * @param {Object} key - Composite key identifying the record
+ * @param {string} key.organisationId
+ * @param {string} key.registrationId
+ * @param {string} key.type
+ * @param {string} key.rowId
  * @param {Object} versionData
  */
 const appendVersionToRecord = (
   storage,
-  validatedOrgId,
-  validatedRegId,
-  type,
-  rowId,
+  { organisationId, registrationId, type, rowId },
   versionData
 ) => {
-  const existingIndex = findRecordIndex(
-    storage,
-    validatedOrgId,
-    validatedRegId,
+  const existingIndex = findRecordIndex(storage, {
+    organisationId,
+    registrationId,
     type,
     rowId
-  )
+  })
 
   if (existingIndex >= 0) {
     const existing = storage[existingIndex]
@@ -71,8 +66,8 @@ const appendVersionToRecord = (
   } else {
     // Create new record with first version
     storage.push({
-      organisationId: validatedOrgId,
-      registrationId: validatedRegId,
+      organisationId,
+      registrationId,
       type,
       rowId,
       data: structuredClone(versionData.data),
@@ -109,13 +104,12 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       for (const record of wasteRecords) {
         const validatedRecord = validateWasteRecord(record)
 
-        const existingIndex = findRecordIndex(
-          storage,
-          validatedRecord.organisationId,
-          validatedRecord.registrationId,
-          validatedRecord.type,
-          validatedRecord.rowId
-        )
+        const existingIndex = findRecordIndex(storage, {
+          organisationId: validatedRecord.organisationId,
+          registrationId: validatedRecord.registrationId,
+          type: validatedRecord.type,
+          rowId: validatedRecord.rowId
+        })
 
         if (existingIndex >= 0) {
           // Update existing record
@@ -135,10 +129,12 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
         for (const [rowId, versionData] of versionsByRowId) {
           appendVersionToRecord(
             storage,
-            validatedOrgId,
-            validatedRegId,
-            type,
-            rowId,
+            {
+              organisationId: validatedOrgId,
+              registrationId: validatedRegId,
+              type,
+              rowId
+            },
             versionData
           )
         }
