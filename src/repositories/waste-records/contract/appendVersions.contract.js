@@ -4,7 +4,7 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 
-export const testAppendVersionsBehaviour = (createTest) => {
+export const testAppendVersionsBehaviour = (it) => {
   describe('appendVersions', () => {
     let repository
 
@@ -12,7 +12,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
       repository = await wasteRecordsRepository()
     })
 
-    createTest('creates new waste record with first version', async () => {
+    it('creates new waste record with first version', async () => {
       const versionsByKey = new Map([
         [
           'received:row-1',
@@ -38,7 +38,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
       expect(result[0].versions[0].summaryLog.id).toBe('log-1')
     })
 
-    createTest('appends version to existing waste record', async () => {
+    it('appends version to existing waste record', async () => {
       // First, create initial record using appendVersions
       const initialVersion = new Map([
         [
@@ -81,37 +81,34 @@ export const testAppendVersionsBehaviour = (createTest) => {
       expect(result[0].versions[1].summaryLog.id).toBe('log-2')
     })
 
-    createTest(
-      'is idempotent - resubmitting same summary log does not duplicate versions',
-      async () => {
-        // First submission
-        const versionsByKey = new Map([
-          [
-            'received:row-1',
-            {
-              data: { VALUE: 'initial' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+    it('is idempotent - resubmitting same summary log does not duplicate versions', async () => {
+      // First submission
+      const versionsByKey = new Map([
+        [
+          'received:row-1',
+          {
+            data: { VALUE: 'initial' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ]
-        ])
+          }
+        ]
+      ])
 
-        await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
 
-        // Retry same submission (e.g., after failure recovery)
-        await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      // Retry same submission (e.g., after failure recovery)
+      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
 
-        const result = await repository.findByRegistration('org-1', 'reg-1')
-        expect(result).toHaveLength(1)
-        expect(result[0].versions).toHaveLength(1) // Only one version, not duplicated
-        expect(result[0].versions[0].summaryLog.id).toBe('log-1')
-      }
-    )
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(1)
+      expect(result[0].versions).toHaveLength(1) // Only one version, not duplicated
+      expect(result[0].versions[0].summaryLog.id).toBe('log-1')
+    })
 
-    createTest('handles multiple records in bulk operation', async () => {
+    it('handles multiple records in bulk operation', async () => {
       const versionsByKey = new Map([
         [
           'received:row-1',
@@ -154,7 +151,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
       expect(result).toHaveLength(3)
     })
 
-    createTest('handles empty versionsByKey map without error', async () => {
+    it('handles empty versionsByKey map without error', async () => {
       const versionsByKey = new Map()
 
       await expect(
@@ -162,7 +159,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
       ).resolves.not.toThrow()
     })
 
-    createTest('isolates different record types with same rowId', async () => {
+    it('isolates different record types with same rowId', async () => {
       const versionsByKey = new Map([
         [
           'received:row-1',
@@ -204,70 +201,67 @@ export const testAppendVersionsBehaviour = (createTest) => {
       expect(processedRecord.data.VALUE).toBe('processed-data')
     })
 
-    createTest(
-      'partial idempotency - skips already-applied versions, adds new ones',
-      async () => {
-        // First submission with two records
-        const firstSubmission = new Map([
-          [
-            'received:row-1',
-            {
-              data: { VALUE: 'first' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+    it('partial idempotency - skips already-applied versions, adds new ones', async () => {
+      // First submission with two records
+      const firstSubmission = new Map([
+        [
+          'received:row-1',
+          {
+            data: { VALUE: 'first' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ],
-          [
-            'received:row-2',
-            {
-              data: { VALUE: 'second' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+          }
+        ],
+        [
+          'received:row-2',
+          {
+            data: { VALUE: 'second' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ]
-        ])
+          }
+        ]
+      ])
 
-        await repository.appendVersions('org-1', 'reg-1', firstSubmission)
+      await repository.appendVersions('org-1', 'reg-1', firstSubmission)
 
-        // Simulate partial failure - only row-1 was persisted, now retry with both
-        const retrySubmission = new Map([
-          [
-            'received:row-1',
-            {
-              data: { VALUE: 'first' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+      // Simulate partial failure - only row-1 was persisted, now retry with both
+      const retrySubmission = new Map([
+        [
+          'received:row-1',
+          {
+            data: { VALUE: 'first' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ],
-          [
-            'received:row-2',
-            {
-              data: { VALUE: 'second' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+          }
+        ],
+        [
+          'received:row-2',
+          {
+            data: { VALUE: 'second' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ]
-        ])
+          }
+        ]
+      ])
 
-        await repository.appendVersions('org-1', 'reg-1', retrySubmission)
+      await repository.appendVersions('org-1', 'reg-1', retrySubmission)
 
-        const result = await repository.findByRegistration('org-1', 'reg-1')
-        expect(result).toHaveLength(2)
-        expect(result[0].versions).toHaveLength(1) // Not duplicated
-        expect(result[1].versions).toHaveLength(1) // Not duplicated
-      }
-    )
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(2)
+      expect(result[0].versions).toHaveLength(1) // Not duplicated
+      expect(result[1].versions).toHaveLength(1) // Not duplicated
+    })
   })
 }
