@@ -5,13 +5,14 @@ import { validateRegistration } from '#repositories/organisations/validation.js'
 import exporter from '#data/fixtures/ea/registration/exporter.json'
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json'
 import {
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  RECYCLING_PROCESS,
   REGULATOR,
   TIME_SCALE,
+  VALUE_TYPE,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
-} from '#domain/organisations.js'
+} from '#domain/organisations/model.js'
 
 describe('parseRegistrationSubmission - Integration Tests with Fixture Data', () => {
   it('should parse exporter registration from fixture', async () => {
@@ -29,13 +30,13 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
       orgName: 'EuroPack GmbH',
       material: MATERIAL.GLASS,
-      wasteRegistrationNumber: 'CBDU123456',
-      wasteManagementPermits: [],
+      cbduNumber: 'CBDU123456',
+      wasteManagementPermits: undefined,
       suppliers:
         'Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)',
-      recyclingType: [
-        RECYCLING_PROCESS.GLASS_RE_MELT,
-        RECYCLING_PROCESS.GLASS_OTHER
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
       ],
       plantEquipmentDetails: undefined,
       exportPorts: ['SouthHampton', 'Portsmouth'],
@@ -60,7 +61,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           title: 'Packaging Compliance Officer'
         }
       ],
-      samplingInspectionPlanFileUploads: [
+      samplingInspectionPlanPart1FileUploads: [
         {
           defraFormUploadedFileId: '12b95c25-6119-4478-a060-79716455036b',
           defraFormUserDownloadLink:
@@ -73,7 +74,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           defraFormUserDownloadLink:
             'https://forms-designer.test.cdp-int.defra.cloud/file-download/92133d12-b525-412a-8328-860dfeaa0718'
         }
-      ]
+      ],
+      yearlyMetrics: undefined
     })
   })
 
@@ -93,7 +95,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
       orgName: 'Green Recycling Solutions Ltd',
       material: MATERIAL.GLASS,
-      wasteRegistrationNumber: 'CBDU123456',
+      cbduNumber: 'CBDU123456',
       wasteManagementPermits: [
         {
           type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
@@ -101,12 +103,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           authorisedMaterials: [
             {
               material: MATERIAL.ALUMINIUM,
-              authorisedWeight: 10,
+              authorisedWeightInTonnes: 10,
               timeScale: TIME_SCALE.YEARLY
             },
             {
               material: MATERIAL.FIBRE,
-              authorisedWeight: 10,
+              authorisedWeightInTonnes: 10,
               timeScale: TIME_SCALE.YEARLY
             }
           ]
@@ -117,17 +119,17 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           authorisedMaterials: [
             {
               material: MATERIAL.PLASTIC,
-              authorisedWeight: 10,
+              authorisedWeightInTonnes: 10,
               timeScale: TIME_SCALE.YEARLY
             },
             {
               material: MATERIAL.STEEL,
-              authorisedWeight: 11,
+              authorisedWeightInTonnes: 11,
               timeScale: TIME_SCALE.YEARLY
             },
             {
               material: MATERIAL.WOOD,
-              authorisedWeight: 11,
+              authorisedWeightInTonnes: 11,
               timeScale: TIME_SCALE.MONTHLY
             }
           ]
@@ -150,7 +152,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       ],
       suppliers:
         'Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)',
-      recyclingType: 'glass_other',
+      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
       plantEquipmentDetails:
         'Optical sorting machine (Model XR-500), industrial crusher producing 10-40mm cullet, trommel screen (50mm aperture), magnetic separator, vibrating screens for grading, wash and rinse facility, rotary dryer, storage bunkers (50 tonne capacity), conveyor belt system (50m length), bag splitter, dust extraction system, weighbridge (60 tonne)',
       exportPorts: undefined,
@@ -172,37 +174,37 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           {
             material: MATERIAL.ALUMINIUM,
             siteCapacityTimescale: TIME_SCALE.MONTHLY,
-            siteCapacityWeight: 10
+            siteCapacityInTonnes: 10
           },
           {
             material: MATERIAL.FIBRE,
             siteCapacityTimescale: TIME_SCALE.MONTHLY,
-            siteCapacityWeight: 111
+            siteCapacityInTonnes: 111
           },
           {
             material: MATERIAL.GLASS,
             siteCapacityTimescale: TIME_SCALE.YEARLY,
-            siteCapacityWeight: 10
+            siteCapacityInTonnes: 10
           },
           {
             material: MATERIAL.PAPER,
             siteCapacityTimescale: TIME_SCALE.YEARLY,
-            siteCapacityWeight: 11
+            siteCapacityInTonnes: 11
           },
           {
             material: MATERIAL.PLASTIC,
             siteCapacityTimescale: TIME_SCALE.WEEKLY,
-            siteCapacityWeight: 10
+            siteCapacityInTonnes: 10
           },
           {
             material: MATERIAL.STEEL,
             siteCapacityTimescale: TIME_SCALE.WEEKLY,
-            siteCapacityWeight: 1
+            siteCapacityInTonnes: 1
           },
           {
             material: MATERIAL.WOOD,
             siteCapacityTimescale: TIME_SCALE.WEEKLY,
-            siteCapacityWeight: 1
+            siteCapacityInTonnes: 1
           }
         ]
       },
@@ -220,35 +222,72 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullAddress: '90,Portland Place,London,W1B 1NT',
         country: 'UK'
       },
-      samplingInspectionPlanFileUploads: [
+      samplingInspectionPlanPart1FileUploads: [
         {
           defraFormUploadedFileId: 'be506501-273f-4770-9d0a-169f4c513465',
           defraFormUserDownloadLink:
             'https://forms-designer.test.cdp-int.defra.cloud/file-download/be506501-273f-4770-9d0a-169f4c513465'
         }
       ],
-      orsFileUploads: undefined
+      orsFileUploads: undefined,
+      yearlyMetrics: [
+        {
+          input: {
+            nonPackagingWasteInTonnes: 10,
+            nonUkPackagingWasteInTonnes: 10,
+            type: VALUE_TYPE.ESTIMATED,
+            ukPackagingWasteInTonnes: 12
+          },
+          output: {
+            contaminantsInTonnes: 11,
+            processLossInTonnes: 11,
+            sentToAnotherSiteInTonnes: 11,
+            type: VALUE_TYPE.ESTIMATED
+          },
+          productsMadeFromRecycling: [
+            {
+              name: 'Utensils',
+              weightInTonnes: 1
+            },
+            {
+              name: 'Plates',
+              weightInTonnes: 1
+            }
+          ],
+          rawMaterialInputs: [
+            {
+              material: 'raw materail1',
+              weightInTonnes: 12
+            },
+            {
+              material: 'raw materail 2',
+              weightInTonnes: 12
+            }
+          ],
+          year: 2024
+        }
+      ]
     })
   })
 
   it('should handle missing notice address', async () => {
-    const exporterWithoutNoticeAddress = {
+    const reprocessorAllMaterialsWithoutNoticeAddress = {
       ...exporter,
       rawSubmissionData: {
-        ...exporter.rawSubmissionData,
+        ...reprocessorAllMaterials.rawSubmissionData,
         data: {
-          ...exporter.rawSubmissionData.data,
+          ...reprocessorAllMaterials.rawSubmissionData.data,
           main: {
-            ...exporter.rawSubmissionData.data.main,
-            pGYoub: ''
+            ...reprocessorAllMaterials.rawSubmissionData.data.main,
+            VHfukU: ''
           }
         }
       }
     }
 
     const result = await parseRegistrationSubmission(
-      exporterWithoutNoticeAddress._id.$oid,
-      exporterWithoutNoticeAddress.rawSubmissionData
+      reprocessorAllMaterialsWithoutNoticeAddress._id.$oid,
+      reprocessorAllMaterialsWithoutNoticeAddress.rawSubmissionData
     )
 
     expect(() => validateRegistration(result)).not.toThrow()
@@ -284,33 +323,123 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       {
         material: MATERIAL.ALUMINIUM,
         siteCapacityTimescale: TIME_SCALE.MONTHLY,
-        siteCapacityWeight: 10
+        siteCapacityInTonnes: 10
       },
       {
         material: MATERIAL.FIBRE,
         siteCapacityTimescale: TIME_SCALE.MONTHLY,
-        siteCapacityWeight: 111
+        siteCapacityInTonnes: 111
       },
       {
         material: MATERIAL.GLASS,
         siteCapacityTimescale: TIME_SCALE.YEARLY,
-        siteCapacityWeight: 10
+        siteCapacityInTonnes: 10
       },
       {
         material: MATERIAL.PAPER,
         siteCapacityTimescale: TIME_SCALE.YEARLY,
-        siteCapacityWeight: 11
+        siteCapacityInTonnes: 11
       },
       {
         material: MATERIAL.PLASTIC,
         siteCapacityTimescale: TIME_SCALE.WEEKLY,
-        siteCapacityWeight: 10
+        siteCapacityInTonnes: 10
       },
       {
         material: MATERIAL.STEEL,
         siteCapacityTimescale: TIME_SCALE.WEEKLY,
-        siteCapacityWeight: 1
+        siteCapacityInTonnes: 1
       }
     ])
+  })
+
+  it('should handle reprocessor without waste exemptions', async () => {
+    // Remove waste exemption repeater data
+    const reprocessorWithoutExemptions = {
+      ...reprocessorAllMaterials,
+      rawSubmissionData: {
+        ...reprocessorAllMaterials.rawSubmissionData,
+        data: {
+          ...reprocessorAllMaterials.rawSubmissionData.data,
+          repeaters: {
+            ...reprocessorAllMaterials.rawSubmissionData.data.repeaters,
+            IVymzQ: [] // Clear waste exemption repeater
+          }
+        }
+      }
+    }
+
+    const result = await parseRegistrationSubmission(
+      reprocessorWithoutExemptions._id.$oid,
+      reprocessorWithoutExemptions.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+
+    // Verify no waste exemption permit exists
+    const hasWasteExemption = result.wasteManagementPermits.some(
+      (permit) => permit.type === WASTE_PERMIT_TYPE.WASTE_EXEMPTION
+    )
+    expect(hasWasteExemption).toBe(false)
+  })
+
+  it('should handle reprocessor without environmental permit', async () => {
+    // Remove environmental permit number
+    const reprocessorWithoutEnvPermit = {
+      ...reprocessorAllMaterials,
+      rawSubmissionData: {
+        ...reprocessorAllMaterials.rawSubmissionData,
+        data: {
+          ...reprocessorAllMaterials.rawSubmissionData.data,
+          main: {
+            ...reprocessorAllMaterials.rawSubmissionData.data.main,
+            xMSsbm: '' // Clear environmental permit number
+          }
+        }
+      }
+    }
+
+    const result = await parseRegistrationSubmission(
+      reprocessorWithoutEnvPermit._id.$oid,
+      reprocessorWithoutEnvPermit.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+
+    // Verify no environmental permit exists
+    const hasEnvPermit = result.wasteManagementPermits.some(
+      (permit) => permit.type === WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT
+    )
+    expect(hasEnvPermit).toBe(false)
+  })
+
+  it('should handle reprocessor without installation permit', async () => {
+    // Remove installation permit number
+    const reprocessorWithoutInstallationPermit = {
+      ...reprocessorAllMaterials,
+      rawSubmissionData: {
+        ...reprocessorAllMaterials.rawSubmissionData,
+        data: {
+          ...reprocessorAllMaterials.rawSubmissionData.data,
+          main: {
+            ...reprocessorAllMaterials.rawSubmissionData.data.main,
+            PUgXbJ: '' // Clear installation permit number
+          }
+        }
+      }
+    }
+
+    const result = await parseRegistrationSubmission(
+      reprocessorWithoutInstallationPermit._id.$oid,
+      reprocessorWithoutInstallationPermit.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+
+    // Verify no installation permit exists
+    const hasInstallationPermit = result.wasteManagementPermits.some(
+      (permit) => permit.type === WASTE_PERMIT_TYPE.INSTALLATION_PERMIT
+    )
+    expect(hasInstallationPermit).toBe(false)
   })
 })

@@ -335,6 +335,38 @@ export const FORM_PAGES = {
       }
     },
     SIP_FILE_UPLOAD: 'Sampling and inspection plan',
-    ORS_FILE_UPLOAD: 'Overseas reprocessing and interim sites'
+    ORS_FILE_UPLOAD: 'Overseas reprocessing and interim sites',
+    INPUT_TO_RECYLING: {
+      title: 'Inputs for calendar year 2024',
+      fields: {
+        ESTIMATED_OR_ACTUAL: 'Input actual or estimated tonnages?',
+        UK_PACKAGING_WASTE: 'UK packaging waste input',
+        NON_UK_PACKAGING_WASTE: 'Non-UK packaging waste input',
+        NON_PACKAGING_WASTE: 'Non-packaging input'
+      },
+      INPUT_RAW_MATERIAL: {
+        title: 'Raw material inputs for calendar year 2024',
+        fields: {
+          MATERIAL: 'Input raw material',
+          TONNAGE: 'Input raw material tonnage'
+        }
+      },
+      OUTPUT_FROM_RECYCLING: {
+        title: 'Outputs for calendar year 2024',
+        fields: {
+          ESTIMATED_OR_ACTUAL: 'Output actual or estimated tonnages?',
+          TONNAGE_SENT_TO_ANOTHER_SITE: 'Tonnage sent to another reprocessor',
+          TOTAL_CONTAMINANTS: 'Tonnage of contaminants',
+          PROCESS_LOSS: 'Total process loss'
+        }
+      },
+      PRODUCTS_MADE: {
+        title: 'Products made from recycling for 2024',
+        fields: {
+          NAME: 'Product name',
+          TONNAGE: 'Product tonnage'
+        }
+      }
+    }
   }
 }

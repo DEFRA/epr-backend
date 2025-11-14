@@ -32,11 +32,11 @@
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'approved'|'suspended', wasteRegistrationNumber: string, validFrom: Date, validTo: Date}} RegistrationApproved
+ * @typedef {RegistrationBase & {status: 'approved'|'suspended', cbduNumber: string, validFrom: Date, validTo: Date}} RegistrationApproved
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', wasteRegistrationNumber?: string, validFrom?: Date, validTo?: Date}} RegistrationOther
+ * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', cbduNumber?: string, validFrom?: Date, validTo?: Date}} RegistrationOther
  */
 
 /**

@@ -34,7 +34,7 @@
       "formSubmissionTime": "2025-10-01T08:00:00.000Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "wasteRegistrationNumber": "CBDU789012",
+      "cbduNumber": "CBDU789012",
       "wasteManagementPermits": [
         {
           "type": "environmental_permit",
@@ -42,7 +42,7 @@
           "authorisedMaterials": [
             {
               "material": "plastic",
-              "authorisedWeight": 30,
+              "authorisedWeightInTonnes": 30,
               "timeScale": "yearly"
             }
           ]
@@ -54,6 +54,20 @@
           "email": "carol.white@export.com",
           "title": "Owner",
           "phone": "2223334444"
+        }
+      ],
+      "suppliers": "International plastic suppliers",
+      "exportPorts": ["Cardiff", "Bristol"],
+      "submitterContactDetails": {
+        "fullName": "Carol White",
+        "email": "carol.white@export.com",
+        "title": "Owner",
+        "phone": "2223334444"
+      },
+      "samplingInspectionPlanFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789",
+          "defraFormUserDownloadLink": "https://example.com/file-789"
         }
       ],
       "noticeAddress": {

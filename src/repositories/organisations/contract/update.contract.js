@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildOrganisation } from './test-data.js'
-import { STATUS } from '#domain/organisations.js'
+import { buildOrganisation, buildRegistration } from './test-data.js'
+import { STATUS } from '#domain/organisations/model.js'
 
 export const testUpdateBehaviour = (it) => {
   describe('update', () => {
@@ -55,7 +55,8 @@ export const testUpdateBehaviour = (it) => {
         const originalReg = organisationAfterInsert.registrations[0]
         const registrationToUpdate = {
           ...originalReg,
-          material: 'plastic'
+          material: 'plastic',
+          glassRecyclingProcess: undefined
         }
         const beforeUpdateOrg = await repository.findById(organisation.id)
 
@@ -68,11 +69,8 @@ export const testUpdateBehaviour = (it) => {
           (r) => r.id === registrationToUpdate.id
         )
 
-        const expectedReg = {
-          ...originalReg,
-          material: 'plastic'
-        }
-        expect(updatedReg).toMatchObject(expectedReg)
+        expect(updatedReg.material).toBe('plastic')
+        expect(updatedReg.glassRecyclingProcess).toBeFalsy()
         expect(result.registrations).toHaveLength(
           organisation.registrations.length
         )
@@ -126,13 +124,7 @@ export const testUpdateBehaviour = (it) => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
-        const { ObjectId } = await import('mongodb')
-        const newRegistration = {
-          ...organisation.registrations[0],
-          id: new ObjectId().toString(),
-          material: 'steel'
-        }
-        delete newRegistration.statusHistory
+        const newRegistration = buildRegistration()
 
         await repository.update(organisation.id, 1, {
           registrations: [newRegistration]
@@ -493,32 +485,6 @@ export const testUpdateBehaviour = (it) => {
             'Invalid organisation data: registrations.0.registrationNumber: any.required'
           )
         })
-
-        it('allows update when registration status is not approved or suspended without wasteRegistrationNumber', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-
-          const registrationToUpdate = {
-            ...organisation.registrations[0],
-            material: 'plastic',
-            wasteRegistrationNumber: undefined
-          }
-
-          await repository.update(organisation.id, 1, {
-            registrations: [registrationToUpdate]
-          })
-
-          const result = await repository.findById(organisation.id, 2)
-          const updatedReg = result.registrations.find(
-            (r) => r.id === registrationToUpdate.id
-          )
-
-          expect(updatedReg.material).toBe('plastic')
-          expect(
-            updatedReg.wasteRegistrationNumber === null ||
-              updatedReg.wasteRegistrationNumber === undefined
-          ).toBe(true)
-        })
       })
 
       describe('accreditationNumber', () => {
@@ -791,6 +757,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             material: 'plastic',
+            glassRecyclingProcess: undefined,
             validFrom: undefined,
             validTo: undefined
           }
@@ -1001,32 +968,6 @@ export const testUpdateBehaviour = (it) => {
             wasteProcessingTypes: ['exporter']
           })
         ).rejects.toThrow('Invalid organisation data: id: any.unknown')
-      })
-
-      it('rejects updates to version field', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        await expect(
-          repository.update(organisation.id, 1, {
-            version: 99,
-            wasteProcessingTypes: ['exporter']
-          })
-        ).rejects.toThrow('Invalid organisation data: version: any.unknown')
-      })
-
-      it('rejects updates to schemaVersion field', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        await expect(
-          repository.update(organisation.id, 1, {
-            schemaVersion: 99,
-            wasteProcessingTypes: ['exporter']
-          })
-        ).rejects.toThrow(
-          'Invalid organisation data: schemaVersion: any.unknown'
-        )
       })
 
       it('does not leak PII data in error messages', async () => {

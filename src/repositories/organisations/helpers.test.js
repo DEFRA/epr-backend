@@ -61,9 +61,7 @@ describe('hasChanges', () => {
     const org2 = buildOrganisation({
       id: org1.id,
       orgId: org1.orgId,
-      registrations: [
-        { ...org1.registrations[0], wasteRegistrationNumber: 'CHANGED123' }
-      ]
+      registrations: [{ ...org1.registrations[0], cbduNumber: 'CHANGED123' }]
     })
 
     expect(hasChanges(org1, org2)).toBe(true)
