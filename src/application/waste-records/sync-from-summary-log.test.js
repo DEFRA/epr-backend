@@ -8,7 +8,7 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import {
   buildVersionData,
-  toVersionsByType
+  toWasteRecordVersions
 } from '#repositories/waste-records/contract/test-data.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
@@ -104,13 +104,17 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const versionsByType = toVersionsByType({
+    const wasteRecordVersions = toWasteRecordVersions({
       received: {
         'row-123': { version, data }
       }
     })
 
-    await wasteRecordRepository.appendVersions('org-1', 'reg-1', versionsByType)
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     const fileId = 'test-file-456'
     const summaryLog = {
@@ -179,13 +183,17 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const versionsByType = toVersionsByType({
+    const wasteRecordVersions = toWasteRecordVersions({
       received: {
         'row-123': { version, data }
       }
     })
 
-    await wasteRecordRepository.appendVersions('org-1', 'reg-1', versionsByType)
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     // Submit the same data again
     const fileId = 'test-file-unchanged'
@@ -257,13 +265,17 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const versionsByType = toVersionsByType({
+    const wasteRecordVersions = toWasteRecordVersions({
       received: {
         'row-123': { version, data }
       }
     })
 
-    await wasteRecordRepository.appendVersions('org-1', 'reg-1', versionsByType)
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     // Submit with only GROSS_WEIGHT changed
     const fileId = 'test-file-delta'
@@ -344,13 +356,17 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const versionsByType = toVersionsByType({
+    const wasteRecordVersions = toWasteRecordVersions({
       received: {
         'row-123': { version, data }
       }
     })
 
-    await wasteRecordRepository.appendVersions('org-1', 'reg-1', versionsByType)
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     // Submit with both date and weight changed
     const fileId = 'test-file-multi-delta'

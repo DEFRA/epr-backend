@@ -76,11 +76,11 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       )
     },
 
-    async appendVersions(organisationId, registrationId, versionsByType) {
+    async appendVersions(organisationId, registrationId, wasteRecordVersions) {
       const validatedOrgId = validateOrganisationId(organisationId)
       const validatedRegId = validateRegistrationId(registrationId)
 
-      for (const [type, versionsByRowId] of versionsByType) {
+      for (const [type, versionsByRowId] of wasteRecordVersions) {
         for (const [rowId, versionData] of versionsByRowId) {
           appendVersionToRecord(
             storage,

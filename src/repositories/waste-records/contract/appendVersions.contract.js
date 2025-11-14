@@ -3,7 +3,7 @@ import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
-import { buildVersionData, toVersionsByType } from './test-data.js'
+import { buildVersionData, toWasteRecordVersions } from './test-data.js'
 
 export const testAppendVersionsBehaviour = (it) => {
   describe('appendVersions', () => {
@@ -14,7 +14,7 @@ export const testAppendVersionsBehaviour = (it) => {
     })
 
     it('creates new waste record with first version', async () => {
-      const versionsByType = toVersionsByType({
+      const wasteRecordVersions = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -25,7 +25,7 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -38,7 +38,7 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('appends version to existing waste record', async () => {
       // First, create initial record using appendVersions
-      const initialVersion = toVersionsByType({
+      const initialVersion = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -52,7 +52,7 @@ export const testAppendVersionsBehaviour = (it) => {
       await repository.appendVersions('org-1', 'reg-1', initialVersion)
 
       // Now append a new version
-      const updatedVersion = toVersionsByType({
+      const updatedVersion = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             createdAt: '2025-01-20T10:00:00.000Z',
@@ -77,7 +77,7 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('is idempotent - resubmitting same summary log does not duplicate versions', async () => {
       // First submission
-      const versionsByType = toVersionsByType({
+      const wasteRecordVersions = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -88,10 +88,10 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
       // Retry same submission (e.g. after failure recovery)
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -100,7 +100,7 @@ export const testAppendVersionsBehaviour = (it) => {
     })
 
     it('handles multiple records in bulk operation', async () => {
-      const versionsByType = toVersionsByType({
+      const wasteRecordVersions = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -125,22 +125,22 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(3)
     })
 
-    it('handles empty versionsByType map without error', async () => {
-      const versionsByType = new Map()
+    it('handles empty wasteRecordVersions map without error', async () => {
+      const wasteRecordVersions = new Map()
 
       await expect(
-        repository.appendVersions('org-1', 'reg-1', versionsByType)
+        repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
       ).resolves.not.toThrow()
     })
 
     it('isolates different record types with same rowId', async () => {
-      const versionsByType = toVersionsByType({
+      const wasteRecordVersions = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -159,7 +159,7 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(2)
@@ -177,7 +177,7 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('partial idempotency - skips already-applied versions, adds new ones', async () => {
       // First submission with two records
-      const firstSubmission = toVersionsByType({
+      const firstSubmission = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -197,7 +197,7 @@ export const testAppendVersionsBehaviour = (it) => {
       await repository.appendVersions('org-1', 'reg-1', firstSubmission)
 
       // Simulate partial failure - only row-1 was persisted, now retry with both
-      const retrySubmission = toVersionsByType({
+      const retrySubmission = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -224,7 +224,7 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('preserves data when resubmitting existing version - idempotent data immutability', async () => {
       // First submission
-      const versionsByType = toVersionsByType({
+      const wasteRecordVersions = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -235,10 +235,10 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
       // Retry same submission but with different data (simulating replay with corrupted/modified data)
-      const retryWithDifferentData = toVersionsByType({
+      const retryWithDifferentData = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -259,7 +259,7 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('handles mixed bulk operations - new records, appends, and idempotent skips', async () => {
       // Setup: Create one existing record with a version from log-1
-      const initialSetup = toVersionsByType({
+      const initialSetup = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -276,7 +276,7 @@ export const testAppendVersionsBehaviour = (it) => {
       await repository.appendVersions(
         'org-1',
         'reg-1',
-        toVersionsByType({
+        toWasteRecordVersions({
           [WASTE_RECORD_TYPE.RECEIVED]: {
             'row-2': buildVersionData({
               summaryLogId: 'log-1',
@@ -289,7 +289,7 @@ export const testAppendVersionsBehaviour = (it) => {
       )
 
       // Now perform mixed operations in one bulk call
-      const mixedOperations = toVersionsByType({
+      const mixedOperations = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           // 1. Idempotent skip - already exists with log-1
           'row-1': buildVersionData({
@@ -353,7 +353,7 @@ export const testAppendVersionsBehaviour = (it) => {
     })
 
     it('isolates records across different organisations', async () => {
-      const versionsByType = toVersionsByType({
+      const wasteRecordVersions = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-1',
@@ -365,9 +365,9 @@ export const testAppendVersionsBehaviour = (it) => {
       })
 
       // Create same rowId and type for two different organisations
-      await repository.appendVersions('org-1', 'reg-1', versionsByType)
+      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
-      const org2VersionsByType = toVersionsByType({
+      const org2VersionsByType = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             summaryLogId: 'log-2',
@@ -395,7 +395,7 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('maintains version array in persistence order, not chronological order', async () => {
       // First submission with earlier timestamp
-      const firstVersion = toVersionsByType({
+      const firstVersion = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             createdAt: '2025-01-20T10:00:00.000Z', // Later timestamp
@@ -410,7 +410,7 @@ export const testAppendVersionsBehaviour = (it) => {
       await repository.appendVersions('org-1', 'reg-1', firstVersion)
 
       // Second submission with later timestamp but earlier createdAt
-      const secondVersion = toVersionsByType({
+      const secondVersion = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
           'row-1': buildVersionData({
             createdAt: '2025-01-15T10:00:00.000Z', // Earlier timestamp

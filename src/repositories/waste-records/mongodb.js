@@ -111,18 +111,18 @@ const buildAppendVersionOperation = (key, versionData) => {
 }
 
 const performAppendVersions =
-  (db) => async (organisationId, registrationId, versionsByType) => {
+  (db) => async (organisationId, registrationId, wasteRecordVersions) => {
     const validatedOrgId = validateOrganisationId(organisationId)
     const validatedRegId = validateRegistrationId(registrationId)
 
-    if (versionsByType.size === 0) {
+    if (wasteRecordVersions.size === 0) {
       return
     }
 
     // Build bulk write operations
     const bulkOps = []
 
-    for (const [type, versionsByRowId] of versionsByType) {
+    for (const [type, versionsByRowId] of wasteRecordVersions) {
       for (const [rowId, versionData] of versionsByRowId) {
         const key = {
           organisationId: validatedOrgId,

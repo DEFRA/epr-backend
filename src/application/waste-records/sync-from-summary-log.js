@@ -56,16 +56,16 @@ export const syncFromSummaryLog = (dependencies) => {
       existingRecords
     )
 
-    // 5. Convert waste records to versionsByType Map structure
-    const versionsByType = new Map()
+    // 5. Convert waste records to wasteRecordVersions Map structure
+    const wasteRecordVersions = new Map()
     for (const record of wasteRecords) {
-      if (!versionsByType.has(record.type)) {
-        versionsByType.set(record.type, new Map())
+      if (!wasteRecordVersions.has(record.type)) {
+        wasteRecordVersions.set(record.type, new Map())
       }
 
       // Get the latest version (last in array) and its data
       const latestVersion = record.versions[record.versions.length - 1]
-      versionsByType.get(record.type).set(record.rowId, {
+      wasteRecordVersions.get(record.type).set(record.rowId, {
         version: latestVersion,
         data: record.data
       })
@@ -75,7 +75,7 @@ export const syncFromSummaryLog = (dependencies) => {
     await wasteRecordRepository.appendVersions(
       summaryLog.organisationId,
       summaryLog.registrationId,
-      versionsByType
+      wasteRecordVersions
     )
   }
 }

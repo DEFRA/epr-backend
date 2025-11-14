@@ -57,16 +57,16 @@ export const buildVersionData = (options = {}) => {
 
 /**
  * Convert object representation to nested Map structure for appendVersions
- * @param {Record<WasteRecordType, Record<string, VersionData>>} versionsByTypeObj
+ * @param {Record<WasteRecordType, Record<string, VersionData>>} wasteRecordVersionsObj
  * @returns {Map<WasteRecordType, Map<string, VersionData>>}
  */
-export const toVersionsByType = (versionsByTypeObj) => {
-  const versionsByType = new Map()
-  for (const [type, recordsObj] of Object.entries(versionsByTypeObj)) {
+export const toWasteRecordVersions = (wasteRecordVersionsObj) => {
+  const wasteRecordVersions = new Map()
+  for (const [type, recordsObj] of Object.entries(wasteRecordVersionsObj)) {
     const recordsMap = new Map(Object.entries(recordsObj))
-    versionsByType.set(type, recordsMap)
+    wasteRecordVersions.set(type, recordsMap)
   }
-  return versionsByType
+  return wasteRecordVersions
 }
 
 /**

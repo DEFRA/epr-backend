@@ -2,7 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import {
   buildWasteRecord,
   buildVersionData,
-  toVersionsByType
+  toWasteRecordVersions
 } from './test-data.js'
 
 export const testDataIsolationBehaviour = (createTest) => {
@@ -20,14 +20,14 @@ export const testDataIsolationBehaviour = (createTest) => {
           const { version: version1, data: data1 } = buildVersionData()
           const { version: version2, data: data2 } = buildVersionData()
 
-          const versionsByType = toVersionsByType({
+          const wasteRecordVersions = toWasteRecordVersions({
             received: {
               'row-1': { version: version1, data: data1 },
               'row-2': { version: version2, data: data2 }
             }
           })
 
-          await repository.appendVersions('org-1', 'reg-1', versionsByType)
+          await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
           const firstRead = await repository.findByRegistration(
             'org-1',
@@ -55,17 +55,18 @@ export const testDataIsolationBehaviour = (createTest) => {
         async () => {
           const { version, data } = buildVersionData()
 
-          const versionsByType = toVersionsByType({
+          const wasteRecordVersions = toWasteRecordVersions({
             received: {
               'row-1': { version, data }
             }
           })
 
-          await repository.appendVersions('org-1', 'reg-1', versionsByType)
+          await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
           // mutate input after save
           data.GROSS_WEIGHT = 999.99
-          versionsByType.get('received').get('row-1').data.GROSS_WEIGHT = 999.99
+          wasteRecordVersions.get('received').get('row-1').data.GROSS_WEIGHT =
+            999.99
 
           const result = await repository.findByRegistration('org-1', 'reg-1')
           expect(result[0].data.GROSS_WEIGHT).toBe(100.5)
