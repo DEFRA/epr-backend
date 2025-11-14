@@ -100,12 +100,11 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
           )
 
           if (!versionExists) {
-            // Append new version
+            // Append new version and update data
             existing.versions.push(structuredClone(versionData.version))
+            existing.data = structuredClone(versionData.data)
           }
-
-          // Always update current data
-          existing.data = structuredClone(versionData.data)
+          // If version exists, preserve existing data (idempotent - no changes)
         } else {
           // Create new record with first version
           storage.push({

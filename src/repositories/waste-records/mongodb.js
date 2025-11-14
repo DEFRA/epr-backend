@@ -123,8 +123,30 @@ const performAppendVersions =
                 registrationId: validatedRegId,
                 type,
                 rowId,
-                // Current data - always update
-                data: structuredClone(versionData.data),
+                // Current data - only update if version doesn't exist
+                data: {
+                  $cond: {
+                    if: {
+                      $in: [
+                        versionData.version.summaryLog.id,
+                        {
+                          $ifNull: [
+                            {
+                              $map: {
+                                input: '$versions',
+                                as: 'v',
+                                in: '$$v.summaryLog.id'
+                              }
+                            },
+                            []
+                          ]
+                        }
+                      ]
+                    },
+                    then: '$data',
+                    else: structuredClone(versionData.data)
+                  }
+                },
                 // Versions array - conditionally append if summaryLog.id doesn't exist
                 versions: {
                   $cond: {
