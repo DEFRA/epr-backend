@@ -6,6 +6,10 @@ import {
 } from '#domain/waste-records/model.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import {
+  buildVersionData,
+  toWasteRecordVersions
+} from '#repositories/waste-records/contract/test-data.js'
 
 const TEST_DATE_2025_01_15 = '2025-01-15'
 const FIELD_GROSS_WEIGHT = 'GROSS_WEIGHT'
@@ -86,34 +90,31 @@ describe('syncFromSummaryLog', () => {
 
   it('updates existing waste records when rowId already exists', async () => {
     // First, save an initial record
-    const existingRecord = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 'row-123',
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: {
-        ROW_ID: 'row-123',
-        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5
-      },
-      versions: [
-        {
-          createdAt: '2025-01-15T10:00:00.000Z',
-          status: VERSION_STATUS.CREATED,
-          summaryLog: {
-            id: 'test-file-initial',
-            uri: 's3://bucket/key'
-          },
-          data: {
-            ROW_ID: 'row-123',
-            DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-            GROSS_WEIGHT: TEST_WEIGHT_100_5
-          }
-        }
-      ]
+    const initialData = {
+      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+      GROSS_WEIGHT: TEST_WEIGHT_100_5
     }
 
-    await wasteRecordRepository.upsertWasteRecords([existingRecord])
+    const { version, data } = buildVersionData({
+      summaryLogId: 'test-file-initial',
+      summaryLogUri: 's3://bucket/key',
+      createdAt: '2025-01-15T10:00:00.000Z',
+      status: VERSION_STATUS.CREATED,
+      versionData: initialData,
+      currentData: initialData
+    })
+
+    const wasteRecordVersions = toWasteRecordVersions({
+      received: {
+        'row-123': { version, data }
+      }
+    })
+
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     const fileId = 'test-file-456'
     const summaryLog = {
@@ -168,34 +169,31 @@ describe('syncFromSummaryLog', () => {
 
   it('should not create new version when row data is unchanged', async () => {
     // First, save an initial record
-    const existingRecord = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 'row-123',
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: {
-        ROW_ID: 'row-123',
-        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5
-      },
-      versions: [
-        {
-          createdAt: '2025-01-15T10:00:00.000Z',
-          status: VERSION_STATUS.CREATED,
-          summaryLog: {
-            id: 'test-file-initial',
-            uri: 's3://bucket/key'
-          },
-          data: {
-            ROW_ID: 'row-123',
-            DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-            GROSS_WEIGHT: TEST_WEIGHT_100_5
-          }
-        }
-      ]
+    const initialData = {
+      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+      GROSS_WEIGHT: TEST_WEIGHT_100_5
     }
 
-    await wasteRecordRepository.upsertWasteRecords([existingRecord])
+    const { version, data } = buildVersionData({
+      summaryLogId: 'test-file-initial',
+      summaryLogUri: 's3://bucket/key',
+      createdAt: '2025-01-15T10:00:00.000Z',
+      status: VERSION_STATUS.CREATED,
+      versionData: initialData,
+      currentData: initialData
+    })
+
+    const wasteRecordVersions = toWasteRecordVersions({
+      received: {
+        'row-123': { version, data }
+      }
+    })
+
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     // Submit the same data again
     const fileId = 'test-file-unchanged'
@@ -253,34 +251,31 @@ describe('syncFromSummaryLog', () => {
 
   it('should create UPDATED version with delta when single field changes', async () => {
     // First, save an initial record
-    const existingRecord = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 'row-123',
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: {
-        ROW_ID: 'row-123',
-        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5
-      },
-      versions: [
-        {
-          createdAt: '2025-01-15T10:00:00.000Z',
-          status: VERSION_STATUS.CREATED,
-          summaryLog: {
-            id: 'test-file-initial',
-            uri: 's3://bucket/key'
-          },
-          data: {
-            ROW_ID: 'row-123',
-            DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-            GROSS_WEIGHT: TEST_WEIGHT_100_5
-          }
-        }
-      ]
+    const initialData = {
+      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+      GROSS_WEIGHT: TEST_WEIGHT_100_5
     }
 
-    await wasteRecordRepository.upsertWasteRecords([existingRecord])
+    const { version, data } = buildVersionData({
+      summaryLogId: 'test-file-initial',
+      summaryLogUri: 's3://bucket/key',
+      createdAt: '2025-01-15T10:00:00.000Z',
+      status: VERSION_STATUS.CREATED,
+      versionData: initialData,
+      currentData: initialData
+    })
+
+    const wasteRecordVersions = toWasteRecordVersions({
+      received: {
+        'row-123': { version, data }
+      }
+    })
+
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     // Submit with only GROSS_WEIGHT changed
     const fileId = 'test-file-delta'
@@ -347,34 +342,31 @@ describe('syncFromSummaryLog', () => {
 
   it('should include all changed fields in UPDATED version delta', async () => {
     // First, save an initial record
-    const existingRecord = {
-      organisationId: 'org-1',
-      registrationId: 'reg-1',
-      rowId: 'row-123',
-      type: WASTE_RECORD_TYPE.RECEIVED,
-      data: {
-        ROW_ID: 'row-123',
-        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5
-      },
-      versions: [
-        {
-          createdAt: '2025-01-15T10:00:00.000Z',
-          status: VERSION_STATUS.CREATED,
-          summaryLog: {
-            id: 'test-file-initial',
-            uri: 's3://bucket/key'
-          },
-          data: {
-            ROW_ID: 'row-123',
-            DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-            GROSS_WEIGHT: TEST_WEIGHT_100_5
-          }
-        }
-      ]
+    const initialData = {
+      DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+      GROSS_WEIGHT: TEST_WEIGHT_100_5
     }
 
-    await wasteRecordRepository.upsertWasteRecords([existingRecord])
+    const { version, data } = buildVersionData({
+      summaryLogId: 'test-file-initial',
+      summaryLogUri: 's3://bucket/key',
+      createdAt: '2025-01-15T10:00:00.000Z',
+      status: VERSION_STATUS.CREATED,
+      versionData: initialData,
+      currentData: initialData
+    })
+
+    const wasteRecordVersions = toWasteRecordVersions({
+      received: {
+        'row-123': { version, data }
+      }
+    })
+
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      wasteRecordVersions
+    )
 
     // Submit with both date and weight changed
     const fileId = 'test-file-multi-delta'
