@@ -4,6 +4,15 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 
+/**
+ * Composite key for uniquely identifying a waste record
+ * @typedef {Object} WasteRecordKey
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} type
+ * @property {string} rowId
+ */
+
 const commonMessages = {
   'any.required': '{#label} is required',
   'string.empty': '{#label} cannot be empty',

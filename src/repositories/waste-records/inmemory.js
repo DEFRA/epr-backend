@@ -3,18 +3,12 @@ import { validateOrganisationId, validateRegistrationId } from './validation.js'
 /**
  * Finds the index of a record matching the composite key
  * @param {Array} storage - Storage array
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} type
- * @param {string} rowId
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
  * @returns {number} Index of matching record, or -1 if not found
  */
 const findRecordIndex = (
   storage,
-  organisationId,
-  registrationId,
-  type,
-  rowId
+  { organisationId, registrationId, type, rowId }
 ) => {
   return storage.findIndex(
     (r) =>
@@ -28,27 +22,11 @@ const findRecordIndex = (
 /**
  * Appends a version to an existing record or creates a new record
  * @param {Array} storage - Storage array
- * @param {string} validatedOrgId
- * @param {string} validatedRegId
- * @param {string} type
- * @param {string} rowId
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
  * @param {Object} versionData
  */
-const appendVersionToRecord = (
-  storage,
-  validatedOrgId,
-  validatedRegId,
-  type,
-  rowId,
-  versionData
-) => {
-  const existingIndex = findRecordIndex(
-    storage,
-    validatedOrgId,
-    validatedRegId,
-    type,
-    rowId
-  )
+const appendVersionToRecord = (storage, key, versionData) => {
+  const existingIndex = findRecordIndex(storage, key)
 
   if (existingIndex >= 0) {
     const existing = storage[existingIndex]
@@ -67,10 +45,7 @@ const appendVersionToRecord = (
   } else {
     // Create new record with first version
     storage.push({
-      organisationId: validatedOrgId,
-      registrationId: validatedRegId,
-      type,
-      rowId,
+      ...key,
       data: structuredClone(versionData.data),
       versions: [structuredClone(versionData.version)]
     })
@@ -109,10 +84,12 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
         for (const [rowId, versionData] of versionsByRowId) {
           appendVersionToRecord(
             storage,
-            validatedOrgId,
-            validatedRegId,
-            type,
-            rowId,
+            {
+              organisationId: validatedOrgId,
+              registrationId: validatedRegId,
+              type,
+              rowId
+            },
             versionData
           )
         }
