@@ -1,5 +1,9 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildWasteRecord } from './test-data.js'
+import {
+  buildWasteRecord,
+  buildVersionData,
+  toVersionsByType
+} from './test-data.js'
 
 export const testDataIsolationBehaviour = (createTest) => {
   describe('data isolation', () => {
@@ -13,9 +17,17 @@ export const testDataIsolationBehaviour = (createTest) => {
       createTest(
         'returns independent copies that cannot modify stored data',
         async () => {
-          const record1 = buildWasteRecord({ rowId: 'row-1' })
-          const record2 = buildWasteRecord({ rowId: 'row-2' })
-          await repository.upsertWasteRecords([record1, record2])
+          const { version: version1, data: data1 } = buildVersionData()
+          const { version: version2, data: data2 } = buildVersionData()
+
+          const versionsByType = toVersionsByType({
+            received: {
+              'row-1': { version: version1, data: data1 },
+              'row-2': { version: version2, data: data2 }
+            }
+          })
+
+          await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
           const firstRead = await repository.findByRegistration(
             'org-1',
@@ -37,20 +49,26 @@ export const testDataIsolationBehaviour = (createTest) => {
       )
     })
 
-    describe('upsertWasteRecords isolation', () => {
+    describe('appendVersions isolation', () => {
       createTest(
         'stores independent copies so input mutations do not affect storage',
         async () => {
-          const record = buildWasteRecord({ rowId: 'row-1' })
-          const originalRowId = record.rowId
+          const { version, data } = buildVersionData()
 
-          await repository.upsertWasteRecords([record])
+          const versionsByType = toVersionsByType({
+            received: {
+              'row-1': { version, data }
+            }
+          })
+
+          await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
           // mutate input after save
-          record.rowId = 'mutated-id'
+          data.GROSS_WEIGHT = 999.99
+          versionsByType.get('received').get('row-1').data.GROSS_WEIGHT = 999.99
 
           const result = await repository.findByRegistration('org-1', 'reg-1')
-          expect(result[0].rowId).toBe(originalRowId)
+          expect(result[0].data.GROSS_WEIGHT).toBe(100.5)
         }
       )
     })

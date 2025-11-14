@@ -1,8 +1,4 @@
-import {
-  validateOrganisationId,
-  validateRegistrationId,
-  validateWasteRecord
-} from './validation.js'
+import { validateOrganisationId, validateRegistrationId } from './validation.js'
 
 /**
  * Finds the index of a record matching the composite key
@@ -103,28 +99,6 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
             record.registrationId === validatedRegId
         )
       )
-    },
-
-    async upsertWasteRecords(wasteRecords) {
-      for (const record of wasteRecords) {
-        const validatedRecord = validateWasteRecord(record)
-
-        const existingIndex = findRecordIndex(
-          storage,
-          validatedRecord.organisationId,
-          validatedRecord.registrationId,
-          validatedRecord.type,
-          validatedRecord.rowId
-        )
-
-        if (existingIndex >= 0) {
-          // Update existing record
-          storage[existingIndex] = structuredClone(validatedRecord)
-        } else {
-          // Insert new record
-          storage.push(structuredClone(validatedRecord))
-        }
-      }
     },
 
     async appendVersions(organisationId, registrationId, versionsByType) {
