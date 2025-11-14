@@ -46,6 +46,36 @@ const performFindByRegistration =
     return docs.map(mapDocumentToDomain)
   }
 
+/**
+ * Builds a bulk upsert operation for a single waste record
+ * @param {Object} record - Validated waste record
+ * @returns {Object} MongoDB bulk write operation
+ */
+const buildUpsertOperation = (record) => {
+  const compositeKey = getCompositeKey(
+    record.organisationId,
+    record.registrationId,
+    record.type,
+    record.rowId
+  )
+
+  return {
+    updateOne: {
+      filter: {
+        _compositeKey: compositeKey
+      },
+      update: {
+        $set: {
+          _compositeKey: compositeKey,
+          schemaVersion: SCHEMA_VERSION,
+          ...structuredClone(record)
+        }
+      },
+      upsert: true
+    }
+  }
+}
+
 const performUpsertWasteRecords = (db) => async (wasteRecords) => {
   if (wasteRecords.length === 0) {
     return
@@ -57,32 +87,95 @@ const performUpsertWasteRecords = (db) => async (wasteRecords) => {
   )
 
   // Build bulk write operations
-  const bulkOps = validatedRecords.map((record) => {
-    const compositeKey = getCompositeKey(
-      record.organisationId,
-      record.registrationId,
-      record.type,
-      record.rowId
-    )
-
-    return {
-      updateOne: {
-        filter: {
-          _compositeKey: compositeKey
-        },
-        update: {
-          $set: {
-            _compositeKey: compositeKey,
-            schemaVersion: SCHEMA_VERSION,
-            ...structuredClone(record)
-          }
-        },
-        upsert: true
-      }
-    }
-  })
+  const bulkOps = validatedRecords.map(buildUpsertOperation)
 
   await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
+}
+
+/**
+ * Builds MongoDB aggregation expression to extract existing summary log IDs
+ * @returns {Object} MongoDB aggregation expression
+ */
+const buildExistingSummaryLogIds = () => ({
+  $ifNull: [
+    {
+      $map: {
+        input: '$versions',
+        as: 'v',
+        in: '$$v.summaryLog.id'
+      }
+    },
+    []
+  ]
+})
+
+/**
+ * Builds MongoDB update operation for appending a version
+ * @param {string} compositeKey
+ * @param {number} schemaVersion
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} type
+ * @param {string} rowId
+ * @param {Object} versionData
+ * @returns {Object} MongoDB update operation
+ */
+const buildAppendVersionOperation = (
+  compositeKey,
+  schemaVersion,
+  organisationId,
+  registrationId,
+  type,
+  rowId,
+  versionData
+) => {
+  const existingSummaryLogIds = buildExistingSummaryLogIds()
+  const versionExists = {
+    $in: [versionData.version.summaryLog.id, existingSummaryLogIds]
+  }
+
+  return {
+    updateOne: {
+      filter: {
+        _compositeKey: compositeKey
+      },
+      update: [
+        {
+          $set: {
+            // Static fields - only set on insert
+            _compositeKey: compositeKey,
+            schemaVersion,
+            organisationId,
+            registrationId,
+            type,
+            rowId,
+            // Current data - only update if version doesn't exist
+            data: {
+              $cond: {
+                if: versionExists,
+                then: '$data',
+                else: structuredClone(versionData.data)
+              }
+            },
+            // Versions array - conditionally append if summaryLog.id doesn't exist
+            versions: {
+              $cond: {
+                if: versionExists,
+                then: '$versions',
+                else: {
+                  $concatArrays: [
+                    { $ifNull: ['$versions', []] },
+                    [structuredClone(versionData.version)]
+                  ]
+                }
+              }
+            }
+          }
+        }
+      ],
+      upsert: true
+    }
+  }
 }
 
 const performAppendVersions =
@@ -106,80 +199,17 @@ const performAppendVersions =
           rowId
         )
 
-        bulkOps.push({
-          updateOne: {
-            filter: {
-              _compositeKey: compositeKey
-            },
-            update: [
-              {
-                $set: {
-                  // Static fields - only set on insert
-                  _compositeKey: compositeKey,
-                  schemaVersion: SCHEMA_VERSION,
-                  organisationId: validatedOrgId,
-                  registrationId: validatedRegId,
-                  type,
-                  rowId,
-                  // Current data - only update if version doesn't exist
-                  data: {
-                    $cond: {
-                      if: {
-                        $in: [
-                          versionData.version.summaryLog.id,
-                          {
-                            $ifNull: [
-                              {
-                                $map: {
-                                  input: '$versions',
-                                  as: 'v',
-                                  in: '$$v.summaryLog.id'
-                                }
-                              },
-                              []
-                            ]
-                          }
-                        ]
-                      },
-                      then: '$data',
-                      else: structuredClone(versionData.data)
-                    }
-                  },
-                  // Versions array - conditionally append if summaryLog.id doesn't exist
-                  versions: {
-                    $cond: {
-                      if: {
-                        $in: [
-                          versionData.version.summaryLog.id,
-                          {
-                            $ifNull: [
-                              {
-                                $map: {
-                                  input: '$versions',
-                                  as: 'v',
-                                  in: '$$v.summaryLog.id'
-                                }
-                              },
-                              []
-                            ]
-                          }
-                        ]
-                      },
-                      then: '$versions',
-                      else: {
-                        $concatArrays: [
-                          { $ifNull: ['$versions', []] },
-                          [structuredClone(versionData.version)]
-                        ]
-                      }
-                    }
-                  }
-                }
-              }
-            ],
-            upsert: true
-          }
-        })
+        bulkOps.push(
+          buildAppendVersionOperation(
+            compositeKey,
+            SCHEMA_VERSION,
+            validatedOrgId,
+            validatedRegId,
+            type,
+            rowId,
+            versionData
+          )
+        )
       }
     }
 
