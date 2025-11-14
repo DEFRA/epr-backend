@@ -366,7 +366,17 @@ export const registrationSchema = Joi.object({
       .min(1)
   ),
   noticeAddress: requiredForExporterOptionalForReprocessor(addressSchema),
-  cbduNumber: Joi.string().required(),
+  cbduNumber: Joi.string()
+    .min(8)
+    .max(10)
+    .regex(/^[cC][bB][dD][uU]/)
+    .required()
+    .messages({
+      'string.pattern.base':
+        'CBDU number must start with CBDU (case insensitive)',
+      'string.min': 'CBDU number must be at least 8 characters',
+      'string.max': 'CBDU number must be at most 10 characters'
+    }),
   wasteManagementPermits: whenReprocessor(
     Joi.array().items(wasteManagementPermitSchema).required().min(1)
   ),
