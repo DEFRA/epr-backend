@@ -127,7 +127,7 @@ export const statusHistoryItemSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .required(),
-  updatedAt: Joi.date().required(),
+  updatedAt: Joi.date().iso().required(),
   updatedBy: idSchema.optional()
 })
 
@@ -331,9 +331,9 @@ export const registrationSchema = Joi.object({
     'status',
     requiredWhenApprovedOrSuspended
   ),
-  validFrom: Joi.date().when('status', requiredWhenApprovedOrSuspended),
-  validTo: Joi.date().when('status', requiredWhenApprovedOrSuspended),
-  formSubmissionTime: Joi.date().required(),
+  validFrom: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  validTo: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -412,9 +412,9 @@ const accreditationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  validFrom: Joi.date().when('status', requiredWhenApprovedOrSuspended),
-  validTo: Joi.date().when('status', requiredWhenApprovedOrSuspended),
-  formSubmissionTime: Joi.date().required(),
+  validFrom: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  validTo: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
@@ -499,7 +499,7 @@ export const organisationInsertSchema = Joi.object({
   partnership: partnershipSchema.optional(),
   submitterContactDetails: userSchema.required(),
   managementContactDetails: userSchema.optional(),
-  formSubmissionTime: Joi.date().required(),
+  formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
