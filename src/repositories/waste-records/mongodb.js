@@ -8,15 +8,6 @@ const COLLECTION_NAME = 'waste-records'
 const SCHEMA_VERSION = 1
 
 /**
- * Composite key for uniquely identifying a waste record
- * @typedef {Object} WasteRecordKey
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string} type
- * @property {string} rowId
- */
-
-/**
  * Maps MongoDB document to domain model by removing internal MongoDB fields
  * and ensuring data isolation through deep cloning
  * @param {Object} doc - MongoDB document
@@ -29,7 +20,7 @@ const mapDocumentToDomain = (doc) => {
 
 /**
  * Generates a composite key for waste record uniqueness
- * @param {WasteRecordKey} key - Composite key components
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key components
  * @returns {string} Composite key
  */
 const getCompositeKey = ({ organisationId, registrationId, type, rowId }) => {
@@ -112,18 +103,12 @@ const buildExistingSummaryLogIds = () => ({
 
 /**
  * Builds MongoDB update operation for appending a version
- * @param {string} compositeKey
- * @param {number} schemaVersion
- * @param {WasteRecordKey} key - Composite key identifying the record
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
  * @param {Object} versionData
  * @returns {Object} MongoDB update operation
  */
-const buildAppendVersionOperation = (
-  compositeKey,
-  schemaVersion,
-  { organisationId, registrationId, type, rowId },
-  versionData
-) => {
+const buildAppendVersionOperation = (key, versionData) => {
+  const compositeKey = getCompositeKey(key)
   const existingSummaryLogIds = buildExistingSummaryLogIds()
   const versionExists = {
     $in: [versionData.version.summaryLog.id, existingSummaryLogIds]
@@ -139,11 +124,8 @@ const buildAppendVersionOperation = (
           $set: {
             // Static fields - only set on insert
             _compositeKey: compositeKey,
-            schemaVersion,
-            organisationId,
-            registrationId,
-            type,
-            rowId,
+            schemaVersion: SCHEMA_VERSION,
+            ...key,
             // Current data - only update if version doesn't exist
             data: {
               $cond: {
@@ -193,16 +175,8 @@ const performAppendVersions =
           type,
           rowId
         }
-        const compositeKey = getCompositeKey(key)
 
-        bulkOps.push(
-          buildAppendVersionOperation(
-            compositeKey,
-            SCHEMA_VERSION,
-            key,
-            versionData
-          )
-        )
+        bulkOps.push(buildAppendVersionOperation(key, versionData))
       }
     }
 

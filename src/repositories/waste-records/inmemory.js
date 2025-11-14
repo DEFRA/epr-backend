@@ -5,18 +5,9 @@ import {
 } from './validation.js'
 
 /**
- * Composite key for uniquely identifying a waste record
- * @typedef {Object} WasteRecordKey
- * @property {string} organisationId
- * @property {string} registrationId
- * @property {string} type
- * @property {string} rowId
- */
-
-/**
  * Finds the index of a record matching the composite key
  * @param {Array} storage - Storage array
- * @param {WasteRecordKey} key - Composite key identifying the record
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
  * @returns {number} Index of matching record, or -1 if not found
  */
 const findRecordIndex = (
@@ -35,20 +26,11 @@ const findRecordIndex = (
 /**
  * Appends a version to an existing record or creates a new record
  * @param {Array} storage - Storage array
- * @param {WasteRecordKey} key - Composite key identifying the record
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
  * @param {Object} versionData
  */
-const appendVersionToRecord = (
-  storage,
-  { organisationId, registrationId, type, rowId },
-  versionData
-) => {
-  const existingIndex = findRecordIndex(storage, {
-    organisationId,
-    registrationId,
-    type,
-    rowId
-  })
+const appendVersionToRecord = (storage, key, versionData) => {
+  const existingIndex = findRecordIndex(storage, key)
 
   if (existingIndex >= 0) {
     const existing = storage[existingIndex]
@@ -67,10 +49,7 @@ const appendVersionToRecord = (
   } else {
     // Create new record with first version
     storage.push({
-      organisationId,
-      registrationId,
-      type,
-      rowId,
+      ...key,
       data: structuredClone(versionData.data),
       versions: [structuredClone(versionData.version)]
     })
