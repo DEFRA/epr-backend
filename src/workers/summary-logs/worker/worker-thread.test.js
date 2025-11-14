@@ -11,7 +11,7 @@ import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { logger } from '#common/helpers/logging/logger.js'
 
-import summaryLogsValidatorWorkerThread from './worker-thread.js'
+import summaryLogsWorkerThread from './worker-thread.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -32,7 +32,7 @@ vi.mock('#repositories/organisations/mongodb.js')
 vi.mock('#repositories/waste-records/inmemory.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
-describe('summaryLogsValidatorWorkerThread', () => {
+describe('summaryLogsWorkerThread', () => {
   let mockDb
   let mockMongoClient
   let mockS3Client
@@ -112,7 +112,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create mongo client as expected', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -124,7 +124,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should get database with expected name', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -133,7 +133,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create summary logs repository with db', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -142,7 +142,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create S3 client with expected config', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -155,7 +155,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create uploads repository', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -164,7 +164,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create summary log extractor', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -177,7 +177,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create summary logs validator', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -190,7 +190,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should call validator as expected', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -199,7 +199,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should destroy S3 client once worker completes', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -208,7 +208,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should close mongo client once worker completes', async () => {
-    await summaryLogsValidatorWorkerThread({
+    await summaryLogsWorkerThread({
       command: 'validate',
       summaryLogId
     })
@@ -220,7 +220,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
-      summaryLogsValidatorWorkerThread({
+      summaryLogsWorkerThread({
         command: 'validate',
         summaryLogId
       })
@@ -236,7 +236,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     })
 
     await expect(
-      summaryLogsValidatorWorkerThread({
+      summaryLogsWorkerThread({
         command: 'validate',
         summaryLogId
       })
@@ -252,7 +252,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     })
 
     await expect(
-      summaryLogsValidatorWorkerThread({
+      summaryLogsWorkerThread({
         command: 'validate',
         summaryLogId
       })
@@ -274,7 +274,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
         summaryLog
       })
 
-      await summaryLogsValidatorWorkerThread({
+      await summaryLogsWorkerThread({
         command: 'submit',
         summaryLogId
       })
@@ -294,7 +294,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
         summaryLog
       })
 
-      await summaryLogsValidatorWorkerThread({
+      await summaryLogsWorkerThread({
         command: 'submit',
         summaryLogId
       })
@@ -320,7 +320,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
         summaryLog
       })
 
-      await summaryLogsValidatorWorkerThread({
+      await summaryLogsWorkerThread({
         command: 'submit',
         summaryLogId
       })
@@ -334,7 +334,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       mockSummaryLogsRepository.findById.mockResolvedValue(null)
 
       await expect(
-        summaryLogsValidatorWorkerThread({
+        summaryLogsWorkerThread({
           command: 'submit',
           summaryLogId
         })
@@ -352,7 +352,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
       })
 
       await expect(
-        summaryLogsValidatorWorkerThread({
+        summaryLogsWorkerThread({
           command: 'submit',
           summaryLogId
         })
@@ -373,7 +373,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
         summaryLog
       })
 
-      await summaryLogsValidatorWorkerThread({
+      await summaryLogsWorkerThread({
         command: 'submit',
         summaryLogId
       })
@@ -393,7 +393,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
         summaryLog
       })
 
-      await summaryLogsValidatorWorkerThread({
+      await summaryLogsWorkerThread({
         command: 'submit',
         summaryLogId
       })
@@ -408,7 +408,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
   describe('unknown command', () => {
     it('should throw error when command is unknown', async () => {
       await expect(
-        summaryLogsValidatorWorkerThread({
+        summaryLogsWorkerThread({
           command: 'unknown',
           summaryLogId
         })
