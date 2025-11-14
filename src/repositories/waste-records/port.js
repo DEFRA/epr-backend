@@ -6,8 +6,8 @@
 
 /**
  * @typedef {Object} VersionData
- * @property {Object} data - Current waste record data
- * @property {Omit<WasteRecordVersion, 'data'>} version - Version metadata (summaryLogId, versionTimestamp)
+ * @property {Record<string, unknown>} data - Current computed state of waste record data
+ * @property {WasteRecordVersion} version - Version entry including delta or full data
  */
 
 /**

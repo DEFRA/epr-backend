@@ -4,6 +4,13 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 
+/**
+ * @typedef {import('#domain/waste-records/model.js').WasteRecordVersion} WasteRecordVersion
+ * @typedef {import('#domain/waste-records/model.js').WasteRecordType} WasteRecordType
+ * @typedef {import('#domain/waste-records/model.js').VersionStatus} VersionStatus
+ * @typedef {import('../port.js').VersionData} VersionData
+ */
+
 let rowIdCounter = 0
 
 const generateRowId = () => {
@@ -13,14 +20,14 @@ const generateRowId = () => {
 
 /**
  * Build version data for appendVersions
- * @param {object} [options] - Optional overrides
+ * @param {Object} [options] - Optional overrides
  * @param {string} [options.summaryLogId] - Summary log ID for this version
  * @param {string} [options.summaryLogUri] - Summary log URI
  * @param {string} [options.createdAt] - ISO timestamp
- * @param {string} [options.status] - Version status (CREATED, UPDATED)
- * @param {object} [options.versionData] - Data for version (delta or full)
- * @param {object} [options.currentData] - Current data state
- * @returns {{version: object, data: object}}
+ * @param {VersionStatus} [options.status] - Version status (CREATED, UPDATED)
+ * @param {Record<string, unknown>} [options.versionData] - Data for version (delta or full)
+ * @param {Record<string, unknown>} [options.currentData] - Current data state
+ * @returns {VersionData}
  */
 export const buildVersionData = (options = {}) => {
   const summaryLogId = options.summaryLogId || 'summary-log-1'
@@ -50,8 +57,8 @@ export const buildVersionData = (options = {}) => {
 
 /**
  * Convert object representation to nested Map structure for appendVersions
- * @param {Object.<string, Object.<string, {version: object, data: object}>>} versionsByTypeObj
- * @returns {Map<string, Map<string, {version: object, data: object}>>}
+ * @param {Record<WasteRecordType, Record<string, VersionData>>} versionsByTypeObj
+ * @returns {Map<WasteRecordType, Map<string, VersionData>>}
  */
 export const toVersionsByType = (versionsByTypeObj) => {
   const versionsByType = new Map()
