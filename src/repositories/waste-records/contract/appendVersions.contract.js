@@ -17,7 +17,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'received:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'initial' },
+            data: { VALUE: 'initial' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -44,7 +44,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'received:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'initial' },
+            data: { VALUE: 'initial' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -61,7 +61,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'received:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'updated' },
+            data: { VALUE: 'updated' },
             version: {
               createdAt: '2025-01-20T10:00:00.000Z',
               status: VERSION_STATUS.UPDATED,
@@ -89,7 +89,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           [
             'received:row-1',
             {
-              data: { ROW_ID: 'row-1', VALUE: 'initial' },
+              data: { VALUE: 'initial' },
               version: {
                 createdAt: '2025-01-15T10:00:00.000Z',
                 status: VERSION_STATUS.CREATED,
@@ -116,7 +116,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'received:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'first' },
+            data: { VALUE: 'first' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -127,7 +127,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'received:row-2',
           {
-            data: { ROW_ID: 'row-2', VALUE: 'second' },
+            data: { VALUE: 'second' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -138,7 +138,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'processed:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'third' },
+            data: { VALUE: 'third' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -167,7 +167,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'received:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'received-data' },
+            data: { VALUE: 'received-data' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -178,7 +178,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
         [
           'processed:row-1',
           {
-            data: { ROW_ID: 'row-1', VALUE: 'processed-data' },
+            data: { VALUE: 'processed-data' },
             version: {
               createdAt: '2025-01-15T10:00:00.000Z',
               status: VERSION_STATUS.CREATED,
@@ -212,7 +212,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           [
             'received:row-1',
             {
-              data: { ROW_ID: 'row-1', VALUE: 'first' },
+              data: { VALUE: 'first' },
               version: {
                 createdAt: '2025-01-15T10:00:00.000Z',
                 status: VERSION_STATUS.CREATED,
@@ -223,7 +223,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           [
             'received:row-2',
             {
-              data: { ROW_ID: 'row-2', VALUE: 'second' },
+              data: { VALUE: 'second' },
               version: {
                 createdAt: '2025-01-15T10:00:00.000Z',
                 status: VERSION_STATUS.CREATED,
@@ -240,7 +240,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           [
             'received:row-1',
             {
-              data: { ROW_ID: 'row-1', VALUE: 'first' },
+              data: { VALUE: 'first' },
               version: {
                 createdAt: '2025-01-15T10:00:00.000Z',
                 status: VERSION_STATUS.CREATED,
@@ -251,7 +251,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           [
             'received:row-2',
             {
-              data: { ROW_ID: 'row-2', VALUE: 'second' },
+              data: { VALUE: 'second' },
               version: {
                 createdAt: '2025-01-15T10:00:00.000Z',
                 status: VERSION_STATUS.CREATED,
