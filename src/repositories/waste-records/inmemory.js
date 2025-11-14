@@ -5,6 +5,31 @@ import {
 } from './validation.js'
 
 /**
+ * Finds the index of a record matching the composite key
+ * @param {Array} storage - Storage array
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {string} type
+ * @param {string} rowId
+ * @returns {number} Index of matching record, or -1 if not found
+ */
+const findRecordIndex = (
+  storage,
+  organisationId,
+  registrationId,
+  type,
+  rowId
+) => {
+  return storage.findIndex(
+    (r) =>
+      r.organisationId === organisationId &&
+      r.registrationId === registrationId &&
+      r.type === type &&
+      r.rowId === rowId
+  )
+}
+
+/**
  * Create an in-memory waste records repository.
  * Ensures data isolation by deep-cloning on store and on read.
  *
@@ -32,13 +57,12 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       for (const record of wasteRecords) {
         const validatedRecord = validateWasteRecord(record)
 
-        // Find existing record with same key
-        const existingIndex = storage.findIndex(
-          (r) =>
-            r.organisationId === validatedRecord.organisationId &&
-            r.registrationId === validatedRecord.registrationId &&
-            r.type === validatedRecord.type &&
-            r.rowId === validatedRecord.rowId
+        const existingIndex = findRecordIndex(
+          storage,
+          validatedRecord.organisationId,
+          validatedRecord.registrationId,
+          validatedRecord.type,
+          validatedRecord.rowId
         )
 
         if (existingIndex >= 0) {
@@ -59,13 +83,12 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
         // Parse the key to extract type and rowId
         const [type, rowId] = key.split(':')
 
-        // Find existing record with same composite key
-        const existingIndex = storage.findIndex(
-          (r) =>
-            r.organisationId === validatedOrgId &&
-            r.registrationId === validatedRegId &&
-            r.type === type &&
-            r.rowId === rowId
+        const existingIndex = findRecordIndex(
+          storage,
+          validatedOrgId,
+          validatedRegId,
+          type,
+          rowId
         )
 
         if (existingIndex >= 0) {
