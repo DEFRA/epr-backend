@@ -4,7 +4,6 @@ import Jwt from '@hapi/jwt'
 import { secureContext } from '@defra/hapi-secure-context'
 
 import { getConfig } from '../config.js'
-import { auth } from '#plugins/auth/auth.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { router } from '#plugins/router.js'
 import { workers } from '#plugins/workers.js'
@@ -69,12 +68,12 @@ async function createServer(options = {}) {
     cacheControl,
     secureContext,
     pulse,
-    Jwt,
-    authPlugin
+    Jwt
+    // authPlugin
   ]
 
   if (process.env.NODE_ENV !== 'test') {
-    plugins.push(auth)
+    plugins.push(authPlugin)
   }
 
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)

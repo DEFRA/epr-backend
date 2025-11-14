@@ -16,7 +16,7 @@ import {
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import { generateInitialUsers } from '#domain/organisations/generate-initial-users.js'
-import { STATUS } from '#domain/organisations/status.js'
+import { STATUS } from '#domain/organisations/model.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000

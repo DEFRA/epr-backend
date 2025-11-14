@@ -1,4 +1,5 @@
-import { ROLE, STATUS } from '#domain/organisations/status.js'
+import { STATUS } from '#domain/organisations/model.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import { StatusCodes } from 'http-status-codes'
 
@@ -83,7 +84,7 @@ function getOrganisationsSummary(organisations) {
   }))
 }
 
-export async function validateRequest(tokenPayload, request, h) {
+export async function getDefraIdUserRoles(tokenPayload, request, h) {
   const { email } = tokenPayload
   const { organisationsRepository, params = {} } = request
   const { organisationId } = params
@@ -151,7 +152,7 @@ export async function validateRequest(tokenPayload, request, h) {
                   email,
                   fullName: `${tokenPayload.firstName} ${tokenPayload.lastName}`,
                   isInitialUser: false,
-                  roles: [ROLE.STANDARD_USER]
+                  roles: [ROLES.standardUser]
                 }
               ]
             }
@@ -159,7 +160,7 @@ export async function validateRequest(tokenPayload, request, h) {
         }
 
         return {
-          scope: isAuthorised ? ['user'] : []
+          scope: isAuthorised ? [ROLES.standardUser] : []
         }
       }
     }
@@ -232,7 +233,7 @@ export async function validateRequest(tokenPayload, request, h) {
         'defra-id: user is authorised for currentLinkedOrganisation'
       )
 
-      return { scope: ['user'] }
+      return { scope: [ROLES.standardUser] }
     }
 
     // Organisation requested does not match the organisation the user is associated with

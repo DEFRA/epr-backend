@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { STATUS } from '#domain/organisations/status.js'
+import { STATUS } from '#domain/organisations/model.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import { config } from '../../../config.js'
 
@@ -14,9 +14,7 @@ export const organisationsLink = {
     ? {}
     : {
         auth: {
-          strategy: 'access-token',
           access: {
-            // only permit access to this endpoint if (logged in) user has user_can_link_organisation scope
             scope: ['user_can_link_organisation']
           }
         }

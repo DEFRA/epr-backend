@@ -7,10 +7,6 @@ export const STATUS = Object.freeze({
   ARCHIVED: 'archived'
 })
 
-export const ROLE = Object.freeze({
-  STANDARD_USER: 'standardUser'
-})
-
 export const REGULATOR = Object.freeze({
   EA: 'ea',
   NRW: 'nrw',
