@@ -13,21 +13,26 @@ export const testAppendVersionsBehaviour = (it) => {
     })
 
     it('creates new waste record with first version', async () => {
-      const versionsByKey = new Map([
+      const versionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'initial' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'initial' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -42,15 +47,20 @@ export const testAppendVersionsBehaviour = (it) => {
       // First, create initial record using appendVersions
       const initialVersion = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'initial' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'initial' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -59,15 +69,20 @@ export const testAppendVersionsBehaviour = (it) => {
       // Now append a new version
       const updatedVersion = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'updated' },
-            version: {
-              createdAt: '2025-01-20T10:00:00.000Z',
-              status: VERSION_STATUS.UPDATED,
-              summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'updated' },
+                version: {
+                  createdAt: '2025-01-20T10:00:00.000Z',
+                  status: VERSION_STATUS.UPDATED,
+                  summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -83,24 +98,29 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('is idempotent - resubmitting same summary log does not duplicate versions', async () => {
       // First submission
-      const versionsByKey = new Map([
+      const versionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'initial' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'initial' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
       // Retry same submission (e.g., after failure recovery)
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -109,83 +129,103 @@ export const testAppendVersionsBehaviour = (it) => {
     })
 
     it('handles multiple records in bulk operation', async () => {
-      const versionsByKey = new Map([
+      const versionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'first' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'first' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ],
+            [
+              'row-2',
+              {
+                data: { VALUE: 'second' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ],
         [
-          'received:row-2',
-          {
-            data: { VALUE: 'second' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
-        ],
-        [
-          'processed:row-1',
-          {
-            data: { VALUE: 'third' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.PROCESSED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'third' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(3)
     })
 
-    it('handles empty versionsByKey map without error', async () => {
-      const versionsByKey = new Map()
+    it('handles empty versionsByType map without error', async () => {
+      const versionsByType = new Map()
 
       await expect(
-        repository.appendVersions('org-1', 'reg-1', versionsByKey)
+        repository.appendVersions('org-1', 'reg-1', versionsByType)
       ).resolves.not.toThrow()
     })
 
     it('isolates different record types with same rowId', async () => {
-      const versionsByKey = new Map([
+      const versionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'received-data' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'received-data' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ],
         [
-          'processed:row-1',
-          {
-            data: { VALUE: 'processed-data' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.PROCESSED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'processed-data' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(2)
@@ -205,26 +245,31 @@ export const testAppendVersionsBehaviour = (it) => {
       // First submission with two records
       const firstSubmission = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'first' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
-        ],
-        [
-          'received:row-2',
-          {
-            data: { VALUE: 'second' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'first' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ],
+            [
+              'row-2',
+              {
+                data: { VALUE: 'second' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -233,26 +278,31 @@ export const testAppendVersionsBehaviour = (it) => {
       // Simulate partial failure - only row-1 was persisted, now retry with both
       const retrySubmission = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'first' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
-        ],
-        [
-          'received:row-2',
-          {
-            data: { VALUE: 'second' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'first' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ],
+            [
+              'row-2',
+              {
+                data: { VALUE: 'second' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -266,34 +316,44 @@ export const testAppendVersionsBehaviour = (it) => {
 
     it('preserves data when resubmitting existing version - idempotent data immutability', async () => {
       // First submission
-      const versionsByKey = new Map([
+      const versionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'original-data' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'original-data' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
       // Retry same submission but with different data (simulating replay with corrupted/modified data)
       const retryWithDifferentData = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'modified-data-should-not-persist' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'modified-data-should-not-persist' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -309,15 +369,20 @@ export const testAppendVersionsBehaviour = (it) => {
       // Setup: Create one existing record with a version from log-1
       const initialSetup = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'existing' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'existing' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -325,41 +390,51 @@ export const testAppendVersionsBehaviour = (it) => {
 
       // Now perform mixed operations in one bulk call
       const mixedOperations = new Map([
-        // 1. Idempotent skip - already exists with log-1
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'should-not-change' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            // 1. Idempotent skip - already exists with log-1
+            [
+              'row-1',
+              {
+                data: { VALUE: 'should-not-change' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ],
+            // 2. Append new version - existing record gets log-2
+            [
+              'row-2',
+              {
+                data: { VALUE: 'will-get-new-version' },
+                version: {
+                  createdAt: '2025-01-20T10:00:00.000Z',
+                  status: VERSION_STATUS.UPDATED,
+                  summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
+                }
+              }
+            ]
+          ])
         ],
-        // 2. Append new version - existing record gets log-2
         [
-          'received:row-2',
-          {
-            data: { VALUE: 'will-get-new-version' },
-            version: {
-              createdAt: '2025-01-20T10:00:00.000Z',
-              status: VERSION_STATUS.UPDATED,
-              summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
-            }
-          }
-        ],
-        // 3. Brand new record - creation
-        [
-          'processed:row-1',
-          {
-            data: { VALUE: 'brand-new' },
-            version: {
-              createdAt: '2025-01-20T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
-            }
-          }
+          WASTE_RECORD_TYPE.PROCESSED,
+          new Map([
+            // 3. Brand new record - creation
+            [
+              'row-1',
+              {
+                data: { VALUE: 'brand-new' },
+                version: {
+                  createdAt: '2025-01-20T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -369,15 +444,20 @@ export const testAppendVersionsBehaviour = (it) => {
         'reg-1',
         new Map([
           [
-            'received:row-2',
-            {
-              data: { VALUE: 'initial' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
-            }
+            WASTE_RECORD_TYPE.RECEIVED,
+            new Map([
+              [
+                'row-2',
+                {
+                  data: { VALUE: 'initial' },
+                  version: {
+                    createdAt: '2025-01-15T10:00:00.000Z',
+                    status: VERSION_STATUS.CREATED,
+                    summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                  }
+                }
+              ]
+            ])
           ]
         ])
       )
@@ -415,38 +495,48 @@ export const testAppendVersionsBehaviour = (it) => {
     })
 
     it('isolates records across different organisations', async () => {
-      const versionsByKey = new Map([
+      const versionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'org-1-data' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'org-1-data' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
       // Create same rowId and type for two different organisations
-      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByType)
 
-      const org2VersionsByKey = new Map([
+      const org2VersionsByType = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'org-2-data' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z',
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'org-2-data' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
-      await repository.appendVersions('org-2', 'reg-1', org2VersionsByKey)
+      await repository.appendVersions('org-2', 'reg-1', org2VersionsByType)
 
       // Verify org-1 only sees its own data
       const org1Result = await repository.findByRegistration('org-1', 'reg-1')
@@ -465,15 +555,20 @@ export const testAppendVersionsBehaviour = (it) => {
       // First submission with earlier timestamp
       const firstVersion = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'first' },
-            version: {
-              createdAt: '2025-01-20T10:00:00.000Z', // Later timestamp
-              status: VERSION_STATUS.CREATED,
-              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'first' },
+                version: {
+                  createdAt: '2025-01-20T10:00:00.000Z', // Later timestamp
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 
@@ -482,15 +577,20 @@ export const testAppendVersionsBehaviour = (it) => {
       // Second submission with later timestamp but earlier createdAt
       const secondVersion = new Map([
         [
-          'received:row-1',
-          {
-            data: { VALUE: 'second' },
-            version: {
-              createdAt: '2025-01-15T10:00:00.000Z', // Earlier timestamp
-              status: VERSION_STATUS.UPDATED,
-              summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
-            }
-          }
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                data: { VALUE: 'second' },
+                version: {
+                  createdAt: '2025-01-15T10:00:00.000Z', // Earlier timestamp
+                  status: VERSION_STATUS.UPDATED,
+                  summaryLog: { id: 'log-2', uri: 's3://bucket/key2' }
+                }
+              }
+            ]
+          ])
         ]
       ])
 

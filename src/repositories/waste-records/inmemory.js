@@ -75,46 +75,45 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       }
     },
 
-    async appendVersions(organisationId, registrationId, versionsByKey) {
+    async appendVersions(organisationId, registrationId, versionsByType) {
       const validatedOrgId = validateOrganisationId(organisationId)
       const validatedRegId = validateRegistrationId(registrationId)
 
-      for (const [key, versionData] of versionsByKey) {
-        // Parse the key to extract type and rowId
-        const [type, rowId] = key.split(':')
-
-        const existingIndex = findRecordIndex(
-          storage,
-          validatedOrgId,
-          validatedRegId,
-          type,
-          rowId
-        )
-
-        if (existingIndex >= 0) {
-          const existing = storage[existingIndex]
-
-          // Check if this version already exists (idempotency check)
-          const versionExists = existing.versions.some(
-            (v) => v.summaryLog.id === versionData.version.summaryLog.id
+      for (const [type, versionsByRowId] of versionsByType) {
+        for (const [rowId, versionData] of versionsByRowId) {
+          const existingIndex = findRecordIndex(
+            storage,
+            validatedOrgId,
+            validatedRegId,
+            type,
+            rowId
           )
 
-          if (!versionExists) {
-            // Append new version and update data
-            existing.versions.push(structuredClone(versionData.version))
-            existing.data = structuredClone(versionData.data)
+          if (existingIndex >= 0) {
+            const existing = storage[existingIndex]
+
+            // Check if this version already exists (idempotency check)
+            const versionExists = existing.versions.some(
+              (v) => v.summaryLog.id === versionData.version.summaryLog.id
+            )
+
+            if (!versionExists) {
+              // Append new version and update data
+              existing.versions.push(structuredClone(versionData.version))
+              existing.data = structuredClone(versionData.data)
+            }
+            // If version exists, preserve existing data (idempotent - no changes)
+          } else {
+            // Create new record with first version
+            storage.push({
+              organisationId: validatedOrgId,
+              registrationId: validatedRegId,
+              type,
+              rowId,
+              data: structuredClone(versionData.data),
+              versions: [structuredClone(versionData.version)]
+            })
           }
-          // If version exists, preserve existing data (idempotent - no changes)
-        } else {
-          // Create new record with first version
-          storage.push({
-            organisationId: validatedOrgId,
-            registrationId: validatedRegId,
-            type,
-            rowId,
-            data: structuredClone(versionData.data),
-            versions: [structuredClone(versionData.version)]
-          })
         }
       }
     }

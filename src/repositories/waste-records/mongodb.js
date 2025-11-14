@@ -86,102 +86,101 @@ const performUpsertWasteRecords = (db) => async (wasteRecords) => {
 }
 
 const performAppendVersions =
-  (db) => async (organisationId, registrationId, versionsByKey) => {
+  (db) => async (organisationId, registrationId, versionsByType) => {
     const validatedOrgId = validateOrganisationId(organisationId)
     const validatedRegId = validateRegistrationId(registrationId)
 
-    if (versionsByKey.size === 0) {
+    if (versionsByType.size === 0) {
       return
     }
 
     // Build bulk write operations
     const bulkOps = []
 
-    for (const [key, versionData] of versionsByKey) {
-      // Parse the key to extract type and rowId
-      const [type, rowId] = key.split(':')
+    for (const [type, versionsByRowId] of versionsByType) {
+      for (const [rowId, versionData] of versionsByRowId) {
+        const compositeKey = getCompositeKey(
+          validatedOrgId,
+          validatedRegId,
+          type,
+          rowId
+        )
 
-      const compositeKey = getCompositeKey(
-        validatedOrgId,
-        validatedRegId,
-        type,
-        rowId
-      )
-
-      bulkOps.push({
-        updateOne: {
-          filter: {
-            _compositeKey: compositeKey
-          },
-          update: [
-            {
-              $set: {
-                // Static fields - only set on insert
-                _compositeKey: compositeKey,
-                schemaVersion: SCHEMA_VERSION,
-                organisationId: validatedOrgId,
-                registrationId: validatedRegId,
-                type,
-                rowId,
-                // Current data - only update if version doesn't exist
-                data: {
-                  $cond: {
-                    if: {
-                      $in: [
-                        versionData.version.summaryLog.id,
-                        {
-                          $ifNull: [
-                            {
-                              $map: {
-                                input: '$versions',
-                                as: 'v',
-                                in: '$$v.summaryLog.id'
-                              }
-                            },
-                            []
-                          ]
-                        }
-                      ]
-                    },
-                    then: '$data',
-                    else: structuredClone(versionData.data)
-                  }
-                },
-                // Versions array - conditionally append if summaryLog.id doesn't exist
-                versions: {
-                  $cond: {
-                    if: {
-                      $in: [
-                        versionData.version.summaryLog.id,
-                        {
-                          $ifNull: [
-                            {
-                              $map: {
-                                input: '$versions',
-                                as: 'v',
-                                in: '$$v.summaryLog.id'
-                              }
-                            },
-                            []
-                          ]
-                        }
-                      ]
-                    },
-                    then: '$versions',
-                    else: {
-                      $concatArrays: [
-                        { $ifNull: ['$versions', []] },
-                        [structuredClone(versionData.version)]
-                      ]
+        bulkOps.push({
+          updateOne: {
+            filter: {
+              _compositeKey: compositeKey
+            },
+            update: [
+              {
+                $set: {
+                  // Static fields - only set on insert
+                  _compositeKey: compositeKey,
+                  schemaVersion: SCHEMA_VERSION,
+                  organisationId: validatedOrgId,
+                  registrationId: validatedRegId,
+                  type,
+                  rowId,
+                  // Current data - only update if version doesn't exist
+                  data: {
+                    $cond: {
+                      if: {
+                        $in: [
+                          versionData.version.summaryLog.id,
+                          {
+                            $ifNull: [
+                              {
+                                $map: {
+                                  input: '$versions',
+                                  as: 'v',
+                                  in: '$$v.summaryLog.id'
+                                }
+                              },
+                              []
+                            ]
+                          }
+                        ]
+                      },
+                      then: '$data',
+                      else: structuredClone(versionData.data)
+                    }
+                  },
+                  // Versions array - conditionally append if summaryLog.id doesn't exist
+                  versions: {
+                    $cond: {
+                      if: {
+                        $in: [
+                          versionData.version.summaryLog.id,
+                          {
+                            $ifNull: [
+                              {
+                                $map: {
+                                  input: '$versions',
+                                  as: 'v',
+                                  in: '$$v.summaryLog.id'
+                                }
+                              },
+                              []
+                            ]
+                          }
+                        ]
+                      },
+                      then: '$versions',
+                      else: {
+                        $concatArrays: [
+                          { $ifNull: ['$versions', []] },
+                          [structuredClone(versionData.version)]
+                        ]
+                      }
                     }
                   }
                 }
               }
-            }
-          ],
-          upsert: true
-        }
-      })
+            ],
+            upsert: true
+          }
+        })
+      }
     }
 
     await db.collection(COLLECTION_NAME).bulkWrite(bulkOps, { ordered: false })
