@@ -101,11 +101,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
-      - name: Test code and Create Test Coverage Reports
-        uses: actions/setup-node@v6
+      - name: Test and Scan
+        uses: ./.github/actions/test-and-scan
         with:
-          node-version-file: .nvmrc
-          cache: npm
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
 
       - name: Cache MongoDB binaries
         uses: actions/cache@v4
@@ -115,24 +115,11 @@ jobs:
           restore-keys: |
             mongodb-binaries-${{ runner.os }}-
 
-      - run: |
-          npm ci --ignore-scripts
-          npm run format:check
-          npm run lint
-          npm test
-
       - name: Test Docker Image Build
         run: |
           set +e
           docker build --no-cache --tag cdp-node-backend-template .
           exit $?
-
-      - name: SonarCloud Scan
-        uses: SonarSource/sonarqube-scan-action@v6 #  (or check latest version on https://github.com/marketplace/actions/official-sonarqube-scan)
-        if: ${{ github.actor != 'dependabot[bot]' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
   test-journey:
     name: Run Journey Tests
