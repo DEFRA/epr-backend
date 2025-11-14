@@ -209,7 +209,7 @@ function getPartnershipDetails(answersByShortDescription, rawSubmissionData) {
       }
 }
 
-export async function parseOrgSubmission(id, orgId, rawSubmissionData) {
+export function parseOrgSubmission(id, orgId, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
   return {

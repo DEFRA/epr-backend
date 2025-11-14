@@ -9,7 +9,8 @@ import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.
 import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 import {
   mapMaterial,
-  mapGlassRecyclingProcess
+  mapGlassRecyclingProcess,
+  convertToNumber
 } from '#formsubmission/parsing-common/form-data-mapper.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getWasteManagementPermits } from '#formsubmission/registration/extract-permits.js'
@@ -51,7 +52,7 @@ function getExportPorts(answersByShortDescription) {
     .filter((port) => port.length > 0)
 }
 
-export async function parseRegistrationSubmission(id, rawSubmissionData) {
+export function parseRegistrationSubmission(id, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
   const wasteProcessingType = getWasteProcessingType(answersByShortDescription)
@@ -62,6 +63,16 @@ export async function parseRegistrationSubmission(id, rawSubmissionData) {
     id,
     formSubmissionTime: extractTimestamp(rawSubmissionData),
     submittedToRegulator: extractAgencyFromDefinitionName(rawSubmissionData),
+    orgId: convertToNumber(
+      answersByShortDescription[
+        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
+      ],
+      'orgId'
+    ),
+    systemReference:
+      answersByShortDescription[
+        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
+      ],
     orgName:
       answersByShortDescription[
         FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME

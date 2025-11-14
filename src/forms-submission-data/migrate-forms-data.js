@@ -1,6 +1,12 @@
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
+import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+import { linkItemsToOrganisations } from '#formsubmission/link-form-submissions.js'
+import {
+  LOGGING_EVENT_ACTIONS,
+  LOGGING_EVENT_CATEGORIES
+} from '#common/enums/index.js'
 
 /**
  * @typedef {Object} SuccessResult
@@ -49,61 +55,61 @@ function isFailureResult(result) {
 }
 
 /**
- * Check if a result failed during transformation phase
- * @param {MigrationResult} result
- * @returns {boolean}
- */
-function isTransformFailure(result) {
-  return isFailureResult(result) && result.phase === 'transform'
-}
-
-/**
  * Migrates form submission data to organisations collection
  * @async
  * @param {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} formsSubmissionRepository - Repository for form submissions
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository - Repository for organisations
- * @returns {Promise<MigrationStatistics>} Migration statistics
+ * @returns {Promise<void>}
  */
 export async function migrateFormsData(
   formsSubmissionRepository,
   organisationsRepository
 ) {
-  const submissions = await formsSubmissionRepository.findAllOrganisations()
+  const orgSubmissions = await formsSubmissionRepository.findAllOrganisations()
+  const registrationSubmissions =
+    await formsSubmissionRepository.findAllRegistrations()
 
-  const migrationPromises = submissions.map((submission) => {
-    const { id, orgId, rawSubmissionData } = submission
+  const transformedOrganisations = transformOrgSubmissions(orgSubmissions)
+  const transformedRegistrations = transformRegistrationSubmissions(
+    registrationSubmissions
+  )
+  const organisationsWithRegistrations = linkRegistrations(
+    transformedOrganisations,
+    transformedRegistrations
+  )
 
-    return parseOrgSubmission(id, orgId, rawSubmissionData)
-      .then((transformedOrg) =>
-        organisationsRepository
-          .upsert(removeUndefinedValues(transformedOrg))
-          .then((result) => ({
-            success: true,
-            id,
-            action: result.action
-          }))
-          .catch((error) => {
-            logger.error(
-              error,
-              `Error upserting organisation ID ${transformedOrg.id}`
-            )
-            return { success: false, id, phase: 'upsert' }
+  const migrationPromises = organisationsWithRegistrations.map(
+    (transformedOrganisation) => {
+      return organisationsRepository
+        .upsert(removeUndefinedValues(transformedOrganisation))
+        .then((result) => ({
+          success: true,
+          id: transformedOrganisation.id,
+          action: result.action
+        }))
+        .catch((error) => {
+          logger.error({
+            error,
+            message: 'Error upserting organisation',
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.DB,
+              action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+              reference: transformedOrganisation.id
+            }
           })
-      )
-      .catch((error) => {
-        logger.error(
-          error,
-          `Error transforming submission ID ${id}, orgId ${orgId}`
-        )
-        return { success: false, id, phase: 'transform' }
-      })
-  })
+          return {
+            success: false,
+            id: transformedOrganisation.id,
+            phase: 'upsert'
+          }
+        })
+    }
+  )
 
   const results = await Promise.all(migrationPromises)
 
   const successful = results.filter(isSuccessResult)
   const failed = results.filter(isFailureResult)
-  const transformFailures = results.filter(isTransformFailure)
 
   const insertedCount = successful.filter((r) => r.action === 'inserted').length
   const updatedCount = successful.filter((r) => r.action === 'updated').length
@@ -112,15 +118,64 @@ export async function migrateFormsData(
   ).length
 
   logger.info({
-    message: `Migration completed: ${successful.length}/${submissions.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${unchangedCount} unchanged, ${transformFailures.length} transform failed, ${failed.length} failed)`
+    message: `Migration completed: ${successful.length}/${orgSubmissions.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${unchangedCount} unchanged, ${failed.length} failed)`
+  })
+}
+
+function transformOrgSubmissions(organisationFormSubmissions) {
+  let failureCount = 0
+  const results = organisationFormSubmissions.flatMap((submission) => {
+    const { id, orgId, rawSubmissionData } = submission
+    try {
+      return [parseOrgSubmission(id, orgId, rawSubmissionData)]
+    } catch (error) {
+      failureCount++
+      logger.error({
+        error,
+        message: 'Error transforming organisation submission',
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+          reference: id
+        }
+      })
+      return []
+    }
   })
 
-  return {
-    totalSubmissions: submissions.length,
-    transformedCount: submissions.length - transformFailures.length,
-    insertedCount,
-    updatedCount,
-    unchangedCount,
-    failedCount: failed.length
-  }
+  logger.error({
+    message: `Transformed ${results.length}/${organisationFormSubmissions.length} organisation form submissions (${failureCount} failed)`
+  })
+  return results
+}
+
+function transformRegistrationSubmissions(registrationSubmissions) {
+  let failureCount = 0
+  const results = registrationSubmissions.flatMap((submission) => {
+    const { id, rawSubmissionData } = submission
+    try {
+      return [parseRegistrationSubmission(id, rawSubmissionData)]
+    } catch (error) {
+      failureCount++
+      logger.error({
+        error,
+        message: 'Error transforming registration submission',
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+          reference: id
+        }
+      })
+      return []
+    }
+  })
+
+  logger.error({
+    message: `Transformed ${results.length}/${registrationSubmissions.length} registration form submissions (${failureCount} failed)`
+  })
+  return results
+}
+
+function linkRegistrations(organisations, registrations) {
+  return linkItemsToOrganisations(organisations, registrations, 'registrations')
 }
