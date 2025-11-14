@@ -95,7 +95,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
   let payload
 
   let summaryLogsRepository
-  let summaryLogsValidator
+  let summaryLogsWorker
 
   beforeAll(async () => {
     summaryLogsRepository = {
@@ -105,7 +105,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       updateStatus: vi.fn().mockResolvedValue(undefined)
     }
 
-    summaryLogsValidator = {
+    summaryLogsWorker = {
       validate: vi.fn()
     }
 
@@ -116,7 +116,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         summaryLogsRepository: (logger) => summaryLogsRepository
       },
       workers: {
-        summaryLogsValidator
+        summaryLogsWorker
       },
       featureFlags
     })
@@ -267,7 +267,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       }
     })
 
-    expect(summaryLogsValidator.validate).toHaveBeenCalledWith(summaryLogId)
+    expect(summaryLogsWorker.validate).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should not invoke validation when uploaded file is still pending', async () => {
@@ -284,7 +284,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       }
     })
 
-    expect(summaryLogsValidator.validate).not.toHaveBeenCalled()
+    expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
   })
 
   it('should not invoke validation when uploaded file was rejected', async () => {
@@ -302,7 +302,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       }
     })
 
-    expect(summaryLogsValidator.validate).not.toHaveBeenCalled()
+    expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
   })
 
   it('returns 400 if payload is not an object', async () => {
@@ -602,7 +602,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
           summaryLogsRepository: createInMemorySummaryLogsRepository()
         },
         workers: {
-          summaryLogsValidator: transitionValidator
+          summaryLogsWorker: transitionValidator
         },
         featureFlags
       })

@@ -22,7 +22,7 @@ const pool = new Piscina({
   idleTimeout: ONE_MINUTE
 })
 
-/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
+/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 
 /**
  * @returns {Promise<void>}

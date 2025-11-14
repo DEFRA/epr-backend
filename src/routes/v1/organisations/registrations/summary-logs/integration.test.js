@@ -162,7 +162,7 @@ describe('Summary logs integration', () => {
         uploadsRepository
       },
       workers: {
-        summaryLogsValidator: { validate: validateSummaryLog }
+        summaryLogsWorker: { validate: validateSummaryLog }
       },
       featureFlags
     })
@@ -499,7 +499,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -715,7 +715,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -903,7 +903,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -1078,7 +1078,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -1286,7 +1286,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -1555,7 +1555,7 @@ describe('Summary logs integration', () => {
           wasteRecordsRepository: wasteRecordsRepositoryFactory
         },
         workers: {
-          summaryLogsValidator: submitterWorker
+          summaryLogsWorker: submitterWorker
         },
         featureFlags
       })

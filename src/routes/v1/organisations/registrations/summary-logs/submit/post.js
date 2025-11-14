@@ -7,7 +7,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 /** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
 
 export const summaryLogsSubmitPath =
@@ -17,12 +17,11 @@ export const summaryLogsSubmit = {
   method: 'POST',
   path: summaryLogsSubmitPath,
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsCommandExecutor}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, summaryLogsValidator, params, logger } =
-      request
+    const { summaryLogsRepository, summaryLogsWorker, params, logger } = request
 
     const { summaryLogId, organisationId, registrationId } = params
 
@@ -44,7 +43,7 @@ export const summaryLogsSubmit = {
       }
 
       // Trigger async submission worker (fire-and-forget)
-      await summaryLogsValidator.submit(summaryLogId)
+      await summaryLogsWorker.submit(summaryLogId)
 
       logger.info({
         message: `Summary log submission initiated: summaryLogId=${summaryLogId}, organisationId=${organisationId}, registrationId=${registrationId}`,

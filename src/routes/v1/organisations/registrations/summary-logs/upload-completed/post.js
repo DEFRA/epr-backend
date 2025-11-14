@@ -15,7 +15,7 @@ import {
 import { uploadCompletedPayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 /** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
 /** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
 
@@ -141,13 +141,13 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsValidator: SummaryLogsCommandExecutor}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
     const {
       summaryLogsRepository,
-      summaryLogsValidator,
+      summaryLogsWorker,
       payload,
       params,
       logger
@@ -167,7 +167,7 @@ export const summaryLogsUploadCompleted = {
       )
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
-        await summaryLogsValidator.validate(summaryLogId)
+        await summaryLogsWorker.validate(summaryLogId)
       }
 
       const s3Info = formatS3Info(summaryLogUpload)

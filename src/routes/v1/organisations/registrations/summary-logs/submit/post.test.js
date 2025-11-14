@@ -22,7 +22,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
   setupAuthContext()
   let server
   let summaryLogsRepository
-  let summaryLogsValidator
+  let summaryLogsWorker
 
   beforeAll(async () => {
     summaryLogsRepository = {
@@ -30,7 +30,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       update: vi.fn().mockResolvedValue(undefined)
     }
 
-    summaryLogsValidator = {
+    summaryLogsWorker = {
       submit: vi.fn().mockResolvedValue(undefined)
     }
 
@@ -41,7 +41,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         summaryLogsRepository: (logger) => summaryLogsRepository
       },
       workers: {
-        summaryLogsValidator
+        summaryLogsWorker
       },
       featureFlags
     })
@@ -94,7 +94,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         }
       })
 
-      expect(summaryLogsValidator.submit).toHaveBeenCalledWith(summaryLogId)
+      expect(summaryLogsWorker.submit).toHaveBeenCalledWith(summaryLogId)
     })
 
     it('logs submission initiation', async () => {
@@ -161,7 +161,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
 
     it('returns 500 when validator submit throws non-Boom error', async () => {
       const testError = new Error('Unexpected error')
-      summaryLogsValidator.submit.mockRejectedValue(testError)
+      summaryLogsWorker.submit.mockRejectedValue(testError)
 
       // Suppress Hapi debug output for this test
       const consoleErrorSpy = vi
@@ -183,7 +183,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
 
     it('logs error when validator submit throws non-Boom error', async () => {
       const testError = new Error('Unexpected error')
-      summaryLogsValidator.submit.mockRejectedValue(testError)
+      summaryLogsWorker.submit.mockRejectedValue(testError)
 
       // Suppress Hapi debug output for this test
       const consoleErrorSpy = vi

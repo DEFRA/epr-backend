@@ -15,7 +15,7 @@ vi.mock('piscina', () => ({
 }))
 
 describe('createSummaryLogsCommandExecutor', () => {
-  let summaryLogsValidator
+  let summaryLogsWorker
   let summaryLogId
   let logger
 
@@ -28,7 +28,7 @@ describe('createSummaryLogsCommandExecutor', () => {
       error: vi.fn()
     }
 
-    summaryLogsValidator = createSummaryLogsCommandExecutor(logger)
+    summaryLogsWorker = createSummaryLogsCommandExecutor(logger)
 
     summaryLogId = 'summary-log-123'
   })
@@ -38,12 +38,12 @@ describe('createSummaryLogsCommandExecutor', () => {
   })
 
   it('creates command executor instance', () => {
-    expect(summaryLogsValidator).toBeDefined()
-    expect(summaryLogsValidator.validate).toBeInstanceOf(Function)
+    expect(summaryLogsWorker).toBeDefined()
+    expect(summaryLogsWorker.validate).toBeInstanceOf(Function)
   })
 
   it('runs worker with command object', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await summaryLogsWorker.validate(summaryLogId)
 
     expect(mockRun).toHaveBeenCalledWith({
       command: 'validate',
@@ -52,7 +52,7 @@ describe('createSummaryLogsCommandExecutor', () => {
   })
 
   it('logs success when worker completes', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await summaryLogsWorker.validate(summaryLogId)
 
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -73,7 +73,7 @@ describe('createSummaryLogsCommandExecutor', () => {
     const error = new Error('Worker failed')
     mockRun.mockRejectedValue(error)
 
-    await summaryLogsValidator.validate(summaryLogId)
+    await summaryLogsWorker.validate(summaryLogId)
 
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -91,7 +91,7 @@ describe('createSummaryLogsCommandExecutor', () => {
 
   it('does not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(summaryLogId)
+      summaryLogsWorker.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 
@@ -99,17 +99,17 @@ describe('createSummaryLogsCommandExecutor', () => {
     mockRun.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
-      summaryLogsValidator.validate(summaryLogId)
+      summaryLogsWorker.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 
   describe('submit', () => {
     it('has submit method', () => {
-      expect(summaryLogsValidator.submit).toBeInstanceOf(Function)
+      expect(summaryLogsWorker.submit).toBeInstanceOf(Function)
     })
 
     it('runs worker with submit command object', async () => {
-      await summaryLogsValidator.submit(summaryLogId)
+      await summaryLogsWorker.submit(summaryLogId)
 
       expect(mockRun).toHaveBeenCalledWith({
         command: 'submit',
@@ -118,7 +118,7 @@ describe('createSummaryLogsCommandExecutor', () => {
     })
 
     it('logs success when submit worker completes', async () => {
-      await summaryLogsValidator.submit(summaryLogId)
+      await summaryLogsWorker.submit(summaryLogId)
 
       // Wait for promise chain to complete
       await new Promise((resolve) => setTimeout(resolve, 0))
@@ -139,7 +139,7 @@ describe('createSummaryLogsCommandExecutor', () => {
       const error = new Error('Submit worker failed')
       mockRun.mockRejectedValue(error)
 
-      await summaryLogsValidator.submit(summaryLogId)
+      await summaryLogsWorker.submit(summaryLogId)
 
       // Wait for promise chain to complete
       await new Promise((resolve) => setTimeout(resolve, 0))
