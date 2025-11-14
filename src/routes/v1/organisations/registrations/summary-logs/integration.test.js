@@ -14,6 +14,8 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testTokens } from '#vite/helpers/create-test-tokens.js'
 
@@ -60,6 +62,9 @@ const buildGetUrl = (summaryLogId) =>
 
 const buildPostUrl = (summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+
+const buildSubmitUrl = (summaryLogId) =>
+  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
 
 /**
  * Polls for validation to complete by checking status endpoint
@@ -157,7 +162,7 @@ describe('Summary logs integration', () => {
         uploadsRepository
       },
       workers: {
-        summaryLogsValidator: { validate: validateSummaryLog }
+        summaryLogsWorker: { validate: validateSummaryLog }
       },
       featureFlags
     })
@@ -494,7 +499,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -710,7 +715,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -898,7 +903,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -1073,7 +1078,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -1281,7 +1286,7 @@ describe('Summary logs integration', () => {
           uploadsRepository
         },
         workers: {
-          summaryLogsValidator: { validate: validateSummaryLog }
+          summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
@@ -1402,6 +1407,229 @@ describe('Summary logs integration', () => {
         failures: [],
         concerns: {}
       })
+    })
+  })
+
+  describe('submitting a validated summary log to create waste records', () => {
+    const summaryLogId = 'summary-submit-test'
+    const fileId = 'file-submit-123'
+    const filename = 'waste-data.xlsx'
+    let wasteRecordsRepository
+    let submitResponse
+
+    beforeEach(async () => {
+      // Set up test server with waste records repository
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: 'REG-12345',
+            status: 'approved',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Extractor for validation - uses REPROCESSOR (validation format)
+      const validationExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION: {
+              value: 'REG-12345',
+              location: { sheet: 'Data', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR',
+              location: { sheet: 'Data', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Data', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Data', row: 4, column: 'B' }
+            }
+          },
+          data: {}
+        }
+      })
+
+      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
+      const transformationExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION: {
+              value: 'REG-12345',
+              location: { sheet: 'Data', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR_INPUT',
+              location: { sheet: 'Data', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Data', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Data', row: 4, column: 'B' }
+            }
+          },
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              location: { sheet: 'Received', row: 7, column: 'A' },
+              headers: [
+                'ROW_ID',
+                'DATE_RECEIVED_FOR_REPROCESSING',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'NET_WEIGHT'
+              ],
+              rows: [
+                ['10001', '2025-01-15', '15 01 01', 1000, 100, 900],
+                ['10002', '2025-01-16', '15 01 02', 2000, 200, 1800]
+              ]
+            }
+          }
+        }
+      })
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository,
+        organisationsRepository,
+        summaryLogExtractor: validationExtractor
+      })
+
+      const wasteRecordsRepositoryFactory =
+        createInMemoryWasteRecordsRepository()
+      wasteRecordsRepository = wasteRecordsRepositoryFactory()
+
+      const syncWasteRecords = syncFromSummaryLog({
+        extractor: transformationExtractor,
+        wasteRecordRepository: wasteRecordsRepository
+      })
+
+      const submitterWorker = {
+        validate: validateSummaryLog,
+        submit: async (summaryLogId) => {
+          // Execute submit command synchronously in test (simulating worker completion)
+          const existing = await summaryLogsRepository.findById(summaryLogId)
+          const { version, summaryLog } = existing
+
+          await syncWasteRecords(summaryLog)
+
+          await summaryLogsRepository.update(summaryLogId, version, {
+            status: SUMMARY_LOG_STATUS.SUBMITTED
+          })
+        }
+      }
+
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository,
+          wasteRecordsRepository: wasteRecordsRepositoryFactory
+        },
+        workers: {
+          summaryLogsWorker: submitterWorker
+        },
+        featureFlags
+      })
+
+      // Upload and validate the summary log
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+      })
+
+      // Wait for validation to complete
+      await pollForValidation(server, summaryLogId)
+
+      // Submit the validated summary log
+      submitResponse = await server.inject({
+        method: 'POST',
+        url: buildSubmitUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      // Wait for submission to complete (worker runs async)
+      let attempts = 0
+      const maxAttempts = 10
+      let status = SUMMARY_LOG_STATUS.VALIDATED
+
+      while (
+        status === SUMMARY_LOG_STATUS.VALIDATED &&
+        attempts < maxAttempts
+      ) {
+        await new Promise((resolve) => setTimeout(resolve, 50))
+
+        const checkResponse = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+
+        status = JSON.parse(checkResponse.payload).status
+        attempts++
+      }
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(submitResponse.statusCode).toBe(202)
+    })
+
+    it('creates waste records from summary log data', async () => {
+      const wasteRecords = await wasteRecordsRepository.findByRegistration(
+        organisationId,
+        registrationId
+      )
+
+      expect(wasteRecords).toHaveLength(2)
+      expect(wasteRecords[0].rowId).toBe('10001')
+      expect(wasteRecords[1].rowId).toBe('10002')
+    })
+
+    it('updates summary log status to SUBMITTED', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(200)
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
     })
   })
 })

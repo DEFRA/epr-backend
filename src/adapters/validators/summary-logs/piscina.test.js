@@ -1,4 +1,4 @@
-import { closeWorkerPool, createSummaryLogsValidator } from './piscina.js'
+import { closeWorkerPool, createSummaryLogsCommandExecutor } from './piscina.js'
 
 const { mockRun, mockDestroy } = vi.hoisted(() => ({
   mockRun: vi.fn(),
@@ -14,8 +14,8 @@ vi.mock('piscina', () => ({
   })
 }))
 
-describe('createSummaryLogsValidator', () => {
-  let summaryLogsValidator
+describe('createSummaryLogsCommandExecutor', () => {
+  let summaryLogsWorker
   let summaryLogId
   let logger
 
@@ -28,7 +28,7 @@ describe('createSummaryLogsValidator', () => {
       error: vi.fn()
     }
 
-    summaryLogsValidator = createSummaryLogsValidator(logger)
+    summaryLogsWorker = createSummaryLogsCommandExecutor(logger)
 
     summaryLogId = 'summary-log-123'
   })
@@ -37,19 +37,22 @@ describe('createSummaryLogsValidator', () => {
     vi.resetAllMocks()
   })
 
-  it('creates validator instance', () => {
-    expect(summaryLogsValidator).toBeDefined()
-    expect(summaryLogsValidator.validate).toBeInstanceOf(Function)
+  it('creates command executor instance', () => {
+    expect(summaryLogsWorker).toBeDefined()
+    expect(summaryLogsWorker.validate).toBeInstanceOf(Function)
   })
 
-  it('runs worker with summary log id', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+  it('runs worker with command object', async () => {
+    await summaryLogsWorker.validate(summaryLogId)
 
-    expect(mockRun).toHaveBeenCalledWith(summaryLogId)
+    expect(mockRun).toHaveBeenCalledWith({
+      command: 'validate',
+      summaryLogId
+    })
   })
 
   it('logs success when worker completes', async () => {
-    await summaryLogsValidator.validate(summaryLogId)
+    await summaryLogsWorker.validate(summaryLogId)
 
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -57,7 +60,7 @@ describe('createSummaryLogsValidator', () => {
     expect(logger.info).toHaveBeenCalledWith(
       expect.objectContaining({
         message:
-          'Summary log validation worker completed: summaryLogId=summary-log-123',
+          'Summary log validate worker completed: summaryLogId=summary-log-123',
         event: {
           category: 'server',
           action: 'process_success'
@@ -70,7 +73,7 @@ describe('createSummaryLogsValidator', () => {
     const error = new Error('Worker failed')
     mockRun.mockRejectedValue(error)
 
-    await summaryLogsValidator.validate(summaryLogId)
+    await summaryLogsWorker.validate(summaryLogId)
 
     // Wait for promise chain to complete
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -78,7 +81,7 @@ describe('createSummaryLogsValidator', () => {
     expect(logger.error).toHaveBeenCalledWith({
       error,
       message:
-        'Summary log validation worker failed: summaryLogId=summary-log-123',
+        'Summary log validate worker failed: summaryLogId=summary-log-123',
       event: {
         category: 'server',
         action: 'process_failure'
@@ -88,7 +91,7 @@ describe('createSummaryLogsValidator', () => {
 
   it('does not throw when worker succeeds', async () => {
     await expect(
-      summaryLogsValidator.validate(summaryLogId)
+      summaryLogsWorker.validate(summaryLogId)
     ).resolves.toBeUndefined()
   })
 
@@ -96,8 +99,61 @@ describe('createSummaryLogsValidator', () => {
     mockRun.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
-      summaryLogsValidator.validate(summaryLogId)
+      summaryLogsWorker.validate(summaryLogId)
     ).resolves.toBeUndefined()
+  })
+
+  describe('submit', () => {
+    it('has submit method', () => {
+      expect(summaryLogsWorker.submit).toBeInstanceOf(Function)
+    })
+
+    it('runs worker with submit command object', async () => {
+      await summaryLogsWorker.submit(summaryLogId)
+
+      expect(mockRun).toHaveBeenCalledWith({
+        command: 'submit',
+        summaryLogId
+      })
+    })
+
+    it('logs success when submit worker completes', async () => {
+      await summaryLogsWorker.submit(summaryLogId)
+
+      // Wait for promise chain to complete
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(logger.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message:
+            'Summary log submit worker completed: summaryLogId=summary-log-123',
+          event: {
+            category: 'server',
+            action: 'process_success'
+          }
+        })
+      )
+    })
+
+    it('logs error when submit worker fails', async () => {
+      const error = new Error('Submit worker failed')
+      mockRun.mockRejectedValue(error)
+
+      await summaryLogsWorker.submit(summaryLogId)
+
+      // Wait for promise chain to complete
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(logger.error).toHaveBeenCalledWith({
+        error,
+        message:
+          'Summary log submit worker failed: summaryLogId=summary-log-123',
+        event: {
+          category: 'server',
+          action: 'process_failure'
+        }
+      })
+    })
   })
 })
 

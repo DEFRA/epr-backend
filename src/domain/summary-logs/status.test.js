@@ -203,5 +203,66 @@ describe('status', () => {
         'Cannot transition summary log from unknown-status to preprocessing'
       )
     })
+
+    it('returns updated summary log for validating -> validated transition', () => {
+      const summaryLog = {
+        id: 'log-303',
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        file: { id: 'file-6' }
+      }
+      const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
+
+      expect(result).toEqual({
+        id: 'log-303',
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        file: { id: 'file-6' }
+      })
+    })
+
+    it('returns updated summary log for validating -> invalid transition', () => {
+      const summaryLog = {
+        id: 'log-404',
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        file: { id: 'file-7' }
+      }
+      const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.INVALID)
+
+      expect(result).toEqual({
+        id: 'log-404',
+        status: SUMMARY_LOG_STATUS.INVALID,
+        file: { id: 'file-7' }
+      })
+    })
+
+    it('returns updated summary log for validated -> submitted transition', () => {
+      const summaryLog = {
+        id: 'log-505',
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        file: { id: 'file-8' }
+      }
+      const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+
+      expect(result).toEqual({
+        id: 'log-505',
+        status: SUMMARY_LOG_STATUS.SUBMITTED,
+        file: { id: 'file-8' }
+      })
+    })
+
+    it('throws error for validated -> invalid transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.INVALID)
+      ).toThrow('Cannot transition summary log from validated to invalid')
+    })
+
+    it('throws error for invalid -> submitted transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.INVALID }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+      ).toThrow('Cannot transition summary log from invalid to submitted')
+    })
   })
 })

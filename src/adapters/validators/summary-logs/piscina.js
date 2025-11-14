@@ -22,16 +22,16 @@ const pool = new Piscina({
   idleTimeout: ONE_MINUTE
 })
 
-/** @typedef {import('#domain/summary-logs/validator/port.js').SummaryLogsValidator} SummaryLogsValidator */
+/** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
 
 /**
  * @returns {Promise<void>}
  */
-const runValidationInWorker = async (summaryLogId, logger) => {
+const runCommandInWorker = async (command, summaryLogId, logger) => {
   try {
-    await pool.run(summaryLogId)
+    await pool.run({ command, summaryLogId })
     logger.info({
-      message: `Summary log validation worker completed: summaryLogId=${summaryLogId}`,
+      message: `Summary log ${command} worker completed: summaryLogId=${summaryLogId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
@@ -40,7 +40,7 @@ const runValidationInWorker = async (summaryLogId, logger) => {
   } catch (err) {
     logger.error({
       error: err,
-      message: `Summary log validation worker failed: summaryLogId=${summaryLogId}`,
+      message: `Summary log ${command} worker failed: summaryLogId=${summaryLogId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
@@ -49,7 +49,7 @@ const runValidationInWorker = async (summaryLogId, logger) => {
   }
 }
 
-export const createSummaryLogsValidator = (logger) => {
+export const createSummaryLogsCommandExecutor = (logger) => {
   return {
     validate: async (summaryLogId) => {
       // Fire-and-forget: validation runs asynchronously in worker thread, request returns immediately
@@ -62,7 +62,20 @@ export const createSummaryLogsValidator = (logger) => {
         }
       })
 
-      runValidationInWorker(summaryLogId, logger)
+      runCommandInWorker('validate', summaryLogId, logger)
+    },
+    submit: async (summaryLogId) => {
+      // Fire-and-forget: submission runs asynchronously in worker thread, request returns immediately
+      // Intentionally not awaiting as the HTTP response completes before submission finishes
+      logger.info({
+        message: `Summary log submission worker spawning: summaryLogId=${summaryLogId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.SERVER,
+          action: LOGGING_EVENT_ACTIONS.START_SUCCESS
+        }
+      })
+
+      runCommandInWorker('submit', summaryLogId, logger)
     }
   }
 }
