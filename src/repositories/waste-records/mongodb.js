@@ -8,6 +8,15 @@ const COLLECTION_NAME = 'waste-records'
 const SCHEMA_VERSION = 1
 
 /**
+ * Composite key for uniquely identifying a waste record
+ * @typedef {Object} WasteRecordKey
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} type
+ * @property {string} rowId
+ */
+
+/**
  * Maps MongoDB document to domain model by removing internal MongoDB fields
  * and ensuring data isolation through deep cloning
  * @param {Object} doc - MongoDB document
@@ -20,11 +29,7 @@ const mapDocumentToDomain = (doc) => {
 
 /**
  * Generates a composite key for waste record uniqueness
- * @param {Object} key - Composite key components
- * @param {string} key.organisationId
- * @param {string} key.registrationId
- * @param {string} key.type
- * @param {string} key.rowId
+ * @param {WasteRecordKey} key - Composite key components
  * @returns {string} Composite key
  */
 const getCompositeKey = ({ organisationId, registrationId, type, rowId }) => {
@@ -53,12 +58,7 @@ const performFindByRegistration =
  * @returns {Object} MongoDB bulk write operation
  */
 const buildUpsertOperation = (record) => {
-  const compositeKey = getCompositeKey({
-    organisationId: record.organisationId,
-    registrationId: record.registrationId,
-    type: record.type,
-    rowId: record.rowId
-  })
+  const compositeKey = getCompositeKey(record)
 
   return {
     updateOne: {
@@ -114,20 +114,14 @@ const buildExistingSummaryLogIds = () => ({
  * Builds MongoDB update operation for appending a version
  * @param {string} compositeKey
  * @param {number} schemaVersion
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} type
- * @param {string} rowId
+ * @param {WasteRecordKey} key - Composite key identifying the record
  * @param {Object} versionData
  * @returns {Object} MongoDB update operation
  */
 const buildAppendVersionOperation = (
   compositeKey,
   schemaVersion,
-  organisationId,
-  registrationId,
-  type,
-  rowId,
+  { organisationId, registrationId, type, rowId },
   versionData
 ) => {
   const existingSummaryLogIds = buildExistingSummaryLogIds()
@@ -193,21 +187,19 @@ const performAppendVersions =
 
     for (const [type, versionsByRowId] of versionsByType) {
       for (const [rowId, versionData] of versionsByRowId) {
-        const compositeKey = getCompositeKey({
+        const key = {
           organisationId: validatedOrgId,
           registrationId: validatedRegId,
           type,
           rowId
-        })
+        }
+        const compositeKey = getCompositeKey(key)
 
         bulkOps.push(
           buildAppendVersionOperation(
             compositeKey,
             SCHEMA_VERSION,
-            validatedOrgId,
-            validatedRegId,
-            type,
-            rowId,
+            key,
             versionData
           )
         )

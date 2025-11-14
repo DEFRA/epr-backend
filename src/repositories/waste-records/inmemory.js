@@ -5,13 +5,18 @@ import {
 } from './validation.js'
 
 /**
+ * Composite key for uniquely identifying a waste record
+ * @typedef {Object} WasteRecordKey
+ * @property {string} organisationId
+ * @property {string} registrationId
+ * @property {string} type
+ * @property {string} rowId
+ */
+
+/**
  * Finds the index of a record matching the composite key
  * @param {Array} storage - Storage array
- * @param {Object} key - Composite key identifying the record
- * @param {string} key.organisationId
- * @param {string} key.registrationId
- * @param {string} key.type
- * @param {string} key.rowId
+ * @param {WasteRecordKey} key - Composite key identifying the record
  * @returns {number} Index of matching record, or -1 if not found
  */
 const findRecordIndex = (
@@ -30,11 +35,7 @@ const findRecordIndex = (
 /**
  * Appends a version to an existing record or creates a new record
  * @param {Array} storage - Storage array
- * @param {Object} key - Composite key identifying the record
- * @param {string} key.organisationId
- * @param {string} key.registrationId
- * @param {string} key.type
- * @param {string} key.rowId
+ * @param {WasteRecordKey} key - Composite key identifying the record
  * @param {Object} versionData
  */
 const appendVersionToRecord = (
@@ -104,12 +105,7 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       for (const record of wasteRecords) {
         const validatedRecord = validateWasteRecord(record)
 
-        const existingIndex = findRecordIndex(storage, {
-          organisationId: validatedRecord.organisationId,
-          registrationId: validatedRecord.registrationId,
-          type: validatedRecord.type,
-          rowId: validatedRecord.rowId
-        })
+        const existingIndex = findRecordIndex(storage, validatedRecord)
 
         if (existingIndex >= 0) {
           // Update existing record
