@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { config } from '../../../config.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -14,11 +15,8 @@ export const organisationsGetAllByDefraIdOrgId = {
     ? {}
     : {
         auth: {
-          // strategy: 'access-token',
-          strategy: 'access-token', // @todo: workaround for strategy-delegation not allowing h.response()
           access: {
-            // only permit access to this endpoint if (logged in) user has either the service_maintainer or user scope
-            scope: ['service_maintainer', 'user']
+            scope: [ROLES.serviceMaintainer, ROLES.standardUser]
           }
         }
       },

@@ -3,7 +3,6 @@ import { ObjectId } from 'mongodb'
 import {
   STATUS,
   REGULATOR,
-  ROLE,
   WASTE_PROCESSING_TYPE,
   NATION,
   BUSINESS_TYPE,
@@ -16,6 +15,7 @@ import {
   TONNAGE_BAND,
   VALUE_TYPE
 } from '#domain/organisations/model.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
 
 const whenReprocessor = (schema) =>
   Joi.when('wasteProcessingType', {
@@ -127,7 +127,7 @@ export const userSchema = Joi.object({
 export const userWithRolesSchema = Joi.object({
   fullName: Joi.string().required(),
   email: Joi.string().email().required(),
-  roles: Joi.array().items(ROLE.STANDARD_USER).optional(),
+  roles: Joi.array().items(ROLES.standardUser).optional(),
   isInitialUser: Joi.boolean()
 })
 

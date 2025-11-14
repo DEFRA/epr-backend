@@ -5,7 +5,7 @@ import { config } from '../../../config.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
-export const organisationsGetByIdPath = '/v1/organisations/{organisationId}'
+export const organisationsGetByIdPath = '/v1/organisations/{id}'
 
 export const organisationsGetById = {
   method: 'GET',
@@ -13,10 +13,10 @@ export const organisationsGetById = {
   options: config.get('isTest')
     ? {}
     : {
-    auth: {
-      scope: [ROLES.serviceMaintainer, 'user']
-    }
-  },
+        auth: {
+          scope: [ROLES.serviceMaintainer, ROLES.standardUser]
+        }
+      },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
    * @param {Object} h - Hapi response toolkit
@@ -24,7 +24,7 @@ export const organisationsGetById = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
 
-    const id = request.params.organisationId.trim()
+    const id = request.params.id.trim()
 
     if (!id) {
       throw Boom.notFound('Organisation not found')

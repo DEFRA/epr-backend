@@ -1,4 +1,5 @@
-import { ROLE, STATUS } from './status.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
+import { STATUS } from './model.js'
 
 const eligibleStatuses = [STATUS.APPROVED, STATUS.ACTIVE, STATUS.SUSPENDED]
 
@@ -26,18 +27,10 @@ export function generateInitialUsers({
         ...accreditations.reduce(
           (
             prev,
-            {
-              prnIssuance = {},
-              pernIssuance = {},
-              statusHistory: accreditationStatusHistory
-            }
+            { prnIssuance = {}, statusHistory: accreditationStatusHistory }
           ) =>
             eligibleStatuses.includes(accreditationStatusHistory.at(-1)?.status)
-              ? [
-                  ...prev,
-                  ...(prnIssuance.signatories ?? []),
-                  ...(pernIssuance.signatories ?? [])
-                ]
+              ? [...prev, ...(prnIssuance.signatories ?? [])]
               : prev,
           []
         )
@@ -51,7 +44,7 @@ export function generateInitialUsers({
                   fullName: user.fullName,
                   email: user.email,
                   isInitialUser: true,
-                  roles: [ROLE.STANDARD_USER]
+                  roles: [ROLES.standardUser]
                 }
               ],
         []
