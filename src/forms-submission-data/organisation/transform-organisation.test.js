@@ -6,7 +6,7 @@ import {
   PARTNER_TYPE,
   BUSINESS_TYPE,
   NATION
-} from '#domain/organisations.js'
+} from '#domain/organisations/model.js'
 
 import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json'
 import registeredLtdLiability from '#data/fixtures/ea/organisation/registered-ltd-liability.json'

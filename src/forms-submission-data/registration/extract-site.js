@@ -4,7 +4,7 @@ import {
   mapTimeScale,
   convertToNumber
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { MATERIAL } from '#domain/organisations.js'
+import { MATERIAL } from '#domain/organisations/model.js'
 
 const SITE_CAPACITY_BY_MATERIALS = [
   {
@@ -43,7 +43,7 @@ function getSiteAddress(answersByShortDescription) {
       FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
     ]
 
-  return siteAddress ? parseUkAddress(siteAddress) : undefined
+  return parseUkAddress(siteAddress)
 }
 
 function getSiteCapacity(answersByPages) {
@@ -57,9 +57,9 @@ function getSiteCapacity(answersByPages) {
 
       return {
         material,
-        siteCapacityWeight: convertToNumber(
+        siteCapacityInTonnes: convertToNumber(
           pageData[config.fields.CAPACITY],
-          'siteCapacityWeight'
+          'siteCapacityInTonnes'
         ),
         siteCapacityTimescale: mapTimeScale(pageData[config.fields.TIMESCALE])
       }
@@ -70,14 +70,8 @@ function getSiteCapacity(answersByPages) {
 }
 
 export function getSiteDetails(answersByShortDescription, answersByPages) {
-  const address = getSiteAddress(answersByShortDescription)
-
-  if (!address) {
-    return undefined
-  }
-
   return {
-    address,
+    address: getSiteAddress(answersByShortDescription),
     gridReference:
       answersByShortDescription[
         FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.GRID_REFERENCE

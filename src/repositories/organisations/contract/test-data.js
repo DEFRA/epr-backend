@@ -9,38 +9,53 @@ export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
 function initializeStatusForItems(items) {
   if (Array.isArray(items)) {
     for (const item of items) {
-      delete item.status
       item.statusHistory = createInitialStatusHistory()
     }
   }
 }
 
-export const buildRegistration = (overrides = {}) => ({
-  id: new ObjectId().toString(),
-  orgName: 'Test Org',
-  material: 'glass',
-  wasteProcessingType: 'reprocessor',
-  wasteRegistrationNumber: 'CBDU111111',
-  formSubmissionTime: '2025-08-20T19:34:44.944Z',
-  submittedToRegulator: 'ea',
-  ...overrides
-})
+export const buildRegistration = (overrides = {}) => {
+  const desiredType = overrides.wasteProcessingType || 'reprocessor'
+  const baseRegistrationIndex = desiredType === 'exporter' ? 1 : 0
 
-export const buildAccreditation = (overrides = {}) => ({
-  id: new ObjectId().toString(),
-  accreditationNumber: '87654321',
-  material: 'glass',
-  wasteProcessingType: 'reprocessor',
-  formSubmissionTime: '2025-08-19T19:34:44.944Z',
-  submittedToRegulator: 'ea',
-  ...overrides
-})
+  const baseRegistration = org1.registrations[baseRegistrationIndex]
+
+  const registration = {
+    ...baseRegistration,
+    id: new ObjectId().toString(),
+    ...overrides
+  }
+
+  if (registration.wasteProcessingType === 'exporter') {
+    delete registration.glassRecyclingProcess
+    delete registration.site
+    delete registration.wasteManagementPermits
+    delete registration.yearlyMetrics
+    delete registration.plantEquipmentDetails
+  }
+
+  if (registration.wasteProcessingType === 'reprocessor') {
+    delete registration.exportPorts
+    delete registration.orsFileUploads
+  }
+
+  return registration
+}
+
+export const buildAccreditation = (overrides = {}) => {
+  const baseAccreditation = org1.accreditations[0]
+
+  return {
+    ...baseAccreditation,
+    id: new ObjectId().toString(),
+    accreditationNumber: '87654321',
+    ...overrides
+  }
+}
 
 export const buildOrganisation = (overrides = {}) => {
-  const { statusHistory: _statusHistory, ...baseOrg } = org1
-
   const org = {
-    ...baseOrg,
+    ...org1,
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
     statusHistory: createInitialStatusHistory(),

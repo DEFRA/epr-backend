@@ -5,7 +5,7 @@ import {
   mapTimeScale,
   convertToNumber
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { MATERIAL, WASTE_PERMIT_TYPE } from '#domain/organisations.js'
+import { MATERIAL, WASTE_PERMIT_TYPE } from '#domain/organisations/model.js'
 
 const ENV_PERMIT_BY_MATERIALS = [
   {
@@ -90,9 +90,9 @@ function getEnvironmentPermitDetails(answersByPages) {
 
             return {
               material,
-              authorisedWeight: convertToNumber(
+              authorisedWeightInTonnes: convertToNumber(
                 pageData[config.fields.AUTHORISED_WEIGHT],
-                'authorisedWeight'
+                'authorisedWeightInTonnes'
               ),
               timeScale: mapTimeScale(pageData[config.fields.TIMESCALE])
             }
@@ -150,9 +150,9 @@ function getInstallationPermitDetails(answersByPages) {
 
             return {
               material,
-              authorisedWeight: convertToNumber(
+              authorisedWeightInTonnes: convertToNumber(
                 pageData[config.fields.AUTHORISED_WEIGHT],
-                'authorisedWeight'
+                'authorisedWeightInTonnes'
               ),
               timeScale: mapTimeScale(pageData[config.fields.TIMESCALE])
             }

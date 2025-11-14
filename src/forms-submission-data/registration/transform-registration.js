@@ -9,16 +9,21 @@ import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.
 import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 import {
   mapMaterial,
-  mapRecyclingProcess
+  mapGlassRecyclingProcess
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getWasteManagementPermits } from '#formsubmission/registration/extract-permits.js'
 import { getSiteDetails } from '#formsubmission/registration/extract-site.js'
 import {
   getSubmitterDetails,
   getApprovedPersons
 } from '#formsubmission/registration/extract-contacts.js'
+import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
 
+/**
+ * @param {Object} answersByShortDescription
+ * @returns {import('#domain/organisations/model.js').WasteProcessingTypeValue}
+ */
 function getWasteProcessingType(answersByShortDescription) {
   return answersByShortDescription[
     FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
@@ -40,10 +45,6 @@ function getExportPorts(answersByShortDescription) {
   const exportPorts =
     answersByShortDescription[FORM_PAGES.REGISTRATION.EXPORT_PORTS]
 
-  if (!exportPorts) {
-    return undefined
-  }
-
   return exportPorts
     .split(/\r?\n/)
     .map((port) => port.trim())
@@ -54,6 +55,9 @@ export async function parseRegistrationSubmission(id, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
   const wasteProcessingType = getWasteProcessingType(answersByShortDescription)
+  const isReprocessor =
+    wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+  const isExporter = !isReprocessor
   return {
     id,
     formSubmissionTime: extractTimestamp(rawSubmissionData),
@@ -63,40 +67,48 @@ export async function parseRegistrationSubmission(id, rawSubmissionData) {
         FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),
-    site: getSiteDetails(answersByShortDescription, answersByPages),
+    site: isReprocessor
+      ? getSiteDetails(answersByShortDescription, answersByPages)
+      : undefined,
     noticeAddress: getNoticeAddress(answersByShortDescription),
-    wasteRegistrationNumber:
+    cbduNumber:
       answersByShortDescription[
         FORM_PAGES.REGISTRATION.WASTE_REGISTRATION_NUMBER
       ],
     material: mapMaterial(
       answersByShortDescription[FORM_PAGES.REGISTRATION.MATERIAL_REGISTERED]
     ),
-    recyclingType: mapRecyclingProcess(
+    glassRecyclingProcess: mapGlassRecyclingProcess(
       answersByShortDescription[FORM_PAGES.REGISTRATION.GLASS_RECYCLING_PROCESS]
     ),
     suppliers: answersByShortDescription[FORM_PAGES.REGISTRATION.SUPPLIERS],
-    exportPorts: getExportPorts(answersByShortDescription),
-    plantEquipmentDetails:
-      answersByShortDescription[
-        FORM_PAGES.REGISTRATION.PLANT_EQUIPMENT_DETAILS
-      ],
+    exportPorts: isExporter
+      ? getExportPorts(answersByShortDescription)
+      : undefined,
+    plantEquipmentDetails: isReprocessor
+      ? answersByShortDescription[
+          FORM_PAGES.REGISTRATION.PLANT_EQUIPMENT_DETAILS
+        ]
+      : undefined,
     wasteProcessingType,
-    wasteManagementPermits: getWasteManagementPermits(
-      rawSubmissionData,
-      answersByPages
-    ),
+    wasteManagementPermits: isReprocessor
+      ? getWasteManagementPermits(rawSubmissionData, answersByPages)
+      : undefined,
     approvedPersons: getApprovedPersons(answersByShortDescription),
-    samplingInspectionPlanFileUploads: retrieveFileUploadDetails(
+    samplingInspectionPlanPart1FileUploads: retrieveFileUploadDetails(
       rawSubmissionData,
       FORM_PAGES.REGISTRATION.SIP_FILE_UPLOAD
     ),
-    orsFileUploads:
-      wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER
-        ? retrieveFileUploadDetails(
-            rawSubmissionData,
-            FORM_PAGES.REGISTRATION.ORS_FILE_UPLOAD
-          )
-        : undefined
+    orsFileUploads: isExporter
+      ? retrieveFileUploadDetails(
+          rawSubmissionData,
+          FORM_PAGES.REGISTRATION.ORS_FILE_UPLOAD
+        )
+      : undefined,
+    yearlyMetrics: getYearlyMetrics(
+      wasteProcessingType,
+      rawSubmissionData,
+      answersByPages
+    )
   }
 }
