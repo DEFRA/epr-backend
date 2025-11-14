@@ -85,6 +85,86 @@ const performUpsertWasteRecords = (db) => async (wasteRecords) => {
   await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
 }
 
+const performAppendVersions =
+  (db) => async (organisationId, registrationId, versionsByKey) => {
+    const validatedOrgId = validateOrganisationId(organisationId)
+    const validatedRegId = validateRegistrationId(registrationId)
+
+    if (versionsByKey.size === 0) {
+      return
+    }
+
+    // Build bulk write operations
+    const bulkOps = []
+
+    for (const [key, versionData] of versionsByKey) {
+      // Parse the key to extract type and rowId
+      const [type, rowId] = key.split(':')
+
+      const compositeKey = getCompositeKey(
+        validatedOrgId,
+        validatedRegId,
+        type,
+        rowId
+      )
+
+      bulkOps.push({
+        updateOne: {
+          filter: {
+            _compositeKey: compositeKey
+          },
+          update: [
+            {
+              $set: {
+                // Static fields - only set on insert
+                _compositeKey: compositeKey,
+                schemaVersion: SCHEMA_VERSION,
+                organisationId: validatedOrgId,
+                registrationId: validatedRegId,
+                type,
+                rowId,
+                // Current data - always update
+                data: structuredClone(versionData.data),
+                // Versions array - conditionally append if summaryLog.id doesn't exist
+                versions: {
+                  $cond: {
+                    if: {
+                      $in: [
+                        versionData.version.summaryLog.id,
+                        {
+                          $ifNull: [
+                            {
+                              $map: {
+                                input: '$versions',
+                                as: 'v',
+                                in: '$$v.summaryLog.id'
+                              }
+                            },
+                            []
+                          ]
+                        }
+                      ]
+                    },
+                    then: '$versions',
+                    else: {
+                      $concatArrays: [
+                        { $ifNull: ['$versions', []] },
+                        [structuredClone(versionData.version)]
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          ],
+          upsert: true
+        }
+      })
+    }
+
+    await db.collection(COLLECTION_NAME).bulkWrite(bulkOps, { ordered: false })
+  }
+
 /**
  * Creates a MongoDB-backed waste records repository
  * @param {import('mongodb').Db} db - MongoDB database instance
@@ -93,6 +173,7 @@ const performUpsertWasteRecords = (db) => async (wasteRecords) => {
 export const createWasteRecordsRepository = (db) => () => {
   return {
     findByRegistration: performFindByRegistration(db),
-    upsertWasteRecords: performUpsertWasteRecords(db)
+    upsertWasteRecords: performUpsertWasteRecords(db),
+    appendVersions: performAppendVersions(db)
   }
 }

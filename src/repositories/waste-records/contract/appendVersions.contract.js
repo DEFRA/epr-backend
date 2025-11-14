@@ -1,6 +1,8 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildWasteRecord } from './test-data.js'
-import { WASTE_RECORD_TYPE, VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  WASTE_RECORD_TYPE,
+  VERSION_STATUS
+} from '#domain/waste-records/model.js'
 
 export const testAppendVersionsBehaviour = (createTest) => {
   describe('appendVersions', () => {
@@ -152,61 +154,55 @@ export const testAppendVersionsBehaviour = (createTest) => {
       expect(result).toHaveLength(3)
     })
 
-    createTest(
-      'handles empty versionsByKey map without error',
-      async () => {
-        const versionsByKey = new Map()
+    createTest('handles empty versionsByKey map without error', async () => {
+      const versionsByKey = new Map()
 
-        await expect(
-          repository.appendVersions('org-1', 'reg-1', versionsByKey)
-        ).resolves.not.toThrow()
-      }
-    )
+      await expect(
+        repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      ).resolves.not.toThrow()
+    })
 
-    createTest(
-      'isolates different record types with same rowId',
-      async () => {
-        const versionsByKey = new Map([
-          [
-            'received:row-1',
-            {
-              data: { ROW_ID: 'row-1', VALUE: 'received-data' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+    createTest('isolates different record types with same rowId', async () => {
+      const versionsByKey = new Map([
+        [
+          'received:row-1',
+          {
+            data: { ROW_ID: 'row-1', VALUE: 'received-data' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ],
-          [
-            'processed:row-1',
-            {
-              data: { ROW_ID: 'row-1', VALUE: 'processed-data' },
-              version: {
-                createdAt: '2025-01-15T10:00:00.000Z',
-                status: VERSION_STATUS.CREATED,
-                summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
-              }
+          }
+        ],
+        [
+          'processed:row-1',
+          {
+            data: { ROW_ID: 'row-1', VALUE: 'processed-data' },
+            version: {
+              createdAt: '2025-01-15T10:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: 'log-1', uri: 's3://bucket/key1' }
             }
-          ]
-        ])
+          }
+        ]
+      ])
 
-        await repository.appendVersions('org-1', 'reg-1', versionsByKey)
+      await repository.appendVersions('org-1', 'reg-1', versionsByKey)
 
-        const result = await repository.findByRegistration('org-1', 'reg-1')
-        expect(result).toHaveLength(2)
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(2)
 
-        const receivedRecord = result.find(
-          (r) => r.type === WASTE_RECORD_TYPE.RECEIVED
-        )
-        const processedRecord = result.find(
-          (r) => r.type === WASTE_RECORD_TYPE.PROCESSED
-        )
+      const receivedRecord = result.find(
+        (r) => r.type === WASTE_RECORD_TYPE.RECEIVED
+      )
+      const processedRecord = result.find(
+        (r) => r.type === WASTE_RECORD_TYPE.PROCESSED
+      )
 
-        expect(receivedRecord.data.VALUE).toBe('received-data')
-        expect(processedRecord.data.VALUE).toBe('processed-data')
-      }
-    )
+      expect(receivedRecord.data.VALUE).toBe('received-data')
+      expect(processedRecord.data.VALUE).toBe('processed-data')
+    })
 
     createTest(
       'partial idempotency - skips already-applied versions, adds new ones',
@@ -237,12 +233,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           ]
         ])
 
-        await repository.appendVersions(
-          'org-1',
-          'reg-1',
-          null,
-          firstSubmission
-        )
+        await repository.appendVersions('org-1', 'reg-1', firstSubmission)
 
         // Simulate partial failure - only row-1 was persisted, now retry with both
         const retrySubmission = new Map([
@@ -270,12 +261,7 @@ export const testAppendVersionsBehaviour = (createTest) => {
           ]
         ])
 
-        await repository.appendVersions(
-          'org-1',
-          'reg-1',
-          null,
-          retrySubmission
-        )
+        await repository.appendVersions('org-1', 'reg-1', retrySubmission)
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
         expect(result).toHaveLength(2)

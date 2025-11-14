@@ -49,6 +49,52 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
           storage.push(structuredClone(validatedRecord))
         }
       }
+    },
+
+    async appendVersions(organisationId, registrationId, versionsByKey) {
+      const validatedOrgId = validateOrganisationId(organisationId)
+      const validatedRegId = validateRegistrationId(registrationId)
+
+      for (const [key, versionData] of versionsByKey) {
+        // Parse the key to extract type and rowId
+        const [type, rowId] = key.split(':')
+
+        // Find existing record with same composite key
+        const existingIndex = storage.findIndex(
+          (r) =>
+            r.organisationId === validatedOrgId &&
+            r.registrationId === validatedRegId &&
+            r.type === type &&
+            r.rowId === rowId
+        )
+
+        if (existingIndex >= 0) {
+          const existing = storage[existingIndex]
+
+          // Check if this version already exists (idempotency check)
+          const versionExists = existing.versions.some(
+            (v) => v.summaryLog.id === versionData.version.summaryLog.id
+          )
+
+          if (!versionExists) {
+            // Append new version
+            existing.versions.push(structuredClone(versionData.version))
+          }
+
+          // Always update current data
+          existing.data = structuredClone(versionData.data)
+        } else {
+          // Create new record with first version
+          storage.push({
+            organisationId: validatedOrgId,
+            registrationId: validatedRegId,
+            type,
+            rowId,
+            data: structuredClone(versionData.data),
+            versions: [structuredClone(versionData.version)]
+          })
+        }
+      }
     }
   })
 }
