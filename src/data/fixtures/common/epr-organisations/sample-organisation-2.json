@@ -1,12 +1,16 @@
 {
   "id": "6507f1f77bcf86cd79943921",
-  "orgId": 50004,
+  "orgId": 500004,
   "schemaVersion": 1,
   "version": 1,
   "statusHistory": [
     {
       "status": "created",
       "updatedAt": "2025-10-01T08:30:00.000Z"
+    },
+    {
+      "status": "approved",
+      "updatedAt": "2025-11-01T08:30:00.000Z"
     }
   ],
   "wasteProcessingTypes": ["exporter"],
@@ -23,10 +27,16 @@
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943922",
+      "registrationNumber": "R26ER2375628628-PL",
+      "accreditationId": "68f6a147c117aec8a1ab7499",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-10-01T08:00:00.000Z"
+          "updatedAt": "2025-10-01T08:30:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "nrw",
@@ -50,10 +60,16 @@
       ],
       "approvedPersons": [
         {
-          "fullName": "Carol White",
-          "email": "carol.white@export.com",
-          "title": "Owner",
-          "phone": "2223334444"
+          "fullName": "Peter Plum",
+          "email": "peter.plum@export.com",
+          "title": "Manager",
+          "phone": "0987654321"
+        },
+        {
+          "fullName": "Yoda",
+          "email": "yoda@starwars.com",
+          "title": "PRN signatory",
+          "phone": "1234567890"
         }
       ],
       "suppliers": "International plastic suppliers",
@@ -80,11 +96,16 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab7499",
+      "accreditationNumber": "A26ER2375628628-PL",
       "formSubmissionTime": "2025-10-01T09:00:00.000Z",
       "statusHistory": [
         {
           "status": "created",
-          "updatedAt": "2025-10-01T09:00:00.000Z"
+          "updatedAt": "2025-10-01T08:30:00.000Z"
+        },
+        {
+          "status": "approved",
+          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "nrw",

@@ -2,12 +2,18 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
 import { config } from '../../../config.js'
 
 async function getOidcConfigs() {
+  const getDefraIdOidcConfig = () =>
+    fetchJson(config.get('oidc.defraId.wellKnownUrl'))
+
   const getEntraIdOidcConfig = () =>
     fetchJson(config.get('oidc.entraId.oidcWellKnownConfigurationUrl'))
 
-  const [entraIdOidcConfig] = await Promise.all([getEntraIdOidcConfig()])
+  const [defraIdOidcConfig, entraIdOidcConfig] = await Promise.all([
+    getDefraIdOidcConfig(),
+    getEntraIdOidcConfig()
+  ])
 
-  return { entraIdOidcConfig }
+  return { defraIdOidcConfig, entraIdOidcConfig }
 }
 
 export { getOidcConfigs }

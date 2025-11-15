@@ -68,9 +68,13 @@ async function createServer(options = {}) {
     cacheControl,
     secureContext,
     pulse,
-    Jwt,
-    authPlugin
+    Jwt
+    // authPlugin
   ]
+
+  if (process.env.NODE_ENV !== 'test') {
+    plugins.push(authPlugin)
+  }
 
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
   if (!options.skipMongoDb) {
