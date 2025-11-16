@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { buildOrganisation } from './test-data.js'
-import { STATUS } from '#domain/organisations.js'
+import { STATUS } from '#domain/organisations/model.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -13,7 +13,7 @@ export const testFindBehaviour = (it) => {
     describe('findById', () => {
       it('rejects invalid ObjectId format', async () => {
         await expect(repository.findById('invalid-id-format')).rejects.toThrow(
-          /Organisation with id invalid-id-format not foun/
+          'Organisation with id invalid-id-format not found'
         )
       })
 

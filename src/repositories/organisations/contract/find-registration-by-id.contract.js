@@ -1,6 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
-import { buildOrganisation } from './test-data.js'
+import {
+  buildOrganisation,
+  buildRegistration,
+  buildAccreditation
+} from './test-data.js'
 
 export const testFindRegistrationByIdBehaviour = (it) => {
   describe('findRegistrationById', () => {
@@ -11,25 +15,17 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('returns registration when both organisation ID and registration ID are valid', async () => {
-      const registration1 = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org 1',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration1 = buildRegistration({
+        orgName: 'Test Org 1'
+      })
 
-      const registration2 = {
-        id: new ObjectId().toString(),
+      const registration2 = buildRegistration({
         orgName: 'Test Org 2',
         material: 'plastic',
         wasteProcessingType: 'exporter',
-        wasteRegistrationNumber: 'CBDU222222',
-        formSubmissionTime: '2025-08-21T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+        cbduNumber: 'CBDU222222',
+        formSubmissionTime: '2025-08-21T19:34:44.944Z'
+      })
 
       const org = buildOrganisation({
         registrations: [registration1, registration2]
@@ -47,8 +43,76 @@ export const testFindRegistrationByIdBehaviour = (it) => {
         orgName: registration1.orgName,
         material: registration1.material,
         wasteProcessingType: registration1.wasteProcessingType,
-        wasteRegistrationNumber: registration1.wasteRegistrationNumber
+        cbduNumber: registration1.cbduNumber
       })
+    })
+
+    it('returns registration with hydrated accreditation when accreditationId exists', async () => {
+      const accreditation = buildAccreditation()
+
+      const registration = buildRegistration({
+        accreditationId: accreditation.id
+      })
+
+      const org = buildOrganisation({
+        registrations: [registration],
+        accreditations: [accreditation]
+      })
+
+      await repository.insert(org)
+
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id
+      )
+
+      expect(result.accreditation).toMatchObject({
+        id: accreditation.id,
+        accreditationNumber: accreditation.accreditationNumber,
+        material: accreditation.material,
+        wasteProcessingType: accreditation.wasteProcessingType
+      })
+    })
+
+    it('returns registration without accreditation field when accreditationId is undefined', async () => {
+      const registration = buildRegistration({
+        material: 'plastic',
+        wasteProcessingType: 'exporter',
+        cbduNumber: 'CBDU222222'
+      })
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id
+      )
+
+      expect(result.accreditation).toBeUndefined()
+    })
+
+    it('returns registration without accreditation field when accreditationId does not match any accreditation', async () => {
+      const registration = buildRegistration({
+        cbduNumber: 'CBDU333333',
+        accreditationId: new ObjectId().toString()
+      })
+
+      const org = buildOrganisation({
+        registrations: [registration]
+      })
+
+      await repository.insert(org)
+
+      const result = await repository.findRegistrationById(
+        org.id,
+        registration.id
+      )
+
+      expect(result.accreditation).toBeUndefined()
     })
 
     it('throws 404 when organisation does not exist', async () => {
@@ -64,15 +128,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws 404 when registration does not exist in organisation', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]
@@ -90,25 +146,9 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws 404 when registration is from different organisation', async () => {
-      const registration1 = {
-        id: new ObjectId().toString(),
-        orgName: 'Org 1',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration1 = buildRegistration()
 
-      const registration2 = {
-        id: new ObjectId().toString(),
-        orgName: 'Org 2',
-        material: 'plastic',
-        wasteProcessingType: 'exporter',
-        wasteRegistrationNumber: 'CBDU222222',
-        formSubmissionTime: '2025-08-21T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration2 = buildRegistration()
 
       const org1 = buildOrganisation({ registrations: [registration1] })
       const org2 = buildOrganisation({ registrations: [registration2] })
@@ -133,15 +173,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('throws timeout error when minimumOrgVersion never arrives', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]
@@ -160,15 +192,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('waits for minimumOrgVersion and returns registration when version arrives', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]
@@ -196,15 +220,7 @@ export const testFindRegistrationByIdBehaviour = (it) => {
     })
 
     it('waits for minimumOrgVersion and throws 404 when registration does not exist', async () => {
-      const registration = {
-        id: new ObjectId().toString(),
-        orgName: 'Test Org',
-        material: 'glass',
-        wasteProcessingType: 'reprocessor',
-        wasteRegistrationNumber: 'CBDU111111',
-        formSubmissionTime: '2025-08-20T19:34:44.944Z',
-        submittedToRegulator: 'ea'
-      }
+      const registration = buildRegistration()
 
       const org = buildOrganisation({
         registrations: [registration]

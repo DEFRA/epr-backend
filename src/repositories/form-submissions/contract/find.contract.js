@@ -65,5 +65,36 @@ export const testFindBehaviour = (it) => {
         }
       })
     })
+
+    describe('findAllOrganisations', () => {
+      it('returns empty array when no organisations exist', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const result = await repository.findAllOrganisations()
+
+        expect(result).toEqual([])
+      })
+
+      it('returns all organisations with field values', async ({
+        seedOrganisations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedOrganisations()
+        const repository = formSubmissionsRepository()
+
+        const result = await repository.findAllOrganisations()
+
+        expect(result).toHaveLength(seededData.length)
+
+        for (const org of result) {
+          const seeded = seededData.find((s) => s.id === org.id)
+          expect(org.id).toBe(seeded.id)
+          expect(org.orgId).toBe(seeded.orgId)
+          expect(org.rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
   })
 }

@@ -1,0 +1,41 @@
+name: 'Test and Scan'
+description: 'Run format check, lint, test, and SonarCloud scan'
+
+inputs:
+  github-token:
+    description: 'GitHub token for SonarCloud'
+    required: true
+  sonar-token:
+    description: 'SonarCloud token'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+
+    - name: Install dependencies
+      shell: bash
+      run: npm ci --ignore-scripts
+
+    - name: Check formatting
+      shell: bash
+      run: npm run format:check
+
+    - name: Lint code
+      shell: bash
+      run: npm run lint
+
+    - name: Run tests
+      shell: bash
+      run: npm test
+
+    - name: SonarCloud Scan
+      uses: SonarSource/sonarqube-scan-action@v6
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        SONAR_TOKEN: ${{ inputs.sonar-token }}

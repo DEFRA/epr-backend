@@ -8,7 +8,8 @@ import {
   createInitialStatusHistory,
   getCurrentStatus,
   statusHistoryWithChanges,
-  mergeSubcollection
+  mergeSubcollection,
+  hasChanges
 } from './helpers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
@@ -114,6 +115,27 @@ const performUpdate = (db) => async (id, version, updates) => {
   }
 }
 
+const performUpsert = (db) => async (organisation) => {
+  const validated = validateOrganisationInsert(organisation)
+  const { id, version, schemaVersion, ...updateData } = validated
+
+  const existing = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ _id: ObjectId.createFromHexString(id) })
+
+  if (!existing) {
+    await performInsert(db)(organisation)
+    return { action: 'inserted', id }
+  }
+
+  if (!hasChanges(mapDocumentWithCurrentStatuses(existing), validated)) {
+    return { action: 'unchanged', id }
+  }
+
+  await performUpdate(db)(id, existing.version, updateData)
+  return { action: 'updated', id }
+}
+
 const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
@@ -196,6 +218,10 @@ export const createOrganisationsRepository =
     return {
       insert: performInsert(db),
       update: performUpdate(db),
+      upsert:
+        /** @type {(organisation: Object) => Promise<import('./port.js').UpsertResult>} */ (
+          performUpsert(db)
+        ),
       findById,
       findAll: performFindAll(db),
 
@@ -213,6 +239,19 @@ export const createOrganisationsRepository =
           throw Boom.notFound(
             `Registration with id ${registrationId} not found`
           )
+        }
+
+        // Hydrate with accreditation if accreditationId exists
+        if (registration.accreditationId) {
+          const accreditation = org.accreditations?.find(
+            (a) => a.id === registration.accreditationId
+          )
+          if (accreditation) {
+            return {
+              ...registration,
+              accreditation
+            }
+          }
         }
 
         return registration

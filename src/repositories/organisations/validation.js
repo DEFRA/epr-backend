@@ -4,8 +4,13 @@ import {
   idSchema,
   organisationInsertSchema,
   organisationUpdateSchema,
-  statusHistoryItemSchema
+  statusHistoryItemSchema,
+  registrationSchema
 } from './schema.js'
+
+const formatValidationErrorDetails = (error) => {
+  return error.details.map((d) => `${d.path.join('.')}: ${d.type}`).join('; ')
+}
 
 export const validateId = (id) => {
   const { error, value } = idSchema.validate(id)
@@ -24,7 +29,7 @@ export const validateOrganisationInsert = (data) => {
   })
 
   if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
+    const details = formatValidationErrorDetails(error)
     throw Boom.badData(`Invalid organisation data: ${details}`)
   }
 
@@ -38,7 +43,7 @@ export const validateOrganisationUpdate = (data) => {
   })
 
   if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
+    const details = formatValidationErrorDetails(error)
     throw Boom.badData(`Invalid organisation data: ${details}`)
   }
 
@@ -50,10 +55,24 @@ export const validateStatusHistory = (statusHistory) => {
   const { error, value } = schema.validate(statusHistory)
 
   if (error) {
-    const details = error.details.map((d) => d.message).join('; ')
+    const details = formatValidationErrorDetails(error)
     throw Boom.badImplementation(
       `Invalid statusHistory: ${details}. This is a system error.`
     )
+  }
+
+  return value
+}
+
+export const validateRegistration = (data) => {
+  const { error, value } = registrationSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true
+  })
+
+  if (error) {
+    const details = formatValidationErrorDetails(error)
+    throw Boom.badData(`Invalid registration data: ${details}`)
   }
 
   return value

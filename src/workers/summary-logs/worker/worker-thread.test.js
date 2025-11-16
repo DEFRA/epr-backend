@@ -1,13 +1,17 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createMockConfig } from '#test/helpers/mock-config.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createMockConfig } from '#vite/helpers/mock-config.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { logger } from '#common/helpers/logging/logger.js'
 
-import summaryLogsValidatorWorkerThread from './worker-thread.js'
+import summaryLogsWorkerThread from './worker-thread.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -18,23 +22,27 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#application/summary-logs/validate.js')
+vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#adapters/repositories/uploads/s3.js')
 vi.mock('#common/helpers/mongo-client.js')
 vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('#repositories/organisations/mongodb.js')
+vi.mock('#repositories/waste-records/inmemory.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
-describe('summaryLogsValidatorWorkerThread', () => {
+describe('summaryLogsWorkerThread', () => {
   let mockDb
   let mockMongoClient
   let mockS3Client
   let mockSummaryLogsRepository
   let mockUploadsRepository
   let mockOrganisationsRepository
+  let mockWasteRecordsRepository
   let mockSummaryLogExtractor
   let mockSummaryLogsValidator
+  let mockSyncFromSummaryLog
 
   let summaryLogId
 
@@ -51,6 +59,7 @@ describe('summaryLogsValidatorWorkerThread', () => {
     }
 
     mockSummaryLogsRepository = {
+      findById: vi.fn(),
       update: vi.fn()
     }
 
@@ -62,11 +71,18 @@ describe('summaryLogsValidatorWorkerThread', () => {
       findRegistrationById: vi.fn()
     }
 
+    mockWasteRecordsRepository = {
+      findByRegistration: vi.fn(),
+      upsertWasteRecords: vi.fn()
+    }
+
     mockSummaryLogExtractor = {
       extract: vi.fn()
     }
 
     mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
+
+    mockSyncFromSummaryLog = vi.fn().mockResolvedValue(undefined)
 
     summaryLogId = 'summary-log-123'
 
@@ -79,12 +95,16 @@ describe('summaryLogsValidatorWorkerThread', () => {
     vi.mocked(createOrganisationsRepository).mockReturnValue(
       () => mockOrganisationsRepository
     )
+    vi.mocked(createInMemoryWasteRecordsRepository).mockReturnValue(
+      () => mockWasteRecordsRepository
+    )
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
       mockSummaryLogExtractor
     )
     vi.mocked(createSummaryLogsValidator).mockReturnValue(
       mockSummaryLogsValidator
     )
+    vi.mocked(syncFromSummaryLog).mockReturnValue(mockSyncFromSummaryLog)
   })
 
   afterEach(() => {
@@ -92,7 +112,10 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create mongo client as expected', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(createMongoClient).toHaveBeenCalledWith({
       url: 'mongodb://localhost:27017',
@@ -101,19 +124,28 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should get database with expected name', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(mockMongoClient.db).toHaveBeenCalledWith('test-db')
   })
 
   it('should create summary logs repository with db', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(createSummaryLogsRepository).toHaveBeenCalledWith(mockDb)
   })
 
   it('should create S3 client with expected config', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(createS3Client).toHaveBeenCalledWith({
       region: 'eu-west-2',
@@ -123,13 +155,19 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create uploads repository', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(createUploadsRepository).toHaveBeenCalledWith(mockS3Client)
   })
 
   it('should create summary log extractor', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(createSummaryLogExtractor).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -139,7 +177,10 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should create summary logs validator', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
@@ -149,19 +190,28 @@ describe('summaryLogsValidatorWorkerThread', () => {
   })
 
   it('should call validator as expected', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(mockSummaryLogsValidator).toHaveBeenCalledWith(summaryLogId)
   })
 
   it('should destroy S3 client once worker completes', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(mockS3Client.destroy).toHaveBeenCalled()
   })
 
   it('should close mongo client once worker completes', async () => {
-    await summaryLogsValidatorWorkerThread(summaryLogId)
+    await summaryLogsWorkerThread({
+      command: 'validate',
+      summaryLogId
+    })
 
     expect(mockMongoClient.close).toHaveBeenCalled()
   })
@@ -170,7 +220,10 @@ describe('summaryLogsValidatorWorkerThread', () => {
     mockSummaryLogsValidator.mockRejectedValue(new Error('Worker failed'))
 
     await expect(
-      summaryLogsValidatorWorkerThread(summaryLogId)
+      summaryLogsWorkerThread({
+        command: 'validate',
+        summaryLogId
+      })
     ).rejects.toThrow('Worker failed')
 
     expect(mockS3Client.destroy).toHaveBeenCalled()
@@ -183,7 +236,10 @@ describe('summaryLogsValidatorWorkerThread', () => {
     })
 
     await expect(
-      summaryLogsValidatorWorkerThread(summaryLogId)
+      summaryLogsWorkerThread({
+        command: 'validate',
+        summaryLogId
+      })
     ).rejects.toThrow('Repository creation failed')
 
     expect(mockS3Client.destroy).toHaveBeenCalled()
@@ -196,9 +252,167 @@ describe('summaryLogsValidatorWorkerThread', () => {
     })
 
     await expect(
-      summaryLogsValidatorWorkerThread(summaryLogId)
+      summaryLogsWorkerThread({
+        command: 'validate',
+        summaryLogId
+      })
     ).rejects.toThrow('S3 client creation failed')
 
     expect(mockMongoClient.close).toHaveBeenCalled()
+  })
+
+  describe('submit command', () => {
+    it('should call syncFromSummaryLog when submit command is provided', async () => {
+      const summaryLog = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      }
+
+      mockSummaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog
+      })
+
+      await summaryLogsWorkerThread({
+        command: 'submit',
+        summaryLogId
+      })
+
+      expect(mockSyncFromSummaryLog).toHaveBeenCalledWith(summaryLog)
+    })
+
+    it('should update summary log status to SUBMITTED', async () => {
+      const summaryLog = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      }
+
+      mockSummaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog
+      })
+
+      await summaryLogsWorkerThread({
+        command: 'submit',
+        summaryLogId
+      })
+
+      expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
+        summaryLogId,
+        1,
+        {
+          status: SUMMARY_LOG_STATUS.SUBMITTED
+        }
+      )
+    })
+
+    it('should log submission completion', async () => {
+      const summaryLog = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      }
+
+      mockSummaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog
+      })
+
+      await summaryLogsWorkerThread({
+        command: 'submit',
+        summaryLogId
+      })
+
+      expect(logger.info).toHaveBeenCalledWith({
+        message: `Summary log submitted: summaryLogId=${summaryLogId}`
+      })
+    })
+
+    it('should throw error when summary log not found', async () => {
+      mockSummaryLogsRepository.findById.mockResolvedValue(null)
+
+      await expect(
+        summaryLogsWorkerThread({
+          command: 'submit',
+          summaryLogId
+        })
+      ).rejects.toThrow(`Summary log ${summaryLogId} not found`)
+    })
+
+    it('should throw error when status is not VALIDATED', async () => {
+      mockSummaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.VALIDATING,
+          organisationId: 'org-123',
+          registrationId: 'reg-456'
+        }
+      })
+
+      await expect(
+        summaryLogsWorkerThread({
+          command: 'submit',
+          summaryLogId
+        })
+      ).rejects.toThrow(
+        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+      )
+    })
+
+    it('should create wasteRecordsRepository', async () => {
+      const summaryLog = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      }
+
+      mockSummaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog
+      })
+
+      await summaryLogsWorkerThread({
+        command: 'submit',
+        summaryLogId
+      })
+
+      expect(createInMemoryWasteRecordsRepository).toHaveBeenCalled()
+    })
+
+    it('should create syncFromSummaryLog with correct dependencies', async () => {
+      const summaryLog = {
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        organisationId: 'org-123',
+        registrationId: 'reg-456'
+      }
+
+      mockSummaryLogsRepository.findById.mockResolvedValue({
+        version: 1,
+        summaryLog
+      })
+
+      await summaryLogsWorkerThread({
+        command: 'submit',
+        summaryLogId
+      })
+
+      expect(syncFromSummaryLog).toHaveBeenCalledWith({
+        extractor: mockSummaryLogExtractor,
+        wasteRecordRepository: mockWasteRecordsRepository
+      })
+    })
+  })
+
+  describe('unknown command', () => {
+    it('should throw error when command is unknown', async () => {
+      await expect(
+        summaryLogsWorkerThread({
+          command: 'unknown',
+          summaryLogId
+        })
+      ).rejects.toThrow('Unknown command: unknown')
+    })
   })
 })

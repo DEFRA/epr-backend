@@ -8,7 +8,8 @@ import {
   createInitialStatusHistory,
   getCurrentStatus,
   statusHistoryWithChanges,
-  mergeSubcollection
+  mergeSubcollection,
+  hasChanges
 } from './helpers.js'
 import Boom from '@hapi/boom'
 
@@ -127,6 +128,28 @@ const performUpdate =
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
   }
 
+const performUpsert =
+  (storage, staleCache, pendingSyncRef, insertFn, updateFn) =>
+  async (organisation) => {
+    const validated = validateOrganisationInsert(organisation)
+    const { id, version, schemaVersion, ...updateData } = validated
+
+    const existing = storage.find((o) => o.id === id)
+
+    if (!existing) {
+      await insertFn(organisation)
+      return { action: 'inserted', id }
+    }
+
+    if (!hasChanges(existing, validated)) {
+      return { action: 'unchanged', id }
+    }
+
+    await updateFn(id, existing.version, updateData)
+    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
+    return { action: 'updated', id }
+  }
+
 const performFindById = (staleCache) => (id) => {
   try {
     validateId(id)
@@ -143,6 +166,71 @@ const performFindById = (staleCache) => (id) => {
 
   return enrichWithCurrentStatus(structuredClone(found))
 }
+
+const performFindByIdWithRetry =
+  (findByIdFromCache) => async (id, minimumVersion) => {
+    for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
+      try {
+        const result = findByIdFromCache(id)
+
+        // No version expectation - return immediately (may be stale)
+        if (minimumVersion === undefined) {
+          return result
+        }
+
+        // Version matches - consistency achieved
+        if (result.version >= minimumVersion) {
+          return result
+        }
+      } catch (error) {
+        // Document not found - retry in case it's propagating
+        if (i === MAX_CONSISTENCY_RETRIES - 1) {
+          throw error
+        }
+      }
+
+      // Wait before retry
+      if (i < MAX_CONSISTENCY_RETRIES - 1) {
+        await new Promise((resolve) =>
+          setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
+        )
+      }
+    }
+
+    // Timeout - throw error
+    throw Boom.internal('Consistency timeout waiting for minimum version')
+  }
+
+const performFindAll = (staleCache) => async () => {
+  return structuredClone(staleCache).map((org) =>
+    enrichWithCurrentStatus({ ...org })
+  )
+}
+
+const performFindRegistrationById =
+  (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
+    const org = await findById(organisationId, minimumOrgVersion)
+    const registration = org.registrations?.find((r) => r.id === registrationId)
+
+    if (!registration) {
+      throw Boom.notFound(`Registration with id ${registrationId} not found`)
+    }
+
+    // Hydrate with accreditation if accreditationId exists
+    if (registration.accreditationId) {
+      const accreditation = org.accreditations?.find(
+        (a) => a.id === registration.accreditationId
+      )
+      if (accreditation) {
+        return structuredClone({
+          ...registration,
+          accreditation
+        })
+      }
+    }
+
+    return structuredClone(registration)
+  }
 
 /**
  * Create an in-memory organisations repository.
@@ -162,69 +250,20 @@ export const createInMemoryOrganisationsRepository = (
   const findByIdFromCache = performFindById(staleCache)
 
   return () => {
-    const findById = async (id, minimumVersion) => {
-      for (let i = 0; i < MAX_CONSISTENCY_RETRIES; i++) {
-        try {
-          const result = findByIdFromCache(id)
-
-          // No version expectation - return immediately (may be stale)
-          if (minimumVersion === undefined) {
-            return result
-          }
-
-          // Version matches - consistency achieved
-          if (result.version >= minimumVersion) {
-            return result
-          }
-        } catch (error) {
-          // Document not found - retry in case it's propagating
-          if (i === MAX_CONSISTENCY_RETRIES - 1) {
-            throw error
-          }
-        }
-
-        // Wait before retry
-        if (i < MAX_CONSISTENCY_RETRIES - 1) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, CONSISTENCY_RETRY_DELAY_MS)
-          )
-        }
-      }
-
-      // Timeout - throw error
-      throw Boom.internal('Consistency timeout waiting for minimum version')
-    }
+    const findById = performFindByIdWithRetry(findByIdFromCache)
+    const insertFn = performInsert(storage, staleCache)
+    const updateFn = performUpdate(storage, staleCache, pendingSyncRef)
 
     return {
-      insert: performInsert(storage, staleCache),
-      update: performUpdate(storage, staleCache, pendingSyncRef),
-
-      async findAll() {
-        return structuredClone(staleCache).map((org) =>
-          enrichWithCurrentStatus({ ...org })
-        )
-      },
-
+      insert: insertFn,
+      update: updateFn,
+      upsert:
+        /** @type {(organisation: Object) => Promise<import('./port.js').UpsertResult>} */ (
+          performUpsert(storage, staleCache, pendingSyncRef, insertFn, updateFn)
+        ),
+      findAll: performFindAll(staleCache),
       findById,
-
-      async findRegistrationById(
-        organisationId,
-        registrationId,
-        minimumOrgVersion
-      ) {
-        const org = await findById(organisationId, minimumOrgVersion)
-        const registration = org.registrations?.find(
-          (r) => r.id === registrationId
-        )
-
-        if (!registration) {
-          throw Boom.notFound(
-            `Registration with id ${registrationId} not found`
-          )
-        }
-
-        return structuredClone(registration)
-      }
+      findRegistrationById: performFindRegistrationById(findById)
     }
   }
 }

@@ -42,7 +42,7 @@
         "siteCapacity": [
           {
             "material": "steel",
-            "siteCapacityWeight": "18",
+            "siteCapacityInTonnes": 18,
             "siteCapacityTimescale": "yearly"
           }
         ]
@@ -50,15 +50,15 @@
       "material": "steel",
       "wasteProcessingType": "reprocessor",
       "accreditationId": "68f6a147c117aec8a1ab749a",
-      "wasteRegistrationNumber": "CBDU345678",
+      "cbduNumber": "CBDU345678",
       "wasteManagementPermits": [
         {
-          "type": "wml",
+          "type": "environmental_permit",
           "permitNumber": "WML345678",
           "authorisedMaterials": [
             {
               "material": "steel",
-              "authorisedWeight": "15",
+              "authorisedWeightInTonnes": 15,
               "timeScale": "yearly"
             }
           ]
@@ -70,6 +70,49 @@
           "email": "eve.black@charity.org",
           "title": "Director",
           "phone": "3334445555"
+        }
+      ],
+      "suppliers": "Local steel suppliers",
+      "plantEquipmentDetails": "Steel processing equipment",
+      "yearlyMetrics": [
+        {
+          "year": 2024,
+          "input": {
+            "type": "actual",
+            "ukPackagingWasteInTonnes": 80,
+            "nonUkPackagingWasteInTonnes": 15,
+            "nonPackagingWasteInTonnes": 5
+          },
+          "rawMaterialInputs": [
+            {
+              "material": "Steel scrap",
+              "weightInTonnes": 70
+            }
+          ],
+          "output": {
+            "type": "actual",
+            "sentToAnotherSiteInTonnes": 4,
+            "contaminantsInTonnes": 2,
+            "processLossInTonnes": 1
+          },
+          "productsMadeFromRecycling": [
+            {
+              "name": "Steel beams",
+              "weightInTonnes": 75
+            }
+          ]
+        }
+      ],
+      "submitterContactDetails": {
+        "fullName": "Eve Black",
+        "email": "eve.black@charity.org",
+        "title": "Director",
+        "phone": "3334445555"
+      },
+      "samplingInspectionPlanPart1FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-345",
+          "defraFormUserDownloadLink": "https://example.com/file-345"
         }
       ],
       "noticeAddress": {
@@ -91,26 +134,33 @@
       "formSubmissionTime": "2025-11-01T11:30:00.000Z",
       "material": "aluminium",
       "wasteProcessingType": "exporter",
-      "wasteRegistrationNumber": "CBDU345679",
-      "wasteManagementPermits": [
-        {
-          "type": "wml",
-          "permitNumber": "WML345679",
-          "authorisedMaterials": [
-            {
-              "material": "aluminium",
-              "authorisedWeight": "15",
-              "timeScale": "yearly"
-            }
-          ]
-        }
-      ],
+      "cbduNumber": "CBDU345679",
       "approvedPersons": [
         {
           "fullName": "John Doe",
           "email": "john.doe@charity.org",
           "title": "Export Manager",
           "phone": "4445556666"
+        }
+      ],
+      "suppliers": "International aluminium suppliers",
+      "exportPorts": ["Belfast", "Larne"],
+      "submitterContactDetails": {
+        "fullName": "John Doe",
+        "email": "john.doe@charity.org",
+        "title": "Export Manager",
+        "phone": "4445556666"
+      },
+      "samplingInspectionPlanPart1FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-346",
+          "defraFormUserDownloadLink": "https://example.com/file-346"
+        }
+      ],
+      "orsFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-346-ors",
+          "defraFormUserDownloadLink": "https://example.com/file-346-ors"
         }
       ],
       "noticeAddress": {
@@ -133,10 +183,8 @@
       "submittedToRegulator": "niea",
       "orgName": "Green Future Trust",
       "site": {
-        "address": {
-          "line1": "100 Trust Road",
-          "postcode": "BT1 1AA"
-        }
+        "line1": "100 Trust Road",
+        "postcode": "BT1 1AA"
       },
       "material": "steel",
       "wasteProcessingType": "reprocessor",
@@ -150,7 +198,7 @@
             "phone": "7778889999"
           }
         ],
-        "prnIncomeBusinessPlan": [
+        "incomeBusinessPlan": [
           {
             "usageDescription": "Expand charity operations",
             "detailedExplanation": "Open new recycling centers",
@@ -158,11 +206,18 @@
           }
         ]
       },
-      "noticeAddress": {
-        "line1": "100 Trust Road",
-        "town": "Belfast",
-        "postcode": "BT1 1AA"
-      }
+      "submitterContactDetails": {
+        "fullName": "Sam Green",
+        "email": "sam.green@charity.org",
+        "title": "PRN signatory",
+        "phone": "7778889999"
+      },
+      "samplingInspectionPlanPart2FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-345-part2",
+          "defraFormUserDownloadLink": "https://example.com/file-345-part2"
+        }
+      ]
     }
   ],
   "companyDetails": {

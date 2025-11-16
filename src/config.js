@@ -230,6 +230,31 @@ const baseConfig = {
       }
     }
   },
+  oidc: {
+    entraId: {
+      oidcWellKnownConfigurationUrl: {
+        doc: 'Entra OIDC .well-known configuration URL',
+        format: String,
+        env: 'ENTRA_OIDC_WELL_KNOWN_CONFIGURATION_URL',
+        default:
+          'https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0/.well-known/openid-configuration'
+      },
+      clientId: {
+        doc: 'Admin UI app as audience',
+        format: String,
+        env: 'ADMIN_UI_ENTRA_CLIENT_ID',
+        default: 'test'
+      }
+    }
+  },
+  roles: {
+    serviceMaintainers: {
+      doc: 'Stringified object defining user roles',
+      format: String,
+      env: 'SERVICE_MAINTAINER_EMAILS',
+      default: '["me@example.com", "you@example.com"]'
+    }
+  },
   featureFlags: {
     summaryLogs: {
       doc: 'Feature Flag: Summary Logs',
@@ -242,6 +267,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_ORGANISATIONS'
+    },
+    formsDataMigration: {
+      doc: 'Feature Flag: Runs forms data migration on startup',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_FORMS_DATA_MIGRATION'
     },
     logFileUploadsFromForms: {
       doc: 'Feature Flag: To enable logging of file ids uploaded from defra-forms on startup',

@@ -1,5 +1,6 @@
 // eslint-disable-next-line n/no-unpublished-import
 import { test, vi } from 'vitest'
+import { createMockOidcServers } from '#vite/helpers/mock-oidc.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -22,6 +23,19 @@ import { test, vi } from 'vitest'
  * ~10x faster than testServerFixture because it skips MongoDB startup.
  */
 export const it = test.extend({
+  mockOidcServer: [
+    // eslint-disable-next-line no-empty-pattern
+    async ({}, use) => {
+      const mockOidcServer = createMockOidcServers()
+      mockOidcServer.listen({ onUnhandledRequest: 'warn' })
+
+      await use(mockOidcServer)
+
+      mockOidcServer.resetHandlers()
+      mockOidcServer.close()
+    },
+    { auto: true } // Always initialize this fixture even if not used in test
+  ],
   server: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {

@@ -10,19 +10,17 @@ export const testUploadsRepositoryContract = (it) => {
       })
 
       it('should return expected result when file exists', async () => {
-        const result = await uploadsRepository.findByLocation({
-          bucket: 'test-bucket',
-          key: 'path/to/summary-log.xlsx'
-        })
+        const result = await uploadsRepository.findByLocation(
+          's3://test-bucket/path/to/summary-log.xlsx'
+        )
 
         expect(result).toBeInstanceOf(Buffer)
       })
 
       it('should return expected result when file does not exist', async () => {
-        const result = await uploadsRepository.findByLocation({
-          bucket: 'non-existent-bucket',
-          key: 'non-existent-key'
-        })
+        const result = await uploadsRepository.findByLocation(
+          's3://non-existent-bucket/non-existent-key'
+        )
 
         expect(result).toBeNull()
       })

@@ -2,8 +2,12 @@ import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { createFormSubmissionsRepository } from './mongodb.js'
-import { testFindBehaviour } from './contract/find.contract.js'
-import { buildAccreditation, buildRegistration } from './contract/test-data.js'
+import { testFormSubmissionsRepositoryContract } from './port.contract.js'
+import {
+  buildAccreditation,
+  buildRegistration,
+  buildOrganisation
+} from './contract/test-data.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -60,6 +64,27 @@ const it = mongoIt.extend({
 
       return testData
     })
+  },
+
+  seedOrganisations: async ({ mongoClient }, use) => {
+    await use(async () => {
+      const org1 = buildOrganisation()
+      const org2 = buildOrganisation()
+      const org3 = buildOrganisation()
+      const testData = [org1, org2, org3]
+
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection('organisation')
+        .insertMany(
+          testData.map((org) => ({
+            _id: ObjectId.createFromHexString(org.id),
+            ...org
+          }))
+        )
+
+      return testData
+    })
   }
 })
 
@@ -73,6 +98,10 @@ describe('MongoDB form submissions repository', () => {
       .db(DATABASE_NAME)
       .collection('registration')
       .deleteMany({})
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection('organisation')
+      .deleteMany({})
   })
 
   it('should create repository instance', async ({
@@ -82,7 +111,8 @@ describe('MongoDB form submissions repository', () => {
     expect(repository).toBeDefined()
     expect(repository.findAllRegistrations).toBeDefined()
     expect(repository.findAllAccreditations).toBeDefined()
+    expect(repository.findAllOrganisations).toBeDefined()
   })
 
-  testFindBehaviour(it)
+  testFormSubmissionsRepositoryContract(it)
 })

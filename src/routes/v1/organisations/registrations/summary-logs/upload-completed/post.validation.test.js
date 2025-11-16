@@ -3,12 +3,17 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
+
+const { validToken } = testTokens
 
 const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
   let server
+  setupAuthContext()
 
   beforeAll(async () => {
     server = await createServer({
@@ -27,6 +32,9 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
       payload: {
         metadata: { organisationId: 'org-123' }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -42,6 +50,9 @@ describe('POST upload-completed validation', () => {
         form: {
           notFile: 'wrong'
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -64,6 +75,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -86,6 +100,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -108,6 +125,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -131,6 +151,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -153,6 +176,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -175,6 +201,9 @@ describe('POST upload-completed validation', () => {
             s3Bucket: 'bucket'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -198,6 +227,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -218,6 +250,9 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -241,6 +276,9 @@ describe('POST upload-completed validation', () => {
             checksumSha256: 'abc123'
           }
         }
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -267,6 +305,9 @@ describe('POST upload-completed validation', () => {
           }
         },
         numberOfRejectedFiles: 0
+      },
+      headers: {
+        Authorization: `Bearer ${validToken}`
       }
     })
 

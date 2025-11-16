@@ -1,10 +1,16 @@
-import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { StatusCodes } from 'http-status-codes'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
+
+const { validToken } = testTokens
 
 describe('GET /v1/organisations/{id}', () => {
+  setupAuthContext()
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
@@ -30,7 +36,10 @@ describe('GET /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org1.id}`
+        url: `/v1/organisations/${org1.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -45,7 +54,10 @@ describe('GET /v1/organisations/{id}', () => {
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${org.id}`
+        url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.headers['cache-control']).toBe(
@@ -58,7 +70,10 @@ describe('GET /v1/organisations/{id}', () => {
     it('returns 404 for orgId that does not exist', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/999999'
+        url: '/v1/organisations/999999',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -67,7 +82,10 @@ describe('GET /v1/organisations/{id}', () => {
     it('returns 404 when orgId is missing (whitespace-only path segment)', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/%20%20%20'
+        url: '/v1/organisations/%20%20%20',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -76,7 +94,10 @@ describe('GET /v1/organisations/{id}', () => {
     it('includes Cache-Control header in error response', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: '/v1/organisations/999999'
+        url: '/v1/organisations/999999',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -84,5 +105,22 @@ describe('GET /v1/organisations/{id}', () => {
         'no-cache, no-store, must-revalidate'
       )
     })
+  })
+
+  testAuthScenarios({
+    server: () => server,
+    makeRequest: async () => {
+      const org1 = buildOrganisation()
+      await organisationsRepository.insert(org1)
+      return {
+        method: 'GET',
+        url: `/v1/organisations/${org1.id}`
+      }
+    },
+    additionalExpectations: (response) => {
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
+    }
   })
 })

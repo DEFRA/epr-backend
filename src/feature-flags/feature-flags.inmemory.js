@@ -10,5 +10,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isLogFileUploadsFromFormsEnabled() {
     return flags.logFileUploadsFromForms ?? false
+  },
+  isFormsDataMigrationEnabled() {
+    return flags.formsDataMigration ?? false
   }
 })
