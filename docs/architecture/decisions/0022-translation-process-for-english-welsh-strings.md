@@ -1,4 +1,4 @@
-# 19. Translation process for English/Welsh strings
+# 22. Translation process for English/Welsh strings
 
 Date: 2025-11-06
 
@@ -32,8 +32,8 @@ These checks ensure both languages have parallel structures and help identify un
 
 ### Translation Format and Delivery
 
-The translation team currently accepts **Excel** files as standard, with the possibility of also accepting **JSON** files.  
-Data can be sent via email or uploaded to a platform (to be confirmed).
+The translation team accepts **Excel** files as standard.  
+Data can be sent via email to the contact to pass it on to the translation team.
 
 ---
 
@@ -41,19 +41,37 @@ Data can be sent via email or uploaded to a platform (to be confirmed).
 
 ### Chosen Approach
 
-We will adopt a flexible export/import process that supports both Excel and JSON formats, defaulting to Excel unless a translation platform can accept JSON uploads.
+We will adopt a custom export/import process that outputs Excel files for the
+translation team.
 
 This approach allows us to align with the translation team’s workflow while preparing for future automation if a platform is introduced.
 
 ### Excel Structure
 
-Each exported Excel file will include four columns:
+Each exported Excel file will include four columns as provided by the translation team:
 
-| Namespace               | Key             | en                         | cy                       |
-| ----------------------- | --------------- | -------------------------- | ------------------------ |
-| Folder name (namespace) | Translation key | English string (if exists) | Welsh string (if exists) |
+| Namespace & Key         | en                         | cy                       |
+| ----------------------- | -------------------------- | ------------------------ |
+| Folder name (namespace) | English string (if exists) | Welsh string (if exists) |
+| & Translation key       |                            |                          |
 
-This format provides the translators with clear context for each string while retaining the mapping required to import translations back into JSON files.
+This format provides the translators with clear context for each string while retaining the mapping required to import translations back into the JSON files.
+
+### Alternative Approach Considered
+
+#### i18next and i18next-parser
+
+We explored using i18next-parser to automatically extract translation keys from
+`.js` and `.njk` files. This was not suitable because:
+
+- Nunjucks templates cannot be reliably parsed by i18next-parser.
+- Even with custom lexers, nested macros and GOV.UK frontend patterns were not
+  detected.
+- The parser does not provide file exports out of the box.
+
+Given these limitations, the automated extraction workflow was abandoned in
+favour of a custom export/import solution that works consistently with our
+structure.
 
 ---
 
@@ -61,7 +79,7 @@ This format provides the translators with clear context for each string while re
 
 ### Export Process
 
-A script will generate an export file (Excel by default, JSON if required) containing all untranslated or updated strings.
+A script will generate an export file (Excel) containing all untranslated strings.
 
 The export script will:
 
@@ -71,8 +89,7 @@ The export script will:
 
 ### Translation Process
 
-The translation team will complete the Welsh or English (`cy` | `en`) column and return the file via email or upload.  
-If JSON format is supported, they may instead provide updated `cy.json` files directly depending on their setup.
+The translation team will complete the Welsh or English (`cy` | `en`) column and return the file via email.
 
 ### Import Process
 
@@ -87,23 +104,28 @@ This ensures consistent re-integration of translated content with minimal manual
 
 1. Enhance existing scripts to output a structured dataset of missing or updated strings.
 2. Create an **export script** using a library such as `xlsx` or `exceljs`.
-3. Create an **import script** to merge completed translations back into `cy.json`.
+3. Create an **import script** to merge completed translations back into `cy.json` or `en.json`.
 4. Document usage and integration steps.
 5. Confirm with the translation team whether a platform is used for submission to explore direct integration options.
 
+### POC Outcome
+
+A small proof-of-concept was created to evaluate whether translation extraction
+could be automated. The POC confirmed that template-based extraction using
+i18next-parser was unreliable, and the effort required to maintain custom
+lexers outweighed any potential benefit.
+
 ### Future Considerations
 
-- If the translation team adopts or confirms the use of a translation management platform (e.g. Smartling, Crowdin, lokalise), explore API-based integration to replace the Excel workflow.
-- Add automation process (e.g. GitHub Actions, or manual trigger) to run translation checks and export updated strings.
 - Consider versioning and change tracking for translation updates.
 
 ### Summary Table
 
 | Aspect           | Decision                                           |
 | ---------------- | -------------------------------------------------- |
-| Export format    | Excel (default), JSON (optional)                   |
+| Export format    | Excel                                              |
 | Columns          | Namespace, Key, en, cy                             |
-| Delivery method  | Email or upload                                    |
+| Delivery method  | Email                                              |
 | Automation scope | Semi-automated (scripts for export/import)         |
 | Future goal      | Integration with a translation management platform |
 
