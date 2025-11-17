@@ -507,7 +507,7 @@ export const organisationInsertSchema = Joi.object({
   accreditations: Joi.array().items(accreditationSchema).optional()
 })
 
-export const NON_UPDATABLE_FIELDS = ['id']
+const NON_UPDATABLE_FIELDS = ['id']
 
 const insertSchemaKeys = Object.keys(organisationInsertSchema.describe().keys)
 const updatableFields = insertSchemaKeys.filter(
