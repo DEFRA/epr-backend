@@ -98,6 +98,7 @@ services:
       GOVUK_NOTIFY_API_KEY: /run/secrets/govuk_notify_api_key
       AUDIT_ENABLED: false
       FEATURE_FLAG_SUMMARY_LOGS: true
+      FEATURE_FLAG_ORGANISATIONS: true
       ADMIN_UI_ENTRA_CLIENT_ID: bd06da51-53f6-46d0-a9f0-ac562864c887
       SERVICE_MAINTAINER_EMAILS: '["customer.test.user.2@defradev.onmicrosoft.com"]'
       # Defra ID Stub Config
