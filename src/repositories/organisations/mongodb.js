@@ -15,7 +15,10 @@ import {
 } from './helpers.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-import { generateInitialUsers } from '#domain/organisations/generate-initial-users.js'
+import {
+  deduplicateUsers,
+  generateInitialUsers
+} from '#domain/organisations/users.js'
 import { STATUS } from '#domain/organisations/model.js'
 
 const COLLECTION_NAME = 'epr-organisations'
@@ -90,11 +93,6 @@ const performUpdate = (db) => async (id, version, updates) => {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
 
-  const merged = {
-    ...existing,
-    ...validatedUpdates
-  }
-
   const registrations = mergeSubcollection(
     existing.registrations,
     validatedUpdates.registrations
@@ -104,11 +102,39 @@ const performUpdate = (db) => async (id, version, updates) => {
     validatedUpdates.accreditations
   )
 
+  const merged = {
+    ...existing,
+    ...validatedUpdates,
+    registrations,
+    accreditations
+  }
+
+  let users = existing.users
+  const generatedInitialUsers = generateInitialUsers(merged)
+
+  console.log('Available Users', {
+    generatedInitialUsers,
+    existingUsers: users,
+    incomingUsers: validatedUpdates.users
+  })
+
+  if ([STATUS.CREATED].includes(merged.status)) {
+    const allUsers = [
+      ...validatedUpdates.users,
+      ...generatedInitialUsers,
+      ...existing.users
+    ]
+    users = deduplicateUsers(allUsers)
+
+    console.log('allUsers', allUsers)
+  }
+
+  console.log('Outputted users', { users })
+
   const data = {
     ...merged,
     statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
-    registrations,
-    accreditations,
+    users,
     version: existing.version + 1
   }
 

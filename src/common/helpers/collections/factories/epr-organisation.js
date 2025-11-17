@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { SCHEMA_VERSION } from '#common/enums/index.js'
 
-import { generateInitialUsers } from '#domain/organisations/generate-initial-users.js'
+import { generateInitialUsers } from '#domain/organisations/users.js'
 
 export function eprOrganisationFactory({ id, ...eprOrganisation }) {
   return {
