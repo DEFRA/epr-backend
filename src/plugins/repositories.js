@@ -23,6 +23,7 @@ export const repositories = {
      */
     register: (server, options) => {
       const skipMongoDb = options?.skipMongoDb ?? false
+
       /**
        * Registers a per-request dependency with logger injection.
        * Uses lazy initialization to defer creation until first access, and caches
@@ -49,78 +50,53 @@ export const repositories = {
         })
       }
 
-      const summaryLogsRepositoryFactory = options?.summaryLogsRepository
-        ? options.summaryLogsRepository
-        : null
-
-      if (summaryLogsRepositoryFactory) {
-        registerPerRequest(
-          'summaryLogsRepository',
-          summaryLogsRepositoryFactory
-        )
-      } else if (skipMongoDb) {
-        // No repository registered - test is skipping MongoDB and not providing a factory
-      } else {
-        server.dependency('mongodb', () => {
-          const productionFactory = createSummaryLogsRepository(
-            /** @type {import('mongodb').Db} */ (server.db)
-          )
-          registerPerRequest('summaryLogsRepository', productionFactory)
-        })
+      /**
+       * Registers a repository with optional test override.
+       *
+       * @param {string} name - Repository property name
+       * @param {Function} productionFactoryCreator - Function that creates the production repository factory from db
+       * @param {Function} [testFactory] - Optional test factory override from options
+       */
+      const registerRepository = (
+        name,
+        productionFactoryCreator,
+        testFactory
+      ) => {
+        if (testFactory) {
+          registerPerRequest(name, testFactory)
+        } else if (!skipMongoDb) {
+          server.dependency('mongodb', () => {
+            const productionFactory = productionFactoryCreator(
+              /** @type {import('mongodb').Db} */ (server.db)
+            )
+            registerPerRequest(name, productionFactory)
+          })
+        }
       }
 
-      const organisationsRepositoryFactory = options?.organisationsRepository
-        ? options.organisationsRepository
-        : null
+      registerRepository(
+        'summaryLogsRepository',
+        createSummaryLogsRepository,
+        options?.summaryLogsRepository
+      )
 
-      if (organisationsRepositoryFactory) {
-        registerPerRequest(
-          'organisationsRepository',
-          organisationsRepositoryFactory
-        )
-      } else if (skipMongoDb) {
-        // No repository registered - test is skipping MongoDB and not providing a factory
-      } else {
-        server.dependency('mongodb', () => {
-          const productionFactory = createOrganisationsRepository(
-            /** @type {import('mongodb').Db} */ (server.db),
-            options?.eventualConsistency
-          )
-          registerPerRequest('organisationsRepository', productionFactory)
-        })
-      }
+      registerRepository(
+        'organisationsRepository',
+        (db) => createOrganisationsRepository(db, options?.eventualConsistency),
+        options?.organisationsRepository
+      )
 
-      if (options?.formSubmissionsRepository) {
-        registerPerRequest(
-          'formSubmissionsRepository',
-          options.formSubmissionsRepository
-        )
-      } else if (skipMongoDb) {
-        // No repository registered - test is skipping MongoDB and not providing a factory
-      } else {
-        server.dependency('mongodb', () => {
-          const productionFactory = createFormSubmissionsRepository(
-            /** @type {import('mongodb').Db} */ (server.db)
-          )
-          registerPerRequest('formSubmissionsRepository', productionFactory)
-        })
-      }
+      registerRepository(
+        'formSubmissionsRepository',
+        createFormSubmissionsRepository,
+        options?.formSubmissionsRepository
+      )
 
-      if (options?.wasteRecordsRepository) {
-        registerPerRequest(
-          'wasteRecordsRepository',
-          options.wasteRecordsRepository
-        )
-      } else if (skipMongoDb) {
-        // No repository registered - test is skipping MongoDB and not providing a factory
-      } else {
-        server.dependency('mongodb', () => {
-          const productionFactory = createWasteRecordsRepository(
-            /** @type {import('mongodb').Db} */ (server.db)
-          )
-          registerPerRequest('wasteRecordsRepository', productionFactory)
-        })
-      }
+      registerRepository(
+        'wasteRecordsRepository',
+        createWasteRecordsRepository,
+        options?.wasteRecordsRepository
+      )
     }
   }
 }
