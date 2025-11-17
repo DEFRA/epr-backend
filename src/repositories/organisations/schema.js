@@ -208,7 +208,7 @@ const wasteManagementPermitSchema = Joi.object({
       WASTE_PERMIT_TYPE.WASTE_EXEMPTION
     )
     .required(),
-  permitNumber: Joi.string().optional(),
+  permitNumber: whenNotWasteExemption(Joi.string()),
   exemptions: whenWasteExemption(
     Joi.array().items(wasteExemptionSchema).min(1)
   ),
@@ -229,10 +229,10 @@ const siteCapacitySchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
-  siteCapacityInTonnes: Joi.number().optional(),
+  siteCapacityInTonnes: Joi.number().required(),
   siteCapacityTimescale: Joi.string()
     .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
-    .optional()
+    .required()
 })
 
 const registrationSiteSchema = Joi.object({
