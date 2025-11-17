@@ -14,15 +14,6 @@ const mapDocumentToDomain = (doc) => {
   return structuredClone(domainFields)
 }
 
-/**
- * Generates a composite key for waste record uniqueness
- * @param {import('./schema.js').WasteRecordKey} key - Composite key components
- * @returns {string} Composite key
- */
-const getCompositeKey = ({ organisationId, registrationId, type, rowId }) => {
-  return `${organisationId}:${registrationId}:${type}:${rowId}`
-}
-
 const performFindByRegistration =
   (db) => async (organisationId, registrationId) => {
     const validatedOrgId = validateOrganisationId(organisationId)
@@ -63,7 +54,6 @@ const buildExistingSummaryLogIds = () => ({
  * @returns {Object} MongoDB update operation
  */
 const buildAppendVersionOperation = (key, versionData) => {
-  const compositeKey = getCompositeKey(key)
   const existingSummaryLogIds = buildExistingSummaryLogIds()
   const versionExists = {
     $in: [versionData.version.summaryLog.id, existingSummaryLogIds]
@@ -71,14 +61,11 @@ const buildAppendVersionOperation = (key, versionData) => {
 
   return {
     updateOne: {
-      filter: {
-        _compositeKey: compositeKey
-      },
+      filter: key,
       update: [
         {
           $set: {
             // Static fields - only set on insert
-            _compositeKey: compositeKey,
             schemaVersion: SCHEMA_VERSION,
             ...key,
             // Current data - only update if version doesn't exist
