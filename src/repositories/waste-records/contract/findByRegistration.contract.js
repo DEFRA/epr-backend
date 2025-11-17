@@ -1,5 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildWasteRecord } from './test-data.js'
+import { buildVersionData, toWasteRecordVersions } from './test-data.js'
 
 export const testFindByRegistrationBehaviour = (createTest) => {
   describe('findByRegistration', () => {
@@ -18,18 +18,16 @@ export const testFindByRegistrationBehaviour = (createTest) => {
     createTest(
       'returns all waste records for specific organisation and registration',
       async () => {
-        const record1 = buildWasteRecord({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: 'row-1'
-        })
-        const record2 = buildWasteRecord({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: 'row-2'
-        })
+        const { version: version1, data: data1 } = buildVersionData()
+        const { version: version2, data: data2 } = buildVersionData()
 
-        await repository.upsertWasteRecords([record1, record2])
+        const wasteRecordVersions = toWasteRecordVersions({
+          received: {
+            'row-1': { version: version1, data: data1 },
+            'row-2': { version: version2, data: data2 }
+          }
+        })
+        await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
 
@@ -43,18 +41,24 @@ export const testFindByRegistrationBehaviour = (createTest) => {
     createTest(
       'does not return waste records from different organisations',
       async () => {
-        const org1Record = buildWasteRecord({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: 'row-1'
-        })
-        const org2Record = buildWasteRecord({
-          organisationId: 'org-2',
-          registrationId: 'reg-1',
-          rowId: 'row-2'
-        })
+        const { version: org1Version, data: org1Data } = buildVersionData()
+        const { version: org2Version, data: org2Data } = buildVersionData()
 
-        await repository.upsertWasteRecords([org1Record, org2Record])
+        // Insert org1 record
+        const org1VersionsByType = toWasteRecordVersions({
+          received: {
+            'row-1': { version: org1Version, data: org1Data }
+          }
+        })
+        await repository.appendVersions('org-1', 'reg-1', org1VersionsByType)
+
+        // Insert org2 record
+        const org2VersionsByType = toWasteRecordVersions({
+          received: {
+            'row-2': { version: org2Version, data: org2Data }
+          }
+        })
+        await repository.appendVersions('org-2', 'reg-1', org2VersionsByType)
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
 
@@ -67,18 +71,24 @@ export const testFindByRegistrationBehaviour = (createTest) => {
     createTest(
       'does not return waste records from different registrations',
       async () => {
-        const reg1Record = buildWasteRecord({
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          rowId: 'row-1'
-        })
-        const reg2Record = buildWasteRecord({
-          organisationId: 'org-1',
-          registrationId: 'reg-2',
-          rowId: 'row-2'
-        })
+        const { version: reg1Version, data: reg1Data } = buildVersionData()
+        const { version: reg2Version, data: reg2Data } = buildVersionData()
 
-        await repository.upsertWasteRecords([reg1Record, reg2Record])
+        // Insert reg1 record
+        const reg1VersionsByType = toWasteRecordVersions({
+          received: {
+            'row-1': { version: reg1Version, data: reg1Data }
+          }
+        })
+        await repository.appendVersions('org-1', 'reg-1', reg1VersionsByType)
+
+        // Insert reg2 record
+        const reg2VersionsByType = toWasteRecordVersions({
+          received: {
+            'row-2': { version: reg2Version, data: reg2Data }
+          }
+        })
+        await repository.appendVersions('org-1', 'reg-2', reg2VersionsByType)
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
 

@@ -1,4 +1,5 @@
 import { StatusCodes } from 'http-status-codes'
+import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -7,6 +8,11 @@ export const organisationsGetAllPath = '/v1/organisations'
 export const organisationsGetAll = {
   method: 'GET',
   path: organisationsGetAllPath,
+  options: {
+    auth: {
+      scope: [ROLES.serviceMaintainer]
+    }
+  },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit

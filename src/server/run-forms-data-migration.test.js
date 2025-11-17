@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runFormsDataMigration } from './run-forms-data-migration.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { migrateFormsData } from '../forms-submission-data/migrate-forms-data.js'
+import { migrateFormsData } from '#formsubmission/migrate-forms-data.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
 vi.mock('#common/helpers/logging/logger.js')
-vi.mock('../forms-submission-data/migrate-forms-data.js')
+vi.mock('#formsubmission/migrate-forms-data.js')
 vi.mock('#repositories/form-submissions/mongodb.js')
 vi.mock('#repositories/organisations/mongodb.js')
 

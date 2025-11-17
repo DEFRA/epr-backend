@@ -12,6 +12,7 @@ const registration = {
   method: 'POST',
   path: registrationPath,
   options: {
+    auth: false,
     validate: {
       payload: registrationAndAccreditationPayload
     }

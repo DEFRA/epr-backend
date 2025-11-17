@@ -17,14 +17,16 @@ describe('repositories plugin', () => {
   })
 
   describe('lazy initialization and caching', () => {
-    it('creates repository on first access and caches it for subsequent accesses', async () => {
+    it('creates repository on first access and caches it for subsequent accesses (in the same request)', async () => {
       const mockFactory = vi.fn(() => ({ findAll: vi.fn() }))
 
       await server.register({
         plugin: repositories.plugin,
         options: {
           summaryLogsRepository: mockFactory,
-          organisationsRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          organisationsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() }))
         }
       })
 
@@ -58,7 +60,9 @@ describe('repositories plugin', () => {
         plugin: repositories.plugin,
         options: {
           organisationsRepository: mockFactory,
-          summaryLogsRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          summaryLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() }))
         }
       })
 

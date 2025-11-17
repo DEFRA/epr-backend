@@ -175,8 +175,7 @@ export const testInsertBehaviour = (it) => {
 
         it('allows optional fields to be omitted', async () => {
           const minimalOrg = buildOrganisation({
-            businessType: undefined,
-            companyDetails: undefined
+            businessType: undefined
           })
 
           await repository.insert(minimalOrg)

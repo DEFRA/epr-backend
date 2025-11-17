@@ -52,7 +52,7 @@ erDiagram
     ObjectId accreditationId FK "automatically linked when possible"
     enum[] recyclingProcess "glass_re_melt,glass_other"
     ADDRESS noticeAddress
-    string wasteRegistrationNumber "waste carrier, broker or dealer registration number"
+    string cbduNumber "waste carrier, broker or dealer registration number"
     WASTE-MANAGEMENT-PERMIT[] wasteManagementPermits "waste management permit or waste exemption details"
     USER[] approvedPersons "approved persons for this site"
     string suppliers "Waste supplier details. applicable only for exporter"
@@ -90,9 +90,6 @@ erDiagram
     enum status "created,approved,rejected,suspended,archived.The initial status created is system generated but afterwards driven by regulator decisions"
     STATUS-HISTORY[] statusHistory "Status change history"
     PRN-ISSUANCE prnIssuance "How much PRN will be issued"
-    PERN-ISSUANCE pernIssuance "How much PERN will be issued"
-    array businessPlan "object(description|detailedDescription|percentSpent)"
-    ADDRESS noticeAddress
     USER submitterContactDetails "who submitted the application"
     FORM-FILE-UPLOAD[] samplingInspectionPlanFileUploads "sampling and inspection plan documents"
     FORM-FILE-UPLOAD[] orsFileUploads "overseas reprocessing and interim sites log documents"
@@ -102,12 +99,6 @@ erDiagram
     string tonnageBand
     USER[] signatories
     json prnIncomeBusinessPlan "How the income from PRN will be used i.e percentIncomeSpent|usageDescription|detailedExplanation"
-  }
-
-  PERN-ISSUANCE {
-    string tonnageBand
-    USER[] signatories
-    json pernIncomeBusinessPlan "How the income from PERN will be used i.e percentIncomeSpent|usageDescription|detailedExplanation"
   }
 
 
@@ -211,10 +202,8 @@ erDiagram
 
 %% ACCREDITATION relationships
   ACCREDITATION ||--|| SITE: contains
-  ACCREDITATION ||--|| ADDRESS: contains
   ACCREDITATION ||--|| USER: contains
   ACCREDITATION ||--o| PRN-ISSUANCE: contains
-  ACCREDITATION ||--o| PERN-ISSUANCE: contains
   ACCREDITATION ||--|{ STATUS-HISTORY: contains
   ACCREDITATION ||--|{ FORM-FILE-UPLOAD: contains
 
@@ -226,7 +215,6 @@ erDiagram
   WASTE-MANAGEMENT-PERMIT ||--o{ WASTE_EXEMPTION: contains
   WASTE-MANAGEMENT-PERMIT  ||--|{ AUTHORISED-MATERIAL: contains
   PRN-ISSUANCE ||--o{ USER: contains
-  PERN-ISSUANCE ||--o{ USER: contains
   USER ||--o| USER-LOGIN-DETAILS: contains
   STATUS-HISTORY   ||--|{ USER: contains
 ```
@@ -288,7 +276,7 @@ erDiagram
       "wasteProcessingType": "reprocessor",
       "accreditationId": "04de8fb2-2dab-48ad-a203-30a80f595c0b",
       "gridReference": "123455",
-      "wasteRegistrationNumber": "CBDU123456",
+      "cbduNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
           "type": "wml",
@@ -328,7 +316,7 @@ erDiagram
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "wasteRegistrationNumber": "CBDU123456",
+      "cbduNumber": "CBDU123456",
       "wasteManagementPermits": [
         {
           "type": "wml",

@@ -4,8 +4,14 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
+import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+
+const { validToken } = testTokens
 
 describe('PUT /v1/organisations/{id}', () => {
+  setupAuthContext()
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
@@ -30,6 +36,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: org.version,
           updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -51,6 +60,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: org.version,
           updateFragment: { wasteProcessingTypes: org.wasteProcessingTypes }
@@ -75,6 +87,9 @@ describe('PUT /v1/organisations/{id}', () => {
         response = await server.inject({
           method: 'PUT',
           url: `/v1/organisations/${nonExistentId}`,
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          },
           payload: {
             version: org.version,
             updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -99,6 +114,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: '/v1/organisations/%20%20%20',
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: org.version,
           updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -117,6 +135,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
         }
@@ -136,6 +157,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: 'not-a-number',
           updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -156,6 +180,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: org.version
         }
@@ -175,6 +202,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: org.version,
           updateFragment: null
@@ -195,6 +225,9 @@ describe('PUT /v1/organisations/{id}', () => {
       const response = await server.inject({
         method: 'PUT',
         url: `/v1/organisations/${org.id}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
         payload: {
           version: org.version,
           updateFragment: 'not-an-object'
@@ -216,6 +249,9 @@ describe('PUT /v1/organisations/{id}', () => {
     const response = await server.inject({
       method: 'PUT',
       url: `/v1/organisations/${org.id}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      },
       payload: {
         version: org.version + 1,
         updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -234,6 +270,9 @@ describe('PUT /v1/organisations/{id}', () => {
     const response = await server.inject({
       method: 'PUT',
       url: `/v1/organisations/${org.id}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      },
       payload: {
         version: org.version,
         updateFragment: { ...org, wasteProcessingTypes: [] }
@@ -245,5 +284,22 @@ describe('PUT /v1/organisations/{id}', () => {
     expect(body.message).toBe(
       'Invalid organisation data: wasteProcessingTypes: array.min'
     )
+  })
+
+  testAuthScenarios({
+    server: () => server,
+    makeRequest: async () => {
+      const org1 = buildOrganisation()
+      await organisationsRepository.insert(org1)
+      return {
+        method: 'PUT',
+        url: `/v1/organisations/${org1.id}`
+      }
+    },
+    additionalExpectations: (response) => {
+      expect(response.headers['cache-control']).toBe(
+        'no-cache, no-store, must-revalidate'
+      )
+    }
   })
 })

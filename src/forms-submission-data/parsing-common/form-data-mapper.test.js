@@ -1,19 +1,28 @@
 import {
-  mapWasteProcessingType,
-  mapNation,
+  convertToNumber,
   mapBusinessType,
-  mapRegulator,
+  mapGlassRecyclingProcess,
+  mapMaterial,
+  mapNation,
+  mapPartnershipType,
   mapPartnerType,
-  mapPartnershipType
+  mapRegulator,
+  mapTimeScale,
+  mapValueType,
+  mapWasteProcessingType
 } from './form-data-mapper.js'
 import {
-  WASTE_PROCESSING_TYPE,
-  NATION,
   BUSINESS_TYPE,
-  REGULATOR,
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  NATION,
   PARTNER_TYPE,
-  PARTNERSHIP_TYPE
-} from '#domain/organisations.js'
+  PARTNERSHIP_TYPE,
+  REGULATOR,
+  TIME_SCALE,
+  VALUE_TYPE,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 describe('mapWasteProcessingType', () => {
   it('should return both types for "Reprocessor and exporter"', () => {
@@ -258,5 +267,140 @@ describe('mapPartnershipType', () => {
 
   it('should return undefined for No string', () => {
     expect(mapPartnershipType('No')).toBeUndefined()
+  })
+})
+
+describe('mapMaterial', () => {
+  it.each([
+    ['Glass (R5)', MATERIAL.GLASS],
+    ['Paper or board (R3)', MATERIAL.PAPER],
+    ['Plastic (R3)', MATERIAL.PLASTIC],
+    ['Steel (R4)', MATERIAL.STEEL],
+    ['Wood (R3)', MATERIAL.WOOD],
+    ['Fibre-based composite material (R3)', MATERIAL.FIBRE],
+    ['Aluminium (R4)', MATERIAL.ALUMINIUM]
+  ])('should map %s to %s', (input, expected) => {
+    expect(mapMaterial(input)).toBe(expected)
+  })
+
+  it('should handle whitespace', () => {
+    expect(mapMaterial('  Glass (R5)  ')).toBe(MATERIAL.GLASS)
+  })
+
+  it('should throw error for invalid material', () => {
+    expect(() => mapMaterial('INVALID')).toThrow('Invalid material: "INVALID"')
+  })
+
+  it.each([null, undefined, ''])('should return undefined for %s', (input) => {
+    expect(mapMaterial(input)).toBeUndefined()
+  })
+})
+
+describe('mapGlassRecyclingProcess', () => {
+  it.each([
+    ['Glass re-melt', [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]],
+    ['Glass other', [GLASS_RECYCLING_PROCESS.GLASS_OTHER]]
+  ])('should map %s to %s', (input, expected) => {
+    expect(mapGlassRecyclingProcess(input)).toEqual(expected)
+  })
+
+  it('should map Both to array of both processes', () => {
+    expect(mapGlassRecyclingProcess('Both')).toEqual([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      GLASS_RECYCLING_PROCESS.GLASS_OTHER
+    ])
+  })
+
+  it('should handle whitespace', () => {
+    expect(mapGlassRecyclingProcess('  Glass re-melt  ')).toEqual([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+    ])
+  })
+
+  it('should throw error for invalid recycling process', () => {
+    expect(() => mapGlassRecyclingProcess('INVALID')).toThrow(
+      'Invalid recycling process: "INVALID"'
+    )
+  })
+
+  it.each([null, undefined, ''])('should return undefined for %s', (input) => {
+    expect(mapGlassRecyclingProcess(input)).toBeUndefined()
+  })
+})
+
+describe('mapTimeScale', () => {
+  it.each([
+    ['Yearly', TIME_SCALE.YEARLY],
+    ['Monthly', TIME_SCALE.MONTHLY],
+    ['Weekly', TIME_SCALE.WEEKLY]
+  ])('should map %s to %s', (input, expected) => {
+    expect(mapTimeScale(input)).toBe(expected)
+  })
+
+  it('should handle whitespace', () => {
+    expect(mapTimeScale('  Yearly  ')).toBe(TIME_SCALE.YEARLY)
+  })
+
+  it('should throw error for invalid time scale', () => {
+    expect(() => mapTimeScale('INVALID')).toThrow(
+      'Invalid time scale: "INVALID". Expected "Yearly", "Monthly", or "Weekly"'
+    )
+  })
+
+  it.each([null, undefined, ''])('should return undefined for %s', (input) => {
+    expect(mapTimeScale(input)).toBeUndefined()
+  })
+})
+
+describe('mapValueType', () => {
+  it.each([
+    ['Actual figures', VALUE_TYPE.ACTUAL],
+    ['Estimated figures', VALUE_TYPE.ESTIMATED]
+  ])('should map %s to %s', (input, expected) => {
+    expect(mapValueType(input)).toBe(expected)
+  })
+
+  it('should handle whitespace', () => {
+    expect(mapValueType('  Actual figures  ')).toBe(VALUE_TYPE.ACTUAL)
+  })
+
+  it('should throw error for invalid value type', () => {
+    expect(() => mapValueType('INVALID')).toThrow(
+      'Invalid value type: "INVALID". Expected "Actual figures" or "Estimated figures"'
+    )
+  })
+
+  it.each([null, undefined, ''])('should return undefined for %s', (input) => {
+    expect(mapValueType(input)).toBeUndefined()
+  })
+})
+
+describe('convertToNumber', () => {
+  it.each([
+    ['10', 10],
+    ['0', 0],
+    ['123.45', 123.45],
+    ['-5', -5],
+    ['  42  ', 42],
+    [100, 100],
+    [0, 0]
+  ])('should convert %s to %s', (input, expected) => {
+    expect(convertToNumber(input)).toBe(expected)
+  })
+
+  it('should throw error for invalid number', () => {
+    expect(() => convertToNumber('abc')).toThrow(
+      'Invalid value: "abc". Expected a valid number'
+    )
+  })
+
+  it('should throw error with custom field name', () => {
+    expect(() => convertToNumber('invalid', 'authorisedWeight')).toThrow(
+      'Invalid authorisedWeight: "invalid". Expected a valid number'
+    )
+  })
+
+  it.each([null, undefined])('should return undefined for %s', (input) => {
+    expect(convertToNumber(input)).toBeUndefined()
   })
 })

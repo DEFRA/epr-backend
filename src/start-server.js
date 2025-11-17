@@ -7,11 +7,15 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { validateConfig } from '#common/helpers/validate-config.js'
 
 import { getConfig } from './config.js'
 
 async function startServer() {
   const config = getConfig()
+
+  // We want the server to break early if the configuration is invalid
+  validateConfig(config)
   const auditConfig = config.get('audit')
   const auditingStatus = auditConfig.isEnabled ? 'on' : 'off'
   enableAuditing(auditConfig.isEnabled)

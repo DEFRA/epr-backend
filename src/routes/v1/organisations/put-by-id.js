@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import { ROLES } from '#common/helpers/auth/constants.js'
 import { stripNonUpdatableFieldsFromItems } from '#repositories/organisations/helpers.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -24,6 +25,9 @@ export const organisationsPutById = {
   method: 'PUT',
   path: organisationsPutByIdPath,
   options: {
+    auth: {
+      scope: [ROLES.serviceMaintainer]
+    },
     validate: {
       payload: validateMyPayload
     }

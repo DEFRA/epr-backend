@@ -1,5 +1,6 @@
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
@@ -7,12 +8,74 @@ import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import {
+  SUMMARY_LOG_STATUS,
+  transitionStatus
+} from '#domain/summary-logs/status.js'
 
 import { config } from '../../../config.js'
 
 patchTlsSecureContext()
 
-export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
+const handleValidateCommand = async ({
+  summaryLogId,
+  summaryLogsRepository,
+  organisationsRepository,
+  summaryLogExtractor
+}) => {
+  const validateSummaryLog = createSummaryLogsValidator({
+    summaryLogsRepository,
+    organisationsRepository,
+    summaryLogExtractor
+  })
+
+  await validateSummaryLog(summaryLogId)
+}
+
+const handleSubmitCommand = async ({
+  summaryLogId,
+  summaryLogsRepository,
+  summaryLogExtractor,
+  wasteRecordsRepository
+}) => {
+  // Load the summary log
+  const existing = await summaryLogsRepository.findById(summaryLogId)
+
+  if (!existing) {
+    throw new Error(`Summary log ${summaryLogId} not found`)
+  }
+
+  const { version, summaryLog } = existing
+
+  // Verify status is VALIDATED
+  if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+    throw new Error(
+      `Summary log must be validated before submission. Current status: ${summaryLog.status}`
+    )
+  }
+
+  // Sync waste records from summary log
+  const sync = syncFromSummaryLog({
+    extractor: summaryLogExtractor,
+    wasteRecordRepository: wasteRecordsRepository
+  })
+
+  await sync(summaryLog)
+
+  // Update status to SUBMITTED
+  transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+
+  await summaryLogsRepository.update(summaryLogId, version, {
+    status: SUMMARY_LOG_STATUS.SUBMITTED
+  })
+
+  logger.info({
+    message: `Summary log submitted: summaryLogId=${summaryLogId}`
+  })
+}
+
+export default async function summaryLogsWorkerThread(command) {
   const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
 
   const awsRegion = config.get('awsRegion')
@@ -37,19 +100,36 @@ export default async function summaryLogsValidatorWorkerThread(summaryLogId) {
       const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
       const uploadsRepository = createUploadsRepository(s3Client)
       const organisationsRepository = createOrganisationsRepository(db)()
+      const wasteRecordsRepository = createWasteRecordsRepository(db)()
 
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,
         logger
       })
 
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        summaryLogExtractor
-      })
+      // Dispatch to appropriate handler based on command type
+      switch (command.command) {
+        case 'validate':
+          await handleValidateCommand({
+            summaryLogId: command.summaryLogId,
+            summaryLogsRepository,
+            organisationsRepository,
+            summaryLogExtractor
+          })
+          break
 
-      await validateSummaryLog(summaryLogId)
+        case 'submit':
+          await handleSubmitCommand({
+            summaryLogId: command.summaryLogId,
+            summaryLogsRepository,
+            summaryLogExtractor,
+            wasteRecordsRepository
+          })
+          break
+
+        default:
+          throw new Error(`Unknown command: ${command.command}`)
+      }
     } finally {
       s3Client.destroy()
     }

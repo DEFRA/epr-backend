@@ -1,11 +1,15 @@
 import {
-  WASTE_PROCESSING_TYPE,
-  NATION,
   BUSINESS_TYPE,
-  REGULATOR,
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL,
+  NATION,
   PARTNER_TYPE,
-  PARTNERSHIP_TYPE
-} from '#domain/organisations.js'
+  PARTNERSHIP_TYPE,
+  REGULATOR,
+  TIME_SCALE,
+  VALUE_TYPE,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 const WASTE_PROCESSING_TYPES_MAPPING = {
   'Reprocessor and exporter': [
@@ -143,4 +147,118 @@ export function mapPartnershipType(value) {
   }
 
   return result
+}
+
+const MATERIAL_MAPPING = {
+  'Glass (R5)': MATERIAL.GLASS,
+  'Paper or board (R3)': MATERIAL.PAPER,
+  'Plastic (R3)': MATERIAL.PLASTIC,
+  'Steel (R4)': MATERIAL.STEEL,
+  'Wood (R3)': MATERIAL.WOOD,
+  'Fibre-based composite material (R3)': MATERIAL.FIBRE,
+  'Aluminium (R4)': MATERIAL.ALUMINIUM
+}
+
+const GLASS_RECYCLING_PROCESS_MAPPING = {
+  'Glass re-melt': [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+  'Glass other': [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
+  Both: [
+    GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+    GLASS_RECYCLING_PROCESS.GLASS_OTHER
+  ]
+}
+
+const TIME_SCALE_MAPPING = {
+  Yearly: TIME_SCALE.YEARLY,
+  Monthly: TIME_SCALE.MONTHLY,
+  Weekly: TIME_SCALE.WEEKLY
+}
+
+export function mapMaterial(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = MATERIAL_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(`Invalid material: "${value}"`)
+  }
+
+  return result
+}
+
+export function mapGlassRecyclingProcess(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = GLASS_RECYCLING_PROCESS_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(`Invalid recycling process: "${value}"`)
+  }
+
+  return result
+}
+
+export function mapTimeScale(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = TIME_SCALE_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid time scale: "${value}". Expected "Yearly", "Monthly", or "Weekly"`
+    )
+  }
+
+  return result
+}
+
+const VALUE_TYPE_MAPPING = {
+  'Actual figures': VALUE_TYPE.ACTUAL,
+  'Estimated figures': VALUE_TYPE.ESTIMATED
+}
+
+export function mapValueType(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = VALUE_TYPE_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid value type: "${value}". Expected "Actual figures" or "Estimated figures"`
+    )
+  }
+
+  return result
+}
+
+export function convertToNumber(value, fieldName = 'value') {
+  if (value == null) {
+    return undefined
+  }
+
+  const num = Number(value)
+
+  if (Number.isNaN(num)) {
+    throw new TypeError(
+      `Invalid ${fieldName}: "${value}". Expected a valid number`
+    )
+  }
+
+  return num
 }

@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { parseOrgSubmission } from './transform-organisation-data.js'
+import { parseOrgSubmission } from './transform-organisation.js'
 import {
   WASTE_PROCESSING_TYPE,
   PARTNERSHIP_TYPE,
   PARTNER_TYPE,
   BUSINESS_TYPE,
   NATION
-} from '#domain/organisations.js'
+} from '#domain/organisations/model.js'
 
 import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json'
 import registeredLtdLiability from '#data/fixtures/ea/organisation/registered-ltd-liability.json'
@@ -407,14 +407,12 @@ describe('parseOrgSubmission - Error Cases', () => {
       }
     }
 
-    await expect(
+    expect(() =>
       parseOrgSubmission(
         invalidSubmission._id.$oid,
         invalidSubmission.orgId,
         invalidSubmission.rawSubmissionData
       )
-    ).rejects.toThrow(
-      'Waste processing type field "Currently operational?" not found'
-    )
+    ).toThrow('Waste processing type field "Currently operational?" not found')
   })
 })
