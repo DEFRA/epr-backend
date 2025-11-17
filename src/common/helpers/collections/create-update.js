@@ -46,10 +46,10 @@ export async function createIndexes(db) {
 
   await db
     .collection('waste-records')
-    .createIndex({ _compositeKey: 1 }, { unique: true })
-  await db
-    .collection('waste-records')
-    .createIndex({ organisationId: 1, registrationId: 1 })
+    .createIndex(
+      { organisationId: 1, registrationId: 1, type: 1, rowId: 1 },
+      { unique: true }
+    )
 }
 
 export async function createSeedData(db) {
