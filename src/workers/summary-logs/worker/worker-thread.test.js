@@ -6,7 +6,7 @@ import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -29,7 +29,7 @@ vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('#repositories/organisations/mongodb.js')
-vi.mock('#repositories/waste-records/inmemory.js')
+vi.mock('#repositories/waste-records/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
 describe('summaryLogsWorkerThread', () => {
@@ -73,7 +73,7 @@ describe('summaryLogsWorkerThread', () => {
 
     mockWasteRecordsRepository = {
       findByRegistration: vi.fn(),
-      upsertWasteRecords: vi.fn()
+      appendVersions: vi.fn()
     }
 
     mockSummaryLogExtractor = {
@@ -95,7 +95,7 @@ describe('summaryLogsWorkerThread', () => {
     vi.mocked(createOrganisationsRepository).mockReturnValue(
       () => mockOrganisationsRepository
     )
-    vi.mocked(createInMemoryWasteRecordsRepository).mockReturnValue(
+    vi.mocked(createWasteRecordsRepository).mockReturnValue(
       () => mockWasteRecordsRepository
     )
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
@@ -378,7 +378,7 @@ describe('summaryLogsWorkerThread', () => {
         summaryLogId
       })
 
-      expect(createInMemoryWasteRecordsRepository).toHaveBeenCalled()
+      expect(createWasteRecordsRepository).toHaveBeenCalledWith(mockDb)
     })
 
     it('should create syncFromSummaryLog with correct dependencies', async () => {

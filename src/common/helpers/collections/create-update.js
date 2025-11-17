@@ -43,6 +43,13 @@ export async function createIndexes(db) {
   await db.collection('organisation').createIndex({ orgId: 1 })
   await db.collection('registration').createIndex({ referenceNumber: 1 })
   await db.collection('accreditation').createIndex({ referenceNumber: 1 })
+
+  await db
+    .collection('waste-records')
+    .createIndex({ _compositeKey: 1 }, { unique: true })
+  await db
+    .collection('waste-records')
+    .createIndex({ organisationId: 1, registrationId: 1 })
 }
 
 export async function createSeedData(db) {

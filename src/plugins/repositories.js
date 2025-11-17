@@ -1,12 +1,14 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
  * @property {import('#repositories/summary-logs/port.js').SummaryLogsRepositoryFactory} [summaryLogsRepository] - Optional test override for summary logs repository factory
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
  * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
+ * @property {import('#repositories/waste-records/port.js').WasteRecordsRepositoryFactory} [wasteRecordsRepository] - Optional test override for waste records repository factory
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
@@ -101,6 +103,22 @@ export const repositories = {
             /** @type {import('mongodb').Db} */ (server.db)
           )
           registerPerRequest('formSubmissionsRepository', productionFactory)
+        })
+      }
+
+      if (options?.wasteRecordsRepository) {
+        registerPerRequest(
+          'wasteRecordsRepository',
+          options.wasteRecordsRepository
+        )
+      } else if (skipMongoDb) {
+        // No repository registered - test is skipping MongoDB and not providing a factory
+      } else {
+        server.dependency('mongodb', () => {
+          const productionFactory = createWasteRecordsRepository(
+            /** @type {import('mongodb').Db} */ (server.db)
+          )
+          registerPerRequest('wasteRecordsRepository', productionFactory)
         })
       }
     }
