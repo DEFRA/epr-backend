@@ -64,15 +64,15 @@ export const repositories = {
       ) => {
         if (testFactory) {
           registerPerRequest(name, testFactory)
-        } else if (!skipMongoDb) {
+        } else if (skipMongoDb) {
+          // No repository registered - test is skipping MongoDB and not providing a factory
+        } else {
           server.dependency('mongodb', () => {
             const productionFactory = productionFactoryCreator(
               /** @type {import('mongodb').Db} */ (server.db)
             )
             registerPerRequest(name, productionFactory)
           })
-        } else {
-          // No repository registered - test is skipping MongoDB and not providing a factory
         }
       }
 
