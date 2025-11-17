@@ -56,7 +56,26 @@ export const syncFromSummaryLog = (dependencies) => {
       existingRecords
     )
 
-    // 5. Save waste records
-    await wasteRecordRepository.upsertWasteRecords(wasteRecords)
+    // 5. Convert waste records to wasteRecordVersions Map structure
+    const wasteRecordVersions = new Map()
+    for (const record of wasteRecords) {
+      if (!wasteRecordVersions.has(record.type)) {
+        wasteRecordVersions.set(record.type, new Map())
+      }
+
+      // Get the latest version (last in array) and its data
+      const latestVersion = record.versions[record.versions.length - 1]
+      wasteRecordVersions.get(record.type).set(record.rowId, {
+        version: latestVersion,
+        data: record.data
+      })
+    }
+
+    // 6. Append versions
+    await wasteRecordRepository.appendVersions(
+      summaryLog.organisationId,
+      summaryLog.registrationId,
+      wasteRecordVersions
+    )
   }
 }
