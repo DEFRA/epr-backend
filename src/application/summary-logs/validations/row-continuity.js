@@ -1,8 +1,8 @@
+import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
-  createValidationIssues,
   VALIDATION_CATEGORY,
   VALIDATION_CODE
-} from '#common/validation/validation-issues.js'
+} from '#common/enums/validation.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 
 /**
@@ -108,9 +108,7 @@ export const validateRowContinuity = ({
     if (missingRowKeys.length > 0) {
       for (const missingKey of missingRowKeys) {
         const [type, rowId] = missingKey.split(':')
-        const originalRecord = existingWasteRecords.find(
-          (r) => r.type === type && r.rowId === rowId
-        )
+        const originalRecord = existingRecordsMap.get(missingKey)
 
         const lastVersion =
           originalRecord.versions[originalRecord.versions.length - 1]

@@ -1,5 +1,5 @@
 import { transformValidationResponse } from './transform-validation-response.js'
-import { VALIDATION_SEVERITY } from '#common/validation/validation-issues.js'
+import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
 describe('transformValidationResponse', () => {
   describe('when validation is empty or has no issues', () => {

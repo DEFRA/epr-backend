@@ -1,5 +1,5 @@
 import { validateMetaBusiness } from './meta-business.js'
-import { VALIDATION_SEVERITY } from '#common/validation/validation-issues.js'
+import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
 describe('validateMetaBusiness', () => {
   const createValidMeta = () => ({

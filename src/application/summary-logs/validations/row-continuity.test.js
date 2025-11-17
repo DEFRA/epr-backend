@@ -2,7 +2,7 @@ import { validateRowContinuity } from './row-continuity.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
-} from '#common/validation/validation-issues.js'
+} from '#common/enums/validation.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 describe('validateRowContinuity', () => {

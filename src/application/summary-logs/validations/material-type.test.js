@@ -2,7 +2,7 @@ import { validateMaterialType } from './material-type.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
-} from '#common/validation/validation-issues.js'
+} from '#common/enums/validation.js'
 
 const mockLoggerInfo = vi.fn()
 

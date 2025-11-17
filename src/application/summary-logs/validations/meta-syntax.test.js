@@ -2,7 +2,7 @@ import { validateMetaSyntax } from './meta-syntax.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
-} from '#common/validation/validation-issues.js'
+} from '#common/enums/validation.js'
 
 describe('validateMetaSyntax', () => {
   const createValidMeta = () => ({

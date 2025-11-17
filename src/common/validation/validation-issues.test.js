@@ -1,9 +1,11 @@
 import {
   createValidationIssues,
-  issueToErrorObject,
+  issueToErrorObject
+} from './validation-issues.js'
+import {
   VALIDATION_SEVERITY,
   VALIDATION_CATEGORY
-} from './validation-issues.js'
+} from '#common/enums/validation.js'
 
 describe('Validation Issues', () => {
   describe('addIssue', () => {

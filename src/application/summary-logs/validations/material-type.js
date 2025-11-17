@@ -1,7 +1,5 @@
-import {
-  createValidationIssues,
-  VALIDATION_CATEGORY
-} from '#common/validation/validation-issues.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,

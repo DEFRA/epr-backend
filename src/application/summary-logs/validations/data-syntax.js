@@ -1,8 +1,8 @@
+import { createValidationIssues } from '#common/validation/validation-issues.js'
 import {
-  createValidationIssues,
   VALIDATION_CATEGORY,
   VALIDATION_CODE
-} from '#common/validation/validation-issues.js'
+} from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 import { getTableSchema } from './table-schemas.js'
