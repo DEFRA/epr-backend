@@ -36,6 +36,9 @@
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943902",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
@@ -137,6 +140,9 @@
     },
     {
       "id": "68f6a147c117aec8a1ab7494",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
@@ -187,6 +193,9 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab7495",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-08-20T21:34:44.944Z",
       "statusHistory": [
         {
@@ -235,6 +244,9 @@
     },
     {
       "id": "68f6a147c117aec8a1ab7496",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-08-21T21:34:44.944Z",
       "statusHistory": [
         {
@@ -283,6 +295,9 @@
     },
     {
       "id": "68f6a147c117aec8a1ab7494",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-08-22T21:34:44.944Z",
       "statusHistory": [
         {
