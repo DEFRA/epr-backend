@@ -318,7 +318,6 @@ const formFileUploadSchema = Joi.object({
 
 export const registrationSchema = Joi.object({
   id: idSchema,
-  statusHistory: Joi.array().items(statusHistoryItemSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -404,7 +403,6 @@ const accreditationSchema = Joi.object({
     'status',
     requiredWhenApprovedOrSuspended
   ),
-  statusHistory: Joi.array().items(statusHistoryItemSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -447,18 +445,18 @@ const accreditationSchema = Joi.object({
   )
 })
 
-const registrationUpdateSchema = registrationSchema
-  .fork(['statusHistory'], (schema) => schema.forbidden())
-  .fork(['status'], (schema) => schema.optional())
+const registrationUpdateSchema = registrationSchema.fork(['status'], (schema) =>
+  schema.optional()
+)
 
-const accreditationUpdateSchema = accreditationSchema
-  .fork(['statusHistory'], (schema) => schema.forbidden())
-  .fork(['status'], (schema) => schema.optional())
+const accreditationUpdateSchema = accreditationSchema.fork(
+  ['status'],
+  (schema) => schema.optional()
+)
 
 export const organisationInsertSchema = Joi.object({
   id: idSchema,
   orgId: Joi.number().required(),
-  statusHistory: Joi.array().items(statusHistoryItemSchema),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
