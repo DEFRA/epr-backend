@@ -79,7 +79,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.FATAL,
             category: 'technical',
             message: 'Validation failed',
-            code: 'VALIDATION_FAILED'
+            code: 'VALIDATION_SYSTEM_ERROR'
           }
         ]
       }
@@ -90,7 +90,7 @@ describe('transformValidationResponse', () => {
         validation: {
           failures: [
             {
-              code: 'VALIDATION_FAILED'
+              code: 'VALIDATION_SYSTEM_ERROR'
             }
           ],
           concerns: {}

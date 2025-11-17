@@ -22,6 +22,7 @@ describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
   let organisationsRepository
+  let wasteRecordsRepository
   let validateSummaryLog
   let summaryLogId
   let summaryLog
@@ -56,6 +57,10 @@ describe('SummaryLogsValidator', () => {
       })
     }
 
+    wasteRecordsRepository = {
+      findByRegistration: vi.fn().mockResolvedValue([])
+    }
+
     summaryLogId = 'summary-log-123'
 
     summaryLog = {
@@ -84,6 +89,7 @@ describe('SummaryLogsValidator', () => {
     validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
+      wasteRecordsRepository,
       summaryLogExtractor
     })
   })
@@ -166,7 +172,7 @@ describe('SummaryLogsValidator', () => {
               severity: 'fatal',
               category: 'technical',
               message: 'Something went wrong while retrieving your file upload',
-              code: 'VALIDATION_FAILED'
+              code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
         }),
@@ -193,7 +199,7 @@ describe('SummaryLogsValidator', () => {
               severity: 'fatal',
               category: 'technical',
               message: 'Registration with id reg-123 not found',
-              code: 'VALIDATION_FAILED'
+              code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
         }),
@@ -266,7 +272,7 @@ describe('SummaryLogsValidator', () => {
               severity: 'fatal',
               category: 'technical',
               message: 'S3 access denied',
-              code: 'VALIDATION_FAILED'
+              code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
         }),
@@ -319,6 +325,7 @@ describe('SummaryLogsValidator', () => {
     const brokenValidate = createSummaryLogsValidator({
       summaryLogsRepository: brokenRepository,
       organisationsRepository,
+      wasteRecordsRepository,
       summaryLogExtractor
     })
 

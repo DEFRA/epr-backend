@@ -185,6 +185,7 @@ describe('summaryLogsWorkerThread', () => {
     expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       organisationsRepository: mockOrganisationsRepository,
+      wasteRecordsRepository: mockWasteRecordsRepository,
       summaryLogExtractor: mockSummaryLogExtractor
     })
   })

@@ -1,9 +1,10 @@
 import {
   VALIDATION_CATEGORY,
-  VALIDATION_SEVERITY
+  VALIDATION_SEVERITY,
+  VALIDATION_CODE
 } from '#common/enums/index.js'
 
-export { VALIDATION_SEVERITY, VALIDATION_CATEGORY }
+export { VALIDATION_SEVERITY, VALIDATION_CATEGORY, VALIDATION_CODE }
 
 /**
  * Represents a single validation issue

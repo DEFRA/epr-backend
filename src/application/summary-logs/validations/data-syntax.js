@@ -1,6 +1,7 @@
 import {
   createValidationIssues,
-  VALIDATION_CATEGORY
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
 } from '#common/validation/validation-issues.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
@@ -14,19 +15,19 @@ import { getTableSchema } from './table-schemas.js'
  */
 const mapJoiTypeToErrorCode = (joiType) => {
   const typeMapping = {
-    'any.required': 'FIELD_REQUIRED',
-    'number.base': 'INVALID_TYPE',
-    'number.min': 'VALUE_OUT_OF_RANGE',
-    'number.max': 'VALUE_OUT_OF_RANGE',
-    'number.greater': 'VALUE_OUT_OF_RANGE',
-    'number.less': 'VALUE_OUT_OF_RANGE',
-    'string.base': 'INVALID_TYPE',
-    'string.pattern.base': 'INVALID_FORMAT',
-    'date.base': 'INVALID_DATE'
+    'any.required': VALIDATION_CODE.FIELD_REQUIRED,
+    'number.base': VALIDATION_CODE.INVALID_TYPE,
+    'number.min': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+    'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+    'number.greater': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+    'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+    'string.base': VALIDATION_CODE.INVALID_TYPE,
+    'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
+    'date.base': VALIDATION_CODE.INVALID_DATE
   }
 
   /* istanbul ignore next - Defensive fallback for unmapped Joi error types */
-  return typeMapping[joiType] || 'VALIDATION_ERROR'
+  return typeMapping[joiType] || VALIDATION_CODE.VALIDATION_FALLBACK_ERROR
 }
 
 /**
@@ -58,7 +59,7 @@ const validateHeaders = ({
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
         `Missing required header '${requiredHeader}' in table '${tableName}'`,
-        'MISSING_REQUIRED_HEADER',
+        VALIDATION_CODE.MISSING_REQUIRED_HEADER,
         {
           location,
           expected: requiredHeader,

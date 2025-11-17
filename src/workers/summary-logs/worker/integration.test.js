@@ -2,6 +2,7 @@ import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   SUMMARY_LOG_STATUS,
@@ -97,9 +98,12 @@ describe('SummaryLogsValidator integration', () => {
     const extractor =
       summaryLogExtractor || createExtractor(summaryLog.file.id, metadata)
 
+    const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
     const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
+      wasteRecordsRepository,
       summaryLogExtractor: extractor
     })
 
@@ -178,7 +182,7 @@ describe('SummaryLogsValidator integration', () => {
               severity: 'fatal',
               category: 'technical',
               message: errorMessage,
-              code: 'VALIDATION_FAILED'
+              code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
         },
