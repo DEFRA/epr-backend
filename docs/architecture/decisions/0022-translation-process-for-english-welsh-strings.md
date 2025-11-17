@@ -121,12 +121,11 @@ lexers outweighed any potential benefit.
 
 ### Summary Table
 
-| Aspect           | Decision                                           |
-| ---------------- | -------------------------------------------------- |
-| Export format    | Excel                                              |
-| Columns          | Namespace, Key, en, cy                             |
-| Delivery method  | Email                                              |
-| Automation scope | Semi-automated (scripts for export/import)         |
-| Future goal      | Integration with a translation management platform |
+| Aspect           | Decision                                   |
+| ---------------- | ------------------------------------------ |
+| Export format    | Excel                                      |
+| Columns          | Namespace, Key, en, cy                     |
+| Delivery method  | Email                                      |
+| Automation scope | Semi-automated (scripts for export/import) |
 
 ---
