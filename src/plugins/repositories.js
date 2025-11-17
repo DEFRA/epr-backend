@@ -71,6 +71,8 @@ export const repositories = {
             )
             registerPerRequest(name, productionFactory)
           })
+        } else {
+          // No repository registered - test is skipping MongoDB and not providing a factory
         }
       }
 
