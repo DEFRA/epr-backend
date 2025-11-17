@@ -1,8 +1,4 @@
-import {
-  validateOrganisationId,
-  validateRegistrationId,
-  validateWasteRecord
-} from './validation.js'
+import { validateOrganisationId, validateRegistrationId } from './validation.js'
 
 const COLLECTION_NAME = 'waste-records'
 const SCHEMA_VERSION = 1
@@ -16,18 +12,6 @@ const SCHEMA_VERSION = 1
 const mapDocumentToDomain = (doc) => {
   const { _id, schemaVersion, ...domainFields } = doc
   return structuredClone(domainFields)
-}
-
-/**
- * Generates a composite key for waste record uniqueness
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} type
- * @param {string} rowId
- * @returns {string} Composite key
- */
-const getCompositeKey = (organisationId, registrationId, type, rowId) => {
-  return `${organisationId}:${registrationId}:${type}:${rowId}`
 }
 
 const performFindByRegistration =
@@ -46,44 +30,100 @@ const performFindByRegistration =
     return docs.map(mapDocumentToDomain)
   }
 
-const performUpsertWasteRecords = (db) => async (wasteRecords) => {
-  if (wasteRecords.length === 0) {
-    return
+/**
+ * Builds MongoDB aggregation expression to extract existing summary log IDs
+ * @returns {Object} MongoDB aggregation expression
+ */
+const buildExistingSummaryLogIds = () => ({
+  $ifNull: [
+    {
+      $map: {
+        input: '$versions',
+        as: 'v',
+        in: '$$v.summaryLog.id'
+      }
+    },
+    []
+  ]
+})
+
+/**
+ * Builds MongoDB update operation for appending a version
+ * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
+ * @param {Object} versionData
+ * @returns {Object} MongoDB update operation
+ */
+const buildAppendVersionOperation = (key, versionData) => {
+  const existingSummaryLogIds = buildExistingSummaryLogIds()
+  const versionExists = {
+    $in: [versionData.version.summaryLog.id, existingSummaryLogIds]
   }
 
-  // Validate all records first
-  const validatedRecords = wasteRecords.map((record) =>
-    validateWasteRecord(record)
-  )
-
-  // Build bulk write operations
-  const bulkOps = validatedRecords.map((record) => {
-    const compositeKey = getCompositeKey(
-      record.organisationId,
-      record.registrationId,
-      record.type,
-      record.rowId
-    )
-
-    return {
-      updateOne: {
-        filter: {
-          _compositeKey: compositeKey
-        },
-        update: {
+  return {
+    updateOne: {
+      filter: key,
+      update: [
+        {
           $set: {
-            _compositeKey: compositeKey,
+            // Static fields - only set on insert
             schemaVersion: SCHEMA_VERSION,
-            ...structuredClone(record)
+            ...key,
+            // Current data - only update if version doesn't exist
+            data: {
+              $cond: {
+                if: versionExists,
+                then: '$data',
+                else: structuredClone(versionData.data)
+              }
+            },
+            // Versions array - conditionally append if summaryLog.id doesn't exist
+            versions: {
+              $cond: {
+                if: versionExists,
+                then: '$versions',
+                else: {
+                  $concatArrays: [
+                    { $ifNull: ['$versions', []] },
+                    [structuredClone(versionData.version)]
+                  ]
+                }
+              }
+            }
           }
-        },
-        upsert: true
+        }
+      ],
+      upsert: true
+    }
+  }
+}
+
+const performAppendVersions =
+  (db) => async (organisationId, registrationId, wasteRecordVersions) => {
+    const validatedOrgId = validateOrganisationId(organisationId)
+    const validatedRegId = validateRegistrationId(registrationId)
+
+    if (wasteRecordVersions.size === 0) {
+      return
+    }
+
+    // Build bulk write operations
+    const bulkOps = []
+
+    for (const [type, versionsByRowId] of wasteRecordVersions) {
+      for (const [rowId, versionData] of versionsByRowId) {
+        const key = {
+          organisationId: validatedOrgId,
+          registrationId: validatedRegId,
+          type,
+          rowId
+        }
+
+        bulkOps.push(buildAppendVersionOperation(key, versionData))
       }
     }
-  })
 
-  await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
-}
+    await db.collection(COLLECTION_NAME).bulkWrite(bulkOps, { ordered: false })
+  }
 
 /**
  * Creates a MongoDB-backed waste records repository
@@ -93,6 +133,6 @@ const performUpsertWasteRecords = (db) => async (wasteRecords) => {
 export const createWasteRecordsRepository = (db) => () => {
   return {
     findByRegistration: performFindByRegistration(db),
-    upsertWasteRecords: performUpsertWasteRecords(db)
+    appendVersions: performAppendVersions(db)
   }
 }
