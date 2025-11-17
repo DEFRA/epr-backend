@@ -23,12 +23,15 @@ const keyPair = generateKeyPairSync('rsa', {
 
 const privateKey = keyPair.privateKey
 /** @type {import('crypto').JsonWebKey & {kid: string, use: string, alg: string}} */
-const publicKey = /** @type {*} */ (keyPair.publicKey)
 
-// Add JWKS-required fields to the public key
-publicKey.kid = 'test-key-id'
-publicKey.use = 'sig'
-publicKey.alg = 'RS256'
+export const publicKey = {
+  ...keyPair.publicKey,
+
+  // Add JWKS-required fields to the public key
+  kid: 'test-key-id',
+  use: 'sig',
+  alg: 'RS256'
+}
 
 const baseValidObject = {
   name: 'John Doe',
@@ -108,23 +111,10 @@ const generateEntraIdTokenForUnauthorisedUser = () => {
   return mockEntraIdToken
 }
 
-const generateMockEntraIdTokens = () => {
-  const validToken = generateValidEntraIdToken()
-  const wrongSignatureToken = generateEntraIdTokenWithWrongSignature()
-  const wrongIssuerToken = generateEntraIdTokenWithWrongIssuer()
-  const wrongAudienceToken = generateEntraIdTokenWithWrongAudience()
-  const unauthorisedUserToken = generateEntraIdTokenForUnauthorisedUser()
-
-  return {
-    validToken,
-    wrongSignatureToken,
-    wrongIssuerToken,
-    wrongAudienceToken,
-    unauthorisedUserToken
-  }
+export const entraIdMockAuthTokens = {
+  validToken: generateValidEntraIdToken(),
+  wrongSignatureToken: generateEntraIdTokenWithWrongSignature(),
+  wrongIssuerToken: generateEntraIdTokenWithWrongIssuer(),
+  wrongAudienceToken: generateEntraIdTokenWithWrongAudience(),
+  unauthorisedUserToken: generateEntraIdTokenForUnauthorisedUser()
 }
-
-export const testTokens = generateMockEntraIdTokens()
-
-// Export the public key so it can be used in JWKS responses
-export const getTestPublicKey = () => publicKey

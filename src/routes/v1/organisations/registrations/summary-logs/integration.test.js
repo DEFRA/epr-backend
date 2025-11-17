@@ -17,11 +17,11 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 import { ObjectId } from 'mongodb'
 
-const { validToken } = testTokens
+const { validToken } = entraIdMockAuthTokens
 
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()

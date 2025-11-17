@@ -3,6 +3,11 @@ import createFetchMock from 'vitest-fetch-mock'
 
 const fetchMock = createFetchMock(vi)
 
+// Remove environment variables before any modules are loaded
+// This ensures test tokens and config defaults are used consistently
+delete process.env.ADMIN_UI_ENTRA_CLIENT_ID
+delete process.env.SERVICE_MAINTAINER_EMAILS
+
 beforeAll(async () => {
   // Setup fetch mock
   fetchMock.enableMocks()
