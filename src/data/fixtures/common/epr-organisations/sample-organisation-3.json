@@ -23,6 +23,9 @@
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943932",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
@@ -123,6 +126,9 @@
     },
     {
       "id": "6507f1f77bcf86cd79943933",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
@@ -173,6 +179,9 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab749a",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-11-01T13:00:00.000Z",
       "statusHistory": [
         {
