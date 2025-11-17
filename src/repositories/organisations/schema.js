@@ -135,7 +135,7 @@ const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),
   tradingName: Joi.string().optional(),
   registrationNumber: Joi.string()
-    .regex(/^[A-Z0-9]{8}$/i)
+    .regex(/^[a-zA-Z0-9]{2}[0-9]{6}$/)
     .messages({
       'string.pattern.base':
         'Registration number must be 8 characters (e.g., 01234567 or AC012345)'
@@ -160,8 +160,12 @@ const partnershipSchema = Joi.object({
 })
 
 const wasteExemptionSchema = Joi.object({
-  reference: Joi.string().required(),
-  exemptionCode: Joi.string().required(),
+  reference: Joi.string()
+    .required()
+    .regex(/^[wW][eE][xX][0-9]{6}$/),
+  exemptionCode: Joi.string()
+    .required()
+    .regex(/^^[a-zA-Z][0-9]{1,2}$/),
   materials: Joi.array()
     .items(
       Joi.valid(
