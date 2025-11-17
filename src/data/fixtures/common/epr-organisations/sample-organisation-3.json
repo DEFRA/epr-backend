@@ -7,10 +7,6 @@
     {
       "status": "created",
       "updatedAt": "2025-11-01T12:00:00.000Z"
-    },
-    {
-      "status": "approved",
-      "updatedAt": "2025-11-01T08:30:00.000Z"
     }
   ],
   "wasteProcessingTypes": ["reprocessor", "exporter"],
@@ -27,14 +23,13 @@
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943932",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
           "updatedAt": "2025-11-01T11:00:00.000Z"
-        },
-        {
-          "status": "approved",
-          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "niea",
@@ -137,14 +132,13 @@
     },
     {
       "id": "6507f1f77bcf86cd79943933",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
           "updatedAt": "2025-11-01T11:30:00.000Z"
-        },
-        {
-          "status": "approved",
-          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "niea",
@@ -191,15 +185,14 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab749a",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-11-01T13:00:00.000Z",
       "statusHistory": [
         {
           "status": "created",
           "updatedAt": "2025-11-01T13:00:00.000Z"
-        },
-        {
-          "status": "approved",
-          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "niea",

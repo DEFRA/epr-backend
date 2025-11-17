@@ -7,10 +7,6 @@
     {
       "status": "created",
       "updatedAt": "2025-10-01T08:30:00.000Z"
-    },
-    {
-      "status": "approved",
-      "updatedAt": "2025-11-01T08:30:00.000Z"
     }
   ],
   "wasteProcessingTypes": ["exporter"],
@@ -28,6 +24,8 @@
     {
       "id": "6507f1f77bcf86cd79943922",
       "registrationNumber": "R26ER2375628628-PL",
+      "validFrom": "2026-01-01T00:00:00.000Z",
+      "validTo": "2027-01-01T00:00:00.000Z",
       "accreditationId": "68f6a147c117aec8a1ab7499",
       "statusHistory": [
         {
@@ -45,19 +43,6 @@
       "material": "plastic",
       "wasteProcessingType": "exporter",
       "cbduNumber": "CBDU789012",
-      "wasteManagementPermits": [
-        {
-          "type": "environmental_permit",
-          "permitNumber": "WML789012",
-          "authorisedMaterials": [
-            {
-              "material": "plastic",
-              "authorisedWeightInTonnes": 30,
-              "timeScale": "yearly"
-            }
-          ]
-        }
-      ],
       "approvedPersons": [
         {
           "fullName": "Peter Plum",
@@ -80,7 +65,13 @@
         "title": "Owner",
         "phone": "2223334444"
       },
-      "samplingInspectionPlanFileUploads": [
+      "samplingInspectionPlanPart1FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789",
+          "defraFormUserDownloadLink": "https://example.com/file-789"
+        }
+      ],
+      "orsFileUploads": [
         {
           "defraFormUploadedFileId": "file-789",
           "defraFormUserDownloadLink": "https://example.com/file-789"
@@ -97,6 +88,8 @@
     {
       "id": "68f6a147c117aec8a1ab7499",
       "accreditationNumber": "A26ER2375628628-PL",
+      "validFrom": "2026-01-01T00:00:00.000Z",
+      "validTo": "2027-01-01T00:00:00.000Z",
       "formSubmissionTime": "2025-10-01T09:00:00.000Z",
       "statusHistory": [
         {
@@ -110,15 +103,9 @@
       ],
       "submittedToRegulator": "nrw",
       "orgName": "Plastic Exporters",
-      "site": {
-        "address": {
-          "line1": "22 Export Lane",
-          "postcode": "CF10 1AA"
-        }
-      },
       "material": "plastic",
       "wasteProcessingType": "exporter",
-      "pernIssuance": {
+      "prnIssuance": {
         "tonnageBand": "up_to_5000",
         "signatories": [
           {
@@ -128,7 +115,7 @@
             "phone": "5556667777"
           }
         ],
-        "pernIncomeBusinessPlan": [
+        "incomeBusinessPlan": [
           {
             "usageDescription": "Expand export fleet",
             "detailedExplanation": "Purchase new trucks",
@@ -140,6 +127,24 @@
         "line1": "22 Export Lane",
         "town": "Cardiff",
         "postcode": "CF10 1AA"
+      },
+      "samplingInspectionPlanPart2FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789",
+          "defraFormUserDownloadLink": "https://example.com/file-789"
+        }
+      ],
+      "orsFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789",
+          "defraFormUserDownloadLink": "https://example.com/file-789"
+        }
+      ],
+      "submitterContactDetails": {
+        "fullName": "Colin Mustard",
+        "email": "colin.mustard@export.com",
+        "title": "Manager",
+        "phone": "0987654321"
       }
     }
   ],

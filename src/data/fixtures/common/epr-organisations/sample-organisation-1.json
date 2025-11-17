@@ -7,10 +7,6 @@
     {
       "status": "created",
       "updatedAt": "2025-10-01T08:30:00.000Z"
-    },
-    {
-      "status": "approved",
-      "updatedAt": "2025-11-01T08:30:00.000Z"
     }
   ],
   "wasteProcessingTypes": ["reprocessor", "exporter"],
@@ -40,14 +36,13 @@
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943902",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
           "updatedAt": "2025-10-01T08:30:00.000Z"
-        },
-        {
-          "status": "approved",
-          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "ea",
@@ -145,14 +140,13 @@
     },
     {
       "id": "68f6a147c117aec8a1ab7494",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
           "updatedAt": "2025-10-01T08:30:00.000Z"
-        },
-        {
-          "status": "approved",
-          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "ea",
@@ -199,7 +193,9 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab7495",
-      "accreditationNumber": "87654321",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-08-20T21:34:44.944Z",
       "statusHistory": [
         {
@@ -248,15 +244,14 @@
     },
     {
       "id": "68f6a147c117aec8a1ab7496",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-08-21T21:34:44.944Z",
       "statusHistory": [
         {
           "status": "created",
           "updatedAt": "2025-08-21T21:34:44.944Z"
-        },
-        {
-          "status": "approved",
-          "updatedAt": "2025-11-01T08:30:00.000Z"
         }
       ],
       "submittedToRegulator": "ea",
@@ -300,6 +295,9 @@
     },
     {
       "id": "68f6a147c117aec8a1ab7494",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-08-22T21:34:44.944Z",
       "statusHistory": [
         {
