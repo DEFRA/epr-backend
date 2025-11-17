@@ -74,29 +74,17 @@ export const repositories = {
         }
       }
 
-      registerRepository(
-        'summaryLogsRepository',
-        createSummaryLogsRepository,
-        options?.summaryLogsRepository
-      )
+      const repositoryFactories = {
+        summaryLogsRepository: createSummaryLogsRepository,
+        organisationsRepository: (db) =>
+          createOrganisationsRepository(db, options?.eventualConsistency),
+        formSubmissionsRepository: createFormSubmissionsRepository,
+        wasteRecordsRepository: createWasteRecordsRepository
+      }
 
-      registerRepository(
-        'organisationsRepository',
-        (db) => createOrganisationsRepository(db, options?.eventualConsistency),
-        options?.organisationsRepository
-      )
-
-      registerRepository(
-        'formSubmissionsRepository',
-        createFormSubmissionsRepository,
-        options?.formSubmissionsRepository
-      )
-
-      registerRepository(
-        'wasteRecordsRepository',
-        createWasteRecordsRepository,
-        options?.wasteRecordsRepository
-      )
+      for (const [name, creator] of Object.entries(repositoryFactories)) {
+        registerRepository(name, creator, options?.[name])
+      }
     }
   }
 }
