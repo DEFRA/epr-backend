@@ -407,14 +407,12 @@ describe('parseOrgSubmission - Error Cases', () => {
       }
     }
 
-    await expect(
+    expect(() =>
       parseOrgSubmission(
         invalidSubmission._id.$oid,
         invalidSubmission.orgId,
         invalidSubmission.rawSubmissionData
       )
-    ).rejects.toThrow(
-      'Waste processing type field "Currently operational?" not found'
-    )
+    ).toThrow('Waste processing type field "Currently operational?" not found')
   })
 })

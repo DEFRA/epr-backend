@@ -50,8 +50,8 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.930.0",
-    "@aws-sdk/credential-providers": "3.930.0",
+    "@aws-sdk/client-s3": "3.932.0",
+    "@aws-sdk/credential-providers": "3.932.0",
     "@defra/cdp-auditing": "0.5.0",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.29.0",
@@ -87,19 +87,19 @@
     "glob": "11.0.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.8",
+    "@vitest/coverage-v8": "4.0.9",
     "eslint": "9.39.1",
     "eslint-plugin-n": "17.23.1",
     "husky": "9.1.7",
     "knip": "5.69.1",
     "lint-staged": "16.2.6",
-    "msw": "2.12.1",
+    "msw": "2.12.2",
     "neostandard": "0.12.2",
     "nodemon": "3.1.11",
     "prettier": "3.6.2",
     "testcontainers": "11.8.1",
     "tinybench": "5.1.0",
-    "vitest": "4.0.8",
+    "vitest": "4.0.9",
     "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.2"
   }
