@@ -135,7 +135,7 @@ const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),
   tradingName: Joi.string().optional(),
   registrationNumber: Joi.string()
-    .regex(/^[A-Z0-9]{8}$/i)
+    .regex(/^[a-zA-Z0-9]{2}\d{6}$/)
     .messages({
       'string.pattern.base':
         'Registration number must be 8 characters (e.g., 01234567 or AC012345)'
@@ -160,8 +160,12 @@ const partnershipSchema = Joi.object({
 })
 
 const wasteExemptionSchema = Joi.object({
-  reference: Joi.string().required(),
-  exemptionCode: Joi.string().required(),
+  reference: Joi.string()
+    .required()
+    .regex(/^[wW][eE][xX]\d{6}$/),
+  exemptionCode: Joi.string()
+    .required()
+    .regex(/^^[a-zA-Z]\d{1,2}$/),
   materials: Joi.array()
     .items(
       Joi.valid(
@@ -204,7 +208,7 @@ const wasteManagementPermitSchema = Joi.object({
       WASTE_PERMIT_TYPE.WASTE_EXEMPTION
     )
     .required(),
-  permitNumber: Joi.string().optional(),
+  permitNumber: whenNotWasteExemption(Joi.string()),
   exemptions: whenWasteExemption(
     Joi.array().items(wasteExemptionSchema).min(1)
   ),
@@ -225,10 +229,10 @@ const siteCapacitySchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
-  siteCapacityInTonnes: Joi.number().optional(),
+  siteCapacityInTonnes: Joi.number().required(),
   siteCapacityTimescale: Joi.string()
     .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
-    .optional()
+    .required()
 })
 
 const registrationSiteSchema = Joi.object({
