@@ -55,7 +55,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   }
 
   describe('accreditation number in response', () => {
-    it('includes accreditation number when registration has valid accreditation', async () => {
+    it('is included when registration has valid accreditation', async () => {
       const accreditation = buildAccreditation({
         accreditationNumber: '87654321'
       })
@@ -84,7 +84,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload.accreditationNumber).toBe('87654321')
     })
 
-    it('returns null for accreditation number when registration does not exist', async () => {
+    it('is null when registration does not exist', async () => {
       const organisation = buildOrganisation({
         id: organisationId,
         registrations: [],
@@ -103,7 +103,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload.accreditationNumber).toBeNull()
     })
 
-    it('returns null for accreditation number when registration is not linked to an accreditation', async () => {
+    it('is null when registration is not linked to an accreditation', async () => {
       const registration = buildRegistration({
         id: registrationId
       })
@@ -127,7 +127,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload.accreditationNumber).toBeNull()
     })
 
-    it('returns null for accreditation number when linked accreditation exists but has no number', async () => {
+    it('is null when linked accreditation exists but has no number', async () => {
       const accreditation = buildAccreditation()
       delete accreditation.accreditationNumber
 
