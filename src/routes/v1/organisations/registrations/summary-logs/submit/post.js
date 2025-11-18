@@ -18,6 +18,7 @@ export const summaryLogsSubmit = {
   method: 'POST',
   path: summaryLogsSubmitPath,
   options: {
+    // Authentication will be implemented in follow-up story
     auth: false,
     response: {
       schema: summaryLogResponseSchema
