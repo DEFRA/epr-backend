@@ -174,7 +174,7 @@ export function retrieveFileUploadDetails(rawSubmissionData, shortDescription) {
 
   const fileUploads = files?.[component.name]
   if (!Array.isArray(fileUploads) || fileUploads.length === 0) {
-    throw new Error(`No files uploaded for field: ${shortDescription}`)
+    return []
   }
 
   return fileUploads.map((file) => ({

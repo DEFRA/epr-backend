@@ -6,6 +6,15 @@ const TIMESCALE_PLASTIC = 'Timescale (Plastic)'
 const TIMESCALE_STEEL = 'Timescale (Steel)'
 const TIMESCALE_WOOD = 'Timescale (Wood)'
 
+const AUTHORISED_WEIGHT_ALUMINIUM = 'Authorised weight (Aluminium)'
+const AUTHORISED_WEIGHT_FIBRE =
+  'Authorised weight (Fibre-based composite material)'
+const AUTHORISED_WEIGHT_GLASS = 'Authorised weight (Glass)'
+const AUTHORISED_WEIGHT_PAPER = 'Authorised weight (Paper or board)'
+const AUTHORISED_WEIGHT_PLASTIC = 'Authorised weight (Plastic)'
+const AUTHORISED_WEIGHT_STEEL = 'Authorised weight (Steel)'
+const AUTHORISED_WEIGHT_WOOD = 'Authorised weight (Wood)'
+
 export const FORM_PAGES = {
   ORGANISATION: {
     BUSINESS_TYPE: {
@@ -172,7 +181,7 @@ export const FORM_PAGES = {
       title:
         'Aluminium - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Aluminium)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_ALUMINIUM,
         TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
@@ -186,14 +195,14 @@ export const FORM_PAGES = {
       title:
         'Fibre-based composite material - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Fibre-based composite material)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_FIBRE,
         TIMESCALE: TIMESCALE_FIBRE
       }
     },
     ENV_PERMIT_DETAILS_GLASS: {
       title: 'Glass - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Glass)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_GLASS,
         TIMESCALE: TIMESCALE_GLASS
       }
     },
@@ -201,7 +210,7 @@ export const FORM_PAGES = {
       title:
         'Paper or board - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Paper or board)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PAPER,
         TIMESCALE: TIMESCALE_PAPER
       }
     },
@@ -209,21 +218,21 @@ export const FORM_PAGES = {
       title:
         'Plastic - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Plastic)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PLASTIC,
         TIMESCALE: TIMESCALE_PLASTIC
       }
     },
     ENV_PERMIT_DETAILS_STEEL: {
       title: 'Steel - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Steel)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_STEEL,
         TIMESCALE: TIMESCALE_STEEL
       }
     },
     ENV_PERMIT_DETAILS_WOOD: {
       title: 'Wood - environmental permit or waste management licence details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Wood)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_WOOD,
         TIMESCALE: TIMESCALE_WOOD
       }
     },
@@ -237,49 +246,164 @@ export const FORM_PAGES = {
     INSTALLATION_PERMIT_DETAILS_ALUMINIUM: {
       title: 'Aluminium - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Aluminium)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_ALUMINIUM,
         TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
     INSTALLATION_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE: {
       title: 'Fibre-based composite material - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Fibre-based composite material)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_FIBRE,
         TIMESCALE: TIMESCALE_FIBRE
       }
     },
     INSTALLATION_PERMIT_DETAILS_GLASS: {
       title: 'Glass - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Glass)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_GLASS,
         TIMESCALE: TIMESCALE_GLASS
       }
     },
     INSTALLATION_PERMIT_DETAILS_PAPER_OR_BOARD: {
       title: 'Paper or board - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Paper or board)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PAPER,
         TIMESCALE: TIMESCALE_PAPER
       }
     },
     INSTALLATION_PERMIT_DETAILS_PLASTIC: {
       title: 'Plastic - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Plastic)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PLASTIC,
         TIMESCALE: TIMESCALE_PLASTIC
       }
     },
     INSTALLATION_PERMIT_DETAILS_STEEL: {
       title: 'Steel - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Steel)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_STEEL,
         TIMESCALE: TIMESCALE_STEEL
       }
     },
     INSTALLATION_PERMIT_DETAILS_WOOD: {
       title: 'Wood - installation permit details',
       fields: {
-        AUTHORISED_WEIGHT: 'Authorised weight (Wood)',
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_WOOD,
+        TIMESCALE: TIMESCALE_WOOD
+      }
+    },
+    // SEPA/NIEA configurations (same field names as EA/NRW but different page titles)
+    ENV_PERMIT_DETAILS_SEPA_NIEA: {
+      title: 'Waste management licence details',
+      fields: {
+        PERMIT_NUMBER:
+          'Environmental permit or Waste management licence number',
+        AUTHORISED_MATERIALS: 'Authorised packaging waste categories'
+      }
+    },
+    ENV_PERMIT_DETAILS_ALUMINIUM_SEPA_NIEA: {
+      title: 'Aluminium - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_ALUMINIUM,
+        TIMESCALE: TIMESCALE_ALUMINIUM
+      }
+    },
+    ENV_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE_SEPA_NIEA: {
+      title:
+        'Fibre-based composite material - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_FIBRE,
+        TIMESCALE: TIMESCALE_FIBRE
+      }
+    },
+    ENV_PERMIT_DETAILS_GLASS_SEPA_NIEA: {
+      title: 'Glass - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_GLASS,
+        TIMESCALE: TIMESCALE_GLASS
+      }
+    },
+    ENV_PERMIT_DETAILS_PAPER_OR_BOARD_SEPA_NIEA: {
+      title: 'Paper or board - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PAPER,
+        TIMESCALE: TIMESCALE_PAPER
+      }
+    },
+    ENV_PERMIT_DETAILS_PLASTIC_SEPA_NIEA: {
+      title: 'Plastic - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PLASTIC,
+        TIMESCALE: TIMESCALE_PLASTIC
+      }
+    },
+    ENV_PERMIT_DETAILS_STEEL_SEPA_NIEA: {
+      title: 'Steel - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_STEEL,
+        TIMESCALE: TIMESCALE_STEEL
+      }
+    },
+    ENV_PERMIT_DETAILS_WOOD_SEPA_NIEA: {
+      title: 'Wood - waste management licence details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_WOOD,
+        TIMESCALE: TIMESCALE_WOOD
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_SEPA_NIEA: {
+      title: 'Pollution, Prevention and Control (PPC) permit details',
+      fields: {
+        PERMIT_NUMBER: 'Installation or PPC permit number',
+        AUTHORISED_MATERIALS: 'Authorised packaging waste categories'
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_ALUMINIUM_SEPA_NIEA: {
+      title: 'Aluminium - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_ALUMINIUM,
+        TIMESCALE: TIMESCALE_ALUMINIUM
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE_SEPA_NIEA: {
+      title: 'Fibre-based composite material - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_FIBRE,
+        TIMESCALE: TIMESCALE_FIBRE
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_GLASS_SEPA_NIEA: {
+      title: 'Glass - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_GLASS,
+        TIMESCALE: TIMESCALE_GLASS
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_PAPER_OR_BOARD_SEPA_NIEA: {
+      title: 'Paper or board - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PAPER,
+        TIMESCALE: TIMESCALE_PAPER
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_PLASTIC_SEPA_NIEA: {
+      title: 'Plastic - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_PLASTIC,
+        TIMESCALE: TIMESCALE_PLASTIC
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_STEEL_SEPA_NIEA: {
+      title: 'Steel - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_STEEL,
+        TIMESCALE: TIMESCALE_STEEL
+      }
+    },
+    INSTALLATION_PERMIT_DETAILS_WOOD_SEPA_NIEA: {
+      title: 'Wood - PPC permit details',
+      fields: {
+        AUTHORISED_WEIGHT: AUTHORISED_WEIGHT_WOOD,
         TIMESCALE: TIMESCALE_WOOD
       }
     },

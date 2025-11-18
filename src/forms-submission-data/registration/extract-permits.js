@@ -15,30 +15,40 @@ import {
 const ENV_PERMIT_BY_MATERIALS = [
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_ALUMINIUM,
+    configSepa: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_ALUMINIUM_SEPA_NIEA,
     material: MATERIAL.ALUMINIUM
   },
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE,
+    configSepa:
+      FORM_PAGES.REGISTRATION
+        .ENV_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE_SEPA_NIEA,
     material: MATERIAL.FIBRE
   },
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_GLASS,
+    configSepa: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_GLASS_SEPA_NIEA,
     material: MATERIAL.GLASS
   },
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_PAPER_OR_BOARD,
+    configSepa:
+      FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_PAPER_OR_BOARD_SEPA_NIEA,
     material: MATERIAL.PAPER
   },
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_PLASTIC,
+    configSepa: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_PLASTIC_SEPA_NIEA,
     material: MATERIAL.PLASTIC
   },
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_STEEL,
+    configSepa: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_STEEL_SEPA_NIEA,
     material: MATERIAL.STEEL
   },
   {
     config: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_WOOD,
+    configSepa: FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_WOOD_SEPA_NIEA,
     material: MATERIAL.WOOD
   }
 ]
@@ -46,39 +56,61 @@ const ENV_PERMIT_BY_MATERIALS = [
 const INSTALLATION_PERMIT_BY_MATERIALS = [
   {
     config: FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_ALUMINIUM,
+    configSepa:
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_ALUMINIUM_SEPA_NIEA,
     material: MATERIAL.ALUMINIUM
   },
   {
     config:
       FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE,
+    configSepa:
+      FORM_PAGES.REGISTRATION
+        .INSTALLATION_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE_SEPA_NIEA,
     material: MATERIAL.FIBRE
   },
   {
     config: FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_GLASS,
+    configSepa:
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_GLASS_SEPA_NIEA,
     material: MATERIAL.GLASS
   },
   {
     config: FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_PAPER_OR_BOARD,
+    configSepa:
+      FORM_PAGES.REGISTRATION
+        .INSTALLATION_PERMIT_DETAILS_PAPER_OR_BOARD_SEPA_NIEA,
     material: MATERIAL.PAPER
   },
   {
     config: FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_PLASTIC,
+    configSepa:
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_PLASTIC_SEPA_NIEA,
     material: MATERIAL.PLASTIC
   },
   {
     config: FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_STEEL,
+    configSepa:
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_STEEL_SEPA_NIEA,
     material: MATERIAL.STEEL
   },
   {
     config: FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_WOOD,
+    configSepa:
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_WOOD_SEPA_NIEA,
     material: MATERIAL.WOOD
   }
 ]
 
 function getEnvironmentPermitDetails(answersByPages) {
+  // Try EA/NRW page title first, then SEPA/NIEA
   const permitNumber =
     answersByPages[FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS.title]?.[
       FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS.fields.PERMIT_NUMBER
+    ] ||
+    answersByPages[
+      FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_SEPA_NIEA.title
+    ]?.[
+      FORM_PAGES.REGISTRATION.ENV_PERMIT_DETAILS_SEPA_NIEA.fields.PERMIT_NUMBER
     ]
 
   return permitNumber
@@ -86,8 +118,10 @@ function getEnvironmentPermitDetails(answersByPages) {
         type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
         permitNumber,
         authorisedMaterials: ENV_PERMIT_BY_MATERIALS.map(
-          ({ config, material }) => {
-            const pageData = answersByPages[config.title]
+          ({ config, configSepa, material }) => {
+            // Try EA/NRW page first, then SEPA/NIEA
+            const pageData =
+              answersByPages[config.title] || answersByPages[configSepa.title]
 
             if (!pageData?.[config.fields.TIMESCALE]) {
               return undefined
@@ -136,9 +170,16 @@ function getWasteExemptionDetails(rawSubmissionData) {
 }
 
 function getInstallationPermitDetails(answersByPages) {
+  // Try EA/NRW page title first, then SEPA/NIEA
   const permitNumber =
     answersByPages[FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS.title]?.[
       FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS.fields.PERMIT_NUMBER
+    ] ||
+    answersByPages[
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_SEPA_NIEA.title
+    ]?.[
+      FORM_PAGES.REGISTRATION.INSTALLATION_PERMIT_DETAILS_SEPA_NIEA.fields
+        .PERMIT_NUMBER
     ]
 
   return permitNumber
@@ -146,8 +187,10 @@ function getInstallationPermitDetails(answersByPages) {
         type: WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
         permitNumber,
         authorisedMaterials: INSTALLATION_PERMIT_BY_MATERIALS.map(
-          ({ config, material }) => {
-            const pageData = answersByPages[config.title]
+          ({ config, configSepa, material }) => {
+            // Try EA/NRW page first, then SEPA/NIEA
+            const pageData =
+              answersByPages[config.title] || answersByPages[configSepa.title]
 
             if (!pageData?.[config.fields.TIMESCALE]) {
               return undefined
