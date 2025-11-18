@@ -265,7 +265,7 @@ describe('summaryLogsWorkerThread', () => {
   describe('submit command', () => {
     it('should call syncFromSummaryLog when submit command is provided', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -285,7 +285,7 @@ describe('summaryLogsWorkerThread', () => {
 
     it('should update summary log status to SUBMITTED', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -311,7 +311,7 @@ describe('summaryLogsWorkerThread', () => {
 
     it('should log submission completion', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -342,7 +342,7 @@ describe('summaryLogsWorkerThread', () => {
       ).rejects.toThrow(`Summary log ${summaryLogId} not found`)
     })
 
-    it('should throw error when status is not VALIDATED', async () => {
+    it('should throw error when status is not SUBMITTING', async () => {
       mockSummaryLogsRepository.findById.mockResolvedValue({
         version: 1,
         summaryLog: {
@@ -358,13 +358,13 @@ describe('summaryLogsWorkerThread', () => {
           summaryLogId
         })
       ).rejects.toThrow(
-        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+        `Summary log must be in submitting status. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
       )
     })
 
     it('should create wasteRecordsRepository', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -384,7 +384,7 @@ describe('summaryLogsWorkerThread', () => {
 
     it('should create syncFromSummaryLog with correct dependencies', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }

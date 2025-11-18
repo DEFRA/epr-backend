@@ -50,10 +50,10 @@ const handleSubmitCommand = async ({
 
   const { version, summaryLog } = existing
 
-  // Verify status is VALIDATED
-  if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+  // Verify status is SUBMITTING
+  if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
     throw new Error(
-      `Summary log must be validated before submission. Current status: ${summaryLog.status}`
+      `Summary log must be in submitting status. Current status: ${summaryLog.status}`
     )
   }
 

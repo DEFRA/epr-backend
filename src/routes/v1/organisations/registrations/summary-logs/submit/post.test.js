@@ -73,7 +73,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
   })
 
   describe('happy path', () => {
-    it('returns ACCEPTED when summary log is validated', async () => {
+    it('returns OK when summary log is validated', async () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
@@ -82,7 +82,52 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns submitting status in response body', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      const body = JSON.parse(response.payload)
+      expect(body).toEqual({ status: 'submitting' })
+    })
+
+    it('returns Location header pointing to GET endpoint', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.headers.location).toBe(
+        `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+      )
+    })
+
+    it('updates summary log status to SUBMITTING using optimistic concurrency', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        summaryLogId,
+        1, // version for optimistic concurrency
+        expect.objectContaining({
+          status: SUMMARY_LOG_STATUS.SUBMITTING
+        })
+      )
     })
 
     it('calls validator submit with summary log ID', async () => {

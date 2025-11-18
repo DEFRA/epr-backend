@@ -1428,7 +1428,7 @@ describe('Summary logs integration', () => {
     })
   })
 
-  describe('submitting a validated summary log to create waste records', () => {
+  describe('submitting a validated summary log', () => {
     const summaryLogId = 'summary-submit-test'
     const fileId = 'file-submit-123'
     const filename = 'waste-data.xlsx'
@@ -1458,7 +1458,10 @@ describe('Summary logs integration', () => {
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            accreditation: {
+              accreditationNumber: 'ACC-2025-001'
+            }
           }
         ]
       })
@@ -1487,6 +1490,10 @@ describe('Summary logs integration', () => {
             TEMPLATE_VERSION: {
               value: 1,
               location: { sheet: 'Data', row: 4, column: 'B' }
+            },
+            ACCREDITATION: {
+              value: 'ACC-2025-001',
+              location: { sheet: 'Data', row: 5, column: 'B' }
             }
           },
           data: {}
@@ -1512,6 +1519,10 @@ describe('Summary logs integration', () => {
             TEMPLATE_VERSION: {
               value: 1,
               location: { sheet: 'Data', row: 4, column: 'B' }
+            },
+            ACCREDITATION: {
+              value: 'ACC-2025-001',
+              location: { sheet: 'Data', row: 5, column: 'B' }
             }
           },
           data: {
@@ -1554,6 +1565,9 @@ describe('Summary logs integration', () => {
         validate: validateSummaryLog,
         submit: async (summaryLogId) => {
           // Execute submit command synchronously in test (simulating worker completion)
+          // Wait for pending operations (in-memory repository uses setImmediate)
+          await new Promise((resolve) => setImmediate(resolve))
+
           const existing = await summaryLogsRepository.findById(summaryLogId)
           const { version, summaryLog } = existing
 
@@ -1571,7 +1585,8 @@ describe('Summary logs integration', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory
+          wasteRecordsRepository: wasteRecordsRepositoryFactory,
+          organisationsRepository: () => organisationsRepository
         },
         workers: {
           summaryLogsWorker: submitterWorker
@@ -1601,10 +1616,10 @@ describe('Summary logs integration', () => {
       // Wait for submission to complete (worker runs async)
       let attempts = 0
       const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.VALIDATED
+      let status = SUMMARY_LOG_STATUS.SUBMITTING
 
       while (
-        status === SUMMARY_LOG_STATUS.VALIDATED &&
+        status === SUMMARY_LOG_STATUS.SUBMITTING &&
         attempts < maxAttempts
       ) {
         await new Promise((resolve) => setTimeout(resolve, 50))
@@ -1622,8 +1637,8 @@ describe('Summary logs integration', () => {
       }
     })
 
-    it('returns ACCEPTED', () => {
-      expect(submitResponse.statusCode).toBe(202)
+    it('returns OK', () => {
+      expect(submitResponse.statusCode).toBe(200)
     })
 
     it('creates waste records from summary log data', async () => {
@@ -1649,6 +1664,20 @@ describe('Summary logs integration', () => {
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+    })
+
+    it('includes accreditation number in response after submission', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(200)
+      const payload = JSON.parse(response.payload)
+      expect(payload.accreditationNumber).toBe('ACC-2025-001')
     })
   })
 })
