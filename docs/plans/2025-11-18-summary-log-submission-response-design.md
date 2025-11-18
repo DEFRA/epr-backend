@@ -51,24 +51,12 @@ Add a new `submitting` status to represent the period between submission initiat
 - Triggers worker
 - Returns 200 OK with `{ status: "submitting" }` and Location header
 
-**Implementation:**
+**Implementation Details:**
 
-```javascript
-// After loading and verifying summary log status
-await summaryLogsRepository.update(summaryLogId, version, {
-  status: SUMMARY_LOG_STATUS.SUBMITTING
-})
-
-await summaryLogsWorker.submit(summaryLogId)
-
-return h
-  .response({ status: SUMMARY_LOG_STATUS.SUBMITTING })
-  .code(StatusCodes.OK)
-  .header(
-    'Location',
-    `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-  )
-```
+- After loading the summary log and verifying status is validated, update the status to `SUBMITTING` using optimistic concurrency
+- Trigger the worker using the existing fire-and-forget pattern
+- Return 200 OK with response body containing the new status
+- Include Location header pointing to the GET endpoint for polling
 
 ### 3. Worker Changes
 
@@ -93,29 +81,18 @@ return h
 - When status is `submitted`: lookup and include accreditation number
 - When status is NOT `submitted`: no accreditation number field
 
-**Implementation:**
+**Implementation Details:**
 
-```javascript
-// After fetching summary log
-if (summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) {
-  const registration = await organisationsRepository.findRegistrationById(
-    organisationId,
-    registrationId
-  )
-
-  const accreditationNumber =
-    registration?.accreditation?.accreditationNumber ?? null
-
-  return h.response({ ...summaryLog, accreditationNumber }).code(StatusCodes.OK)
-}
-
-return h.response(summaryLog).code(StatusCodes.OK)
-```
+- After fetching the summary log, check if status is `SUBMITTED`
+- If yes: lookup the registration using `organisationsRepository.findRegistrationById()`
+- Extract accreditation number from the hydrated registration (registration.accreditation.accreditationNumber)
+- Add accreditation number to response
+- If no: return summary log as-is
 
 **Dependencies:**
 
 - Inject `organisationsRepository` into handler
-- Use existing `findRegistrationById()` method which hydrates accreditation
+- Use existing `findRegistrationById()` method which already hydrates the accreditation
 
 **Edge Cases:**
 
