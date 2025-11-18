@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { summaryLogResponseSchema } from '../response.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
@@ -16,6 +17,11 @@ export const summaryLogsSubmitPath =
 export const summaryLogsSubmit = {
   method: 'POST',
   path: summaryLogsSubmitPath,
+  options: {
+    response: {
+      schema: summaryLogResponseSchema
+    }
+  },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
    * @param {Object} h - Hapi response toolkit
