@@ -9,6 +9,7 @@ import {
   mapRegulator,
   mapTimeScale,
   mapValueType,
+  mapWastePermitType,
   mapWasteProcessingType
 } from './form-data-mapper.js'
 import {
@@ -21,6 +22,7 @@ import {
   REGULATOR,
   TIME_SCALE,
   VALUE_TYPE,
+  WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -372,6 +374,38 @@ describe('mapValueType', () => {
 
   it.each([null, undefined, ''])('should return undefined for %s', (input) => {
     expect(mapValueType(input)).toBeUndefined()
+  })
+})
+
+describe('mapWastePermitType', () => {
+  it.each([
+    [
+      'Waste management licence or environmental permit',
+      WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT
+    ],
+    [
+      'Installation permit or Pollution Prevention and Control (PPC) permit',
+      WASTE_PERMIT_TYPE.INSTALLATION_PERMIT
+    ],
+    ['Waste exemption', WASTE_PERMIT_TYPE.WASTE_EXEMPTION]
+  ])('should map "%s" to %s', (input, expected) => {
+    expect(mapWastePermitType(input)).toBe(expected)
+  })
+
+  it('should handle whitespace', () => {
+    expect(
+      mapWastePermitType('  Waste management licence or environmental permit  ')
+    ).toBe(WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT)
+  })
+
+  it('should throw error for invalid waste permit type', () => {
+    expect(() => mapWastePermitType('INVALID')).toThrow(
+      'Invalid waste permit type: "INVALID". Expected "Waste management licence or environmental permit", "Installation permit or Pollution Prevention and Control (PPC) permit", or "Waste exemption"'
+    )
+  })
+
+  it.each([null, undefined, ''])('should return undefined for %s', (input) => {
+    expect(mapWastePermitType(input)).toBeUndefined()
   })
 })
 
