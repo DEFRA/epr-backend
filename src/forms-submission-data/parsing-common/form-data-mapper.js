@@ -8,6 +8,7 @@ import {
   REGULATOR,
   TIME_SCALE,
   VALUE_TYPE,
+  WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -229,6 +230,14 @@ const VALUE_TYPE_MAPPING = {
   'Estimated figures': VALUE_TYPE.ESTIMATED
 }
 
+const WASTE_PERMIT_TYPE_MAPPING = {
+  'Waste management licence or environmental permit':
+    WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
+  'Installation permit or Pollution Prevention and Control (PPC) permit':
+    WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
+  'Waste exemption': WASTE_PERMIT_TYPE.WASTE_EXEMPTION
+}
+
 export function mapValueType(value) {
   const trimmedValue = value?.trim()
 
@@ -241,6 +250,24 @@ export function mapValueType(value) {
   if (!result) {
     throw new Error(
       `Invalid value type: "${value}". Expected "Actual figures" or "Estimated figures"`
+    )
+  }
+
+  return result
+}
+
+export function mapWastePermitType(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = WASTE_PERMIT_TYPE_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid waste permit type: "${value}". Expected "Waste management licence or environmental permit", "Installation permit or Pollution Prevention and Control (PPC) permit", or "Waste exemption"`
     )
   }
 

@@ -176,6 +176,12 @@ export const FORM_PAGES = {
         TIMESCALE: TIMESCALE_ALUMINIUM
       }
     },
+    EXPORTER_PERMITS: {
+      title: 'Do you hold a permit or waste exemption?',
+      fields: {
+        PERMITS: 'Permit type'
+      }
+    },
     ENV_PERMIT_DETAILS_FIBRE_BASED_COMPOSITE: {
       title:
         'Fibre-based composite material - environmental permit or waste management licence details',

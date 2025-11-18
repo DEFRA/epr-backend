@@ -33,7 +33,11 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       orgName: 'EuroPack GmbH',
       material: MATERIAL.GLASS,
       cbduNumber: 'CBDU123456',
-      wasteManagementPermits: undefined,
+      wasteManagementPermits: [
+        { type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT },
+        { type: WASTE_PERMIT_TYPE.INSTALLATION_PERMIT },
+        { type: WASTE_PERMIT_TYPE.WASTE_EXEMPTION }
+      ],
       suppliers:
         'Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)',
       glassRecyclingProcess: [
@@ -445,5 +449,29 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       (permit) => permit.type === WASTE_PERMIT_TYPE.INSTALLATION_PERMIT
     )
     expect(hasInstallationPermit).toBe(false)
+  })
+
+  it('should handle exporter without permit answer', async () => {
+    const exporterWithoutPermits = {
+      ...exporter,
+      rawSubmissionData: {
+        ...exporter.rawSubmissionData,
+        data: {
+          ...exporter.rawSubmissionData.data,
+          main: {
+            ...exporter.rawSubmissionData.data.main,
+            QHJFhL: '' // Clear permit answer
+          }
+        }
+      }
+    }
+
+    const result = await parseRegistrationSubmission(
+      exporterWithoutPermits._id.$oid,
+      exporterWithoutPermits.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result.wasteManagementPermits).toEqual([])
   })
 })

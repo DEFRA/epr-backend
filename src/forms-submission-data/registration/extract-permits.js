@@ -3,9 +3,14 @@ import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.
 import {
   mapMaterial,
   mapTimeScale,
-  convertToNumber
+  convertToNumber,
+  mapWastePermitType
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { MATERIAL, WASTE_PERMIT_TYPE } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  WASTE_PERMIT_TYPE,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 const ENV_PERMIT_BY_MATERIALS = [
   {
@@ -162,10 +167,38 @@ function getInstallationPermitDetails(answersByPages) {
     : undefined
 }
 
-export function getWasteManagementPermits(rawSubmissionData, answersByPages) {
+function getPermitsForReprocessor(answersByPages, rawSubmissionData) {
   return [
     getEnvironmentPermitDetails(answersByPages),
     getInstallationPermitDetails(answersByPages),
     getWasteExemptionDetails(rawSubmissionData)
   ].filter(Boolean)
+}
+
+const NONE_OF_ABOVE = 'None of the above'
+
+function getPermitsForExporter(answersByPages) {
+  const exporterPermits = FORM_PAGES.REGISTRATION.EXPORTER_PERMITS
+  const permits =
+    answersByPages[exporterPermits.title][exporterPermits.fields.PERMITS]
+
+  if (!permits) {
+    return []
+  }
+
+  return permits
+    .split(',')
+    .map((permit) => permit.trim())
+    .filter((permit) => permit && permit !== NONE_OF_ABOVE)
+    .map((permit) => ({ type: mapWastePermitType(permit) }))
+}
+
+export function getWasteManagementPermits(
+  wasteProcessingType,
+  rawSubmissionData,
+  answersByPages
+) {
+  return wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+    ? getPermitsForReprocessor(answersByPages, rawSubmissionData)
+    : getPermitsForExporter(answersByPages)
 }
