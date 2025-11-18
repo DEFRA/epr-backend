@@ -1,5 +1,5 @@
 import { transformValidationResponse } from './transform-validation-response.js'
-import { VALIDATION_SEVERITY } from '#common/validation/validation-issues.js'
+import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
 describe('transformValidationResponse', () => {
   describe('when validation is empty or has no issues', () => {
@@ -79,7 +79,7 @@ describe('transformValidationResponse', () => {
             severity: VALIDATION_SEVERITY.FATAL,
             category: 'technical',
             message: 'Validation failed',
-            code: 'VALIDATION_FAILED'
+            code: 'VALIDATION_SYSTEM_ERROR'
           }
         ]
       }
@@ -90,7 +90,7 @@ describe('transformValidationResponse', () => {
         validation: {
           failures: [
             {
-              code: 'VALIDATION_FAILED'
+              code: 'VALIDATION_SYSTEM_ERROR'
             }
           ],
           concerns: {}

@@ -1,7 +1,5 @@
-import {
-  createValidationIssues,
-  VALIDATION_CATEGORY
-} from '#common/validation/validation-issues.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
 import { metaSchema } from './meta-syntax.schema.js'
 
 /**

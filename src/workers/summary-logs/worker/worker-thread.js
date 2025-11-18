@@ -22,11 +22,13 @@ const handleValidateCommand = async ({
   summaryLogId,
   summaryLogsRepository,
   organisationsRepository,
+  wasteRecordsRepository,
   summaryLogExtractor
 }) => {
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
+    wasteRecordsRepository,
     summaryLogExtractor
   })
 
@@ -36,8 +38,8 @@ const handleValidateCommand = async ({
 const handleSubmitCommand = async ({
   summaryLogId,
   summaryLogsRepository,
-  summaryLogExtractor,
-  wasteRecordsRepository
+  wasteRecordsRepository,
+  summaryLogExtractor
 }) => {
   // Load the summary log
   const existing = await summaryLogsRepository.findById(summaryLogId)
@@ -114,6 +116,7 @@ export default async function summaryLogsWorkerThread(command) {
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
             organisationsRepository,
+            wasteRecordsRepository,
             summaryLogExtractor
           })
           break
@@ -122,8 +125,8 @@ export default async function summaryLogsWorkerThread(command) {
           await handleSubmitCommand({
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
-            summaryLogExtractor,
-            wasteRecordsRepository
+            wasteRecordsRepository,
+            summaryLogExtractor
           })
           break
 

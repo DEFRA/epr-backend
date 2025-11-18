@@ -297,7 +297,6 @@ The `code` field enables **internationalization (i18n)** and consistent error ha
 
 Meta-level validation:
 
-- `VALIDATION_FAILED` - General validation failure
 - `REGISTRATION_MISMATCH` - Registration number doesn't match
 - `PROCESSING_TYPE_MISMATCH` - Processing type doesn't match registration
 - `UNEXPECTED_PROCESSING_TYPE` - Unrecognized processing type value
@@ -307,6 +306,7 @@ Meta-level validation:
 - `UNEXPECTED_MATERIAL` - Unrecognized material type
 - `MATERIAL_MISMATCH` - Material doesn't match registration
 - `INVALID_META_FIELD` - Invalid or missing meta field
+- `VALIDATION_SYSTEM_ERROR` - System failures during validation
 
 Data-level validation:
 
@@ -316,7 +316,7 @@ Data-level validation:
 - `VALUE_OUT_OF_RANGE` - Cell value outside valid range (Joi 'number.min', 'number.max', 'number.greater', 'number.less')
 - `INVALID_FORMAT` - Cell value doesn't match required pattern (Joi 'string.pattern.base')
 - `INVALID_DATE` - Cell value is not a valid date (Joi 'date.base')
-- `VALIDATION_ERROR` - Fallback for unmapped Joi error types
+- `VALIDATION_FALLBACK_ERROR` - Fallback for unmapped Joi error types
 
 Example client-side i18n usage:
 

@@ -149,9 +149,12 @@ describe('Summary logs integration', () => {
       }
     })
 
+    const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
     const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
+      wasteRecordsRepository,
       summaryLogExtractor
     })
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -486,9 +489,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -702,9 +708,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -890,9 +899,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -1065,9 +1077,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -1273,9 +1288,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -1516,15 +1534,16 @@ describe('Summary logs integration', () => {
         }
       })
 
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        summaryLogExtractor: validationExtractor
-      })
-
       const wasteRecordsRepositoryFactory =
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor: validationExtractor
+      })
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
