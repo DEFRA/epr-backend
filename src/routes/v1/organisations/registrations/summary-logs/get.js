@@ -50,18 +50,13 @@ export const summaryLogsGet = {
 
     // Add accreditation number if status is SUBMITTED
     if (summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) {
-      try {
-        const registration = await organisationsRepository.findRegistrationById(
-          organisationId,
-          registrationId
-        )
+      const registration = await organisationsRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      )
 
-        response.accreditationNumber =
-          registration?.accreditation?.accreditationNumber ?? null
-      } catch {
-        // Registration not found - return null for accreditation number
-        response.accreditationNumber = null
-      }
+      response.accreditationNumber =
+        registration?.accreditation?.accreditationNumber ?? null
     }
 
     return h.response(response).code(StatusCodes.OK)

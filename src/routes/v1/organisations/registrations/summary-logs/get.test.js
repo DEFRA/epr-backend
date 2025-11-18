@@ -84,25 +84,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload.accreditationNumber).toBe('87654321')
     })
 
-    it('is null when registration does not exist', async () => {
-      const organisation = buildOrganisation({
-        id: organisationId,
-        registrations: [],
-        accreditations: []
-      })
-
-      const server = await createServerWithData(organisation)
-
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.accreditationNumber).toBeNull()
-    })
-
     it('is null when registration is not linked to an accreditation', async () => {
       const registration = buildRegistration({
         id: registrationId
