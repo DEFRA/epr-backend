@@ -171,12 +171,20 @@ const partnershipSchema = Joi.object({
 })
 
 const wasteExemptionSchema = Joi.object({
-  reference: Joi.string()
-    .required()
-    .regex(/^[wW][eE][xX]\d{6}$/),
-  exemptionCode: Joi.string()
-    .required()
-    .regex(/^^[a-zA-Z]\d{1,2}$/),
+  reference: Joi.when(Joi.ref('submittedToRegulator', { ancestor: 5 }), {
+    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    then: Joi.string()
+      .required()
+      .regex(/^[wW][eE][xX]\d{6}$/),
+    otherwise: Joi.string().required()
+  }),
+  exemptionCode: Joi.when(Joi.ref('submittedToRegulator', { ancestor: 5 }), {
+    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    then: Joi.string()
+      .required()
+      .regex(/^[a-zA-Z]\d{1,2}$/),
+    otherwise: Joi.string().required()
+  }),
   materials: Joi.array()
     .items(
       Joi.valid(
@@ -381,17 +389,25 @@ export const registrationSchema = Joi.object({
       .min(1)
   ),
   noticeAddress: requiredForExporterOptionalForReprocessor(addressSchema),
-  cbduNumber: Joi.string()
-    .min(8)
-    .max(10)
-    .regex(/^[cC][bB][dD][uU]/)
-    .required()
-    .messages({
-      'string.pattern.base':
-        'CBDU number must start with CBDU (case insensitive)',
-      'string.min': 'CBDU number must be at least 8 characters',
-      'string.max': 'CBDU number must be at most 10 characters'
-    }),
+  cbduNumber: Joi.when('submittedToRegulator', {
+    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    then: Joi.string()
+      .min(8)
+      .max(10)
+      .regex(/^[cC][bB][dD][uU]/)
+      .required()
+      .messages({
+        'string.pattern.base':
+          'CBDU number must start with CBDU (case insensitive)',
+        'string.min': 'CBDU number must be at least 8 characters',
+        'string.max': 'CBDU number must be at most 10 characters'
+      }),
+    otherwise: Joi.when('submittedToRegulator', {
+      is: REGULATOR.SEPA,
+      then: Joi.string().required(),
+      otherwise: Joi.string().optional()
+    })
+  }),
   wasteManagementPermits: Joi.when('wasteProcessingType', {
     is: WASTE_PROCESSING_TYPE.REPROCESSOR,
     then: Joi.array().items(wasteManagementPermitSchema).min(1).required(),
@@ -407,8 +423,7 @@ export const registrationSchema = Joi.object({
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart1FileUploads: Joi.array()
     .items(formFileUploadSchema)
-    .required()
-    .min(1),
+    .required(),
   orsFileUploads: whenExporter(
     Joi.array().items(formFileUploadSchema).required().min(1)
   )

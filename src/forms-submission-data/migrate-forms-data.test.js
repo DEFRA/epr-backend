@@ -9,6 +9,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { REGULATOR } from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -434,13 +435,25 @@ describe('migrateFormsData', () => {
         'exporter'
       )
 
+      // Org 503176 should have 2 registrations: EA and SEPA
       const orgWithReprocessorReg = orgsByOrgId.get(503176)
       expect(orgWithReprocessorReg).toBeDefined()
       expect(orgWithReprocessorReg.registrations).toBeDefined()
-      expect(orgWithReprocessorReg.registrations).toHaveLength(1)
-      expect(orgWithReprocessorReg.registrations[0].wasteProcessingType).toBe(
-        'reprocessor'
+      expect(orgWithReprocessorReg.registrations).toHaveLength(2)
+
+      // All registrations should be reprocessors
+      expect(
+        orgWithReprocessorReg.registrations.every(
+          (r) => r.wasteProcessingType === 'reprocessor'
+        )
+      ).toBe(true)
+
+      // Verify both regulators exist (EA and SEPA)
+      const regulators = orgWithReprocessorReg.registrations.map(
+        (r) => r.submittedToRegulator
       )
+      expect(regulators).toContain(REGULATOR.EA)
+      expect(regulators).toContain(REGULATOR.SEPA)
     })
   })
 })

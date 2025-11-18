@@ -567,12 +567,12 @@ describe('retrieveFileUploadDetails', () => {
       }
     }
 
-    expect(() =>
+    expect(
       retrieveFileUploadDetails(
         dataWithoutFiles,
         FORM_PAGES.REGISTRATION.SIP_FILE_UPLOAD
       )
-    ).toThrow('No files uploaded for field: Sampling and inspection plan')
+    ).toEqual([])
   })
 
   it('should throw error when file upload field not found', () => {
