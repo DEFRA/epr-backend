@@ -33,7 +33,7 @@ export const summaryLogsSubmit = {
         throw Boom.notFound(`Summary log ${summaryLogId} not found`)
       }
 
-      const { summaryLog } = existing
+      const { summaryLog, version } = existing
 
       // Verify status is VALIDATED
       if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
@@ -41,6 +41,12 @@ export const summaryLogsSubmit = {
           `Summary log must be validated before submission. Current status: ${summaryLog.status}`
         )
       }
+
+      // Update status to SUBMITTING using optimistic concurrency
+      await summaryLogsRepository.update(summaryLogId, version, {
+        ...summaryLog,
+        status: SUMMARY_LOG_STATUS.SUBMITTING
+      })
 
       // Trigger async submission worker (fire-and-forget)
       await summaryLogsWorker.submit(summaryLogId)
@@ -54,7 +60,13 @@ export const summaryLogsSubmit = {
         }
       })
 
-      return h.response().code(StatusCodes.ACCEPTED)
+      return h
+        .response({ status: SUMMARY_LOG_STATUS.SUBMITTING })
+        .code(StatusCodes.OK)
+        .header(
+          'Location',
+          `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        )
     } catch (error) {
       if (error.isBoom) {
         throw error

@@ -1554,6 +1554,9 @@ describe('Summary logs integration', () => {
         validate: validateSummaryLog,
         submit: async (summaryLogId) => {
           // Execute submit command synchronously in test (simulating worker completion)
+          // Wait for replication lag to settle (in-memory repository uses setImmediate)
+          await new Promise((resolve) => setImmediate(resolve))
+
           const existing = await summaryLogsRepository.findById(summaryLogId)
           const { version, summaryLog } = existing
 
@@ -1601,10 +1604,10 @@ describe('Summary logs integration', () => {
       // Wait for submission to complete (worker runs async)
       let attempts = 0
       const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.VALIDATED
+      let status = SUMMARY_LOG_STATUS.SUBMITTING
 
       while (
-        status === SUMMARY_LOG_STATUS.VALIDATED &&
+        status === SUMMARY_LOG_STATUS.SUBMITTING &&
         attempts < maxAttempts
       ) {
         await new Promise((resolve) => setTimeout(resolve, 50))
@@ -1622,8 +1625,8 @@ describe('Summary logs integration', () => {
       }
     })
 
-    it('returns ACCEPTED', () => {
-      expect(submitResponse.statusCode).toBe(202)
+    it('returns OK', () => {
+      expect(submitResponse.statusCode).toBe(200)
     })
 
     it('creates waste records from summary log data', async () => {
