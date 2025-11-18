@@ -1565,7 +1565,7 @@ describe('Summary logs integration', () => {
         validate: validateSummaryLog,
         submit: async (summaryLogId) => {
           // Execute submit command synchronously in test (simulating worker completion)
-          // Wait for replication lag to settle (in-memory repository uses setImmediate)
+          // Wait for pending operations (in-memory repository uses setImmediate)
           await new Promise((resolve) => setImmediate(resolve))
 
           const existing = await summaryLogsRepository.findById(summaryLogId)

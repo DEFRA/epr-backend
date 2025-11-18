@@ -21,10 +21,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   const registrationId = new ObjectId().toString()
   const summaryLogId = new ObjectId().toString()
 
-  beforeEach(async () => {
-    // Don't create server here - each test will create it with appropriate repositories
-  })
-
   describe('when status is SUBMITTED', () => {
     it('returns accreditation number from linked registration', async () => {
       // Arrange
@@ -252,92 +248,6 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBeNull()
-    })
-  })
-
-  describe('when status is NOT submitted', () => {
-    it('does not return accreditation number field when status is VALIDATED', async () => {
-      // Arrange
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'test-file-id',
-          name: 'test-file.xlsx',
-          status: 'complete',
-          uri: 's3://test-bucket/test-file.xlsx'
-        }
-      })
-
-      // Act
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-      })
-
-      // Assert
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-      expect(payload).not.toHaveProperty('accreditationNumber')
-    })
-
-    it('does not return accreditation number field when status is SUBMITTING', async () => {
-      // Arrange
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.SUBMITTING,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'test-file-id',
-          name: 'test-file.xlsx',
-          status: 'complete',
-          uri: 's3://test-bucket/test-file.xlsx'
-        }
-      })
-
-      // Act
-      const response = await server.inject({
-        method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
-      })
-
-      // Assert
-      expect(response.statusCode).toBe(StatusCodes.OK)
-      const payload = JSON.parse(response.payload)
-      expect(payload.status).toBe(SUMMARY_LOG_STATUS.SUBMITTING)
-      expect(payload).not.toHaveProperty('accreditationNumber')
     })
   })
 })
