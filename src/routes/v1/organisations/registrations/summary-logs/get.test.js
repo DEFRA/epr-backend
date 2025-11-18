@@ -14,16 +14,48 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 
 describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}', () => {
   setupAuthContext()
-  let server
-  let summaryLogsRepository
 
   const organisationId = new ObjectId().toString()
   const registrationId = new ObjectId().toString()
   const summaryLogId = new ObjectId().toString()
 
-  describe('when status is SUBMITTED', () => {
-    it('returns accreditation number from linked registration', async () => {
-      // Arrange
+  const createServerWithData = async (organisationData) => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([organisationData])
+
+    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+    const summaryLogsRepository = summaryLogsRepositoryFactory({
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn()
+    })
+
+    const server = await createTestServer({
+      repositories: {
+        summaryLogsRepository: summaryLogsRepositoryFactory,
+        organisationsRepository: organisationsRepositoryFactory
+      },
+      featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+    })
+
+    await summaryLogsRepository.insert(summaryLogId, {
+      status: SUMMARY_LOG_STATUS.SUBMITTED,
+      organisationId,
+      registrationId,
+      file: {
+        id: 'test-file-id',
+        name: 'test-file.xlsx',
+        status: 'complete',
+        uri: 's3://test-bucket/test-file.xlsx'
+      }
+    })
+
+    return server
+  }
+
+  describe('accreditation number in response', () => {
+    it('includes accreditation number when registration has valid accreditation', async () => {
       const accreditation = buildAccreditation({
         accreditationNumber: '87654321'
       })
@@ -39,104 +71,39 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         accreditations: [accreditation]
       })
 
-      const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([organisation])
+      const server = await createServerWithData(organisation)
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      })
-
-      // Create server with both repositories
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationsRepository: organisationsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'test-file-id',
-          name: 'test-file.xlsx',
-          status: 'complete',
-          uri: 's3://test-bucket/test-file.xlsx'
-        }
-      })
-
-      // Act
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
       })
 
-      // Assert
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
       expect(payload.accreditationNumber).toBe('87654321')
     })
 
-    it('returns null when registration not found', async () => {
-      // Arrange - organisation exists but doesn't have this specific registration
+    it('returns null when registration does not exist', async () => {
       const organisation = buildOrganisation({
         id: organisationId,
         registrations: [],
         accreditations: []
       })
 
-      const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([organisation])
+      const server = await createServerWithData(organisation)
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationsRepository: organisationsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'test-file-id',
-          name: 'test-file.xlsx',
-          status: 'complete',
-          uri: 's3://test-bucket/test-file.xlsx'
-        }
-      })
-
-      // Act
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
       })
 
-      // Assert
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBeNull()
     })
 
-    it('returns null when registration has no accreditation', async () => {
-      // Arrange
+    it('returns null when registration is not linked to an accreditation', async () => {
       const registration = buildRegistration({
         id: registrationId
       })
@@ -148,51 +115,19 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         accreditations: []
       })
 
-      const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([organisation])
+      const server = await createServerWithData(organisation)
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationsRepository: organisationsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'test-file-id',
-          name: 'test-file.xlsx',
-          status: 'complete',
-          uri: 's3://test-bucket/test-file.xlsx'
-        }
-      })
-
-      // Act
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
       })
 
-      // Assert
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBeNull()
     })
 
-    it('returns null when accreditation has no number', async () => {
-      // Arrange
+    it('returns null when linked accreditation exists but has no number', async () => {
       const accreditation = buildAccreditation()
       delete accreditation.accreditationNumber
 
@@ -207,44 +142,13 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         accreditations: [accreditation]
       })
 
-      const organisationsRepositoryFactory =
-        createInMemoryOrganisationsRepository([organisation])
+      const server = await createServerWithData(organisation)
 
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory({
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          organisationsRepository: organisationsRepositoryFactory
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.SUBMITTED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'test-file-id',
-          name: 'test-file.xlsx',
-          status: 'complete',
-          uri: 's3://test-bucket/test-file.xlsx'
-        }
-      })
-
-      // Act
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
       })
 
-      // Assert
       expect(response.statusCode).toBe(StatusCodes.OK)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBeNull()
