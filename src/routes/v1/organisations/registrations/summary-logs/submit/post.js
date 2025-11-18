@@ -18,6 +18,7 @@ export const summaryLogsSubmit = {
   method: 'POST',
   path: summaryLogsSubmitPath,
   options: {
+    auth: false,
     response: {
       schema: summaryLogResponseSchema
     }
