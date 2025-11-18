@@ -102,9 +102,11 @@ export function parseRegistrationSubmission(id, rawSubmissionData) {
         ]
       : undefined,
     wasteProcessingType,
-    wasteManagementPermits: isReprocessor
-      ? getWasteManagementPermits(rawSubmissionData, answersByPages)
-      : undefined,
+    wasteManagementPermits: getWasteManagementPermits(
+      wasteProcessingType,
+      rawSubmissionData,
+      answersByPages
+    ),
     approvedPersons: getApprovedPersons(answersByShortDescription),
     samplingInspectionPlanPart1FileUploads: retrieveFileUploadDetails(
       rawSubmissionData,

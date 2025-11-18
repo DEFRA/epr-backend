@@ -58,18 +58,29 @@ const whenMaterial = (material, schema) =>
     otherwise: Joi.forbidden()
   })
 
-const whenWasteExemption = (schema) =>
+const requiredForPermitAndReprocessor = (schema) =>
   Joi.when('type', {
-    is: WASTE_PERMIT_TYPE.WASTE_EXEMPTION,
-    then: schema.required(),
+    is: Joi.valid(
+      WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
+      WASTE_PERMIT_TYPE.INSTALLATION_PERMIT
+    ),
+    then: Joi.when('....wasteProcessingType', {
+      is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      then: schema.required(),
+      otherwise: Joi.forbidden()
+    }),
     otherwise: Joi.forbidden()
   })
 
-const whenNotWasteExemption = (schema) =>
+const requiredForWasteExemptionAndReprocessor = (schema) =>
   Joi.when('type', {
     is: WASTE_PERMIT_TYPE.WASTE_EXEMPTION,
-    then: Joi.forbidden(),
-    otherwise: schema.required()
+    then: Joi.when('....wasteProcessingType', {
+      is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      then: schema.required(),
+      otherwise: Joi.forbidden()
+    }),
+    otherwise: Joi.forbidden()
   })
 
 /**
@@ -208,11 +219,11 @@ const wasteManagementPermitSchema = Joi.object({
       WASTE_PERMIT_TYPE.WASTE_EXEMPTION
     )
     .required(),
-  permitNumber: whenNotWasteExemption(Joi.string()),
-  exemptions: whenWasteExemption(
+  permitNumber: requiredForPermitAndReprocessor(Joi.string()),
+  exemptions: requiredForWasteExemptionAndReprocessor(
     Joi.array().items(wasteExemptionSchema).min(1)
   ),
-  authorisedMaterials: whenNotWasteExemption(
+  authorisedMaterials: requiredForPermitAndReprocessor(
     Joi.array().items(authorisedMaterialSchema).min(1)
   )
 })
@@ -381,9 +392,11 @@ export const registrationSchema = Joi.object({
       'string.min': 'CBDU number must be at least 8 characters',
       'string.max': 'CBDU number must be at most 10 characters'
     }),
-  wasteManagementPermits: whenReprocessor(
-    Joi.array().items(wasteManagementPermitSchema).required().min(1)
-  ),
+  wasteManagementPermits: Joi.when('wasteProcessingType', {
+    is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    then: Joi.array().items(wasteManagementPermitSchema).min(1).required(),
+    otherwise: Joi.array().items(wasteManagementPermitSchema).optional()
+  }),
   approvedPersons: Joi.array().items(userSchema).required().min(1),
   suppliers: Joi.string().required(),
   exportPorts: whenExporter(Joi.array().items(Joi.string()).required().min(1)),
