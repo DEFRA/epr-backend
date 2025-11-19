@@ -84,7 +84,7 @@
   },
   "overrides": {
     "brace-expansion": "2.0.2",
-    "glob": "11.0.3"
+    "glob": "11.1.0"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.10",
