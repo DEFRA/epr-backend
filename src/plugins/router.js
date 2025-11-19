@@ -16,16 +16,11 @@ const router = {
             ? Object.values(summaryLogsRoutes)
             : []
 
-        const organisationRoutesBehindFeatureFlag =
-          featureFlags.isOrganisationRoutesEnabled()
-            ? Object.values(organisationRoutes)
-            : []
-
         server.route([
           health,
           ...apply,
           ...summaryLogsRoutesBehindFeatureFlag,
-          ...organisationRoutesBehindFeatureFlag,
+          ...Object.values(organisationRoutes),
           ...formSubmissionsRoutes
         ])
       })

@@ -55,14 +55,4 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isFormsDataMigrationEnabled()).toBe(false)
   })
-
-  it('returns true when organisations flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ organisations: true })
-    expect(flags.isOrganisationRoutesEnabled()).toBe(true)
-  })
-
-  it('returns false when organisations flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ organisations: false })
-    expect(flags.isOrganisationRoutesEnabled()).toBe(false)
-  })
 })
