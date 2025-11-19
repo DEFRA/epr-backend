@@ -15,6 +15,8 @@ const AUTHORISED_WEIGHT_PLASTIC = 'Authorised weight (Plastic)'
 const AUTHORISED_WEIGHT_STEEL = 'Authorised weight (Steel)'
 const AUTHORISED_WEIGHT_WOOD = 'Authorised weight (Wood)'
 
+const AUTHORISED_MATERIAL_SHORT_DESC = 'Authorised packaging waste categories'
+
 export const FORM_PAGES = {
   ORGANISATION: {
     BUSINESS_TYPE: {
@@ -174,7 +176,7 @@ export const FORM_PAGES = {
       fields: {
         PERMIT_NUMBER:
           'Environmental permit or Waste management licence number',
-        AUTHORISED_MATERIALS: 'Authorised packaging waste categories'
+        AUTHORISED_MATERIALS: AUTHORISED_MATERIAL_SHORT_DESC
       }
     },
     ENV_PERMIT_DETAILS_ALUMINIUM: {
@@ -240,7 +242,7 @@ export const FORM_PAGES = {
       title: 'Installation permit details',
       fields: {
         PERMIT_NUMBER: 'Installation or PPC permit number',
-        AUTHORISED_MATERIALS: 'Authorised packaging waste categories'
+        AUTHORISED_MATERIALS: AUTHORISED_MATERIAL_SHORT_DESC
       }
     },
     INSTALLATION_PERMIT_DETAILS_ALUMINIUM: {
@@ -298,7 +300,7 @@ export const FORM_PAGES = {
       fields: {
         PERMIT_NUMBER:
           'Environmental permit or Waste management licence number',
-        AUTHORISED_MATERIALS: 'Authorised packaging waste categories'
+        AUTHORISED_MATERIALS: AUTHORISED_MATERIAL_SHORT_DESC
       }
     },
     ENV_PERMIT_DETAILS_ALUMINIUM_SEPA_NIEA: {
@@ -355,7 +357,7 @@ export const FORM_PAGES = {
       title: 'Pollution, Prevention and Control (PPC) permit details',
       fields: {
         PERMIT_NUMBER: 'Installation or PPC permit number',
-        AUTHORISED_MATERIALS: 'Authorised packaging waste categories'
+        AUTHORISED_MATERIALS: AUTHORISED_MATERIAL_SHORT_DESC
       }
     },
     INSTALLATION_PERMIT_DETAILS_ALUMINIUM_SEPA_NIEA: {

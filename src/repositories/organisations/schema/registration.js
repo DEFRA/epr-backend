@@ -1,0 +1,145 @@
+import Joi from 'joi'
+import {
+  STATUS,
+  REGULATOR,
+  MATERIAL,
+  WASTE_PROCESSING_TYPE,
+  GLASS_RECYCLING_PROCESS,
+  TIME_SCALE
+} from '#domain/organisations/model.js'
+import {
+  idSchema,
+  addressSchema,
+  userSchema,
+  formFileUploadSchema
+} from './base.js'
+import { wasteManagementPermitSchema } from './waste-permits.js'
+import { yearlyMetricsSchema } from './metrics.js'
+import {
+  whenReprocessor,
+  whenExporter,
+  requiredForReprocessor,
+  requiredForReprocessorOptionalForExporter,
+  requiredForExporterOptionalForReprocessor,
+  whenMaterial,
+  requiredWhenApprovedOrSuspended
+} from './helpers.js'
+
+const siteCapacitySchema = Joi.object({
+  material: Joi.string()
+    .valid(
+      MATERIAL.ALUMINIUM,
+      MATERIAL.FIBRE,
+      MATERIAL.GLASS,
+      MATERIAL.PAPER,
+      MATERIAL.PLASTIC,
+      MATERIAL.STEEL,
+      MATERIAL.WOOD
+    )
+    .required(),
+  siteCapacityInTonnes: Joi.number().required(),
+  siteCapacityTimescale: Joi.string()
+    .valid(TIME_SCALE.WEEKLY, TIME_SCALE.MONTHLY, TIME_SCALE.YEARLY)
+    .required()
+})
+
+const registrationSiteSchema = Joi.object({
+  address: addressSchema.required(),
+  gridReference: Joi.string().required(),
+  siteCapacity: Joi.array().items(siteCapacitySchema).required().min(1)
+})
+
+export const registrationSchema = Joi.object({
+  id: idSchema,
+  status: Joi.string()
+    .valid(
+      STATUS.CREATED,
+      STATUS.APPROVED,
+      STATUS.REJECTED,
+      STATUS.SUSPENDED,
+      STATUS.ARCHIVED
+    )
+    .forbidden(),
+  registrationNumber: Joi.string().when(
+    'status',
+    requiredWhenApprovedOrSuspended
+  ),
+  validFrom: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  validTo: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  formSubmissionTime: Joi.date().iso().required(),
+  submittedToRegulator: Joi.string()
+    .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
+    .required(),
+  orgName: Joi.string().required(),
+  site: requiredForReprocessorOptionalForExporter(registrationSiteSchema),
+  material: Joi.string()
+    .valid(
+      MATERIAL.ALUMINIUM,
+      MATERIAL.FIBRE,
+      MATERIAL.GLASS,
+      MATERIAL.PAPER,
+      MATERIAL.PLASTIC,
+      MATERIAL.STEEL,
+      MATERIAL.WOOD
+    )
+    .required(),
+  wasteProcessingType: Joi.string()
+    .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
+    .required(),
+  accreditationId: idSchema.optional(),
+  glassRecyclingProcess: whenMaterial(
+    MATERIAL.GLASS,
+    Joi.array()
+      .items(
+        Joi.string().valid(
+          GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+          GLASS_RECYCLING_PROCESS.GLASS_OTHER
+        )
+      )
+      .min(1)
+  ),
+  noticeAddress: requiredForExporterOptionalForReprocessor(addressSchema),
+  cbduNumber: Joi.when('submittedToRegulator', {
+    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    then: Joi.string()
+      .min(8)
+      .max(10)
+      .regex(/^[cC][bB][dD][uU]/)
+      .required()
+      .messages({
+        'string.pattern.base':
+          'CBDU number must start with CBDU (case insensitive)',
+        'string.min': 'CBDU number must be at least 8 characters',
+        'string.max': 'CBDU number must be at most 10 characters'
+      }),
+    otherwise: Joi.when('submittedToRegulator', {
+      is: REGULATOR.SEPA,
+      then: Joi.string().required(),
+      otherwise: Joi.string().optional()
+    })
+  }),
+  wasteManagementPermits: Joi.when('wasteProcessingType', {
+    is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+    then: Joi.array().items(wasteManagementPermitSchema).min(1).required(),
+    otherwise: Joi.array().items(wasteManagementPermitSchema).optional()
+  }),
+  approvedPersons: Joi.array().items(userSchema).required().min(1),
+  suppliers: Joi.string().required(),
+  exportPorts: whenExporter(Joi.array().items(Joi.string()).required().min(1)),
+  yearlyMetrics: whenReprocessor(
+    Joi.array().items(yearlyMetricsSchema).required().min(1)
+  ),
+  plantEquipmentDetails: requiredForReprocessor(Joi.string()),
+  submitterContactDetails: userSchema.required(),
+  samplingInspectionPlanPart1FileUploads: Joi.array()
+    .items(formFileUploadSchema)
+    .required(),
+  orsFileUploads: whenExporter(
+    Joi.array().items(formFileUploadSchema).required().min(1)
+  )
+})
+
+export const registrationUpdateSchema = registrationSchema.fork(
+  ['status'],
+  (schema) => schema.optional()
+)
