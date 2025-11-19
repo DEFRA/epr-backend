@@ -6,7 +6,7 @@ import {
   organisationUpdateSchema,
   statusHistoryItemSchema,
   registrationSchema
-} from './schema.js'
+} from './organisation.js'
 
 const formatValidationErrorDetails = (error) => {
   return error.details.map((d) => `${d.path.join('.')}: ${d.type}`).join('; ')

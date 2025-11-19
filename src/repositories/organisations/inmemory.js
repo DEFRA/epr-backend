@@ -2,7 +2,7 @@ import {
   validateId,
   validateOrganisationInsert,
   validateOrganisationUpdate
-} from './validation.js'
+} from './schema/index.js'
 import {
   SCHEMA_VERSION,
   createInitialStatusHistory,

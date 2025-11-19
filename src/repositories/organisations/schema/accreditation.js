@@ -1,0 +1,94 @@
+import Joi from 'joi'
+import {
+  STATUS,
+  REGULATOR,
+  MATERIAL,
+  WASTE_PROCESSING_TYPE,
+  TONNAGE_BAND
+} from '#domain/organisations/model.js'
+import { idSchema, userSchema, formFileUploadSchema } from './base.js'
+import {
+  whenReprocessor,
+  whenExporter,
+  requiredWhenApprovedOrSuspended
+} from './helpers.js'
+
+const accreditationSiteSchema = Joi.object({
+  line1: Joi.string().required(),
+  postcode: Joi.string().required()
+})
+
+const prnIncomeBusinessPlanSchema = Joi.object({
+  percentIncomeSpent: Joi.number().required(),
+  usageDescription: Joi.string().required(),
+  detailedExplanation: Joi.string().required()
+})
+
+const prnIssuanceSchema = Joi.object({
+  tonnageBand: Joi.string()
+    .valid(
+      TONNAGE_BAND.UP_TO_500,
+      TONNAGE_BAND.UP_TO_5000,
+      TONNAGE_BAND.UP_TO_10000,
+      TONNAGE_BAND.OVER_10000
+    )
+    .required(),
+  signatories: Joi.array().items(userSchema).required().min(1),
+  incomeBusinessPlan: Joi.array()
+    .items(prnIncomeBusinessPlanSchema)
+    .required()
+    .min(1)
+})
+
+export const accreditationSchema = Joi.object({
+  id: idSchema,
+  accreditationNumber: Joi.string().when(
+    'status',
+    requiredWhenApprovedOrSuspended
+  ),
+  status: Joi.string()
+    .valid(
+      STATUS.CREATED,
+      STATUS.APPROVED,
+      STATUS.REJECTED,
+      STATUS.SUSPENDED,
+      STATUS.ARCHIVED
+    )
+    .forbidden(),
+  validFrom: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  validTo: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  formSubmissionTime: Joi.date().iso().required(),
+  submittedToRegulator: Joi.string()
+    .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
+    .required(),
+  orgName: Joi.string().required(),
+  site: whenReprocessor(accreditationSiteSchema),
+  material: Joi.string()
+    .valid(
+      MATERIAL.ALUMINIUM,
+      MATERIAL.FIBRE,
+      MATERIAL.GLASS,
+      MATERIAL.PAPER,
+      MATERIAL.PLASTIC,
+      MATERIAL.STEEL,
+      MATERIAL.WOOD
+    )
+    .required(),
+  wasteProcessingType: Joi.string()
+    .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
+    .required(),
+  prnIssuance: prnIssuanceSchema.required(),
+  submitterContactDetails: userSchema.required(),
+  samplingInspectionPlanPart2FileUploads: Joi.array()
+    .items(formFileUploadSchema)
+    .required()
+    .min(1),
+  orsFileUploads: whenExporter(
+    Joi.array().items(formFileUploadSchema).required().min(1)
+  )
+})
+
+export const accreditationUpdateSchema = accreditationSchema.fork(
+  ['status'],
+  (schema) => schema.optional()
+)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { parseRegistrationSubmission } from './transform-registration.js'
-import { validateRegistration } from '#repositories/organisations/validation.js'
+import { validateRegistration } from '#repositories/organisations/schema/validation.js'
 
 import exporter from '#data/fixtures/ea/registration/exporter.json'
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json'

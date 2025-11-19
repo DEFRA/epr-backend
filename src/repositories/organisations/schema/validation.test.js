@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { validateRegistration, validateStatusHistory } from './validation.js'
 import { STATUS, REGULATOR, MATERIAL } from '#domain/organisations/model.js'
-import { buildRegistration } from './contract/test-data.js'
+import { buildRegistration } from '#repositories/organisations/contract/test-data.js'
 
 describe('validateStatusHistory', () => {
   it('throws badImplementation when statusHistory item has invalid status', () => {
