@@ -1,6 +1,6 @@
 // eslint-disable-next-line n/no-unpublished-import
 import { test, vi } from 'vitest'
-import { createMockOidcServers } from '#vite/helpers/mock-oidc.js'
+import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {

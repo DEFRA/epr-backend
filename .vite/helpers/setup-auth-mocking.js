@@ -1,4 +1,4 @@
-import { createMockOidcServers } from '#vite/helpers/mock-oidc.js'
+import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
 
 export function setupAuthContext(disabledMocks) {
   let mockOidcServer
@@ -22,4 +22,8 @@ export function setupAuthContext(disabledMocks) {
       global.fetchMock?.enableMocks()
     }
   })
+
+  return {
+    getServer: () => mockOidcServer
+  }
 }

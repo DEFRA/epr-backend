@@ -5,9 +5,9 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
-import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
-const { validToken } = testTokens
+const { validToken } = entraIdMockAuthTokens
 
 describe('GET /v1/organisations/{id}', () => {
   setupAuthContext()

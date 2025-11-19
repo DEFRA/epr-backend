@@ -245,6 +245,21 @@ const baseConfig = {
         env: 'ADMIN_UI_ENTRA_CLIENT_ID',
         default: 'test'
       }
+    },
+    defraId: {
+      oidcWellKnownConfigurationUrl: {
+        doc: 'The Defra Identity well known URL.',
+        format: String,
+        default:
+          'https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0/.well-known/openid-configuration?p=B2C_1A_CUI_CPDEV_SIGNUPSIGNIN',
+        env: 'DEFRA_ID_OIDC_WELL_KNOWN_URL'
+      },
+      clientId: {
+        doc: 'The Defra Identity client ID.',
+        format: String,
+        default: 'f0b82f82-0698-4938-a874-6fd215c0c592',
+        env: 'DEFRA_ID_CLIENT_ID'
+      }
     }
   },
   roles: {
