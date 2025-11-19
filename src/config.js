@@ -262,12 +262,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOGS'
     },
-    organisations: {
-      doc: 'Feature Flag: Organisations',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_ORGANISATIONS'
-    },
     formsDataMigration: {
       doc: 'Feature Flag: Runs forms data migration on startup',
       format: Boolean,
