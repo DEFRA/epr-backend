@@ -48,54 +48,70 @@ describe('validateRegistration', () => {
   })
 
   describe('cbduNumber validation by regulator', () => {
-    it('EA/NRW: rejects cbduNumber not starting with CBDU', () => {
-      ;[REGULATOR.EA, REGULATOR.NRW].forEach((regulator) => {
-        const registration = buildRegistration({
-          submittedToRegulator: regulator,
-          cbduNumber: 'ABC12345'
-        })
-
-        expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*cbduNumber.*string.pattern.base/
-        )
-      })
-    })
-
-    it('EA/NRW: rejects cbduNumber shorter than 8 characters', () => {
-      ;[REGULATOR.EA, REGULATOR.NRW].forEach((regulator) => {
-        const registration = buildRegistration({
-          submittedToRegulator: regulator,
-          cbduNumber: 'CBDU123'
-        })
-
-        expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*cbduNumber.*string.min/
-        )
-      })
-    })
-
-    it('EA/NRW: rejects cbduNumber longer than 10 characters', () => {
-      ;[REGULATOR.EA, REGULATOR.NRW].forEach((regulator) => {
-        const registration = buildRegistration({
-          submittedToRegulator: regulator,
-          cbduNumber: 'CBDU1234567'
-        })
-
-        expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*cbduNumber.*string.max/
-        )
-      })
-    })
-
-    it('SEPA: rejects missing cbduNumber', () => {
+    it('EA: rejects cbduNumber not starting with CBDU', () => {
       const registration = buildRegistration({
-        submittedToRegulator: REGULATOR.SEPA,
-        cbduNumber: undefined
+        submittedToRegulator: REGULATOR.EA,
+        cbduNumber: 'ABC12345'
       })
 
       expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*cbduNumber.*any.required/
+        /Invalid registration data.*cbduNumber.*string.pattern.base/
       )
+    })
+
+    it('EA: rejects cbduNumber shorter than 8 characters', () => {
+      const registration = buildRegistration({
+        submittedToRegulator: REGULATOR.EA,
+        cbduNumber: 'CBDU123'
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*cbduNumber.*string.min/
+      )
+    })
+
+    it('EA: rejects cbduNumber longer than 10 characters', () => {
+      const registration = buildRegistration({
+        submittedToRegulator: REGULATOR.EA,
+        cbduNumber: 'CBDU1234567'
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*cbduNumber.*string.max/
+      )
+    })
+
+    it('EA: accepts valid CBDU format', () => {
+      const registration = buildRegistration({
+        submittedToRegulator: REGULATOR.EA,
+        cbduNumber: 'CBDU12345'
+      })
+
+      expect(() => validateRegistration(registration)).not.toThrow()
+    })
+
+    it('NRW/SEPA: rejects missing cbduNumber', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA].forEach((regulator) => {
+        const registration = buildRegistration({
+          submittedToRegulator: regulator,
+          cbduNumber: undefined
+        })
+
+        expect(() => validateRegistration(registration)).toThrow(
+          /Invalid registration data.*cbduNumber.*any.required/
+        )
+      })
+    })
+
+    it('NRW/SEPA: accepts any string format', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA].forEach((regulator) => {
+        const registration = buildRegistration({
+          submittedToRegulator: regulator,
+          cbduNumber: 'ANY-FORMAT-123'
+        })
+
+        expect(() => validateRegistration(registration)).not.toThrow()
+      })
     })
 
     it('NIEA: accepts when cbduNumber is omitted (optional for NIEA)', () => {
@@ -118,30 +134,28 @@ describe('validateRegistration', () => {
   })
 
   describe('waste exemption validation by regulator', () => {
-    it('EA/NRW: accepts valid WEX reference and code format', () => {
-      ;[REGULATOR.EA, REGULATOR.NRW].forEach((regulator) => {
-        const registration = buildRegistration({
-          submittedToRegulator: regulator,
-          wasteManagementPermits: [
-            {
-              type: 'waste_exemption',
-              exemptions: [
-                {
-                  reference: 'WEX123456',
-                  exemptionCode: 'U9',
-                  materials: [MATERIAL.PAPER]
-                }
-              ]
-            }
-          ]
-        })
-
-        expect(() => validateRegistration(registration)).not.toThrow()
+    it('EA: accepts valid WEX reference and code format', () => {
+      const registration = buildRegistration({
+        submittedToRegulator: REGULATOR.EA,
+        wasteManagementPermits: [
+          {
+            type: 'waste_exemption',
+            exemptions: [
+              {
+                reference: 'WEX123456',
+                exemptionCode: 'U9',
+                materials: [MATERIAL.PAPER]
+              }
+            ]
+          }
+        ]
       })
+
+      expect(() => validateRegistration(registration)).not.toThrow()
     })
 
-    it('SEPA/NIEA: accepts flexible reference and code formats', () => {
-      ;[REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
+    it('NRW/SEPA/NIEA: accepts flexible reference and code formats', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           wasteManagementPermits: [
@@ -162,56 +176,52 @@ describe('validateRegistration', () => {
       })
     })
 
-    it('EA/NRW: rejects non-WEX reference format', () => {
-      ;[REGULATOR.EA, REGULATOR.NRW].forEach((regulator) => {
-        const registration = buildRegistration({
-          submittedToRegulator: regulator,
-          wasteManagementPermits: [
-            {
-              type: 'waste_exemption',
-              exemptions: [
-                {
-                  reference: 'SEPA/EX/2024/001234',
-                  exemptionCode: 'U9',
-                  materials: [MATERIAL.PAPER]
-                }
-              ]
-            }
-          ]
-        })
-
-        expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*reference.*string.pattern.base/
-        )
+    it('EA: rejects non-WEX reference format', () => {
+      const registration = buildRegistration({
+        submittedToRegulator: REGULATOR.EA,
+        wasteManagementPermits: [
+          {
+            type: 'waste_exemption',
+            exemptions: [
+              {
+                reference: 'SEPA/EX/2024/001234',
+                exemptionCode: 'U9',
+                materials: [MATERIAL.PAPER]
+              }
+            ]
+          }
+        ]
       })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*reference.*string.pattern.base/
+      )
     })
 
-    it('EA/NRW: rejects invalid exemption code format', () => {
-      ;[REGULATOR.EA, REGULATOR.NRW].forEach((regulator) => {
-        const registration = buildRegistration({
-          submittedToRegulator: regulator,
-          wasteManagementPermits: [
-            {
-              type: 'waste_exemption',
-              exemptions: [
-                {
-                  reference: 'WEX123456',
-                  exemptionCode: 'SEPA1',
-                  materials: [MATERIAL.PAPER]
-                }
-              ]
-            }
-          ]
-        })
-
-        expect(() => validateRegistration(registration)).toThrow(
-          /Invalid registration data.*exemptionCode.*string.pattern.base/
-        )
+    it('EA: rejects invalid exemption code format', () => {
+      const registration = buildRegistration({
+        submittedToRegulator: REGULATOR.EA,
+        wasteManagementPermits: [
+          {
+            type: 'waste_exemption',
+            exemptions: [
+              {
+                reference: 'WEX123456',
+                exemptionCode: 'SEPA1',
+                materials: [MATERIAL.PAPER]
+              }
+            ]
+          }
+        ]
       })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*exemptionCode.*string.pattern.base/
+      )
     })
 
-    it('SEPA/NIEA: rejects missing reference', () => {
-      ;[REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
+    it('NRW/SEPA/NIEA: rejects missing reference', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           wasteManagementPermits: [
@@ -230,8 +240,8 @@ describe('validateRegistration', () => {
       })
     })
 
-    it('SEPA/NIEA: rejects missing exemptionCode', () => {
-      ;[REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
+    it('NRW/SEPA/NIEA: rejects missing exemptionCode', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           wasteManagementPermits: [
