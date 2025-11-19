@@ -100,7 +100,7 @@ export const registrationSchema = Joi.object({
   ),
   noticeAddress: requiredForExporterOptionalForReprocessor(addressSchema),
   cbduNumber: Joi.when('submittedToRegulator', {
-    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    is: Joi.valid(REGULATOR.EA),
     then: Joi.string()
       .min(8)
       .max(10)
@@ -113,7 +113,7 @@ export const registrationSchema = Joi.object({
         'string.max': 'CBDU number must be at most 10 characters'
       }),
     otherwise: Joi.when('submittedToRegulator', {
-      is: REGULATOR.SEPA,
+      is: Joi.valid(REGULATOR.SEPA, REGULATOR.NRW),
       then: Joi.string().required(),
       otherwise: Joi.string().optional()
     })

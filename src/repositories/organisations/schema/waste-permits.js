@@ -12,14 +12,14 @@ import {
 
 export const wasteExemptionSchema = Joi.object({
   reference: Joi.when(Joi.ref('submittedToRegulator', { ancestor: 5 }), {
-    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    is: Joi.valid(REGULATOR.EA),
     then: Joi.string()
       .required()
       .regex(/^[wW][eE][xX]\d{6}$/),
     otherwise: Joi.string().required()
   }),
   exemptionCode: Joi.when(Joi.ref('submittedToRegulator', { ancestor: 5 }), {
-    is: Joi.valid(REGULATOR.EA, REGULATOR.NRW),
+    is: Joi.valid(REGULATOR.EA),
     then: Joi.string()
       .required()
       .regex(/^[a-zA-Z]\d{1,2}$/),
