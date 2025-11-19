@@ -1,4 +1,4 @@
-import { validateStatusHistory } from './validation.js'
+import { validateStatusHistory } from './schema/index.js'
 import equal from 'fast-deep-equal'
 
 export const SCHEMA_VERSION = 1
