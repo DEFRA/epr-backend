@@ -38,10 +38,7 @@ const performFindAllOrganisations = (db) => async () => {
 }
 
 const performFindOrganisationById = (db) => async (id) => {
-  let mongoDocumentId
-  try {
-    mongoDocumentId = ObjectId.createFromHexString(id)
-  } catch (e) {
+  if (!ObjectId.isValid(id)) {
     // gracefully handle when called with malformed id
     return null
   }
@@ -49,7 +46,7 @@ const performFindOrganisationById = (db) => async (id) => {
   const doc = await db
     .collection(COLLECTION_NAME)
     .findOne(
-      { _id: mongoDocumentId },
+      { _id: ObjectId.createFromHexString(id) },
       { projection: { _id: 1, orgId: 1, rawSubmissionData: 1 } }
     )
 
