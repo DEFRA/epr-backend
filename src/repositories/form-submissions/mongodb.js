@@ -1,3 +1,5 @@
+import { ObjectId } from 'mongodb'
+
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
 const COLLECTION_NAME = 'organisation'
@@ -35,6 +37,28 @@ const performFindAllOrganisations = (db) => async () => {
   }))
 }
 
+const performFindOrganisationById = (db) => async (id) => {
+  if (!ObjectId.isValid(id)) {
+    // gracefully handle when called with malformed id
+    return null
+  }
+
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne(
+      { _id: ObjectId.createFromHexString(id) },
+      { projection: { _id: 1, orgId: 1, rawSubmissionData: 1 } }
+    )
+
+  return doc
+    ? {
+        id: doc._id.toString(),
+        orgId: doc.orgId,
+        rawSubmissionData: doc.rawSubmissionData
+      }
+    : null
+}
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {import('./port.js').FormSubmissionsRepositoryFactory}
@@ -43,6 +67,7 @@ export const createFormSubmissionsRepository = (db) => () => {
   return {
     findAllAccreditations: performFindAllAccreditations(db),
     findAllRegistrations: performFindAllRegistrations(db),
-    findAllOrganisations: performFindAllOrganisations(db)
+    findAllOrganisations: performFindAllOrganisations(db),
+    findOrganisationById: performFindOrganisationById(db)
   }
 }

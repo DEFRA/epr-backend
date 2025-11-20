@@ -96,5 +96,47 @@ export const testFindBehaviour = (it) => {
         }
       })
     })
+
+    describe('findOrganisationById', () => {
+      it('returns null when no organisation exists with supplied ID', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const documentId = '000011112222333344445555' // a valid ID that does not match a document in the seeded data
+
+        const result = await repository.findOrganisationById(documentId)
+
+        expect(result).toBeNull()
+      })
+
+      it.for([null, undefined, '', '   '])(
+        'returns null when supplied ID is empty - %s',
+        async (input, { formSubmissionsRepository }) => {
+          const repository = formSubmissionsRepository()
+
+          const result = await repository.findOrganisationById(input)
+
+          expect(result).toBeNull()
+        }
+      )
+
+      it('returns organisation with field values', async ({
+        seedOrganisations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedOrganisations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThanOrEqual(1)
+
+        for (const seeded of seededData) {
+          const result = await repository.findOrganisationById(seeded.id)
+          expect(result.id).toBe(seeded.id)
+          expect(result.orgId).toBe(seeded.orgId)
+          expect(result.rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
   })
 }

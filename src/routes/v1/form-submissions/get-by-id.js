@@ -18,19 +18,19 @@ export const formSubmissionsDataGet = {
   handler: async ({ formSubmissionsRepository, params }, h) => {
     const documentId = params.documentId
 
-    const organisations = await formSubmissionsRepository.findAllOrganisations()
-    const organisation = organisations.find((o) => o.id === documentId) || null
+    const organisation =
+      await formSubmissionsRepository.findOrganisationById(documentId)
 
     const linkedSubmissionsFilter = organisation
       ? (r) => r.referenceNumber === organisation.id // find registrations/accreditatons linked to the org
       : (r) => r.id === documentId // find registrations/accreditatons by supplied ID
 
-    const allRegistrations =
-      await formSubmissionsRepository.findAllRegistrations()
-    const registrations = allRegistrations.filter(linkedSubmissionsFilter)
+    const [allRegistrations, allAccreditations] = await Promise.all([
+      formSubmissionsRepository.findAllRegistrations(),
+      formSubmissionsRepository.findAllAccreditations()
+    ])
 
-    const allAccreditations =
-      await formSubmissionsRepository.findAllAccreditations()
+    const registrations = allRegistrations.filter(linkedSubmissionsFilter)
     const accreditations = allAccreditations.filter(linkedSubmissionsFilter)
 
     const data = {
