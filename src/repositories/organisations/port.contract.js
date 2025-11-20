@@ -4,12 +4,14 @@ import { testUpdateBehaviour } from './contract/update.contract.js'
 import { testUpsertBehaviour } from './contract/upsert.contract.js'
 import { testDataIsolationBehaviour } from './contract/data-isolation.contract.js'
 import { testFindRegistrationByIdBehaviour } from './contract/find-registration-by-id.contract.js'
+import { testQueryBehaviour } from './contract/query.contract.js'
 
 export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testInsertBehaviour(repositoryFactory)
   testUpdateBehaviour(repositoryFactory)
   testUpsertBehaviour(repositoryFactory)
   testFindBehaviour(repositoryFactory)
+  testQueryBehaviour(repositoryFactory)
   testFindRegistrationByIdBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)
 }

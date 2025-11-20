@@ -207,6 +207,29 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
+const performQuery = (staleCache) => async (filter) => {
+  // Simple in-memory filtering - supports nested properties using dot notation
+  const filtered = staleCache.filter((org) => {
+    return Object.keys(filter).every((key) => {
+      if (filter[key] === undefined || filter[key] === null) return true
+
+      // Support nested properties (e.g., 'companyDetails.name')
+      const keys = key.split('.')
+      let value = org
+      for (const k of keys) {
+        value = value?.[k]
+        if (value === undefined) return false
+      }
+
+      return value === filter[key]
+    })
+  })
+
+  return structuredClone(filtered).map((org) =>
+    enrichWithCurrentStatus({ ...org })
+  )
+}
+
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -263,6 +286,7 @@ export const createInMemoryOrganisationsRepository = (
         ),
       findAll: performFindAll(staleCache),
       findById,
+      query: performQuery(staleCache),
       findRegistrationById: performFindRegistrationById(findById)
     }
   }

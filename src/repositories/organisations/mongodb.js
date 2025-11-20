@@ -200,6 +200,11 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performQuery = (db) => async (filter) => {
+  const docs = await db.collection(COLLECTION_NAME).find(filter).toArray()
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
@@ -224,6 +229,7 @@ export const createOrganisationsRepository =
         ),
       findById,
       findAll: performFindAll(db),
+      query: performQuery(db),
 
       async findRegistrationById(
         organisationId,
