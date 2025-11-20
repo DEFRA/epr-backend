@@ -20,6 +20,12 @@ export const createFormSubmissionsRepository = (
     async findAllOrganisations() {
       return structuredClone(organisations)
     },
+    async findOrganisationById(id) {
+      if (!id || (id.trim && !id.trim())) {
+        return null
+      }
+      return structuredClone(organisations).find((org) => org.id === id) || null
+    },
     async findAllRegistrations() {
       return structuredClone(registrations)
     }

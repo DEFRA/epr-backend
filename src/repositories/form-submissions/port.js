@@ -26,6 +26,7 @@
  * @property {() => Promise<AccreditationFormSubmission[]>} findAllAccreditations
  * @property {() => Promise<RegistrationFormSubmission[]>} findAllRegistrations
  * @property {() => Promise<OrganisationFormSubmission[]>} findAllOrganisations - Find all organisations
+ * @property {(id: string) => Promise<OrganisationFormSubmission | null>} findOrganisationById
  */
 
 /**
