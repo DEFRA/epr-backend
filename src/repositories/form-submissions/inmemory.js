@@ -17,6 +17,19 @@ export const createFormSubmissionsRepository = (
     async findAllAccreditations() {
       return structuredClone(accreditations)
     },
+    async findAccreditationsBySystemReference(ref) {
+      return structuredClone(accreditations).filter(
+        (acc) => acc.referenceNumber === ref
+      )
+    },
+    async findAccreditationById(id) {
+      if (!id || (id.trim && !id.trim())) {
+        return null
+      }
+      return (
+        structuredClone(accreditations).find((org) => org.id === id) || null
+      )
+    },
     async findAllOrganisations() {
       return structuredClone(organisations)
     },
@@ -28,6 +41,17 @@ export const createFormSubmissionsRepository = (
     },
     async findAllRegistrations() {
       return structuredClone(registrations)
+    },
+    async findRegistrationsBySystemReference(ref) {
+      return structuredClone(registrations).filter(
+        (reg) => reg.referenceNumber === ref
+      )
+    },
+    async findRegistrationById(id) {
+      if (!id || (id.trim && !id.trim())) {
+        return null
+      }
+      return structuredClone(registrations).find((org) => org.id === id) || null
     }
   })
 }
