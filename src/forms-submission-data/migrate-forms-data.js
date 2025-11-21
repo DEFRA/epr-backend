@@ -85,7 +85,7 @@ async function fetchAndTransformSubmissions({
     }
   })
 
-  logger.error({
+  logger.info({
     message: `Transformed ${results.length}/${submissions.length} ${submissionType} form submissions (${failureCount} failed)`
   })
 
