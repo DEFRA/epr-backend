@@ -2,7 +2,10 @@ import { parseOrgSubmission } from '#formsubmission/organisation/transform-organ
 import { logger } from '#common/helpers/logging/logger.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
-import { linkItemsToOrganisations } from '#formsubmission/link-form-submissions.js'
+import {
+  linkItemsToOrganisations,
+  linkRegistrationToAccreditations
+} from '#formsubmission/link-form-submissions.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -193,8 +196,13 @@ export async function migrateFormsData(
     organisationsWithRegistrations,
     transformedAccreditations
   )
+
+  const orgRegistrationsLinkedToAcc = linkRegistrationToAccreditations(
+    organisationsWithAccreditations
+  )
+
   await upsertOrganisations(
-    organisationsWithAccreditations,
+    orgRegistrationsLinkedToAcc,
     organisationsRepository,
     transformedOrganisations
   )
