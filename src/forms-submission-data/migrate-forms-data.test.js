@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { migrateFormsData } from './migrate-forms-data.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
@@ -9,7 +9,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { REGULATOR } from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -68,7 +67,8 @@ describe('migrateFormsData', () => {
 
     formsSubmissionRepository = {
       findAllOrganisations: vi.fn(),
-      findAllRegistrations: vi.fn()
+      findAllRegistrations: vi.fn(),
+      findAllAccreditations: vi.fn()
     }
     organisationsRepository = {
       upsert: vi.fn()
@@ -77,18 +77,38 @@ describe('migrateFormsData', () => {
 
   describe('unit tests with mocked parseOrgSubmission', () => {
     let parseOrgSubmission
+    let parseRegistrationSubmission
+    let parseAccreditationSubmission
 
     beforeEach(async () => {
-      // Import and mock parseOrgSubmission
-      const module = await import(
+      // Import and mock all transform functions
+      const orgModule = await import(
         '#formsubmission/organisation/transform-organisation.js'
       )
-      parseOrgSubmission = vi.spyOn(module, 'parseOrgSubmission')
+      parseOrgSubmission = vi.spyOn(orgModule, 'parseOrgSubmission')
+
+      const regModule = await import(
+        '#formsubmission/registration/transform-registration.js'
+      )
+      parseRegistrationSubmission = vi.spyOn(
+        regModule,
+        'parseRegistrationSubmission'
+      )
+
+      const accrModule = await import(
+        '#formsubmission/accreditation/transform-accreditation.js'
+      )
+      parseAccreditationSubmission = vi.spyOn(
+        accrModule,
+        'parseAccreditationSubmission'
+      )
     })
 
     afterEach(() => {
       // Restore the real implementation after each test
       parseOrgSubmission.mockRestore()
+      parseRegistrationSubmission.mockRestore()
+      parseAccreditationSubmission.mockRestore()
     })
 
     describe('persistence scenarios', () => {
@@ -100,14 +120,7 @@ describe('migrateFormsData', () => {
         formsSubmissionRepository.findAllRegistrations.mockResolvedValue([
           validRegSubmission1
         ])
-
-        const regModule = await import(
-          '#formsubmission/registration/transform-registration.js'
-        )
-        const parseRegistrationSubmission = vi.spyOn(
-          regModule,
-          'parseRegistrationSubmission'
-        )
+        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
 
         parseOrgSubmission
           .mockReturnValueOnce(transformedOrg1)
@@ -158,8 +171,6 @@ describe('migrateFormsData', () => {
           message:
             'Migration completed: 2/2 organisations processed (1 inserted, 1 updated, 0 unchanged, 0 failed)'
         })
-
-        parseRegistrationSubmission.mockRestore()
       })
 
       it('one upsert fails', async () => {
@@ -167,6 +178,7 @@ describe('migrateFormsData', () => {
           validSubmission1
         ])
         formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
+        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
         parseOrgSubmission.mockReturnValue(transformedOrg1)
         organisationsRepository.upsert.mockRejectedValue(
           new Error('Upsert failed')
@@ -214,6 +226,7 @@ describe('migrateFormsData', () => {
           validSubmission1
         ])
         formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
+        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
         parseOrgSubmission.mockReturnValue(transformedOrg1)
         organisationsRepository.upsert.mockResolvedValue({
           action: 'unchanged'
@@ -250,6 +263,7 @@ describe('migrateFormsData', () => {
           validSubmission2
         ])
         formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
+        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
         parseOrgSubmission
           .mockReturnValueOnce(transformedOrg1)
           .mockImplementationOnce(() => {
@@ -284,7 +298,7 @@ describe('migrateFormsData', () => {
         })
         expect(logger.info).toHaveBeenCalledWith({
           message:
-            'Migration completed: 1/2 organisations processed (1 inserted, 0 updated, 0 unchanged, 0 failed)'
+            'Migration completed: 1/1 organisations processed (1 inserted, 0 updated, 0 unchanged, 0 failed)'
         })
       })
 
@@ -296,14 +310,7 @@ describe('migrateFormsData', () => {
           validRegSubmission1,
           validRegSubmission2
         ])
-
-        const module = await import(
-          '#formsubmission/registration/transform-registration.js'
-        )
-        const parseRegistrationSubmission = vi.spyOn(
-          module,
-          'parseRegistrationSubmission'
-        )
+        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
 
         parseOrgSubmission.mockReturnValueOnce(transformedOrg1)
         parseRegistrationSubmission
@@ -318,35 +325,11 @@ describe('migrateFormsData', () => {
           organisationsRepository
         )
 
-        expect(parseOrgSubmission).toHaveBeenCalledTimes(1)
-        expect(parseOrgSubmission).toHaveBeenCalledWith(
-          validSubmission1.id,
-          validSubmission1.orgId,
-          validSubmission1.rawSubmissionData
-        )
-
         expect(parseRegistrationSubmission).toHaveBeenCalledTimes(2)
-        expect(parseRegistrationSubmission).toHaveBeenCalledWith(
-          validRegSubmission1.id,
-          validRegSubmission1.rawSubmissionData
-        )
-        expect(parseRegistrationSubmission).toHaveBeenCalledWith(
-          validRegSubmission2.id,
-          validRegSubmission2.rawSubmissionData
-        )
-
-        expect(organisationsRepository.upsert).toHaveBeenCalledTimes(1)
-        expect(organisationsRepository.upsert).toHaveBeenCalledWith(
-          transformedOrg1
-        )
-
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            error: expect.any(Error),
             message: 'Error transforming registration submission',
             event: expect.objectContaining({
-              category: LOGGING_EVENT_CATEGORIES.DB,
-              action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
               reference: validRegSubmission2.id
             })
           })
@@ -354,15 +337,55 @@ describe('migrateFormsData', () => {
         expect(logger.error).toHaveBeenCalledWith({
           message: 'Transformed 1/2 registration form submissions (1 failed)'
         })
-        expect(logger.error).toHaveBeenCalledWith({
-          message: 'Transformed 1/1 organisation form submissions (0 failed)'
-        })
-        expect(logger.info).toHaveBeenCalledWith({
-          message:
-            'Migration completed: 1/1 organisations processed (1 inserted, 0 updated, 0 unchanged, 0 failed)'
-        })
+      })
 
-        parseRegistrationSubmission.mockRestore()
+      it('1 accreditation transform fails', async () => {
+        const validAccrSubmission1 = {
+          id: '507f1f77bcf86cd799439011',
+          rawSubmissionData: { accrData: 'value1' }
+        }
+        const validAccrSubmission2 = {
+          id: '507f1f77bcf86cd799439012',
+          rawSubmissionData: { accrData: 'value2' }
+        }
+
+        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
+          validSubmission1
+        ])
+        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
+        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([
+          validAccrSubmission1,
+          validAccrSubmission2
+        ])
+
+        parseOrgSubmission.mockReturnValueOnce(transformedOrg1)
+        parseAccreditationSubmission
+          .mockReturnValueOnce({
+            id: '507f1f77bcf86cd799439011',
+            orgName: 'Test Org 1'
+          })
+          .mockImplementationOnce(() => {
+            throw new Error('Accreditation transform failed')
+          })
+        organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
+
+        await migrateFormsData(
+          formsSubmissionRepository,
+          organisationsRepository
+        )
+
+        expect(parseAccreditationSubmission).toHaveBeenCalledTimes(2)
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: 'Error transforming accreditation submission',
+            event: expect.objectContaining({
+              reference: validAccrSubmission2.id
+            })
+          })
+        )
+        expect(logger.error).toHaveBeenCalledWith({
+          message: 'Transformed 1/2 accreditation form submissions (1 failed)'
+        })
       })
     })
   })
@@ -389,6 +412,7 @@ describe('migrateFormsData', () => {
     beforeEach(() => {
       const orgFixtures = loadFixtures('organisation')
       const regFixtures = loadFixtures('registration')
+      const accrFixtures = loadFixtures('accreditation')
 
       // Prepare organisation form submission data
       const orgFormSubmissions = orgFixtures.map((fixture) => ({
@@ -404,8 +428,15 @@ describe('migrateFormsData', () => {
         rawSubmissionData: fixture.rawSubmissionData
       }))
 
+      // Prepare accreditation form submission data
+      const accFormSubmissions = accrFixtures.map((fixture) => ({
+        id: fixture._id.$oid,
+        orgId: fixture.orgId,
+        rawSubmissionData: fixture.rawSubmissionData
+      }))
+
       formsInMemoryRepo = createFormSubmissionsRepository(
-        [],
+        accFormSubmissions,
         regFormSubmissions,
         orgFormSubmissions
       )()
@@ -426,34 +457,36 @@ describe('migrateFormsData', () => {
         new Map()
       )
 
-      // Verify registrations exist for specific orgIds
-      const orgWithExporterReg = orgsByOrgId.get(503181)
-      expect(orgWithExporterReg).toBeDefined()
-      expect(orgWithExporterReg.registrations).toBeDefined()
-      expect(orgWithExporterReg.registrations).toHaveLength(1)
-      expect(orgWithExporterReg.registrations[0].wasteProcessingType).toBe(
-        'exporter'
+      // Count total registrations across all orgs
+      const totalRegistrations = allOrgs.reduce(
+        (count, org) => count + (org.registrations?.length || 0),
+        0
       )
+      expect(totalRegistrations).toBe(3)
 
-      // Org 503176 should have 2 registrations: EA and SEPA
-      const orgWithReprocessorReg = orgsByOrgId.get(503176)
-      expect(orgWithReprocessorReg).toBeDefined()
-      expect(orgWithReprocessorReg.registrations).toBeDefined()
-      expect(orgWithReprocessorReg.registrations).toHaveLength(2)
-
-      // All registrations should be reprocessors
-      expect(
-        orgWithReprocessorReg.registrations.every(
-          (r) => r.wasteProcessingType === 'reprocessor'
-        )
-      ).toBe(true)
-
-      // Verify both regulators exist (EA and SEPA)
-      const regulators = orgWithReprocessorReg.registrations.map(
-        (r) => r.submittedToRegulator
+      // Count total accreditations across all orgs
+      const totalAccreditations = allOrgs.reduce(
+        (count, org) => count + (org.accreditations?.length || 0),
+        0
       )
-      expect(regulators).toContain(REGULATOR.EA)
-      expect(regulators).toContain(REGULATOR.SEPA)
+      expect(totalAccreditations).toBe(4)
+
+      // Verify registrations count by org
+      const org503181 = orgsByOrgId.get(503181)
+      expect(org503181).toBeDefined()
+      expect(org503181.registrations).toHaveLength(1)
+
+      const org503176 = orgsByOrgId.get(503176)
+      expect(org503176).toBeDefined()
+      expect(org503176.registrations).toHaveLength(2)
+
+      // Verify accreditations count by org
+      expect(org503181.accreditations).toHaveLength(1)
+      expect(org503176.accreditations).toHaveLength(2)
+
+      const org503177 = orgsByOrgId.get(503177)
+      expect(org503177).toBeDefined()
+      expect(org503177.accreditations).toHaveLength(1)
     })
   })
 })

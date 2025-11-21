@@ -384,7 +384,7 @@ describe('validateRegistration', () => {
     it('non-glass: accepts when glassRecyclingProcess is omitted', () => {
       const registration = buildRegistration({
         material: MATERIAL.PAPER,
-        glassRecyclingProcess: undefined
+        glassRecyclingProcess: null
       })
 
       expect(() => validateRegistration(registration)).not.toThrow()
