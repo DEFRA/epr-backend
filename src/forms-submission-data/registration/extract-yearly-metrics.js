@@ -1,4 +1,4 @@
-import { FORM_PAGES } from '../parsing-common/form-field-constants.js'
+import { REGISTRATION } from './form-field-constants.js'
 import { extractRepeaters } from '../parsing-common/parse-forms-data.js'
 import {
   mapValueType,
@@ -7,7 +7,7 @@ import {
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 function getInputData(answersByPages) {
-  const inputPage = FORM_PAGES.REGISTRATION.INPUT_TO_RECYLING
+  const inputPage = REGISTRATION.INPUT_TO_RECYLING
   const inputData = answersByPages[inputPage.title]
 
   return {
@@ -28,8 +28,7 @@ function getInputData(answersByPages) {
 }
 
 function getRawMaterialInputs(rawSubmissionData) {
-  const rawMaterialPage =
-    FORM_PAGES.REGISTRATION.INPUT_TO_RECYLING.INPUT_RAW_MATERIAL
+  const rawMaterialPage = REGISTRATION.INPUT_TO_RECYLING.INPUT_RAW_MATERIAL
   const rawMaterials = extractRepeaters(
     rawSubmissionData,
     rawMaterialPage.title,
@@ -49,8 +48,7 @@ function getRawMaterialInputs(rawSubmissionData) {
 }
 
 function getOutputData(answersByPages) {
-  const outputPage =
-    FORM_PAGES.REGISTRATION.INPUT_TO_RECYLING.OUTPUT_FROM_RECYCLING
+  const outputPage = REGISTRATION.INPUT_TO_RECYLING.OUTPUT_FROM_RECYCLING
   const outputData = answersByPages[outputPage.title]
 
   return {
@@ -71,7 +69,7 @@ function getOutputData(answersByPages) {
 }
 
 function getProductsMadeFromRecycling(rawSubmissionData) {
-  const productsPage = FORM_PAGES.REGISTRATION.INPUT_TO_RECYLING.PRODUCTS_MADE
+  const productsPage = REGISTRATION.INPUT_TO_RECYLING.PRODUCTS_MADE
 
   const products = extractRepeaters(rawSubmissionData, productsPage.title, {
     [productsPage.fields.NAME]: 'name',
