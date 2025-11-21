@@ -26,6 +26,7 @@ const prnIncomeBusinessPlanSchema = Joi.object({
   detailedExplanation: Joi.string().required()
 })
 
+const REQUIRED_NUMBER_OF_BUSINESS_INCOME_PLAN = 7
 const prnIssuanceSchema = Joi.object({
   tonnageBand: Joi.string()
     .valid(
@@ -39,7 +40,7 @@ const prnIssuanceSchema = Joi.object({
   incomeBusinessPlan: Joi.array()
     .items(prnIncomeBusinessPlanSchema)
     .required()
-    .length(7)
+    .length(REQUIRED_NUMBER_OF_BUSINESS_INCOME_PLAN)
 })
 
 export const accreditationSchema = Joi.object({
