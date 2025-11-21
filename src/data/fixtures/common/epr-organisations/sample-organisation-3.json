@@ -198,9 +198,39 @@
         ],
         "incomeBusinessPlan": [
           {
-            "usageDescription": "Expand charity operations",
+            "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
             "detailedExplanation": "Open new recycling centers",
             "percentIncomeSpent": 50
+          },
+          {
+            "usageDescription": "Price support for buying packaging waste or selling recycled packaging waste",
+            "detailedExplanation": "Price support",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Support for business collections",
+            "detailedExplanation": "Collection support",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Communications, including information campaigns",
+            "detailedExplanation": "Communications",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Developing new markets for products made from recycled packaging waste",
+            "detailedExplanation": "Market development",
+            "percentIncomeSpent": 5
+          },
+          {
+            "usageDescription": "Developing new uses for recycled packaging waste",
+            "detailedExplanation": "New uses",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Activities or investment not covered by the other categories",
+            "detailedExplanation": "Other activities",
+            "percentIncomeSpent": 5
           }
         ]
       },
