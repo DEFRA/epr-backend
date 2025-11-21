@@ -87,7 +87,7 @@
     "glob": "11.1.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.10",
+    "@vitest/coverage-v8": "4.0.12",
     "eslint": "9.39.1",
     "eslint-plugin-n": "17.23.1",
     "husky": "9.1.7",
