@@ -39,7 +39,7 @@ const prnIssuanceSchema = Joi.object({
   incomeBusinessPlan: Joi.array()
     .items(prnIncomeBusinessPlanSchema)
     .required()
-    .min(1)
+    .length(7)
 })
 
 export const accreditationSchema = Joi.object({

@@ -4,6 +4,7 @@ import reprocessorPaper from '#data/fixtures/ea/accreditation/reprocessor-paper.
 import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json'
 import exporterWithoutRegistration from '#data/fixtures/ea/accreditation/exporter-without-registration.json'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
+import { validateAccreditation } from '#repositories/organisations/schema/validation.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
@@ -18,6 +19,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       exporter._id.$oid,
       exporter.rawSubmissionData
     )
+
+    expect(() => validateAccreditation(result)).not.toThrow()
 
     expect(result).toStrictEqual({
       id: '68e6aa2423d5d5454a9a193c',
@@ -125,6 +128,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorWood.rawSubmissionData
     )
 
+    expect(() => validateAccreditation(result)).not.toThrow()
+
     expect(result).toStrictEqual({
       id: '68e6a62723d5d5454a9a193a',
       formSubmissionTime: new Date('2025-10-08T17:57:59.709Z'),
@@ -221,6 +226,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorPaper._id.$oid,
       reprocessorPaper.rawSubmissionData
     )
+
+    expect(() => validateAccreditation(result)).not.toThrow()
 
     expect(result).toStrictEqual({
       id: '68e6a50423d5d5454a9a1939',
@@ -324,6 +331,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       exporterWithoutRegistration._id.$oid,
       exporterWithoutRegistration.rawSubmissionData
     )
+
+    expect(() => validateAccreditation(result)).not.toThrow()
 
     expect(result).toStrictEqual({
       id: '68e6a97723d5d5454a9a193b',
