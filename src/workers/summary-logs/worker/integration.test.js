@@ -129,7 +129,7 @@ describe('SummaryLogsValidator integration', () => {
           location: { sheet: 'Cover', row: 1, column: 'B' }
         },
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR',
+          value: 'REPROCESSOR_INPUT',
           location: { sheet: 'Cover', row: 2, column: 'B' }
         },
         MATERIAL: {
@@ -196,7 +196,7 @@ describe('SummaryLogsValidator integration', () => {
       {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        spreadsheetType: 'REPROCESSOR'
+        spreadsheetType: 'REPROCESSOR_INPUT'
       },
       {
         registrationType: 'exporter',
@@ -250,16 +250,23 @@ describe('SummaryLogsValidator integration', () => {
       {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        spreadsheetType: 'EXPORTER'
+        spreadsheetType: 'EXPORTER',
+        expectedWasteProcessingType: 'exporter'
       },
       {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
-        spreadsheetType: 'REPROCESSOR'
+        spreadsheetType: 'REPROCESSOR_INPUT',
+        expectedWasteProcessingType: 'reprocessor'
       }
     ])(
       'when $spreadsheetType type does not match $registrationType registration',
-      ({ registrationType, registrationWRN, spreadsheetType }) => {
+      ({
+        registrationType,
+        registrationWRN,
+        spreadsheetType,
+        expectedWasteProcessingType
+      }) => {
         it('should fail validation with mismatch error', async () => {
           const { updated, summaryLog } = await runValidation({
             registrationType,
@@ -295,7 +302,7 @@ describe('SummaryLogsValidator integration', () => {
                     severity: 'fatal',
                     category: 'business',
                     message:
-                      'Summary log processing type does not match registration processing type',
+                      'Summary log processing type does not match registration waste processing type',
                     code: 'PROCESSING_TYPE_MISMATCH',
                     context: {
                       location: {
@@ -304,14 +311,14 @@ describe('SummaryLogsValidator integration', () => {
                         column: 'B',
                         field: 'PROCESSING_TYPE'
                       },
-                      expected: spreadsheetType.toLowerCase(),
+                      expected: expectedWasteProcessingType,
                       actual: registrationType
                     }
                   }
                 ]
               },
               failureReason:
-                'Summary log processing type does not match registration processing type'
+                'Summary log processing type does not match registration waste processing type'
             }
           })
         })
@@ -399,7 +406,7 @@ describe('SummaryLogsValidator integration', () => {
                 severity: 'fatal',
                 category: 'business',
                 message:
-                  'Summary log processing type does not match registration processing type',
+                  'Summary log processing type does not match registration waste processing type',
                 code: 'PROCESSING_TYPE_MISMATCH',
                 context: {
                   location: {
@@ -415,7 +422,7 @@ describe('SummaryLogsValidator integration', () => {
             ]
           },
           failureReason:
-            'Summary log processing type does not match registration processing type'
+            'Summary log processing type does not match registration waste processing type'
         }
       })
     })
@@ -439,7 +446,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
@@ -480,7 +487,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
@@ -519,7 +526,7 @@ describe('SummaryLogsValidator integration', () => {
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {

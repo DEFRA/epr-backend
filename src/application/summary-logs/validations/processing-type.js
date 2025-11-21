@@ -1,21 +1,18 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
-import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  SUMMARY_LOG_META_FIELDS,
+  PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE
+} from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
   extractMetaField,
   logValidationSuccess
 } from './helpers.js'
 
-/**
- * Mapping between spreadsheet type values and registration waste processing types
- */
-const PROCESSING_TYPE_MAP = Object.freeze({
-  REPROCESSOR: 'reprocessor',
-  EXPORTER: 'exporter'
-})
-
-const VALID_REGISTRATION_TYPES = Object.values(PROCESSING_TYPE_MAP)
+const VALID_WASTE_PROCESSING_TYPES = [
+  ...new Set(Object.values(PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE))
+]
 
 /**
  * Validates that the summary log type in the spreadsheet matches the registration's waste processing type
@@ -48,29 +45,30 @@ export const validateProcessingType = ({
     SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE
   )
 
-  if (!VALID_REGISTRATION_TYPES.includes(wasteProcessingType)) {
+  if (!VALID_WASTE_PROCESSING_TYPES.includes(wasteProcessingType)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: registration has unexpected waste processing type',
       'UNEXPECTED_PROCESSING_TYPE',
       {
-        expected: VALID_REGISTRATION_TYPES,
+        expected: VALID_WASTE_PROCESSING_TYPES,
         actual: wasteProcessingType
       }
     )
     return issues
   }
 
-  const expectedProcessingType = PROCESSING_TYPE_MAP[spreadsheetProcessingType]
+  const expectedWasteProcessingType =
+    PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE[spreadsheetProcessingType]
 
-  if (expectedProcessingType !== wasteProcessingType) {
+  if (expectedWasteProcessingType !== wasteProcessingType) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      'Summary log processing type does not match registration processing type',
+      'Summary log processing type does not match registration waste processing type',
       'PROCESSING_TYPE_MISMATCH',
       {
         location,
-        expected: expectedProcessingType,
+        expected: expectedWasteProcessingType,
         actual: wasteProcessingType
       }
     )

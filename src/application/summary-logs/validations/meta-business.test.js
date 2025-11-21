@@ -4,7 +4,7 @@ import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 describe('validateMetaBusiness', () => {
   const createValidMeta = () => ({
     REGISTRATION: { value: 'WRN12345' },
-    PROCESSING_TYPE: { value: 'REPROCESSOR' },
+    PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
     MATERIAL: { value: 'Aluminium' },
     ACCREDITATION: { value: 'ACC123' }
   })

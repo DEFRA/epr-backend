@@ -846,7 +846,7 @@ describe('Validation Issues', () => {
         'TEST_CODE',
         {
           location: { field: 'PROCESSING_TYPE' },
-          expected: 'REPROCESSOR',
+          expected: 'REPROCESSOR_INPUT',
           actual: 'EXPORTER'
         }
       )
@@ -857,7 +857,7 @@ describe('Validation Issues', () => {
         type: 'BUSINESS_FATAL',
         meta: {
           location: { field: 'PROCESSING_TYPE' },
-          expected: 'REPROCESSOR',
+          expected: 'REPROCESSOR_INPUT',
           actual: 'EXPORTER'
         }
       })

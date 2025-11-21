@@ -21,7 +21,7 @@ describe('validateProcessingType', () => {
     const parsed = {
       meta: {
         REGISTRATION: { value: 'REG12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
       }
     }
     const registration = {
@@ -51,7 +51,7 @@ describe('validateProcessingType', () => {
       meta: {
         REGISTRATION: { value: 'REG12345' },
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR',
+          value: 'REPROCESSOR_INPUT',
           location: { sheet: 'Cover', row: 5, column: 'B' }
         }
       }
@@ -72,7 +72,7 @@ describe('validateProcessingType', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Summary log processing type does not match registration processing type'
+      'Summary log processing type does not match registration waste processing type'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     expect(fatals[0].context.location).toEqual({
@@ -86,7 +86,8 @@ describe('validateProcessingType', () => {
   })
 
   it.each([
-    ['REPROCESSOR', 'reprocessor'],
+    ['REPROCESSOR_INPUT', 'reprocessor'],
+    ['REPROCESSOR_OUTPUT', 'reprocessor'],
     ['EXPORTER', 'exporter']
   ])(
     'returns valid result when types match - %s',
