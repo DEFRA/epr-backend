@@ -9,3 +9,21 @@ export const SUMMARY_LOG_META_FIELDS = Object.freeze({
   ACCREDITATION: 'ACCREDITATION',
   REGISTRATION: 'REGISTRATION'
 })
+
+/**
+ * Valid PROCESSING_TYPE values that can appear in summary log spreadsheets
+ */
+export const PROCESSING_TYPES = Object.freeze({
+  REPROCESSOR_INPUT: 'REPROCESSOR_INPUT',
+  REPROCESSOR_OUTPUT: 'REPROCESSOR_OUTPUT',
+  EXPORTER: 'EXPORTER'
+})
+
+/**
+ * Mapping from spreadsheet PROCESSING_TYPE values to registration wasteProcessingType values
+ */
+export const PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE = Object.freeze({
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: 'reprocessor',
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: 'reprocessor',
+  [PROCESSING_TYPES.EXPORTER]: 'exporter'
+})

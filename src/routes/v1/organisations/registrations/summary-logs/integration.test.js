@@ -133,7 +133,7 @@ describe('Summary logs integration', () => {
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           MATERIAL: {
@@ -425,7 +425,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -682,7 +682,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -849,7 +849,7 @@ describe('Summary logs integration', () => {
           meta: {
             // Missing REGISTRATION - fatal meta error
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1045,7 +1045,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1229,7 +1229,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1480,7 +1480,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Data', row: 2, column: 'B' }
             },
             MATERIAL: {

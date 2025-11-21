@@ -69,12 +69,12 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('marker-based parsing', () => {
     it('should extract single metadata marker', async () => {
       const result = await parseWorkbook({
-        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']]
+        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT']]
       })
 
       expect(result.meta).toEqual({
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR',
+          value: 'REPROCESSOR_INPUT',
           location: { sheet: 'Sheet1', row: 1, column: 'B' }
         }
       })
@@ -83,13 +83,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('extracts multiple metadata markers', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board']
         ]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -263,7 +263,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const result = await parseWorkbook({
         Summary: [
           // Metadata section
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           // Blank row
           [],
@@ -282,7 +282,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Summary', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -309,12 +309,12 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('multiple worksheets', () => {
     it('should parse metadata from multiple sheets', async () => {
       const result = await parseWorkbook({
-        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']],
+        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT']],
         Sheet2: [['__EPR_META_MATERIAL', 'Paper and board']]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Sheet1', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -326,7 +326,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should merge metadata and data sections from multiple worksheets', async () => {
       const result = await parseWorkbook({
         Sheet1: [
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           [],
           ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'WEIGHT'],
           [null, 12345, 100],
@@ -342,7 +342,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Sheet1', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -423,7 +423,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should throw error for duplicate metadata marker names', async () => {
       const result = parseWorkbook({
         Test: [
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           ['__EPR_META_PROCESSING_TYPE', 'EXPORTER']
         ]
@@ -486,13 +486,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should extract metadata marker and value from correct positions when not in column A', async () => {
       const result = await parseWorkbook({
         Test: [
-          [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           [null, '__EPR_META_MATERIAL', 'Paper and board']
         ]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'D' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -523,7 +523,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should handle mixed placement of metadata and data markers', async () => {
       const result = await parseWorkbook({
         Test: [
-          [null, null, '__EPR_META_TYPE', 'REPROCESSOR'],
+          [null, null, '__EPR_META_TYPE', 'REPROCESSOR_INPUT'],
           [],
           [
             null,
@@ -541,7 +541,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'D' }
       })
 
@@ -809,7 +809,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           [null, 12345678910, '2025-05-25'],
           [null, 98765432100, '2025-05-26'],
           [null, '', ''],
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board']
         ]
       })
@@ -824,7 +824,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 5, column: 'B' }
       })
 
@@ -845,7 +845,7 @@ describe('ExcelJSSummaryLogsParser', () => {
             '2025-05-26',
             null,
             '__EPR_META_PROCESSING_TYPE',
-            'REPROCESSOR'
+            'REPROCESSOR_INPUT'
           ],
           [null, 11122233344, '2025-05-27'],
           [null, '', '']
@@ -863,7 +863,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 3, column: 'F' }
       })
     })
@@ -876,7 +876,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           [null, 'XYZ Corp', 'XYZ789'],
           [null, '', ''],
           [],
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           ['__EPR_META_SUBMISSION_DATE', '2025-05-25']
         ]
@@ -892,7 +892,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 6, column: 'B' }
       })
 
@@ -914,7 +914,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           [null, 'value_a1', 'value_b1'],
           [null, '', ''],
           [],
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           [],
           ['__EPR_DATA_SECOND_SECTION', 'COLUMN_X', 'COLUMN_Y'],
@@ -931,7 +931,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 5, column: 'B' }
       })
 
@@ -959,7 +959,7 @@ describe('ExcelJSSummaryLogsParser', () => {
             'DATE_RECEIVED',
             null,
             '__EPR_META_PROCESSING_TYPE',
-            'REPROCESSOR'
+            'REPROCESSOR_INPUT'
           ],
           [null, 12345678910, '2025-05-25'],
           [null, '', '']
@@ -973,7 +973,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'F' }
       })
     })

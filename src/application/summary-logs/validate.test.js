@@ -35,7 +35,7 @@ describe('SummaryLogsValidator', () => {
             value: 'REG12345'
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR'
+            value: 'REPROCESSOR_INPUT'
           },
           TEMPLATE_VERSION: {
             value: 1
@@ -215,7 +215,7 @@ describe('SummaryLogsValidator', () => {
           value: 'REG99999'
         },
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR'
+          value: 'REPROCESSOR_INPUT'
         },
         TEMPLATE_VERSION: {
           value: 1
@@ -365,7 +365,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
           REGISTRATION: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
           MATERIAL: { value: 'Aluminium' }
           // TEMPLATE_VERSION missing - fatal syntax error
         },
@@ -405,7 +405,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
           REGISTRATION: { value: 'REG99999' }, // Wrong registration - fatal business error
-          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
           TEMPLATE_VERSION: { value: 1 },
           MATERIAL: { value: 'Aluminium' }
         },
@@ -442,7 +442,7 @@ describe('SummaryLogsValidator', () => {
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
           REGISTRATION: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
           TEMPLATE_VERSION: { value: 1 },
           MATERIAL: { value: 'Aluminium' }
         },
