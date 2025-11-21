@@ -78,6 +78,7 @@ services:
     ports:
       - '3001:3001'
     extra_hosts:
+      - 'host.docker.internal:host-gateway'
       - 'localhost:host-gateway'
     links:
 #      - 'localstack:localstack'
@@ -104,7 +105,7 @@ services:
       # Defra ID Stub Config
       DEFRA_ID_CLIENT_ID: 63983fc2-cfff-45bb-8ec2-959e21062b9a
       DEFRA_ID_CLIENT_SECRET: test_value
-      DEFRA_ID_OIDC_CONFIGURATION_URL: http://localhost:3200/cdp-defra-id-stub/.well-known/openid-configuration
+      DEFRA_ID_OIDC_WELL_KNOWN_URL: http://localhost:3200/cdp-defra-id-stub/.well-known/openid-configuration
       DEFRA_ID_SERVICE_ID: d7d72b79-9c62-ee11-8df0-000d3adf7047
     secrets:
       - govuk_notify_api_key

@@ -110,26 +110,16 @@ const performUpdate = (db) => async (id, version, updates) => {
   }
 
   let users = existing.users
-  const generatedInitialUsers = generateInitialUsers(merged)
-
-  console.log('Available Users', {
-    generatedInitialUsers,
-    existingUsers: users,
-    incomingUsers: validatedUpdates.users
-  })
 
   if ([STATUS.CREATED].includes(merged.status)) {
+    const generatedInitialUsers = generateInitialUsers(merged)
     const allUsers = [
       ...validatedUpdates.users,
       ...generatedInitialUsers,
       ...existing.users
     ]
     users = deduplicateUsers(allUsers)
-
-    console.log('allUsers', allUsers)
   }
-
-  console.log('Outputted users', { users })
 
   const data = {
     ...merged,

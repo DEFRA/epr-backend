@@ -31,31 +31,37 @@ export const organisationsLink = {
       throw Boom.notFound('Organisation not found')
     }
 
-    const organisation = await organisationsRepository.findById(organisationId)
+    try {
+      const organisation =
+        await organisationsRepository.findById(organisationId)
 
-    await organisationsRepository.update(
-      organisation.id,
-      organisation.version,
-      {
-        status: STATUS.ACTIVE,
-        defraIdOrgId: `${defraIdOrgId}`,
-        registrations: organisation.registrations.reduce(
-          (prev, registration) =>
-            registration.status === STATUS.APPROVED
-              ? [...prev, { ...registration, status: STATUS.ACTIVE }]
-              : prev,
-          []
-        ),
-        accreditations: organisation.accreditations.reduce(
-          (prev, accreditation) =>
-            accreditation.status === STATUS.APPROVED
-              ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
-              : prev,
-          []
-        )
-      }
-    )
+      await organisationsRepository.update(
+        organisation.id,
+        organisation.version,
+        {
+          status: STATUS.ACTIVE,
+          statusHistory: organisation.statusHistory,
+          defraIdOrgId: `${defraIdOrgId}`,
+          registrations: organisation.registrations.reduce(
+            (prev, registration) =>
+              registration.status === STATUS.APPROVED
+                ? [...prev, { ...registration, status: STATUS.ACTIVE }]
+                : prev,
+            []
+          ),
+          accreditations: organisation.accreditations.reduce(
+            (prev, accreditation) =>
+              accreditation.status === STATUS.APPROVED
+                ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
+                : prev,
+            []
+          )
+        }
+      )
 
-    return h.response(organisation).code(StatusCodes.OK)
+      return h.response(organisation).code(StatusCodes.OK)
+    } catch (error) {
+      throw Boom.boomify(error)
+    }
   }
 }
