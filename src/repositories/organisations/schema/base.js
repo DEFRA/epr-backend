@@ -1,3 +1,4 @@
+import { ROLES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
 import {
@@ -5,6 +6,12 @@ import {
   PARTNER_TYPE,
   PARTNERSHIP_TYPE
 } from '#domain/organisations/model.js'
+
+export const defraIdOrgIdSchema = Joi.string().required().messages({
+  'any.required': 'id is required',
+  'string.empty': 'id cannot be empty',
+  'string.base': 'id must be a string'
+})
 
 export const idSchema = Joi.string()
   .required()
@@ -40,11 +47,19 @@ export const userSchema = Joi.object({
   title: Joi.string().optional()
 }).or('role', 'title')
 
+export const userWithRolesSchema = Joi.object({
+  fullName: Joi.string().required(),
+  email: Joi.string().email().required(),
+  roles: Joi.array().items(ROLES.standardUser).optional(),
+  isInitialUser: Joi.boolean()
+})
+
 export const statusHistoryItemSchema = Joi.object({
   status: Joi.string()
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
+      STATUS.ACTIVE,
       STATUS.REJECTED,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
