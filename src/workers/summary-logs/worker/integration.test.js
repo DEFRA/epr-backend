@@ -124,7 +124,7 @@ describe('SummaryLogsValidator integration', () => {
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
       metadata: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG-123',
           location: { sheet: 'Cover', row: 1, column: 'B' }
         },
@@ -211,7 +211,7 @@ describe('SummaryLogsValidator integration', () => {
             registrationType,
             registrationWRN,
             metadata: {
-              REGISTRATION: {
+              REGISTRATION_NUMBER: {
                 value: registrationWRN,
                 location: { sheet: 'Cover', row: 1, column: 'B' }
               },
@@ -272,7 +272,7 @@ describe('SummaryLogsValidator integration', () => {
             registrationType,
             registrationWRN,
             metadata: {
-              REGISTRATION: {
+              REGISTRATION_NUMBER: {
                 value: registrationWRN,
                 location: { sheet: 'Cover', row: 1, column: 'B' }
               },
@@ -332,7 +332,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
@@ -376,7 +376,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
@@ -441,7 +441,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -453,7 +453,7 @@ describe('SummaryLogsValidator integration', () => {
             value: 'Paper_and_board',
             location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION: {
+          ACCREDITATION_NUMBER: {
             value: accreditationNumber,
             location: { sheet: 'Cover', row: 5, column: 'B' }
           }
@@ -482,7 +482,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -494,7 +494,7 @@ describe('SummaryLogsValidator integration', () => {
             value: 'Paper_and_board',
             location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION: {
+          ACCREDITATION_NUMBER: {
             value: '99999999',
             location: { sheet: 'Cover', row: 5, column: 'B' }
           }
@@ -521,7 +521,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -554,7 +554,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-456',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -590,7 +590,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-456',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -602,7 +602,7 @@ describe('SummaryLogsValidator integration', () => {
             value: 'Paper_and_board',
             location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION: {
+          ACCREDITATION_NUMBER: {
             value: '12345678',
             location: { sheet: 'Cover', row: 5, column: 'B' }
           }

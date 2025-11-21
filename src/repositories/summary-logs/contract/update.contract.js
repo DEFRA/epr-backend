@@ -280,7 +280,7 @@ export const testUpdateBehaviour = (it) => {
                   category: 'technical',
                   message: 'Missing required field',
                   code: 'MISSING_REQUIRED_FIELD',
-                  context: { field: 'REGISTRATION' }
+                  context: { field: 'REGISTRATION_NUMBER' }
                 }
               ]
             }
@@ -296,7 +296,7 @@ export const testUpdateBehaviour = (it) => {
             category: 'technical',
             message: 'Missing required field',
             code: 'MISSING_REQUIRED_FIELD',
-            context: { field: 'REGISTRATION' }
+            context: { field: 'REGISTRATION_NUMBER' }
           })
         })
 

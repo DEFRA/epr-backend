@@ -47,7 +47,7 @@ describe('transformValidationResponse', () => {
             message: 'Registration mismatch',
             code: 'REGISTRATION_MISMATCH',
             context: {
-              location: { field: 'REGISTRATION' },
+              location: { field: 'REGISTRATION_NUMBER' },
               actual: 'REG99999',
               expected: 'REG12345'
             }
@@ -62,7 +62,7 @@ describe('transformValidationResponse', () => {
           failures: [
             {
               code: 'REGISTRATION_MISMATCH',
-              location: { field: 'REGISTRATION' },
+              location: { field: 'REGISTRATION_NUMBER' },
               actual: 'REG99999',
               expected: 'REG12345'
             }

@@ -128,7 +128,7 @@ describe('Summary logs integration', () => {
     const summaryLogExtractor = createInMemorySummaryLogExtractor({
       'file-123': {
         meta: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
@@ -420,7 +420,7 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
@@ -677,7 +677,7 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
@@ -1040,7 +1040,7 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG12345',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
@@ -1224,7 +1224,7 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
@@ -1475,7 +1475,7 @@ describe('Summary logs integration', () => {
       const validationExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-12345',
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
@@ -1491,7 +1491,7 @@ describe('Summary logs integration', () => {
               value: 1,
               location: { sheet: 'Data', row: 4, column: 'B' }
             },
-            ACCREDITATION: {
+            ACCREDITATION_NUMBER: {
               value: 'ACC-2025-001',
               location: { sheet: 'Data', row: 5, column: 'B' }
             }
@@ -1504,7 +1504,7 @@ describe('Summary logs integration', () => {
       const transformationExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-12345',
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
@@ -1520,7 +1520,7 @@ describe('Summary logs integration', () => {
               value: 1,
               location: { sheet: 'Data', row: 4, column: 'B' }
             },
-            ACCREDITATION: {
+            ACCREDITATION_NUMBER: {
               value: 'ACC-2025-001',
               location: { sheet: 'Data', row: 5, column: 'B' }
             }

@@ -23,7 +23,7 @@ describe('validateRegistrationNumber', () => {
     }
     const parsed = {
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG12345'
         }
       }
@@ -53,7 +53,7 @@ describe('validateRegistrationNumber', () => {
     }
     const parsed = {
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG99999',
           location: { sheet: 'Cover', row: 12, column: 'F' }
         }
@@ -79,7 +79,7 @@ describe('validateRegistrationNumber', () => {
       sheet: 'Cover',
       row: 12,
       column: 'F',
-      field: 'REGISTRATION'
+      field: 'REGISTRATION_NUMBER'
     })
     expect(fatals[0].context.expected).toBe('REG12345')
     expect(fatals[0].context.actual).toBe('REG99999')
@@ -92,7 +92,7 @@ describe('validateRegistrationNumber', () => {
     }
     const parsed = {
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG12345'
         }
       }
@@ -117,7 +117,7 @@ describe('validateRegistrationNumber', () => {
     }
     const parsed = {
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG99999',
           location: { sheet: 'Cover', row: 12, column: 'F' }
         }
@@ -135,7 +135,7 @@ describe('validateRegistrationNumber', () => {
       sheet: 'Cover',
       row: 12,
       column: 'F',
-      field: 'REGISTRATION'
+      field: 'REGISTRATION_NUMBER'
     })
     expect(error.context.expected).toBe('REG12345')
     expect(error.context.actual).toBe('REG99999')
@@ -148,7 +148,7 @@ describe('validateRegistrationNumber', () => {
     }
     const parsed = {
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG99999'
         }
       }
@@ -173,7 +173,7 @@ describe('validateRegistrationNumber', () => {
     }
     const parsed = {
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG99999' // No location provided
         }
       }
@@ -188,7 +188,7 @@ describe('validateRegistrationNumber', () => {
     expect(result.isFatal()).toBe(true)
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals[0].context.location).toEqual({
-      field: 'REGISTRATION' // Only field is set when location is missing
+      field: 'REGISTRATION_NUMBER' // Only field is set when location is missing
     })
   })
 })

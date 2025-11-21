@@ -33,7 +33,7 @@ describe('Summary Log Markers', () => {
 
   describe('isEprMarker', () => {
     it('should return true for META_PREFIX markers', () => {
-      expect(isEprMarker('__EPR_META_REGISTRATION')).toBe(true)
+      expect(isEprMarker('__EPR_META_REGISTRATION_NUMBER')).toBe(true)
       expect(isEprMarker('__EPR_META_TEMPLATE_VERSION')).toBe(true)
     })
 

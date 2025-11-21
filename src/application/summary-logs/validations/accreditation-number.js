@@ -26,13 +26,13 @@ export const validateAccreditationNumber = ({
   const accreditationNumber = registration.accreditation?.accreditationNumber
   const accreditationField = extractMetaField(
     parsed,
-    SUMMARY_LOG_META_FIELDS.ACCREDITATION
+    SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER
   )
   const spreadsheetAccreditationNumber = accreditationField?.value
 
   const location = buildMetaFieldLocation(
     accreditationField,
-    SUMMARY_LOG_META_FIELDS.ACCREDITATION
+    SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER
   )
 
   // Case 1: Registration has accreditation → spreadsheet MUST match

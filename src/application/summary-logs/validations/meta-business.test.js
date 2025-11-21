@@ -3,10 +3,10 @@ import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
 describe('validateMetaBusiness', () => {
   const createValidMeta = () => ({
-    REGISTRATION: { value: 'WRN12345' },
+    REGISTRATION_NUMBER: { value: 'WRN12345' },
     PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
     MATERIAL: { value: 'Aluminium' },
-    ACCREDITATION: { value: 'ACC123' }
+    ACCREDITATION_NUMBER: { value: 'ACC123' }
   })
 
   const createValidRegistration = () => ({
@@ -39,7 +39,7 @@ describe('validateMetaBusiness', () => {
     const parsed = {
       meta: {
         ...createValidMeta(),
-        REGISTRATION: { value: 'WRN99999' }
+        REGISTRATION_NUMBER: { value: 'WRN99999' }
       }
     }
     const registration = createValidRegistration()
@@ -59,7 +59,7 @@ describe('validateMetaBusiness', () => {
     const parsed = {
       meta: {
         ...createValidMeta(),
-        REGISTRATION: { value: 'WRN99999' },
+        REGISTRATION_NUMBER: { value: 'WRN99999' },
         PROCESSING_TYPE: { value: 'EXPORTER' }
       }
     }

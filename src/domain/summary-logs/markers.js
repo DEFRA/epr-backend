@@ -8,7 +8,7 @@
 /** Base prefix for all EPR template markers */
 export const EPR_PREFIX = '__EPR'
 
-/** Marker prefix for metadata fields (e.g., __EPR_META_REGISTRATION) */
+/** Marker prefix for metadata fields (e.g., __EPR_META_REGISTRATION_NUMBER) */
 export const META_PREFIX = `${EPR_PREFIX}_META_`
 
 /** Marker prefix for data section starts (e.g., __EPR_DATA_UPDATE_WASTE_BALANCE) */
