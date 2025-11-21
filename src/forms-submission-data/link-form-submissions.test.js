@@ -1,12 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ObjectId } from 'mongodb'
-import { linkItemsToOrganisations } from './link-form-submissions.js'
+import {
+  linkItemsToOrganisations,
+  linkRegistrationToAccreditations
+} from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
     error: vi.fn(),
-    warn: vi.fn()
+    warn: vi.fn(),
+    info: vi.fn()
   }
 }))
 
@@ -163,5 +168,218 @@ describe('linkItemsToOrganisations', () => {
     ])
 
     expect(logger.error).not.toHaveBeenCalled()
+  })
+})
+
+describe('linkRegistrationToAccreditations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('link exporter registration to accreditation', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+  })
+
+  it('link reprocessor registration to accreditation', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+  })
+
+  it('dont link registration to accreditation when required fields doesnt match', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const acc1Id = new ObjectId().toString()
+    const reg2Id = new ObjectId().toString()
+    const acc2Id = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD
+          },
+          {
+            id: reg2Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.ALUMINIUM,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ],
+        accreditations: [
+          {
+            id: acc1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.ALUMINIUM,
+            site: { line1: '78', postcode: 'W1B 1NT' }
+          },
+          {
+            id: acc2Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.PAPER
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    for (const reg of result[0].registrations) {
+      expect(reg.accreditationId).toBeUndefined()
+    }
+  })
+
+  it('link registrations from multiple org to accreditations', () => {
+    const org1Id = new ObjectId().toString()
+    const org2Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const acc1Id = new ObjectId().toString()
+    const reg2Id = new ObjectId().toString()
+    const acc2Id = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD
+          }
+        ],
+        accreditations: [
+          {
+            id: acc1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD
+          }
+        ]
+      },
+      {
+        id: org2Id,
+        name: 'Org 2',
+        orgId: 101,
+        registrations: [
+          {
+            id: reg2Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.ALUMINIUM,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ],
+        accreditations: [
+          {
+            id: acc2Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.ALUMINIUM,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(2)
+    expect(result[0].registrations[0].accreditationId).toEqual(acc1Id)
+    expect(result[1].registrations[0].accreditationId).toEqual(acc2Id)
+  })
+
+  it('dont link when multiple registrations match to accreditation', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const reg2Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          },
+          {
+            id: reg2Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toBeUndefined()
   })
 })

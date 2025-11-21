@@ -1,4 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 function getItemsBySystemReference(items) {
   return items.reduce((itemsMap, item) => {
@@ -73,5 +74,51 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   }
   logOrganisationsWithoutItems(organisations, propertyName)
 
-  return [...organisationsById.values()]
+  return organisations
+}
+
+function isAccreditationForRegistration(accreditation, registration) {
+  return (
+    registration.wasteProcessingType === accreditation.wasteProcessingType &&
+    registration.material === accreditation.material &&
+    (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+      ? registration.site.line1 === accreditation.site.line1 &&
+        registration.site.postcode === accreditation.site.postcode
+      : true)
+  )
+}
+
+export function linkRegistrationToAccreditations(organisations) {
+  let linkedCount = 0
+  const totalAccreditationsCount = organisations.reduce(
+    (agg, org) => agg + org.accreditations.length,
+    0
+  )
+  for (const org of organisations) {
+    for (const accreditation of org.accreditations) {
+      const matchedRegistrations = org.registrations.filter((registration) =>
+        isAccreditationForRegistration(accreditation, registration)
+      )
+
+      if (matchedRegistrations.length === 1) {
+        matchedRegistrations[0].accreditationId = accreditation.id
+        linkedCount++
+      } else if (matchedRegistrations.length > 1) {
+        logger.warn({
+          message: `Multiple registrations matched for accreditation: accreditationId=${accreditation.id}, registrationIds=[${matchedRegistrations.map((r) => r.id).join(', ')}], orgId=${org.orgId}, org id:${org.id}`
+        })
+      } else {
+        logger.warn({
+          message: `No registrations matched for accreditation: accreditationId=${accreditation.id}, orgId=${org.orgId}, org id:${org.id}`
+        })
+      }
+    }
+  }
+
+  // Log summary
+  logger.info({
+    message: `Accreditation linking complete: ${linkedCount} linked, ${totalAccreditationsCount - linkedCount} unlinked`
+  })
+
+  return organisations
 }
