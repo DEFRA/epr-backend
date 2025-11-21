@@ -148,6 +148,7 @@
       "formSubmissionTime": "2025-08-21T19:34:44.944Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
+      "glassRecyclingProcess": null,
       "cbduNumber": "CBDU123456",
       "approvedPersons": [
         {
@@ -178,7 +179,7 @@
         }
       ],
       "noticeAddress": {
-        "line1": "7 Glass processing site",
+        "line1": "8 Export Centre",
         "town": "London",
         "postcode": "SW2A 0AA"
       }
@@ -202,6 +203,7 @@
         "postcode": "SW2A 0AA"
       },
       "material": "glass",
+      "glassRecyclingProcess": ["glass_re_melt"],
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "tonnageBand": "over_10000",
@@ -250,6 +252,7 @@
         "postcode": "SW2A 0AA"
       },
       "material": "glass",
+      "glassRecyclingProcess": ["glass_re_melt"],
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "tonnageBand": "over_10000",
@@ -294,6 +297,7 @@
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
       "material": "plastic",
+      "glassRecyclingProcess": null,
       "wasteProcessingType": "exporter",
       "prnIssuance": {
         "tonnageBand": "up_to_500",

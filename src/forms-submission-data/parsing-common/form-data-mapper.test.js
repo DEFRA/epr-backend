@@ -8,6 +8,7 @@ import {
   mapPartnerType,
   mapRegulator,
   mapTimeScale,
+  mapTonnageBand,
   mapValueType,
   mapWastePermitType,
   mapWasteProcessingType
@@ -436,5 +437,42 @@ describe('convertToNumber', () => {
 
   it.each([null, undefined])('should return undefined for %s', (input) => {
     expect(convertToNumber(input)).toBeUndefined()
+  })
+})
+
+describe('mapTonnageBand', () => {
+  it.each([
+    ['Up to 500 tonnes', 'up_to_500'],
+    ['Up to 5,000 tonnes', 'up_to_5000'],
+    ['Up to 5000 tonnes', 'up_to_5000'],
+    ['Up to 10,000 tonnes', 'up_to_10000'],
+    ['Up to 10000 tonnes', 'up_to_10000'],
+    ['Over 10,000 tonnes', 'over_10000']
+  ])('should map "%s" to "%s"', (input, expected) => {
+    expect(mapTonnageBand(input)).toBe(expected)
+  })
+
+  it('should handle whitespace', () => {
+    expect(mapTonnageBand('  Up to 500 tonnes  ')).toBe('up_to_500')
+  })
+
+  it('should throw error for invalid tonnage band', () => {
+    expect(() => mapTonnageBand('INVALID')).toThrow(
+      'Invalid tonnage band: "INVALID". Expected one of: Up to 500 tonnes, Up to 5,000 tonnes, Up to 5000 tonnes, Up to 10,000 tonnes, Up to 10000 tonnes, Over 10,000 tonnes'
+    )
+  })
+
+  it('should throw error for empty string', () => {
+    expect(() => mapTonnageBand('')).toThrow('Tonnage band value is required')
+  })
+
+  it('should throw error for null', () => {
+    expect(() => mapTonnageBand(null)).toThrow('Tonnage band value is required')
+  })
+
+  it('should throw error for undefined', () => {
+    expect(() => mapTonnageBand(undefined)).toThrow(
+      'Tonnage band value is required'
+    )
   })
 })
