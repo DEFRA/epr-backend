@@ -5,7 +5,7 @@
 * [Contributing](#contributing)
   * [Requirements](#requirements)
     * [Node.js](#nodejs)
-    * [Secrets](#secrets)
+    * [Environment variables](#environment-variables)
     * [ADR tools](#adr-tools)
   * [Documentation](#documentation)
     * [Architecture Decision Records (ADRs)](#architecture-decision-records-adrs)
@@ -62,16 +62,38 @@ cd epr-backend
 nvm use
 ```
 
-### Secrets
+### Environment variables
 
-Certain secrets are required to run this repository, to ensure these are safeguarded we use [Docker Compose Secrets](https://docs.docker.com/compose/how-tos/use-secrets/) during local development.
+Certain environment variables are required to run this repository, some of which are secrets. To ensure these are safeguarded we use [Docker Compose Secrets](https://docs.docker.com/compose/how-tos/use-secrets/) during local development.
 
-To configure these, please complete the following actions:
+#### Secrets
 
-1. Obtain the necessary secret values from a team member
-2. Create the following Env Var(s):
-   - `export GOVUK_NOTIFY_API_KEY=AskTeamMemberForSecretValue`
+The following environment variables are considered secrets. You must get their values from a team member.
+
+- `GOVUK_NOTIFY_API_KEY` : optional, needed if you plan to test email sending locally. You can provide any value if you don't plan to test email sending.
+
+#### Other environment-variables
+
+> ![IMPORTANT]
+> A full set of essential non-secret environment variables for this project can be found in the `cdp-app-config` repository.
+> The most updated configuration will always be the one there.
+
+These environment variables are needed if you want to test authenticated endpoints:
+
+- `ADMIN_UI_ENTRA_CLIENT_ID`: optional, needed if you plan to test the Entra tokens locally
+- `SERVICE_MAINTAINER_EMAILS`: optional, needed if you need to authenticate Entra tokens locally
+
+And these are used as feature flags. You need to set to `true` explicitly:
+
+- `FEATURE_FLAG_SUMMARY_LOGS`
+- `FEATURE_FLAG_FORMS_DATA_MIGRATION`
+- `FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS`
+
+A number of other useful env vars (`AUDIT_ENABLED`, `LOG_LEVEL`, etc) can be found by inspecting `config.js`.
+
 3. Optionally [persist these Env Vars in your CLI environment](https://unix.stackexchange.com/questions/117467/how-to-permanently-set-environmental-variables)
+
+The `.envrc` file is automatically excluded from source control. You are encouraged to keep your environment variables in it.
 
 > [!NOTE]
 > Docker Compose secrets cannot be accidentally exposed via `process.env`
