@@ -17,6 +17,9 @@ export const DATA_PREFIX = `${EPR_PREFIX}_DATA_`
 /** Special marker to skip a column in data collection */
 export const SKIP_COLUMN = `${EPR_PREFIX}_SKIP_COLUMN`
 
+/** Text value in a skip column that triggers row skipping */
+export const SKIP_ROW_TEXT = 'Example'
+
 /**
  * Helper to check if a header is an EPR marker
  * @param {string} header - Header value to check
