@@ -161,10 +161,10 @@ describe('migrateFormsData', () => {
           transformedOrg2
         )
 
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 2/2 organisation form submissions (0 failed)'
         })
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/1 registration form submissions (0 failed)'
         })
         expect(logger.info).toHaveBeenCalledWith({
@@ -198,10 +198,10 @@ describe('migrateFormsData', () => {
           transformedOrg1
         )
 
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/1 organisation form submissions (0 failed)'
         })
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 0/0 registration form submissions (0 failed)'
         })
         expect(logger.error).toHaveBeenCalledWith(
@@ -246,7 +246,7 @@ describe('migrateFormsData', () => {
           transformedOrg1
         )
 
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/1 organisation form submissions (0 failed)'
         })
         expect(logger.info).toHaveBeenCalledWith({
@@ -293,7 +293,7 @@ describe('migrateFormsData', () => {
             })
           })
         )
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/2 organisation form submissions (1 failed)'
         })
         expect(logger.info).toHaveBeenCalledWith({
@@ -334,7 +334,7 @@ describe('migrateFormsData', () => {
             })
           })
         )
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/2 registration form submissions (1 failed)'
         })
       })
@@ -383,7 +383,7 @@ describe('migrateFormsData', () => {
             })
           })
         )
-        expect(logger.error).toHaveBeenCalledWith({
+        expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/2 accreditation form submissions (1 failed)'
         })
       })
