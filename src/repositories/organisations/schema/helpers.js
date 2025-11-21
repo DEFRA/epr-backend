@@ -44,7 +44,7 @@ export const whenMaterial = (material, schema) =>
   Joi.when('material', {
     is: material,
     then: schema.required(),
-    otherwise: Joi.forbidden()
+    otherwise: Joi.valid(null).optional()
   })
 
 export const requiredForPermitAndReprocessor = (schema) =>

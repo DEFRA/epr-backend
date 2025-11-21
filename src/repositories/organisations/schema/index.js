@@ -3,5 +3,6 @@ export {
   validateOrganisationInsert,
   validateOrganisationUpdate,
   validateStatusHistory,
-  validateRegistration
+  validateRegistration,
+  validateAccreditation
 } from './validation.js'
