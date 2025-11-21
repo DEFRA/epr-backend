@@ -4,7 +4,8 @@ import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
 import {
   META_PREFIX,
   DATA_PREFIX,
-  SKIP_COLUMN
+  SKIP_COLUMN,
+  SKIP_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
@@ -77,6 +78,7 @@ const processDataMarker = (
       state: CollectionState.HEADERS,
       startColumn: colNumber + 1,
       headers: [],
+      skipColumnIndices: [],
       rows: [],
       currentRow: [],
       location: {
@@ -92,6 +94,7 @@ const processHeaderCell = (draftCollection, cellValueStr) => {
   if (cellValueStr === '') {
     draftCollection.state = CollectionState.ROWS
   } else if (cellValueStr === SKIP_COLUMN) {
+    draftCollection.skipColumnIndices.push(draftCollection.headers.length)
     draftCollection.headers.push(null)
   } else {
     draftCollection.headers.push(cellValueStr)
@@ -127,6 +130,16 @@ const updateCollectionWithCell = (
   }
 }
 
+const shouldSkipRow = (draftCollection) => {
+  for (const skipIndex of draftCollection.skipColumnIndices) {
+    const cellValue = draftCollection.currentRow[skipIndex]
+    if (cellValue === SKIP_ROW_TEXT) {
+      return true
+    }
+  }
+  return false
+}
+
 const finalizeRowForCollection = (draftCollection) => {
   if (draftCollection.state === CollectionState.HEADERS) {
     draftCollection.state = CollectionState.ROWS
@@ -138,6 +151,8 @@ const finalizeRowForCollection = (draftCollection) => {
     const isEmptyRow = draftCollection.currentRow.every((val) => val === null)
     if (isEmptyRow) {
       draftCollection.complete = true
+    } else if (shouldSkipRow(draftCollection)) {
+      draftCollection.currentRow = []
     } else {
       draftCollection.rows.push(draftCollection.currentRow)
       draftCollection.currentRow = []

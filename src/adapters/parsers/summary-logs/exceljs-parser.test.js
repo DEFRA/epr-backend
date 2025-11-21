@@ -703,6 +703,127 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('skip row functionality', () => {
+    it('should skip rows where skip column contains "Example" text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_SENT_ON',
+            'ROW_ID',
+            '__EPR_SKIP_COLUMN',
+            'DATE_LOAD_LEFT_SITE',
+            'WEIGHT'
+          ],
+          [null, 'row-1', 'Example', '2024-01-15', 100],
+          [null, 'row-2', '', '2024-01-16', 200],
+          [null, 'row-3', null, '2024-01-17', 300]
+        ]
+      })
+
+      expect(result.data.SENT_ON).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['ROW_ID', null, 'DATE_LOAD_LEFT_SITE', 'WEIGHT'],
+        rows: [
+          ['row-2', null, '2024-01-16', 200],
+          ['row-3', null, '2024-01-17', 300]
+        ]
+      })
+    })
+
+    it('should skip multiple example rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'ex-1', 'Example', 100],
+          [null, 'ex-2', 'Example', 200],
+          [null, 'real-1', '', 300],
+          [null, 'real-2', null, 400]
+        ]
+      })
+
+      expect(result.data.LOADS.rows).toEqual([
+        ['real-1', null, 300],
+        ['real-2', null, 400]
+      ])
+    })
+
+    it('should not skip rows where skip column contains other text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'row-1', 'Example', 100],
+          [null, 'row-2', 'Not Example', 200],
+          [null, 'row-3', 'example', 300],
+          [null, 'row-4', 'EXAMPLE', 400]
+        ]
+      })
+
+      expect(result.data.LOADS.rows).toEqual([
+        ['row-2', 'Not Example', 200],
+        ['row-3', 'example', 300],
+        ['row-4', 'EXAMPLE', 400]
+      ])
+    })
+
+    it('should skip row if any skip column contains "Example"', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_MULTI_SKIP',
+            'ID',
+            '__EPR_SKIP_COLUMN',
+            'VALUE',
+            '__EPR_SKIP_COLUMN'
+          ],
+          [null, 'row-1', 'Example', 100, ''],
+          [null, 'row-2', '', 200, 'Example'],
+          [null, 'row-3', '', 300, '']
+        ]
+      })
+
+      expect(result.data.MULTI_SKIP.rows).toEqual([['row-3', null, 300, null]])
+    })
+
+    it('should work with skip column as first header', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', '__EPR_SKIP_COLUMN', 'ID', 'VALUE'],
+          [null, 'Example', 'row-1', 100],
+          [null, '', 'row-2', 200]
+        ]
+      })
+
+      expect(result.data.LOADS.rows).toEqual([[null, 'row-2', 200]])
+    })
+
+    it('should still terminate section on empty row even after skipping example rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'row-1', 'Example', 100],
+          [null, 'row-2', '', 200],
+          [null, null, null, null]
+        ]
+      })
+
+      // The example row is skipped, and row-2 is included
+      expect(result.data.LOADS.rows).toEqual([['row-2', null, 200]])
+    })
+
+    it('should handle section with only example rows (results in empty rows array)', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_EMPTY_SECTION', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'ex-1', 'Example', 100],
+          [null, 'ex-2', 'Example', 200],
+          [null, null, null, null]
+        ]
+      })
+
+      expect(result.data.EMPTY_SECTION.rows).toEqual([])
+    })
+  })
+
   describe('partial empty rows', () => {
     it('should treat row with some nulls and some values as data row, not terminator', async () => {
       const result = await parseWorkbook({
