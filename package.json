@@ -99,7 +99,7 @@
     "prettier": "3.6.2",
     "testcontainers": "11.8.1",
     "tinybench": "5.1.0",
-    "vitest": "4.0.10",
+    "vitest": "4.0.12",
     "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.2"
   }
