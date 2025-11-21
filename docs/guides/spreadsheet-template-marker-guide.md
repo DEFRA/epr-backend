@@ -100,7 +100,7 @@ Marker names must follow these rules:
 - Use underscores to separate words (e.g., `DATE_RECEIVED`, not `DATERECEIVED`)
 - Choose names that describe the data, not the layout
 
-**Good names:** `__EPR_META_ACCREDITATION`, `__EPR_DATA_UPDATE_WASTE_BALANCE`
+**Good names:** `__EPR_META_ACCREDITATION_NUMBER`, `__EPR_DATA_UPDATE_WASTE_BALANCE`
 
 **Bad names:** `__EPR_META_TopSection`, `__EPR_DATA_TableOne`
 

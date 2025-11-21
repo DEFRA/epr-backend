@@ -44,7 +44,8 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result).toBeDefined()
       expect(result.meta).toBeDefined()
-      // Note: reprocessor.xlsx fixture actually contains markers, so meta is not empty
+      // Note: reprocessor.xlsx fixture contains old markers - REGISTRATION not REGISTRATION_NUMBER
+      // This test validates the parser works with the fixture file as-is
       expect(result.meta).toMatchObject({
         PROCESSING_TYPE: expect.any(Object),
         REGISTRATION: expect.any(Object),

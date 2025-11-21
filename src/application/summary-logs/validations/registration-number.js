@@ -27,13 +27,13 @@ export const validateRegistrationNumber = ({
 
   const registrationField = extractMetaField(
     parsed,
-    SUMMARY_LOG_META_FIELDS.REGISTRATION
+    SUMMARY_LOG_META_FIELDS.REGISTRATION_NUMBER
   )
   const spreadsheetRegistrationNumber = registrationField?.value
 
   const location = buildMetaFieldLocation(
     registrationField,
-    SUMMARY_LOG_META_FIELDS.REGISTRATION
+    SUMMARY_LOG_META_FIELDS.REGISTRATION_NUMBER
   )
 
   if (!registrationNumber) {

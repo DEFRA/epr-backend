@@ -14,7 +14,7 @@ import { VALIDATION_SEVERITY } from '#common/enums/index.js'
  * @property {string} [context.location.table] - Data table name (e.g., 'UPDATE_WASTE_BALANCE')
  * @property {number} [context.location.row] - Spreadsheet row number (1-based)
  * @property {string} [context.location.column] - Excel column letter (e.g., 'B', 'AA')
- * @property {string} [context.location.field] - Meta field name (e.g., 'REGISTRATION', 'MATERIAL')
+ * @property {string} [context.location.field] - Meta field name (e.g., 'REGISTRATION_NUMBER', 'MATERIAL')
  * @property {string} [context.location.header] - Data table column header (e.g., 'DATE_RECEIVED', 'TONNAGE')
  * @property {*} [context.expected] - The expected value (for mismatch errors)
  * @property {*} [context.actual] - The actual value that was provided (for validation errors)
