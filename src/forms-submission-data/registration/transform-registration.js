@@ -5,7 +5,7 @@ import {
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from '#formsubmission/parsing-common/parse-forms-data.js'
-import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.js'
+import { REGISTRATION } from './form-field-constants.js'
 import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 import {
   mapMaterial,
@@ -27,7 +27,7 @@ import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-me
  */
 function getWasteProcessingType(answersByShortDescription) {
   return answersByShortDescription[
-    FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
+    REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
   ]?.trim()
     ? WASTE_PROCESSING_TYPE.REPROCESSOR
     : WASTE_PROCESSING_TYPE.EXPORTER
@@ -35,16 +35,13 @@ function getWasteProcessingType(answersByShortDescription) {
 
 function getNoticeAddress(answersByShortDescription) {
   const noticeAddress =
-    answersByShortDescription[
-      FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.NOTICE_ADDRESS
-    ]
+    answersByShortDescription[REGISTRATION.SITE_DETAILS.fields.NOTICE_ADDRESS]
 
   return noticeAddress ? parseUkAddress(noticeAddress) : undefined
 }
 
 function getExportPorts(answersByShortDescription) {
-  const exportPorts =
-    answersByShortDescription[FORM_PAGES.REGISTRATION.EXPORT_PORTS]
+  const exportPorts = answersByShortDescription[REGISTRATION.EXPORT_PORTS]
 
   return exportPorts
     .split(/\r?\n/)
@@ -65,17 +62,17 @@ export function parseRegistrationSubmission(id, rawSubmissionData) {
     submittedToRegulator: extractAgencyFromDefinitionName(rawSubmissionData),
     orgId: convertToNumber(
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
+        REGISTRATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
       ],
       'orgId'
     ),
     systemReference:
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
+        REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
       ],
     orgName:
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
+        REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),
     site: isReprocessor
@@ -83,23 +80,19 @@ export function parseRegistrationSubmission(id, rawSubmissionData) {
       : undefined,
     noticeAddress: getNoticeAddress(answersByShortDescription),
     cbduNumber:
-      answersByShortDescription[
-        FORM_PAGES.REGISTRATION.WASTE_REGISTRATION_NUMBER
-      ],
+      answersByShortDescription[REGISTRATION.WASTE_REGISTRATION_NUMBER],
     material: mapMaterial(
-      answersByShortDescription[FORM_PAGES.REGISTRATION.MATERIAL_REGISTERED]
+      answersByShortDescription[REGISTRATION.MATERIAL_REGISTERED]
     ),
     glassRecyclingProcess: mapGlassRecyclingProcess(
-      answersByShortDescription[FORM_PAGES.REGISTRATION.GLASS_RECYCLING_PROCESS]
+      answersByShortDescription[REGISTRATION.GLASS_RECYCLING_PROCESS]
     ),
-    suppliers: answersByShortDescription[FORM_PAGES.REGISTRATION.SUPPLIERS],
+    suppliers: answersByShortDescription[REGISTRATION.SUPPLIERS],
     exportPorts: isExporter
       ? getExportPorts(answersByShortDescription)
       : undefined,
     plantEquipmentDetails: isReprocessor
-      ? answersByShortDescription[
-          FORM_PAGES.REGISTRATION.PLANT_EQUIPMENT_DETAILS
-        ]
+      ? answersByShortDescription[REGISTRATION.PLANT_EQUIPMENT_DETAILS]
       : undefined,
     wasteProcessingType,
     wasteManagementPermits: getWasteManagementPermits(
@@ -110,12 +103,12 @@ export function parseRegistrationSubmission(id, rawSubmissionData) {
     approvedPersons: getApprovedPersons(answersByShortDescription),
     samplingInspectionPlanPart1FileUploads: retrieveFileUploadDetails(
       rawSubmissionData,
-      FORM_PAGES.REGISTRATION.SIP_FILE_UPLOAD
+      REGISTRATION.SIP_FILE_UPLOAD
     ),
     orsFileUploads: isExporter
       ? retrieveFileUploadDetails(
           rawSubmissionData,
-          FORM_PAGES.REGISTRATION.ORS_FILE_UPLOAD
+          REGISTRATION.ORS_FILE_UPLOAD
         )
       : undefined,
     yearlyMetrics: getYearlyMetrics(

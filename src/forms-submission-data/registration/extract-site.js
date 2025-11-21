@@ -1,4 +1,4 @@
-import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.js'
+import { REGISTRATION } from './form-field-constants.js'
 import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 import {
   mapTimeScale,
@@ -8,40 +8,38 @@ import { MATERIAL } from '#domain/organisations/model.js'
 
 const SITE_CAPACITY_BY_MATERIALS = [
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_ALUMINIUM,
+    config: REGISTRATION.SITE_CAPACITY_ALUMINIUM,
     material: MATERIAL.ALUMINIUM
   },
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_FIBRE_BASED_COMPOSITE,
+    config: REGISTRATION.SITE_CAPACITY_FIBRE_BASED_COMPOSITE,
     material: MATERIAL.FIBRE
   },
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_GLASS,
+    config: REGISTRATION.SITE_CAPACITY_GLASS,
     material: MATERIAL.GLASS
   },
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_PAPER_OR_BOARD,
+    config: REGISTRATION.SITE_CAPACITY_PAPER_OR_BOARD,
     material: MATERIAL.PAPER
   },
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_PLASTIC,
+    config: REGISTRATION.SITE_CAPACITY_PLASTIC,
     material: MATERIAL.PLASTIC
   },
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_STEEL,
+    config: REGISTRATION.SITE_CAPACITY_STEEL,
     material: MATERIAL.STEEL
   },
   {
-    config: FORM_PAGES.REGISTRATION.SITE_CAPACITY_WOOD,
+    config: REGISTRATION.SITE_CAPACITY_WOOD,
     material: MATERIAL.WOOD
   }
 ]
 
 function getSiteAddress(answersByShortDescription) {
   const siteAddress =
-    answersByShortDescription[
-      FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
-    ]
+    answersByShortDescription[REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS]
 
   return parseUkAddress(siteAddress)
 }
@@ -74,7 +72,7 @@ export function getSiteDetails(answersByShortDescription, answersByPages) {
     address: getSiteAddress(answersByShortDescription),
     gridReference:
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.SITE_DETAILS.fields.GRID_REFERENCE
+        REGISTRATION.SITE_DETAILS.fields.GRID_REFERENCE
       ],
     siteCapacity: getSiteCapacity(answersByPages)
   }

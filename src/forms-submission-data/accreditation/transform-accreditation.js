@@ -11,12 +11,13 @@ import {
   mapGlassRecyclingProcess,
   mapMaterial
 } from '#formsubmission/parsing-common/form-data-mapper.js'
-import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.js'
+import { ACCREDITATION } from './form-field-constants.js'
+import { REGISTRATION } from '../registration/form-field-constants.js'
 import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
 
 function getWasteProcessingType(answersByShortDescription) {
   return answersByShortDescription[
-    FORM_PAGES.ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS
+    ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS
   ]?.trim()
     ? WASTE_PROCESSING_TYPE.REPROCESSOR
     : WASTE_PROCESSING_TYPE.EXPORTER
@@ -25,20 +26,16 @@ function getWasteProcessingType(answersByShortDescription) {
 function getSubmitterDetails(answersByShortDescription) {
   return {
     fullName:
-      answersByShortDescription[
-        FORM_PAGES.ACCREDITATION.SUBMITTER_DETAILS.fields.NAME
-      ],
+      answersByShortDescription[ACCREDITATION.SUBMITTER_DETAILS.fields.NAME],
     email:
-      answersByShortDescription[
-        FORM_PAGES.ACCREDITATION.SUBMITTER_DETAILS.fields.EMAIL
-      ],
+      answersByShortDescription[ACCREDITATION.SUBMITTER_DETAILS.fields.EMAIL],
     phone:
       answersByShortDescription[
-        FORM_PAGES.ACCREDITATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
+        ACCREDITATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
       ],
     title:
       answersByShortDescription[
-        FORM_PAGES.ACCREDITATION.SUBMITTER_DETAILS.fields.JOB_TITLE
+        ACCREDITATION.SUBMITTER_DETAILS.fields.JOB_TITLE
       ]
   }
 }
@@ -46,11 +43,8 @@ function getSubmitterDetails(answersByShortDescription) {
 function getSiteDetails(answersByShortDescription) {
   return {
     line1:
-      answersByShortDescription[
-        FORM_PAGES.ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS
-      ],
-    postcode:
-      answersByShortDescription[FORM_PAGES.ACCREDITATION.SITE.fields.POSTCODE]
+      answersByShortDescription[ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS],
+    postcode: answersByShortDescription[ACCREDITATION.SITE.fields.POSTCODE]
   }
 }
 
@@ -69,37 +63,37 @@ export function parseAccreditationSubmission(id, rawSubmissionData) {
     wasteProcessingType,
     orgId: convertToNumber(
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
+        REGISTRATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
       ],
       'orgId'
     ),
     material: mapMaterial(
       answersByShortDescription[
-        FORM_PAGES.ACCREDITATION.CATEGORY_TO_ACCREDIT.fields.MATERIAL
+        ACCREDITATION.CATEGORY_TO_ACCREDIT.fields.MATERIAL
       ]
     ),
     glassRecyclingProcess: mapGlassRecyclingProcess(
-      answersByShortDescription[FORM_PAGES.REGISTRATION.GLASS_RECYCLING_PROCESS]
+      answersByShortDescription[REGISTRATION.GLASS_RECYCLING_PROCESS]
     ),
     site: isReprocessor ? getSiteDetails(answersByShortDescription) : undefined,
     systemReference:
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
+        REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
       ],
     orgName:
       answersByShortDescription[
-        FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
+        REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     prnIssuance: getPrnIssuance(answersByShortDescription, rawSubmissionData),
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),
     samplingInspectionPlanPart2FileUploads: retrieveFileUploadDetails(
       rawSubmissionData,
-      FORM_PAGES.ACCREDITATION.SIP_FILE_UPLOAD_PART_2
+      ACCREDITATION.SIP_FILE_UPLOAD_PART_2
     ),
     orsFileUploads: isExporter
       ? retrieveFileUploadDetails(
           rawSubmissionData,
-          FORM_PAGES.ACCREDITATION.ORS_FILE_UPLOAD
+          ACCREDITATION.ORS_FILE_UPLOAD
         )
       : undefined
   }
