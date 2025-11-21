@@ -255,10 +255,10 @@ const baseConfig = {
         env: 'DEFRA_ID_OIDC_WELL_KNOWN_URL'
       },
       clientId: {
-        doc: 'The Defra Identity client ID.',
+        doc: 'EPR Frontend as audience',
         format: String,
-        default: 'f0b82f82-0698-4938-a874-6fd215c0c592',
-        env: 'DEFRA_ID_CLIENT_ID'
+        default: 'dbc093e4-3e78-411d-898d-88e45c1e8bc3',
+        env: 'EPR_FRONTEND_DEFRA_ID_CLIENT_ID'
       }
     }
   },
