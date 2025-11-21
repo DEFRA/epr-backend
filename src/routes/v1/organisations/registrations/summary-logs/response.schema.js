@@ -14,6 +14,7 @@ const validationIssueSchema = Joi.object({
     sheet: Joi.string().optional(),
     table: Joi.string().optional(),
     row: Joi.number().optional(),
+    rowId: Joi.string().optional(),
     header: Joi.string().optional(),
     column: Joi.string().optional()
   }).optional()
