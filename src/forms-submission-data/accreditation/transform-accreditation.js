@@ -2,6 +2,7 @@ import {
   extractAgencyFromDefinitionName,
   extractAnswers,
   extractTimestamp,
+  extractWasteProcessingType,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from '#formsubmission/parsing-common/parse-forms-data.js'
@@ -12,16 +13,7 @@ import {
   mapMaterial
 } from '#formsubmission/parsing-common/form-data-mapper.js'
 import { ACCREDITATION } from './form-field-constants.js'
-import { REGISTRATION } from '../registration/form-field-constants.js'
 import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
-
-function getWasteProcessingType(answersByShortDescription) {
-  return answersByShortDescription[
-    ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS
-  ]?.trim()
-    ? WASTE_PROCESSING_TYPE.REPROCESSOR
-    : WASTE_PROCESSING_TYPE.EXPORTER
-}
 
 function getSubmitterDetails(answersByShortDescription) {
   return {
@@ -51,7 +43,7 @@ function getSiteDetails(answersByShortDescription) {
 export function parseAccreditationSubmission(id, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
-  const wasteProcessingType = getWasteProcessingType(answersByShortDescription)
+  const wasteProcessingType = extractWasteProcessingType(rawSubmissionData)
   const isReprocessor =
     wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const isExporter = !isReprocessor
@@ -63,7 +55,7 @@ export function parseAccreditationSubmission(id, rawSubmissionData) {
     wasteProcessingType,
     orgId: convertToNumber(
       answersByShortDescription[
-        REGISTRATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
+        ACCREDITATION.ORGANISATION_DETAILS.fields.ORGANISATION_ID
       ],
       'orgId'
     ),
@@ -73,16 +65,16 @@ export function parseAccreditationSubmission(id, rawSubmissionData) {
       ]
     ),
     glassRecyclingProcess: mapGlassRecyclingProcess(
-      answersByShortDescription[REGISTRATION.GLASS_RECYCLING_PROCESS]
+      answersByShortDescription[ACCREDITATION.GLASS_RECYCLING_PROCESS]
     ),
     site: isReprocessor ? getSiteDetails(answersByShortDescription) : undefined,
     systemReference:
       answersByShortDescription[
-        REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
+        ACCREDITATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
       ],
     orgName:
       answersByShortDescription[
-        REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME
+        ACCREDITATION.ORGANISATION_DETAILS.fields.ORG_NAME
       ],
     prnIssuance: getPrnIssuance(answersByShortDescription, rawSubmissionData),
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),

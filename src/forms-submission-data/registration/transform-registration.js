@@ -2,6 +2,7 @@ import {
   extractAgencyFromDefinitionName,
   extractAnswers,
   extractTimestamp,
+  extractWasteProcessingType,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from '#formsubmission/parsing-common/parse-forms-data.js'
@@ -20,18 +21,6 @@ import {
   getApprovedPersons
 } from '#formsubmission/registration/extract-contacts.js'
 import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
-
-/**
- * @param {Object} answersByShortDescription
- * @returns {import('#domain/organisations/model.js').WasteProcessingTypeValue}
- */
-function getWasteProcessingType(answersByShortDescription) {
-  return answersByShortDescription[
-    REGISTRATION.SITE_DETAILS.fields.SITE_ADDRESS
-  ]?.trim()
-    ? WASTE_PROCESSING_TYPE.REPROCESSOR
-    : WASTE_PROCESSING_TYPE.EXPORTER
-}
 
 function getNoticeAddress(answersByShortDescription) {
   const noticeAddress =
@@ -52,7 +41,7 @@ function getExportPorts(answersByShortDescription) {
 export function parseRegistrationSubmission(id, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
-  const wasteProcessingType = getWasteProcessingType(answersByShortDescription)
+  const wasteProcessingType = extractWasteProcessingType(rawSubmissionData)
   const isReprocessor =
     wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const isExporter = !isReprocessor

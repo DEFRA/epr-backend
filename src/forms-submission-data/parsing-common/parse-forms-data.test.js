@@ -3,6 +3,7 @@ import {
   extractAnswers,
   extractRepeaters,
   extractTimestamp,
+  extractWasteProcessingType,
   findFirstValue,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
@@ -18,7 +19,10 @@ import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-n
 
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { REGULATOR } from '#domain/organisations/model.js'
+import {
+  REGULATOR,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 describe('extractRepeaters', () => {
   const ltdPartnershipPage = ORGANISATION.LTD_PARTNERSHIP_DETAILS
@@ -764,5 +768,39 @@ describe('findFirstValue', () => {
   it('should return undefined for empty field list', () => {
     const answers = { field1: 'value1' }
     expect(findFirstValue(answers, [])).toBeUndefined()
+  })
+})
+
+describe('extractWasteProcessingTypeFromDefinitionName', () => {
+  it('should extract EXPORTER from definition name', () => {
+    expect(
+      extractWasteProcessingType(exporterRegistration.rawSubmissionData)
+    ).toBe(WASTE_PROCESSING_TYPE.EXPORTER)
+  })
+
+  it('should extract REPROCESSOR from definition name', () => {
+    expect(
+      extractWasteProcessingType(reprocessorAllMaterials.rawSubmissionData)
+    ).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
+  })
+
+  it('should throw error when definition.name is missing', () => {
+    expect(() => extractWasteProcessingType({})).toThrow(
+      'extractWasteProcessingTypeFromDefinitionName: Missing definition.name'
+    )
+  })
+
+  it('should throw error with definition name when type cannot be determined', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          name: 'Invalid form name'
+        }
+      }
+    }
+
+    expect(() => extractWasteProcessingType(mockData)).toThrow(
+      'extractWasteProcessingTypeFromDefinitionName: Cannot determine waste processing type from definition name: "Invalid form name"'
+    )
   })
 })
