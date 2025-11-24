@@ -87,20 +87,20 @@
     "glob": "11.1.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.12",
+    "@vitest/coverage-v8": "4.0.13",
     "eslint": "9.39.1",
     "eslint-plugin-n": "17.23.1",
     "husky": "9.1.7",
     "knip": "5.70.1",
     "lint-staged": "16.2.7",
-    "msw": "2.12.2",
+    "msw": "2.12.3",
     "neostandard": "0.12.2",
     "nodemon": "3.1.11",
     "prettier": "3.6.2",
     "testcontainers": "11.8.1",
     "tinybench": "5.1.0",
-    "vitest": "4.0.12",
+    "vitest": "4.0.13",
     "vitest-fetch-mock": "0.4.5",
-    "vitest-mongodb": "1.0.2"
+    "vitest-mongodb": "1.0.3"
   }
 }
