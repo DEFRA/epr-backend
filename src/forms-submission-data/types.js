@@ -5,6 +5,20 @@
  */
 
 /**
+ * @typedef {Object} DefraIdLinkedBy
+ * @property {string} email
+ * @property {string} id
+ */
+
+/**
+ * @typedef {Object} DefraId
+ * @property {string} orgId
+ * @property {string} orgName
+ * @property {DefraIdLinkedBy} linkedBy
+ * @property {string} linkedAt
+ */
+
+/**
  * @typedef {Object} OrganisationUser
  * @property {string} fullName
  * @property {string} email
@@ -27,6 +41,7 @@
  * @property {User} [managementContactDetails]
  * @property {Date} formSubmissionTime
  * @property {string} submittedToRegulator
+ * @property {DefraId} [defraId]
  */
 
 /**

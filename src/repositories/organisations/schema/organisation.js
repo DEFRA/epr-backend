@@ -1,23 +1,24 @@
-import Joi from 'joi'
 import {
-  STATUS,
-  REGULATOR,
-  WASTE_PROCESSING_TYPE,
+  BUSINESS_TYPE,
   NATION,
-  BUSINESS_TYPE
+  REGULATOR,
+  STATUS,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import {
-  idSchema,
-  companyDetailsSchema,
-  partnershipSchema,
-  userSchema,
-  collatedUserSchema
-} from './base.js'
-import { registrationSchema, registrationUpdateSchema } from './registration.js'
+import Joi from 'joi'
 import {
   accreditationSchema,
   accreditationUpdateSchema
 } from './accreditation.js'
+import {
+  collatedUserSchema,
+  companyDetailsSchema,
+  defraIdSchema,
+  idSchema,
+  partnershipSchema,
+  userSchema
+} from './base.js'
+import { registrationSchema, registrationUpdateSchema } from './registration.js'
 
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
@@ -67,6 +68,7 @@ export const organisationInsertSchema = Joi.object({
   partnership: partnershipSchema.optional(),
   submitterContactDetails: userSchema.required(),
   managementContactDetails: userSchema.optional(),
+  defraId: defraIdSchema.optional(),
   users: Joi.array().items(collatedUserSchema).optional(),
   formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()

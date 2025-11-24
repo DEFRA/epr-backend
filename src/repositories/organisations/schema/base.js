@@ -32,19 +32,32 @@ export const addressSchema = Joi.object({
   fullAddress: Joi.string().optional()
 })
 
-export const userSchema = Joi.object({
+const baseUserSchema = Joi.object({
   fullName: Joi.string().required(),
-  email: Joi.string().email().required(),
-  phone: Joi.string().required(),
-  role: Joi.string().optional(),
-  title: Joi.string().optional()
-}).or('role', 'title')
+  email: Joi.string().email().required()
+})
 
-export const collatedUserSchema = Joi.object({
-  fullName: Joi.string().required(),
-  email: Joi.string().email().required(),
+export const userSchema = baseUserSchema
+  .keys({
+    phone: Joi.string().required(),
+    role: Joi.string().optional(),
+    title: Joi.string().optional()
+  })
+  .or('role', 'title')
+
+export const collatedUserSchema = baseUserSchema.keys({
   isInitialUser: Joi.boolean().required(),
   roles: Joi.array().items(Joi.string()).min(1).required()
+})
+
+export const defraIdSchema = Joi.object({
+  orgId: Joi.string().uuid().required(),
+  orgName: Joi.string().required(),
+  linkedBy: Joi.object({
+    email: Joi.string().email().required(),
+    id: Joi.string().uuid().required()
+  }).required(),
+  linkedAt: Joi.date().iso().required()
 })
 
 export const statusHistoryItemSchema = Joi.object({
