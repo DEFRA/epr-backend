@@ -78,7 +78,9 @@ export async function createIndexes(db) {
  * @returns {Promise<void>}
  */
 export async function createSeedData(db) {
-  const organisationDocCount = await db.collection('organisation').count()
+  const organisationDocCount = await db
+    .collection('organisation')
+    .countDocuments()
 
   if (organisationDocCount === 0) {
     const organisationAnswers = extractAnswers(organisationFixture)
