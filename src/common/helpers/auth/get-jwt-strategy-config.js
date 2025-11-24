@@ -58,7 +58,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
           const scope = []
 
           return {
-            isValid: true,
+            isValid: scope.length > 0,
             credentials: {
               id: contactId,
               email,

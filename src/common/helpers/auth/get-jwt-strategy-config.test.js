@@ -93,7 +93,7 @@ describe('#getJwtStrategyConfig', () => {
     })
   })
 
-  describe('validate function - Entra ID tokens (always enabled)', () => {
+  describe('validate function - Entra ID tokens', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
         if (key === 'oidc.entraId.clientId') return mockEntraClientId
@@ -433,11 +433,6 @@ describe('#getJwtStrategyConfig', () => {
     })
   })
 
-  // ============================================================================
-  // FEATURE FLAG: defraIdAuth
-  // When this feature is fully rolled out, remove this entire describe block
-  // and the feature flag from the implementation
-  // ============================================================================
   describe('Feature Flag: defraIdAuth = true', () => {
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
@@ -469,7 +464,7 @@ describe('#getJwtStrategyConfig', () => {
         const result = await config.validate(artifacts)
 
         expect(result).toEqual({
-          isValid: true,
+          isValid: false,
           credentials: {
             id: 'defra-contact-123',
             email: 'defra-user@example.com',
@@ -554,7 +549,7 @@ describe('#getJwtStrategyConfig', () => {
 
         expect(result.credentials.id).toBe('')
         expect(result.credentials.email).toBe('')
-        expect(result.isValid).toBe(true)
+        expect(result.isValid).toBe(false)
       })
 
       test('calls config.get for Defra ID client ID', async () => {
