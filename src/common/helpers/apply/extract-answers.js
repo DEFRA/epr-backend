@@ -1,6 +1,40 @@
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 import { getConfig } from '../../../config.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 
+/**
+ * @typedef {Object} Component
+ * @property {string} name
+ * @property {string} shortDescription
+ * @property {string} title
+ * @property {string} type
+ */
+
+/**
+ * @typedef {Object} Page
+ * @property {Component[]} components
+ */
+
+/**
+ * @typedef {Object} FormPayload
+ * @property {Object} [meta]
+ * @property {Object} [meta.definition]
+ * @property {Page[]} [meta.definition.pages]
+ * @property {Object} [data]
+ * @property {Object.<string, *>} [data.main]
+ */
+
+/**
+ * @typedef {Object} Answer
+ * @property {string} shortDescription
+ * @property {string} title
+ * @property {string} type
+ * @property {*} value
+ */
+
+/**
+ * @param {FormPayload} payload
+ * @returns {Answer[]}
+ */
 export function extractAnswers(payload) {
   return (
     payload?.meta?.definition?.pages?.reduce((prev, { components }) => {
@@ -28,6 +62,11 @@ export function extractAnswers(payload) {
   )
 }
 
+/**
+ * Extracts email from answers
+ * @param {Answer[]} answers
+ * @returns {string | undefined}
+ */
 export function extractEmail(answers) {
   return answers.find(
     ({ shortDescription }) =>
@@ -35,6 +74,11 @@ export function extractEmail(answers) {
   )?.value
 }
 
+/**
+ * Extracts organisation id from answers
+ * @param {Answer[]} answers
+ * @returns {number | undefined}
+ */
 export function extractOrgId(answers) {
   const { value } =
     answers.find(
@@ -47,6 +91,11 @@ export function extractOrgId(answers) {
   return isNaN(orgId) ? undefined : orgId
 }
 
+/**
+ * Extracts organisation name from answers
+ * @param {Answer[]} answers
+ * @returns {string | undefined}
+ */
 export function extractOrgName(answers) {
   return answers.find(
     ({ shortDescription }) =>
@@ -54,6 +103,11 @@ export function extractOrgName(answers) {
   )?.value
 }
 
+/**
+ * Extracts reference number from answers
+ * @param {Answer[]} answers
+ * @returns {string | undefined}
+ */
 export function extractReferenceNumber(answers) {
   return answers.find(
     ({ shortDescription }) =>
@@ -61,6 +115,11 @@ export function extractReferenceNumber(answers) {
   )?.value
 }
 
+/**
+ * Extracts reference number from answers
+ * @param {Answer[]} answers
+ * @returns {string | undefined}
+ */
 export function getRegulatorEmail({ meta }) {
   const config = getConfig()
   const { name } = meta?.definition ?? {}
