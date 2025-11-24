@@ -288,6 +288,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS'
+    },
+    defraIdAuth: {
+      doc: 'Feature Flag: Enable Defra Id authentication strategy',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
     }
   }
 }

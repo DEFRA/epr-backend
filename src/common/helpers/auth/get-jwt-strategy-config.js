@@ -47,22 +47,24 @@ export function getJwtStrategyConfig(oidcConfigs) {
         }
       }
 
-      if (issuer === defraIdOidcConfig.issuer) {
-        const frontendClientId = config.get('oidc.defraId.clientId')
-        if (audience !== frontendClientId) {
-          throw Boom.forbidden('Invalid audience for Defra Id token')
-        }
+      if (config.get('featureFlags.defraIdAuth')) {
+        if (issuer === defraIdOidcConfig.issuer) {
+          const frontendClientId = config.get('oidc.defraId.clientId')
+          if (audience !== frontendClientId) {
+            throw Boom.forbidden('Invalid audience for Defra Id token')
+          }
 
-        // Placeholder for Defra Id token scope/roles
-        const scope = []
+          // Placeholder for Defra Id token scope/roles
+          const scope = []
 
-        return {
-          isValid: true,
-          credentials: {
-            id: contactId,
-            email,
-            issuer,
-            scope
+          return {
+            isValid: scope.length > 0,
+            credentials: {
+              id: contactId,
+              email,
+              issuer,
+              scope
+            }
           }
         }
       }

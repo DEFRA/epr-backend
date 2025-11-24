@@ -40,6 +40,7 @@ process.env.AUDIT_ENABLED = 'true'
 process.env.FEATURE_FLAG_SUMMARY_LOGS = 'false'
 process.env.FEATURE_FLAG_FORMS_DATA_MIGRATION = 'false'
 process.env.FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS = 'false'
+process.env.FEATURE_FLAG_DEFRA_ID_AUTH = 'false'
 
 beforeAll(async () => {
   // Setup fetch mock

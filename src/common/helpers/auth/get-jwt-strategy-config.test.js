@@ -335,6 +335,16 @@ describe('#getJwtStrategyConfig', () => {
   })
 
   describe('edge cases', () => {
+    let previousDefraIdAuthFlag
+    beforeEach(() => {
+      previousDefraIdAuthFlag = process.env.DEFRA_ID_AUTH_ENABLED
+      process.env.DEFRA_ID_AUTH_ENABLED = 'true'
+    })
+
+    afterEach(() => {
+      process.env.DEFRA_ID_AUTH_ENABLED = previousDefraIdAuthFlag
+    })
+
     test('handles token payload with missing email field', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
