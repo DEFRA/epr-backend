@@ -99,11 +99,7 @@ async function fetchAndTransformSubmissions({
   return results
 }
 
-async function upsertOrganisations(
-  organisations,
-  organisationsRepository,
-  transformedOrganisations
-) {
+async function upsertOrganisations(organisations, organisationsRepository) {
   const migrationPromises = organisations.map((transformedOrganisation) => {
     return organisationsRepository
       .upsert(removeUndefinedValues(transformedOrganisation))
@@ -148,7 +144,7 @@ async function upsertOrganisations(
   ).length
 
   logger.info({
-    message: `Migration completed: ${successful.length}/${transformedOrganisations.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${unchangedCount} unchanged, ${failed.length} failed)`
+    message: `Migration completed: ${successful.length}/${organisations.length} organisations processed (${insertedCount} inserted, ${updatedCount} updated, ${unchangedCount} unchanged, ${failed.length} failed)`
   })
 }
 
@@ -164,7 +160,7 @@ export async function migrateFormsData(
   organisationsRepository
 ) {
   /** @type {BaseOrganisation[]} */
-  const transformedOrganisations = await fetchAndTransformSubmissions({
+  const baseOrganisations = await fetchAndTransformSubmissions({
     repository: formsSubmissionRepository,
     fetchMethod: 'findAllOrganisations',
     parseFunction: parseOrgSubmission,
@@ -185,7 +181,7 @@ export async function migrateFormsData(
 
   /** @type {OrganisationWithRegistrations[]} */
   const organisationsWithRegistrations = linkRegistrations(
-    transformedOrganisations,
+    baseOrganisations,
     transformedRegistrations
   )
 
@@ -211,11 +207,7 @@ export async function migrateFormsData(
     })
   )
 
-  await upsertOrganisations(
-    organisations,
-    organisationsRepository,
-    transformedOrganisations
-  )
+  await upsertOrganisations(organisations, organisationsRepository)
 }
 
 function linkRegistrations(organisations, registrations) {
