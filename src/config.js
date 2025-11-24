@@ -258,7 +258,7 @@ const baseConfig = {
         doc: 'EPR Frontend as audience',
         format: String,
         default: 'dbc093e4-3e78-411d-898d-88e45c1e8bc3',
-        env: 'EPR_FRONTEND_DEFRA_ID_CLIENT_ID'
+        env: 'DEFRA_ID_CLIENT_ID'
       }
     }
   },
