@@ -1,9 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { collateUsers } from './collate-users.js'
 
 describe('collateUsers', () => {
   describe('submitterContactDetails', () => {
-    it('includes submitter contact details as a user', () => {
+    it('should include submitter contact details as a user', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'John Smith',
@@ -22,7 +22,7 @@ describe('collateUsers', () => {
       })
     })
 
-    it('handles missing submitterContactDetails', () => {
+    it('should handle missing submitterContactDetails', () => {
       const organisation = {}
 
       const result = collateUsers(organisation)
@@ -30,7 +30,7 @@ describe('collateUsers', () => {
       expect(result).toEqual([])
     })
 
-    it('normalises email to lowercase for deduplication', () => {
+    it('should normalise email to lowercase for deduplication', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'John Smith',
@@ -46,7 +46,7 @@ describe('collateUsers', () => {
   })
 
   describe('deduplication', () => {
-    it('deduplicates submitter who also appears as approved person', () => {
+    it('should deduplicate submitter who also appears as approved person', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'John Smith',
@@ -75,7 +75,7 @@ describe('collateUsers', () => {
       })
     })
 
-    it('deduplicates by email case-insensitively', () => {
+    it('should deduplicate by email case-insensitively', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'John Smith',
@@ -98,7 +98,7 @@ describe('collateUsers', () => {
       expect(result).toHaveLength(1)
     })
 
-    it('deduplicates submitter who also appears as accreditation signatory', () => {
+    it('should deduplicate submitter who also appears as accreditation signatory', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'Carol White',
@@ -129,7 +129,7 @@ describe('collateUsers', () => {
       })
     })
 
-    it('deduplicates across all three sources', () => {
+    it('should deduplicate across all three sources', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'John Smith',
@@ -167,7 +167,7 @@ describe('collateUsers', () => {
   })
 
   describe('multiple sources', () => {
-    it('collates users from submitter, registrations and accreditations', () => {
+    it('should collate users from submitter, registrations and accreditations', () => {
       const organisation = {
         submitterContactDetails: {
           fullName: 'John Smith',
@@ -207,6 +207,97 @@ describe('collateUsers', () => {
           'bob@example.com'
         ])
       )
+    })
+  })
+
+  describe('handle missing data', () => {
+    it('should handle null approvedPersons array', () => {
+      const organisation = {
+        submitterContactDetails: {
+          fullName: 'John Smith',
+          email: 'john@example.com'
+        },
+        registrations: [
+          {
+            approvedPersons: null
+          }
+        ]
+      }
+
+      const result = collateUsers(organisation)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].email).toBe('john@example.com')
+    })
+
+    it('should handle undefined approvedPersons array', () => {
+      const organisation = {
+        submitterContactDetails: {
+          fullName: 'John Smith',
+          email: 'john@example.com'
+        },
+        registrations: [{}]
+      }
+
+      const result = collateUsers(organisation)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].email).toBe('john@example.com')
+    })
+
+    it('should handle missing prnIssuance', () => {
+      const organisation = {
+        submitterContactDetails: {
+          fullName: 'John Smith',
+          email: 'john@example.com'
+        },
+        accreditations: [{}]
+      }
+
+      const result = collateUsers(organisation)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].email).toBe('john@example.com')
+    })
+
+    it('should handle null signatories array', () => {
+      const organisation = {
+        submitterContactDetails: {
+          fullName: 'John Smith',
+          email: 'john@example.com'
+        },
+        accreditations: [
+          {
+            prnIssuance: {
+              signatories: null
+            }
+          }
+        ]
+      }
+
+      const result = collateUsers(organisation)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].email).toBe('john@example.com')
+    })
+
+    it('should handle undefined signatories array', () => {
+      const organisation = {
+        submitterContactDetails: {
+          fullName: 'John Smith',
+          email: 'john@example.com'
+        },
+        accreditations: [
+          {
+            prnIssuance: {}
+          }
+        ]
+      }
+
+      const result = collateUsers(organisation)
+
+      expect(result).toHaveLength(1)
+      expect(result[0].email).toBe('john@example.com')
     })
   })
 })

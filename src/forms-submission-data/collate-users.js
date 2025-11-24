@@ -43,7 +43,7 @@ export function collateUsers(organisation) {
 /**
  * Deduplicates users by email address
  *
- * @param {Partial<User>[]} users
+ * @param {User[]} users
  * @returns {OrganisationUser[]}
  */
 function deduplicateUsers(users) {
