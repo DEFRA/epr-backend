@@ -1100,4 +1100,183 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
     })
   })
+
+  describe('skip row functionality', () => {
+    it('should skip rows with "Example" text in skip column', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            'DATE_RECEIVED',
+            '__EPR_SKIP_COLUMN',
+            'SUPPLIER_REF'
+          ],
+          [null, 12345678910, '2025-05-25', 'Example', 'ABC123'],
+          [null, 98765432100, '2025-05-26', null, 'DEF456'],
+          [null, 11122233344, '2025-05-27', null, 'GHI789']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED', null, 'SUPPLIER_REF'],
+        rows: [
+          [98765432100, '2025-05-26', null, 'DEF456'],
+          [11122233344, '2025-05-27', null, 'GHI789']
+        ]
+      })
+    })
+
+    it('should skip multiple example rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED'
+          ],
+          [null, 12345678910, 'Example', '2025-05-25'],
+          [null, 98765432100, 'Example', '2025-05-26'],
+          [null, 11122233344, null, '2025-05-27']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [11122233344, null, '2025-05-27']
+      ])
+    })
+
+    it('should not skip rows when skip column has value other than "Example"', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED'
+          ],
+          [null, 12345678910, 'NotExample', '2025-05-25'],
+          [null, 98765432100, 'EXAMPLE', '2025-05-26'],
+          [null, 11122233344, 'example', '2025-05-27']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, 'NotExample', '2025-05-25'],
+        [98765432100, 'EXAMPLE', '2025-05-26'],
+        [11122233344, 'example', '2025-05-27']
+      ])
+    })
+
+    it('should handle skip row with multiple skip columns', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED',
+            '__EPR_SKIP_COLUMN'
+          ],
+          [null, 12345678910, null, '2025-05-25', 'Example'],
+          [null, 98765432100, 'Example', '2025-05-26', 'keep'],
+          [null, 11122233344, null, '2025-05-27', 'keep']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [11122233344, null, '2025-05-27', 'keep']
+      ])
+    })
+
+    it('should not skip rows when no skip column is defined', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [null, 'Example', '2025-05-26']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, '2025-05-25'],
+        ['Example', '2025-05-26']
+      ])
+    })
+  })
+
+  describe('placeholder text normalization', () => {
+    it('should normalize "Choose option" to null in data rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'STATUS', 'TYPE'],
+          [null, 12345678910, 'Choose option', 'Choose option'],
+          [null, 98765432100, 'Active', 'Choose option']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, null, null],
+        [98765432100, 'Active', null]
+      ])
+    })
+
+    it('should treat rows with mix of empty and "Choose option" as empty and terminate section', async () => {
+      // Realistic scenario: blank rows have empty cells plus dropdown defaults
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            'DATE',
+            'EWC_CODE',
+            'WEIGHT'
+          ],
+          [null, 12345678910, '2025-01-15', '03 03 08', 1000],
+          [null, null, null, 'Choose option', null], // Blank row: empty + dropdown default
+          [null, 'This should be ignored', '2025-12-31', '03 03 08', 9999]
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, '2025-01-15', '03 03 08', 1000]
+      ])
+    })
+
+    it('should not normalize "Choose option" in metadata values', async () => {
+      const result = await parseWorkbook({
+        Test: [['__EPR_META_DROPDOWN_DEFAULT', 'Choose option']]
+      })
+
+      expect(result.meta.DROPDOWN_DEFAULT.value).toBe('Choose option')
+    })
+
+    it('should handle mixed empty values and placeholder text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'COL_A', 'COL_B', 'COL_C', 'COL_D'],
+          [null, null, '', 'Choose option', 'actual value']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [null, null, null, 'actual value']
+      ])
+    })
+
+    it('should be case-sensitive for placeholder text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'COL_A', 'COL_B', 'COL_C'],
+          [null, 'Choose option', 'CHOOSE OPTION', 'choose Option']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [null, 'CHOOSE OPTION', 'choose Option']
+      ])
+    })
+  })
 })
