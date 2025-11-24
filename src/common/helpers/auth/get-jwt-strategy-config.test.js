@@ -628,6 +628,29 @@ describe('#getJwtStrategyConfig', () => {
         expect(defraResult.credentials.scope).toEqual([])
       })
     })
+
+    describe('unrecognized issuer handling', () => {
+      test('throws bad request error for unrecognized issuer when defraIdAuth is true', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const unknownIssuer = 'https://unknown-issuer.example.com'
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: unknownIssuer,
+              aud: 'some-client-id',
+              id: 'contact-123',
+              email: 'user@example.com'
+            }
+          }
+        }
+
+        await expect(config.validate(artifacts)).rejects.toThrow(
+          Boom.badRequest(`Unrecognized token issuer: ${unknownIssuer}`)
+        )
+      })
+    })
   })
 
   // ============================================================================
