@@ -1,0 +1,47 @@
+import Boom from '@hapi/boom'
+import {
+  findOrganisationMatches,
+  getDefraTokenSummary
+} from '#common/helpers/auth/roles/helpers.js'
+
+/**
+ * @typedef {'trace'|'debug'|'info'|'warn'|'error'|'fatal'} LogLevel
+ */
+
+/**
+ * @param {object} tokenPayload - The OIDC token payload containing user and organization data
+ */
+export async function getUsersOrganisationInfo(
+  tokenPayload,
+  organisationsRepository
+) {
+  const { email } = tokenPayload
+
+  try {
+    const { defraIdOrgId } = getDefraTokenSummary(tokenPayload)
+
+    // No defraIdOrgId to link
+    if (!defraIdOrgId) {
+      throw Boom.forbidden('defra-id: defraIdOrgId not found in token')
+    }
+
+    const organisationsInfo = await findOrganisationMatches(
+      email,
+      defraIdOrgId,
+      organisationsRepository
+    )
+
+    if (organisationsInfo.linked.length > 0) {
+      // Impossible to unequivocally determine which organisation is current
+      throw Boom.forbidden(
+        'defra-id: multiple organisations linked to the user token'
+      )
+    }
+
+    const linkedEprOrg = organisationsInfo.linked[0]
+
+    return { linkedEprOrg, organisationsInfo }
+  } catch (error) {
+    throw Boom.forbidden('defra-id: failed to validate request')
+  }
+}

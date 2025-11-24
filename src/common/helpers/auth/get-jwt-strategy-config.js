@@ -1,5 +1,7 @@
 import Boom from '@hapi/boom'
-import { getEntraUserRoles } from './get-entra-user-roles.js'
+import { getEntraUserRoles } from './ge{}t-entra-user-roles.js'
+import { getDefraIdUserRoles } from './get-defra-id-user-roles.js'
+import { getUsersOrganisationInfo } from './get-users-org-info.js'
 import { config } from '../../../config.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
@@ -23,7 +25,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
       maxAgeSec: 3600, // 60 minutes
       timeSkewSec: 15
     },
-    validate: async (artifacts) => {
+    validate: async (artifacts, request) => {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
@@ -54,8 +56,15 @@ export function getJwtStrategyConfig(oidcConfigs) {
             throw Boom.forbidden('Invalid audience for Defra Id token')
           }
 
-          // Placeholder for Defra Id token scope/roles
-          const scope = []
+          const { organisationsRepository } = request
+
+          const { linkedEprOrg, organisationsInfo } = getUsersOrganisationInfo(
+            tokenPayload,
+            organisationsRepository
+          )
+
+          // The roles are determined by the currentRelationship, never by other relationships in the token
+          const scope = getDefraIdUserRoles(linkedEprOrg, tokenPayload.email)
 
           return {
             isValid: scope.length > 0,
@@ -63,6 +72,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
               id: contactId,
               email,
               issuer,
+              organisationsInfo,
               scope
             }
           }
