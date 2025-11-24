@@ -43,7 +43,7 @@ Note: this requires `GOVUK_NOTIFY_API_KEY` envvar
 
 ## Contributing
 
-If you intend to contribute to this repository and/or run the application locally, please [see the contributing guidance](./CONTRIBUTING.md).
+If you intend to contribute to this repository and/or run the application locally, please [see the contributing guidance](./CONTRIBUTING.md)..
 
 ## Architecture
 
