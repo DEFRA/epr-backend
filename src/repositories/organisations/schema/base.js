@@ -40,6 +40,13 @@ export const userSchema = Joi.object({
   title: Joi.string().optional()
 }).or('role', 'title')
 
+export const collatedUserSchema = Joi.object({
+  fullName: Joi.string().required(),
+  email: Joi.string().email().required(),
+  isInitialUser: Joi.boolean().required(),
+  roles: Joi.array().items(Joi.string()).min(1).required()
+})
+
 export const statusHistoryItemSchema = Joi.object({
   status: Joi.string()
     .valid(

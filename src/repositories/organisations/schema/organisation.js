@@ -10,7 +10,8 @@ import {
   idSchema,
   companyDetailsSchema,
   partnershipSchema,
-  userSchema
+  userSchema,
+  collatedUserSchema
 } from './base.js'
 import { registrationSchema, registrationUpdateSchema } from './registration.js'
 import {
@@ -66,6 +67,7 @@ export const organisationInsertSchema = Joi.object({
   partnership: partnershipSchema.optional(),
   submitterContactDetails: userSchema.required(),
   managementContactDetails: userSchema.optional(),
+  users: Joi.array().items(collatedUserSchema).optional(),
   formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)

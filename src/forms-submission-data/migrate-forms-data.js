@@ -1,13 +1,20 @@
-import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
-import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
-import { linkItemsToOrganisations } from '#formsubmission/link-form-submissions.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { logger } from '#common/helpers/logging/logger.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
+import { collateUsers } from '#formsubmission/collate-users.js'
+import { linkItemsToOrganisations } from '#formsubmission/link-form-submissions.js'
+import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
+import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
+import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+
+/**
+ * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
+ * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
+ * @import {BaseOrganisation, Organisation, OrganisationWithAccreditations, OrganisationWithRegistrations} from './types.js'
+ */
 
 /**
  * @typedef {Object} SuccessResult
@@ -93,37 +100,35 @@ async function fetchAndTransformSubmissions({
 }
 
 async function upsertOrganisations(
-  organisationsWithAccreditations,
+  organisations,
   organisationsRepository,
   transformedOrganisations
 ) {
-  const migrationPromises = organisationsWithAccreditations.map(
-    (transformedOrganisation) => {
-      return organisationsRepository
-        .upsert(removeUndefinedValues(transformedOrganisation))
-        .then((result) => ({
-          success: true,
-          id: transformedOrganisation.id,
-          action: result.action
-        }))
-        .catch((error) => {
-          logger.error({
-            error,
-            message: 'Error upserting organisation',
-            event: {
-              category: LOGGING_EVENT_CATEGORIES.DB,
-              action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
-              reference: transformedOrganisation.id
-            }
-          })
-          return {
-            success: false,
-            id: transformedOrganisation.id,
-            phase: 'upsert'
+  const migrationPromises = organisations.map((transformedOrganisation) => {
+    return organisationsRepository
+      .upsert(removeUndefinedValues(transformedOrganisation))
+      .then((result) => ({
+        success: true,
+        id: transformedOrganisation.id,
+        action: result.action
+      }))
+      .catch((error) => {
+        logger.error({
+          error,
+          message: 'Error upserting organisation',
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.DB,
+            action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+            reference: transformedOrganisation.id
           }
         })
-    }
-  )
+        return {
+          success: false,
+          id: transformedOrganisation.id,
+          phase: 'upsert'
+        }
+      })
+  })
 
   const results = await Promise.allSettled(migrationPromises)
 
@@ -149,15 +154,16 @@ async function upsertOrganisations(
 
 /**
  * Migrates form submission data to organisations collection
- * @async
- * @param {import('#repositories/form-submissions/port.js').FormSubmissionsRepository} formsSubmissionRepository - Repository for form submissions
- * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationsRepository - Repository for organisations
+ *
+ * @param {FormSubmissionsRepository} formsSubmissionRepository
+ * @param {OrganisationsRepository} organisationsRepository
  * @returns {Promise<void>}
  */
 export async function migrateFormsData(
   formsSubmissionRepository,
   organisationsRepository
 ) {
+  /** @type {BaseOrganisation[]} */
   const transformedOrganisations = await fetchAndTransformSubmissions({
     repository: formsSubmissionRepository,
     fetchMethod: 'findAllOrganisations',
@@ -177,6 +183,7 @@ export async function migrateFormsData(
     submissionType: 'registration'
   })
 
+  /** @type {OrganisationWithRegistrations[]} */
   const organisationsWithRegistrations = linkRegistrations(
     transformedOrganisations,
     transformedRegistrations
@@ -189,12 +196,23 @@ export async function migrateFormsData(
     submissionType: 'accreditation'
   })
 
+  /** @type {OrganisationWithAccreditations[]} */
   const organisationsWithAccreditations = linkAccreditations(
     organisationsWithRegistrations,
     transformedAccreditations
   )
+
+  /** @type {Organisation[]} */
+  const organisations = organisationsWithAccreditations.map(
+    /** @param {OrganisationWithAccreditations} org */
+    (org) => ({
+      ...org,
+      users: collateUsers(org)
+    })
+  )
+
   await upsertOrganisations(
-    organisationsWithAccreditations,
+    organisations,
     organisationsRepository,
     transformedOrganisations
   )
