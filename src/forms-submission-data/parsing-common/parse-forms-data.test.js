@@ -3,11 +3,14 @@ import {
   extractAnswers,
   extractRepeaters,
   extractTimestamp,
+  extractWasteProcessingType,
   findFirstValue,
   flattenAnswersByShortDesc,
   retrieveFileUploadDetails
 } from './parse-forms-data.js'
-import { FORM_PAGES } from './form-field-constants.js'
+import { ORGANISATION } from '../organisation/form-field-constants.js'
+import { REGISTRATION } from '../registration/form-field-constants.js'
+import { ACCREDITATION } from '../accreditation/form-field-constants.js'
 import registeredLtdPartnership from '#data/fixtures/ea/organisation/registered-ltd-partnership.json' with { type: 'json' }
 import reprocessorWood from '#data/fixtures/ea/accreditation/reprocessor-wood.json' with { type: 'json' }
 import exporterRegistration from '#data/fixtures/ea/registration/exporter.json' with { type: 'json' }
@@ -16,18 +19,20 @@ import registeredNoPartnership from '#data/fixtures/ea/organisation/registered-n
 
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
-import { REGULATOR } from '#domain/organisations/model.js'
+import {
+  REGULATOR,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 describe('extractRepeaters', () => {
-  const ltdPartnershipPage = FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS
+  const ltdPartnershipPage = ORGANISATION.LTD_PARTNERSHIP_DETAILS
 
   it('should extract partner names and types from limited partnership', () => {
     const result = extractRepeaters(
       registeredLtdPartnership.rawSubmissionData,
       ltdPartnershipPage.title,
       {
-        [FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS.fields.PARTNER_NAMES]:
-          'name',
+        [ORGANISATION.LTD_PARTNERSHIP_DETAILS.fields.PARTNER_NAMES]: 'name',
         [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
       }
     )
@@ -149,7 +154,7 @@ describe('extractRepeaters', () => {
   })
 
   it('should extract PRN signatory details from accreditation form', () => {
-    const prnSignatory = FORM_PAGES.ACCREDITATION.PRN_SIGNATORY
+    const prnSignatory = ACCREDITATION.PRN_SIGNATORY
 
     const result = extractRepeaters(
       reprocessorWood.rawSubmissionData,
@@ -176,9 +181,9 @@ describe('extractRepeaters', () => {
 describe('extractAnswers', () => {
   it('should extract answers in nested structure by page', () => {
     const result = extractAnswers(exporterRegistration.rawSubmissionData)
-    const orgDetails = FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS
+    const orgDetails = REGISTRATION.ORGANISATION_DETAILS
 
-    const haveOrgId = FORM_PAGES.REGISTRATION.HAVE_ORGANISATION_ID
+    const haveOrgId = REGISTRATION.HAVE_ORGANISATION_ID
     expect(result[haveOrgId.title]).toBeDefined()
     expect(result[haveOrgId.title][haveOrgId.fields.HAVE_ORG_ID]).toBe('true')
 
@@ -199,15 +204,15 @@ describe('extractAnswers', () => {
 
     expect(
       result['Companies House details'][
-        FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.TRADING_NAME
+        ORGANISATION.COMPANY_DETAILS.fields.TRADING_NAME
       ]
     ).toBeUndefined()
   })
 
   it('should handle duplicate field names across different pages', () => {
     const result = extractAnswers(reprocessorAllMaterials.rawSubmissionData)
-    const envPermit = FORM_PAGES.REGISTRATION.ALUMINIUM_ENVIRONMENTAL_PERMIT
-    const siteCapacity = FORM_PAGES.REGISTRATION.ALUMINIUM_SITE_CAPACITY
+    const envPermit = REGISTRATION.ALUMINIUM_ENVIRONMENTAL_PERMIT
+    const siteCapacity = REGISTRATION.ALUMINIUM_SITE_CAPACITY
 
     expect(result[envPermit.title]).toBeDefined()
     expect(result[envPermit.title][envPermit.fields.TIMESCALE]).toBe('Yearly')
@@ -486,7 +491,7 @@ describe('flattenAnswersByShortDesc', () => {
     const answers = extractAnswers(exporterRegistration.rawSubmissionData)
     const flattened = flattenAnswersByShortDesc(answers)
 
-    const orgDetails = FORM_PAGES.REGISTRATION.ORGANISATION_DETAILS
+    const orgDetails = REGISTRATION.ORGANISATION_DETAILS
     expect(flattened[orgDetails.fields.ORG_NAME]).toBe('EuroPack GmbH')
     expect(flattened[orgDetails.fields.ORGANISATION_ID]).toBe('503181')
   })
@@ -534,7 +539,7 @@ describe('retrieveFileUploadDetails', () => {
   it('should retrieve file upload details', () => {
     const result = retrieveFileUploadDetails(
       exporterRegistration.rawSubmissionData,
-      FORM_PAGES.REGISTRATION.SIP_FILE_UPLOAD
+      REGISTRATION.SIP_FILE_UPLOAD
     )
 
     expect(result).toHaveLength(1)
@@ -548,7 +553,7 @@ describe('retrieveFileUploadDetails', () => {
   it('should retrieve file with ORS Log shortDescription', () => {
     const result = retrieveFileUploadDetails(
       exporterRegistration.rawSubmissionData,
-      FORM_PAGES.REGISTRATION.ORS_FILE_UPLOAD
+      REGISTRATION.ORS_FILE_UPLOAD
     )
 
     expect(result).toHaveLength(1)
@@ -568,10 +573,7 @@ describe('retrieveFileUploadDetails', () => {
     }
 
     expect(
-      retrieveFileUploadDetails(
-        dataWithoutFiles,
-        FORM_PAGES.REGISTRATION.SIP_FILE_UPLOAD
-      )
+      retrieveFileUploadDetails(dataWithoutFiles, REGISTRATION.SIP_FILE_UPLOAD)
     ).toEqual([])
   })
 
@@ -766,5 +768,39 @@ describe('findFirstValue', () => {
   it('should return undefined for empty field list', () => {
     const answers = { field1: 'value1' }
     expect(findFirstValue(answers, [])).toBeUndefined()
+  })
+})
+
+describe('extractWasteProcessingTypeFromDefinitionName', () => {
+  it('should extract EXPORTER from definition name', () => {
+    expect(
+      extractWasteProcessingType(exporterRegistration.rawSubmissionData)
+    ).toBe(WASTE_PROCESSING_TYPE.EXPORTER)
+  })
+
+  it('should extract REPROCESSOR from definition name', () => {
+    expect(
+      extractWasteProcessingType(reprocessorAllMaterials.rawSubmissionData)
+    ).toBe(WASTE_PROCESSING_TYPE.REPROCESSOR)
+  })
+
+  it('should throw error when definition.name is missing', () => {
+    expect(() => extractWasteProcessingType({})).toThrow(
+      'extractWasteProcessingTypeFromDefinitionName: Missing definition.name'
+    )
+  })
+
+  it('should throw error with definition name when type cannot be determined', () => {
+    const mockData = {
+      meta: {
+        definition: {
+          name: 'Invalid form name'
+        }
+      }
+    }
+
+    expect(() => extractWasteProcessingType(mockData)).toThrow(
+      'extractWasteProcessingTypeFromDefinitionName: Cannot determine waste processing type from definition name: "Invalid form name"'
+    )
   })
 })

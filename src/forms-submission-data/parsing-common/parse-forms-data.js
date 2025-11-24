@@ -1,4 +1,5 @@
 import { mapRegulator } from './form-data-mapper.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
  * Extract repeater field data from raw form submission
@@ -221,4 +222,35 @@ export function extractAgencyFromDefinitionName(rawSubmissionData) {
 export function findFirstValue(answers, fieldNames) {
   const field = fieldNames.find((f) => answers?.[f])
   return field ? answers[field] : undefined
+}
+
+/**
+ * Extract waste processing type from form definition name
+ * @param {Object} rawSubmissionData - The raw submission data object
+ * @returns {import('#domain/organisations/model.js').WasteProcessingTypeValue} The waste processing type enum value
+ * @throws {Error} If waste processing type cannot be determined from definition name
+ */
+export function extractWasteProcessingType(rawSubmissionData) {
+  const definitionName = rawSubmissionData?.meta?.definition?.name
+
+  if (!definitionName) {
+    throw new Error(
+      'extractWasteProcessingTypeFromDefinitionName: Missing definition.name'
+    )
+  }
+
+  const lowerName = definitionName.toLowerCase()
+
+  if (lowerName.includes('exporter')) {
+    return WASTE_PROCESSING_TYPE.EXPORTER
+  }
+
+  if (lowerName.includes('reprocessor')) {
+    return WASTE_PROCESSING_TYPE.REPROCESSOR
+  }
+
+  // If neither is found, throw an error with the actual definition name
+  throw new Error(
+    `extractWasteProcessingTypeFromDefinitionName: Cannot determine waste processing type from definition name: "${definitionName}"`
+  )
 }

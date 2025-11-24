@@ -121,7 +121,7 @@ describe('linkItemsToOrganisations', () => {
     expect(org1.registrations).toHaveLength(1)
     expect(org1.registrations[0].id).toBe(reg1Id)
 
-    expect(logger.error).toHaveBeenCalledWith({
+    expect(logger.warn).toHaveBeenCalledWith({
       message: '2 registrations not linked to an organisation'
     })
     expect(logger.warn).toHaveBeenCalledWith({

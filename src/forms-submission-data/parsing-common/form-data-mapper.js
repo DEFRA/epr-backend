@@ -238,6 +238,15 @@ const WASTE_PERMIT_TYPE_MAPPING = {
   'Waste exemption': WASTE_PERMIT_TYPE.WASTE_EXEMPTION
 }
 
+const TONNAGE_BAND_MAPPER = {
+  'Up to 500 tonnes': 'up_to_500',
+  'Up to 5,000 tonnes': 'up_to_5000',
+  'Up to 5000 tonnes': 'up_to_5000',
+  'Up to 10,000 tonnes': 'up_to_10000',
+  'Up to 10000 tonnes': 'up_to_10000',
+  'Over 10,000 tonnes': 'over_10000'
+}
+
 export function mapValueType(value) {
   const trimmedValue = value?.trim()
 
@@ -288,4 +297,22 @@ export function convertToNumber(value, fieldName = 'value') {
   }
 
   return num
+}
+
+export function mapTonnageBand(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    throw new Error('Tonnage band value is required')
+  }
+
+  const result = TONNAGE_BAND_MAPPER[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid tonnage band: "${value}". Expected one of: ${Object.keys(TONNAGE_BAND_MAPPER).join(', ')}`
+    )
+  }
+
+  return result
 }
