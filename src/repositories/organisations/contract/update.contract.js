@@ -56,7 +56,7 @@ export const testUpdateBehaviour = (it) => {
         const registrationToUpdate = {
           ...originalReg,
           material: 'plastic',
-          glassRecyclingProcess: undefined
+          glassRecyclingProcess: null
         }
         const beforeUpdateOrg = await repository.findById(organisation.id)
 
@@ -92,6 +92,7 @@ export const testUpdateBehaviour = (it) => {
         const originalAcc = organisationAfterInsert.accreditations[0]
         const accreditationToUpdate = {
           ...originalAcc,
+          glassRecyclingProcess: null,
           material: 'plastic'
         }
         await repository.update(organisation.id, 1, {
@@ -105,6 +106,7 @@ export const testUpdateBehaviour = (it) => {
 
         const expectedAcc = {
           ...originalAcc,
+          glassRecyclingProcess: null,
           material: 'plastic'
         }
         expect(updatedAcc).toMatchObject(expectedAcc)
@@ -163,7 +165,8 @@ export const testUpdateBehaviour = (it) => {
         const newAccreditation = {
           ...organisation.accreditations[0],
           id: new ObjectId().toString(),
-          material: 'aluminium'
+          material: 'aluminium',
+          glassRecyclingProcess: null
         }
         delete newAccreditation.statusHistory
 
@@ -587,7 +590,8 @@ export const testUpdateBehaviour = (it) => {
           const accreditationToUpdate = {
             ...organisation.accreditations[0],
             material: 'plastic',
-            accreditationNumber: undefined
+            accreditationNumber: undefined,
+            glassRecyclingProcess: null
           }
 
           await repository.update(organisation.id, 1, {
@@ -757,7 +761,7 @@ export const testUpdateBehaviour = (it) => {
           const registrationToUpdate = {
             ...organisation.registrations[0],
             material: 'plastic',
-            glassRecyclingProcess: undefined,
+            glassRecyclingProcess: null,
             validFrom: undefined,
             validTo: undefined
           }
@@ -932,7 +936,8 @@ export const testUpdateBehaviour = (it) => {
             ...organisation.accreditations[0],
             material: 'plastic',
             validFrom: undefined,
-            validTo: undefined
+            validTo: undefined,
+            glassRecyclingProcess: null
           }
 
           await repository.update(organisation.id, 1, {

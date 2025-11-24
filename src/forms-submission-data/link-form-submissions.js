@@ -62,7 +62,7 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   }
 
   if (unlinked.length > 0) {
-    logger.error({
+    logger.warn({
       message: `${unlinked.length} ${propertyName} not linked to an organisation`
     })
     for (const item of unlinked) {

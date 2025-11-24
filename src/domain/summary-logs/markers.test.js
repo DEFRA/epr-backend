@@ -4,6 +4,7 @@ import {
   DATA_PREFIX,
   SKIP_COLUMN,
   SKIP_ROW_TEXT,
+  PLACEHOLDER_TEXT,
   isEprMarker
 } from './markers.js'
 
@@ -27,6 +28,10 @@ describe('Summary Log Markers', () => {
 
     it('should have correct SKIP_ROW_TEXT', () => {
       expect(SKIP_ROW_TEXT).toBe('Example')
+    })
+
+    it('should have correct PLACEHOLDER_TEXT', () => {
+      expect(PLACEHOLDER_TEXT).toBe('Choose option')
     })
 
     it('should ensure all prefixes start with EPR_PREFIX', () => {

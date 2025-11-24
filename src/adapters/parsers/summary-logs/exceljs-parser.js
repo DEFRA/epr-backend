@@ -5,7 +5,8 @@ import {
   META_PREFIX,
   DATA_PREFIX,
   SKIP_COLUMN,
-  SKIP_ROW_TEXT
+  SKIP_ROW_TEXT,
+  PLACEHOLDER_TEXT
 } from '#domain/summary-logs/markers.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
@@ -103,7 +104,10 @@ const processHeaderCell = (draftCollection, cellValueStr) => {
 
 const processRowCell = (draftCollection, cellValue) => {
   const normalisedValue =
-    cellValue === null || cellValue === undefined || cellValue === ''
+    cellValue === null ||
+    cellValue === undefined ||
+    cellValue === '' ||
+    cellValue === PLACEHOLDER_TEXT
       ? null
       : cellValue
   draftCollection.currentRow.push(normalisedValue)

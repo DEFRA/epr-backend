@@ -95,6 +95,24 @@ In this example, the first data row (row-1) is skipped because its skip column c
 
 **Important:** The skip text must be exactly "Example" (case-sensitive). Text like "example", "EXAMPLE", or "Example row" will not trigger row skipping.
 
+## Placeholder Text Handling
+
+Spreadsheets may use dropdown lists with a default placeholder value like `Choose option`. These cells appear populated but are semantically empty—the user hasn't made a selection.
+
+The system automatically normalizes the exact text `Choose option` (case-sensitive) to `null` in data rows. This prevents placeholder values from appearing as real data.
+
+**Example:**
+
+| Column A                    | Column B      | Column C      |
+| --------------------------- | ------------- | ------------- |
+| `__EPR_DATA_WASTE_RECEIVED` | OUR_REFERENCE | STATUS        |
+|                             | 12345678910   | Active        |
+|                             | 98765432100   | Choose option |
+
+The second row extracts with STATUS as `null`, not as the text "Choose option".
+
+**Important:** If a row contains only placeholder values (all cells are `null`, empty, or `Choose option`), the system treats it as an empty row and terminates the data section. This prevents thousands of pre-populated but unused rows from being parsed.
+
 ## Marker Placement
 
 Markers can appear in any column. The system scans all cells in all worksheets to find markers.
