@@ -13,6 +13,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
@@ -20,6 +21,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 import { ObjectId } from 'mongodb'
+import ExcelJS from 'exceljs'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -128,12 +130,12 @@ describe('Summary logs integration', () => {
     const summaryLogExtractor = createInMemorySummaryLogExtractor({
       'file-123': {
         meta: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           MATERIAL: {
@@ -420,12 +422,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -677,12 +679,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -849,7 +851,7 @@ describe('Summary logs integration', () => {
           meta: {
             // Missing REGISTRATION - fatal meta error
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1040,12 +1042,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG12345',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1224,12 +1226,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1475,36 +1477,7 @@ describe('Summary logs integration', () => {
       const validationExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
-              value: 'REG-12345',
-              location: { sheet: 'Data', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
-              location: { sheet: 'Data', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
-            },
-            ACCREDITATION: {
-              value: 'ACC-2025-001',
-              location: { sheet: 'Data', row: 5, column: 'B' }
-            }
-          },
-          data: {}
-        }
-      })
-
-      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
-      const transformationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-12345',
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
@@ -1520,7 +1493,36 @@ describe('Summary logs integration', () => {
               value: 1,
               location: { sheet: 'Data', row: 4, column: 'B' }
             },
-            ACCREDITATION: {
+            ACCREDITATION_NUMBER: {
+              value: 'ACC-2025-001',
+              location: { sheet: 'Data', row: 5, column: 'B' }
+            }
+          },
+          data: {}
+        }
+      })
+
+      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
+      const transformationExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION_NUMBER: {
+              value: 'REG-12345',
+              location: { sheet: 'Data', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR_INPUT',
+              location: { sheet: 'Data', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Data', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Data', row: 4, column: 'B' }
+            },
+            ACCREDITATION_NUMBER: {
               value: 'ACC-2025-001',
               location: { sheet: 'Data', row: 5, column: 'B' }
             }
@@ -1678,6 +1680,205 @@ describe('Summary logs integration', () => {
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBe('ACC-2025-001')
+    })
+  })
+
+  describe('parsing spreadsheet with example rows (real parser integration)', () => {
+    let server
+    let summaryLogsRepository
+    let wasteRecordsRepository
+    const summaryLogId = 'summary-real-parser'
+    const fileId = 'file-real-parser'
+    const filename = 'real-parser-test.xlsx'
+
+    /**
+     * Creates a real Excel buffer with example rows that should be skipped
+     */
+    const createExcelBufferWithExampleRows = async () => {
+      const workbook = new ExcelJS.Workbook()
+
+      // Cover sheet with metadata
+      const cover = workbook.addWorksheet('Cover')
+      cover.getRow(1).values = ['__EPR_META_REGISTRATION_NUMBER', 'REG-123']
+      cover.getRow(2).values = [
+        '__EPR_META_PROCESSING_TYPE',
+        'REPROCESSOR_INPUT'
+      ]
+      cover.getRow(3).values = ['__EPR_META_MATERIAL', 'Paper_and_board']
+      cover.getRow(4).values = ['__EPR_META_TEMPLATE_VERSION', 1]
+
+      // Data sheet with example row
+      const data = workbook.addWorksheet('Received')
+      data.getRow(1).values = [
+        '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+        'ROW_ID',
+        '__EPR_SKIP_COLUMN',
+        'EWC_CODE',
+        'PRODUCER_WRN',
+        'GROSS_WEIGHT',
+        'TARE_WEIGHT',
+        'NET_WEIGHT',
+        'LOAD_DATE',
+        'OPERATOR_NAME',
+        'OPERATOR_ADDRESS_LINE_1',
+        'OPERATOR_TOWN_CITY',
+        'OPERATOR_POSTCODE'
+      ]
+      // Example row - should be skipped
+      data.getRow(2).values = [
+        null,
+        'example-row',
+        'Example',
+        '150101',
+        'WRN-EXAMPLE',
+        1000,
+        100,
+        900,
+        new Date('2024-01-01'),
+        'Example Operator',
+        'Example Street',
+        'Example Town',
+        'EX1 1EX'
+      ]
+      // Real row 1
+      data.getRow(3).values = [
+        null,
+        '10001',
+        null,
+        '150101',
+        'REG-123',
+        5000,
+        500,
+        4500,
+        new Date('2024-06-15'),
+        'Real Operator A',
+        '123 Real Street',
+        'Real Town',
+        'RT1 1RT'
+      ]
+      // Real row 2
+      data.getRow(4).values = [
+        null,
+        '10002',
+        null,
+        '150105',
+        'REG-123',
+        7500,
+        750,
+        6750,
+        new Date('2024-06-16'),
+        'Real Operator B',
+        '456 Real Avenue',
+        'Real City',
+        'RC2 2RC'
+      ]
+      // Empty row to terminate
+      data.getRow(5).values = [null, null, null, null, null, null, null, null]
+
+      return workbook.xlsx.writeBuffer()
+    }
+
+    beforeEach(async () => {
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+
+      // Create uploads repository that returns our generated Excel buffer
+      const excelBuffer = await createExcelBufferWithExampleRows()
+      const uploadsRepository = {
+        findByLocation: vi.fn().mockResolvedValue(excelBuffer)
+      }
+
+      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: 'REG-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Use the REAL extractor that calls the actual parser
+      const summaryLogExtractor = createSummaryLogExtractor({
+        uploadsRepository,
+        logger: mockLogger
+      })
+
+      wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor
+      })
+
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository: () => uploadsRepository
+        },
+        workers: {
+          summaryLogsWorker: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+    })
+
+    it('skips example rows when parsing spreadsheet end-to-end', async () => {
+      // Upload the file
+      const uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(uploadResponse.statusCode).toBe(202)
+
+      // Wait for validation to complete
+      await pollForValidation(server, summaryLogId)
+
+      // Get the summary log
+      const getResponse = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(getResponse.statusCode).toBe(200)
+      const payload = JSON.parse(getResponse.payload)
+
+      // Should be validated - this confirms:
+      // 1. The example row (with ROW_ID 'example-row' and 'Example' in skip column) was skipped
+      // 2. Only the 2 real data rows were processed and passed validation
+      // If example rows weren't skipped, we'd have 3 rows with potentially invalid data
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+      // The validation should have no fatal errors
+      expect(payload.validation).toBeDefined()
+      expect(payload.validation.failures).toEqual([])
     })
   })
 })

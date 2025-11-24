@@ -61,7 +61,7 @@ const realFileBuffer = await readFile(
 
 const smallDatasetBuffer = await createWorkbook({
   Sheet1: [
-    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
     ['__EPR_META_MATERIAL', 'Paper and board'],
     ...createLargeDataset(10)
   ]
@@ -69,7 +69,7 @@ const smallDatasetBuffer = await createWorkbook({
 
 const mediumDatasetBuffer = await createWorkbook({
   Sheet1: [
-    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
     ['__EPR_META_MATERIAL', 'Paper and board'],
     ...createLargeDataset(100)
   ]
@@ -77,7 +77,7 @@ const mediumDatasetBuffer = await createWorkbook({
 
 const largeDatasetBuffer = await createWorkbook({
   Sheet1: [
-    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
     ['__EPR_META_MATERIAL', 'Paper and board'],
     ...createLargeDataset(1000)
   ]
@@ -85,7 +85,7 @@ const largeDatasetBuffer = await createWorkbook({
 
 const multiSheetBuffer = await createWorkbook({
   Sheet1: [
-    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+    ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
     ...createLargeDataset(50)
   ],
   Sheet2: [

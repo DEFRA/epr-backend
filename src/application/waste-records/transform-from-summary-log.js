@@ -1,4 +1,5 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 
 /**
@@ -24,19 +25,19 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * Dispatch map: processing type → table name → row transformer function
  * Maps each combination of processing type and table to its specific row transformer
  */
-const PROCESSING_TYPES = {
-  REPROCESSOR_INPUT: {
+const TABLE_TRANSFORMERS = {
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: {
     RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
   },
-  REPROCESSOR_OUTPUT: {
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
     RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
   },
-  EXPORTER: {
+  [PROCESSING_TYPES.EXPORTER]: {
     // No table transformers yet - awaiting business confirmation of data mappings
   }
 }
 
-const KNOWN_PROCESSING_TYPES = Object.keys(PROCESSING_TYPES)
+const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
 
 /**
  * Generic table transformation function
@@ -139,7 +140,7 @@ export const transformFromSummaryLog = (
   }
 
   // Look up table transformers for this processing type
-  const tableTransformers = PROCESSING_TYPES[processingType] || {}
+  const tableTransformers = TABLE_TRANSFORMERS[processingType] || {}
 
   // Transform each table that exists in the parsed data
   const results = Object.entries(tableTransformers).map(

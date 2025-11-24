@@ -1,5 +1,7 @@
 import { transformValidationResponse } from './transform-validation-response.js'
 import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
+import { summaryLogResponseSchema } from './response.schema.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 
 describe('transformValidationResponse', () => {
   describe('when validation is empty or has no issues', () => {
@@ -47,7 +49,7 @@ describe('transformValidationResponse', () => {
             message: 'Registration mismatch',
             code: 'REGISTRATION_MISMATCH',
             context: {
-              location: { field: 'REGISTRATION' },
+              location: { field: 'REGISTRATION_NUMBER' },
               actual: 'REG99999',
               expected: 'REG12345'
             }
@@ -62,7 +64,7 @@ describe('transformValidationResponse', () => {
           failures: [
             {
               code: 'REGISTRATION_MISMATCH',
-              location: { field: 'REGISTRATION' },
+              location: { field: 'REGISTRATION_NUMBER' },
               actual: 'REG99999',
               expected: 'REG12345'
             }
@@ -96,6 +98,57 @@ describe('transformValidationResponse', () => {
           concerns: {}
         }
       })
+    })
+
+    it('transforms fatal issues with rowId in location (row continuity errors)', () => {
+      const validation = {
+        issues: [
+          {
+            severity: VALIDATION_SEVERITY.FATAL,
+            category: 'business',
+            message:
+              "Row 'row-3' from a previous summary log submission cannot be removed.",
+            code: 'SEQUENTIAL_ROW_REMOVED',
+            context: {
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                rowId: 'row-3'
+              },
+              previousSummaryLog: {
+                id: 'previous-summary-log-id',
+                submittedAt: '2024-01-15T10:00:00.000Z'
+              }
+            }
+          }
+        ]
+      }
+
+      const result = transformValidationResponse(validation)
+
+      expect(result).toEqual({
+        validation: {
+          failures: [
+            {
+              code: 'SEQUENTIAL_ROW_REMOVED',
+              location: {
+                sheet: 'Received',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+                rowId: 'row-3'
+              }
+            }
+          ],
+          concerns: {}
+        }
+      })
+
+      // Verify the response passes Hapi schema validation (this would have caught the original bug)
+      const httpResponse = {
+        status: SUMMARY_LOG_STATUS.INVALID,
+        ...result
+      }
+      const { error } = summaryLogResponseSchema.validate(httpResponse)
+      expect(error).toBeUndefined()
     })
 
     it('filters out non-fatal issues when fatal issues are present', () => {

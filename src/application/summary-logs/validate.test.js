@@ -31,11 +31,11 @@ describe('SummaryLogsValidator', () => {
     summaryLogExtractor = {
       extract: vi.fn().mockResolvedValue({
         meta: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG12345'
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR'
+            value: 'REPROCESSOR_INPUT'
           },
           TEMPLATE_VERSION: {
             value: 1
@@ -211,11 +211,11 @@ describe('SummaryLogsValidator', () => {
   it('should update status as expected when waste registration number validation fails', async () => {
     summaryLogExtractor.extract.mockResolvedValue({
       meta: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG99999'
         },
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR'
+          value: 'REPROCESSOR_INPUT'
         },
         TEMPLATE_VERSION: {
           value: 1
@@ -243,7 +243,7 @@ describe('SummaryLogsValidator', () => {
                 "Summary log's registration number does not match this registration",
               code: 'REGISTRATION_MISMATCH',
               context: {
-                location: { field: 'REGISTRATION' },
+                location: { field: 'REGISTRATION_NUMBER' },
                 expected: 'REG12345',
                 actual: 'REG99999'
               }
@@ -364,8 +364,8 @@ describe('SummaryLogsValidator', () => {
       // Meta syntax error: missing TEMPLATE_VERSION
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
-          REGISTRATION: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
           MATERIAL: { value: 'Aluminium' }
           // TEMPLATE_VERSION missing - fatal syntax error
         },
@@ -404,8 +404,8 @@ describe('SummaryLogsValidator', () => {
       // Data syntax error: invalid data table structure that should NOT be validated
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
-          REGISTRATION: { value: 'REG99999' }, // Wrong registration - fatal business error
-          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          REGISTRATION_NUMBER: { value: 'REG99999' }, // Wrong registration - fatal business error
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
           TEMPLATE_VERSION: { value: 1 },
           MATERIAL: { value: 'Aluminium' }
         },
@@ -441,8 +441,8 @@ describe('SummaryLogsValidator', () => {
       // Valid meta, but invalid data (row-level errors, not fatal)
       summaryLogExtractor.extract.mockResolvedValue({
         meta: {
-          REGISTRATION: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR' },
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
           TEMPLATE_VERSION: { value: 1 },
           MATERIAL: { value: 'Aluminium' }
         },

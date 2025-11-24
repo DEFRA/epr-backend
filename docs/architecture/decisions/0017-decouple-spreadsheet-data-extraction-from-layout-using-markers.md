@@ -73,19 +73,19 @@ The double underscore prefix (`__EPR_`) makes markers highly distinctive and unl
 
 The following table shows how markers would appear in a spreadsheet (markers would typically be in hidden columns). Note that tables can be arranged either stacked vertically or side-by-side:
 
-| Column A                          | Column B        | Column C            | Column D                     | Column E           | Column F           |
-| --------------------------------- | --------------- | ------------------- | ---------------------------- | ------------------ | ------------------ |
-| `__EPR_META_PROCESSING_TYPE`      | REPROCESSOR     |                     |                              |                    |                    |
-| `__EPR_META_TEMPLATE_VERSION`     | 1               |                     |                              |                    |                    |
-| `__EPR_META_MATERIAL`             | Paper and board |                     |                              |                    |                    |
-| `__EPR_META_ACCREDITATION`        | ER25199864      |                     |                              |                    |                    |
-|                                   |                 |                     |                              |                    |                    |
-| `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE   | DATE_RECEIVED       | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
-|                                   | 12345678910     | 2025-05-25          |                              | Joe Blogs Refinery | 15 Good Street     |
-|                                   | 98765432100     | 2025-05-26          |                              | Acme Recycling     | 42 Industrial Park |
-|                                   |                 |                     |                              |                    |                    |
-| `__EPR_DATA_PROCESSED`            | OUR_REFERENCE   | DATE_LOAD_LEFT_SITE |                              |                    |                    |
-|                                   | 12345678910     | 2025-05-25          |                              |                    |                    |
+| Column A                          | Column B          | Column C            | Column D                     | Column E           | Column F           |
+| --------------------------------- | ----------------- | ------------------- | ---------------------------- | ------------------ | ------------------ |
+| `__EPR_META_PROCESSING_TYPE`      | REPROCESSOR_INPUT |                     |                              |                    |                    |
+| `__EPR_META_TEMPLATE_VERSION`     | 1                 |                     |                              |                    |                    |
+| `__EPR_META_MATERIAL`             | Paper and board   |                     |                              |                    |                    |
+| `__EPR_META_ACCREDITATION_NUMBER` | ER25199864        |                     |                              |                    |                    |
+|                                   |                   |                     |                              |                    |                    |
+| `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE     | DATE_RECEIVED       | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
+|                                   | 12345678910       | 2025-05-25          |                              | Joe Blogs Refinery | 15 Good Street     |
+|                                   | 98765432100       | 2025-05-26          |                              | Acme Recycling     | 42 Industrial Park |
+|                                   |                   |                     |                              |                    |                    |
+| `__EPR_DATA_PROCESSED`            | OUR_REFERENCE     | DATE_LOAD_LEFT_SITE |                              |                    |                    |
+|                                   | 12345678910       | 2025-05-25          |                              |                    |                    |
 
 In this example:
 

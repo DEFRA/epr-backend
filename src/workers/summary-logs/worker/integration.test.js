@@ -124,12 +124,12 @@ describe('SummaryLogsValidator integration', () => {
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
       metadata: {
-        REGISTRATION: {
+        REGISTRATION_NUMBER: {
           value: 'REG-123',
           location: { sheet: 'Cover', row: 1, column: 'B' }
         },
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR',
+          value: 'REPROCESSOR_INPUT',
           location: { sheet: 'Cover', row: 2, column: 'B' }
         },
         MATERIAL: {
@@ -196,7 +196,7 @@ describe('SummaryLogsValidator integration', () => {
       {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        spreadsheetType: 'REPROCESSOR'
+        spreadsheetType: 'REPROCESSOR_INPUT'
       },
       {
         registrationType: 'exporter',
@@ -211,7 +211,7 @@ describe('SummaryLogsValidator integration', () => {
             registrationType,
             registrationWRN,
             metadata: {
-              REGISTRATION: {
+              REGISTRATION_NUMBER: {
                 value: registrationWRN,
                 location: { sheet: 'Cover', row: 1, column: 'B' }
               },
@@ -250,22 +250,29 @@ describe('SummaryLogsValidator integration', () => {
       {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        spreadsheetType: 'EXPORTER'
+        spreadsheetType: 'EXPORTER',
+        expectedWasteProcessingType: 'exporter'
       },
       {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
-        spreadsheetType: 'REPROCESSOR'
+        spreadsheetType: 'REPROCESSOR_INPUT',
+        expectedWasteProcessingType: 'reprocessor'
       }
     ])(
       'when $spreadsheetType type does not match $registrationType registration',
-      ({ registrationType, registrationWRN, spreadsheetType }) => {
+      ({
+        registrationType,
+        registrationWRN,
+        spreadsheetType,
+        expectedWasteProcessingType
+      }) => {
         it('should fail validation with mismatch error', async () => {
           const { updated, summaryLog } = await runValidation({
             registrationType,
             registrationWRN,
             metadata: {
-              REGISTRATION: {
+              REGISTRATION_NUMBER: {
                 value: registrationWRN,
                 location: { sheet: 'Cover', row: 1, column: 'B' }
               },
@@ -295,7 +302,7 @@ describe('SummaryLogsValidator integration', () => {
                     severity: 'fatal',
                     category: 'business',
                     message:
-                      'Summary log processing type does not match registration processing type',
+                      'Summary log processing type does not match registration waste processing type',
                     code: 'PROCESSING_TYPE_MISMATCH',
                     context: {
                       location: {
@@ -304,14 +311,14 @@ describe('SummaryLogsValidator integration', () => {
                         column: 'B',
                         field: 'PROCESSING_TYPE'
                       },
-                      expected: spreadsheetType.toLowerCase(),
+                      expected: expectedWasteProcessingType,
                       actual: registrationType
                     }
                   }
                 ]
               },
               failureReason:
-                'Summary log processing type does not match registration processing type'
+                'Summary log processing type does not match registration waste processing type'
             }
           })
         })
@@ -325,7 +332,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
@@ -369,7 +376,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
@@ -399,7 +406,7 @@ describe('SummaryLogsValidator integration', () => {
                 severity: 'fatal',
                 category: 'business',
                 message:
-                  'Summary log processing type does not match registration processing type',
+                  'Summary log processing type does not match registration waste processing type',
                 code: 'PROCESSING_TYPE_MISMATCH',
                 context: {
                   location: {
@@ -415,7 +422,7 @@ describe('SummaryLogsValidator integration', () => {
             ]
           },
           failureReason:
-            'Summary log processing type does not match registration processing type'
+            'Summary log processing type does not match registration waste processing type'
         }
       })
     })
@@ -434,19 +441,19 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
             location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION: {
+          ACCREDITATION_NUMBER: {
             value: accreditationNumber,
             location: { sheet: 'Cover', row: 5, column: 'B' }
           }
@@ -475,19 +482,19 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
             value: 'Paper_and_board',
             location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION: {
+          ACCREDITATION_NUMBER: {
             value: '99999999',
             location: { sheet: 'Cover', row: 5, column: 'B' }
           }
@@ -514,12 +521,12 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 3, column: 'B' }
           },
           MATERIAL: {
@@ -547,7 +554,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-456',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -583,7 +590,7 @@ describe('SummaryLogsValidator integration', () => {
             value: '1.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-456',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
@@ -595,7 +602,7 @@ describe('SummaryLogsValidator integration', () => {
             value: 'Paper_and_board',
             location: { sheet: 'Cover', row: 4, column: 'B' }
           },
-          ACCREDITATION: {
+          ACCREDITATION_NUMBER: {
             value: '12345678',
             location: { sheet: 'Cover', row: 5, column: 'B' }
           }

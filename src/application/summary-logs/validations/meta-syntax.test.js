@@ -6,11 +6,11 @@ import {
 
 describe('validateMetaSyntax', () => {
   const createValidMeta = () => ({
-    PROCESSING_TYPE: { value: 'REPROCESSOR' },
+    PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
     TEMPLATE_VERSION: { value: 1 },
     MATERIAL: { value: 'Aluminium' },
-    ACCREDITATION: { value: 'ACC123' },
-    REGISTRATION: { value: 'REG12345' }
+    ACCREDITATION_NUMBER: { value: 'ACC123' },
+    REGISTRATION_NUMBER: { value: 'REG12345' }
   })
 
   it('returns valid result when all meta fields are syntactically correct', () => {
@@ -28,10 +28,10 @@ describe('validateMetaSyntax', () => {
   it('returns valid result when optional ACCREDITATION is missing', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR' },
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
         TEMPLATE_VERSION: { value: 1 },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'REG12345' }
+        REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
 
@@ -45,7 +45,7 @@ describe('validateMetaSyntax', () => {
     const parsed = {
       meta: {
         ...createValidMeta(),
-        ACCREDITATION: { value: null }
+        ACCREDITATION_NUMBER: { value: null }
       }
     }
 
@@ -60,7 +60,7 @@ describe('validateMetaSyntax', () => {
       meta: {
         TEMPLATE_VERSION: { value: 1 },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'REG12345' }
+        REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
 
@@ -117,9 +117,9 @@ describe('validateMetaSyntax', () => {
   it('returns fatal technical error when TEMPLATE_VERSION is missing', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR' },
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'REG12345' }
+        REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
 
@@ -156,9 +156,9 @@ describe('validateMetaSyntax', () => {
   it('returns fatal technical error when MATERIAL is missing', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR' },
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
         TEMPLATE_VERSION: { value: 1 },
-        REGISTRATION: { value: 'REG12345' }
+        REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
 
@@ -195,7 +195,7 @@ describe('validateMetaSyntax', () => {
   it('returns fatal technical error when REGISTRATION is missing', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR' },
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
         TEMPLATE_VERSION: { value: 1 },
         MATERIAL: { value: 'Aluminium' }
       }
@@ -208,7 +208,7 @@ describe('validateMetaSyntax', () => {
 
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
-    expect(fatals[0].message).toContain('REGISTRATION')
+    expect(fatals[0].message).toContain('REGISTRATION_NUMBER')
     expect(fatals[0].message).toContain('is required')
   })
 
@@ -261,10 +261,10 @@ describe('validateMetaSyntax', () => {
   it('handles fields without location data', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }, // No location property
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }, // No location property
         TEMPLATE_VERSION: { value: 0 }, // Invalid value, no location
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'REG12345' }
+        REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
 
@@ -300,13 +300,13 @@ describe('validateMetaSyntax', () => {
   it('includes location data when available in the parsed structure', () => {
     const parsed = {
       meta: {
-        PROCESSING_TYPE: { value: 'REPROCESSOR' },
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
         TEMPLATE_VERSION: {
           value: -1,
           location: { row: 2, column: 'E' }
         },
         MATERIAL: { value: 'Aluminium' },
-        REGISTRATION: { value: 'REG12345' }
+        REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
 

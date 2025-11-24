@@ -3,6 +3,7 @@ import {
   META_PREFIX,
   DATA_PREFIX,
   SKIP_COLUMN,
+  SKIP_ROW_TEXT,
   isEprMarker
 } from './markers.js'
 
@@ -24,6 +25,10 @@ describe('Summary Log Markers', () => {
       expect(SKIP_COLUMN).toBe('__EPR_SKIP_COLUMN')
     })
 
+    it('should have correct SKIP_ROW_TEXT', () => {
+      expect(SKIP_ROW_TEXT).toBe('Example')
+    })
+
     it('should ensure all prefixes start with EPR_PREFIX', () => {
       expect(META_PREFIX.startsWith(EPR_PREFIX)).toBe(true)
       expect(DATA_PREFIX.startsWith(EPR_PREFIX)).toBe(true)
@@ -33,7 +38,7 @@ describe('Summary Log Markers', () => {
 
   describe('isEprMarker', () => {
     it('should return true for META_PREFIX markers', () => {
-      expect(isEprMarker('__EPR_META_REGISTRATION')).toBe(true)
+      expect(isEprMarker('__EPR_META_REGISTRATION_NUMBER')).toBe(true)
       expect(isEprMarker('__EPR_META_TEMPLATE_VERSION')).toBe(true)
     })
 

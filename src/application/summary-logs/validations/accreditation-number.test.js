@@ -50,7 +50,7 @@ describe('validateAccreditationNumber', () => {
     }
     const parsed = {
       meta: {
-        ACCREDITATION: {
+        ACCREDITATION_NUMBER: {
           value: undefined
         }
       }
@@ -81,7 +81,7 @@ describe('validateAccreditationNumber', () => {
     }
     const parsed = {
       meta: {
-        ACCREDITATION: {
+        ACCREDITATION_NUMBER: {
           value: '99999999',
           location: { sheet: 'Cover', row: 15, column: 'F' }
         }
@@ -106,7 +106,7 @@ describe('validateAccreditationNumber', () => {
           sheet: 'Cover',
           row: 15,
           column: 'F',
-          field: 'ACCREDITATION'
+          field: 'ACCREDITATION_NUMBER'
         },
         expected: '12345678',
         actual: '99999999'
@@ -120,7 +120,7 @@ describe('validateAccreditationNumber', () => {
     }
     const parsed = {
       meta: {
-        ACCREDITATION: {
+        ACCREDITATION_NUMBER: {
           value: '12345678'
         }
       }
@@ -155,7 +155,7 @@ describe('validateAccreditationNumber', () => {
     }
     const parsed = {
       meta: {
-        ACCREDITATION: {
+        ACCREDITATION_NUMBER: {
           value: '12345678'
         }
       }
@@ -217,7 +217,7 @@ describe('validateAccreditationNumber', () => {
     }
     const parsed = {
       meta: {
-        ACCREDITATION: {
+        ACCREDITATION_NUMBER: {
           value: '99999999' // No location provided
         }
       }
@@ -232,7 +232,7 @@ describe('validateAccreditationNumber', () => {
     expect(issues.isFatal()).toBe(true)
     const allIssues = issues.getAllIssues()
     expect(allIssues[0].context.location).toEqual({
-      field: 'ACCREDITATION' // Only field is set when location is missing
+      field: 'ACCREDITATION_NUMBER' // Only field is set when location is missing
     })
   })
 })
