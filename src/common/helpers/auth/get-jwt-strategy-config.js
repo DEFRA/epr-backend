@@ -3,12 +3,15 @@ import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { config } from '../../../config.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
-  const { entraIdOidcConfig } = oidcConfigs
+  const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
 
   return {
     keys: [
       {
         uri: entraIdOidcConfig.jwks_uri
+      },
+      {
+        uri: defraIdOidcConfig.jwks_uri
       }
     ],
     verify: {
@@ -44,7 +47,28 @@ export function getJwtStrategyConfig(oidcConfigs) {
         }
       }
 
-      // Defra id authentication goes here
+      if (
+        config.get('featureFlags.defraIdAuth') &&
+        issuer === defraIdOidcConfig.issuer
+      ) {
+        const frontendClientId = config.get('oidc.defraId.clientId')
+        if (audience !== frontendClientId) {
+          throw Boom.forbidden('Invalid audience for Defra Id token')
+        }
+
+        // Placeholder for Defra Id token scope/roles
+        const scope = []
+
+        return {
+          isValid: scope.length > 0,
+          credentials: {
+            id: contactId,
+            email,
+            issuer,
+            scope
+          }
+        }
+      }
 
       throw Boom.badRequest(`Unrecognized token issuer: ${issuer}`)
     }
