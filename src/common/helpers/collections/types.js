@@ -1,9 +1,8 @@
-/**
- * @import {CollectionInfo, Db} from 'mongodb'
- */
+/** @import {CollectionInfo, Db} from 'mongodb' */
 
 /**
  * Create or update collection
+ *
  * @typedef {(db: Db, collections: Pick<CollectionInfo, "type" | "name">[]) => Promise<void>} CreateOrUpdateCollection
  */
 

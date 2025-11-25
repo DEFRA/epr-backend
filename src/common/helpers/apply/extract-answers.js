@@ -2,33 +2,41 @@ import { getConfig } from '../../../config.js'
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 
 /**
- * @typedef {Object} Component
- * @property {string} name
- * @property {string} shortDescription
- * @property {string} title
- * @property {string} type
+ * @typedef {{
+ *   name: string
+ *   shortDescription: string
+ *   title: string
+ *   type: string
+ * }} Component
  */
 
 /**
- * @typedef {Object} Page
- * @property {Component[]} components
+ * @typedef {{
+ *   components: Component[]
+ * }} Page
  */
 
 /**
- * @typedef {Object} FormPayload
- * @property {Object} [meta]
- * @property {Object} [meta.definition]
- * @property {Page[]} [meta.definition.pages]
- * @property {Object} [data]
- * @property {Object.<string, *>} [data.main]
+ * @typedef {{
+ *   meta?: {
+ *     definition?: {
+ *       name?: string
+ *       pages?: Page[]
+ *     }
+ *   }
+ *   data?: {
+ *     main?: Record<string, any>
+ *   }
+ * }} FormPayload
  */
 
 /**
- * @typedef {Object} Answer
- * @property {string} shortDescription
- * @property {string} title
- * @property {string} type
- * @property {*} value
+ * @typedef {{
+ *   shortDescription: string
+ *   title: string
+ *   type: string
+ *   value: any
+ * }} Answer
  */
 
 /**
@@ -116,8 +124,8 @@ export function extractReferenceNumber(answers) {
 }
 
 /**
- * Extracts reference number from answers
- * @param {Answer[]} answers
+ * Extracts regulator email from form metadata
+ * @param {Pick<FormPayload, 'meta'>} payload
  * @returns {string | undefined}
  */
 export function getRegulatorEmail({ meta }) {
@@ -130,5 +138,6 @@ export function getRegulatorEmail({ meta }) {
     return undefined
   }
 
+  // @ts-ignore - Dynamic config path causes deep type inference
   return config.get(`regulator.${regulatorId}.email`) ?? undefined
 }

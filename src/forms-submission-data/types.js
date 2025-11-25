@@ -1,92 +1,99 @@
 /** @import {UserRoles} from '#domain/organisations/model.js' */
 
 /**
- * @typedef {Object} User
- * @property {string} fullName
- * @property {string} email
+ * @typedef {{
+ *   email: string
+ *   fullName: string
+ * }} User
  */
 
 /**
- * @typedef {Object} DefraIdLinkedBy
- * @property {string} email
- * @property {string} id
+ * @typedef {{
+ *   email: string
+ *   id: string
+ * }} DefraIdLinkedBy
  */
 
 /**
- * @typedef {Object} DefraId
- * @property {string} orgId
- * @property {string} orgName
- * @property {DefraIdLinkedBy} linkedBy
- * @property {string} linkedAt
+ * @typedef {{
+ *   linkedAt: string
+ *   linkedBy: DefraIdLinkedBy
+ *   orgId: string
+ *   orgName: string
+ * }} DefraId
  */
 
 /**
- * @typedef {Object} OrganisationUser
- * @property {string} fullName
- * @property {string} email
- * @property {boolean} isInitialUser
- * @property {UserRoles[]} roles
+ * @typedef {{
+ *   email: string
+ *   fullName: string
+ *   isInitialUser: boolean
+ *   roles: UserRoles[]
+ * }} OrganisationUser
  */
 
 /**
  * Base organisation from transformation
  *
- * @typedef {Object} BaseOrganisation
- * @property {string} id
- * @property {number} orgId
- * @property {string[]} wasteProcessingTypes
- * @property {string[]} [reprocessingNations]
- * @property {string} [businessType]
- * @property {object} companyDetails
- * @property {object} [partnership]
- * @property {User} submitterContactDetails
- * @property {User} [managementContactDetails]
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
- * @property {DefraId} [defraId]
+ * @typedef {{
+ *   businessType?: string
+ *   companyDetails: object
+ *   defraId?: DefraId
+ *   formSubmissionTime: Date
+ *   id: string
+ *   managementContactDetails?: User
+ *   orgId: number
+ *   partnership?: object
+ *   reprocessingNations?: string[]
+ *   submitterContactDetails: User
+ *   submittedToRegulator: string
+ *   wasteProcessingTypes: string[]
+ * }} BaseOrganisation
  */
 
 /**
- * @typedef {Object} Registration
- * @property {string} id
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
- * @property {number} orgId
- * @property {string} systemReference
- * @property {string} orgName
- * @property {User} submitterContactDetails
- * @property {string} cbduNumber
- * @property {string} material
- * @property {string} [glassRecyclingProcess]
- * @property {string} wasteProcessingType
- * @property {User[]} approvedPersons
- * @property {object} [site]
- * @property {object} [noticeAddress]
- * @property {string} [suppliers]
- * @property {string[]} [exportPorts]
- * @property {string} [plantEquipmentDetails]
- * @property {object[]} [wasteManagementPermits]
- * @property {object[]} [samplingInspectionPlanPart1FileUploads]
- * @property {object[]} [orsFileUploads]
- * @property {object[]} [yearlyMetrics]
+ * @typedef {{
+ *   accreditationId?: string
+ *   approvedPersons: User[]
+ *   cbduNumber: string
+ *   exportPorts?: string[]
+ *   formSubmissionTime: Date
+ *   glassRecyclingProcess?: string
+ *   id: string
+ *   material: string
+ *   noticeAddress?: object
+ *   orgId: number
+ *   orgName: string
+ *   orsFileUploads?: object[]
+ *   plantEquipmentDetails?: string
+ *   samplingInspectionPlanPart1FileUploads?: object[]
+ *   site?: object
+ *   submitterContactDetails: User
+ *   submittedToRegulator: string
+ *   suppliers?: string
+ *   systemReference: string
+ *   wasteManagementPermits?: object[]
+ *   wasteProcessingType: string
+ *   yearlyMetrics?: object[]
+ * }} Registration
  */
 
 /**
- * @typedef {Object} Accreditation
- * @property {string} id
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
- * @property {number} orgId
- * @property {string} systemReference
- * @property {string} orgName
- * @property {User} submitterContactDetails
- * @property {string} material
- * @property {string} [glassRecyclingProcess]
- * @property {string} wasteProcessingType
- * @property {object} [prnIssuance]
- * @property {User[]} [prnIssuance.signatories]
- * @property {object[]} [samplingInspectionPlanPart2FileUploads]
- * @property {object[]} [orsFileUploads]
+ * @typedef {{
+ *   formSubmissionTime: Date
+ *   glassRecyclingProcess?: string
+ *   id: string
+ *   material: string
+ *   orgId: number
+ *   orgName: string
+ *   orsFileUploads?: object[]
+ *   prnIssuance?: {signatories?: User[]}
+ *   samplingInspectionPlanPart2FileUploads?: object[]
+ *   submitterContactDetails: User
+ *   submittedToRegulator: string
+ *   systemReference: string
+ *   wasteProcessingType: string
+ * }} Accreditation
  */
 
 /**
