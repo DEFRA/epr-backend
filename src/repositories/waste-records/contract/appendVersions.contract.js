@@ -393,7 +393,7 @@ export const testAppendVersionsBehaviour = (it) => {
       expect(org2Result[0].versions[0].summaryLog.id).toBe('log-2')
     })
 
-    it('removes fields from data when they are absent from currentData', async () => {
+    it('removes fields from data when they are absent from new VersionData.data', async () => {
       // Create initial record with two fields
       const initialVersion = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
@@ -426,8 +426,8 @@ export const testAppendVersionsBehaviour = (it) => {
             status: VERSION_STATUS.UPDATED,
             summaryLogId: 'log-2',
             summaryLogUri: 's3://bucket/key2',
-            versionData: { FIELD_A: 'updated' }, // Delta only
-            currentData: { FIELD_A: 'updated', FIELD_C: 'new-field' } // Complete replacement
+            versionData: { FIELD_A: 'updated' },
+            currentData: { FIELD_A: 'updated', FIELD_C: 'new-field' }
           })
         }
       })
@@ -438,7 +438,7 @@ export const testAppendVersionsBehaviour = (it) => {
       expect(result).toHaveLength(1)
 
       // Data should be completely replaced, NOT merged
-      // FIELD_B should NOT exist (it was in original but not in currentData)
+      // FIELD_B should NOT exist (it was in original but not in new VersionData.data)
       expect(result[0].data).toEqual({
         FIELD_A: 'updated',
         FIELD_C: 'new-field'
