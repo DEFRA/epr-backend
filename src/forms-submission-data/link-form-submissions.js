@@ -82,7 +82,7 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
 }
 
 function normalizePostcode(postcode) {
-  return postcode.replace(/\s/g, '').toUpperCase()
+  return postcode.replaceAll(/\s/g, '').toUpperCase()
 }
 
 function sitesMatch(site1, site2) {
