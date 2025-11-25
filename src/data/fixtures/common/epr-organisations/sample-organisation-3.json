@@ -180,8 +180,10 @@
       "submittedToRegulator": "niea",
       "orgName": "Green Future Trust",
       "site": {
-        "line1": "100 Trust Road",
-        "postcode": "BT1 1AA"
+        "address": {
+          "line1": "100 Trust Road",
+          "postcode": "BT1 1AA"
+        }
       },
       "material": "steel",
       "glassRecyclingProcess": null,

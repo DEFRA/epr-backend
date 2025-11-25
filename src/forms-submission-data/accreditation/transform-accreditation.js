@@ -34,9 +34,11 @@ function getSubmitterDetails(answersByShortDescription) {
 
 function getSiteDetails(answersByShortDescription) {
   return {
-    line1:
-      answersByShortDescription[ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS],
-    postcode: answersByShortDescription[ACCREDITATION.SITE.fields.POSTCODE]
+    address: {
+      line1:
+        answersByShortDescription[ACCREDITATION.SITE.fields.FIRST_LINE_ADDRESS],
+      postcode: answersByShortDescription[ACCREDITATION.SITE.fields.POSTCODE]
+    }
   }
 }
 

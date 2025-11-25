@@ -199,8 +199,10 @@
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
       "site": {
-        "line1": "7 Glass processing site",
-        "postcode": "SW2A 0AA"
+        "address": {
+          "line1": "7 Glass processing site",
+          "postcode": "SW2A 0AA"
+        }
       },
       "material": "glass",
       "glassRecyclingProcess": ["glass_re_melt"],
@@ -278,8 +280,10 @@
       "submittedToRegulator": "ea",
       "orgName": "ACME ltd",
       "site": {
-        "line1": "7",
-        "postcode": "SW2A 0AA"
+        "address": {
+          "line1": "7",
+          "postcode": "SW2A 0AA"
+        }
       },
       "material": "glass",
       "glassRecyclingProcess": ["glass_re_melt"],
