@@ -5,6 +5,7 @@ import {
   linkRegistrationToAccreditations
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { postCodeForLogging } from './parsing-common/postcode.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -297,11 +298,14 @@ describe('linkRegistrationToAccreditations', () => {
     for (const reg of result[0].registrations) {
       expect(reg.accreditationId).toBeUndefined()
     }
+    const acc1PostcodeHash = postCodeForLogging('W1B 1NT')
+    const reg2PostcodeHash = postCodeForLogging('W1C 1NT')
+
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `No registrations matched for accreditation: accreditationId=${acc1Id}, orgId=100, org id:${org1Id}`
+      message: `No registrations matched for accreditation: accreditationId=${acc1Id}, wasteProcessingType=reprocessor, material=aluminium, site.postcodeHash=${acc1PostcodeHash}, registrations=[{id=${reg1Id}, wasteProcessingType=exporter, material=wood}, {id=${reg2Id}, wasteProcessingType=reprocessor, material=aluminium, site.postcodeHash=${reg2PostcodeHash}}], orgId=100, org id:${org1Id}`
     })
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `No registrations matched for accreditation: accreditationId=${acc2Id}, orgId=100, org id:${org1Id}`
+      message: `No registrations matched for accreditation: accreditationId=${acc2Id}, wasteProcessingType=exporter, material=paper, registrations=[{id=${reg1Id}, wasteProcessingType=exporter, material=wood}, {id=${reg2Id}, wasteProcessingType=reprocessor, material=aluminium, site.postcodeHash=${reg2PostcodeHash}}], orgId=100, org id:${org1Id}`
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/2 linked, 2 unlinked'
@@ -412,8 +416,11 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
     expect(result[0].registrations[1].accreditationId).toBeUndefined()
+
+    const postcodeHash = postCodeForLogging('W1B 1NT')
+
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `Multiple registrations matched for accreditation: accreditationId=${accId1}, registrationIds=[${reg1Id}, ${reg2Id}], orgId=100, org id:${org1Id}`
+      message: `Multiple registrations matched for accreditation: accreditationId=${accId1}, wasteProcessingType=reprocessor, material=wood, site.postcodeHash=${postcodeHash}, registrations=[{id=${reg1Id}, wasteProcessingType=reprocessor, material=wood, site.postcodeHash=${postcodeHash}}, {id=${reg2Id}, wasteProcessingType=reprocessor, material=wood, site.postcodeHash=${postcodeHash}}], orgId=100, org id:${org1Id}`
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/1 linked, 1 unlinked'
