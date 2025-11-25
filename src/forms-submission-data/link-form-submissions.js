@@ -81,14 +81,15 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   return organisations
 }
 
+function normalizePostcode(postcode) {
+  return postcode.replace(/[\s\t\r\n]/g, '').toUpperCase()
+}
+
 function sitesMatch(site1, site2) {
   return (
-    site1.line1 &&
-    site2.line1 &&
-    site1.line1 === site2.line1 &&
     site1.postcode &&
     site2.postcode &&
-    site1.postcode === site2.postcode
+    normalizePostcode(site1.postcode) === normalizePostcode(site2.postcode)
   )
 }
 
@@ -101,25 +102,9 @@ function isAccreditationForRegistration(accreditation, registration) {
     return false
   }
 
-  // For reprocessors, site must also match
-  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR) {
-    const sitesDoMatch = sitesMatch(registration.site, accreditation.site)
-
-    if (
-      !sitesDoMatch &&
-      registration.site.postcode &&
-      accreditation.site.postcode &&
-      registration.site.postcode === accreditation.site.postcode
-    ) {
-      logger.warn({
-        message: `Postcode matches but address line1 doesn't: regId=${registration.id}, accId=${accreditation.id}`
-      })
-    }
-
-    return sitesDoMatch
-  }
-
-  return true
+  return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+    ? sitesMatch(registration.site, accreditation.site)
+    : true
 }
 
 /**

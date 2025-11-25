@@ -227,7 +227,7 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: { line1: '78 Portland Place', postcode: '   W1b 1NT' }
           }
         ],
         accreditations: [
@@ -235,7 +235,7 @@ describe('linkRegistrationToAccreditations', () => {
             id: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: { line1: '78 Portland Place', postcode: 'W1B1NT ' }
           }
         ]
       }
@@ -273,7 +273,7 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: { line1: '78 Portland Place', postcode: 'W1C 1NT' }
           }
         ],
         accreditations: [
@@ -474,40 +474,5 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
-  })
-
-  it('logs warning when postcode matches but line1 doesnt for reprocessor', () => {
-    const org1Id = new ObjectId().toString()
-    const reg1Id = new ObjectId().toString()
-    const acc1Id = new ObjectId().toString()
-    const organisations = [
-      {
-        id: org1Id,
-        name: 'Org 1',
-        orgId: 100,
-        registrations: [
-          {
-            id: reg1Id,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-          }
-        ],
-        accreditations: [
-          {
-            id: acc1Id,
-            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-            material: MATERIAL.WOOD,
-            site: { line1: '80 Portland Place', postcode: 'W1B 1NT' }
-          }
-        ]
-      }
-    ]
-
-    const result = linkRegistrationToAccreditations(organisations)
-    expect(result[0].registrations[0].accreditationId).toBeUndefined()
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `Postcode matches but address line1 doesn't: regId=${reg1Id}, accId=${acc1Id}`
-    })
   })
 })

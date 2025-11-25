@@ -19,7 +19,7 @@ export function parseUkAddress(addressString) {
     .filter((part) => part !== '')
 
   if (parts.length < MIN_ADDRESS_PARTS) {
-    return { fullAddress: addressString, country: 'UK' }
+    return { fullAddress: parts.join(','), country: 'UK' }
   }
 
   const middleParts = parts.slice(1, -1)

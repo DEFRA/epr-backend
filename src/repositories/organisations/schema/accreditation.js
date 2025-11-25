@@ -95,8 +95,7 @@ export const accreditationSchema = Joi.object({
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart2FileUploads: Joi.array()
     .items(formFileUploadSchema)
-    .required()
-    .min(1),
+    .required(),
   orsFileUploads: whenExporter(
     Joi.array().items(formFileUploadSchema).required().min(1)
   )
