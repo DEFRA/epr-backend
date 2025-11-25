@@ -1,10 +1,11 @@
+import {
+  PARTNER_TYPE,
+  PARTNERSHIP_TYPE,
+  STATUS,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
-import {
-  STATUS,
-  PARTNER_TYPE,
-  PARTNERSHIP_TYPE
-} from '#domain/organisations/model.js'
 
 export const idSchema = Joi.string()
   .required()
@@ -32,13 +33,36 @@ export const addressSchema = Joi.object({
   fullAddress: Joi.string().optional()
 })
 
-export const userSchema = Joi.object({
+const baseUserSchema = Joi.object({
   fullName: Joi.string().required(),
-  email: Joi.string().email().required(),
-  phone: Joi.string().required(),
-  role: Joi.string().optional(),
-  title: Joi.string().optional()
-}).or('role', 'title')
+  email: Joi.string().email().required()
+})
+
+export const userSchema = baseUserSchema
+  .keys({
+    phone: Joi.string().required(),
+    role: Joi.string().optional(),
+    title: Joi.string().optional()
+  })
+  .or('role', 'title')
+
+export const collatedUserSchema = baseUserSchema.keys({
+  isInitialUser: Joi.boolean().required(),
+  roles: Joi.array()
+    .items(Joi.string().valid(USER_ROLES.STANDARD))
+    .min(1)
+    .required()
+})
+
+export const linkedDefraOrganisationSchema = Joi.object({
+  orgId: Joi.string().uuid().required(),
+  orgName: Joi.string().required(),
+  linkedBy: Joi.object({
+    email: Joi.string().email().required(),
+    id: Joi.string().uuid().required()
+  }).required(),
+  linkedAt: Joi.date().iso().required()
+})
 
 export const statusHistoryItemSchema = Joi.object({
   status: Joi.string()

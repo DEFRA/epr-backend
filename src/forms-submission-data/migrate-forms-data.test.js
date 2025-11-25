@@ -33,13 +33,15 @@ const validSubmission2 = {
 const transformedOrg1 = {
   id: 'org-123',
   orgId: 500001,
-  companyDetails: { name: 'Test Company 1' }
+  companyDetails: { name: 'Test Company 1' },
+  users: []
 }
 
 const transformedOrg2 = {
   id: 'org-456',
   orgId: 500002,
-  companyDetails: { name: 'Test Company 2' }
+  companyDetails: { name: 'Test Company 2' },
+  users: []
 }
 
 const validRegSubmission1 = {

@@ -2,13 +2,20 @@ import {
   answers,
   createdAt,
   orgId,
-  referenceNumber,
   rawSubmissionData,
+  referenceNumber,
   schemaVersion
 } from './schema-properties.js'
 
+/**
+ * @import {CreateOrUpdateCollection} from './types.js'
+ */
+
 const collectionName = 'accreditation'
 
+/**
+ * @type {CreateOrUpdateCollection}
+ */
 export async function createOrUpdateAccreditationCollection(db, collections) {
   const options = {
     validator: {

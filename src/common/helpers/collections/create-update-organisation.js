@@ -10,6 +10,13 @@ import {
 
 const collectionName = 'organisation'
 
+/**
+ * @import {CreateOrUpdateCollection} from './types.js'
+ */
+
+/**
+ * @type {CreateOrUpdateCollection}
+ */
 export async function createOrUpdateOrganisationCollection(db, collections) {
   const options = {
     validator: {

@@ -1,6 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
+/**
+ * @import {OrganisationWithAccreditations} from './types.js'
+ */
+
 function getItemsBySystemReference(items) {
   return items.reduce((itemsMap, item) => {
     itemsMap.set(item.systemReference, [
@@ -118,6 +122,12 @@ function isAccreditationForRegistration(accreditation, registration) {
   return true
 }
 
+/**
+ * Link registration to accredidations
+ *
+ * @param {OrganisationWithAccreditations[]} organisations
+ * @returns {OrganisationWithAccreditations[]}
+ */
 export function linkRegistrationToAccreditations(organisations) {
   let linkedCount = 0
   const totalAccreditationsCount = organisations.flatMap(
