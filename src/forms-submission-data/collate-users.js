@@ -1,3 +1,5 @@
+import { USER_ROLES } from '#domain/organisations/model.js'
+
 /**
  * @import {OrganisationWithAccreditations, OrganisationUser, User} from './types.js'
  */
@@ -9,7 +11,7 @@
  * @returns {OrganisationUser[]}
  */
 export function collateUsers(organisation) {
-  /** @type {Partial<User>[]} */
+  /** @type {User[]} */
   const users = []
 
   if (organisation.submitterContactDetails) {
@@ -47,6 +49,7 @@ export function collateUsers(organisation) {
  * @returns {OrganisationUser[]}
  */
 function deduplicateUsers(users) {
+  /** @type Map<string, OrganisationUser> */
   const userMap = new Map()
 
   for (const user of users) {
@@ -57,7 +60,7 @@ function deduplicateUsers(users) {
         fullName: user.fullName,
         email: user.email,
         isInitialUser: true,
-        roles: ['standardUser']
+        roles: [USER_ROLES.STANDARD]
       })
     }
   }

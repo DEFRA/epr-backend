@@ -1,10 +1,11 @@
+import {
+  PARTNER_TYPE,
+  PARTNERSHIP_TYPE,
+  STATUS,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
-import {
-  STATUS,
-  PARTNER_TYPE,
-  PARTNERSHIP_TYPE
-} from '#domain/organisations/model.js'
 
 export const idSchema = Joi.string()
   .required()
@@ -47,10 +48,13 @@ export const userSchema = baseUserSchema
 
 export const collatedUserSchema = baseUserSchema.keys({
   isInitialUser: Joi.boolean().required(),
-  roles: Joi.array().items(Joi.string()).min(1).required()
+  roles: Joi.array()
+    .items(Joi.string().valid(USER_ROLES.STANDARD))
+    .min(1)
+    .required()
 })
 
-export const defraIdSchema = Joi.object({
+export const linkedDefraOrganisationSchema = Joi.object({
   orgId: Joi.string().uuid().required(),
   orgName: Joi.string().required(),
   linkedBy: Joi.object({

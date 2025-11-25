@@ -1,3 +1,5 @@
+/** @import {UserRoles} from '#domain/organisations/model.js' */
+
 /**
  * @typedef {Object} User
  * @property {string} fullName
@@ -23,7 +25,7 @@
  * @property {string} fullName
  * @property {string} email
  * @property {boolean} isInitialUser
- * @property {string[]} roles
+ * @property {UserRoles[]} roles
  */
 
 /**

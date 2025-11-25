@@ -84,3 +84,10 @@ export const VALUE_TYPE = Object.freeze({
   ACTUAL: 'actual',
   ESTIMATED: 'estimated'
 })
+
+/**
+ * @typedef {typeof USER_ROLES[keyof typeof USER_ROLES]} UserRoles
+ */
+export const USER_ROLES = Object.freeze({
+  STANDARD: 'standardUser'
+})
