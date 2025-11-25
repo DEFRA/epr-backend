@@ -3,7 +3,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "target": "ES2022",
-    "checkJs": false,
+    "checkJs": true,
     "baseUrl": ".",
     "paths": {
       "#adapters/*": ["./src/adapters/*"],
