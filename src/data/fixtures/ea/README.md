@@ -72,3 +72,4 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 | [503176](./accreditation/reprocessor-wood.json)              | Reprocessor accreditation for wood with first line of address not same as registration. "78 Portland Place" during registration vs 78 during accreditation |
 | [503177](./accreditation/exporter-without-registration.json) | Exporter accreditation for glass without registration                                                                                                      |
 | [503181](./accreditation/exporter.json)                      | Exporter accreditation for glass                                                                                                                           |
+| [503176](./accreditation/reprocessor-glass.json)             | Reprocessor accreditation for glass                                                                                                                        |
