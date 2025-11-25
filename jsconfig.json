@@ -5,6 +5,7 @@
     "target": "ES2022",
     "checkJs": true,
     "baseUrl": ".",
+    "types": ["vitest/globals"],
     "paths": {
       "#adapters/*": ["./src/adapters/*"],
       "#application/*": ["./src/application/*"],
