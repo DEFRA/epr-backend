@@ -18,7 +18,7 @@ describe('collateUsers', () => {
         fullName: 'John Smith',
         email: 'john.smith@example.com',
         isInitialUser: true,
-        roles: ['standardUser']
+        roles: ['standard_user']
       })
     })
 
@@ -71,7 +71,7 @@ describe('collateUsers', () => {
         fullName: 'John Smith',
         email: 'john.smith@example.com',
         isInitialUser: true,
-        roles: ['standardUser']
+        roles: ['standard_user']
       })
     })
 
@@ -125,7 +125,7 @@ describe('collateUsers', () => {
         fullName: 'Carol White',
         email: 'carol.white@example.com',
         isInitialUser: true,
-        roles: ['standardUser']
+        roles: ['standard_user']
       })
     })
 

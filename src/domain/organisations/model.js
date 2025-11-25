@@ -89,5 +89,5 @@ export const VALUE_TYPE = Object.freeze({
  * @typedef {typeof USER_ROLES[keyof typeof USER_ROLES]} UserRoles
  */
 export const USER_ROLES = Object.freeze({
-  STANDARD: 'standardUser'
+  STANDARD: 'standard_user'
 })
