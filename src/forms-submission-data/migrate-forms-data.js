@@ -5,7 +5,10 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
 import { collateUsers } from '#formsubmission/collate-users.js'
-import { linkItemsToOrganisations } from '#formsubmission/link-form-submissions.js'
+import {
+  linkItemsToOrganisations,
+  linkRegistrationToAccreditations
+} from '#formsubmission/link-form-submissions.js'
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
@@ -198,8 +201,11 @@ export async function migrateFormsData(
     transformedAccreditations
   )
 
-  /** @type {Organisation[]} */
-  const organisations = organisationsWithAccreditations.map(
+  const orgRegistrationsLinkedToAcc = linkRegistrationToAccreditations(
+    organisationsWithAccreditations
+  )
+
+  const organisations = orgRegistrationsLinkedToAcc.map(
     /** @param {OrganisationWithAccreditations} org */
     (org) => ({
       ...org,

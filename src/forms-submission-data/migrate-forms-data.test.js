@@ -489,6 +489,21 @@ describe('migrateFormsData', () => {
       const org503177 = orgsByOrgId.get(503177)
       expect(org503177).toBeDefined()
       expect(org503177.accreditations).toHaveLength(1)
+
+      // Verify registration-to-accreditation linking
+      // Exporter registration SHOULD be linked to exporter accreditation
+      const exporterRegistration = org503181.registrations[0]
+      const exporterAccreditation = org503181.accreditations[0]
+      expect(exporterRegistration.accreditationId).toBe(
+        exporterAccreditation.id
+      )
+
+      // All other registrations should NOT be linked (materials/sites don't match or no accreditation)
+      for (const reg of allOrgs
+        .filter((o) => o.orgId !== 503181)
+        .flatMap((o) => o.registrations ?? [])) {
+        expect(reg.accreditationId).toBeUndefined()
+      }
     })
   })
 })
