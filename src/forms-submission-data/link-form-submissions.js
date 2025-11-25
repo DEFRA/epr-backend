@@ -1,9 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 function getItemsBySystemReference(items) {
   return items.reduce((itemsMap, item) => {
     itemsMap.set(item.systemReference, [
-      ...(itemsMap.get(item.systemReference) || []),
+      ...(itemsMap.get(item.systemReference) ?? []),
       item
     ])
     return itemsMap
@@ -19,15 +20,15 @@ function getOrganisationsById(organisations) {
 
 function logOrganisationsWithoutItems(organisations, propertyName) {
   const orgsWithoutItems = organisations.filter(
-    (org) => !org[propertyName] || org[propertyName].length === 0
+    (org) => (org[propertyName] ?? []).length === 0
   )
 
   if (orgsWithoutItems.length > 0) {
-    logger.warn({
+    logger.info({
       message: `${orgsWithoutItems.length} organisations without ${propertyName}`
     })
     for (const org of orgsWithoutItems) {
-      logger.warn({
+      logger.info({
         message: `Organisation without any ${propertyName}: id=${org.id}`
       })
     }
@@ -73,5 +74,93 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   }
   logOrganisationsWithoutItems(organisations, propertyName)
 
-  return [...organisationsById.values()]
+  return organisations
+}
+
+function sitesMatch(site1, site2) {
+  return (
+    site1.line1 &&
+    site2.line1 &&
+    site1.line1 === site2.line1 &&
+    site1.postcode &&
+    site2.postcode &&
+    site1.postcode === site2.postcode
+  )
+}
+
+function isAccreditationForRegistration(accreditation, registration) {
+  const typeAndMaterialMatch =
+    registration.wasteProcessingType === accreditation.wasteProcessingType &&
+    registration.material === accreditation.material
+
+  if (!typeAndMaterialMatch) {
+    return false
+  }
+
+  // For reprocessors, site must also match
+  if (registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR) {
+    const sitesDoMatch = sitesMatch(registration.site, accreditation.site)
+
+    if (
+      !sitesDoMatch &&
+      registration.site.postcode &&
+      accreditation.site.postcode &&
+      registration.site.postcode === accreditation.site.postcode
+    ) {
+      logger.warn({
+        message: `Postcode matches but address line1 doesn't: regId=${registration.id}, accId=${accreditation.id}`
+      })
+    }
+
+    return sitesDoMatch
+  }
+
+  return true
+}
+
+export function linkRegistrationToAccreditations(organisations) {
+  let linkedCount = 0
+  const totalAccreditationsCount = organisations.flatMap(
+    (org) => org.accreditations ?? []
+  ).length
+
+  for (const org of organisations) {
+    const accreditations = org.accreditations ?? []
+    const registrations = org.registrations ?? []
+
+    for (const accreditation of accreditations) {
+      const matchedRegistrations = registrations.filter((registration) =>
+        isAccreditationForRegistration(accreditation, registration)
+      )
+
+      if (matchedRegistrations.length === 1) {
+        matchedRegistrations[0].accreditationId = accreditation.id
+        linkedCount++
+      } else if (matchedRegistrations.length > 1) {
+        logger.warn({
+          message: `Multiple registrations matched for accreditation: accreditationId=${accreditation.id}, registrationIds=[${matchedRegistrations.map((r) => r.id).join(', ')}], orgId=${org.orgId}, org id:${org.id}`
+        })
+      } else {
+        logger.warn({
+          message: `No registrations matched for accreditation: accreditationId=${accreditation.id}, orgId=${org.orgId}, org id:${org.id}`
+        })
+      }
+    }
+  }
+
+  logger.info({
+    message: `Accreditation linking complete: ${linkedCount}/${totalAccreditationsCount} linked, ${totalAccreditationsCount - linkedCount} unlinked`
+  })
+
+  const registrationsCount = organisations.flatMap(
+    (org) => org.registrations ?? []
+  ).length
+  const registrationsWithoutAcc = organisations.flatMap((org) =>
+    (org.registrations ?? []).filter((r) => !r.accreditationId)
+  ).length
+  logger.info({
+    message: `Registrations : ${registrationsCount - registrationsWithoutAcc}/${registrationsCount} linked to accreditations, ${registrationsWithoutAcc} unlinked`
+  })
+
+  return organisations
 }
