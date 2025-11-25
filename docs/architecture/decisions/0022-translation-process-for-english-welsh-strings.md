@@ -4,7 +4,7 @@ Date: 2025-11-06
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -16,19 +16,14 @@ Currently, the translation process is manual. To move toward a structured and pa
 
 We also need to ensure consistency between English and Welsh locale files by validating that both exist and contain matching keys.
 
-### Existing Translation Checks
+### Current Translation Validation
 
-Two scripts are already in place to validate translation completeness:
+The project currently uses **`@lingual/i18n-check`** for basic translation validation, but it has limitations:
 
-1. **Locale File Existence Check**
-   - Verifies that if an `en.json` file exists in a folder, a corresponding `cy.json` must also exist.
-   - Produces a list of missing locale files (i.e., folders where one of the language files is missing).
-
-2. **Key Consistency Check**
-   - Compares keys between `en.json` and `cy.json`.
-   - Lists missing keys in either file and identifies discrepancies.
-
-These checks ensure both languages have parallel structures and help identify untranslated or missing strings.
+- Manual process requiring separate script execution
+- No automated key extraction from source code
+- Limited reporting capabilities
+- No built-in translation progress tracking
 
 ### Translation Format and Delivery
 
@@ -39,93 +34,145 @@ Data can be sent via email to the contact to pass it on to the translation team.
 
 ## Decision
 
-### Chosen Approach
+We will implement an automated translation workflow using **i18next-cli** with a custom Nunjucks plugin, combined with Excel-based export/import scripts.
 
-We will adopt a custom export/import process that outputs Excel files for the
-translation team.
+### Why i18next-cli Replaces @lingual/i18n-check
 
-This approach allows us to align with the translation team’s workflow while preparing for future automation if a platform is introduced.
+i18next-cli provides comprehensive translation management capabilities that make `@lingual/i18n-check` redundant:
 
-### Excel Structure
+**i18next-cli provides:**
 
-Each exported Excel file will include four columns as provided by the translation team:
+- Automated key extraction from source code (`.js`, `.njk` files)
+- Built-in validation of translation file pairs
+- Real-time translation progress tracking (`status` command)
+- Automatic synchronization of keys across languages
+- Detection of missing/extra keys
+- Plugin system for custom file formats (Nunjucks)
 
-| Namespace & Key         | en                         | cy                       |
-| ----------------------- | -------------------------- | ------------------------ |
-| Folder name (namespace) | English string (if exists) | Welsh string (if exists) |
-| & Translation key       |                            |                          |
+By adopting i18next-cli, we consolidate translation extraction, validation, and reporting into a single tool with a modern plugin architecture.
 
-This format provides the translators with clear context for each string while retaining the mapping required to import translations back into the JSON files.
+### Solution Components
 
-### Alternative Approach Considered
+#### 1. Automated Key Extraction: i18next-cli + Custom Plugin
 
-#### i18next and i18next-parser
+**i18next-cli** provides automated extraction of translation keys from source code with built-in commands:
 
-We explored using i18next-parser to automatically extract translation keys from
-`.js` and `.njk` files. This was not suitable because:
+- **`extract`** - Scans source code for translation keys and updates JSON files in place
+  - Adds newly discovered keys to translation files
+  - Preserves existing translations
+  - Updates files directly in `src/server/*/en.json` and `cy.json`
+  - Does NOT provide exportable files for translators
 
-- Nunjucks templates cannot be reliably parsed by i18next-parser.
-- Even with custom lexers, nested macros and GOV.UK frontend patterns were not
-  detected.
-- The parser does not provide file exports out of the box.
+- **`status`** - Show translation completion progress (e.g., "Welsh: 32% complete")
 
-Given these limitations, the automated extraction workflow was abandoned in
-favour of a custom export/import solution that works consistently with our
-structure.
+- **`sync`** - Synchronize keys across languages (ensures en.json and cy.json have matching keys)
+
+**Custom Nunjucks Plugin** extends i18next-cli to handle `.njk` template files:
+
+- Uses the `onEnd` hook to process files after standard JS parsing
+- Scans all `.njk` files using `glob`
+- Extracts translation function calls (`localise()` and `t()`) via regex
+- Adds extracted keys directly to the collection
+
+#### 2. Excel Export/Import for Translation Team
+
+**Excel Structure:**
+
+| field name                | en                           | cy  |
+| ------------------------- | ---------------------------- | --- |
+| home:pageTitle            | Home                         |     |
+| home:services.description | Use the service to manage... |     |
+
+**Export Script** (`scripts/export-translations.js`):
+
+- Discovers all namespaces by scanning for `en.json` files
+- Flattens nested JSON to dot notation
+- Identifies keys with empty Welsh translations
+- Generates Excel file with only untranslated strings
+- Uses `ExcelJS` library for Excel generation
+
+**Import Script** (`scripts/import-translations.js`):
+
+- Reads completed Excel file
+- Parses `namespace:key` format from "field name" column
+- Reconstructs nested JSON structure
+- Validates keys exist in `en.json` before importing
+- Updates corresponding `cy.json` files
+- Reports success/errors
 
 ---
 
 ## Consequences
 
-### Export Process
+### Translation Workflow
 
-A script will generate an export file (Excel) containing all untranslated strings.
+The complete workflow integrates i18next-cli commands with custom Excel export/import scripts:
 
-The export script will:
-
-- Identify missing or updated strings using the existing comparison scripts.
-- Compile them into a structured dataset.
-- Write the dataset into an Excel file (e.g. `translations-export.xlsx`).
-
-### Translation Process
-
-The translation team will complete the Welsh or English (`cy` | `en`) column and return the file via email.
-
-### Import Process
-
-A complementary import script will read the completed Excel file and update the relevant `cy.json` files based on the **Namespace** and **Key** columns.
-
-- Existing keys will be updated with the new translations.
-- New keys will be added where missing.
-
-This ensures consistent re-integration of translated content with minimal manual work.
-
-### Implementation Plan
-
-1. Enhance existing scripts to output a structured dataset of missing or updated strings.
-2. Create an **export script** using a library such as `xlsx` or `exceljs`.
-3. Create an **import script** to merge completed translations back into `cy.json` or `en.json`.
-4. Document usage and integration steps.
-5. Confirm with the translation team whether a platform is used for submission to explore direct integration options.
-
-### POC Outcome
-
-A small proof-of-concept was created to evaluate whether translation extraction
-could be automated. The POC confirmed that template-based extraction using
-i18next-parser was unreliable, and the effort required to maintain custom
-lexers outweighed any potential benefit.
-
-### Future Considerations
-
-- Consider versioning and change tracking for translation updates.
+```
+┌─────────────────┐
+│  Development    │ Add new features with translation keys
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ i18next extract │ Extract keys from .js, .njk, templates
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Export Script   │ Generate Excel with missing translations
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Translation Team│ Fill in Welsh translations in Excel
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Import Script   │ Update cy.json files from Excel
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ i18next status  │ Verify completion increased (e.g., 24% → 80%)
+└─────────────────┘
+```
 
 ### Summary Table
 
-| Aspect           | Decision                                   |
-| ---------------- | ------------------------------------------ |
-| Export format    | Excel                                      |
-| Columns          | Namespace, Key, en, cy                     |
-| Delivery method  | Email                                      |
-| Automation scope | Semi-automated (scripts for export/import) |
+| Aspect           | Decision                                    |
+| ---------------- | ------------------------------------------- |
+| Extraction tool  | i18next-cli with custom Nunjucks plugin     |
+| Export format    | Excel (.xlsx)                               |
+| Columns          | field name, en, cy                          |
+| Delivery method  | Email                                       |
+| Automation scope | Highly automated (extract + export/import)  |
+| Key format       | namespace:key (e.g., `home:pageTitle`)      |
+| Nested keys      | Dot notation (e.g., `services.description`) |
+
+### Available npm Scripts
+
+```bash
+# Extract translation keys from source code
+npm run i18n:extract
+
+# Check translation completion status
+npm run i18n:status
+
+# Export missing translations to Excel
+npm run export:translations
+
+# Import completed translations from Excel
+npm run import:translations
+
+```
+
+### References
+
+- i18next-cli documentation: https://github.com/i18next/i18next-cli
+- i18next plugin system: https://github.com/i18next/i18next-cli#plugins
+- ExcelJS documentation: https://github.com/exceljs/exceljs
+- Frontend i18n implementation: ADR 0013
 
 ---
