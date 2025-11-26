@@ -1,4 +1,8 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import {
+  comparePostcodes,
+  postCodeForLogging
+} from './parsing-common/postcode.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
@@ -81,16 +85,29 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   return organisations
 }
 
-function normalizePostcode(postcode) {
-  return postcode.replaceAll(/\s/g, '').toUpperCase()
+function formatRegistrationForLogging(registration) {
+  const isReprocessor =
+    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+  const siteInfo = isReprocessor
+    ? `, site.postcodeHash=${postCodeForLogging(registration.site.address.postcode)}`
+    : ''
+  return `{id=${registration.id}, wasteProcessingType=${registration.wasteProcessingType}, material=${registration.material}${siteInfo}}`
+}
+
+function formatAccreditationComparisonLog(accreditation, registrations, org) {
+  const isReprocessor =
+    accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+  const siteInfo = isReprocessor
+    ? `, site.postcodeHash=${postCodeForLogging(accreditation.site.address.postcode)}`
+    : ''
+  const registrationsInfo = registrations
+    .map(formatRegistrationForLogging)
+    .join(', ')
+  return `accreditationId=${accreditation.id}, wasteProcessingType=${accreditation.wasteProcessingType}, material=${accreditation.material}${siteInfo}, registrations=[${registrationsInfo}], orgId=${org.orgId}, org id:${org.id}`
 }
 
 function sitesMatch(site1, site2) {
-  return (
-    site1.postcode &&
-    site2.postcode &&
-    normalizePostcode(site1.postcode) === normalizePostcode(site2.postcode)
-  )
+  return comparePostcodes(site1.address.postcode, site2.address.postcode)
 }
 
 function isAccreditationForRegistration(accreditation, registration) {
@@ -133,11 +150,11 @@ export function linkRegistrationToAccreditations(organisations) {
         linkedCount++
       } else if (matchedRegistrations.length > 1) {
         logger.warn({
-          message: `Multiple registrations matched for accreditation: accreditationId=${accreditation.id}, registrationIds=[${matchedRegistrations.map((r) => r.id).join(', ')}], orgId=${org.orgId}, org id:${org.id}`
+          message: `Multiple registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, org)}`
         })
       } else {
         logger.warn({
-          message: `No registrations matched for accreditation: accreditationId=${accreditation.id}, orgId=${org.orgId}, org id:${org.id}`
+          message: `No registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, org)}`
         })
       }
     }

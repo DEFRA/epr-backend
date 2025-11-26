@@ -16,8 +16,10 @@ import {
 } from './helpers.js'
 
 const accreditationSiteSchema = Joi.object({
-  line1: Joi.string().required(),
-  postcode: Joi.string().required()
+  address: Joi.object({
+    line1: Joi.string().required(),
+    postcode: Joi.string().required()
+  })
 })
 
 const prnIncomeBusinessPlanSchema = Joi.object({

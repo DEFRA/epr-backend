@@ -1837,8 +1837,7 @@
         "NbYOqe": "1",
         "bOVLpK": "Weekly",
         "ruHJsg": "SEPA-WML-2024-001",
-        "dFPgaw": "Glass (R5)",
-        "YMRnmp": "Glass other",
+        "dFPgaw": "Plastic (R3)",
         "HFOWKa": "Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)",
         "VVwRDD": "Estimated figures",
         "cyBcMz": "12",
@@ -2166,12 +2165,6 @@
       "title": "Which packaging waste category are you registering?",
       "type": "RadiosField",
       "value": "Glass (R5)"
-    },
-    {
-      "shortDescription": "Glass process",
-      "title": "What process is used for recycling glass?",
-      "type": "RadiosField",
-      "value": "Glass other"
     },
     {
       "shortDescription": "Suppliers",
