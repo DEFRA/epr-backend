@@ -3,11 +3,29 @@ import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 
 /**
  * @typedef {{
+ *   id: string
+ *   type: string
+ *   content: string
+ *   options: Record<string, any>
+ *   schema: Record<string, any>
+ * }} DisplayComponent
+ */
+
+/**
+ * @typedef {{
+ *   id: string
+ *   type: string
  *   name: string
  *   shortDescription: string
  *   title: string
- *   type: string
- * }} Component
+ *   hint?: string
+ *   options: Record<string, any>
+ *   schema: Record<string, any>
+ * }} InputComponent
+ */
+
+/**
+ * @typedef {DisplayComponent | InputComponent} Component
  */
 
 /**
@@ -40,33 +58,31 @@ import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
  */
 
 /**
+ * Type predicate to check if a component is an InputComponent
+ * @param {Component} component
+ * @returns {component is InputComponent}
+ */
+function isInputComponent(component) {
+  return 'name' in component
+}
+
+/**
  * @param {FormPayload} payload
  * @returns {Answer[]}
  */
 export function extractAnswers(payload) {
   return (
-    payload?.meta?.definition?.pages?.reduce((prev, { components }) => {
-      const values = components.reduce(
-        (prevComponents, { name, shortDescription, title, type }) => {
-          const value = payload?.data?.main?.[name]
-
-          return value !== undefined && value !== null
-            ? [
-                ...prevComponents,
-                {
-                  shortDescription,
-                  title,
-                  type,
-                  value
-                }
-              ]
-            : prevComponents
-        },
-        []
-      )
-
-      return values.length ? [...prev, ...values] : prev
-    }, []) ?? []
+    payload?.meta?.definition?.pages?.flatMap(({ components }) =>
+      components
+        .filter(isInputComponent)
+        .map(({ name, shortDescription, title, type }) => ({
+          shortDescription,
+          title,
+          type,
+          value: payload?.data?.main?.[name]
+        }))
+        .filter(({ value }) => value !== undefined && value !== null)
+    ) ?? []
   )
 }
 
