@@ -111,7 +111,7 @@ For data row errors:
 {
   "location": {
     "sheet": "Received",
-    "table": "UPDATE_WASTE_BALANCE",
+    "table": "RECEIVED_LOADS_FOR_REPROCESSING",
     "row": 9,
     "column": "D",
     "header": "DATE_RECEIVED"
@@ -125,7 +125,7 @@ For data row value mismatches:
 {
   "location": {
     "sheet": "Received",
-    "table": "UPDATE_WASTE_BALANCE",
+    "table": "RECEIVED_LOADS_FOR_REPROCESSING",
     "row": 15,
     "column": "M",
     "header": "TONNAGE_RECEIVED_FOR_EXPORT"
@@ -138,7 +138,7 @@ For data row value mismatches:
 **Location structure:**
 
 - `sheet` - The worksheet name (e.g., "Cover", "Received")
-- `table` - The data table name (e.g., "UPDATE_WASTE_BALANCE") - only for data rows, not meta fields
+- `table` - The data table name (e.g., "RECEIVED_LOADS_FOR_REPROCESSING") - only for data rows, not meta fields
 - `row` - The 1-based row number in the spreadsheet
 - `column` - The Excel column letter (e.g., "B", "AA")
 - `field` - Used for meta fields (e.g., "PROCESSING_TYPE", "REGISTRATION")
@@ -184,7 +184,7 @@ For validated submissions (no FATAL errors, may have data-level ERROR/WARNING):
   "validation": {
     "failures": [],  // Empty when no fatal errors
     "concerns": {
-      "UPDATE_WASTE_BALANCE": {
+      "RECEIVED_LOADS_FOR_REPROCESSING": {
         "sheet": "Received",
         "rows": [
           {
@@ -428,7 +428,7 @@ const errorMessages = {
         "context": {
           "location": {
             "sheet": "Received",
-            "table": "UPDATE_WASTE_BALANCE",
+            "table": "RECEIVED_LOADS_FOR_REPROCESSING",
             "row": 8,
             "column": "B",
             "header": "DATE_RECEIVED"
@@ -444,7 +444,7 @@ const errorMessages = {
         "context": {
           "location": {
             "sheet": "Received",
-            "table": "UPDATE_WASTE_BALANCE",
+            "table": "RECEIVED_LOADS_FOR_REPROCESSING",
             "row": 8,
             "column": "M",
             "header": "TONNAGE_RECEIVED_FOR_EXPORT"
@@ -465,7 +465,7 @@ const errorMessages = {
   "validation": {
     "failures": [],
     "concerns": {
-      "UPDATE_WASTE_BALANCE": {
+      "RECEIVED_LOADS_FOR_REPROCESSING": {
         "sheet": "Received",
         "rows": [
           {

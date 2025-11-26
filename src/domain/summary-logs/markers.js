@@ -11,7 +11,7 @@ export const EPR_PREFIX = '__EPR'
 /** Marker prefix for metadata fields (e.g., __EPR_META_REGISTRATION_NUMBER) */
 export const META_PREFIX = `${EPR_PREFIX}_META_`
 
-/** Marker prefix for data section starts (e.g., __EPR_DATA_UPDATE_WASTE_BALANCE) */
+/** Marker prefix for data section starts (e.g., __EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING) */
 export const DATA_PREFIX = `${EPR_PREFIX}_DATA_`
 
 /** Special marker to skip a column in data collection */
