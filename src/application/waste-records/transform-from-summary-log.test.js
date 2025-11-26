@@ -61,8 +61,6 @@ describe('transformFromSummaryLog', () => {
     const result = transformFromSummaryLog(parsedData, summaryLogContext)
 
     expect(result).toHaveLength(2)
-
-    // Result is now { record, issues }[]
     expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
     expectValidWasteRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
   })
