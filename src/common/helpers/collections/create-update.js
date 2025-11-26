@@ -35,6 +35,15 @@ const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 
+const eprOrganisationFixturesIds = [
+  eprOrganisation1,
+  eprOrganisation2,
+  eprOrganisation3,
+  eprOrganisation4
+]
+  .map((record) => record.id)
+  .map(ObjectId.createFromHexString)
+
 /**
  * @import {Db} from 'mongodb'
  */
@@ -91,13 +100,16 @@ export async function createIndexes(db) {
  */
 export async function createSeedData(db, isProduction) {
   if (!isProduction()) {
-    logger.info({ message: 'Creating seed data' })
+    logger.info({ message: 'Create seed data: start' })
 
     const organisationDocCount = await db
       .collection(COLLECTION_ORGANISATION)
       .countDocuments()
 
     if (organisationDocCount === 0) {
+      logger.info({
+        message: 'Create seed data: inserting org/reg/acc fixtures'
+      })
       const organisationAnswers = extractAnswers(organisationFixture)
 
       const { insertedIds } = await db
@@ -132,11 +144,15 @@ export async function createSeedData(db, isProduction) {
       ])
     }
 
-    const eprOrganisationDocCount = await db
+    const eprOrganisationFixturesDocs = await db
       .collection(COLLECTION_EPR_ORGANISATIONS)
-      .countDocuments()
+      .find({ _id: { $in: eprOrganisationFixturesIds } })
+      .toArray()
 
-    if (eprOrganisationDocCount === 0) {
+    if (eprOrganisationFixturesDocs.length === 0) {
+      logger.info({
+        message: 'Create seed data: inserting epr-organisation fixtures'
+      })
       await db
         .collection(COLLECTION_EPR_ORGANISATIONS)
         .insertMany([
@@ -190,15 +206,9 @@ export async function cleanupSeedData(db, isProduction) {
         accreditationFixture.data.main.MyWHms // system reference
     })
 
-    const eprOrganisationIds = [
-      eprOrganisation1,
-      eprOrganisation2,
-      eprOrganisation3,
-      eprOrganisation4
-    ]
-      .map((record) => record.id)
-      .map(ObjectId.createFromHexString)
-
-    await deleteDocuments(COLLECTION_EPR_ORGANISATIONS, eprOrganisationIds)
+    await deleteDocuments(
+      COLLECTION_EPR_ORGANISATIONS,
+      eprOrganisationFixturesIds
+    )
   }
 }
