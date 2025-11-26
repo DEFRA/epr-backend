@@ -11,7 +11,8 @@ import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 import {
   mapMaterial,
   mapGlassRecyclingProcess,
-  convertToNumber
+  convertToNumber,
+  normalizeObjectId
 } from '#formsubmission/parsing-common/form-data-mapper.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { getWasteManagementPermits } from '#formsubmission/registration/extract-permits.js'
@@ -55,10 +56,11 @@ export function parseRegistrationSubmission(id, rawSubmissionData) {
       ],
       'orgId'
     ),
-    systemReference:
+    systemReference: normalizeObjectId(
       answersByShortDescription[
         REGISTRATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
-      ],
+      ]
+    ),
     orgName:
       answersByShortDescription[
         REGISTRATION.ORGANISATION_DETAILS.fields.ORG_NAME

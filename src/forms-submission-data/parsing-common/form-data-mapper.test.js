@@ -11,7 +11,8 @@ import {
   mapTonnageBand,
   mapValueType,
   mapWastePermitType,
-  mapWasteProcessingType
+  mapWasteProcessingType,
+  normalizeObjectId
 } from './form-data-mapper.js'
 import {
   BUSINESS_TYPE,
@@ -474,5 +475,26 @@ describe('mapTonnageBand', () => {
     expect(() => mapTonnageBand(undefined)).toThrow(
       'Tonnage band value is required'
     )
+  })
+})
+
+describe('normalizeObjectId', () => {
+  it('should convert valid 24-character hex string to ObjectId string', () => {
+    const result = normalizeObjectId('507f1f77bcf86cd799439011')
+    expect(result).toBe('507f1f77bcf86cd799439011')
+    expect(typeof result).toBe('string')
+  })
+
+  it('should normalize mixed-case ObjectId to lowercase', () => {
+    const result = normalizeObjectId('68dBDA7ac9947d5a6fd51ddF')
+    expect(result).toBe('68dbda7ac9947d5a6fd51ddf')
+  })
+
+  it('should throw error for invalid ObjectId format', () => {
+    expect(() => normalizeObjectId('invalid-id')).toThrow()
+  })
+
+  it('should return null when passed null', () => {
+    expect(normalizeObjectId(null)).toBeNull()
   })
 })

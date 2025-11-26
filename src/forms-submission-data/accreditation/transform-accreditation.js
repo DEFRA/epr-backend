@@ -10,7 +10,8 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import {
   convertToNumber,
   mapGlassRecyclingProcess,
-  mapMaterial
+  mapMaterial,
+  normalizeObjectId
 } from '#formsubmission/parsing-common/form-data-mapper.js'
 import { ACCREDITATION } from './form-field-constants.js'
 import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
@@ -70,10 +71,11 @@ export function parseAccreditationSubmission(id, rawSubmissionData) {
       answersByShortDescription[ACCREDITATION.GLASS_RECYCLING_PROCESS]
     ),
     site: isReprocessor ? getSiteDetails(answersByShortDescription) : undefined,
-    systemReference:
+    systemReference: normalizeObjectId(
       answersByShortDescription[
         ACCREDITATION.ORGANISATION_DETAILS.fields.SYSTEM_REFERENCE
-      ],
+      ]
+    ),
     orgName:
       answersByShortDescription[
         ACCREDITATION.ORGANISATION_DETAILS.fields.ORG_NAME
