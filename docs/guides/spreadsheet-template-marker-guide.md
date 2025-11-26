@@ -38,14 +38,14 @@ Put the marker in a cell - machine-readable column headers must be in the cells 
 
 **Example:**
 
-| Column A                          | Column B      | Column C      |
-| --------------------------------- | ------------- | ------------- |
-| `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE | DATE_RECEIVED |
-|                                   | 12345678910   | 2025-05-25    |
-|                                   | 98765432100   | 2025-05-26    |
-|                                   |               |               |
+| Column A                                     | Column B    | Column C      |
+| -------------------------------------------- | ----------- | ------------- |
+| `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING` | ROW_ID      | DATE_RECEIVED |
+|                                              | 12345678910 | 2025-05-25    |
+|                                              | 98765432100 | 2025-05-26    |
+|                                              |             |               |
 
-The system extracts a table called UPDATE_WASTE_BALANCE with two columns (OUR_REFERENCE and DATE_RECEIVED) and two data rows. The empty row signals the end of the table.
+The system extracts a table called RECEIVED_LOADS_FOR_REPROCESSING with two columns (ROW_ID and DATE_RECEIVED) and two data rows. The empty row signals the end of the table.
 
 ## Placing Tables Side-by-Side
 
@@ -53,13 +53,13 @@ Tables can be stacked vertically or placed side-by-side. When placing tables sid
 
 **Example (side-by-side tables):**
 
-| Column A                          | Column B      | Column C      | Column D | Column E                     | Column F      | Column G       |
-| --------------------------------- | ------------- | ------------- | -------- | ---------------------------- | ------------- | -------------- |
-| `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE | DATE_RECEIVED |          | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME | ADDRESS_LINE_1 |
-|                                   | 12345678910   | 2025-05-25    |          |                              | Joe Blogs     | 15 Good Street |
-|                                   |               |               |          |                              |               |                |
+| Column A                                     | Column B    | Column C      | Column D | Column E                     | Column F      | Column G       |
+| -------------------------------------------- | ----------- | ------------- | -------- | ---------------------------- | ------------- | -------------- |
+| `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING` | ROW_ID      | DATE_RECEIVED |          | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME | ADDRESS_LINE_1 |
+|                                              | 12345678910 | 2025-05-25    |          |                              | Joe Blogs     | 15 Good Street |
+|                                              |             |               |          |                              |               |                |
 
-This creates two separate tables: UPDATE_WASTE_BALANCE (columns B-C) and MONTHLY_REPORTS (columns F-G). The empty cell in column D stops the first table's headers from continuing into column E.
+This creates two separate tables: RECEIVED_LOADS_FOR_REPROCESSING (columns B-C) and MONTHLY_REPORTS (columns F-G). The empty cell in column D stops the first table's headers from continuing into column E.
 
 ## Using Skip Column Markers
 
@@ -69,10 +69,10 @@ Put `__EPR_SKIP_COLUMN` in a header position where you want a blank column. The 
 
 **Example:**
 
-| Column A                    | Column B      | Column C      | Column D            | Column E     | Column F      |
-| --------------------------- | ------------- | ------------- | ------------------- | ------------ | ------------- |
-| `__EPR_DATA_WASTE_RECEIVED` | OUR_REFERENCE | DATE_RECEIVED | `__EPR_SKIP_COLUMN` | SUPPLIER_REF | SUPPLIER_NAME |
-|                             | 12345678910   | 2025-05-25    |                     | ABC123       | Joe Blogs     |
+| Column A                    | Column B    | Column C      | Column D            | Column E     | Column F      |
+| --------------------------- | ----------- | ------------- | ------------------- | ------------ | ------------- |
+| `__EPR_DATA_WASTE_RECEIVED` | ROW_ID      | DATE_RECEIVED | `__EPR_SKIP_COLUMN` | SUPPLIER_REF | SUPPLIER_NAME |
+|                             | 12345678910 | 2025-05-25    |                     | ABC123       | Joe Blogs     |
 
 This extracts as a single table with five columns. Column D becomes `null` in the extracted data, but the visual gap in Excel makes the spreadsheet easier to read.
 
@@ -103,11 +103,11 @@ The system automatically normalizes the exact text `Choose option` (case-sensiti
 
 **Example:**
 
-| Column A                    | Column B      | Column C      |
-| --------------------------- | ------------- | ------------- |
-| `__EPR_DATA_WASTE_RECEIVED` | OUR_REFERENCE | STATUS        |
-|                             | 12345678910   | Active        |
-|                             | 98765432100   | Choose option |
+| Column A                    | Column B    | Column C      |
+| --------------------------- | ----------- | ------------- |
+| `__EPR_DATA_WASTE_RECEIVED` | ROW_ID      | STATUS        |
+|                             | 12345678910 | Active        |
+|                             | 98765432100 | Choose option |
 
 The second row extracts with STATUS as `null`, not as the text "Choose option".
 
@@ -137,7 +137,7 @@ Marker names must follow these rules:
 - Use underscores to separate words (e.g., `DATE_RECEIVED`, not `DATERECEIVED`)
 - Choose names that describe the data, not the layout
 
-**Good names:** `__EPR_META_ACCREDITATION_NUMBER`, `__EPR_DATA_UPDATE_WASTE_BALANCE`
+**Good names:** `__EPR_META_ACCREDITATION_NUMBER`, `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING`
 
 **Bad names:** `__EPR_META_TopSection`, `__EPR_DATA_TableOne`
 
@@ -151,7 +151,7 @@ Marker names must follow these rules:
 
 **Metadata values must be to the right of the marker.** The system reads the cell immediately to the right, not above or below.
 
-**Each marker name must be unique.** Duplicate metadata marker names (e.g., two `__EPR_META_PROCESSING_TYPE` markers) or duplicate data section names (e.g., two `__EPR_DATA_UPDATE_WASTE_BALANCE` markers) will cause an error. Each marker must have a unique name across the entire spreadsheet.
+**Each marker name must be unique.** Duplicate metadata marker names (e.g., two `__EPR_META_PROCESSING_TYPE` markers) or duplicate data section names (e.g., two `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING` markers) will cause an error. Each marker must have a unique name across the entire spreadsheet.
 
 **One marker per data section.** Don't put multiple `__EPR_DATA_` markers in the same table. Each marker starts a new table.
 
@@ -163,25 +163,25 @@ Marker names must follow these rules:
 
 This example shows a complete template with metadata, multiple tables, skip columns, and an example row:
 
-| Column A                          | Column B        | Column C       | Column D            | Column E  | Column F |
-| --------------------------------- | --------------- | -------------- | ------------------- | --------- | -------- |
-| `__EPR_META_PROCESSING_TYPE`      | REPROCESSOR     |                |                     |           |          |
-| `__EPR_META_TEMPLATE_VERSION`     | 1               |                |                     |           |          |
-| `__EPR_META_MATERIAL`             | Paper and board |                |                     |           |          |
-|                                   |                 |                |                     |           |          |
-| `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE   | DATE_RECEIVED  | `__EPR_SKIP_COLUMN` | WEIGHT_KG | ORIGIN   |
-|                                   | 00000000001     | 2025-01-01     | Example             | 1000      | UK       |
-|                                   | 12345678910     | 2025-05-25     |                     | 1500      | UK       |
-|                                   | 98765432100     | 2025-05-26     |                     | 2300      | EU       |
-|                                   |                 |                |                     |           |          |
-| `__EPR_DATA_MONTHLY_REPORTS`      | SUPPLIER_NAME   | ADDRESS_LINE_1 |                     |           |          |
-|                                   | Joe Blogs       | 15 Good Street |                     |           |          |
+| Column A                                     | Column B        | Column C       | Column D            | Column E  | Column F |
+| -------------------------------------------- | --------------- | -------------- | ------------------- | --------- | -------- |
+| `__EPR_META_PROCESSING_TYPE`                 | REPROCESSOR     |                |                     |           |          |
+| `__EPR_META_TEMPLATE_VERSION`                | 1               |                |                     |           |          |
+| `__EPR_META_MATERIAL`                        | Paper and board |                |                     |           |          |
+|                                              |                 |                |                     |           |          |
+| `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING` | ROW_ID          | DATE_RECEIVED  | `__EPR_SKIP_COLUMN` | WEIGHT_KG | ORIGIN   |
+|                                              | 00000000001     | 2025-01-01     | Example             | 1000      | UK       |
+|                                              | 12345678910     | 2025-05-25     |                     | 1500      | UK       |
+|                                              | 98765432100     | 2025-05-26     |                     | 2300      | EU       |
+|                                              |                 |                |                     |           |          |
+| `__EPR_DATA_MONTHLY_REPORTS`                 | SUPPLIER_NAME   | ADDRESS_LINE_1 |                     |           |          |
+|                                              | Joe Blogs       | 15 Good Street |                     |           |          |
 
 In this example:
 
 - Column A is hidden from users
 - Three metadata fields are defined at the top
-- UPDATE_WASTE_BALANCE table has five columns with a visual gap at column D
+- RECEIVED_LOADS_FOR_REPROCESSING table has five columns with a visual gap at column D
 - The first data row (with "Example" in column D) is a frozen example row that gets skipped during extraction
 - MONTHLY_REPORTS table appears below with two columns
 - Empty rows separate each section

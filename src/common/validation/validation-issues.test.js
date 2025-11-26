@@ -782,7 +782,7 @@ describe('Validation Issues', () => {
             sheet: 'Received',
             row: 7,
             column: 'B',
-            header: 'OUR_REFERENCE'
+            header: 'ROW_ID'
           },
           actual: null
         }
@@ -798,7 +798,7 @@ describe('Validation Issues', () => {
             sheet: 'Received',
             row: 7,
             column: 'B',
-            header: 'OUR_REFERENCE'
+            header: 'ROW_ID'
           },
           actual: null
         }
@@ -812,7 +812,7 @@ describe('Validation Issues', () => {
         'Missing reference',
         'TEST_CODE',
         {
-          location: { row: 5, header: 'OUR_REFERENCE' }
+          location: { row: 5, header: 'ROW_ID' }
         }
       )
       result.addWarning(
@@ -955,7 +955,7 @@ describe('Validation Issues', () => {
             sheet: 'Received',
             row: 9,
             column: 'B',
-            header: 'OUR_REFERENCE'
+            header: 'ROW_ID'
           },
           actual: 9999
         }
@@ -970,7 +970,7 @@ describe('Validation Issues', () => {
             sheet: 'Received',
             row: 9,
             column: 'B',
-            header: 'OUR_REFERENCE'
+            header: 'ROW_ID'
           },
           actual: 9999
         }
