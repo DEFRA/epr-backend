@@ -17,32 +17,28 @@ export async function getUsersOrganisationInfo(
 ) {
   const { email } = tokenPayload
 
-  try {
-    const { defraIdOrgId } = getDefraTokenSummary(tokenPayload)
+  const { defraIdOrgId } = getDefraTokenSummary(tokenPayload)
 
-    // No defraIdOrgId to link
-    if (!defraIdOrgId) {
-      throw Boom.forbidden('defra-id: defraIdOrgId not found in token')
-    }
-
-    const organisationsInfo = await findOrganisationMatches(
-      email,
-      defraIdOrgId,
-      organisationsRepository
-    )
-
-    if (organisationsInfo.linked.length > 0) {
-      // Impossible to unequivocally determine which organisation is current
-      throw Boom.forbidden(
-        'defra-id: multiple organisations linked to the user token'
-      )
-    }
-
-    const linkedEprOrg = organisationsInfo.linked[0]
-    const userOrgs = organisationsInfo.all
-
-    return { linkedEprOrg, userOrgs }
-  } catch (error) {
-    throw Boom.forbidden('defra-id: failed to validate request')
+  // No defraIdOrgId to link
+  if (!defraIdOrgId) {
+    throw Boom.forbidden('defra-id: defraIdOrgId not found in token')
   }
+
+  const organisationsInfo = await findOrganisationMatches(
+    email,
+    defraIdOrgId,
+    organisationsRepository
+  )
+
+  if (organisationsInfo.linked.length > 1) {
+    // Impossible to unequivocally determine which organisation is current
+    throw Boom.forbidden(
+      'defra-id: multiple organisations linked to the user token'
+    )
+  }
+
+  const linkedEprOrg = organisationsInfo.linked[0]
+  const userOrgs = organisationsInfo.all
+
+  return { linkedEprOrg, userOrgs }
 }
