@@ -22,14 +22,14 @@
     }
   },
   "data": {
-    "UPDATE_WASTE_BALANCE": {
+    "RECEIVED_LOADS_FOR_REPROCESSING": {
       "location": {
         "sheet": "Received (sections 1, 2, 3)",
         "row": 7,
         "column": "B"
       },
       "headers": [
-        "OUR_REFERENCE",
+        "ROW_ID",
         "DATE_RECEIVED",
         "EWC_CODE",
         "DESCRIPTION_WASTE",
@@ -52,7 +52,7 @@
         "ACTIVITIES_SUPPLIER",
         null,
         "__EPR_DATA_COMPLIANCE",
-        "YOUR_REFERENCE",
+        "YROW_ID",
         "WEIGHBRIDGE_TICKET",
         "CARRIER_NAME",
         "CBD_REG_NUMBER",
@@ -618,7 +618,7 @@
         "ACTIVITIES_SUPPLIER",
         null,
         "__EPR_DATA_COMPLIANCE",
-        "YOUR_REFERENCE",
+        "YROW_ID",
         "WEIGHBRIDGE_TICKET",
         "CARRIER_NAME",
         "CBD_REG_NUMBER",
@@ -921,7 +921,7 @@
         "column": "Y"
       },
       "headers": [
-        "YOUR_REFERENCE",
+        "YROW_ID",
         "WEIGHBRIDGE_TICKET",
         "CARRIER_NAME",
         "CBD_REG_NUMBER",
@@ -1074,7 +1074,7 @@
         "column": "B"
       },
       "headers": [
-        "OUR_REFERENCE",
+        "ROW_ID",
         "DATE_LOAD_LEFT_SITE",
         "WEIGHBRIDGE_TICKET",
         "HAULIER_NAME",
@@ -1313,8 +1313,8 @@
     "SENT_ON": {
       "location": { "sheet": "Sent on (section 5)", "row": 7, "column": "B" },
       "headers": [
-        "OUR_REFERENCE",
-        "YOUR_REFERENCE",
+        "ROW_ID",
+        "YROW_ID",
         "DESCRIPTION_WASTE",
         "EWC_CODE",
         "DATE_LOAD_LEFT_SITE",

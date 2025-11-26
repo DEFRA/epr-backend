@@ -27,8 +27,8 @@ const createWorkbook = async (worksheets) => {
 
 const createLargeDataset = (rowCount) => {
   const headers = [
-    '__EPR_DATA_UPDATE_WASTE_BALANCE',
-    'OUR_REFERENCE',
+    '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+    'ROW_ID',
     'DATE_RECEIVED',
     'TONNAGE',
     'MATERIAL',

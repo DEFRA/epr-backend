@@ -39,7 +39,7 @@
  * @example
  * const result = await parse(excelBuffer)
  * // result.meta.PROCESSING_TYPE = { value: 'REPROCESSOR_INPUT', location: { sheet: 'Sheet1', row: 1, column: 'B' } }
- * // result.data.UPDATE_WASTE_BALANCE = { location: {...}, headers: ['REF', 'DATE'], rows: [[123, '2025-01-01']] }
+ * // result.data.RECEIVED_LOADS_FOR_REPROCESSING = { location: {...}, headers: ['REF', 'DATE'], rows: [[123, '2025-01-01']] }
  *
  * @typedef {(buffer: any) => Promise<ParsedSummaryLog>} SummaryLogParser
  */
