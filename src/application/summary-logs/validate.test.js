@@ -6,6 +6,88 @@ import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'
 
+// ============================================================================
+// Test Builders
+// ============================================================================
+
+const RECEIVED_LOADS_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'EWC_CODE',
+  'GROSS_WEIGHT',
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE',
+  'HOW_CALCULATE_RECYCLABLE',
+  'WEIGHT_OF_NON_TARGET',
+  'RECYCLABLE_PROPORTION',
+  'TONNAGE_RECEIVED_FOR_EXPORT'
+]
+
+const buildMeta = (overrides = {}) => ({
+  REGISTRATION_NUMBER: { value: 'REG12345' },
+  PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+  TEMPLATE_VERSION: { value: 1 },
+  MATERIAL: { value: 'Aluminium' },
+  ...overrides
+})
+
+const buildReceivedLoadRow = (overrides = {}) => ({
+  ROW_ID: 10000,
+  DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
+  EWC_CODE: '03 03 08',
+  GROSS_WEIGHT: 1000,
+  TARE_WEIGHT: 100,
+  PALLET_WEIGHT: 50,
+  NET_WEIGHT: 850,
+  BAILING_WIRE: 'YES',
+  HOW_CALCULATE_RECYCLABLE: 'WEIGHT',
+  WEIGHT_OF_NON_TARGET: 50,
+  RECYCLABLE_PROPORTION: 0.85,
+  TONNAGE_RECEIVED_FOR_EXPORT: 850,
+  ...overrides
+})
+
+const rowToArray = (rowObject) =>
+  RECEIVED_LOADS_HEADERS.map((header) => rowObject[header])
+
+const buildReceivedLoadsTable = ({
+  rows = [],
+  headers = RECEIVED_LOADS_HEADERS
+} = {}) => ({
+  location: { sheet: 'Received', row: 7, column: 'B' },
+  headers,
+  rows: rows.map((row) => (Array.isArray(row) ? row : rowToArray(row)))
+})
+
+const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
+  meta: buildMeta(meta),
+  data
+})
+
+const buildExistingWasteRecord = (rowData, overrides = {}) => ({
+  type: 'received',
+  rowId: String(rowData.ROW_ID),
+  organisationId: 'org-1',
+  registrationId: 'reg-1',
+  data: rowData,
+  versions: [
+    {
+      createdAt: '2025-01-01T00:00:00.000Z',
+      status: 'created',
+      summaryLog: {
+        id: 'previous-summary-log',
+        uri: 's3://bucket/old-key'
+      },
+      data: rowData
+    }
+  ],
+  ...overrides
+})
+
+// ============================================================================
+
 const mockLoggerInfo = vi.fn()
 const mockLoggerWarn = vi.fn()
 const mockLoggerError = vi.fn()
@@ -209,23 +291,11 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should update status as expected when waste registration number validation fails', async () => {
-    summaryLogExtractor.extract.mockResolvedValue({
-      meta: {
-        REGISTRATION_NUMBER: {
-          value: 'REG99999'
-        },
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        },
-        TEMPLATE_VERSION: {
-          value: 1
-        },
-        MATERIAL: {
-          value: 'Aluminium'
-        }
-      },
-      data: {}
-    })
+    summaryLogExtractor.extract.mockResolvedValue(
+      buildExtractedData({
+        meta: { REGISTRATION_NUMBER: { value: 'REG99999' } }
+      })
+    )
 
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
@@ -362,15 +432,11 @@ describe('SummaryLogsValidator', () => {
   describe('Four-level validation hierarchy short-circuit behavior', () => {
     it('Level 1 fatal (meta syntax) stops Level 2 (meta business) from running', async () => {
       // Meta syntax error: missing TEMPLATE_VERSION
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          MATERIAL: { value: 'Aluminium' }
-          // TEMPLATE_VERSION missing - fatal syntax error
-        },
-        data: {}
-      })
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: { TEMPLATE_VERSION: undefined } // Missing - fatal syntax error
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 
@@ -402,21 +468,17 @@ describe('SummaryLogsValidator', () => {
     it('Level 2 fatal (meta business) stops Level 3 (data syntax) from running', async () => {
       // Meta business error: registration mismatch
       // Data syntax error: invalid data table structure that should NOT be validated
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG99999' }, // Wrong registration - fatal business error
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
-          MATERIAL: { value: 'Aluminium' }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Received', row: 7, column: 'B' },
-            headers: ['INVALID_HEADER'], // This should NOT be validated
-            rows: [[123]] // Invalid data that should NOT be validated
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: { REGISTRATION_NUMBER: { value: 'REG99999' } }, // Wrong - fatal business error
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              headers: ['INVALID_HEADER'], // Should NOT be validated
+              rows: [[123]]
+            })
           }
-        }
-      })
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 
@@ -439,49 +501,15 @@ describe('SummaryLogsValidator', () => {
 
     it('Level 1 and Level 2 pass, Level 3 (data syntax) runs and finds errors', async () => {
       // Valid meta, but invalid data (row-level errors, not fatal)
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
-          MATERIAL: { value: 'Aluminium' }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Received', row: 7, column: 'B' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT'
-            ],
-            rows: [
-              [
-                9999, // Below minimum ROW_ID - non-fatal error
-                '2025-05-28T00:00:00.000Z',
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850
-              ]
-            ]
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [buildReceivedLoadRow({ ROW_ID: 9999 })] // Below minimum - non-fatal error
+            })
           }
-        }
-      })
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 
@@ -499,24 +527,16 @@ describe('SummaryLogsValidator', () => {
 
     it('Level 3 fatal (missing required header) stops Level 4 (transform/data business) from running', async () => {
       // Valid meta, but missing required header in data table (fatal)
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
-          MATERIAL: { value: 'Aluminium' }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Received', row: 7, column: 'B' },
-            headers: [
-              'ROW_ID'
-              // Missing required headers like DATE_RECEIVED_FOR_REPROCESSING, etc.
-            ],
-            rows: [[10001]]
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              headers: ['ROW_ID'], // Missing required headers - fatal
+              rows: [[10001]]
+            })
           }
-        }
-      })
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 
@@ -540,63 +560,22 @@ describe('SummaryLogsValidator', () => {
 
   describe('Load classification', () => {
     it('stores loadCounts when validation passes with data rows', async () => {
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
-          MATERIAL: { value: 'Aluminium' }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Received', row: 7, column: 'B' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT'
-            ],
-            rows: [
-              [
-                10000, // Valid row
-                '2025-05-28T00:00:00.000Z',
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850
-              ],
-              [
-                9999, // Invalid row - below minimum OUR_REFERENCE
-                'invalid-date',
-                'bad-code',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow(), // Valid row
+                buildReceivedLoadRow({
+                  ROW_ID: 9999, // Invalid - below minimum
+                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date',
+                  EWC_CODE: 'bad-code'
+                })
               ]
-            ]
+            })
           }
-        }
-      })
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 
@@ -610,15 +589,11 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('does not store loadCounts when validation fails with fatal error', async () => {
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG99999' }, // Wrong - fatal error
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
-          MATERIAL: { value: 'Aluminium' }
-        },
-        data: {}
-      })
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal error
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 
@@ -629,97 +604,22 @@ describe('SummaryLogsValidator', () => {
     })
 
     it('classifies existing records as unchanged when data has not changed', async () => {
-      // Set up existing waste records with SAME data as will be in the new upload
+      // Same row data used for both existing record and new upload
+      const rowData = buildReceivedLoadRow()
+
       wasteRecordsRepository.findByRegistration.mockResolvedValue([
-        {
-          type: 'received',
-          rowId: '10000',
-          organisationId: 'org-1',
-          registrationId: 'reg-1',
-          data: {
-            ROW_ID: 10000,
-            DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
-            EWC_CODE: '03 03 08',
-            GROSS_WEIGHT: 1000,
-            TARE_WEIGHT: 100,
-            PALLET_WEIGHT: 50,
-            NET_WEIGHT: 850,
-            BAILING_WIRE: 'YES',
-            HOW_CALCULATE_RECYCLABLE: 'WEIGHT',
-            WEIGHT_OF_NON_TARGET: 50,
-            RECYCLABLE_PROPORTION: 0.85,
-            TONNAGE_RECEIVED_FOR_EXPORT: 850
-          },
-          versions: [
-            {
-              createdAt: '2025-01-01T00:00:00.000Z',
-              status: 'created',
-              summaryLog: {
-                id: 'previous-summary-log',
-                uri: 's3://bucket/old-key'
-              },
-              data: {
-                ROW_ID: 10000,
-                DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
-                EWC_CODE: '03 03 08',
-                GROSS_WEIGHT: 1000,
-                TARE_WEIGHT: 100,
-                PALLET_WEIGHT: 50,
-                NET_WEIGHT: 850,
-                BAILING_WIRE: 'YES',
-                HOW_CALCULATE_RECYCLABLE: 'WEIGHT',
-                WEIGHT_OF_NON_TARGET: 50,
-                RECYCLABLE_PROPORTION: 0.85,
-                TONNAGE_RECEIVED_FOR_EXPORT: 850
-              }
-            }
-          ]
-        }
+        buildExistingWasteRecord(rowData)
       ])
 
-      summaryLogExtractor.extract.mockResolvedValue({
-        meta: {
-          REGISTRATION_NUMBER: { value: 'REG12345' },
-          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
-          MATERIAL: { value: 'Aluminium' }
-        },
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Received', row: 7, column: 'B' },
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT'
-            ],
-            rows: [
-              [
-                10000, // Same data as existing record
-                '2025-05-28T00:00:00.000Z',
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850
-              ]
-            ]
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [rowData]
+            })
           }
-        }
-      })
+        })
+      )
 
       await validateSummaryLog(summaryLogId)
 

@@ -100,10 +100,8 @@ const createRowIssues = ({
   error,
   headerToIndexMap,
   location
-}) => {
-  const rowIssues = []
-
-  for (const detail of error.details) {
+}) =>
+  error.details.map((detail) => {
     const fieldName = detail.path[0]
     const colIndex = headerToIndexMap.get(fieldName)
 
@@ -118,7 +116,7 @@ const createRowIssues = ({
           }
         : { table: tableName, header: fieldName }
 
-    rowIssues.push({
+    return {
       severity: 'error',
       category: VALIDATION_CATEGORY.TECHNICAL,
       message: `Invalid value in column '${fieldName}': ${detail.message}`,
@@ -127,11 +125,8 @@ const createRowIssues = ({
         location: cellLocation,
         actual: detail.context.value
       }
-    })
-  }
-
-  return rowIssues
-}
+    }
+  })
 
 /**
  * Extracts the row ID from a row object based on the table's ID field
