@@ -1,5 +1,5 @@
 import Boom from '@hapi/boom'
-import { getEntraUserRoles } from './ge{}t-entra-user-roles.js'
+import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { getDefraIdUserRoles } from './get-defra-id-user-roles.js'
 import { getUsersOrganisationInfo } from './get-users-org-info.js'
 import { config } from '../../../config.js'
@@ -30,7 +30,6 @@ export function getJwtStrategyConfig(oidcConfigs) {
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
-        // For Entra Id tokens, we only accept them if they were signed for Admin UI
         const adminUiEntraClientId = config.get('oidc.entraId.clientId')
         if (audience !== adminUiEntraClientId) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
@@ -58,13 +57,13 @@ export function getJwtStrategyConfig(oidcConfigs) {
 
           const { organisationsRepository } = request
 
-          const { linkedEprOrg, organisationsInfo } = getUsersOrganisationInfo(
+          const { linkedEprOrg, userOrgs } = getUsersOrganisationInfo(
             tokenPayload,
             organisationsRepository
           )
 
           // The roles are determined by the currentRelationship, never by other relationships in the token
-          const scope = getDefraIdUserRoles(linkedEprOrg, tokenPayload.email)
+          const scope = getDefraIdUserRoles(linkedEprOrg, tokenPayload)
 
           return {
             isValid: scope.length > 0,
@@ -72,7 +71,8 @@ export function getJwtStrategyConfig(oidcConfigs) {
               id: contactId,
               email,
               issuer,
-              organisationsInfo,
+              userOrgs,
+              linkedEprOrg,
               scope
             }
           }

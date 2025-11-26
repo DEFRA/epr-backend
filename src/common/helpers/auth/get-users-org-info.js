@@ -39,8 +39,9 @@ export async function getUsersOrganisationInfo(
     }
 
     const linkedEprOrg = organisationsInfo.linked[0]
+    const userOrgs = organisationsInfo.all
 
-    return { linkedEprOrg, organisationsInfo }
+    return { linkedEprOrg, userOrgs }
   } catch (error) {
     throw Boom.forbidden('defra-id: failed to validate request')
   }
