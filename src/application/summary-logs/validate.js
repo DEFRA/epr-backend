@@ -144,10 +144,11 @@ const performValidationChecks = async ({
     }
 
     // Fetch existing records and build lookup map for transformation
-    const existingWasteRecords = await wasteRecordsRepository.findByRegistration(
-      summaryLog.organisationId,
-      summaryLog.registrationId
-    )
+    const existingWasteRecords =
+      await wasteRecordsRepository.findByRegistration(
+        summaryLog.organisationId,
+        summaryLog.registrationId
+      )
 
     const existingRecordsMap = new Map(
       existingWasteRecords.map((record) => [

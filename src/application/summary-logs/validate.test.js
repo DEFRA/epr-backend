@@ -654,7 +654,10 @@ describe('SummaryLogsValidator', () => {
             {
               createdAt: '2025-01-01T00:00:00.000Z',
               status: 'created',
-              summaryLog: { id: 'previous-summary-log', uri: 's3://bucket/old-key' },
+              summaryLog: {
+                id: 'previous-summary-log',
+                uri: 's3://bucket/old-key'
+              },
               data: {
                 ROW_ID: 10000,
                 DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',

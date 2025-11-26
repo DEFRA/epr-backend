@@ -81,7 +81,10 @@ describe('classifyLoads', () => {
             {
               createdAt: '2025-01-01T00:00:00.000Z',
               status: VERSION_STATUS.CREATED,
-              summaryLog: { id: PREVIOUS_SUMMARY_LOG_ID, uri: 's3://bucket/old-key' },
+              summaryLog: {
+                id: PREVIOUS_SUMMARY_LOG_ID,
+                uri: 's3://bucket/old-key'
+              },
               data: { ROW_ID: '10001' }
             }
           ]
@@ -172,7 +175,10 @@ describe('classifyLoads', () => {
             {
               createdAt: '2025-01-01T00:00:00.000Z',
               status: VERSION_STATUS.CREATED,
-              summaryLog: { id: PREVIOUS_SUMMARY_LOG_ID, uri: 's3://bucket/old-key' },
+              summaryLog: {
+                id: PREVIOUS_SUMMARY_LOG_ID,
+                uri: 's3://bucket/old-key'
+              },
               data: { ROW_ID: '10001' }
             }
           ]
@@ -213,7 +219,10 @@ describe('classifyLoads', () => {
             {
               createdAt: '2025-01-01T00:00:00.000Z',
               status: VERSION_STATUS.CREATED,
-              summaryLog: { id: PREVIOUS_SUMMARY_LOG_ID, uri: 's3://bucket/old-key' },
+              summaryLog: {
+                id: PREVIOUS_SUMMARY_LOG_ID,
+                uri: 's3://bucket/old-key'
+              },
               data: {}
             }
           ]

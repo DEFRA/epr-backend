@@ -1,5 +1,8 @@
 import { validateDataBusiness } from './data-business.js'
-import { VERSION_STATUS, WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_TYPE
+} from '#domain/waste-records/model.js'
 
 describe('validateDataBusiness', () => {
   /**

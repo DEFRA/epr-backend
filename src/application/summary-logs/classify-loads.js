@@ -49,17 +49,8 @@ const classifyRecord = (record, summaryLogId) => {
     return 'unchanged'
   }
 
-  // Version was added in this upload - check status
-  if (lastVersion.status === VERSION_STATUS.CREATED) {
-    return 'new'
-  }
-
-  if (lastVersion.status === VERSION_STATUS.UPDATED) {
-    return 'adjusted'
-  }
-
-  // Defensive fallback - shouldn't happen with current transform logic
-  return 'unchanged'
+  // Version was added in this upload - determine if new or adjusted
+  return lastVersion.status === VERSION_STATUS.CREATED ? 'new' : 'adjusted'
 }
 
 /**

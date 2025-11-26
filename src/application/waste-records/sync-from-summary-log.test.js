@@ -429,4 +429,118 @@ describe('syncFromSummaryLog', () => {
     // ROW_ID shouldn't be in delta as it didn't change
     expect(updatedVersion.data).not.toHaveProperty('ROW_ID')
   })
+
+  it('handles headers with null values and EPR markers', async () => {
+    const fileId = 'test-file-markers'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key-markers'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            null,
+            'EPR:TABLE_START',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            [
+              'row-789',
+              'ignored',
+              'also-ignored',
+              TEST_DATE_2025_01_15,
+              TEST_WEIGHT_100_5
+            ]
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository
+    })
+
+    await sync(summaryLog)
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords).toHaveLength(1)
+    expect(savedRecords[0].rowId).toBe('row-789')
+  })
+
+  it('skips tables without schemas', async () => {
+    const fileId = 'test-file-unknown-table'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key-unknown'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        UNKNOWN_TABLE: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['SOME_FIELD'],
+          rows: [['some-value']]
+        },
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 10, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [['row-999', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository
+    })
+
+    await sync(summaryLog)
+
+    // Only the known table should have been processed
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords).toHaveLength(1)
+    expect(savedRecords[0].rowId).toBe('row-999')
+  })
 })

@@ -22,18 +22,28 @@ export const TABLE_METADATA = {
  * Gets the row ID field name for a table
  *
  * @param {string} tableName - The table name
- * @returns {string|null} The field name containing the row ID, or null if unknown
+ * @returns {string} The field name containing the row ID
+ * @throws {Error} If no metadata is defined for the table
  */
 export const getRowIdField = (tableName) => {
-  return TABLE_METADATA[tableName]?.rowIdField ?? null
+  const metadata = TABLE_METADATA[tableName]
+  if (!metadata) {
+    throw new Error(`No metadata defined for table: ${tableName}`)
+  }
+  return metadata.rowIdField
 }
 
 /**
  * Gets the waste record type for a table
  *
  * @param {string} tableName - The table name
- * @returns {string|null} The waste record type, or null if unknown
+ * @returns {string} The waste record type
+ * @throws {Error} If no metadata is defined for the table
  */
 export const getWasteRecordType = (tableName) => {
-  return TABLE_METADATA[tableName]?.wasteRecordType ?? null
+  const metadata = TABLE_METADATA[tableName]
+  if (!metadata) {
+    throw new Error(`No metadata defined for table: ${tableName}`)
+  }
+  return metadata.wasteRecordType
 }

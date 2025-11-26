@@ -1,12 +1,12 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
+import { getTableSchema } from '#application/summary-logs/validations/table-schemas.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 
 /**
  * Converts raw rows to validated row format expected by transformFromSummaryLog
  *
- * Since sync is called after validation passes, we don't need to run validation again.
- * We just need to convert the row format and extract row IDs.
+ * Only called for tables with schemas, so idField is guaranteed to exist.
  *
  * @param {string} tableName - The table name
  * @param {Array<string|null>} headers - Array of header names
@@ -23,18 +23,13 @@ const convertToValidatedRows = (tableName, headers, rows) => {
     }
   }
 
-  const idFieldIndex = idField ? headerToIndexMap.get(idField) : null
+  const idFieldIndex = headerToIndexMap.get(idField)
 
   for (let i = 0; i < rows.length; i++) {
     const originalRow = rows[i]
-    const rowId =
-      idFieldIndex !== null && idFieldIndex !== undefined
-        ? String(originalRow[idFieldIndex] ?? '')
-        : null
-
     rows[i] = {
       values: originalRow,
-      rowId,
+      rowId: String(originalRow[idFieldIndex]),
       issues: []
     }
   }
@@ -43,17 +38,16 @@ const convertToValidatedRows = (tableName, headers, rows) => {
 /**
  * Prepares parsed data by converting raw rows to validated row format
  *
+ * Only processes tables that have schemas defined.
+ *
  * @param {Object} parsedData - The parsed summary log data
  */
 const prepareRowsForTransformation = (parsedData) => {
-  if (!parsedData.data) {
-    return
-  }
-
   for (const [tableName, tableData] of Object.entries(parsedData.data)) {
-    if (tableData?.rows && Array.isArray(tableData.rows)) {
-      convertToValidatedRows(tableName, tableData.headers || [], tableData.rows)
+    if (!getTableSchema(tableName)) {
+      continue
     }
+    convertToValidatedRows(tableName, tableData.headers, tableData.rows)
   }
 }
 

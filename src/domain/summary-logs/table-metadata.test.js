@@ -21,8 +21,10 @@ describe('table-metadata', () => {
       expect(getRowIdField('RECEIVED_LOADS_FOR_REPROCESSING')).toBe('ROW_ID')
     })
 
-    it('returns null for unknown table', () => {
-      expect(getRowIdField('UNKNOWN_TABLE')).toBeNull()
+    it('throws for unknown table', () => {
+      expect(() => getRowIdField('UNKNOWN_TABLE')).toThrow(
+        'No metadata defined for table: UNKNOWN_TABLE'
+      )
     })
   })
 
@@ -33,8 +35,10 @@ describe('table-metadata', () => {
       )
     })
 
-    it('returns null for unknown table', () => {
-      expect(getWasteRecordType('UNKNOWN_TABLE')).toBeNull()
+    it('throws for unknown table', () => {
+      expect(() => getWasteRecordType('UNKNOWN_TABLE')).toThrow(
+        'No metadata defined for table: UNKNOWN_TABLE'
+      )
     })
   })
 })

@@ -16,7 +16,7 @@ import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
  * A validated row with issues attached
  * @typedef {Object} ValidatedRow
  * @property {Array<*>} values - Original row values array
- * @property {string|null} rowId - Extracted row ID or null if not available
+ * @property {string} rowId - Extracted row ID
  * @property {ValidationIssue[]} issues - Validation issues for this row
  */
 
@@ -136,18 +136,16 @@ const createRowIssues = ({
 /**
  * Extracts the row ID from a row object based on the table's ID field
  *
+ * Only called for tables with schemas, so idField is guaranteed to exist.
+ * The row ID value is required by schema validation, so it's guaranteed to be present.
+ *
  * @param {Object} rowObject - Row data as object with header keys
  * @param {string} tableName - Name of the table
- * @returns {string|null} The row ID or null if not found
+ * @returns {string} The row ID
  */
 const extractRowId = (rowObject, tableName) => {
   const idField = getRowIdField(tableName)
-  if (!idField) {
-    return null
-  }
-
-  const value = rowObject[idField]
-  return value !== null && value !== undefined ? String(value) : null
+  return String(rowObject[idField])
 }
 
 /**

@@ -36,8 +36,14 @@ describe('transformFromSummaryLog', () => {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
-            createValidatedRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID),
-            createValidatedRow(['row-456', '2025-01-16', SECOND_WEIGHT], 'row-456')
+            createValidatedRow(
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            ),
+            createValidatedRow(
+              ['row-456', '2025-01-16', SECOND_WEIGHT],
+              'row-456'
+            )
           ]
         }
       }
@@ -57,8 +63,18 @@ describe('transformFromSummaryLog', () => {
     expect(result).toHaveLength(2)
 
     // Result is now { record, issues }[]
-    expectValidTransformedRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
-    expectValidTransformedRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
+    expectValidTransformedRecord(
+      result[0],
+      FIRST_ROW_ID,
+      FIRST_DATE,
+      FIRST_WEIGHT
+    )
+    expectValidTransformedRecord(
+      result[1],
+      'row-456',
+      '2025-01-16',
+      SECOND_WEIGHT
+    )
   })
 
   it('returns empty array when no RECEIVED_LOADS data present', () => {
@@ -127,7 +143,12 @@ describe('transformFromSummaryLog', () => {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-          rows: [createValidatedRow([FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT], FIRST_ROW_ID)]
+          rows: [
+            createValidatedRow(
+              [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
+              FIRST_ROW_ID
+            )
+          ]
         }
       }
     }
@@ -209,7 +230,12 @@ describe('transformFromSummaryLog', () => {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-          rows: [createValidatedRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID)]
+          rows: [
+            createValidatedRow(
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            )
+          ]
         }
       }
     }
@@ -248,7 +274,11 @@ describe('transformFromSummaryLog', () => {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
-            createValidatedRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID, [validationIssue])
+            createValidatedRow(
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID,
+              [validationIssue]
+            )
           ]
         }
       }
@@ -300,7 +330,12 @@ function createExistingWasteRecord() {
   }
 }
 
-function expectValidTransformedRecord(transformedRecord, rowId, dateReceived, grossWeight) {
+function expectValidTransformedRecord(
+  transformedRecord,
+  rowId,
+  dateReceived,
+  grossWeight
+) {
   const { record, issues } = transformedRecord
 
   expect(issues).toEqual([])

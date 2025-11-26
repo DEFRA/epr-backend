@@ -3,7 +3,10 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
-import { VERSION_STATUS, WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_TYPE
+} from '#domain/waste-records/model.js'
 
 describe('validateRowContinuity', () => {
   /**
