@@ -497,4 +497,95 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
     })
   })
+
+  describe('Load classification', () => {
+    it('stores loadCounts when validation passes with data rows', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          UPDATE_WASTE_BALANCE: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'OUR_REFERENCE',
+              'DATE_RECEIVED',
+              'EWC_CODE',
+              'GROSS_WEIGHT',
+              'TARE_WEIGHT',
+              'PALLET_WEIGHT',
+              'NET_WEIGHT',
+              'BAILING_WIRE',
+              'HOW_CALCULATE_RECYCLABLE',
+              'WEIGHT_OF_NON_TARGET',
+              'RECYCLABLE_PROPORTION',
+              'TONNAGE_RECEIVED_FOR_EXPORT'
+            ],
+            rows: [
+              [
+                10000, // Valid row
+                '2025-05-28T00:00:00.000Z',
+                '03 03 08',
+                1000,
+                100,
+                50,
+                850,
+                'YES',
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ],
+              [
+                9999, // Invalid row - below minimum OUR_REFERENCE
+                'invalid-date',
+                'bad-code',
+                1000,
+                100,
+                50,
+                850,
+                'YES',
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ]
+            ]
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loadCounts).toEqual({
+        new: { valid: 1, invalid: 1 },
+        unchanged: { valid: 0, invalid: 0 },
+        adjusted: { valid: 0, invalid: 0 }
+      })
+    })
+
+    it('does not store loadCounts when validation fails with fatal error', async () => {
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'REG99999' }, // Wrong - fatal error
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {}
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loadCounts).toBeUndefined()
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    })
+  })
 })

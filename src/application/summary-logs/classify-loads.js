@@ -1,0 +1,239 @@
+import { getTableSchema } from './validations/table-schemas.js'
+
+/**
+ * @typedef {Object} LoadCounts
+ * @property {{ valid: number, invalid: number }} new - Counts for new loads
+ * @property {{ valid: number, invalid: number }} unchanged - Counts for unchanged loads
+ * @property {{ valid: number, invalid: number }} adjusted - Counts for adjusted loads
+ */
+
+/**
+ * Creates an empty load counts structure
+ *
+ * @returns {LoadCounts}
+ */
+const createEmptyLoadCounts = () => ({
+  new: { valid: 0, invalid: 0 },
+  unchanged: { valid: 0, invalid: 0 },
+  adjusted: { valid: 0, invalid: 0 }
+})
+
+/**
+ * Maps validation table names to row ID field names
+ *
+ * This maps the table names used in validation to the field that
+ * contains the row identifier for that table type.
+ */
+const TABLE_ROW_ID_FIELDS = {
+  UPDATE_WASTE_BALANCE: 'OUR_REFERENCE'
+  // Add more mappings as new table types are added
+}
+
+/**
+ * Maps validation table names to waste record types
+ *
+ * This maps the table names used in validation to the waste record
+ * type used for comparison with existing records.
+ */
+const TABLE_TO_WASTE_RECORD_TYPE = {
+  UPDATE_WASTE_BALANCE: 'received'
+  // Add more mappings as new table types are added
+}
+
+/**
+ * Builds a set of row keys that have validation errors
+ *
+ * @param {Array} issues - Array of validation issues
+ * @param {Object} parsed - The parsed summary log data
+ * @returns {Set<string>} Set of keys in format "tableName:rowIndex"
+ */
+const buildInvalidRowKeys = (issues, parsed) => {
+  const invalidRowKeys = new Set()
+
+  for (const issue of issues) {
+    const location = issue.context?.location
+    if (!location?.table || location?.row === undefined) {
+      continue
+    }
+
+    const tableName = location.table
+    const tableData = parsed?.data?.[tableName]
+
+    if (!tableData?.location?.row) {
+      continue
+    }
+
+    // Convert spreadsheet row to array index
+    // Spreadsheet row includes header row, so subtract header row and 1
+    const headerRow = tableData.location.row
+    const rowIndex = location.row - headerRow - 1
+
+    if (rowIndex >= 0) {
+      invalidRowKeys.add(`${tableName}:${rowIndex}`)
+    }
+  }
+
+  return invalidRowKeys
+}
+
+/**
+ * Builds a map of existing row IDs by type
+ *
+ * @param {Array} existingWasteRecords - Array of existing waste records
+ * @returns {Map<string, Set<string>>} Map of waste record type to set of row IDs
+ */
+const buildExistingRowIdsByType = (existingWasteRecords) => {
+  const existingRowIds = new Map()
+
+  for (const record of existingWasteRecords || []) {
+    if (!existingRowIds.has(record.type)) {
+      existingRowIds.set(record.type, new Set())
+    }
+    existingRowIds.get(record.type).add(String(record.rowId))
+  }
+
+  return existingRowIds
+}
+
+/**
+ * Builds a map to check if existing records have changed
+ *
+ * @param {Array} existingWasteRecords - Array of existing waste records
+ * @returns {Map<string, Object>} Map of "type:rowId" to record data
+ */
+const buildExistingRecordData = (existingWasteRecords) => {
+  const existingData = new Map()
+
+  for (const record of existingWasteRecords || []) {
+    const key = `${record.type}:${record.rowId}`
+    existingData.set(key, record.data)
+  }
+
+  return existingData
+}
+
+/**
+ * Extracts the row ID from a row based on the table's ID field
+ *
+ * @param {Object} rowObject - Row data as object with header keys
+ * @param {string} tableName - Name of the table
+ * @returns {string|null} The row ID or null if not found
+ */
+export const getRowId = (rowObject, tableName) => {
+  const idField = TABLE_ROW_ID_FIELDS[tableName]
+  if (!idField) {
+    return null
+  }
+
+  const value = rowObject[idField]
+  return value !== null && value !== undefined ? String(value) : null
+}
+
+/**
+ * Converts row array to object using headers
+ *
+ * @param {Array} row - Row data as array
+ * @param {Array<string>} headers - Array of header names
+ * @returns {Object} Row data as object with header keys
+ */
+const rowToObject = (row, headers) => {
+  const result = {}
+  for (let i = 0; i < headers.length; i++) {
+    if (headers[i]) {
+      result[headers[i]] = row[i]
+    }
+  }
+  return result
+}
+
+/**
+ * Checks if row data has changed from existing record
+ *
+ * @param {Object} rowObject - Current row data
+ * @param {Object} existingData - Existing record data
+ * @returns {boolean} True if data has changed
+ */
+const hasRowChanged = (rowObject, existingData) => {
+  if (!existingData) {
+    return false
+  }
+
+  // Compare each field in the row with existing data
+  for (const [key, value] of Object.entries(rowObject)) {
+    if (existingData[key] !== undefined && existingData[key] !== value) {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Classifies loads from a summary log and returns counts
+ *
+ * Classification dimensions:
+ * - new: Load not present in any previous submission
+ * - unchanged: Load exists in previous submission, data has not changed
+ * - adjusted: Load exists in previous submission, data has changed
+ *
+ * Validity:
+ * - valid: Load passes all validation rules
+ * - invalid: Load has validation errors
+ *
+ * @param {Object} params
+ * @param {Object} params.parsed - The parsed summary log data
+ * @param {Array} params.issues - Array of validation issues
+ * @param {Array} params.existingWasteRecords - Existing waste records from previous uploads
+ * @returns {LoadCounts} Counts of loads by classification
+ */
+export const classifyLoads = ({ parsed, issues, existingWasteRecords }) => {
+  const counts = createEmptyLoadCounts()
+
+  const data = parsed?.data || {}
+  const invalidRowKeys = buildInvalidRowKeys(issues, parsed)
+  const existingRowIds = buildExistingRowIdsByType(existingWasteRecords)
+  const existingRecordData = buildExistingRecordData(existingWasteRecords)
+
+  for (const [tableName, tableData] of Object.entries(data)) {
+    // Only count tables that have schemas (known table types)
+    const schema = getTableSchema(tableName)
+    if (!schema) {
+      continue
+    }
+
+    const { headers, rows } = tableData
+    const wasteRecordType = TABLE_TO_WASTE_RECORD_TYPE[tableName]
+    const existingRowIdsForType =
+      existingRowIds.get(wasteRecordType) || new Set()
+
+    for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
+      const rowKey = `${tableName}:${rowIndex}`
+      const isInvalid = invalidRowKeys.has(rowKey)
+      const validityKey = isInvalid ? 'invalid' : 'valid'
+
+      // Convert row to object for ID extraction and comparison
+      const rowObject = rowToObject(rows[rowIndex], headers)
+      const rowId = getRowId(rowObject, tableName)
+
+      // Determine classification
+      let classification
+      if (!rowId || !existingRowIdsForType.has(rowId)) {
+        classification = 'new'
+      } else {
+        // Check if row data has changed
+        const existingKey = `${wasteRecordType}:${rowId}`
+        const existingData = existingRecordData.get(existingKey)
+
+        if (hasRowChanged(rowObject, existingData)) {
+          classification = 'adjusted'
+        } else {
+          classification = 'unchanged'
+        }
+      }
+
+      counts[classification][validityKey]++
+    }
+  }
+
+  return counts
+}

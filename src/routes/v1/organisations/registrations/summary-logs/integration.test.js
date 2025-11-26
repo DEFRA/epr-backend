@@ -260,6 +260,11 @@ describe('Summary logs integration', () => {
           validation: {
             failures: [],
             concerns: {}
+          },
+          loadCounts: {
+            new: { valid: 0, invalid: 0 },
+            unchanged: { valid: 0, invalid: 0 },
+            adjusted: { valid: 0, invalid: 0 }
           }
         })
       })
@@ -640,6 +645,19 @@ describe('Summary logs integration', () => {
 
         // All 3 errors are from row 9, so rowsWithIssues should be 1
         expect(rowsWithIssues).toBe(1)
+      })
+
+      it('returns loadCounts classifying loads as new/valid/invalid', () => {
+        const payload = JSON.parse(response.payload)
+
+        // Both rows are new (first submission, no prior records)
+        // Row 1 (OUR_REFERENCE 10000) is valid
+        // Row 2 (OUR_REFERENCE 9999) is invalid (has validation errors)
+        expect(payload.loadCounts).toEqual({
+          new: { valid: 1, invalid: 1 },
+          unchanged: { valid: 0, invalid: 0 },
+          adjusted: { valid: 0, invalid: 0 }
+        })
       })
     })
   })

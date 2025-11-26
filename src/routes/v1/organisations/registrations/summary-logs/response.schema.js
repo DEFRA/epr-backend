@@ -35,6 +35,17 @@ const validationConcernsSchema = Joi.object().pattern(
   })
 )
 
+const loadCountCategorySchema = Joi.object({
+  valid: Joi.number().integer().min(0).required(),
+  invalid: Joi.number().integer().min(0).required()
+})
+
+const loadCountsSchema = Joi.object({
+  new: loadCountCategorySchema.required(),
+  unchanged: loadCountCategorySchema.required(),
+  adjusted: loadCountCategorySchema.required()
+})
+
 export const summaryLogResponseSchema = Joi.object({
   status: Joi.string()
     .valid(
@@ -51,6 +62,7 @@ export const summaryLogResponseSchema = Joi.object({
     failures: Joi.array().items(validationIssueSchema).required(),
     concerns: validationConcernsSchema.required()
   }).optional(),
+  loadCounts: loadCountsSchema.optional(),
   failureReason: Joi.string().optional(),
   accreditationNumber: Joi.string().allow(null).optional()
 })

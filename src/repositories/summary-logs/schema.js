@@ -45,12 +45,24 @@ export const summaryLogInsertSchema = Joi.object({
   registrationId: Joi.string().optional()
 }).messages(commonMessages)
 
+const loadCountCategorySchema = Joi.object({
+  valid: Joi.number().integer().min(0).required(),
+  invalid: Joi.number().integer().min(0).required()
+})
+
+const loadCountsSchema = Joi.object({
+  new: loadCountCategorySchema.required(),
+  unchanged: loadCountCategorySchema.required(),
+  adjusted: loadCountCategorySchema.required()
+})
+
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
   failureReason: Joi.string().optional(),
   validation: Joi.object({
     issues: Joi.array().items(Joi.object()).optional()
   }).optional(),
+  loadCounts: loadCountsSchema.optional(),
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()

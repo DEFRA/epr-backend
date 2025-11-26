@@ -12,6 +12,7 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateDataSyntax } from './validations/data-syntax.js'
 import { validateDataBusiness } from './validations/data-business.js'
+import { classifyLoads } from './classify-loads.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -41,6 +42,13 @@ const fetchRegistration = async ({
 
   return registration
 }
+
+/**
+ * @typedef {Object} ValidationResult
+ * @property {Object} issues - Validation issues object with methods like getAllIssues(), isFatal()
+ * @property {Object|null} parsed - Parsed summary log data (null if extraction failed)
+ * @property {Array|null} existingWasteRecords - Existing waste records (null if not fetched)
+ */
 
 /**
  * Performs all validation checks on a summary log
@@ -78,7 +86,7 @@ const fetchRegistration = async ({
  * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
  * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
  * @param {WasteRecordsRepository} params.wasteRecordsRepository - Waste records repository for fetching existing records
- * @returns {Promise<Object>} Validation issues object with methods like getAllIssues(), isFatal()
+ * @returns {Promise<ValidationResult>} Validation result with issues, parsed data, and existing records
  */
 const performValidationChecks = async ({
   summaryLog,
@@ -88,9 +96,11 @@ const performValidationChecks = async ({
   wasteRecordsRepository
 }) => {
   const issues = createValidationIssues()
+  let parsed = null
+  let existingWasteRecords = null
 
   try {
-    const parsed = await summaryLogExtractor.extract(summaryLog)
+    parsed = await summaryLogExtractor.extract(summaryLog)
 
     logger.info({
       message: `Extracted summary log file: ${loggingContext}`,
@@ -103,7 +113,7 @@ const performValidationChecks = async ({
     issues.merge(validateMetaSyntax({ parsed }))
 
     if (issues.isFatal()) {
-      return issues
+      return { issues, parsed, existingWasteRecords }
     }
 
     const registration = await fetchRegistration({
@@ -116,20 +126,19 @@ const performValidationChecks = async ({
     issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
     if (issues.isFatal()) {
-      return issues
+      return { issues, parsed, existingWasteRecords }
     }
 
     issues.merge(validateDataSyntax({ parsed }))
 
     if (issues.isFatal()) {
-      return issues
+      return { issues, parsed, existingWasteRecords }
     }
 
-    const existingWasteRecords =
-      await wasteRecordsRepository.findByRegistration(
-        summaryLog.organisationId,
-        summaryLog.registrationId
-      )
+    existingWasteRecords = await wasteRecordsRepository.findByRegistration(
+      summaryLog.organisationId,
+      summaryLog.registrationId
+    )
 
     issues.merge(
       validateDataBusiness({ parsed, summaryLog, existingWasteRecords })
@@ -151,7 +160,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return issues
+  return { issues, parsed, existingWasteRecords }
 }
 
 /**
@@ -193,23 +202,38 @@ export const createSummaryLogsValidator =
       }
     })
 
-    const issues = await performValidationChecks({
-      summaryLog,
-      loggingContext,
-      summaryLogExtractor,
-      organisationsRepository,
-      wasteRecordsRepository
-    })
+    const { issues, parsed, existingWasteRecords } =
+      await performValidationChecks({
+        summaryLog,
+        loggingContext,
+        summaryLogExtractor,
+        organisationsRepository,
+        wasteRecordsRepository
+      })
 
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
+
+    // Calculate load counts only for validated summary logs
+    // Note: existingWasteRecords is guaranteed to be an array when status is VALIDATED
+    // because we only reach VALIDATED if we passed all short-circuits and called
+    // findByRegistration, which returns WasteRecord[] per the repository contract
+    const loadCounts =
+      status === SUMMARY_LOG_STATUS.VALIDATED && parsed
+        ? classifyLoads({
+            parsed,
+            issues: issues.getAllIssues(),
+            existingWasteRecords
+          })
+        : null
 
     await summaryLogsRepository.update(summaryLogId, version, {
       status,
       validation: {
         issues: issues.getAllIssues()
       },
+      ...(loadCounts && { loadCounts }),
       ...(issues.isFatal() && {
         failureReason: issues.getAllIssues()[0].message
       })
