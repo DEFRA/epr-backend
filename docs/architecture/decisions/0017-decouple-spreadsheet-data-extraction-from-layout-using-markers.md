@@ -36,7 +36,7 @@ The spreadsheet templates will include hidden marker cells that follow these pat
 - **Data section markers**: Cells starting with `__EPR_DATA_` indicate the start of tabular data sections
   - The cells to the right of the marker contain column headers (on the same row)
   - Subsequent rows below contain data until an empty row is encountered
-  - Example: `__EPR_DATA_UPDATE_WASTE_BALANCE` → extract headers to the right and rows below
+  - Example: `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING` → extract headers to the right and rows below
 
 - **Skip column markers**: Cells containing `__EPR_SKIP_COLUMN` in the header row indicate columns to skip within a data section
   - The parser includes these columns in the extracted data as `null` values to maintain column index alignment
@@ -56,7 +56,7 @@ The double underscore prefix (`__EPR_`) makes markers highly distinctive and unl
  *   - Extract marker name from suffix (e.g., "__EPR_META_PROCESSING_TYPE" → "PROCESSING_TYPE")
  *   - Extract contents of cell to right of marker
  * - Look for cells starting with "__EPR_DATA_":
- *   - Extract section name from suffix (e.g., "__EPR_DATA_UPDATE_WASTE_BALANCE" → "UPDATE_WASTE_BALANCE")
+ *   - Extract section name from suffix (e.g., "__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING" → "RECEIVED_LOADS_FOR_REPROCESSING")
  *   - Extract headers from cells to the right of marker (same row)
  *     - Record "__EPR_SKIP_COLUMN" positions as null in headers array
  *     - Continue reading headers beyond skip markers
@@ -73,24 +73,24 @@ The double underscore prefix (`__EPR_`) makes markers highly distinctive and unl
 
 The following table shows how markers would appear in a spreadsheet (markers would typically be in hidden columns). Note that tables can be arranged either stacked vertically or side-by-side:
 
-| Column A                          | Column B          | Column C            | Column D                     | Column E           | Column F           |
-| --------------------------------- | ----------------- | ------------------- | ---------------------------- | ------------------ | ------------------ |
-| `__EPR_META_PROCESSING_TYPE`      | REPROCESSOR_INPUT |                     |                              |                    |                    |
-| `__EPR_META_TEMPLATE_VERSION`     | 1                 |                     |                              |                    |                    |
-| `__EPR_META_MATERIAL`             | Paper and board   |                     |                              |                    |                    |
-| `__EPR_META_ACCREDITATION_NUMBER` | ER25199864        |                     |                              |                    |                    |
-|                                   |                   |                     |                              |                    |                    |
-| `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE     | DATE_RECEIVED       | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
-|                                   | 12345678910       | 2025-05-25          |                              | Joe Blogs Refinery | 15 Good Street     |
-|                                   | 98765432100       | 2025-05-26          |                              | Acme Recycling     | 42 Industrial Park |
-|                                   |                   |                     |                              |                    |                    |
-| `__EPR_DATA_PROCESSED`            | OUR_REFERENCE     | DATE_LOAD_LEFT_SITE |                              |                    |                    |
-|                                   | 12345678910       | 2025-05-25          |                              |                    |                    |
+| Column A                                     | Column B          | Column C            | Column D                     | Column E           | Column F           |
+| -------------------------------------------- | ----------------- | ------------------- | ---------------------------- | ------------------ | ------------------ |
+| `__EPR_META_PROCESSING_TYPE`                 | REPROCESSOR_INPUT |                     |                              |                    |                    |
+| `__EPR_META_TEMPLATE_VERSION`                | 1                 |                     |                              |                    |                    |
+| `__EPR_META_MATERIAL`                        | Paper and board   |                     |                              |                    |                    |
+| `__EPR_META_ACCREDITATION_NUMBER`            | ER25199864        |                     |                              |                    |                    |
+|                                              |                   |                     |                              |                    |                    |
+| `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING` | ROW_ID            | DATE_RECEIVED       | `__EPR_DATA_MONTHLY_REPORTS` | SUPPLIER_NAME      | ADDRESS_LINE_1     |
+|                                              | 12345678910       | 2025-05-25          |                              | Joe Blogs Refinery | 15 Good Street     |
+|                                              | 98765432100       | 2025-05-26          |                              | Acme Recycling     | 42 Industrial Park |
+|                                              |                   |                     |                              |                    |                    |
+| `__EPR_DATA_PROCESSED`                       | ROW_ID            | DATE_LOAD_LEFT_SITE |                              |                    |                    |
+|                                              | 12345678910       | 2025-05-25          |                              |                    |                    |
 
 In this example:
 
 - Metadata markers are stacked at the top
-- `UPDATE_WASTE_BALANCE` and `MONTHLY_REPORTS` tables are side-by-side (columns A-C and D-F respectively)
+- `RECEIVED_LOADS_FOR_REPROCESSING` and `MONTHLY_REPORTS` tables are side-by-side (columns A-C and D-F respectively)
 - `PROCESSED` table is below in columns A-C
 
 The parser doesn't care about the spatial arrangement - it simply finds markers and extracts the data associated with each one.
@@ -99,11 +99,11 @@ The parser doesn't care about the spatial arrangement - it simply finds markers 
 
 When a single logical table is visually broken into sections with blank columns between them, use `__EPR_SKIP_COLUMN` markers:
 
-| Column A                    | Column B      | Column C      | Column D            | Column E     | Column F       |
-| --------------------------- | ------------- | ------------- | ------------------- | ------------ | -------------- |
-| `__EPR_DATA_WASTE_RECEIVED` | OUR_REFERENCE | DATE_RECEIVED | `__EPR_SKIP_COLUMN` | SUPPLIER_REF | SUPPLIER_NAME  |
-|                             | 12345678910   | 2025-05-25    |                     | ABC123       | Joe Blogs      |
-|                             | 98765432100   | 2025-05-26    |                     | XYZ789       | Acme Recycling |
+| Column A                    | Column B    | Column C      | Column D            | Column E     | Column F       |
+| --------------------------- | ----------- | ------------- | ------------------- | ------------ | -------------- |
+| `__EPR_DATA_WASTE_RECEIVED` | ROW_ID      | DATE_RECEIVED | `__EPR_SKIP_COLUMN` | SUPPLIER_REF | SUPPLIER_NAME  |
+|                             | 12345678910 | 2025-05-25    |                     | ABC123       | Joe Blogs      |
+|                             | 98765432100 | 2025-05-26    |                     | XYZ789       | Acme Recycling |
 
 This extracts as a single table with five columns (with null at column D to maintain index alignment):
 
@@ -112,7 +112,7 @@ This extracts as a single table with five columns (with null at column D to main
   data: {
     WASTE_RECEIVED: {
       location: { sheet: 'Data', row: 1, column: 'B' },
-      headers: ['OUR_REFERENCE', 'DATE_RECEIVED', null, 'SUPPLIER_REF', 'SUPPLIER_NAME'],
+      headers: ['ROW_ID', 'DATE_RECEIVED', null, 'SUPPLIER_REF', 'SUPPLIER_NAME'],
       rows: [
         [12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs'],
         [98765432100, '2025-05-26', null, 'XYZ789', 'Acme Recycling']
@@ -149,9 +149,9 @@ The parser will return a structured JSON object with source location for validat
     }
   },
   data: {
-    UPDATE_WASTE_BALANCE: {
+    RECEIVED_LOADS_FOR_REPROCESSING: {
       location: { sheet: 'Received', row: 6, column: 'B' },  // First header cell
-      headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+      headers: ['ROW_ID', 'DATE_RECEIVED'],
       rows: [
         [12345678910, '2025-05-25'],
         [98765432100, '2025-05-26']
@@ -167,7 +167,7 @@ The parser will return a structured JSON object with source location for validat
     },
     PROCESSED: {
       location: { sheet: 'Processed', row: 10, column: 'B' },  // First header cell
-      headers: ['OUR_REFERENCE', 'DATE_LOAD_LEFT_SITE'],
+      headers: ['ROW_ID', 'DATE_LOAD_LEFT_SITE'],
       rows: [[12345678910, '2025-05-25']]
     }
   }
@@ -190,7 +190,7 @@ For validation error reporting, specific cell locations can be calculated from t
 // For data cells in a data section:
 // location.row + 1 + rowIndex, location.column + columnIndex
 
-// Example: To find the cell at row index 1, column index 1 in UPDATE_WASTE_BALANCE:
+// Example: To find the cell at row index 1, column index 1 in RECEIVED_LOADS_FOR_REPROCESSING:
 // Sheet: 'Received'
 // Row: 6 + 1 + 1 = 8
 // Column: B + 1 = C
@@ -225,7 +225,7 @@ For validation error reporting, specific cell locations can be calculated from t
   - Data can be organized across multiple worksheets for user convenience
   - Worksheet names can be changed without affecting parsing (markers provide all context)
   - Layout can be optimized for user experience without impacting parsing logic
-- **Self-documenting**: The marker names (e.g., `__EPR_DATA_UPDATE_WASTE_BALANCE`) make it clear what data is being extracted from each section
+- **Self-documenting**: The marker names (e.g., `__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING`) make it clear what data is being extracted from each section
 - **Collision resistance**: The `__EPR_` prefix makes it highly unlikely that markers will accidentally match user-supplied data, while avoiding conflicts with spreadsheet formula operators
 - **Testability**: Tests can focus on marker detection and extraction logic rather than specific cell coordinates
 
