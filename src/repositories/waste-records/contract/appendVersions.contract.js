@@ -393,6 +393,69 @@ export const testAppendVersionsBehaviour = (it) => {
       expect(org2Result[0].versions[0].summaryLog.id).toBe('log-2')
     })
 
+    it('removes fields from data when they are absent from new VersionData.data', async () => {
+      // Create initial record with two fields
+      const initialVersion = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.RECEIVED]: {
+          'row-1': buildVersionData({
+            summaryLogId: 'log-1',
+            summaryLogUri: 's3://bucket/key1',
+            versionData: { FIELD_A: 'initial', FIELD_B: 'should-disappear' },
+            currentData: { FIELD_A: 'initial', FIELD_B: 'should-disappear' }
+          })
+        }
+      })
+
+      await repository.appendVersions('org-1', 'reg-1', initialVersion)
+
+      // Verify initial state
+      const initialResult = await repository.findByRegistration(
+        'org-1',
+        'reg-1'
+      )
+      expect(initialResult[0].data).toEqual({
+        FIELD_A: 'initial',
+        FIELD_B: 'should-disappear'
+      })
+
+      // Update with different fields - FIELD_B is missing, FIELD_C is new
+      const updatedVersion = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.RECEIVED]: {
+          'row-1': buildVersionData({
+            createdAt: '2025-01-20T10:00:00.000Z',
+            status: VERSION_STATUS.UPDATED,
+            summaryLogId: 'log-2',
+            summaryLogUri: 's3://bucket/key2',
+            versionData: { FIELD_A: 'updated' },
+            currentData: { FIELD_A: 'updated', FIELD_C: 'new-field' }
+          })
+        }
+      })
+
+      await repository.appendVersions('org-1', 'reg-1', updatedVersion)
+
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(1)
+
+      // Data should be completely replaced, NOT merged
+      // FIELD_B should NOT exist (it was in original but not in new VersionData.data)
+      expect(result[0].data).toEqual({
+        FIELD_A: 'updated',
+        FIELD_C: 'new-field'
+      })
+      expect(result[0].data.FIELD_B).toBeUndefined()
+
+      // Versions should still contain their respective data
+      expect(result[0].versions).toHaveLength(2)
+      expect(result[0].versions[0].data).toEqual({
+        FIELD_A: 'initial',
+        FIELD_B: 'should-disappear'
+      })
+      expect(result[0].versions[1].data).toEqual({
+        FIELD_A: 'updated'
+      })
+    })
+
     it('maintains version array in persistence order, not chronological order', async () => {
       // First submission with earlier timestamp
       const firstVersion = toWasteRecordVersions({

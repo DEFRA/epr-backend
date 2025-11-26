@@ -48,8 +48,10 @@ describe('Summary Log Markers', () => {
     })
 
     it('should return true for DATA_PREFIX markers', () => {
-      expect(isEprMarker('__EPR_DATA_UPDATE_WASTE_BALANCE')).toBe(true)
-      expect(isEprMarker('__EPR_DATA_MONTHLY_REPORTS')).toBe(true)
+      expect(isEprMarker('__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING')).toBe(
+        true
+      )
+      expect(isEprMarker('__EPR_DATA_REPROCESSED_LOADS')).toBe(true)
     })
 
     it('should return true for SKIP_COLUMN marker', () => {
@@ -62,7 +64,7 @@ describe('Summary Log Markers', () => {
     })
 
     it('should return false for regular headers', () => {
-      expect(isEprMarker('OUR_REFERENCE')).toBe(false)
+      expect(isEprMarker('ROW_ID')).toBe(false)
       expect(isEprMarker('DATE_RECEIVED')).toBe(false)
       expect(isEprMarker('EWC_CODE')).toBe(false)
     })

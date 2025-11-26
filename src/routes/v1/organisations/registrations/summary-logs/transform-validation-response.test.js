@@ -171,10 +171,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           }
@@ -201,10 +201,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               },
               actual: 9999
             }
@@ -217,7 +217,7 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'C',
                 header: 'DATE_RECEIVED'
@@ -234,7 +234,7 @@ describe('transformValidationResponse', () => {
         validation: {
           failures: [],
           concerns: {
-            UPDATE_WASTE_BALANCE: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
               sheet: 'Received',
               rows: [
                 {
@@ -243,7 +243,7 @@ describe('transformValidationResponse', () => {
                     {
                       type: 'error',
                       code: 'VALUE_OUT_OF_RANGE',
-                      header: 'OUR_REFERENCE',
+                      header: 'ROW_ID',
                       column: 'B',
                       actual: 9999
                     },
@@ -274,7 +274,7 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
                 header: 'NET_WEIGHT'
@@ -288,7 +288,8 @@ describe('transformValidationResponse', () => {
       const result = transformValidationResponse(validation)
 
       expect(
-        result.validation.concerns.UPDATE_WASTE_BALANCE.rows[0].issues[0]
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0]
       ).toMatchObject({
         type: 'warning',
         code: 'SUSPICIOUS_VALUE'
@@ -306,7 +307,7 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
                 header: 'MATERIAL'
@@ -321,7 +322,8 @@ describe('transformValidationResponse', () => {
       const result = transformValidationResponse(validation)
 
       expect(
-        result.validation.concerns.UPDATE_WASTE_BALANCE.rows[0].issues[0]
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0]
       ).toMatchObject({
         type: 'error',
         code: 'VALUE_MISMATCH',
@@ -343,10 +345,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 10,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -358,10 +360,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -373,10 +375,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 9,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           }
@@ -385,7 +387,8 @@ describe('transformValidationResponse', () => {
 
       const result = transformValidationResponse(validation)
 
-      const rows = result.validation.concerns.UPDATE_WASTE_BALANCE.rows
+      const rows =
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
       expect(rows).toHaveLength(3)
       expect(rows[0].row).toBe(8)
       expect(rows[1].row).toBe(9)
@@ -403,10 +406,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -431,12 +434,12 @@ describe('transformValidationResponse', () => {
       const result = transformValidationResponse(validation)
 
       expect(Object.keys(result.validation.concerns)).toEqual([
-        'UPDATE_WASTE_BALANCE',
+        'RECEIVED_LOADS_FOR_REPROCESSING',
         'DISPATCHED_RECORDS'
       ])
-      expect(result.validation.concerns.UPDATE_WASTE_BALANCE.sheet).toBe(
-        'Received'
-      )
+      expect(
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.sheet
+      ).toBe('Received')
       expect(result.validation.concerns.DISPATCHED_RECORDS.sheet).toBe(
         'Dispatched'
       )
@@ -453,10 +456,10 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -467,10 +470,10 @@ describe('transformValidationResponse', () => {
             code: 'MISSING_SHEET',
             context: {
               location: {
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -484,7 +487,7 @@ describe('transformValidationResponse', () => {
                 sheet: 'Received',
                 row: 8,
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -496,9 +499,9 @@ describe('transformValidationResponse', () => {
             context: {
               location: {
                 sheet: 'Received',
-                table: 'UPDATE_WASTE_BALANCE',
+                table: 'RECEIVED_LOADS_FOR_REPROCESSING',
                 column: 'B',
-                header: 'OUR_REFERENCE'
+                header: 'ROW_ID'
               }
             }
           },
@@ -515,14 +518,16 @@ describe('transformValidationResponse', () => {
       const result = transformValidationResponse(validation)
 
       // Should only include the valid error, skipping the others
-      expect(result.validation.concerns.UPDATE_WASTE_BALANCE.rows).toHaveLength(
-        1
-      )
       expect(
-        result.validation.concerns.UPDATE_WASTE_BALANCE.rows[0].issues
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
       ).toHaveLength(1)
       expect(
-        result.validation.concerns.UPDATE_WASTE_BALANCE.rows[0].issues[0].code
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues
+      ).toHaveLength(1)
+      expect(
+        result.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
+          .issues[0].code
       ).toBe('VALID_ERROR')
     })
   })

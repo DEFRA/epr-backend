@@ -410,7 +410,7 @@ describe('SummaryLogsValidator', () => {
           MATERIAL: { value: 'Aluminium' }
         },
         data: {
-          UPDATE_WASTE_BALANCE: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
             location: { sheet: 'Received', row: 7, column: 'B' },
             headers: ['INVALID_HEADER'], // This should NOT be validated
             rows: [[123]] // Invalid data that should NOT be validated
@@ -447,10 +447,10 @@ describe('SummaryLogsValidator', () => {
           MATERIAL: { value: 'Aluminium' }
         },
         data: {
-          UPDATE_WASTE_BALANCE: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
             location: { sheet: 'Received', row: 7, column: 'B' },
             headers: [
-              'OUR_REFERENCE',
+              'ROW_ID',
               'DATE_RECEIVED',
               'EWC_CODE',
               'GROSS_WEIGHT',
@@ -465,7 +465,7 @@ describe('SummaryLogsValidator', () => {
             ],
             rows: [
               [
-                9999, // Below minimum OUR_REFERENCE - non-fatal error
+                9999, // Below minimum ROW_ID - non-fatal error
                 '2025-05-28T00:00:00.000Z',
                 '03 03 08',
                 1000,
