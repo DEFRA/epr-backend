@@ -151,6 +151,34 @@ const hasRowChanged = (rowObject, existingData) => {
 }
 
 /**
+ * Determines the classification for a single row
+ *
+ * @param {Object} params
+ * @param {string} params.rowId - The row ID
+ * @param {Object} params.rowObject - Row data as object
+ * @param {Set<string>} params.existingRowIdsForType - Set of existing row IDs for this type
+ * @param {string} params.wasteRecordType - The waste record type
+ * @param {Map<string, Object>} params.existingRecordData - Map of existing record data
+ * @returns {'new'|'unchanged'|'adjusted'} The classification
+ */
+const classifyRow = ({
+  rowId,
+  rowObject,
+  existingRowIdsForType,
+  wasteRecordType,
+  existingRecordData
+}) => {
+  if (!rowId || !existingRowIdsForType.has(rowId)) {
+    return 'new'
+  }
+
+  const existingKey = `${wasteRecordType}:${rowId}`
+  const existingData = existingRecordData.get(existingKey)
+
+  return hasRowChanged(rowObject, existingData) ? 'adjusted' : 'unchanged'
+}
+
+/**
  * Classifies loads from a summary log and returns counts
  *
  * Classification dimensions:
@@ -193,25 +221,16 @@ export const classifyLoads = ({ parsed, issues, existingWasteRecords }) => {
       const isInvalid = invalidRowKeys.has(rowKey)
       const validityKey = isInvalid ? 'invalid' : 'valid'
 
-      // Convert row to object for ID extraction and comparison
       const rowObject = rowToObject(rows[rowIndex], headers)
       const rowId = getRowId(rowObject, tableName)
 
-      // Determine classification
-      let classification
-      if (!rowId || !existingRowIdsForType.has(rowId)) {
-        classification = 'new'
-      } else {
-        // Check if row data has changed
-        const existingKey = `${wasteRecordType}:${rowId}`
-        const existingData = existingRecordData.get(existingKey)
-
-        if (hasRowChanged(rowObject, existingData)) {
-          classification = 'adjusted'
-        } else {
-          classification = 'unchanged'
-        }
-      }
+      const classification = classifyRow({
+        rowId,
+        rowObject,
+        existingRowIdsForType,
+        wasteRecordType,
+        existingRecordData
+      })
 
       counts[classification][validityKey]++
     }
