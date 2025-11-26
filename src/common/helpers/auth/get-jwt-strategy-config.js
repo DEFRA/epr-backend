@@ -58,8 +58,25 @@ export function getJwtStrategyConfig(oidcConfigs) {
             throw Boom.forbidden('Invalid audience for Defra Id token')
           }
 
+          const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
+            request,
+            tokenPayload
+          )
+          if (isValidLinkingReq) {
+            return {
+              isValid: true,
+              credentials: {
+                id: contactId,
+                email,
+                issuer,
+                scope: []
+              }
+            }
+          }
+
           const { organisationsRepository } = request
 
+          // TODO: Prevent this from throwin an error if user isn't linked yet
           const { linkedEprOrg, userOrgs } = getUsersOrganisationInfo(
             tokenPayload,
             organisationsRepository
@@ -75,22 +92,6 @@ export function getJwtStrategyConfig(oidcConfigs) {
                 issuer,
                 userOrgs,
                 linkedEprOrg,
-                scope: []
-              }
-            }
-          }
-
-          const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
-            request,
-            tokenPayload
-          )
-          if (isValidLinkingReq) {
-            return {
-              isValid: true,
-              credentials: {
-                id: contactId,
-                email,
-                issuer,
                 scope: []
               }
             }
