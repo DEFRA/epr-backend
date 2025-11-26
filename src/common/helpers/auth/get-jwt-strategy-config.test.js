@@ -28,6 +28,28 @@ vi.mock('./get-entra-user-roles.js', () => ({
   getEntraUserRoles: (...args) => mockGetEntraUserRoles(...args)
 }))
 
+// Mock getUsersOrganisationInfo
+const mockGetUsersOrganisationInfo = vi.fn()
+
+vi.mock('./get-users-org-info.js', () => ({
+  getUsersOrganisationInfo: (...args) => mockGetUsersOrganisationInfo(...args)
+}))
+
+// Mock validateEprOrganisationAccess
+const mockValidateEprOrganisationAccess = vi.fn()
+
+vi.mock('./validate-epr-org-access.js', () => ({
+  validateEprOrganisationAccess: (...args) =>
+    mockValidateEprOrganisationAccess(...args)
+}))
+
+// Mock getDefraIdUserRoles
+const mockGetDefraIdUserRoles = vi.fn()
+
+vi.mock('./get-defra-id-user-roles.js', () => ({
+  getDefraIdUserRoles: (...args) => mockGetDefraIdUserRoles(...args)
+}))
+
 describe('#getJwtStrategyConfig', () => {
   const mockOidcConfigs = {
     entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
@@ -40,10 +62,36 @@ describe('#getJwtStrategyConfig', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetEntraUserRoles.mockResolvedValue([ROLES.serviceMaintainer])
+    mockGetUsersOrganisationInfo.mockResolvedValue({
+      linkedEprOrg: undefined,
+      userOrgs: []
+    })
+    mockGetDefraIdUserRoles.mockReturnValue([])
+    mockValidateEprOrganisationAccess.mockImplementation(() => {})
   })
 
   afterEach(() => {
     vi.clearAllMocks()
+  })
+
+  // Helper to create mock request objects for Defra ID validation
+  const createMockRequest = (
+    organisationId = undefined,
+    path = '/organisations/{organisationId}',
+    method = 'get'
+  ) => ({
+    organisationsRepository: {
+      findAllByDefraIdOrgId: vi.fn().mockResolvedValue([]),
+      findAllUnlinkedOrganisationsByUser: vi.fn().mockResolvedValue([])
+    },
+    params: {
+      ...(organisationId && { organisationId })
+    },
+    route: {
+      path,
+      method
+    },
+    method
   })
 
   describe('configuration structure', () => {
@@ -427,7 +475,8 @@ describe('#getJwtStrategyConfig', () => {
         }
       }
 
-      const result = await config.validate(artifacts)
+      const mockRequest = createMockRequest()
+      const result = await config.validate(artifacts, mockRequest)
 
       expect(result.credentials.issuer).toBe(customIssuer)
     })
@@ -461,7 +510,8 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        const result = await config.validate(artifacts)
+        const mockRequest = createMockRequest()
+        const result = await config.validate(artifacts, mockRequest)
 
         expect(result).toEqual({
           isValid: false,
@@ -469,6 +519,8 @@ describe('#getJwtStrategyConfig', () => {
             id: 'defra-contact-123',
             email: 'defra-user@example.com',
             issuer: defraIdMockOidcWellKnownResponse.issuer,
+            linkedEprOrg: undefined,
+            userOrgs: undefined,
             scope: []
           }
         })
@@ -488,7 +540,8 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        const result = await config.validate(artifacts)
+        const mockRequest = createMockRequest()
+        const result = await config.validate(artifacts, mockRequest)
 
         expect(result.credentials.scope).toEqual([])
       })
@@ -507,7 +560,8 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        await config.validate(artifacts)
+        const mockRequest = createMockRequest()
+        await config.validate(artifacts, mockRequest)
 
         expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
       })
@@ -545,7 +599,8 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        const result = await config.validate(artifacts)
+        const mockRequest = createMockRequest()
+        const result = await config.validate(artifacts, mockRequest)
 
         expect(result.credentials.id).toBe('')
         expect(result.credentials.email).toBe('')
@@ -566,7 +621,8 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        await config.validate(artifacts)
+        const mockRequest = createMockRequest()
+        await config.validate(artifacts, mockRequest)
 
         expect(mockConfigGet).toHaveBeenCalledWith('oidc.defraId.clientId')
       })
@@ -585,7 +641,8 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
-        await config.validate(artifacts)
+        const mockRequest = createMockRequest()
+        await config.validate(artifacts, mockRequest)
 
         expect(mockConfigGet).toHaveBeenCalledWith('featureFlags.defraIdAuth')
       })
@@ -617,9 +674,10 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
+        const mockRequest = createMockRequest()
         const [entraResult, defraResult] = await Promise.all([
-          config.validate(entraArtifacts),
-          config.validate(defraArtifacts)
+          config.validate(entraArtifacts, mockRequest),
+          config.validate(defraArtifacts, mockRequest)
         ])
 
         expect(entraResult.credentials.id).toBe('entra-contact')
