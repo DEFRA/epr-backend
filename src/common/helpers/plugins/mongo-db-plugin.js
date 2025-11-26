@@ -9,8 +9,10 @@ import {
 import {
   createIndexes,
   createOrUpdateCollections,
-  createSeedData
+  createSeedData,
+  cleanupSeedData
 } from '../collections/create-update.js'
+import { config } from '../../../config.js'
 
 export const mongoDbPlugin = {
   plugin: {
@@ -39,7 +41,8 @@ export const mongoDbPlugin = {
 
       await createOrUpdateCollections(db)
       await createIndexes(db)
-      await createSeedData(db)
+      await createSeedData(db, () => config.get('isProduction'))
+      await cleanupSeedData(db, () => config.get('isProduction'))
 
       server.logger.info({
         message: `MongoDb connected to ${options.databaseName}`,
