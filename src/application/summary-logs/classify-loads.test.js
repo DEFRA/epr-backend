@@ -35,10 +35,10 @@ describe('classifyLoads', () => {
     const parsed = {
       meta: {},
       data: {
-        UPDATE_WASTE_BALANCE: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Received', row: 7, column: 'B' },
           headers: [
-            'OUR_REFERENCE',
+            'ROW_ID',
             'DATE_RECEIVED',
             'EWC_CODE',
             'GROSS_WEIGHT',
@@ -105,10 +105,10 @@ describe('classifyLoads', () => {
           context: {
             location: {
               sheet: 'Received',
-              table: 'UPDATE_WASTE_BALANCE',
+              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
               row: 9,
               column: 'B',
-              header: 'OUR_REFERENCE'
+              header: 'ROW_ID'
             },
             actual: 9999
           }
@@ -118,7 +118,7 @@ describe('classifyLoads', () => {
           context: {
             location: {
               sheet: 'Received',
-              table: 'UPDATE_WASTE_BALANCE',
+              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
               row: 9,
               column: 'C',
               header: 'DATE_RECEIVED'
@@ -131,7 +131,7 @@ describe('classifyLoads', () => {
           context: {
             location: {
               sheet: 'Received',
-              table: 'UPDATE_WASTE_BALANCE',
+              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
               row: 9,
               column: 'D',
               header: 'EWC_CODE'
@@ -159,9 +159,9 @@ describe('classifyLoads', () => {
     const parsed = {
       meta: {},
       data: {
-        UPDATE_WASTE_BALANCE: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: ['OUR_REFERENCE', 'DATE_RECEIVED', 'EWC_CODE'],
+          headers: ['ROW_ID', 'DATE_RECEIVED', 'EWC_CODE'],
           rows: [
             ['10001', '2025-05-28', '03 03 08'],
             ['10002', '2025-05-29', '03 03 09'],
@@ -177,7 +177,7 @@ describe('classifyLoads', () => {
           type: 'received',
           rowId: '10001',
           data: {
-            OUR_REFERENCE: '10001',
+            ROW_ID: '10001',
             DATE_RECEIVED: '2025-05-28',
             EWC_CODE: '03 03 08'
           }
@@ -200,7 +200,7 @@ describe('classifyLoads', () => {
           type: 'received',
           rowId: '10001',
           data: {
-            OUR_REFERENCE: '10001',
+            ROW_ID: '10001',
             DATE_RECEIVED: '2025-01-01',
             EWC_CODE: '03 03 08'
           }
@@ -223,7 +223,7 @@ describe('classifyLoads', () => {
           type: 'received',
           rowId: '10001',
           data: {
-            OUR_REFERENCE: '10001',
+            ROW_ID: '10001',
             DATE_RECEIVED: '2025-05-28',
             EWC_CODE: '03 03 08'
           }
@@ -232,7 +232,7 @@ describe('classifyLoads', () => {
           type: 'received',
           rowId: '10002',
           data: {
-            OUR_REFERENCE: '10002',
+            ROW_ID: '10002',
             DATE_RECEIVED: '2025-05-29',
             EWC_CODE: '03 03 09'
           }
@@ -282,9 +282,9 @@ describe('classifyLoads', () => {
     const parsed = {
       meta: {},
       data: {
-        UPDATE_WASTE_BALANCE: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+          headers: ['ROW_ID', 'DATE_RECEIVED'],
           rows: [['10001', '2025-05-28']]
         }
       }
@@ -335,7 +335,7 @@ describe('classifyLoads', () => {
           context: {
             location: {
               sheet: 'Received',
-              table: 'UPDATE_WASTE_BALANCE',
+              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
               column: 'B'
             }
             // No row property
@@ -382,9 +382,9 @@ describe('classifyLoads', () => {
       const parsedWithMissingLocation = {
         meta: {},
         data: {
-          UPDATE_WASTE_BALANCE: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
             // No location property
-            headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+            headers: ['ROW_ID', 'DATE_RECEIVED'],
             rows: [['10001', '2025-05-28']]
           }
         }
@@ -396,7 +396,7 @@ describe('classifyLoads', () => {
           context: {
             location: {
               sheet: 'Received',
-              table: 'UPDATE_WASTE_BALANCE',
+              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
               row: 8,
               column: 'B'
             }
@@ -421,7 +421,7 @@ describe('classifyLoads', () => {
           context: {
             location: {
               sheet: 'Received',
-              table: 'UPDATE_WASTE_BALANCE',
+              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
               row: 6, // Row 6 is before header row 7, so rowIndex would be negative
               column: 'B'
             }
@@ -445,9 +445,9 @@ describe('classifyLoads', () => {
     const parsed = {
       meta: {},
       data: {
-        UPDATE_WASTE_BALANCE: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+          headers: ['ROW_ID', 'DATE_RECEIVED'],
           rows: [['10001', '2025-05-28']]
         }
       }
@@ -506,10 +506,10 @@ describe('classifyLoads', () => {
       const parsed = {
         meta: {},
         data: {
-          UPDATE_WASTE_BALANCE: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
             location: { sheet: 'Received', row: 7, column: 'B' },
             // Headers array has empty string and null values
-            headers: ['OUR_REFERENCE', '', null, 'DATE_RECEIVED'],
+            headers: ['ROW_ID', '', null, 'DATE_RECEIVED'],
             rows: [['10001', 'ignored1', 'ignored2', '2025-05-28']]
           }
         }
@@ -529,8 +529,8 @@ describe('classifyLoads', () => {
 
 describe('getRowId', () => {
   it('returns row ID for known table with ID field', () => {
-    const rowObject = { OUR_REFERENCE: '12345', OTHER_FIELD: 'value' }
-    const result = getRowId(rowObject, 'UPDATE_WASTE_BALANCE')
+    const rowObject = { ROW_ID: '12345', OTHER_FIELD: 'value' }
+    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
     expect(result).toBe('12345')
   })
 
@@ -541,20 +541,20 @@ describe('getRowId', () => {
   })
 
   it('returns null when ID field value is null', () => {
-    const rowObject = { OUR_REFERENCE: null }
-    const result = getRowId(rowObject, 'UPDATE_WASTE_BALANCE')
+    const rowObject = { ROW_ID: null }
+    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
     expect(result).toBeNull()
   })
 
   it('returns null when ID field value is undefined', () => {
-    const rowObject = { OUR_REFERENCE: undefined }
-    const result = getRowId(rowObject, 'UPDATE_WASTE_BALANCE')
+    const rowObject = { ROW_ID: undefined }
+    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
     expect(result).toBeNull()
   })
 
   it('converts numeric ID to string', () => {
-    const rowObject = { OUR_REFERENCE: 12345 }
-    const result = getRowId(rowObject, 'UPDATE_WASTE_BALANCE')
+    const rowObject = { ROW_ID: 12345 }
+    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
     expect(result).toBe('12345')
   })
 })

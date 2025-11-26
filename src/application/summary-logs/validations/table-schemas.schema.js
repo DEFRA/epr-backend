@@ -24,7 +24,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA = {
     'number.min': 'must be at least 10000',
     'any.required': IS_REQUIRED
   }),
-  DATE_RECEIVED: Joi.date().required().messages({
+  DATE_RECEIVED_FOR_REPROCESSING: Joi.date().required().messages({
     'date.base': MUST_BE_A_VALID_DATE,
     'any.required': IS_REQUIRED
   }),

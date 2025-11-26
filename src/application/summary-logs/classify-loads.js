@@ -1,4 +1,8 @@
 import { getTableSchema } from './validations/table-schemas.js'
+import {
+  getRowIdField,
+  getWasteRecordType
+} from '#domain/summary-logs/table-metadata.js'
 
 /**
  * @typedef {Object} LoadCounts
@@ -17,28 +21,6 @@ const createEmptyLoadCounts = () => ({
   unchanged: { valid: 0, invalid: 0 },
   adjusted: { valid: 0, invalid: 0 }
 })
-
-/**
- * Maps validation table names to row ID field names
- *
- * This maps the table names used in validation to the field that
- * contains the row identifier for that table type.
- */
-const TABLE_ROW_ID_FIELDS = {
-  UPDATE_WASTE_BALANCE: 'OUR_REFERENCE'
-  // Add more mappings as new table types are added
-}
-
-/**
- * Maps validation table names to waste record types
- *
- * This maps the table names used in validation to the waste record
- * type used for comparison with existing records.
- */
-const TABLE_TO_WASTE_RECORD_TYPE = {
-  UPDATE_WASTE_BALANCE: 'received'
-  // Add more mappings as new table types are added
-}
 
 /**
  * Builds a set of row keys that have validation errors
@@ -120,7 +102,7 @@ const buildExistingRecordData = (existingWasteRecords) => {
  * @returns {string|null} The row ID or null if not found
  */
 export const getRowId = (rowObject, tableName) => {
-  const idField = TABLE_ROW_ID_FIELDS[tableName]
+  const idField = getRowIdField(tableName)
   if (!idField) {
     return null
   }
@@ -202,7 +184,7 @@ export const classifyLoads = ({ parsed, issues, existingWasteRecords }) => {
     }
 
     const { headers, rows } = tableData
-    const wasteRecordType = TABLE_TO_WASTE_RECORD_TYPE[tableName]
+    const wasteRecordType = getWasteRecordType(tableName)
     const existingRowIdsForType =
       existingRowIds.get(wasteRecordType) || new Set()
 

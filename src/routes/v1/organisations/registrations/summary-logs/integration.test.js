@@ -450,7 +450,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -586,7 +586,7 @@ describe('Summary logs integration', () => {
           (i) => i.context.location?.header
         )
         expect(errorFields).toContain('ROW_ID')
-        expect(errorFields).toContain('DATE_RECEIVED')
+        expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(errorFields).toContain('EWC_CODE')
 
         // All should be error severity (not fatal)
@@ -651,8 +651,8 @@ describe('Summary logs integration', () => {
         const payload = JSON.parse(response.payload)
 
         // Both rows are new (first submission, no prior records)
-        // Row 1 (OUR_REFERENCE 10000) is valid
-        // Row 2 (OUR_REFERENCE 9999) is invalid (has validation errors)
+        // Row 1 (ROW_ID 10000) is valid
+        // Row 2 (ROW_ID 9999) is invalid (has validation errors)
         expect(payload.loadCounts).toEqual({
           new: { valid: 1, invalid: 1 },
           unchanged: { valid: 0, invalid: 0 },
@@ -725,7 +725,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED'
+                'DATE_RECEIVED_FOR_REPROCESSING'
                 // Missing EWC_CODE and other required headers
               ],
               rows: [[10000, '2025-05-28T00:00:00.000Z']]
@@ -892,7 +892,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -1272,7 +1272,7 @@ describe('Summary logs integration', () => {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -1739,7 +1739,7 @@ describe('Summary logs integration', () => {
       worksheet.getCell('A6').value =
         '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
       worksheet.getCell('B6').value = 'ROW_ID'
-      worksheet.getCell('C6').value = 'DATE_RECEIVED'
+      worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
       worksheet.getCell('D6').value = 'EWC_CODE'
       worksheet.getCell('E6').value = 'GROSS_WEIGHT'
       worksheet.getCell('F6').value = 'TARE_WEIGHT'

@@ -451,7 +451,7 @@ describe('SummaryLogsValidator', () => {
             location: { sheet: 'Received', row: 7, column: 'B' },
             headers: [
               'ROW_ID',
-              'DATE_RECEIVED',
+              'DATE_RECEIVED_FOR_REPROCESSING',
               'EWC_CODE',
               'GROSS_WEIGHT',
               'TARE_WEIGHT',
@@ -508,11 +508,11 @@ describe('SummaryLogsValidator', () => {
           MATERIAL: { value: 'Aluminium' }
         },
         data: {
-          UPDATE_WASTE_BALANCE: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
             location: { sheet: 'Received', row: 7, column: 'B' },
             headers: [
-              'OUR_REFERENCE',
-              'DATE_RECEIVED',
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
               'EWC_CODE',
               'GROSS_WEIGHT',
               'TARE_WEIGHT',

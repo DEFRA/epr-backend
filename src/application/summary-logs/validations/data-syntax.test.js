@@ -5,7 +5,7 @@ import {
 } from '#common/enums/validation.js'
 
 describe('validateDataSyntax', () => {
-  const createValidUpdateWasteBalanceTable = () => ({
+  const createValidReceivedLoadsForReprocessingTable = () => ({
     location: {
       sheet: 'Received (sections 1, 2, 3)',
       row: 7,
@@ -13,7 +13,7 @@ describe('validateDataSyntax', () => {
     },
     headers: [
       'ROW_ID',
-      'DATE_RECEIVED',
+      'DATE_RECEIVED_FOR_REPROCESSING',
       'EWC_CODE',
       'GROSS_WEIGHT',
       'TARE_WEIGHT',
@@ -75,7 +75,8 @@ describe('validateDataSyntax', () => {
     it('returns valid result when all data is correct', () => {
       const parsed = {
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: createValidUpdateWasteBalanceTable()
+          RECEIVED_LOADS_FOR_REPROCESSING:
+            createValidReceivedLoadsForReprocessingTable()
         }
       }
 
@@ -90,9 +91,9 @@ describe('validateDataSyntax', () => {
       const parsed = {
         data: {
           RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidUpdateWasteBalanceTable(),
+            ...createValidReceivedLoadsForReprocessingTable(),
             headers: [
-              'DATE_RECEIVED',
+              'DATE_RECEIVED_FOR_REPROCESSING',
               'ROW_ID',
               'EWC_CODE',
               'GROSS_WEIGHT',
@@ -149,10 +150,10 @@ describe('validateDataSyntax', () => {
       const parsed = {
         data: {
           RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidUpdateWasteBalanceTable(),
+            ...createValidReceivedLoadsForReprocessingTable(),
             headers: [
               'ROW_ID',
-              'DATE_RECEIVED',
+              'DATE_RECEIVED_FOR_REPROCESSING',
               'EWC_CODE',
               'GROSS_WEIGHT',
               'TARE_WEIGHT',
@@ -198,11 +199,11 @@ describe('validateDataSyntax', () => {
       const parsed = {
         data: {
           RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidUpdateWasteBalanceTable(),
+            ...createValidReceivedLoadsForReprocessingTable(),
             headers: [
               'ROW_ID',
               null,
-              'DATE_RECEIVED',
+              'DATE_RECEIVED_FOR_REPROCESSING',
               'EWC_CODE',
               'GROSS_WEIGHT',
               'TARE_WEIGHT',
@@ -247,10 +248,10 @@ describe('validateDataSyntax', () => {
       const parsed = {
         data: {
           RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidUpdateWasteBalanceTable(),
+            ...createValidReceivedLoadsForReprocessingTable(),
             headers: [
               'ROW_ID',
-              'DATE_RECEIVED',
+              'DATE_RECEIVED_FOR_REPROCESSING',
               'EWC_CODE',
               'GROSS_WEIGHT',
               'TARE_WEIGHT',
@@ -295,8 +296,8 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
-              headers: ['ROW_ID', 'DATE_RECEIVED'],
+              ...createValidReceivedLoadsForReprocessingTable(),
+              headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
               rows: [[10000, '2025-05-28T00:00:00.000Z']]
             }
           }
@@ -321,7 +322,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               headers: ['ROW_ID'],
               rows: [[10000]]
             }
@@ -336,7 +337,7 @@ describe('validateDataSyntax', () => {
         const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
         expect(fatals.length).toBeGreaterThanOrEqual(2)
         const messages = fatals.map((f) => f.message).join(' ')
-        expect(messages).toContain('DATE_RECEIVED')
+        expect(messages).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(messages).toContain('EWC_CODE')
       })
     })
@@ -346,7 +347,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   'not-a-number',
@@ -391,7 +392,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   9999,
@@ -424,12 +425,12 @@ describe('validateDataSyntax', () => {
       })
     })
 
-    describe('cell validation errors - DATE_RECEIVED', () => {
-      it('returns error when DATE_RECEIVED is invalid', () => {
+    describe('cell validation errors - DATE_RECEIVED_FOR_REPROCESSING', () => {
+      it('returns error when DATE_RECEIVED_FOR_REPROCESSING is invalid', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -457,7 +458,7 @@ describe('validateDataSyntax', () => {
 
         const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('DATE_RECEIVED')
+        expect(errors[0].message).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(errors[0].message).toContain('must be a valid date')
       })
     })
@@ -467,7 +468,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -503,7 +504,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -536,7 +537,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -608,7 +609,7 @@ describe('validateDataSyntax', () => {
               },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -663,7 +664,7 @@ describe('validateDataSyntax', () => {
               },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -705,7 +706,7 @@ describe('validateDataSyntax', () => {
           (e) => e.context.location?.header === 'ROW_ID'
         )
         const dateError = errors.find(
-          (e) => e.context.location?.header === 'DATE_RECEIVED'
+          (e) => e.context.location?.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
         const ewcError = errors.find(
           (e) => e.context.location?.header === 'EWC_CODE'
@@ -727,7 +728,7 @@ describe('validateDataSyntax', () => {
               },
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -766,7 +767,7 @@ describe('validateDataSyntax', () => {
           (e) => e.context.location?.header === 'ROW_ID'
         )
         const dateError = errors.find(
-          (e) => e.context.location?.header === 'DATE_RECEIVED'
+          (e) => e.context.location?.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
         const ewcError = errors.find(
           (e) => e.context.location?.header === 'EWC_CODE'
@@ -784,7 +785,7 @@ describe('validateDataSyntax', () => {
               // No location provided
               headers: [
                 'ROW_ID',
-                'DATE_RECEIVED',
+                'DATE_RECEIVED_FOR_REPROCESSING',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
@@ -831,7 +832,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -866,7 +867,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -901,7 +902,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -937,7 +938,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -973,7 +974,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -1006,7 +1007,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -1039,7 +1040,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -1074,7 +1075,7 @@ describe('validateDataSyntax', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidUpdateWasteBalanceTable(),
+              ...createValidReceivedLoadsForReprocessingTable(),
               rows: [
                 [
                   10000,
@@ -1109,7 +1110,8 @@ describe('validateDataSyntax', () => {
     it('validates multiple tables independently', () => {
       const parsed = {
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: createValidUpdateWasteBalanceTable(),
+          RECEIVED_LOADS_FOR_REPROCESSING:
+            createValidReceivedLoadsForReprocessingTable(),
           UNKNOWN_TABLE: {
             // This should be ignored since no schema exists
             headers: ['ANYTHING'],
