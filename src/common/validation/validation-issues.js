@@ -11,7 +11,7 @@ import { VALIDATION_SEVERITY } from '#common/enums/index.js'
  * @property {Object} [context] - Additional context about the issue
  * @property {Object} [context.location] - Spreadsheet location information
  * @property {string} [context.location.sheet] - Sheet name (e.g., 'Cover', 'Received')
- * @property {string} [context.location.table] - Data table name (e.g., 'UPDATE_WASTE_BALANCE')
+ * @property {string} [context.location.table] - Data table name (e.g., 'RECEIVED_LOADS_FOR_REPROCESSING')
  * @property {number} [context.location.row] - Spreadsheet row number (1-based)
  * @property {string} [context.location.column] - Excel column letter (e.g., 'B', 'AA')
  * @property {string} [context.location.field] - Meta field name (e.g., 'REGISTRATION_NUMBER', 'MATERIAL')

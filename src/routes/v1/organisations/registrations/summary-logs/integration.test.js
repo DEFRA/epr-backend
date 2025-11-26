@@ -441,10 +441,10 @@ describe('Summary logs integration', () => {
             }
           },
           data: {
-            UPDATE_WASTE_BALANCE: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
-                'OUR_REFERENCE',
+                'ROW_ID',
                 'DATE_RECEIVED',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
@@ -553,9 +553,12 @@ describe('Summary logs integration', () => {
         })
         expect(payload.validation).toBeDefined()
         expect(payload.validation.concerns).toBeDefined()
-        expect(payload.validation.concerns.UPDATE_WASTE_BALANCE).toBeDefined()
         expect(
-          payload.validation.concerns.UPDATE_WASTE_BALANCE.rows.length
+          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
+        ).toBeDefined()
+        expect(
+          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
+            .length
         ).toBeGreaterThan(0)
       })
 
@@ -577,7 +580,7 @@ describe('Summary logs integration', () => {
         const errorFields = summaryLog.validation.issues.map(
           (i) => i.context.location?.header
         )
-        expect(errorFields).toContain('OUR_REFERENCE')
+        expect(errorFields).toContain('ROW_ID')
         expect(errorFields).toContain('DATE_RECEIVED')
         expect(errorFields).toContain('EWC_CODE')
 
@@ -591,27 +594,29 @@ describe('Summary logs integration', () => {
         const payload = JSON.parse(response.payload)
 
         // Should have table-keyed concerns structure
-        expect(payload.validation.concerns.UPDATE_WASTE_BALANCE).toBeDefined()
-        expect(payload.validation.concerns.UPDATE_WASTE_BALANCE.sheet).toBe(
-          'Received'
-        )
         expect(
-          payload.validation.concerns.UPDATE_WASTE_BALANCE.rows
+          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
+        ).toBeDefined()
+        expect(
+          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.sheet
+        ).toBe('Received')
+        expect(
+          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
         ).toHaveLength(1)
 
         const rowWithIssues =
-          payload.validation.concerns.UPDATE_WASTE_BALANCE.rows[0]
+          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(rowWithIssues.row).toBe(9)
         expect(rowWithIssues.issues).toHaveLength(3)
 
         // Spot check one issue has the complete structure per ADR 0020
         const ourReferenceIssue = rowWithIssues.issues.find(
-          (issue) => issue.header === 'OUR_REFERENCE'
+          (issue) => issue.header === 'ROW_ID'
         )
         expect(ourReferenceIssue).toMatchObject({
           type: 'error',
           code: expect.any(String),
-          header: 'OUR_REFERENCE',
+          header: 'ROW_ID',
           column: 'B',
           actual: 9999
         })
@@ -698,10 +703,10 @@ describe('Summary logs integration', () => {
             }
           },
           data: {
-            UPDATE_WASTE_BALANCE: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
-                'OUR_REFERENCE',
+                'ROW_ID',
                 'DATE_RECEIVED'
                 // Missing EWC_CODE and other required headers
               ],
@@ -865,10 +870,10 @@ describe('Summary logs integration', () => {
             }
           },
           data: {
-            UPDATE_WASTE_BALANCE: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
-                'OUR_REFERENCE',
+                'ROW_ID',
                 'DATE_RECEIVED',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
@@ -1059,7 +1064,7 @@ describe('Summary logs integration', () => {
           },
           data: {
             // Even though we have invalid data, it should NOT be validated
-            UPDATE_WASTE_BALANCE: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: ['INVALID_HEADER'], // Missing required headers
               rows: [
@@ -1245,10 +1250,10 @@ describe('Summary logs integration', () => {
             }
           },
           data: {
-            UPDATE_WASTE_BALANCE: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: [
-                'OUR_REFERENCE',
+                'ROW_ID',
                 'DATE_RECEIVED',
                 'EWC_CODE',
                 'GROSS_WEIGHT',
@@ -1713,8 +1718,9 @@ describe('Summary logs integration', () => {
       worksheet.getCell('B4').value = 1
 
       // Row 6: Data section headers
-      worksheet.getCell('A6').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
-      worksheet.getCell('B6').value = 'OUR_REFERENCE'
+      worksheet.getCell('A6').value =
+        '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
+      worksheet.getCell('B6').value = 'ROW_ID'
       worksheet.getCell('C6').value = 'DATE_RECEIVED'
       worksheet.getCell('D6').value = 'EWC_CODE'
       worksheet.getCell('E6').value = 'GROSS_WEIGHT'
@@ -1926,10 +1932,10 @@ describe('Summary logs integration', () => {
         // Row 8 has validation concerns for dropdown fields that were "Choose option"
         // (normalized to null by the parser)
         const concerns = payload.validation.concerns
-        expect(concerns.UPDATE_WASTE_BALANCE).toBeDefined()
-        expect(concerns.UPDATE_WASTE_BALANCE.rows).toHaveLength(1)
+        expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
+        expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows).toHaveLength(1)
 
-        const row8Issues = concerns.UPDATE_WASTE_BALANCE.rows[0]
+        const row8Issues = concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(row8Issues.row).toBe(8)
 
         // These are the dropdown fields that had "Choose option" (now null)
