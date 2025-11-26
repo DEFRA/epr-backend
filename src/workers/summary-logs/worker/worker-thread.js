@@ -8,7 +8,7 @@ import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
@@ -22,11 +22,13 @@ const handleValidateCommand = async ({
   summaryLogId,
   summaryLogsRepository,
   organisationsRepository,
+  wasteRecordsRepository,
   summaryLogExtractor
 }) => {
   const validateSummaryLog = createSummaryLogsValidator({
     summaryLogsRepository,
     organisationsRepository,
+    wasteRecordsRepository,
     summaryLogExtractor
   })
 
@@ -36,8 +38,8 @@ const handleValidateCommand = async ({
 const handleSubmitCommand = async ({
   summaryLogId,
   summaryLogsRepository,
-  summaryLogExtractor,
-  wasteRecordsRepository
+  wasteRecordsRepository,
+  summaryLogExtractor
 }) => {
   // Load the summary log
   const existing = await summaryLogsRepository.findById(summaryLogId)
@@ -48,10 +50,10 @@ const handleSubmitCommand = async ({
 
   const { version, summaryLog } = existing
 
-  // Verify status is VALIDATED
-  if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+  // Verify status is SUBMITTING
+  if (summaryLog.status !== SUMMARY_LOG_STATUS.SUBMITTING) {
     throw new Error(
-      `Summary log must be validated before submission. Current status: ${summaryLog.status}`
+      `Summary log must be in submitting status. Current status: ${summaryLog.status}`
     )
   }
 
@@ -100,7 +102,7 @@ export default async function summaryLogsWorkerThread(command) {
       const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
       const uploadsRepository = createUploadsRepository(s3Client)
       const organisationsRepository = createOrganisationsRepository(db)()
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+      const wasteRecordsRepository = createWasteRecordsRepository(db)()
 
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,
@@ -114,6 +116,7 @@ export default async function summaryLogsWorkerThread(command) {
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
             organisationsRepository,
+            wasteRecordsRepository,
             summaryLogExtractor
           })
           break
@@ -122,8 +125,8 @@ export default async function summaryLogsWorkerThread(command) {
           await handleSubmitCommand({
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
-            summaryLogExtractor,
-            wasteRecordsRepository
+            wasteRecordsRepository,
+            summaryLogExtractor
           })
           break
 

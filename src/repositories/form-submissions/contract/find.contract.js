@@ -34,6 +34,84 @@ export const testFindBehaviour = (it) => {
       })
     })
 
+    describe('findAccreditationsBySystemReference', () => {
+      it('returns empty array when no accreditations exists with supplied reference number', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const ref = '000011112222333344445555'
+
+        const result = await repository.findAccreditationsBySystemReference(ref)
+
+        expect(result).toEqual([])
+      })
+
+      it('returns accreditations with field values', async ({
+        seedAccreditations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedAccreditations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThan(1)
+
+        for (const seeded of seededData) {
+          const results = await repository.findAccreditationsBySystemReference(
+            seeded.referenceNumber
+          )
+          expect(results).toHaveLength(1)
+          expect(results[0].id).toBe(seeded.id)
+          expect(results[0].orgId).toBe(seeded.orgId)
+          expect(results[0].referenceNumber).toBe(seeded.referenceNumber)
+          expect(results[0].rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
+
+    describe('findAccreditationById', () => {
+      it('returns null when no accreditation exists with supplied ID', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const documentId = '000011112222333344445555' // a valid ID that does not match a document in the seeded data
+
+        const result = await repository.findAccreditationById(documentId)
+
+        expect(result).toBeNull()
+      })
+
+      it.for([null, undefined, '', '   '])(
+        'returns null when supplied ID is empty - %s',
+        async (input, { formSubmissionsRepository }) => {
+          const repository = formSubmissionsRepository()
+
+          const result = await repository.findAccreditationById(input)
+
+          expect(result).toBeNull()
+        }
+      )
+
+      it('returns accreditation with field values', async ({
+        seedAccreditations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedAccreditations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThanOrEqual(1)
+
+        for (const seeded of seededData) {
+          const result = await repository.findAccreditationById(seeded.id)
+          expect(result.id).toBe(seeded.id)
+          expect(result.orgId).toBe(seeded.orgId)
+          expect(result.referenceNumber).toBe(seeded.referenceNumber)
+          expect(result.rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
+
     describe('findAllRegistrations', () => {
       it('returns empty array when no registrations exist', async ({
         formSubmissionsRepository
@@ -66,6 +144,84 @@ export const testFindBehaviour = (it) => {
       })
     })
 
+    describe('findRegistrationsBySystemReference', () => {
+      it('returns empty array when no registrations exists with supplied reference number', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const ref = '000011112222333344445555'
+
+        const result = await repository.findRegistrationsBySystemReference(ref)
+
+        expect(result).toEqual([])
+      })
+
+      it('returns accreditations with field values', async ({
+        seedRegistrations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedRegistrations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThan(1)
+
+        for (const seeded of seededData) {
+          const results = await repository.findRegistrationsBySystemReference(
+            seeded.referenceNumber
+          )
+          expect(results).toHaveLength(1)
+          expect(results[0].id).toBe(seeded.id)
+          expect(results[0].orgId).toBe(seeded.orgId)
+          expect(results[0].referenceNumber).toBe(seeded.referenceNumber)
+          expect(results[0].rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
+
+    describe('findRegistrationById', () => {
+      it('returns null when no registration exists with supplied ID', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const documentId = '000011112222333344445555' // a valid ID that does not match a document in the seeded data
+
+        const result = await repository.findRegistrationById(documentId)
+
+        expect(result).toBeNull()
+      })
+
+      it.for([null, undefined, '', '   '])(
+        'returns null when supplied ID is empty - %s',
+        async (input, { formSubmissionsRepository }) => {
+          const repository = formSubmissionsRepository()
+
+          const result = await repository.findRegistrationById(input)
+
+          expect(result).toBeNull()
+        }
+      )
+
+      it('returns registration with field values', async ({
+        seedRegistrations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedRegistrations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThanOrEqual(1)
+
+        for (const seeded of seededData) {
+          const result = await repository.findRegistrationById(seeded.id)
+          expect(result.id).toBe(seeded.id)
+          expect(result.orgId).toBe(seeded.orgId)
+          expect(result.referenceNumber).toBe(seeded.referenceNumber)
+          expect(result.rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
+
     describe('findAllOrganisations', () => {
       it('returns empty array when no organisations exist', async ({
         formSubmissionsRepository
@@ -93,6 +249,48 @@ export const testFindBehaviour = (it) => {
           expect(org.id).toBe(seeded.id)
           expect(org.orgId).toBe(seeded.orgId)
           expect(org.rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+    })
+
+    describe('findOrganisationById', () => {
+      it('returns null when no organisation exists with supplied ID', async ({
+        formSubmissionsRepository
+      }) => {
+        const repository = formSubmissionsRepository()
+
+        const documentId = '000011112222333344445555' // a valid ID that does not match a document in the seeded data
+
+        const result = await repository.findOrganisationById(documentId)
+
+        expect(result).toBeNull()
+      })
+
+      it.for([null, undefined, '', '   '])(
+        'returns null when supplied ID is empty - %s',
+        async (input, { formSubmissionsRepository }) => {
+          const repository = formSubmissionsRepository()
+
+          const result = await repository.findOrganisationById(input)
+
+          expect(result).toBeNull()
+        }
+      )
+
+      it('returns organisation with field values', async ({
+        seedOrganisations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedOrganisations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThanOrEqual(1)
+
+        for (const seeded of seededData) {
+          const result = await repository.findOrganisationById(seeded.id)
+          expect(result.id).toBe(seeded.id)
+          expect(result.orgId).toBe(seeded.orgId)
+          expect(result.rawSubmissionData).toEqual(seeded.rawSubmissionData)
         }
       })
     })

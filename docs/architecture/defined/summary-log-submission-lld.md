@@ -320,7 +320,12 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 // For each waste record in versionsByKey Map:
 {
   updateOne: {
-    filter: { _compositeKey: "org:reg:type:rowId" },
+    filter: {
+      organisationId: "org",
+      registrationId: "reg",
+      type: "type",
+      rowId: "rowId"
+    },
     update: {
       $setOnInsert: { /* static fields (only on create) */ },
       $set: { data: currentData },

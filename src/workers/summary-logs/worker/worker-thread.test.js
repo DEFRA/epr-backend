@@ -6,7 +6,7 @@ import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -29,7 +29,7 @@ vi.mock('#common/helpers/s3/s3-client.js')
 vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('#repositories/organisations/mongodb.js')
-vi.mock('#repositories/waste-records/inmemory.js')
+vi.mock('#repositories/waste-records/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
 describe('summaryLogsWorkerThread', () => {
@@ -73,7 +73,7 @@ describe('summaryLogsWorkerThread', () => {
 
     mockWasteRecordsRepository = {
       findByRegistration: vi.fn(),
-      upsertWasteRecords: vi.fn()
+      appendVersions: vi.fn()
     }
 
     mockSummaryLogExtractor = {
@@ -95,7 +95,7 @@ describe('summaryLogsWorkerThread', () => {
     vi.mocked(createOrganisationsRepository).mockReturnValue(
       () => mockOrganisationsRepository
     )
-    vi.mocked(createInMemoryWasteRecordsRepository).mockReturnValue(
+    vi.mocked(createWasteRecordsRepository).mockReturnValue(
       () => mockWasteRecordsRepository
     )
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
@@ -185,6 +185,7 @@ describe('summaryLogsWorkerThread', () => {
     expect(createSummaryLogsValidator).toHaveBeenCalledWith({
       summaryLogsRepository: mockSummaryLogsRepository,
       organisationsRepository: mockOrganisationsRepository,
+      wasteRecordsRepository: mockWasteRecordsRepository,
       summaryLogExtractor: mockSummaryLogExtractor
     })
   })
@@ -264,7 +265,7 @@ describe('summaryLogsWorkerThread', () => {
   describe('submit command', () => {
     it('should call syncFromSummaryLog when submit command is provided', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -284,7 +285,7 @@ describe('summaryLogsWorkerThread', () => {
 
     it('should update summary log status to SUBMITTED', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -310,7 +311,7 @@ describe('summaryLogsWorkerThread', () => {
 
     it('should log submission completion', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -341,7 +342,7 @@ describe('summaryLogsWorkerThread', () => {
       ).rejects.toThrow(`Summary log ${summaryLogId} not found`)
     })
 
-    it('should throw error when status is not VALIDATED', async () => {
+    it('should throw error when status is not SUBMITTING', async () => {
       mockSummaryLogsRepository.findById.mockResolvedValue({
         version: 1,
         summaryLog: {
@@ -357,13 +358,13 @@ describe('summaryLogsWorkerThread', () => {
           summaryLogId
         })
       ).rejects.toThrow(
-        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+        `Summary log must be in submitting status. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
       )
     })
 
     it('should create wasteRecordsRepository', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }
@@ -378,12 +379,12 @@ describe('summaryLogsWorkerThread', () => {
         summaryLogId
       })
 
-      expect(createInMemoryWasteRecordsRepository).toHaveBeenCalled()
+      expect(createWasteRecordsRepository).toHaveBeenCalledWith(mockDb)
     })
 
     it('should create syncFromSummaryLog with correct dependencies', async () => {
       const summaryLog = {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
         registrationId: 'reg-456'
       }

@@ -6,7 +6,8 @@ import {
   organisationUpdateSchema,
   statusHistoryItemSchema,
   registrationSchema
-} from './schema.js'
+} from './organisation.js'
+import { accreditationSchema } from './accreditation.js'
 
 const formatValidationErrorDetails = (error) => {
   return error.details.map((d) => `${d.path.join('.')}: ${d.type}`).join('; ')
@@ -73,6 +74,20 @@ export const validateRegistration = (data) => {
   if (error) {
     const details = formatValidationErrorDetails(error)
     throw Boom.badData(`Invalid registration data: ${details}`)
+  }
+
+  return value
+}
+
+export const validateAccreditation = (data) => {
+  const { error, value } = accreditationSchema.validate(data, {
+    abortEarly: false,
+    stripUnknown: true
+  })
+
+  if (error) {
+    const details = formatValidationErrorDetails(error)
+    throw Boom.badData(`Invalid accreditation data: ${details}`)
   }
 
   return value

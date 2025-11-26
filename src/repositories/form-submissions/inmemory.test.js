@@ -87,8 +87,13 @@ describe('In-memory form submissions repository', () => {
     const repository = formSubmissionsRepository()
     expect(repository).toBeDefined()
     expect(repository.findAllRegistrations).toBeDefined()
+    expect(repository.findRegistrationsBySystemReference).toBeDefined()
+    expect(repository.findRegistrationById).toBeDefined()
     expect(repository.findAllAccreditations).toBeDefined()
+    expect(repository.findAccreditationsBySystemReference).toBeDefined()
+    expect(repository.findAccreditationById).toBeDefined()
     expect(repository.findAllOrganisations).toBeDefined()
+    expect(repository.findOrganisationById).toBeDefined()
   })
 
   testFormSubmissionsRepositoryContract(it)

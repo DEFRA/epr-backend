@@ -2,7 +2,7 @@ import { validateProcessingType } from './processing-type.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
-} from '#common/validation/validation-issues.js'
+} from '#common/enums/validation.js'
 
 const mockLoggerInfo = vi.fn()
 
@@ -20,8 +20,8 @@ describe('validateProcessingType', () => {
   it('returns fatal business error when registration has unexpected waste processing type', () => {
     const parsed = {
       meta: {
-        REGISTRATION: { value: 'REG12345' },
-        PROCESSING_TYPE: { value: 'REPROCESSOR' }
+        REGISTRATION_NUMBER: { value: 'REG12345' },
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
       }
     }
     const registration = {
@@ -49,9 +49,9 @@ describe('validateProcessingType', () => {
   it('returns fatal business error when types do not match', () => {
     const parsed = {
       meta: {
-        REGISTRATION: { value: 'REG12345' },
+        REGISTRATION_NUMBER: { value: 'REG12345' },
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR',
+          value: 'REPROCESSOR_INPUT',
           location: { sheet: 'Cover', row: 5, column: 'B' }
         }
       }
@@ -72,7 +72,7 @@ describe('validateProcessingType', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Summary log processing type does not match registration processing type'
+      'Summary log processing type does not match registration waste processing type'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
     expect(fatals[0].context.location).toEqual({
@@ -86,14 +86,15 @@ describe('validateProcessingType', () => {
   })
 
   it.each([
-    ['REPROCESSOR', 'reprocessor'],
+    ['REPROCESSOR_INPUT', 'reprocessor'],
+    ['REPROCESSOR_OUTPUT', 'reprocessor'],
     ['EXPORTER', 'exporter']
   ])(
     'returns valid result when types match - %s',
     (spreadsheetType, registrationType) => {
       const parsed = {
         meta: {
-          REGISTRATION: { value: 'REG12345' },
+          REGISTRATION_NUMBER: { value: 'REG12345' },
           PROCESSING_TYPE: { value: spreadsheetType }
         }
       }

@@ -1,7 +1,5 @@
-import {
-  createValidationIssues,
-  VALIDATION_CATEGORY
-} from '#common/validation/validation-issues.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
@@ -28,13 +26,13 @@ export const validateAccreditationNumber = ({
   const accreditationNumber = registration.accreditation?.accreditationNumber
   const accreditationField = extractMetaField(
     parsed,
-    SUMMARY_LOG_META_FIELDS.ACCREDITATION
+    SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER
   )
   const spreadsheetAccreditationNumber = accreditationField?.value
 
   const location = buildMetaFieldLocation(
     accreditationField,
-    SUMMARY_LOG_META_FIELDS.ACCREDITATION
+    SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER
   )
 
   // Case 1: Registration has accreditation → spreadsheet MUST match

@@ -8,7 +8,7 @@
 /** Base prefix for all EPR template markers */
 export const EPR_PREFIX = '__EPR'
 
-/** Marker prefix for metadata fields (e.g., __EPR_META_REGISTRATION) */
+/** Marker prefix for metadata fields (e.g., __EPR_META_REGISTRATION_NUMBER) */
 export const META_PREFIX = `${EPR_PREFIX}_META_`
 
 /** Marker prefix for data section starts (e.g., __EPR_DATA_UPDATE_WASTE_BALANCE) */
@@ -16,6 +16,12 @@ export const DATA_PREFIX = `${EPR_PREFIX}_DATA_`
 
 /** Special marker to skip a column in data collection */
 export const SKIP_COLUMN = `${EPR_PREFIX}_SKIP_COLUMN`
+
+/** Text value in a skip column that triggers row skipping */
+export const SKIP_ROW_TEXT = 'Example'
+
+/** Default dropdown placeholder text that should be treated as empty/null */
+export const PLACEHOLDER_TEXT = 'Choose option'
 
 /**
  * Helper to check if a header is an EPR marker

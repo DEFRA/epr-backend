@@ -76,6 +76,43 @@ Put `__EPR_SKIP_COLUMN` in a header position where you want a blank column. The 
 
 This extracts as a single table with five columns. Column D becomes `null` in the extracted data, but the visual gap in Excel makes the spreadsheet easier to read.
 
+## Skipping Example Rows
+
+Templates often include a frozen example row to help users understand what data to enter. The system automatically skips rows where a `__EPR_SKIP_COLUMN` column contains the text "Example".
+
+Put `__EPR_SKIP_COLUMN` in a header position, then put "Example" in that column for the example row. The system will skip that row during data extraction.
+
+**Example:**
+
+| Column A             | Column B | Column C            | Column D            | Column E |
+| -------------------- | -------- | ------------------- | ------------------- | -------- |
+| `__EPR_DATA_SENT_ON` | ROW_ID   | `__EPR_SKIP_COLUMN` | DATE_LOAD_LEFT_SITE | WEIGHT   |
+|                      | row-1    | Example             | 2024-01-15          | 100      |
+|                      | row-2    |                     | 2024-01-16          | 200      |
+|                      | row-3    |                     | 2024-01-17          | 300      |
+
+In this example, the first data row (row-1) is skipped because its skip column contains "Example". The extracted table contains only row-2 and row-3.
+
+**Important:** The skip text must be exactly "Example" (case-sensitive). Text like "example", "EXAMPLE", or "Example row" will not trigger row skipping.
+
+## Placeholder Text Handling
+
+Spreadsheets may use dropdown lists with a default placeholder value like `Choose option`. These cells appear populated but are semantically empty—the user hasn't made a selection.
+
+The system automatically normalizes the exact text `Choose option` (case-sensitive) to `null` in data rows. This prevents placeholder values from appearing as real data.
+
+**Example:**
+
+| Column A                    | Column B      | Column C      |
+| --------------------------- | ------------- | ------------- |
+| `__EPR_DATA_WASTE_RECEIVED` | OUR_REFERENCE | STATUS        |
+|                             | 12345678910   | Active        |
+|                             | 98765432100   | Choose option |
+
+The second row extracts with STATUS as `null`, not as the text "Choose option".
+
+**Important:** If a row contains only placeholder values (all cells are `null`, empty, or `Choose option`), the system treats it as an empty row and terminates the data section. This prevents thousands of pre-populated but unused rows from being parsed.
+
 ## Marker Placement
 
 Markers can appear in any column. The system scans all cells in all worksheets to find markers.
@@ -100,7 +137,7 @@ Marker names must follow these rules:
 - Use underscores to separate words (e.g., `DATE_RECEIVED`, not `DATERECEIVED`)
 - Choose names that describe the data, not the layout
 
-**Good names:** `__EPR_META_ACCREDITATION`, `__EPR_DATA_UPDATE_WASTE_BALANCE`
+**Good names:** `__EPR_META_ACCREDITATION_NUMBER`, `__EPR_DATA_UPDATE_WASTE_BALANCE`
 
 **Bad names:** `__EPR_META_TopSection`, `__EPR_DATA_TableOne`
 
@@ -124,7 +161,7 @@ Marker names must follow these rules:
 
 ## Example Template Layout
 
-This example shows a complete template with metadata, multiple tables, and skip columns:
+This example shows a complete template with metadata, multiple tables, skip columns, and an example row:
 
 | Column A                          | Column B        | Column C       | Column D            | Column E  | Column F |
 | --------------------------------- | --------------- | -------------- | ------------------- | --------- | -------- |
@@ -133,6 +170,7 @@ This example shows a complete template with metadata, multiple tables, and skip 
 | `__EPR_META_MATERIAL`             | Paper and board |                |                     |           |          |
 |                                   |                 |                |                     |           |          |
 | `__EPR_DATA_UPDATE_WASTE_BALANCE` | OUR_REFERENCE   | DATE_RECEIVED  | `__EPR_SKIP_COLUMN` | WEIGHT_KG | ORIGIN   |
+|                                   | 00000000001     | 2025-01-01     | Example             | 1000      | UK       |
 |                                   | 12345678910     | 2025-05-25     |                     | 1500      | UK       |
 |                                   | 98765432100     | 2025-05-26     |                     | 2300      | EU       |
 |                                   |                 |                |                     |           |          |
@@ -144,6 +182,7 @@ In this example:
 - Column A is hidden from users
 - Three metadata fields are defined at the top
 - UPDATE_WASTE_BALANCE table has five columns with a visual gap at column D
+- The first data row (with "Example" in column D) is a frozen example row that gets skipped during extraction
 - MONTHLY_REPORTS table appears below with two columns
 - Empty rows separate each section
 

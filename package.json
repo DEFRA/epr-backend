@@ -8,17 +8,17 @@
     "#adapters/*": "./src/adapters/*",
     "#application/*": "./src/application/*",
     "#common/*": "./src/common/*",
-    "#domain/*": "./src/domain/*",
-    "#repositories/*": "./src/repositories/*",
-    "#workers/*": "./src/workers/*",
-    "#routes/*": "./src/routes/*",
-    "#plugins/*": "./src/plugins/*",
     "#data/*": "./src/data/*",
-    "#server/*": "./src/server/*",
+    "#domain/*": "./src/domain/*",
     "#feature-flags/*": "./src/feature-flags/*",
+    "#formsubmission/*": "./src/forms-submission-data/*",
+    "#plugins/*": "./src/plugins/*",
+    "#repositories/*": "./src/repositories/*",
+    "#routes/*": "./src/routes/*",
+    "#server/*": "./src/server/*",
     "#test/*": "./src/test/*",
     "#vite/*": "./.vite/*",
-    "#formsubmission/*": "./src/forms-submission-data/*"
+    "#workers/*": "./src/workers/*"
   },
   "engines": {
     "node": ">=24.11.0"
@@ -50,8 +50,8 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.930.0",
-    "@aws-sdk/credential-providers": "3.930.0",
+    "@aws-sdk/client-s3": "3.937.0",
+    "@aws-sdk/credential-providers": "3.936.0",
     "@defra/cdp-auditing": "0.5.0",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.29.0",
@@ -59,7 +59,7 @@
     "@hapi/boom": "10.0.1",
     "@hapi/hapi": "21.4.4",
     "@hapi/jwt": "3.2.1",
-    "aws-embedded-metrics": "4.2.0",
+    "aws-embedded-metrics": "4.2.1",
     "aws4": "1.13.2",
     "convict": "6.2.4",
     "convict-format-with-validator": "6.2.0",
@@ -84,23 +84,23 @@
   },
   "overrides": {
     "brace-expansion": "2.0.2",
-    "glob": "11.0.3"
+    "glob": "11.1.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.8",
+    "@vitest/coverage-v8": "4.0.13",
     "eslint": "9.39.1",
     "eslint-plugin-n": "17.23.1",
     "husky": "9.1.7",
-    "knip": "5.69.1",
-    "lint-staged": "16.2.6",
-    "msw": "2.12.1",
+    "knip": "5.70.1",
+    "lint-staged": "16.2.7",
+    "msw": "2.12.3",
     "neostandard": "0.12.2",
     "nodemon": "3.1.11",
     "prettier": "3.6.2",
     "testcontainers": "11.8.1",
     "tinybench": "5.1.0",
-    "vitest": "4.0.8",
+    "vitest": "4.0.13",
     "vitest-fetch-mock": "0.4.5",
-    "vitest-mongodb": "1.0.2"
+    "vitest-mongodb": "1.0.3"
   }
 }

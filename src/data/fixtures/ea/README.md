@@ -58,10 +58,11 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 
 ### Registration
 
-| Test data                                               | description                                                          |
-| ------------------------------------------------------- | -------------------------------------------------------------------- |
-| [503176](./registration/reprocessor-all-materials.json) | Reprocessor registration for a site that can process all 7 materials |
-| [503181](./registration/exporter.json)                  | Exporter registration for Glass                                      |
+| Test data                                                                  | description                                                                                                                                                                     |
+| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [503176](./registration/reprocessor-all-materials.json)                    | Reprocessor registration for a site that can process all 7 materials (EA)                                                                                                       |
+| [503181](./registration/exporter.json)                                     | Exporter registration for Glass (EA)                                                                                                                                            |
+| [674b8a12](./registration/reprocessor-all-materials-sepa-handcrafted.json) | **Handcrafted** SEPA reprocessor - Based on EA fixture with SEPA page titles, CBDU format `SEPA-WML-2024-001`, and exemption codes `SEPA1`/`SEPA2` (non-EA formats for testing) |
 
 ### Accreditation
 
@@ -71,3 +72,4 @@ Forms are defined and maintained in DEFRA Forms Designer. Once deployed, users c
 | [503176](./accreditation/reprocessor-wood.json)              | Reprocessor accreditation for wood with first line of address not same as registration. "78 Portland Place" during registration vs 78 during accreditation |
 | [503177](./accreditation/exporter-without-registration.json) | Exporter accreditation for glass without registration                                                                                                      |
 | [503181](./accreditation/exporter.json)                      | Exporter accreditation for glass                                                                                                                           |
+| [503176](./accreditation/reprocessor-glass.json)             | Reprocessor accreditation for glass                                                                                                                        |

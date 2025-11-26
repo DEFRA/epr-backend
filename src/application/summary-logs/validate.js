@@ -1,25 +1,23 @@
 import {
   LOGGING_EVENT_ACTIONS,
-  LOGGING_EVENT_CATEGORIES
+  LOGGING_EVENT_CATEGORIES,
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import {
-  createValidationIssues,
-  VALIDATION_CATEGORY
-} from '#common/validation/validation-issues.js'
+import { createValidationIssues } from '#common/validation/validation-issues.js'
 
 import { validateMetaSyntax } from './validations/meta-syntax.js'
+import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateDataSyntax } from './validations/data-syntax.js'
-import { validateAccreditationNumber } from './validations/accreditation-number.js'
-import { validateRegistrationNumber } from './validations/registration-number.js'
-import { validateProcessingType } from './validations/processing-type.js'
-import { validateMaterialType } from './validations/material-type.js'
+import { validateDataBusiness } from './validations/data-business.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 
 const fetchRegistration = async ({
@@ -61,9 +59,10 @@ const fetchRegistration = async ({
  *   - Validates structural correctness of data table rows
  *   - Continues even with errors (non-fatal)
  *
- * Level 4: Data Business (ERROR/WARNING)
- *   - Validates data table rows against business rules (e.g., waste balance calculations)
- *   - Currently placeholder - to be implemented
+ * Level 4: Data Business (FATAL/ERROR/WARNING)
+ *   - Validates data table rows against business rules
+ *   - Sequential row validation: ensures no rows removed from previous uploads
+ *   - Stops on fatal errors
  *
  * This approach provides:
  * - Better performance (stops early on fatal errors)
@@ -78,13 +77,15 @@ const fetchRegistration = async ({
  * @param {string} params.loggingContext - Context string for logging (e.g., "summaryLogId=123, fileId=456")
  * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
  * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
+ * @param {WasteRecordsRepository} params.wasteRecordsRepository - Waste records repository for fetching existing records
  * @returns {Promise<Object>} Validation issues object with methods like getAllIssues(), isFatal()
  */
 const performValidationChecks = async ({
   summaryLog,
   loggingContext,
   summaryLogExtractor,
-  organisationsRepository
+  organisationsRepository,
+  wasteRecordsRepository
 }) => {
   const issues = createValidationIssues()
 
@@ -112,20 +113,27 @@ const performValidationChecks = async ({
       loggingContext
     })
 
-    for (const validate of [
-      validateRegistrationNumber,
-      validateProcessingType,
-      validateAccreditationNumber,
-      validateMaterialType
-    ]) {
-      issues.merge(validate({ parsed, registration, loggingContext }))
-    }
+    issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
     if (issues.isFatal()) {
       return issues
     }
 
     issues.merge(validateDataSyntax({ parsed }))
+
+    if (issues.isFatal()) {
+      return issues
+    }
+
+    const existingWasteRecords =
+      await wasteRecordsRepository.findByRegistration(
+        summaryLog.organisationId,
+        summaryLog.registrationId
+      )
+
+    issues.merge(
+      validateDataBusiness({ parsed, summaryLog, existingWasteRecords })
+    )
   } catch (error) {
     logger.error({
       error,
@@ -139,7 +147,7 @@ const performValidationChecks = async ({
     issues.addFatal(
       VALIDATION_CATEGORY.TECHNICAL,
       error.message,
-      'VALIDATION_FAILED'
+      VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
     )
   }
 
@@ -152,11 +160,17 @@ const performValidationChecks = async ({
  * @param {Object} params
  * @param {SummaryLogsRepository} params.summaryLogsRepository
  * @param {OrganisationsRepository} params.organisationsRepository
+ * @param {WasteRecordsRepository} params.wasteRecordsRepository
  * @param {SummaryLogExtractor} params.summaryLogExtractor
  * @returns {Function} Function that validates a summary log by ID
  */
 export const createSummaryLogsValidator =
-  ({ summaryLogsRepository, organisationsRepository, summaryLogExtractor }) =>
+  ({
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    summaryLogExtractor
+  }) =>
   async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
 
@@ -183,7 +197,8 @@ export const createSummaryLogsValidator =
       summaryLog,
       loggingContext,
       summaryLogExtractor,
-      organisationsRepository
+      organisationsRepository,
+      wasteRecordsRepository
     })
 
     const status = issues.isFatal()

@@ -33,8 +33,8 @@ export const metaSchema = Joi.object({
     'string.max': 'must be at most 50 characters',
     'any.required': IS_REQUIRED
   }),
-  ACCREDITATION: Joi.string().optional().allow(null, ''),
-  REGISTRATION: Joi.string().required().messages({
+  ACCREDITATION_NUMBER: Joi.string().optional().allow(null, ''),
+  REGISTRATION_NUMBER: Joi.string().required().messages({
     'any.required': IS_REQUIRED
   })
 }).unknown(true) // Allow other fields that might be present

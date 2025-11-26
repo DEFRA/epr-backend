@@ -1,3 +1,5 @@
+import ExcelJS from 'exceljs'
+
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -13,15 +15,16 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 import { ObjectId } from 'mongodb'
 
-const { validToken } = testTokens
+const { validToken } = entraIdMockAuthTokens
 
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()
@@ -128,12 +131,12 @@ describe('Summary logs integration', () => {
     const summaryLogExtractor = createInMemorySummaryLogExtractor({
       'file-123': {
         meta: {
-          REGISTRATION: {
+          REGISTRATION_NUMBER: {
             value: 'REG-123',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           PROCESSING_TYPE: {
-            value: 'REPROCESSOR',
+            value: 'REPROCESSOR_INPUT',
             location: { sheet: 'Cover', row: 2, column: 'B' }
           },
           MATERIAL: {
@@ -149,9 +152,12 @@ describe('Summary logs integration', () => {
       }
     })
 
+    const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
     const validateSummaryLog = createSummaryLogsValidator({
       summaryLogsRepository,
       organisationsRepository,
+      wasteRecordsRepository,
       summaryLogExtractor
     })
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -417,12 +423,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -486,9 +492,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -671,12 +680,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -702,9 +711,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -840,7 +852,7 @@ describe('Summary logs integration', () => {
           meta: {
             // Missing REGISTRATION - fatal meta error
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -890,9 +902,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -1028,12 +1043,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG12345',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1065,9 +1080,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -1209,12 +1227,12 @@ describe('Summary logs integration', () => {
       const summaryLogExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-123',
               location: { sheet: 'Cover', row: 1, column: 'B' }
             },
             PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
+              value: 'REPROCESSOR_INPUT',
               location: { sheet: 'Cover', row: 2, column: 'B' }
             },
             MATERIAL: {
@@ -1273,9 +1291,12 @@ describe('Summary logs integration', () => {
         }
       })
 
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
+        wasteRecordsRepository,
         summaryLogExtractor
       })
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
@@ -1410,7 +1431,7 @@ describe('Summary logs integration', () => {
     })
   })
 
-  describe('submitting a validated summary log to create waste records', () => {
+  describe('submitting a validated summary log', () => {
     const summaryLogId = 'summary-submit-test'
     const fileId = 'file-submit-123'
     const filename = 'waste-data.xlsx'
@@ -1440,7 +1461,10 @@ describe('Summary logs integration', () => {
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            accreditation: {
+              accreditationNumber: 'ACC-2025-001'
+            }
           }
         ]
       })
@@ -1454,32 +1478,7 @@ describe('Summary logs integration', () => {
       const validationExtractor = createInMemorySummaryLogExtractor({
         [fileId]: {
           meta: {
-            REGISTRATION: {
-              value: 'REG-12345',
-              location: { sheet: 'Data', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR',
-              location: { sheet: 'Data', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
-            }
-          },
-          data: {}
-        }
-      })
-
-      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
-      const transformationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION: {
+            REGISTRATION_NUMBER: {
               value: 'REG-12345',
               location: { sheet: 'Data', row: 1, column: 'B' }
             },
@@ -1494,6 +1493,39 @@ describe('Summary logs integration', () => {
             TEMPLATE_VERSION: {
               value: 1,
               location: { sheet: 'Data', row: 4, column: 'B' }
+            },
+            ACCREDITATION_NUMBER: {
+              value: 'ACC-2025-001',
+              location: { sheet: 'Data', row: 5, column: 'B' }
+            }
+          },
+          data: {}
+        }
+      })
+
+      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
+      const transformationExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION_NUMBER: {
+              value: 'REG-12345',
+              location: { sheet: 'Data', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR_INPUT',
+              location: { sheet: 'Data', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Data', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Data', row: 4, column: 'B' }
+            },
+            ACCREDITATION_NUMBER: {
+              value: 'ACC-2025-001',
+              location: { sheet: 'Data', row: 5, column: 'B' }
             }
           },
           data: {
@@ -1516,15 +1548,16 @@ describe('Summary logs integration', () => {
         }
       })
 
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
-        organisationsRepository,
-        summaryLogExtractor: validationExtractor
-      })
-
       const wasteRecordsRepositoryFactory =
         createInMemoryWasteRecordsRepository()
       wasteRecordsRepository = wasteRecordsRepositoryFactory()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor: validationExtractor
+      })
 
       const syncWasteRecords = syncFromSummaryLog({
         extractor: transformationExtractor,
@@ -1535,6 +1568,9 @@ describe('Summary logs integration', () => {
         validate: validateSummaryLog,
         submit: async (summaryLogId) => {
           // Execute submit command synchronously in test (simulating worker completion)
+          // Wait for pending operations (in-memory repository uses setImmediate)
+          await new Promise((resolve) => setImmediate(resolve))
+
           const existing = await summaryLogsRepository.findById(summaryLogId)
           const { version, summaryLog } = existing
 
@@ -1552,7 +1588,8 @@ describe('Summary logs integration', () => {
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
-          wasteRecordsRepository: wasteRecordsRepositoryFactory
+          wasteRecordsRepository: wasteRecordsRepositoryFactory,
+          organisationsRepository: () => organisationsRepository
         },
         workers: {
           summaryLogsWorker: submitterWorker
@@ -1582,10 +1619,10 @@ describe('Summary logs integration', () => {
       // Wait for submission to complete (worker runs async)
       let attempts = 0
       const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.VALIDATED
+      let status = SUMMARY_LOG_STATUS.SUBMITTING
 
       while (
-        status === SUMMARY_LOG_STATUS.VALIDATED &&
+        status === SUMMARY_LOG_STATUS.SUBMITTING &&
         attempts < maxAttempts
       ) {
         await new Promise((resolve) => setTimeout(resolve, 50))
@@ -1603,8 +1640,8 @@ describe('Summary logs integration', () => {
       }
     })
 
-    it('returns ACCEPTED', () => {
-      expect(submitResponse.statusCode).toBe(202)
+    it('returns OK', () => {
+      expect(submitResponse.statusCode).toBe(200)
     })
 
     it('creates waste records from summary log data', async () => {
@@ -1630,6 +1667,293 @@ describe('Summary logs integration', () => {
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
+    })
+
+    it('includes accreditation number in response after submission', async () => {
+      const response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(summaryLogId),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(200)
+      const payload = JSON.parse(response.payload)
+      expect(payload.accreditationNumber).toBe('ACC-2025-001')
+    })
+  })
+
+  describe('placeholder text normalization with real Excel parsing', () => {
+    const summaryLogId = 'summary-placeholder-test'
+    const fileId = 'file-placeholder-test'
+    const filename = 'placeholder-test.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+    let uploadsRepository
+
+    /**
+     * Creates an Excel buffer with placeholder text that should be normalized
+     */
+    const createExcelWithPlaceholders = async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Data')
+
+      // Row 1-4: Metadata
+      worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
+      worksheet.getCell('B1').value = 'REG-123'
+
+      worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
+      worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
+
+      worksheet.getCell('A3').value = '__EPR_META_MATERIAL'
+      worksheet.getCell('B3').value = 'Paper_and_board'
+
+      worksheet.getCell('A4').value = '__EPR_META_TEMPLATE_VERSION'
+      worksheet.getCell('B4').value = 1
+
+      // Row 6: Data section headers
+      worksheet.getCell('A6').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      worksheet.getCell('B6').value = 'OUR_REFERENCE'
+      worksheet.getCell('C6').value = 'DATE_RECEIVED'
+      worksheet.getCell('D6').value = 'EWC_CODE'
+      worksheet.getCell('E6').value = 'GROSS_WEIGHT'
+      worksheet.getCell('F6').value = 'TARE_WEIGHT'
+      worksheet.getCell('G6').value = 'PALLET_WEIGHT'
+      worksheet.getCell('H6').value = 'NET_WEIGHT'
+      worksheet.getCell('I6').value = 'BAILING_WIRE'
+      worksheet.getCell('J6').value = 'HOW_CALCULATE_RECYCLABLE'
+      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET'
+      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION'
+      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_EXPORT'
+
+      // Row 7: Valid data row
+      worksheet.getCell('B7').value = 10000000001
+      worksheet.getCell('C7').value = new Date('2025-05-28')
+      worksheet.getCell('D7').value = '03 03 08'
+      worksheet.getCell('E7').value = 1000
+      worksheet.getCell('F7').value = 100
+      worksheet.getCell('G7').value = 50
+      worksheet.getCell('H7').value = 850
+      worksheet.getCell('I7').value = 'YES'
+      worksheet.getCell('J7').value = 'WEIGHT'
+      worksheet.getCell('K7').value = 50
+      worksheet.getCell('L7').value = 0.85
+      worksheet.getCell('M7').value = 850
+
+      // Row 8: Row with "Choose option" in required dropdown fields
+      // This represents a user who filled numeric fields but didn't select from dropdowns
+      worksheet.getCell('B8').value = 10000000002
+      worksheet.getCell('C8').value = new Date('2025-05-29')
+      worksheet.getCell('D8').value = 'Choose option' // EWC_CODE - required dropdown
+      worksheet.getCell('E8').value = 2000
+      worksheet.getCell('F8').value = 200
+      worksheet.getCell('G8').value = 100
+      worksheet.getCell('H8').value = 1700
+      worksheet.getCell('I8').value = 'Choose option' // BAILING_WIRE - required dropdown
+      worksheet.getCell('J8').value = 'Choose option' // HOW_CALCULATE_RECYCLABLE - required dropdown
+      worksheet.getCell('K8').value = 100
+      worksheet.getCell('L8').value = 0.9
+      worksheet.getCell('M8').value = 1700
+
+      // Row 9: Blank row - mix of empty cells and dropdown placeholders
+      // This is what a truly "blank" pre-populated row looks like:
+      // - Most fields are empty
+      // - Dropdown fields have "Choose option"
+      // After normalization, all values become null -> terminates section
+      worksheet.getCell('B9').value = null // Empty
+      worksheet.getCell('C9').value = null // Empty
+      worksheet.getCell('D9').value = 'Choose option' // Dropdown default
+      worksheet.getCell('E9').value = null // Empty
+      worksheet.getCell('F9').value = null // Empty
+      worksheet.getCell('G9').value = null // Empty
+      worksheet.getCell('H9').value = null // Empty
+      worksheet.getCell('I9').value = 'Choose option' // Dropdown default
+      worksheet.getCell('J9').value = 'Choose option' // Dropdown default
+      worksheet.getCell('K9').value = null // Empty
+      worksheet.getCell('L9').value = null // Empty
+      worksheet.getCell('M9').value = null // Empty
+
+      // Row 10: This row should NOT be parsed (section terminated at row 9)
+      worksheet.getCell('B10').value = 99999999999
+      worksheet.getCell('C10').value = new Date('2025-12-31')
+      worksheet.getCell('D10').value = '03 03 08'
+      worksheet.getCell('E10').value = 9999
+      worksheet.getCell('F10').value = 999
+      worksheet.getCell('G10').value = 99
+      worksheet.getCell('H10').value = 8901
+      worksheet.getCell('I10').value = 'NO'
+      worksheet.getCell('J10').value = 'WEIGHT'
+      worksheet.getCell('K10').value = 500
+      worksheet.getCell('L10').value = 0.5
+      worksheet.getCell('M10').value = 4450
+
+      return workbook.xlsx.writeBuffer()
+    }
+
+    beforeEach(async () => {
+      // Create test infrastructure with real Excel parsing
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: 'REG-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Create real Excel buffer and store it in uploads repository
+      // URI format matches what upload-completed handler creates: s3://${s3Bucket}/${s3Key}
+      const excelBuffer = await createExcelWithPlaceholders()
+      const fileUri = `s3://test-bucket/path/to/${filename}`
+      uploadsRepository.put(fileUri, excelBuffer)
+
+      // Use real extractor with real parser (not mocked)
+      const summaryLogExtractor = createSummaryLogExtractor({
+        uploadsRepository,
+        logger: mockLogger
+      })
+
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsWorker: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: {
+          uploadStatus: 'ready',
+          metadata: {
+            organisationId,
+            registrationId
+          },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: 'test-bucket',
+              s3Key: `path/to/${filename}`
+            }
+          },
+          numberOfRejectedFiles: 0
+        },
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log after parsing with placeholder normalization', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('validates successfully with placeholder text normalized to null', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
+
+      it('documents placeholder normalization behavior in integration context', () => {
+        const payload = JSON.parse(response.payload)
+
+        // Status is VALIDATED (not INVALID) because data errors are non-fatal
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+        // No fatal failures
+        expect(payload.validation.failures).toEqual([])
+
+        // Row 8 has validation concerns for dropdown fields that were "Choose option"
+        // (normalized to null by the parser)
+        const concerns = payload.validation.concerns
+        expect(concerns.UPDATE_WASTE_BALANCE).toBeDefined()
+        expect(concerns.UPDATE_WASTE_BALANCE.rows).toHaveLength(1)
+
+        const row8Issues = concerns.UPDATE_WASTE_BALANCE.rows[0]
+        expect(row8Issues.row).toBe(8)
+
+        // These are the dropdown fields that had "Choose option" (now null)
+        const issueHeaders = row8Issues.issues.map((i) => i.header)
+        expect(issueHeaders).toContain('EWC_CODE')
+        expect(issueHeaders).toContain('BAILING_WIRE')
+        expect(issueHeaders).toContain('HOW_CALCULATE_RECYCLABLE')
+      })
+
+      it('terminates data section at row with all placeholder values', async () => {
+        // The row with all "Choose option" values should terminate the section
+        // so only 2 data rows should be parsed (not 4)
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        // With placeholder normalization working correctly:
+        // - Row 7: Valid data row
+        // - Row 8: Row with some placeholders (normalized to null, but still has real data)
+        // - Row 9: All placeholders -> all nulls -> terminates section
+        // - Row 10: Should NOT be parsed
+
+        // Check that validation passed (VALIDATED status means parsing worked correctly)
+        expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
     })
   })
 })

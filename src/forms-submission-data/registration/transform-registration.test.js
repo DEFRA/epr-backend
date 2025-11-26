@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { parseRegistrationSubmission } from './transform-registration.js'
-import { validateRegistration } from '#repositories/organisations/validation.js'
+import { validateRegistration } from '#repositories/organisations/schema/validation.js'
 
 import exporter from '#data/fixtures/ea/registration/exporter.json'
 import reprocessorAllMaterials from '#data/fixtures/ea/registration/reprocessor-all-materials.json'
+import reprocessorSepa from '#data/fixtures/ea/registration/reprocessor-all-materials-sepa-handcrafted.json'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL,
@@ -16,7 +17,7 @@ import {
 
 describe('parseRegistrationSubmission - Integration Tests with Fixture Data', () => {
   it('should parse exporter registration from fixture', async () => {
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       exporter._id.$oid,
       exporter.rawSubmissionData
     )
@@ -25,13 +26,19 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
 
     expect(result).toStrictEqual({
       id: exporter._id.$oid,
+      orgId: 503181,
+      systemReference: '68e6912278f83083f0f17a7b',
       formSubmissionTime: new Date('2025-10-08T17:48:22.220Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
       orgName: 'EuroPack GmbH',
       material: MATERIAL.GLASS,
       cbduNumber: 'CBDU123456',
-      wasteManagementPermits: undefined,
+      wasteManagementPermits: [
+        { type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT },
+        { type: WASTE_PERMIT_TYPE.INSTALLATION_PERMIT },
+        { type: WASTE_PERMIT_TYPE.WASTE_EXEMPTION }
+      ],
       suppliers:
         'Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)',
       glassRecyclingProcess: [
@@ -80,7 +87,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
   })
 
   it('should parse reprocessor registration for all materials from fixture', async () => {
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       reprocessorAllMaterials._id.$oid,
       reprocessorAllMaterials.rawSubmissionData
     )
@@ -90,6 +97,8 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
 
     expect(result).toStrictEqual({
       id: reprocessorAllMaterials._id.$oid,
+      orgId: 503176,
+      systemReference: '68e68d9c78f83083f0f17a76',
       formSubmissionTime: new Date('2025-10-08T17:40:07.373Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
@@ -285,7 +294,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     }
 
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       reprocessorAllMaterialsWithoutNoticeAddress._id.$oid,
       reprocessorAllMaterialsWithoutNoticeAddress.rawSubmissionData
     )
@@ -310,7 +319,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     }
 
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       reprocessorWithPartialCapacity._id.$oid,
       reprocessorWithPartialCapacity.rawSubmissionData
     )
@@ -369,7 +378,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     }
 
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       reprocessorWithoutExemptions._id.$oid,
       reprocessorWithoutExemptions.rawSubmissionData
     )
@@ -399,7 +408,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     }
 
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       reprocessorWithoutEnvPermit._id.$oid,
       reprocessorWithoutEnvPermit.rawSubmissionData
     )
@@ -429,7 +438,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     }
 
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       reprocessorWithoutInstallationPermit._id.$oid,
       reprocessorWithoutInstallationPermit.rawSubmissionData
     )
@@ -441,5 +450,123 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       (permit) => permit.type === WASTE_PERMIT_TYPE.INSTALLATION_PERMIT
     )
     expect(hasInstallationPermit).toBe(false)
+  })
+
+  it('should handle exporter without permit answer', async () => {
+    const exporterWithoutPermits = {
+      ...exporter,
+      rawSubmissionData: {
+        ...exporter.rawSubmissionData,
+        data: {
+          ...exporter.rawSubmissionData.data,
+          main: {
+            ...exporter.rawSubmissionData.data.main,
+            QHJFhL: '' // Clear permit answer
+          }
+        }
+      }
+    }
+
+    const result = await parseRegistrationSubmission(
+      exporterWithoutPermits._id.$oid,
+      exporterWithoutPermits.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result.wasteManagementPermits).toEqual([])
+  })
+
+  it('should handle reprocessor without SIP file uploads', async () => {
+    // Remove SIP file uploads
+    const reprocessorWithoutSipFiles = {
+      ...reprocessorAllMaterials,
+      rawSubmissionData: {
+        ...reprocessorAllMaterials.rawSubmissionData,
+        data: {
+          ...reprocessorAllMaterials.rawSubmissionData.data,
+          files: {
+            ...reprocessorAllMaterials.rawSubmissionData.data.files,
+            xddzIW: [] // Clear SIP file uploads
+          }
+        }
+      }
+    }
+
+    const result = parseRegistrationSubmission(
+      reprocessorWithoutSipFiles._id.$oid,
+      reprocessorWithoutSipFiles.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result.samplingInspectionPlanPart1FileUploads).toEqual([])
+  })
+
+  it('should parse SEPA/NIEA reprocessor registration', async () => {
+    const result = parseRegistrationSubmission(
+      reprocessorSepa._id.$oid,
+      reprocessorSepa.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+
+    // Verify SEPA-specific values are parsed correctly
+    expect(result.submittedToRegulator).toBe(REGULATOR.SEPA)
+    expect(result.cbduNumber).toBe('SEPA-WML-2024-001')
+
+    // Should parse the same permit data despite different page titles
+    expect(result.wasteManagementPermits).toEqual([
+      {
+        type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
+        permitNumber: 'EPR/AB1234CD/A001',
+        authorisedMaterials: [
+          {
+            material: MATERIAL.ALUMINIUM,
+            authorisedWeightInTonnes: 10,
+            timeScale: TIME_SCALE.YEARLY
+          },
+          {
+            material: MATERIAL.FIBRE,
+            authorisedWeightInTonnes: 10,
+            timeScale: TIME_SCALE.YEARLY
+          }
+        ]
+      },
+      {
+        type: WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
+        permitNumber: '1232',
+        authorisedMaterials: [
+          {
+            material: MATERIAL.PLASTIC,
+            authorisedWeightInTonnes: 10,
+            timeScale: TIME_SCALE.YEARLY
+          },
+          {
+            material: MATERIAL.STEEL,
+            authorisedWeightInTonnes: 11,
+            timeScale: TIME_SCALE.YEARLY
+          },
+          {
+            material: MATERIAL.WOOD,
+            authorisedWeightInTonnes: 11,
+            timeScale: TIME_SCALE.MONTHLY
+          }
+        ]
+      },
+      {
+        type: WASTE_PERMIT_TYPE.WASTE_EXEMPTION,
+        exemptions: [
+          {
+            exemptionCode: 'SEPA1',
+            materials: [MATERIAL.PAPER, MATERIAL.PLASTIC],
+            reference: 'SEPA/EX/2024/001234'
+          },
+          {
+            exemptionCode: 'SEPA2',
+            materials: [MATERIAL.PAPER],
+            reference: 'SEPA/EX/2024/005678'
+          }
+        ]
+      }
+    ])
   })
 })

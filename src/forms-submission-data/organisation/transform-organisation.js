@@ -6,7 +6,7 @@ import {
   findFirstValue,
   flattenAnswersByShortDesc
 } from '#formsubmission/parsing-common/parse-forms-data.js'
-import { FORM_PAGES } from '#formsubmission/parsing-common/form-field-constants.js'
+import { ORGANISATION } from './form-field-constants.js'
 import {
   mapBusinessType,
   mapNation,
@@ -19,11 +19,11 @@ import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
 function extractWasteProcessingTypes(answersByShortDescription) {
   const value =
     answersByShortDescription?.[
-      FORM_PAGES.ORGANISATION.WASTE_PROCESSING_DETAILS.fields.TYPES
+      ORGANISATION.WASTE_PROCESSING_DETAILS.fields.TYPES
     ]
   if (value === undefined || value === null) {
     throw new Error(
-      `Waste processing type field "${FORM_PAGES.ORGANISATION.WASTE_PROCESSING_DETAILS.fields.TYPES}" not found`
+      `Waste processing type field "${ORGANISATION.WASTE_PROCESSING_DETAILS.fields.TYPES}" not found`
     )
   }
 
@@ -32,9 +32,7 @@ function extractWasteProcessingTypes(answersByShortDescription) {
 
 function extractReprocessingNations(answersByShortDescription) {
   const value =
-    answersByShortDescription[
-      FORM_PAGES.ORGANISATION.REPROCESSING_NATIONS.fields.NATIONS
-    ]
+    answersByShortDescription[ORGANISATION.REPROCESSING_NATIONS.fields.NATIONS]
 
   if (!value) {
     return []
@@ -46,7 +44,7 @@ function extractReprocessingNations(answersByShortDescription) {
 function getAddress(answersByShortDescription) {
   const orgAddress =
     answersByShortDescription[
-      FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.ORGANISATION_ADDRESS
+      ORGANISATION.COMPANY_DETAILS.fields.ORGANISATION_ADDRESS
     ]
   if (orgAddress) {
     return parseUkAddress(orgAddress)
@@ -54,27 +52,21 @@ function getAddress(answersByShortDescription) {
     const address = {
       line1:
         answersByShortDescription[
-          FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.ADDRESS_LINE_1
+          ORGANISATION.COMPANY_DETAILS.fields.ADDRESS_LINE_1
         ],
       line2:
         answersByShortDescription[
-          FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.ADDRESS_LINE_2
+          ORGANISATION.COMPANY_DETAILS.fields.ADDRESS_LINE_2
         ],
-      town: answersByShortDescription[
-        FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.TOWN
-      ],
+      town: answersByShortDescription[ORGANISATION.COMPANY_DETAILS.fields.TOWN],
       country:
-        answersByShortDescription[
-          FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.COUNTRY
-        ],
+        answersByShortDescription[ORGANISATION.COMPANY_DETAILS.fields.COUNTRY],
       postcode:
         answersByShortDescription[
-          FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.POST_CODE
+          ORGANISATION.COMPANY_DETAILS.fields.POST_CODE
         ],
       region:
-        answersByShortDescription[
-          FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.REGION
-        ]
+        answersByShortDescription[ORGANISATION.COMPANY_DETAILS.fields.REGION]
     }
 
     const hasAnyValue = Object.values(address).some(
@@ -86,20 +78,18 @@ function getAddress(answersByShortDescription) {
 
 function getCompanyDetails(answersByShortDescription) {
   return {
-    name: answersByShortDescription[
-      FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.NAME
-    ],
+    name: answersByShortDescription[ORGANISATION.COMPANY_DETAILS.fields.NAME],
     tradingName:
       answersByShortDescription[
-        FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.TRADING_NAME
+        ORGANISATION.COMPANY_DETAILS.fields.TRADING_NAME
       ],
     registrationNumber:
       answersByShortDescription[
-        FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.REGISTRATION_NUMBER
+        ORGANISATION.COMPANY_DETAILS.fields.REGISTRATION_NUMBER
       ],
     registeredAddress: parseUkAddress(
       answersByShortDescription[
-        FORM_PAGES.ORGANISATION.COMPANY_DETAILS.fields.REGISTERED_ADDRESS
+        ORGANISATION.COMPANY_DETAILS.fields.REGISTERED_ADDRESS
       ]
     ),
     address: getAddress(answersByShortDescription)
@@ -109,21 +99,15 @@ function getCompanyDetails(answersByShortDescription) {
 function getSubmitterDetails(answersByShortDescription) {
   return {
     fullName:
-      answersByShortDescription[
-        FORM_PAGES.ORGANISATION.SUBMITTER_DETAILS.fields.NAME
-      ],
+      answersByShortDescription[ORGANISATION.SUBMITTER_DETAILS.fields.NAME],
     email:
-      answersByShortDescription[
-        FORM_PAGES.ORGANISATION.SUBMITTER_DETAILS.fields.EMAIL
-      ],
+      answersByShortDescription[ORGANISATION.SUBMITTER_DETAILS.fields.EMAIL],
     phone:
       answersByShortDescription[
-        FORM_PAGES.ORGANISATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
+        ORGANISATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
       ],
     title:
-      answersByShortDescription[
-        FORM_PAGES.ORGANISATION.SUBMITTER_DETAILS.fields.JOB_TITLE
-      ]
+      answersByShortDescription[ORGANISATION.SUBMITTER_DETAILS.fields.JOB_TITLE]
   }
 }
 
@@ -133,7 +117,7 @@ function getManagementContactDetails(answersByShortDescription) {
     IS_SEPARATE_CONTACT_NON_UK,
     IS_SEPARATE_CONTACT_UNINCORP,
     IS_SEPARATE_CONTACT_SOLE_TRADER
-  } = FORM_PAGES.ORGANISATION.MANAGEMENT_CONTACT_DETAILS
+  } = ORGANISATION.MANAGEMENT_CONTACT_DETAILS
 
   const submitterControlOrg = findFirstValue(answersByShortDescription, [
     IS_SEPARATE_CONTACT_NON_UK,
@@ -169,29 +153,25 @@ function getManagementContactDetails(answersByShortDescription) {
 
 function getPartnershipDetails(answersByShortDescription, rawSubmissionData) {
   const partnerShipType = mapPartnershipType(
-    answersByShortDescription[
-      FORM_PAGES.ORGANISATION.PARTNERSHIP_DETAILS.PARTNERSHIP_TYPE
-    ]
+    answersByShortDescription[ORGANISATION.PARTNERSHIP_DETAILS.PARTNERSHIP_TYPE]
   )
 
   const generalPartners = extractRepeaters(
     rawSubmissionData,
-    FORM_PAGES.ORGANISATION.PARTNERSHIP_DETAILS.title,
+    ORGANISATION.PARTNERSHIP_DETAILS.title,
     {
-      [FORM_PAGES.ORGANISATION.PARTNERSHIP_DETAILS.fields.PARTNER_NAME]: 'name',
-      [FORM_PAGES.ORGANISATION.PARTNERSHIP_DETAILS.fields.TYPE_OF_PARTNER]:
-        'type'
+      [ORGANISATION.PARTNERSHIP_DETAILS.fields.PARTNER_NAME]: 'name',
+      [ORGANISATION.PARTNERSHIP_DETAILS.fields.TYPE_OF_PARTNER]: 'type'
     }
   )
 
-  const ltdPartnershipPage = FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS
+  const ltdPartnershipPage = ORGANISATION.LTD_PARTNERSHIP_DETAILS
 
   const ltdPartners = extractRepeaters(
     rawSubmissionData,
     ltdPartnershipPage.title,
     {
-      [FORM_PAGES.ORGANISATION.LTD_PARTNERSHIP_DETAILS.fields.PARTNER_NAMES]:
-        'name',
+      [ORGANISATION.LTD_PARTNERSHIP_DETAILS.fields.PARTNER_NAMES]: 'name',
       [ltdPartnershipPage.fields.PARTNER_TYPE]: 'type'
     }
   )
@@ -209,7 +189,7 @@ function getPartnershipDetails(answersByShortDescription, rawSubmissionData) {
       }
 }
 
-export async function parseOrgSubmission(id, orgId, rawSubmissionData) {
+export function parseOrgSubmission(id, orgId, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
   return {
@@ -220,9 +200,7 @@ export async function parseOrgSubmission(id, orgId, rawSubmissionData) {
     ),
     reprocessingNations: extractReprocessingNations(answersByShortDescription),
     businessType: mapBusinessType(
-      answersByShortDescription[
-        FORM_PAGES.ORGANISATION.BUSINESS_TYPE.fields.TYPE
-      ]
+      answersByShortDescription[ORGANISATION.BUSINESS_TYPE.fields.TYPE]
     ),
     companyDetails: getCompanyDetails(answersByShortDescription),
     submitterContactDetails: getSubmitterDetails(answersByShortDescription),

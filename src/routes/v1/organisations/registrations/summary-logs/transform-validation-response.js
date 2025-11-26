@@ -1,4 +1,4 @@
-import { VALIDATION_SEVERITY } from '#common/validation/validation-issues.js'
+import { VALIDATION_SEVERITY } from '#common/enums/validation.js'
 
 /**
  * Transforms a fatal validation issue to HTTP response format

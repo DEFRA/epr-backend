@@ -1,3 +1,7 @@
+/**
+ * @import {CreateOrUpdateCollection} from './types.js'
+ */
+
 const collectionName = 'epr-organisations'
 
 /**
@@ -6,9 +10,7 @@ const collectionName = 'epr-organisations'
  * Note: this collection is created without any schema validation
  * as we validate inserted data at the repository level
  *
- * @param db
- * @param collections
- * @returns {Promise<void>}
+ * @type {CreateOrUpdateCollection}
  */
 export async function createOrUpdateEPROrganisationCollection(db, collections) {
   if (!collections.find(({ name }) => name === collectionName)) {

@@ -3,9 +3,9 @@ import { createFormSubmissionsRepository } from '#repositories/form-submissions/
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
-import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
-const { validToken } = testTokens
+const { validToken } = entraIdMockAuthTokens
 
 const ORG_A = { id: 'org-a' }
 const ORG_B = { id: 'org-b' }

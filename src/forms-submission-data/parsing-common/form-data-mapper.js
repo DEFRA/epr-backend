@@ -8,6 +8,7 @@ import {
   REGULATOR,
   TIME_SCALE,
   VALUE_TYPE,
+  WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
@@ -229,6 +230,23 @@ const VALUE_TYPE_MAPPING = {
   'Estimated figures': VALUE_TYPE.ESTIMATED
 }
 
+const WASTE_PERMIT_TYPE_MAPPING = {
+  'Waste management licence or environmental permit':
+    WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
+  'Installation permit or Pollution Prevention and Control (PPC) permit':
+    WASTE_PERMIT_TYPE.INSTALLATION_PERMIT,
+  'Waste exemption': WASTE_PERMIT_TYPE.WASTE_EXEMPTION
+}
+
+const TONNAGE_BAND_MAPPER = {
+  'Up to 500 tonnes': 'up_to_500',
+  'Up to 5,000 tonnes': 'up_to_5000',
+  'Up to 5000 tonnes': 'up_to_5000',
+  'Up to 10,000 tonnes': 'up_to_10000',
+  'Up to 10000 tonnes': 'up_to_10000',
+  'Over 10,000 tonnes': 'over_10000'
+}
+
 export function mapValueType(value) {
   const trimmedValue = value?.trim()
 
@@ -241,6 +259,24 @@ export function mapValueType(value) {
   if (!result) {
     throw new Error(
       `Invalid value type: "${value}". Expected "Actual figures" or "Estimated figures"`
+    )
+  }
+
+  return result
+}
+
+export function mapWastePermitType(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    return undefined
+  }
+
+  const result = WASTE_PERMIT_TYPE_MAPPING[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid waste permit type: "${value}". Expected "Waste management licence or environmental permit", "Installation permit or Pollution Prevention and Control (PPC) permit", or "Waste exemption"`
     )
   }
 
@@ -261,4 +297,22 @@ export function convertToNumber(value, fieldName = 'value') {
   }
 
   return num
+}
+
+export function mapTonnageBand(value) {
+  const trimmedValue = value?.trim()
+
+  if (!trimmedValue) {
+    throw new Error('Tonnage band value is required')
+  }
+
+  const result = TONNAGE_BAND_MAPPER[trimmedValue]
+
+  if (!result) {
+    throw new Error(
+      `Invalid tonnage band: "${value}". Expected one of: ${Object.keys(TONNAGE_BAND_MAPPER).join(', ')}`
+    )
+  }
+
+  return result
 }

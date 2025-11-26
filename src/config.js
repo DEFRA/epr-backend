@@ -245,6 +245,21 @@ const baseConfig = {
         env: 'ADMIN_UI_ENTRA_CLIENT_ID',
         default: 'test'
       }
+    },
+    defraId: {
+      oidcWellKnownConfigurationUrl: {
+        doc: 'The Defra Identity well known URL.',
+        format: String,
+        default:
+          'https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0/.well-known/openid-configuration?p=B2C_1A_CUI_CPDEV_SIGNUPSIGNIN',
+        env: 'DEFRA_ID_OIDC_WELL_KNOWN_URL'
+      },
+      clientId: {
+        doc: 'EPR Frontend as audience',
+        format: String,
+        default: 'dbc093e4-3e78-411d-898d-88e45c1e8bc3',
+        env: 'DEFRA_ID_CLIENT_ID'
+      }
     }
   },
   roles: {
@@ -262,12 +277,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_SUMMARY_LOGS'
     },
-    organisations: {
-      doc: 'Feature Flag: Organisations',
-      format: Boolean,
-      default: false,
-      env: 'FEATURE_FLAG_ORGANISATIONS'
-    },
     formsDataMigration: {
       doc: 'Feature Flag: Runs forms data migration on startup',
       format: Boolean,
@@ -279,6 +288,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS'
+    },
+    defraIdAuth: {
+      doc: 'Feature Flag: Enable Defra Id authentication strategy',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
     }
   }
 }

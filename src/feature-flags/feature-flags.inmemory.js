@@ -5,9 +5,6 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isSummaryLogsEnabled() {
     return flags.summaryLogs ?? false
   },
-  isOrganisationRoutesEnabled() {
-    return flags.organisations ?? false
-  },
   isLogFileUploadsFromFormsEnabled() {
     return flags.logFileUploadsFromForms ?? false
   },

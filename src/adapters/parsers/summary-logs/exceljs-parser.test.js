@@ -44,7 +44,8 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result).toBeDefined()
       expect(result.meta).toBeDefined()
-      // Note: reprocessor.xlsx fixture actually contains markers, so meta is not empty
+      // Note: reprocessor.xlsx fixture contains old markers - REGISTRATION not REGISTRATION_NUMBER
+      // This test validates the parser works with the fixture file as-is
       expect(result.meta).toMatchObject({
         PROCESSING_TYPE: expect.any(Object),
         REGISTRATION: expect.any(Object),
@@ -69,12 +70,12 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('marker-based parsing', () => {
     it('should extract single metadata marker', async () => {
       const result = await parseWorkbook({
-        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']]
+        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT']]
       })
 
       expect(result.meta).toEqual({
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR',
+          value: 'REPROCESSOR_INPUT',
           location: { sheet: 'Sheet1', row: 1, column: 'B' }
         }
       })
@@ -83,13 +84,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('extracts multiple metadata markers', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board']
         ]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -263,7 +264,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const result = await parseWorkbook({
         Summary: [
           // Metadata section
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           // Blank row
           [],
@@ -282,7 +283,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Summary', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -309,12 +310,12 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('multiple worksheets', () => {
     it('should parse metadata from multiple sheets', async () => {
       const result = await parseWorkbook({
-        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR']],
+        Sheet1: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT']],
         Sheet2: [['__EPR_META_MATERIAL', 'Paper and board']]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Sheet1', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -326,7 +327,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should merge metadata and data sections from multiple worksheets', async () => {
       const result = await parseWorkbook({
         Sheet1: [
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           [],
           ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'WEIGHT'],
           [null, 12345, 100],
@@ -342,7 +343,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Sheet1', row: 1, column: 'B' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -423,7 +424,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should throw error for duplicate metadata marker names', async () => {
       const result = parseWorkbook({
         Test: [
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           ['__EPR_META_PROCESSING_TYPE', 'EXPORTER']
         ]
@@ -486,13 +487,13 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should extract metadata marker and value from correct positions when not in column A', async () => {
       const result = await parseWorkbook({
         Test: [
-          [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          [null, null, '__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           [null, '__EPR_META_MATERIAL', 'Paper and board']
         ]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'D' }
       })
       expect(result.meta.MATERIAL).toEqual({
@@ -523,7 +524,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should handle mixed placement of metadata and data markers', async () => {
       const result = await parseWorkbook({
         Test: [
-          [null, null, '__EPR_META_TYPE', 'REPROCESSOR'],
+          [null, null, '__EPR_META_TYPE', 'REPROCESSOR_INPUT'],
           [],
           [
             null,
@@ -541,7 +542,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'D' }
       })
 
@@ -702,6 +703,127 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('skip row functionality', () => {
+    it('should skip rows where skip column contains "Example" text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_SENT_ON',
+            'ROW_ID',
+            '__EPR_SKIP_COLUMN',
+            'DATE_LOAD_LEFT_SITE',
+            'WEIGHT'
+          ],
+          [null, 'row-1', 'Example', '2024-01-15', 100],
+          [null, 'row-2', '', '2024-01-16', 200],
+          [null, 'row-3', null, '2024-01-17', 300]
+        ]
+      })
+
+      expect(result.data.SENT_ON).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['ROW_ID', null, 'DATE_LOAD_LEFT_SITE', 'WEIGHT'],
+        rows: [
+          ['row-2', null, '2024-01-16', 200],
+          ['row-3', null, '2024-01-17', 300]
+        ]
+      })
+    })
+
+    it('should skip multiple example rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'ex-1', 'Example', 100],
+          [null, 'ex-2', 'Example', 200],
+          [null, 'real-1', '', 300],
+          [null, 'real-2', null, 400]
+        ]
+      })
+
+      expect(result.data.LOADS.rows).toEqual([
+        ['real-1', null, 300],
+        ['real-2', null, 400]
+      ])
+    })
+
+    it('should not skip rows where skip column contains other text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'row-1', 'Example', 100],
+          [null, 'row-2', 'Not Example', 200],
+          [null, 'row-3', 'example', 300],
+          [null, 'row-4', 'EXAMPLE', 400]
+        ]
+      })
+
+      expect(result.data.LOADS.rows).toEqual([
+        ['row-2', 'Not Example', 200],
+        ['row-3', 'example', 300],
+        ['row-4', 'EXAMPLE', 400]
+      ])
+    })
+
+    it('should skip row if any skip column contains "Example"', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_MULTI_SKIP',
+            'ID',
+            '__EPR_SKIP_COLUMN',
+            'VALUE',
+            '__EPR_SKIP_COLUMN'
+          ],
+          [null, 'row-1', 'Example', 100, ''],
+          [null, 'row-2', '', 200, 'Example'],
+          [null, 'row-3', '', 300, '']
+        ]
+      })
+
+      expect(result.data.MULTI_SKIP.rows).toEqual([['row-3', null, 300, null]])
+    })
+
+    it('should work with skip column as first header', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', '__EPR_SKIP_COLUMN', 'ID', 'VALUE'],
+          [null, 'Example', 'row-1', 100],
+          [null, '', 'row-2', 200]
+        ]
+      })
+
+      expect(result.data.LOADS.rows).toEqual([[null, 'row-2', 200]])
+    })
+
+    it('should still terminate section on empty row even after skipping example rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'row-1', 'Example', 100],
+          [null, 'row-2', '', 200],
+          [null, null, null, null]
+        ]
+      })
+
+      // The example row is skipped, and row-2 is included
+      expect(result.data.LOADS.rows).toEqual([['row-2', null, 200]])
+    })
+
+    it('should handle section with only example rows (results in empty rows array)', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_EMPTY_SECTION', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+          [null, 'ex-1', 'Example', 100],
+          [null, 'ex-2', 'Example', 200],
+          [null, null, null, null]
+        ]
+      })
+
+      expect(result.data.EMPTY_SECTION.rows).toEqual([])
+    })
+  })
+
   describe('partial empty rows', () => {
     it('should treat row with some nulls and some values as data row, not terminator', async () => {
       const result = await parseWorkbook({
@@ -809,7 +931,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           [null, 12345678910, '2025-05-25'],
           [null, 98765432100, '2025-05-26'],
           [null, '', ''],
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board']
         ]
       })
@@ -824,7 +946,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 5, column: 'B' }
       })
 
@@ -845,7 +967,7 @@ describe('ExcelJSSummaryLogsParser', () => {
             '2025-05-26',
             null,
             '__EPR_META_PROCESSING_TYPE',
-            'REPROCESSOR'
+            'REPROCESSOR_INPUT'
           ],
           [null, 11122233344, '2025-05-27'],
           [null, '', '']
@@ -863,7 +985,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 3, column: 'F' }
       })
     })
@@ -876,7 +998,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           [null, 'XYZ Corp', 'XYZ789'],
           [null, '', ''],
           [],
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           ['__EPR_META_SUBMISSION_DATE', '2025-05-25']
         ]
@@ -892,7 +1014,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 6, column: 'B' }
       })
 
@@ -914,7 +1036,7 @@ describe('ExcelJSSummaryLogsParser', () => {
           [null, 'value_a1', 'value_b1'],
           [null, '', ''],
           [],
-          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR'],
+          ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           ['__EPR_META_MATERIAL', 'Paper and board'],
           [],
           ['__EPR_DATA_SECOND_SECTION', 'COLUMN_X', 'COLUMN_Y'],
@@ -931,7 +1053,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 5, column: 'B' }
       })
 
@@ -959,7 +1081,7 @@ describe('ExcelJSSummaryLogsParser', () => {
             'DATE_RECEIVED',
             null,
             '__EPR_META_PROCESSING_TYPE',
-            'REPROCESSOR'
+            'REPROCESSOR_INPUT'
           ],
           [null, 12345678910, '2025-05-25'],
           [null, '', '']
@@ -973,9 +1095,188 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
-        value: 'REPROCESSOR',
+        value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'F' }
       })
+    })
+  })
+
+  describe('skip row functionality', () => {
+    it('should skip rows with "Example" text in skip column', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            'DATE_RECEIVED',
+            '__EPR_SKIP_COLUMN',
+            'SUPPLIER_REF'
+          ],
+          [null, 12345678910, '2025-05-25', 'Example', 'ABC123'],
+          [null, 98765432100, '2025-05-26', null, 'DEF456'],
+          [null, 11122233344, '2025-05-27', null, 'GHI789']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED).toEqual({
+        location: { sheet: 'Test', row: 1, column: 'B' },
+        headers: ['OUR_REFERENCE', 'DATE_RECEIVED', null, 'SUPPLIER_REF'],
+        rows: [
+          [98765432100, '2025-05-26', null, 'DEF456'],
+          [11122233344, '2025-05-27', null, 'GHI789']
+        ]
+      })
+    })
+
+    it('should skip multiple example rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED'
+          ],
+          [null, 12345678910, 'Example', '2025-05-25'],
+          [null, 98765432100, 'Example', '2025-05-26'],
+          [null, 11122233344, null, '2025-05-27']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [11122233344, null, '2025-05-27']
+      ])
+    })
+
+    it('should not skip rows when skip column has value other than "Example"', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED'
+          ],
+          [null, 12345678910, 'NotExample', '2025-05-25'],
+          [null, 98765432100, 'EXAMPLE', '2025-05-26'],
+          [null, 11122233344, 'example', '2025-05-27']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, 'NotExample', '2025-05-25'],
+        [98765432100, 'EXAMPLE', '2025-05-26'],
+        [11122233344, 'example', '2025-05-27']
+      ])
+    })
+
+    it('should handle skip row with multiple skip columns', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            '__EPR_SKIP_COLUMN',
+            'DATE_RECEIVED',
+            '__EPR_SKIP_COLUMN'
+          ],
+          [null, 12345678910, null, '2025-05-25', 'Example'],
+          [null, 98765432100, 'Example', '2025-05-26', 'keep'],
+          [null, 11122233344, null, '2025-05-27', 'keep']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [11122233344, null, '2025-05-27', 'keep']
+      ])
+    })
+
+    it('should not skip rows when no skip column is defined', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, 12345678910, '2025-05-25'],
+          [null, 'Example', '2025-05-26']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, '2025-05-25'],
+        ['Example', '2025-05-26']
+      ])
+    })
+  })
+
+  describe('placeholder text normalization', () => {
+    it('should normalize "Choose option" to null in data rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'STATUS', 'TYPE'],
+          [null, 12345678910, 'Choose option', 'Choose option'],
+          [null, 98765432100, 'Active', 'Choose option']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, null, null],
+        [98765432100, 'Active', null]
+      ])
+    })
+
+    it('should treat rows with mix of empty and "Choose option" as empty and terminate section', async () => {
+      // Realistic scenario: blank rows have empty cells plus dropdown defaults
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_WASTE_RECEIVED',
+            'OUR_REFERENCE',
+            'DATE',
+            'EWC_CODE',
+            'WEIGHT'
+          ],
+          [null, 12345678910, '2025-01-15', '03 03 08', 1000],
+          [null, null, null, 'Choose option', null], // Blank row: empty + dropdown default
+          [null, 'This should be ignored', '2025-12-31', '03 03 08', 9999]
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [12345678910, '2025-01-15', '03 03 08', 1000]
+      ])
+    })
+
+    it('should not normalize "Choose option" in metadata values', async () => {
+      const result = await parseWorkbook({
+        Test: [['__EPR_META_DROPDOWN_DEFAULT', 'Choose option']]
+      })
+
+      expect(result.meta.DROPDOWN_DEFAULT.value).toBe('Choose option')
+    })
+
+    it('should handle mixed empty values and placeholder text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'COL_A', 'COL_B', 'COL_C', 'COL_D'],
+          [null, null, '', 'Choose option', 'actual value']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [null, null, null, 'actual value']
+      ])
+    })
+
+    it('should be case-sensitive for placeholder text', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_WASTE_RECEIVED', 'COL_A', 'COL_B', 'COL_C'],
+          [null, 'Choose option', 'CHOOSE OPTION', 'choose Option']
+        ]
+      })
+
+      expect(result.data.WASTE_RECEIVED.rows).toEqual([
+        [null, 'CHOOSE OPTION', 'choose Option']
+      ])
     })
   })
 })

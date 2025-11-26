@@ -4,9 +4,9 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
-const { validToken } = testTokens
+const { validToken } = entraIdMockAuthTokens
 
 const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`

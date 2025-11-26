@@ -2,13 +2,20 @@ import {
   answers,
   createdAt,
   orgId,
-  referenceNumber,
   rawSubmissionData,
+  referenceNumber,
   schemaVersion
 } from './schema-properties.js'
 
+/**
+ * @import {CreateOrUpdateCollection} from './types.js'
+ */
+
 const collectionName = 'registration'
 
+/**
+ * @type {CreateOrUpdateCollection}
+ */
 export async function createOrUpdateRegistrationCollection(db, collections) {
   const options = {
     validator: {

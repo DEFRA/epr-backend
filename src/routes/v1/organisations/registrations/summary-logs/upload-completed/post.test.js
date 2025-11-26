@@ -8,11 +8,11 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testTokens } from '#vite/helpers/create-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 
-const { validToken } = testTokens
+const { validToken } = entraIdMockAuthTokens
 
 const summaryLogId = 'summary-log-123'
 
