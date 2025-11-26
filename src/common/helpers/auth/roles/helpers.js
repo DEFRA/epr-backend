@@ -70,3 +70,7 @@ export function getDefraTokenSummary(tokenPayload) {
 
   return { defraIdOrgId, defraIdOrgName, defraIdRelationships }
 }
+
+export function isOrganisationsDiscoveryReq(request) {
+  return request.route.path === '/user-status' && request.method === 'get'
+}

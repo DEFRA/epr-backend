@@ -4,7 +4,8 @@ import { getDefraIdUserRoles } from './get-defra-id-user-roles.js'
 import { getUsersOrganisationInfo } from './get-users-org-info.js'
 import { validateEprOrganisationAccess } from './validate-epr-org-access.js'
 import { config } from '../../../config.js'
-import { isAuthorisedOrgLinkingReq } from './authorise-org-linking.js'
+import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
+import { isOrganisationsDiscoveryReq } from './roles/helpers.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
@@ -64,18 +65,16 @@ export function getJwtStrategyConfig(oidcConfigs) {
             organisationsRepository
           )
 
-          const isDiscoveryRequest =
-            request.route.path === '/user-status' && request.method === 'get'
-          if (isDiscoveryRequest) {
-            // Any user can check the organisations associated with their token
+          if (isOrganisationsDiscoveryReq(request)) {
+            // The route is responsible for determining what info the user can see
             return {
               isValid: true,
               credentials: {
                 id: contactId,
                 email,
                 issuer,
-                userOrgs, // Useful for the discovery endpoint
-                linkedEprOrg, // Could be useful in some endpoints
+                userOrgs,
+                linkedEprOrg,
                 scope: []
               }
             }
@@ -92,8 +91,6 @@ export function getJwtStrategyConfig(oidcConfigs) {
                 id: contactId,
                 email,
                 issuer,
-                userOrgs, // Useful for the discovery endpoint
-                linkedEprOrg, // Could be useful in some endpoints
                 scope: []
               }
             }
