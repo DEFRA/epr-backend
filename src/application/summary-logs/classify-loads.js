@@ -23,6 +23,34 @@ const createEmptyLoadCounts = () => ({
 })
 
 /**
+ * Gets the row key for an issue if it has valid location data
+ *
+ * @param {Object} issue - A validation issue
+ * @param {Object} parsed - The parsed summary log data
+ * @returns {string|null} Row key in format "tableName:rowIndex" or null
+ */
+const getInvalidRowKey = (issue, parsed) => {
+  const location = issue.context?.location
+  if (!location?.table || location?.row === undefined) {
+    return null
+  }
+
+  const tableName = location.table
+  const tableData = parsed?.data?.[tableName]
+
+  if (!tableData?.location?.row) {
+    return null
+  }
+
+  // Convert spreadsheet row to array index
+  // Spreadsheet row includes header row, so subtract header row and 1
+  const headerRow = tableData.location.row
+  const rowIndex = location.row - headerRow - 1
+
+  return rowIndex >= 0 ? `${tableName}:${rowIndex}` : null
+}
+
+/**
  * Builds a set of row keys that have validation errors
  *
  * @param {Array} issues - Array of validation issues
@@ -33,25 +61,9 @@ const buildInvalidRowKeys = (issues, parsed) => {
   const invalidRowKeys = new Set()
 
   for (const issue of issues) {
-    const location = issue.context?.location
-    if (!location?.table || location?.row === undefined) {
-      continue
-    }
-
-    const tableName = location.table
-    const tableData = parsed?.data?.[tableName]
-
-    if (!tableData?.location?.row) {
-      continue
-    }
-
-    // Convert spreadsheet row to array index
-    // Spreadsheet row includes header row, so subtract header row and 1
-    const headerRow = tableData.location.row
-    const rowIndex = location.row - headerRow - 1
-
-    if (rowIndex >= 0) {
-      invalidRowKeys.add(`${tableName}:${rowIndex}`)
+    const rowKey = getInvalidRowKey(issue, parsed)
+    if (rowKey) {
+      invalidRowKeys.add(rowKey)
     }
   }
 
