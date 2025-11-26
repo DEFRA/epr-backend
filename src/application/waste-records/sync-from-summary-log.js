@@ -11,6 +11,7 @@ import { isEprMarker } from '#domain/summary-logs/markers.js'
  * @param {string} tableName - The table name
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<Array<*>>} rows - Array of raw row value arrays
+ * @returns {Array<{values: Array<*>, rowId: string, issues: Array<*>}>}
  */
 const convertToValidatedRows = (tableName, headers, rows) => {
   const idField = getRowIdField(tableName)
@@ -25,14 +26,11 @@ const convertToValidatedRows = (tableName, headers, rows) => {
 
   const idFieldIndex = headerToIndexMap.get(idField)
 
-  for (let i = 0; i < rows.length; i++) {
-    const originalRow = rows[i]
-    rows[i] = {
-      values: originalRow,
-      rowId: String(originalRow[idFieldIndex]),
-      issues: []
-    }
-  }
+  return rows.map((row) => ({
+    values: row,
+    rowId: String(row[idFieldIndex]),
+    issues: []
+  }))
 }
 
 /**
@@ -47,7 +45,11 @@ const prepareRowsForTransformation = (parsedData) => {
     if (!getTableSchema(tableName)) {
       continue
     }
-    convertToValidatedRows(tableName, tableData.headers, tableData.rows)
+    tableData.rows = convertToValidatedRows(
+      tableName,
+      tableData.headers,
+      tableData.rows
+    )
   }
 }
 

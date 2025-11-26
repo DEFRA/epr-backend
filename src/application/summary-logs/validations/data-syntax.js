@@ -102,7 +102,7 @@ const createRowIssues = ({
   location
 }) =>
   error.details.map((detail) => {
-    const fieldName = detail.path[0]
+    const fieldName = String(detail.path[0])
     const colIndex = headerToIndexMap.get(fieldName)
 
     const cellLocation =
