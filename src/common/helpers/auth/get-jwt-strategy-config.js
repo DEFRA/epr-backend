@@ -1,7 +1,7 @@
 import { config } from '#root/config.js'
 import Boom from '@hapi/boom'
-import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
+import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
@@ -24,12 +24,11 @@ export function getJwtStrategyConfig(oidcConfigs) {
       maxAgeSec: 3600, // 60 minutes
       timeSkewSec: 15
     },
-    validate: async (artifacts) => {
+    validate: async (artifacts, request) => {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
-        // For Entra Id tokens, we only accept them if they were signed for Admin UI
         const adminUiEntraClientId = config.get('oidc.entraId.clientId')
         if (audience !== adminUiEntraClientId) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
@@ -57,17 +56,25 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Defra Id token')
         }
 
-        const scope = await getDefraUserRoles(tokenPayload)
+        // Placeholder for intercepting access to /organisations/user-info
 
-        return {
-          isValid: scope.length > 0,
-          credentials: {
-            id: contactId,
-            email,
-            issuer,
-            scope
+        const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
+          request,
+          tokenPayload
+        )
+        if (isValidLinkingReq) {
+          return {
+            isValid: true,
+            credentials: {
+              id: contactId,
+              email,
+              issuer,
+              scope: []
+            }
           }
         }
+
+        // Place holder for validating access to any /{organisationId} endpoints
       }
 
       throw Boom.badRequest(`Unrecognized token issuer: ${issuer}`)
