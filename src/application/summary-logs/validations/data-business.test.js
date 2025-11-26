@@ -13,7 +13,7 @@ describe('validateDataBusiness', () => {
    * @param {Array} [options.issues] - Validation issues
    * @returns {{ record: Object, issues: Array }}
    */
-  const createTransformedRecord = ({
+  const createValidatedWasteRecord = ({
     rowId,
     type = WASTE_RECORD_TYPE.RECEIVED,
     issues = []
@@ -82,11 +82,11 @@ describe('validateDataBusiness', () => {
   })
 
   it('returns valid result when validators pass', () => {
-    const transformedRecords = [createTransformedRecord({ rowId: 'row-1' })]
+    const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
     const existingWasteRecords = []
 
     const result = validateDataBusiness({
-      transformedRecords,
+      wasteRecords,
       existingWasteRecords
     })
 
@@ -96,8 +96,8 @@ describe('validateDataBusiness', () => {
   })
 
   it('returns invalid result when validators fail', () => {
-    const transformedRecords = [
-      createTransformedRecord({ rowId: 'row-2' }) // row-1 is missing
+    const wasteRecords = [
+      createValidatedWasteRecord({ rowId: 'row-2' }) // row-1 is missing
     ]
     const existingWasteRecords = [
       createWasteRecord('row-1'),
@@ -105,7 +105,7 @@ describe('validateDataBusiness', () => {
     ]
 
     const result = validateDataBusiness({
-      transformedRecords,
+      wasteRecords,
       existingWasteRecords
     })
 

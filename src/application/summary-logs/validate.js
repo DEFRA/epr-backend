@@ -21,7 +21,7 @@ import { classifyLoads } from './classify-loads.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
-/** @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} TransformedRecord */
+/** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
 
 const fetchRegistration = async ({
   organisationsRepository,
@@ -48,7 +48,7 @@ const fetchRegistration = async ({
 /**
  * @typedef {Object} ValidationResult
  * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues object with methods like getAllIssues(), isFatal()
- * @property {TransformedRecord[]|null} transformedRecords - Transformed records (null if transformation not reached)
+ * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
  */
 
 /**
@@ -101,7 +101,7 @@ const performValidationChecks = async ({
   wasteRecordsRepository
 }) => {
   const issues = createValidationIssues()
-  let transformedRecords = null
+  let wasteRecords = null
 
   try {
     const parsed = await summaryLogExtractor.extract(summaryLog)
@@ -117,7 +117,7 @@ const performValidationChecks = async ({
     issues.merge(validateMetaSyntax({ parsed }))
 
     if (issues.isFatal()) {
-      return { issues, transformedRecords }
+      return { issues, wasteRecords }
     }
 
     const registration = await fetchRegistration({
@@ -130,7 +130,7 @@ const performValidationChecks = async ({
     issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
     if (issues.isFatal()) {
-      return { issues, transformedRecords }
+      return { issues, wasteRecords }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
@@ -140,7 +140,7 @@ const performValidationChecks = async ({
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, transformedRecords }
+      return { issues, wasteRecords }
     }
 
     // Fetch existing records and build lookup map for transformation
@@ -158,7 +158,7 @@ const performValidationChecks = async ({
     )
 
     // Transform validated rows into waste records with issues attached
-    transformedRecords = transformFromSummaryLog(
+    wasteRecords = transformFromSummaryLog(
       validatedData,
       {
         summaryLog: {
@@ -172,10 +172,8 @@ const performValidationChecks = async ({
       existingRecordsMap
     )
 
-    // Data business validation using transformed records
-    issues.merge(
-      validateDataBusiness({ transformedRecords, existingWasteRecords })
-    )
+    // Data business validation using waste records
+    issues.merge(validateDataBusiness({ wasteRecords, existingWasteRecords }))
   } catch (error) {
     logger.error({
       error,
@@ -193,7 +191,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, transformedRecords }
+  return { issues, wasteRecords }
 }
 
 /**
@@ -235,7 +233,7 @@ export const createSummaryLogsValidator =
       }
     })
 
-    const { issues, transformedRecords } = await performValidationChecks({
+    const { issues, wasteRecords } = await performValidationChecks({
       summaryLogId,
       summaryLog,
       loggingContext,
@@ -249,12 +247,12 @@ export const createSummaryLogsValidator =
       : SUMMARY_LOG_STATUS.VALIDATED
 
     // Calculate load counts only for validated summary logs
-    // transformedRecords is guaranteed to be non-null when status is VALIDATED
+    // wasteRecords is guaranteed to be non-null when status is VALIDATED
     // because we only reach VALIDATED if we passed all short-circuits
     const loadCounts =
-      status === SUMMARY_LOG_STATUS.VALIDATED && transformedRecords
+      status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
         ? classifyLoads({
-            transformedRecords,
+            wasteRecords,
             summaryLogId
           })
         : null

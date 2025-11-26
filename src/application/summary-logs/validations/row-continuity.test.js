@@ -17,7 +17,7 @@ describe('validateRowContinuity', () => {
    * @param {Array} [options.issues] - Validation issues
    * @returns {{ record: Object, issues: Array }}
    */
-  const createTransformedRecord = ({
+  const createValidatedWasteRecord = ({
     rowId,
     type = WASTE_RECORD_TYPE.RECEIVED,
     issues = []
@@ -94,11 +94,11 @@ describe('validateRowContinuity', () => {
 
   describe('first-time uploads (no existing records)', () => {
     it('returns valid result when no existing records exist', () => {
-      const transformedRecords = [createTransformedRecord({ rowId: 'row-1' })]
+      const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
       const existingWasteRecords = []
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -108,11 +108,11 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when existingWasteRecords is null', () => {
-      const transformedRecords = [createTransformedRecord({ rowId: 'row-1' })]
+      const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
       const existingWasteRecords = null
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -121,11 +121,11 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when existingWasteRecords is undefined', () => {
-      const transformedRecords = [createTransformedRecord({ rowId: 'row-1' })]
+      const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
       const existingWasteRecords = undefined
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -136,9 +136,9 @@ describe('validateRowContinuity', () => {
 
   describe('subsequent uploads with all rows present', () => {
     it('returns valid result when all existing rows are present', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-1' }),
-        createTransformedRecord({ rowId: 'row-2' })
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }),
+        createValidatedWasteRecord({ rowId: 'row-2' })
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
@@ -146,7 +146,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -156,13 +156,13 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when existing rows are present with updated values', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-1' }) // Updated date and tonnage
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }) // Updated date and tonnage
       ]
       const existingWasteRecords = [createWasteRecord('row-1')]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -173,10 +173,10 @@ describe('validateRowContinuity', () => {
 
   describe('subsequent uploads with new rows added', () => {
     it('returns valid result when new rows are added alongside existing rows', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-1' }), // Existing
-        createTransformedRecord({ rowId: 'row-2' }), // Existing
-        createTransformedRecord({ rowId: 'row-3' }) // New row added
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }), // Existing
+        createValidatedWasteRecord({ rowId: 'row-2' }), // Existing
+        createValidatedWasteRecord({ rowId: 'row-3' }) // New row added
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
@@ -184,7 +184,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -193,15 +193,15 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when only new rows are added', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-1' }), // Existing
-        createTransformedRecord({ rowId: 'row-3' }), // New
-        createTransformedRecord({ rowId: 'row-4' }) // New
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }), // Existing
+        createValidatedWasteRecord({ rowId: 'row-3' }), // New
+        createValidatedWasteRecord({ rowId: 'row-4' }) // New
       ]
       const existingWasteRecords = [createWasteRecord('row-1')]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -212,8 +212,8 @@ describe('validateRowContinuity', () => {
 
   describe('subsequent uploads with missing rows', () => {
     it('returns fatal business error when a single row is missing', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-2' }) // row-1 is missing
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-2' }) // row-1 is missing
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
@@ -221,7 +221,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -242,8 +242,8 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns fatal errors for multiple missing rows', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-2' }) // row-1 and row-3 are missing
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-2' }) // row-1 and row-3 are missing
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
@@ -252,7 +252,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -269,8 +269,8 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns fatal error when all existing rows are removed', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-3' }) // All previous rows removed
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-3' }) // All previous rows removed
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
@@ -278,7 +278,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -292,11 +292,11 @@ describe('validateRowContinuity', () => {
 
   describe('edge cases', () => {
     it('returns valid result when upload has no data rows but no existing records either', () => {
-      const transformedRecords = []
+      const wasteRecords = []
       const existingWasteRecords = []
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -305,14 +305,14 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns fatal error when upload has no data rows but existing records exist', () => {
-      const transformedRecords = []
+      const wasteRecords = []
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -324,7 +324,7 @@ describe('validateRowContinuity', () => {
     })
 
     it('includes previous summary log information in error context', () => {
-      const transformedRecords = []
+      const wasteRecords = []
       const previousSummaryLogId = 'prev-123'
       const previousSubmitTime = '2024-01-10T10:00:00.000Z'
 
@@ -345,7 +345,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -360,9 +360,9 @@ describe('validateRowContinuity', () => {
 
   describe('different waste record types', () => {
     it('validates rows across different waste record types', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-1' }),
-        createTransformedRecord({ rowId: 'row-2' })
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }),
+        createValidatedWasteRecord({ rowId: 'row-2' })
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1', WASTE_RECORD_TYPE.RECEIVED),
@@ -371,7 +371,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -393,11 +393,11 @@ describe('validateRowContinuity', () => {
       ]
 
       for (const { type, expectedSheet } of testCases) {
-        const transformedRecords = []
+        const wasteRecords = []
         const existingWasteRecords = [createWasteRecord('row-1', type)]
 
         const result = validateRowContinuity({
-          transformedRecords,
+          wasteRecords,
           existingWasteRecords
         })
 
@@ -409,9 +409,9 @@ describe('validateRowContinuity', () => {
 
   describe('idempotent uploads (same file uploaded twice)', () => {
     it('returns valid result when exact same data is uploaded again', () => {
-      const transformedRecords = [
-        createTransformedRecord({ rowId: 'row-1' }),
-        createTransformedRecord({ rowId: 'row-2' })
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }),
+        createValidatedWasteRecord({ rowId: 'row-2' })
       ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
@@ -419,7 +419,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -431,11 +431,11 @@ describe('validateRowContinuity', () => {
 
   describe('unknown waste record types', () => {
     it('handles unknown waste record type with fallback sheet and table names', () => {
-      const transformedRecords = []
+      const wasteRecords = []
       const existingWasteRecords = [createWasteRecord('row-1', 'unknownType')]
 
       const result = validateRowContinuity({
-        transformedRecords,
+        wasteRecords,
         existingWasteRecords
       })
 

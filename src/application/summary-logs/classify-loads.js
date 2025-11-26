@@ -1,7 +1,7 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 /**
- * @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} TransformedRecord
+ * @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
  */
 
@@ -37,7 +37,7 @@ const createEmptyLoadCounts = () => ({
  * - adjusted: Record had a version added in this upload (last version has status UPDATED and matching summaryLogId)
  * - unchanged: No version was added in this upload
  *
- * @param {TransformedRecord['record']} record - The waste record
+ * @param {ValidatedWasteRecord['record']} record - The waste record
  * @param {string} summaryLogId - The current summary log ID
  * @returns {'new'|'unchanged'|'adjusted'} The classification
  */
@@ -66,14 +66,14 @@ const classifyRecord = (record, summaryLogId) => {
  * - invalid: Load has validation errors (issues.length > 0)
  *
  * @param {Object} params
- * @param {TransformedRecord[]} params.transformedRecords - Array of transformed records with issues
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues
  * @param {string} params.summaryLogId - The current summary log ID
  * @returns {LoadCounts} Counts of loads by classification
  */
-export const classifyLoads = ({ transformedRecords, summaryLogId }) => {
+export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   const counts = createEmptyLoadCounts()
 
-  for (const { record, issues } of transformedRecords) {
+  for (const { record, issues } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
     counts[classification][validityKey]++

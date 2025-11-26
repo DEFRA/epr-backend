@@ -104,7 +104,7 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationId: summaryLog.accreditationId
     }
 
-    const transformedRecords = transformFromSummaryLog(
+    const wasteRecords = transformFromSummaryLog(
       parsedData,
       summaryLogContext,
       existingRecords
@@ -112,7 +112,7 @@ export const syncFromSummaryLog = (dependencies) => {
 
     // 6. Convert waste records to wasteRecordVersions Map structure
     const wasteRecordVersions = new Map()
-    for (const { record } of transformedRecords) {
+    for (const { record } of wasteRecords) {
       if (!wasteRecordVersions.has(record.type)) {
         wasteRecordVersions.set(record.type, new Map())
       }

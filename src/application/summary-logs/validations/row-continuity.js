@@ -6,7 +6,7 @@ import {
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} TransformedRecord
+ * @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord
  */
 
 /**
@@ -55,12 +55,12 @@ const getTableForType = (type) => {
  * Missing rows result in FATAL errors that block submission.
  *
  * @param {Object} params
- * @param {TransformedRecord[]} params.transformedRecords - Transformed records from the current upload
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
  * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
  * @returns {Object} Validation issues object
  */
 export const validateRowContinuity = ({
-  transformedRecords,
+  wasteRecords,
   existingWasteRecords
 }) => {
   const issues = createValidationIssues()
@@ -81,7 +81,7 @@ export const validateRowContinuity = ({
   )
 
   const newRowKeys = new Set(
-    transformedRecords.map(({ record }) => `${record.type}:${record.rowId}`)
+    wasteRecords.map(({ record }) => `${record.type}:${record.rowId}`)
   )
 
   const missingRowKeys = [...existingRowKeys].filter(

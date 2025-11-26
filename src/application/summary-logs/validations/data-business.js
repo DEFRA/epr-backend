@@ -3,7 +3,7 @@ import { validateRowContinuity } from './row-continuity.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} TransformedRecord
+ * @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord
  */
 
 /**
@@ -22,12 +22,12 @@ import { validateRowContinuity } from './row-continuity.js'
  * - Unchanged (carried forward as-is)
  *
  * @param {Object} params
- * @param {TransformedRecord[]} params.transformedRecords - Transformed records from the current upload
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
  * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
  * @returns {Object} Validation issues object
  */
 export const validateDataBusiness = ({
-  transformedRecords,
+  wasteRecords,
   existingWasteRecords
 }) => {
   const issues = createValidationIssues()
@@ -39,7 +39,7 @@ export const validateDataBusiness = ({
     // validateTonnageAccuracy,
     // etc.
   ]) {
-    issues.merge(validate({ transformedRecords, existingWasteRecords }))
+    issues.merge(validate({ wasteRecords, existingWasteRecords }))
   }
 
   return issues

@@ -12,7 +12,7 @@ const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
  * @param {Array} options.issues - Validation issues (default empty)
  * @returns {{ record: Object, issues: Array }}
  */
-const createTransformedRecord = ({
+const createValidatedWasteRecord = ({
   status,
   summaryLogId,
   issues = [],
@@ -39,9 +39,9 @@ const createTransformedRecord = ({
 
 describe('classifyLoads', () => {
   describe('with empty data', () => {
-    it('returns zero counts when transformedRecords is empty', () => {
+    it('returns zero counts when wasteRecords is empty', () => {
       const result = classifyLoads({
-        transformedRecords: [],
+        wasteRecords: [],
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -55,15 +55,15 @@ describe('classifyLoads', () => {
 
   describe('classification based on version status', () => {
     it('classifies as new when last version has CREATED status and matches current summaryLogId', () => {
-      const transformedRecords = [
-        createTransformedRecord({
+      const wasteRecords = [
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID
         })
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -73,8 +73,8 @@ describe('classifyLoads', () => {
     })
 
     it('classifies as adjusted when last version has UPDATED status and matches current summaryLogId', () => {
-      const transformedRecords = [
-        createTransformedRecord({
+      const wasteRecords = [
+        createValidatedWasteRecord({
           status: VERSION_STATUS.UPDATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           previousVersions: [
@@ -92,7 +92,7 @@ describe('classifyLoads', () => {
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -102,15 +102,15 @@ describe('classifyLoads', () => {
     })
 
     it('classifies as unchanged when last version summaryLogId does not match current', () => {
-      const transformedRecords = [
-        createTransformedRecord({
+      const wasteRecords = [
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: PREVIOUS_SUMMARY_LOG_ID
         })
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -122,8 +122,8 @@ describe('classifyLoads', () => {
 
   describe('validity based on issues', () => {
     it('classifies as valid when issues array is empty', () => {
-      const transformedRecords = [
-        createTransformedRecord({
+      const wasteRecords = [
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: []
@@ -131,7 +131,7 @@ describe('classifyLoads', () => {
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -140,8 +140,8 @@ describe('classifyLoads', () => {
     })
 
     it('classifies as invalid when issues array has items', () => {
-      const transformedRecords = [
-        createTransformedRecord({
+      const wasteRecords = [
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [
@@ -157,7 +157,7 @@ describe('classifyLoads', () => {
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -166,8 +166,8 @@ describe('classifyLoads', () => {
     })
 
     it('classifies adjusted records as invalid when they have issues', () => {
-      const transformedRecords = [
-        createTransformedRecord({
+      const wasteRecords = [
+        createValidatedWasteRecord({
           status: VERSION_STATUS.UPDATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [{ severity: 'error', message: 'test' }],
@@ -186,7 +186,7 @@ describe('classifyLoads', () => {
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -197,21 +197,21 @@ describe('classifyLoads', () => {
 
   describe('mixed scenarios', () => {
     it('correctly counts mixed classifications and validities', () => {
-      const transformedRecords = [
+      const wasteRecords = [
         // New, valid
-        createTransformedRecord({
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: []
         }),
         // New, invalid
-        createTransformedRecord({
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [{ severity: 'error', message: 'test' }]
         }),
         // Adjusted, valid
-        createTransformedRecord({
+        createValidatedWasteRecord({
           status: VERSION_STATUS.UPDATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: [],
@@ -228,13 +228,13 @@ describe('classifyLoads', () => {
           ]
         }),
         // Unchanged, valid (previous summary log)
-        createTransformedRecord({
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
           issues: []
         }),
         // Unchanged, invalid (previous summary log with issues)
-        createTransformedRecord({
+        createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
           issues: [{ severity: 'error', message: 'test' }]
@@ -242,7 +242,7 @@ describe('classifyLoads', () => {
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -256,7 +256,7 @@ describe('classifyLoads', () => {
 
   describe('edge cases', () => {
     it('handles record with missing summaryLog gracefully (classifies as unchanged)', () => {
-      const transformedRecords = [
+      const wasteRecords = [
         {
           record: {
             organisationId: 'org-1',
@@ -278,7 +278,7 @@ describe('classifyLoads', () => {
       ]
 
       const result = classifyLoads({
-        transformedRecords,
+        wasteRecords,
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
@@ -287,7 +287,7 @@ describe('classifyLoads', () => {
     })
 
     it('handles empty versions array gracefully', () => {
-      const transformedRecords = [
+      const wasteRecords = [
         {
           record: {
             organisationId: 'org-1',
@@ -305,7 +305,7 @@ describe('classifyLoads', () => {
       // But this is an invalid state that shouldn't occur in practice
       expect(() =>
         classifyLoads({
-          transformedRecords,
+          wasteRecords,
           summaryLogId: CURRENT_SUMMARY_LOG_ID
         })
       ).toThrow()

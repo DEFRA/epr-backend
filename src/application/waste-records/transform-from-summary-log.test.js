@@ -63,18 +63,8 @@ describe('transformFromSummaryLog', () => {
     expect(result).toHaveLength(2)
 
     // Result is now { record, issues }[]
-    expectValidTransformedRecord(
-      result[0],
-      FIRST_ROW_ID,
-      FIRST_DATE,
-      FIRST_WEIGHT
-    )
-    expectValidTransformedRecord(
-      result[1],
-      'row-456',
-      '2025-01-16',
-      SECOND_WEIGHT
-    )
+    expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
+    expectValidWasteRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
   })
 
   it('returns empty array when no RECEIVED_LOADS data present', () => {
@@ -330,13 +320,8 @@ function createExistingWasteRecord() {
   }
 }
 
-function expectValidTransformedRecord(
-  transformedRecord,
-  rowId,
-  dateReceived,
-  grossWeight
-) {
-  const { record, issues } = transformedRecord
+function expectValidWasteRecord(result, rowId, dateReceived, grossWeight) {
+  const { record, issues } = result
 
   expect(issues).toEqual([])
   expect(record).toMatchObject({
