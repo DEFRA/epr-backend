@@ -27,6 +27,14 @@ import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-org
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
 import { eprOrganisationFactory } from '#common/helpers/collections/factories/epr-organisation.js'
 
+import { logger } from '#common/helpers/logging/logger.js'
+import { ObjectId } from 'mongodb'
+
+const COLLECTION_ORGANISATION = 'organisation'
+const COLLECTION_REGISTRATION = 'registration'
+const COLLECTION_ACCREDITATION = 'accreditation'
+const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
+
 /**
  * @import {Db} from 'mongodb'
  */
@@ -58,9 +66,13 @@ export async function createOrUpdateCollections(db) {
 export async function createIndexes(db) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
 
-  await db.collection('organisation').createIndex({ orgId: 1 })
-  await db.collection('registration').createIndex({ referenceNumber: 1 })
-  await db.collection('accreditation').createIndex({ referenceNumber: 1 })
+  await db.collection(COLLECTION_ORGANISATION).createIndex({ orgId: 1 })
+  await db
+    .collection(COLLECTION_REGISTRATION)
+    .createIndex({ referenceNumber: 1 })
+  await db
+    .collection(COLLECTION_ACCREDITATION)
+    .createIndex({ referenceNumber: 1 })
 
   await db
     .collection('waste-records')
@@ -77,56 +89,116 @@ export async function createIndexes(db) {
  * @param {Db} db
  * @returns {Promise<void>}
  */
-export async function createSeedData(db) {
-  const organisationDocCount = await db
-    .collection('organisation')
-    .countDocuments()
+export async function createSeedData(db, isProduction) {
+  if (!isProduction()) {
+    logger.info({ message: 'Creating seed data' })
 
-  if (organisationDocCount === 0) {
-    const organisationAnswers = extractAnswers(organisationFixture)
+    const organisationDocCount = await db
+      .collection(COLLECTION_ORGANISATION)
+      .countDocuments()
 
-    const { insertedIds } = await db.collection('organisation').insertMany([
-      organisationFactory({
-        orgId: ORG_ID_START_NUMBER,
-        orgName: extractOrgName(organisationAnswers),
-        email: extractEmail(organisationAnswers),
-        nations: null,
-        answers: organisationAnswers,
-        rawSubmissionData: organisationFixture
-      })
-    ])
+    if (organisationDocCount === 0) {
+      const organisationAnswers = extractAnswers(organisationFixture)
 
-    await db.collection('registration').insertMany([
-      registrationFactory({
-        referenceNumber: insertedIds[0]?.toString(),
-        orgId: ORG_ID_START_NUMBER,
-        answers: extractAnswers(registrationFixture),
-        rawSubmissionData: registrationFixture
-      })
-    ])
+      const { insertedIds } = await db
+        .collection(COLLECTION_ORGANISATION)
+        .insertMany([
+          organisationFactory({
+            orgId: ORG_ID_START_NUMBER,
+            orgName: extractOrgName(organisationAnswers),
+            email: extractEmail(organisationAnswers),
+            nations: null,
+            answers: organisationAnswers,
+            rawSubmissionData: organisationFixture
+          })
+        ])
 
-    await db.collection('accreditation').insertMany([
-      accreditationFactory({
-        referenceNumber: insertedIds[0]?.toString(),
-        orgId: ORG_ID_START_NUMBER,
-        answers: extractAnswers(accreditationFixture),
-        rawSubmissionData: accreditationFixture
-      })
-    ])
-  }
-
-  const eprOrganisationDocCount = await db
-    .collection('epr-organisations')
-    .countDocuments()
-
-  if (eprOrganisationDocCount === 0) {
-    await db
-      .collection('epr-organisations')
-      .insertMany([
-        eprOrganisationFactory(eprOrganisation1),
-        eprOrganisationFactory(eprOrganisation2),
-        eprOrganisationFactory(eprOrganisation3),
-        eprOrganisationFactory(eprOrganisation4)
+      await db.collection(COLLECTION_REGISTRATION).insertMany([
+        registrationFactory({
+          referenceNumber: insertedIds[0]?.toString(),
+          orgId: ORG_ID_START_NUMBER,
+          answers: extractAnswers(registrationFixture),
+          rawSubmissionData: registrationFixture
+        })
       ])
+
+      await db.collection(COLLECTION_ACCREDITATION).insertMany([
+        accreditationFactory({
+          referenceNumber: insertedIds[0]?.toString(),
+          orgId: ORG_ID_START_NUMBER,
+          answers: extractAnswers(accreditationFixture),
+          rawSubmissionData: accreditationFixture
+        })
+      ])
+    }
+
+    const eprOrganisationDocCount = await db
+      .collection(COLLECTION_EPR_ORGANISATIONS)
+      .countDocuments()
+
+    if (eprOrganisationDocCount === 0) {
+      await db
+        .collection(COLLECTION_EPR_ORGANISATIONS)
+        .insertMany([
+          eprOrganisationFactory(eprOrganisation1),
+          eprOrganisationFactory(eprOrganisation2),
+          eprOrganisationFactory(eprOrganisation3),
+          eprOrganisationFactory(eprOrganisation4)
+        ])
+    }
+  }
+}
+
+export async function cleanupSeedData(db, isProduction) {
+  if (isProduction()) {
+    const deleteDocuments = async (collectionName, ids) => {
+      const result = await db
+        .collection(collectionName)
+        .deleteMany({ _id: { $in: ids } })
+      logger.info({
+        message: `Seed data clean up: deleted ${result.deletedCount} documents from ${collectionName} collection`
+      })
+    }
+
+    const findAndDeleteOne = async (collectionName, query) => {
+      const docs = await db.collection(collectionName).find(query).toArray()
+
+      if (docs.length === 1) {
+        await deleteDocuments(collectionName, [docs[0]._id])
+      } else if (docs.length > 1) {
+        logger.info({
+          message: `Seed data clean up: more than one seed data candidate document found for ${collectionName} collection - not deleting`
+        })
+      } else {
+        logger.info({
+          message: `Seed data clean up: no seed data found for ${collectionName} collection`
+        })
+      }
+    }
+
+    findAndDeleteOne(COLLECTION_ORGANISATION, {
+      orgName: organisationFixture.data.main.JbEBvr,
+      email: organisationFixture.data.main.aSoxDO
+    })
+
+    findAndDeleteOne(COLLECTION_REGISTRATION, {
+      'rawSubmissionData.data.main.RIXIzA': registrationFixture.data.main.RIXIzA // system reference
+    })
+
+    findAndDeleteOne(COLLECTION_ACCREDITATION, {
+      'rawSubmissionData.data.main.MyWHms':
+        accreditationFixture.data.main.MyWHms // system reference
+    })
+
+    const eprOrganisationIds = [
+      eprOrganisation1,
+      eprOrganisation2,
+      eprOrganisation3,
+      eprOrganisation4
+    ]
+      .map((record) => record.id)
+      .map(ObjectId.createFromHexString)
+
+    await deleteDocuments(COLLECTION_EPR_ORGANISATIONS, eprOrganisationIds)
   }
 }
