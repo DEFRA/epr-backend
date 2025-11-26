@@ -23,6 +23,64 @@ import { classifyLoads } from './classify-loads.js'
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
 
+const extractSummaryLog = async ({
+  summaryLogExtractor,
+  summaryLog,
+  loggingContext
+}) => {
+  const parsed = await summaryLogExtractor.extract(summaryLog)
+
+  logger.info({
+    message: `Extracted summary log file: ${loggingContext}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
+    }
+  })
+
+  return parsed
+}
+
+const transformAndValidateData = async ({
+  summaryLogId,
+  summaryLog,
+  validatedData,
+  wasteRecordsRepository
+}) => {
+  // Fetch existing records and build lookup map for transformation
+  const existingWasteRecords = await wasteRecordsRepository.findByRegistration(
+    summaryLog.organisationId,
+    summaryLog.registrationId
+  )
+
+  const existingRecordsMap = new Map(
+    existingWasteRecords.map((record) => [
+      `${record.type}:${record.rowId}`,
+      record
+    ])
+  )
+
+  // Transform validated rows into waste records with issues attached
+  const wasteRecords = transformFromSummaryLog(
+    validatedData,
+    {
+      summaryLog: {
+        id: summaryLogId,
+        uri: summaryLog.file.uri
+      },
+      organisationId: summaryLog.organisationId,
+      registrationId: summaryLog.registrationId,
+      accreditationId: summaryLog.accreditationId
+    },
+    existingRecordsMap
+  )
+
+  // Data business validation using waste records
+  const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })
+
+  return { wasteRecords, issues }
+}
+
 const fetchRegistration = async ({
   organisationsRepository,
   organisationId,
@@ -104,14 +162,10 @@ const performValidationChecks = async ({
   let wasteRecords = null
 
   try {
-    const parsed = await summaryLogExtractor.extract(summaryLog)
-
-    logger.info({
-      message: `Extracted summary log file: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_SUCCESS
-      }
+    const parsed = await extractSummaryLog({
+      summaryLogExtractor,
+      summaryLog,
+      loggingContext
     })
 
     issues.merge(validateMetaSyntax({ parsed }))
@@ -143,37 +197,15 @@ const performValidationChecks = async ({
       return { issues, wasteRecords }
     }
 
-    // Fetch existing records and build lookup map for transformation
-    const existingWasteRecords =
-      await wasteRecordsRepository.findByRegistration(
-        summaryLog.organisationId,
-        summaryLog.registrationId
-      )
-
-    const existingRecordsMap = new Map(
-      existingWasteRecords.map((record) => [
-        `${record.type}:${record.rowId}`,
-        record
-      ])
-    )
-
-    // Transform validated rows into waste records with issues attached
-    wasteRecords = transformFromSummaryLog(
+    const dataResult = await transformAndValidateData({
+      summaryLogId,
+      summaryLog,
       validatedData,
-      {
-        summaryLog: {
-          id: summaryLogId,
-          uri: summaryLog.file.uri
-        },
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        accreditationId: summaryLog.accreditationId
-      },
-      existingRecordsMap
-    )
+      wasteRecordsRepository
+    })
 
-    // Data business validation using waste records
-    issues.merge(validateDataBusiness({ wasteRecords, existingWasteRecords }))
+    wasteRecords = dataResult.wasteRecords
+    issues.merge(dataResult.issues)
   } catch (error) {
     logger.error({
       error,
