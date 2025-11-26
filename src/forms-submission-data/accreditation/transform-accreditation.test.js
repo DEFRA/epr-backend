@@ -139,8 +139,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       material: MATERIAL.WOOD,
       glassRecyclingProcess: undefined,
       site: {
-        line1: '78',
-        postcode: 'W1B 1NT'
+        address: {
+          line1: '78',
+          postcode: 'W1B 1NT'
+        }
       },
       systemReference: '68e68d9c78f83083f0f17a76',
       orgName: 'Green Recycling Solutions Ltd',
@@ -238,8 +240,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       material: MATERIAL.PAPER,
       glassRecyclingProcess: undefined,
       site: {
-        line1: '78 Portland Place',
-        postcode: 'W1B 1NT'
+        address: {
+          line1: '78 Portland Place',
+          postcode: 'W1B 1NT'
+        }
       },
       systemReference: '68e68d9c78f83083f0f17a76',
       orgName: 'Green Recycling Solutions Ltd',

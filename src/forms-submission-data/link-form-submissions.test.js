@@ -228,7 +228,9 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: '   W1b 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: '   W1b 1NT' }
+            }
           }
         ],
         accreditations: [
@@ -236,7 +238,9 @@ describe('linkRegistrationToAccreditations', () => {
             id: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B1NT ' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B1NT ' }
+            }
           }
         ]
       }
@@ -274,7 +278,9 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { line1: '78 Portland Place', postcode: 'W1C 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1C 1NT' }
+            }
           }
         ],
         accreditations: [
@@ -282,7 +288,7 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { line1: '78', postcode: 'W1B 1NT' }
+            site: { address: { line1: '78', postcode: 'W1B 1NT' } }
           },
           {
             id: acc2Id,
@@ -351,7 +357,9 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
           }
         ],
         accreditations: [
@@ -359,7 +367,9 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
           }
         ]
       }
@@ -392,13 +402,17 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
           },
           {
             id: reg2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
           }
         ],
         accreditations: [
@@ -406,7 +420,9 @@ describe('linkRegistrationToAccreditations', () => {
             id: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.WOOD,
-            site: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
           }
         ]
       }
@@ -465,7 +481,7 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: {}
+            site: { address: {} }
           }
         ],
         accreditations: [
@@ -473,7 +489,7 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: {}
+            site: { address: {} }
           }
         ]
       }

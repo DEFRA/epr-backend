@@ -9,6 +9,9 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { MATERIAL } from '#domain/organisations/model.js'
+import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
+import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -471,7 +474,7 @@ describe('migrateFormsData', () => {
         (count, org) => count + (org.accreditations?.length || 0),
         0
       )
-      expect(totalAccreditations).toBe(4)
+      expect(totalAccreditations).toBe(5)
 
       // Verify registrations count by org
       const org503181 = orgsByOrgId.get(503181)
@@ -484,23 +487,36 @@ describe('migrateFormsData', () => {
 
       // Verify accreditations count by org
       expect(org503181.accreditations).toHaveLength(1)
-      expect(org503176.accreditations).toHaveLength(2)
+      expect(org503176.accreditations).toHaveLength(3)
 
       const org503177 = orgsByOrgId.get(503177)
       expect(org503177).toBeDefined()
       expect(org503177.accreditations).toHaveLength(1)
 
-      // Verify registration-to-accreditation linking
       // Exporter registration SHOULD be linked to exporter accreditation
-      const exporterRegistration = org503181.registrations[0]
-      const exporterAccreditation = org503181.accreditations[0]
-      expect(exporterRegistration.accreditationId).toBe(
-        exporterAccreditation.id
+      expect(org503181.registrations[0].accreditationId).toBe(
+        exporterAccreditation._id.$oid
       )
 
+      // Reprocessor registration SHOULD be linked to accreditation
+      const glassRegistrations = org503176.registrations.filter(
+        (r) => r.material === MATERIAL.GLASS
+      )
+      expect(glassRegistrations).toHaveLength(1)
+      expect(glassRegistrations[0].accreditationId).toBe(
+        reprocessorGlassAccreditation._id.$oid
+      )
+      // Other registrations SHOULD NOT be linked to accreditation
+      org503176.registrations
+        .filter((r) => r.material !== MATERIAL.GLASS)
+        .forEach((reg) => {
+          expect(reg.accreditationId).toBeUndefined()
+        })
+
       // All other registrations should NOT be linked (materials/sites don't match or no accreditation)
+      const orgsWithMatchingACcreditations = [503181, 503176]
       for (const reg of allOrgs
-        .filter((o) => o.orgId !== 503181)
+        .filter((o) => !orgsWithMatchingACcreditations.includes(o.orgId))
         .flatMap((o) => o.registrations ?? [])) {
         expect(reg.accreditationId).toBeUndefined()
       }

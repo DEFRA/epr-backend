@@ -180,8 +180,10 @@
       "submittedToRegulator": "sepa",
       "orgName": "Eco Recycle Ltd",
       "site": {
-        "line1": "1 Green Park",
-        "postcode": "EH1 1AA"
+        "address": {
+          "line1": "1 Green Park",
+          "postcode": "EH1 1AA"
+        }
       },
       "material": "paper",
       "glassRecyclingProcess": null,

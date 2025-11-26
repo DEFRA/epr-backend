@@ -89,7 +89,7 @@ function formatRegistrationForLogging(registration) {
   const isReprocessor =
     registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const siteInfo = isReprocessor
-    ? `, site.postcodeHash=${postCodeForLogging(registration.site?.postcode)}`
+    ? `, site.postcodeHash=${postCodeForLogging(registration.site.address.postcode)}`
     : ''
   return `{id=${registration.id}, wasteProcessingType=${registration.wasteProcessingType}, material=${registration.material}${siteInfo}}`
 }
@@ -98,7 +98,7 @@ function formatAccreditationComparisonLog(accreditation, registrations, org) {
   const isReprocessor =
     accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const siteInfo = isReprocessor
-    ? `, site.postcodeHash=${postCodeForLogging(accreditation.site?.postcode)}`
+    ? `, site.postcodeHash=${postCodeForLogging(accreditation.site.address.postcode)}`
     : ''
   const registrationsInfo = registrations
     .map(formatRegistrationForLogging)
@@ -107,7 +107,7 @@ function formatAccreditationComparisonLog(accreditation, registrations, org) {
 }
 
 function sitesMatch(site1, site2) {
-  return comparePostcodes(site1.postcode, site2.postcode)
+  return comparePostcodes(site1.address.postcode, site2.address.postcode)
 }
 
 function isAccreditationForRegistration(accreditation, registration) {
