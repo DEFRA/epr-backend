@@ -1,37 +1,61 @@
 import { validateDataBusiness } from './data-business.js'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { VERSION_STATUS, WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('validateDataBusiness', () => {
-  const createSummaryLog = (overrides = {}) => ({
-    id: 'summary-log-123',
-    organisationId: 'org-456',
-    registrationId: 'reg-789',
-    accreditationId: 'acc-111',
-    file: {
-      uri: 's3://bucket/file.xlsx'
+  /**
+   * Creates a transformed record for testing
+   * @param {Object} options
+   * @param {string} options.rowId - The row ID
+   * @param {string} [options.type] - The waste record type
+   * @param {Array} [options.issues] - Validation issues
+   * @returns {{ record: Object, issues: Array }}
+   */
+  const createTransformedRecord = ({
+    rowId,
+    type = WASTE_RECORD_TYPE.RECEIVED,
+    issues = []
+  }) => ({
+    record: {
+      organisationId: 'org-456',
+      registrationId: 'reg-789',
+      accreditationId: 'acc-111',
+      rowId,
+      type,
+      data: {
+        ROW_ID: rowId,
+        DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+        GROSS_WEIGHT: 100
+      },
+      versions: [
+        {
+          createdAt: new Date().toISOString(),
+          status: VERSION_STATUS.CREATED,
+          summaryLog: {
+            id: 'current-summary-log-id',
+            uri: 's3://bucket/current-file.xlsx'
+          },
+          data: {
+            ROW_ID: rowId,
+            DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+            GROSS_WEIGHT: 100
+          }
+        }
+      ]
     },
-    ...overrides
+    issues
   })
 
-  const createParsedData = (rows = []) => ({
-    meta: {
-      PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
-    },
-    data: {
-      RECEIVED_LOADS_FOR_REPROCESSING: {
-        location: { sheet: 'Received', row: 1, column: 'A' },
-        headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-        rows
-      }
-    }
-  })
-
+  /**
+   * Creates an existing waste record for testing
+   * @param {string} rowId - The row ID
+   * @returns {Object} Waste record
+   */
   const createWasteRecord = (rowId) => ({
     organisationId: 'org-456',
     registrationId: 'reg-789',
     accreditationId: 'acc-111',
     rowId,
-    type: 'received',
+    type: WASTE_RECORD_TYPE.RECEIVED,
     data: {
       ROW_ID: rowId,
       DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
@@ -55,13 +79,11 @@ describe('validateDataBusiness', () => {
   })
 
   it('returns valid result when validators pass', () => {
-    const summaryLog = createSummaryLog()
-    const parsed = createParsedData([['row-1', '2024-01-15', 100]])
+    const transformedRecords = [createTransformedRecord({ rowId: 'row-1' })]
     const existingWasteRecords = []
 
     const result = validateDataBusiness({
-      parsed,
-      summaryLog,
+      transformedRecords,
       existingWasteRecords
     })
 
@@ -71,18 +93,16 @@ describe('validateDataBusiness', () => {
   })
 
   it('returns invalid result when validators fail', () => {
-    const summaryLog = createSummaryLog()
-    const parsed = createParsedData([
-      ['row-2', '2024-01-15', 200] // row-1 is missing
-    ])
+    const transformedRecords = [
+      createTransformedRecord({ rowId: 'row-2' }) // row-1 is missing
+    ]
     const existingWasteRecords = [
       createWasteRecord('row-1'),
       createWasteRecord('row-2')
     ]
 
     const result = validateDataBusiness({
-      parsed,
-      summaryLog,
+      transformedRecords,
       existingWasteRecords
     })
 

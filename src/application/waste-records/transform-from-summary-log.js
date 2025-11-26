@@ -5,12 +5,17 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
 /**
  * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
+ * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ * @typedef {import('#application/summary-logs/validations/data-syntax.js').ValidatedRow} ValidatedRow
  */
 
 /**
- * Transforms parsed summary log data into waste records
+ * Transforms parsed summary log data into waste records with issues attached
  *
- * @param {ParsedSummaryLog} parsedData - The parsed summary log data
+ * Expects rows in validated structure: { values: [...], rowId: string|null, issues: [...] }
+ * Returns nested structure: { record: WasteRecord, issues: [...] }[]
+ *
+ * @param {ParsedSummaryLog} parsedData - The parsed summary log data (with validated rows)
  * @param {Object} summaryLogContext - Context from the summary log
  * @param {Object} summaryLogContext.summaryLog - The summary log reference
  * @param {string} summaryLogContext.summaryLog.id - The summary log ID
@@ -19,7 +24,7 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {WasteRecord[]} Array of waste records
+ * @returns {TransformedRecord[]} Array of transformed records with issues
  */
 /**
  * Dispatch map: processing type → table name → row transformer function
@@ -40,14 +45,23 @@ const TABLE_TRANSFORMERS = {
 const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
 
 /**
+ * A transformed record with validation issues attached
+ * @typedef {Object} TransformedRecord
+ * @property {WasteRecord} record - The waste record
+ * @property {ValidationIssue[]} issues - Validation issues for this row
+ */
+
+/**
  * Generic table transformation function
  * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
+ *
+ * Rows are expected to be in the validated structure: { values: [...], rowId: string|null, issues: [...] }
  *
  * @param {Object} tableData - Table data with headers and rows
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {WasteRecord[]} Array of waste records
+ * @returns {TransformedRecord[]} Array of transformed records with issues
  */
 const transformTable = (
   tableData,
@@ -60,9 +74,12 @@ const transformTable = (
     context
 
   return rows.map((row, rowIndex) => {
+    // Extract values and issues from validated row structure
+    const { values, issues: rowIssues } = row
+
     // Map row values to object using headers
     const rowData = headers.reduce((acc, header, index) => {
-      acc[header] = row[index]
+      acc[header] = values[index]
       return acc
     }, /** @type {Record<string, any>} */ ({}))
 
@@ -84,7 +101,7 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return existingRecord
+        return { record: existingRecord, issues: rowIssues }
       }
 
       // Add new version with only changed fields
@@ -96,9 +113,12 @@ const transformTable = (
       }
 
       return {
-        ...existingRecord,
-        data,
-        versions: [...existingRecord.versions, newVersion]
+        record: {
+          ...existingRecord,
+          data,
+          versions: [...existingRecord.versions, newVersion]
+        },
+        issues: rowIssues
       }
     }
 
@@ -124,7 +144,7 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return wasteRecord
+    return { record: wasteRecord, issues: rowIssues }
   })
 }
 

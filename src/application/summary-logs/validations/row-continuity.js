@@ -3,10 +3,10 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_CODE
 } from '#common/enums/validation.js'
-import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
+ * @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} TransformedRecord
  */
 
 /**
@@ -55,14 +55,12 @@ const getTableForType = (type) => {
  * Missing rows result in FATAL errors that block submission.
  *
  * @param {Object} params
- * @param {Object} params.parsed - The parsed summary log data
- * @param {Object} params.summaryLog - The summary log being validated
+ * @param {TransformedRecord[]} params.transformedRecords - Transformed records from the current upload
  * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
  * @returns {Object} Validation issues object
  */
 export const validateRowContinuity = ({
-  parsed,
-  summaryLog,
+  transformedRecords,
   existingWasteRecords
 }) => {
   const issues = createValidationIssues()
@@ -82,64 +80,39 @@ export const validateRowContinuity = ({
     ])
   )
 
-  try {
-    const transformedRecords = transformFromSummaryLog(
-      parsed,
-      {
-        summaryLog: {
-          id: summaryLog.id,
-          uri: summaryLog.file.uri
-        },
-        organisationId: summaryLog.organisationId,
-        registrationId: summaryLog.registrationId,
-        accreditationId: summaryLog.accreditationId
-      },
-      existingRecordsMap
-    )
+  const newRowKeys = new Set(
+    transformedRecords.map(({ record }) => `${record.type}:${record.rowId}`)
+  )
 
-    const newRowKeys = new Set(
-      transformedRecords.map((record) => `${record.type}:${record.rowId}`)
-    )
+  const missingRowKeys = [...existingRowKeys].filter(
+    (key) => !newRowKeys.has(key)
+  )
 
-    const missingRowKeys = [...existingRowKeys].filter(
-      (key) => !newRowKeys.has(key)
-    )
+  if (missingRowKeys.length > 0) {
+    for (const missingKey of missingRowKeys) {
+      const [type, rowId] = missingKey.split(':')
+      const originalRecord = existingRecordsMap.get(missingKey)
 
-    if (missingRowKeys.length > 0) {
-      for (const missingKey of missingRowKeys) {
-        const [type, rowId] = missingKey.split(':')
-        const originalRecord = existingRecordsMap.get(missingKey)
+      const lastVersion =
+        originalRecord.versions[originalRecord.versions.length - 1]
 
-        const lastVersion =
-          originalRecord.versions[originalRecord.versions.length - 1]
-
-        issues.addFatal(
-          VALIDATION_CATEGORY.BUSINESS,
-          `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
-          VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
-          {
-            location: {
-              sheet: getSheetForType(type),
-              table: getTableForType(type),
-              rowId
-            },
-            previousSummaryLog: {
-              id: lastVersion.summaryLog.id,
-              submittedAt: lastVersion.createdAt
-            }
+      issues.addFatal(
+        VALIDATION_CATEGORY.BUSINESS,
+        `Row '${rowId}' from a previous summary log submission cannot be removed. All previously submitted rows must be included in subsequent uploads.`,
+        VALIDATION_CODE.SEQUENTIAL_ROW_REMOVED,
+        {
+          location: {
+            sheet: getSheetForType(type),
+            table: getTableForType(type),
+            rowId
+          },
+          previousSummaryLog: {
+            id: lastVersion.summaryLog.id,
+            submittedAt: lastVersion.createdAt
           }
-        )
-      }
+        }
+      )
     }
-  } catch (error) {
-    // If transformation fails at this stage, something has gone seriously wrong
-    // Previous validation levels should have caught data issues, so this indicates
-    // either a validation gap or data corruption
-    issues.addFatal(
-      VALIDATION_CATEGORY.TECHNICAL,
-      error.message,
-      VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
-    )
   }
 
   return issues

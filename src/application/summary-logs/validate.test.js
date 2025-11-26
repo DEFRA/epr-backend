@@ -496,6 +496,46 @@ describe('SummaryLogsValidator', () => {
       // Should be VALIDATED (data syntax errors are not fatal)
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
     })
+
+    it('Level 3 fatal (missing required header) stops Level 4 (transform/data business) from running', async () => {
+      // Valid meta, but missing required header in data table (fatal)
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'ROW_ID'
+              // Missing required headers like DATE_RECEIVED_FOR_REPROCESSING, etc.
+            ],
+            rows: [[10001]]
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Should be INVALID (missing required header is fatal)
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+
+      // Should have fatal error about missing header
+      expect(updateCall.validation.issues).toContainEqual(
+        expect.objectContaining({
+          severity: 'fatal',
+          code: 'MISSING_REQUIRED_HEADER'
+        })
+      )
+
+      // Should NOT fetch existing waste records (Level 4 transform didn't run)
+      expect(wasteRecordsRepository.findByRegistration).not.toHaveBeenCalled()
+    })
   })
 
   describe('Load classification', () => {
@@ -586,6 +626,110 @@ describe('SummaryLogsValidator', () => {
 
       expect(updateCall.loadCounts).toBeUndefined()
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    })
+
+    it('classifies existing records as unchanged when data has not changed', async () => {
+      // Set up existing waste records with SAME data as will be in the new upload
+      wasteRecordsRepository.findByRegistration.mockResolvedValue([
+        {
+          type: 'received',
+          rowId: '10000',
+          organisationId: 'org-1',
+          registrationId: 'reg-1',
+          data: {
+            ROW_ID: 10000,
+            DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
+            EWC_CODE: '03 03 08',
+            GROSS_WEIGHT: 1000,
+            TARE_WEIGHT: 100,
+            PALLET_WEIGHT: 50,
+            NET_WEIGHT: 850,
+            BAILING_WIRE: 'YES',
+            HOW_CALCULATE_RECYCLABLE: 'WEIGHT',
+            WEIGHT_OF_NON_TARGET: 50,
+            RECYCLABLE_PROPORTION: 0.85,
+            TONNAGE_RECEIVED_FOR_EXPORT: 850
+          },
+          versions: [
+            {
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: 'created',
+              summaryLog: { id: 'previous-summary-log', uri: 's3://bucket/old-key' },
+              data: {
+                ROW_ID: 10000,
+                DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
+                EWC_CODE: '03 03 08',
+                GROSS_WEIGHT: 1000,
+                TARE_WEIGHT: 100,
+                PALLET_WEIGHT: 50,
+                NET_WEIGHT: 850,
+                BAILING_WIRE: 'YES',
+                HOW_CALCULATE_RECYCLABLE: 'WEIGHT',
+                WEIGHT_OF_NON_TARGET: 50,
+                RECYCLABLE_PROPORTION: 0.85,
+                TONNAGE_RECEIVED_FOR_EXPORT: 850
+              }
+            }
+          ]
+        }
+      ])
+
+      summaryLogExtractor.extract.mockResolvedValue({
+        meta: {
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' }
+        },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Received', row: 7, column: 'B' },
+            headers: [
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
+              'EWC_CODE',
+              'GROSS_WEIGHT',
+              'TARE_WEIGHT',
+              'PALLET_WEIGHT',
+              'NET_WEIGHT',
+              'BAILING_WIRE',
+              'HOW_CALCULATE_RECYCLABLE',
+              'WEIGHT_OF_NON_TARGET',
+              'RECYCLABLE_PROPORTION',
+              'TONNAGE_RECEIVED_FOR_EXPORT'
+            ],
+            rows: [
+              [
+                10000, // Same data as existing record
+                '2025-05-28T00:00:00.000Z',
+                '03 03 08',
+                1000,
+                100,
+                50,
+                850,
+                'YES',
+                'WEIGHT',
+                50,
+                0.85,
+                850
+              ]
+            ]
+          }
+        }
+      })
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loadCounts).toEqual({
+        new: { valid: 0, invalid: 0 },
+        unchanged: { valid: 1, invalid: 0 },
+        adjusted: { valid: 0, invalid: 0 }
+      })
+
+      // Reset the mock for other tests
+      wasteRecordsRepository.findByRegistration.mockResolvedValue([])
     })
   })
 })

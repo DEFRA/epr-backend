@@ -12,6 +12,7 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { validateDataSyntax } from './validations/data-syntax.js'
 import { validateDataBusiness } from './validations/data-business.js'
+import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
@@ -20,6 +21,7 @@ import { classifyLoads } from './classify-loads.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
+/** @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} TransformedRecord */
 
 const fetchRegistration = async ({
   organisationsRepository,
@@ -45,9 +47,8 @@ const fetchRegistration = async ({
 
 /**
  * @typedef {Object} ValidationResult
- * @property {Object} issues - Validation issues object with methods like getAllIssues(), isFatal()
- * @property {Object|null} parsed - Parsed summary log data (null if extraction failed)
- * @property {Array|null} existingWasteRecords - Existing waste records (null if not fetched)
+ * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues object with methods like getAllIssues(), isFatal()
+ * @property {TransformedRecord[]|null} transformedRecords - Transformed records (null if transformation not reached)
  */
 
 /**
@@ -65,10 +66,11 @@ const fetchRegistration = async ({
  *
  * Level 3: Data Syntax (ERROR/WARNING)
  *   - Validates structural correctness of data table rows
+ *   - Attaches issues directly to rows for downstream processing
  *   - Continues even with errors (non-fatal)
  *
- * Level 4: Data Business (FATAL/ERROR/WARNING)
- *   - Validates data table rows against business rules
+ * Level 4: Transform & Data Business (FATAL/ERROR/WARNING)
+ *   - Transforms validated rows into waste records with issues attached
  *   - Sequential row validation: ensures no rows removed from previous uploads
  *   - Stops on fatal errors
  *
@@ -77,18 +79,21 @@ const fetchRegistration = async ({
  * - Clearer user feedback (fixes meta issues before seeing data errors)
  * - Reduced noise in validation output
  * - Logical separation between meta and data validation phases
+ * - Issues flow with data through transformation (no re-correlation needed)
  *
  * Converts any exceptions to fatal technical issues.
  *
  * @param {Object} params
+ * @param {string} params.summaryLogId - The summary log ID
  * @param {SummaryLog} params.summaryLog - The summary log to validate
  * @param {string} params.loggingContext - Context string for logging (e.g., "summaryLogId=123, fileId=456")
  * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
  * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
  * @param {WasteRecordsRepository} params.wasteRecordsRepository - Waste records repository for fetching existing records
- * @returns {Promise<ValidationResult>} Validation result with issues, parsed data, and existing records
+ * @returns {Promise<ValidationResult>} Validation result with issues and transformed records
  */
 const performValidationChecks = async ({
+  summaryLogId,
   summaryLog,
   loggingContext,
   summaryLogExtractor,
@@ -96,11 +101,10 @@ const performValidationChecks = async ({
   wasteRecordsRepository
 }) => {
   const issues = createValidationIssues()
-  let parsed = null
-  let existingWasteRecords = null
+  let transformedRecords = null
 
   try {
-    parsed = await summaryLogExtractor.extract(summaryLog)
+    const parsed = await summaryLogExtractor.extract(summaryLog)
 
     logger.info({
       message: `Extracted summary log file: ${loggingContext}`,
@@ -113,7 +117,7 @@ const performValidationChecks = async ({
     issues.merge(validateMetaSyntax({ parsed }))
 
     if (issues.isFatal()) {
-      return { issues, parsed, existingWasteRecords }
+      return { issues, transformedRecords }
     }
 
     const registration = await fetchRegistration({
@@ -126,22 +130,50 @@ const performValidationChecks = async ({
     issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
     if (issues.isFatal()) {
-      return { issues, parsed, existingWasteRecords }
+      return { issues, transformedRecords }
     }
 
-    issues.merge(validateDataSyntax({ parsed }))
+    // Data syntax validation returns validated data with issues attached to rows
+    const { issues: dataSyntaxIssues, validatedData } = validateDataSyntax({
+      parsed
+    })
+    issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, parsed, existingWasteRecords }
+      return { issues, transformedRecords }
     }
 
-    existingWasteRecords = await wasteRecordsRepository.findByRegistration(
+    // Fetch existing records and build lookup map for transformation
+    const existingWasteRecords = await wasteRecordsRepository.findByRegistration(
       summaryLog.organisationId,
       summaryLog.registrationId
     )
 
+    const existingRecordsMap = new Map(
+      existingWasteRecords.map((record) => [
+        `${record.type}:${record.rowId}`,
+        record
+      ])
+    )
+
+    // Transform validated rows into waste records with issues attached
+    transformedRecords = transformFromSummaryLog(
+      validatedData,
+      {
+        summaryLog: {
+          id: summaryLogId,
+          uri: summaryLog.file.uri
+        },
+        organisationId: summaryLog.organisationId,
+        registrationId: summaryLog.registrationId,
+        accreditationId: summaryLog.accreditationId
+      },
+      existingRecordsMap
+    )
+
+    // Data business validation using transformed records
     issues.merge(
-      validateDataBusiness({ parsed, summaryLog, existingWasteRecords })
+      validateDataBusiness({ transformedRecords, existingWasteRecords })
     )
   } catch (error) {
     logger.error({
@@ -160,7 +192,7 @@ const performValidationChecks = async ({
     )
   }
 
-  return { issues, parsed, existingWasteRecords }
+  return { issues, transformedRecords }
 }
 
 /**
@@ -202,29 +234,27 @@ export const createSummaryLogsValidator =
       }
     })
 
-    const { issues, parsed, existingWasteRecords } =
-      await performValidationChecks({
-        summaryLog,
-        loggingContext,
-        summaryLogExtractor,
-        organisationsRepository,
-        wasteRecordsRepository
-      })
+    const { issues, transformedRecords } = await performValidationChecks({
+      summaryLogId,
+      summaryLog,
+      loggingContext,
+      summaryLogExtractor,
+      organisationsRepository,
+      wasteRecordsRepository
+    })
 
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
     // Calculate load counts only for validated summary logs
-    // Note: existingWasteRecords is guaranteed to be an array when status is VALIDATED
-    // because we only reach VALIDATED if we passed all short-circuits and called
-    // findByRegistration, which returns WasteRecord[] per the repository contract
+    // transformedRecords is guaranteed to be non-null when status is VALIDATED
+    // because we only reach VALIDATED if we passed all short-circuits
     const loadCounts =
-      status === SUMMARY_LOG_STATUS.VALIDATED && parsed
+      status === SUMMARY_LOG_STATUS.VALIDATED && transformedRecords
         ? classifyLoads({
-            parsed,
-            issues: issues.getAllIssues(),
-            existingWasteRecords
+            transformedRecords,
+            summaryLogId
           })
         : null
 

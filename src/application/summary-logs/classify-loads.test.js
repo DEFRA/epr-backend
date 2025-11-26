@@ -1,26 +1,48 @@
-import { classifyLoads, getRowId } from './classify-loads.js'
+import { classifyLoads } from './classify-loads.js'
+import { VERSION_STATUS } from '#domain/waste-records/model.js'
+
+const CURRENT_SUMMARY_LOG_ID = 'current-summary-log'
+const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
+
+/**
+ * Creates a transformed record for testing
+ * @param {Object} options
+ * @param {string} options.status - VERSION_STATUS value
+ * @param {string} options.summaryLogId - The summary log ID for the last version
+ * @param {Array} options.issues - Validation issues (default empty)
+ * @returns {{ record: Object, issues: Array }}
+ */
+const createTransformedRecord = ({
+  status,
+  summaryLogId,
+  issues = [],
+  previousVersions = []
+}) => ({
+  record: {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    rowId: `row-${Math.random().toString(36).substring(7)}`,
+    type: 'received',
+    data: { ROW_ID: '10001' },
+    versions: [
+      ...previousVersions,
+      {
+        createdAt: new Date().toISOString(),
+        status,
+        summaryLog: { id: summaryLogId, uri: 's3://bucket/key' },
+        data: { ROW_ID: '10001' }
+      }
+    ]
+  },
+  issues
+})
 
 describe('classifyLoads', () => {
   describe('with empty data', () => {
-    it('returns zero counts when parsed data is empty', () => {
+    it('returns zero counts when transformedRecords is empty', () => {
       const result = classifyLoads({
-        parsed: { data: {} },
-        issues: [],
-        existingWasteRecords: []
-      })
-
-      expect(result).toEqual({
-        new: { valid: 0, invalid: 0 },
-        unchanged: { valid: 0, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
-      })
-    })
-
-    it('returns zero counts when parsed is null', () => {
-      const result = classifyLoads({
-        parsed: null,
-        issues: [],
-        existingWasteRecords: []
+        transformedRecords: [],
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
       expect(result).toEqual({
@@ -31,530 +53,253 @@ describe('classifyLoads', () => {
     })
   })
 
-  describe('with new loads (first submission)', () => {
-    const parsed = {
-      meta: {},
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: [
-            'ROW_ID',
-            'DATE_RECEIVED',
-            'EWC_CODE',
-            'GROSS_WEIGHT',
-            'TARE_WEIGHT',
-            'PALLET_WEIGHT',
-            'NET_WEIGHT',
-            'BAILING_WIRE',
-            'HOW_CALCULATE_RECYCLABLE',
-            'WEIGHT_OF_NON_TARGET',
-            'RECYCLABLE_PROPORTION',
-            'TONNAGE_RECEIVED_FOR_EXPORT'
-          ],
-          rows: [
-            [
-              10000,
-              '2025-05-28T00:00:00.000Z',
-              '03 03 08',
-              1000,
-              100,
-              50,
-              850,
-              'YES',
-              'WEIGHT',
-              50,
-              0.85,
-              850
-            ],
-            [
-              9999,
-              'invalid-date',
-              'bad-code',
-              1000,
-              100,
-              50,
-              850,
-              'YES',
-              'WEIGHT',
-              50,
-              0.85,
-              850
-            ]
-          ]
-        }
-      }
-    }
-
-    it('classifies all rows as new when no existing records', () => {
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords: []
-      })
-
-      expect(result.new.valid).toBe(2)
-      expect(result.new.invalid).toBe(0)
-      expect(result.unchanged).toEqual({ valid: 0, invalid: 0 })
-      expect(result.adjusted).toEqual({ valid: 0, invalid: 0 })
-    })
-
-    it('classifies rows with validation errors as invalid', () => {
-      const issues = [
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Received',
-              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-              row: 9,
-              column: 'B',
-              header: 'ROW_ID'
-            },
-            actual: 9999
-          }
-        },
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Received',
-              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-              row: 9,
-              column: 'C',
-              header: 'DATE_RECEIVED'
-            },
-            actual: 'invalid-date'
-          }
-        },
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Received',
-              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-              row: 9,
-              column: 'D',
-              header: 'EWC_CODE'
-            },
-            actual: 'bad-code'
-          }
-        }
+  describe('classification based on version status', () => {
+    it('classifies as new when last version has CREATED status and matches current summaryLogId', () => {
+      const transformedRecords = [
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID
+        })
       ]
 
       const result = classifyLoads({
-        parsed,
-        issues,
-        existingWasteRecords: []
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.new.valid).toBe(1)
+      expect(result.unchanged.valid).toBe(0)
+      expect(result.adjusted.valid).toBe(0)
+    })
+
+    it('classifies as adjusted when last version has UPDATED status and matches current summaryLogId', () => {
+      const transformedRecords = [
+        createTransformedRecord({
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          previousVersions: [
+            {
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: PREVIOUS_SUMMARY_LOG_ID, uri: 's3://bucket/old-key' },
+              data: { ROW_ID: '10001' }
+            }
+          ]
+        })
+      ]
+
+      const result = classifyLoads({
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.adjusted.valid).toBe(1)
+      expect(result.new.valid).toBe(0)
+      expect(result.unchanged.valid).toBe(0)
+    })
+
+    it('classifies as unchanged when last version summaryLogId does not match current', () => {
+      const transformedRecords = [
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: PREVIOUS_SUMMARY_LOG_ID
+        })
+      ]
+
+      const result = classifyLoads({
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.unchanged.valid).toBe(1)
+      expect(result.new.valid).toBe(0)
+      expect(result.adjusted.valid).toBe(0)
+    })
+  })
+
+  describe('validity based on issues', () => {
+    it('classifies as valid when issues array is empty', () => {
+      const transformedRecords = [
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: []
+        })
+      ]
+
+      const result = classifyLoads({
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.new.valid).toBe(1)
+      expect(result.new.invalid).toBe(0)
+    })
+
+    it('classifies as invalid when issues array has items', () => {
+      const transformedRecords = [
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [
+            {
+              severity: 'error',
+              category: 'TECHNICAL',
+              message: 'Invalid value',
+              code: 'INVALID_TYPE',
+              context: {}
+            }
+          ]
+        })
+      ]
+
+      const result = classifyLoads({
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.new.invalid).toBe(1)
+      expect(result.new.valid).toBe(0)
+    })
+
+    it('classifies adjusted records as invalid when they have issues', () => {
+      const transformedRecords = [
+        createTransformedRecord({
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [{ severity: 'error', message: 'test' }],
+          previousVersions: [
+            {
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: PREVIOUS_SUMMARY_LOG_ID, uri: 's3://bucket/old-key' },
+              data: { ROW_ID: '10001' }
+            }
+          ]
+        })
+      ]
+
+      const result = classifyLoads({
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.adjusted.invalid).toBe(1)
+      expect(result.adjusted.valid).toBe(0)
+    })
+  })
+
+  describe('mixed scenarios', () => {
+    it('correctly counts mixed classifications and validities', () => {
+      const transformedRecords = [
+        // New, valid
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: []
+        }),
+        // New, invalid
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [{ severity: 'error', message: 'test' }]
+        }),
+        // Adjusted, valid
+        createTransformedRecord({
+          status: VERSION_STATUS.UPDATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [],
+          previousVersions: [
+            {
+              createdAt: '2025-01-01T00:00:00.000Z',
+              status: VERSION_STATUS.CREATED,
+              summaryLog: { id: PREVIOUS_SUMMARY_LOG_ID, uri: 's3://bucket/old-key' },
+              data: {}
+            }
+          ]
+        }),
+        // Unchanged, valid (previous summary log)
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
+          issues: []
+        }),
+        // Unchanged, invalid (previous summary log with issues)
+        createTransformedRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: PREVIOUS_SUMMARY_LOG_ID,
+          issues: [{ severity: 'error', message: 'test' }]
+        })
+      ]
+
+      const result = classifyLoads({
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
       expect(result).toEqual({
         new: { valid: 1, invalid: 1 },
-        unchanged: { valid: 0, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
+        unchanged: { valid: 1, invalid: 1 },
+        adjusted: { valid: 1, invalid: 0 }
       })
     })
   })
 
-  describe('with existing records', () => {
-    const parsed = {
-      meta: {},
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: ['ROW_ID', 'DATE_RECEIVED', 'EWC_CODE'],
-          rows: [
-            ['10001', '2025-05-28', '03 03 08'],
-            ['10002', '2025-05-29', '03 03 09'],
-            ['10003', '2025-05-30', '03 03 10']
-          ]
-        }
-      }
-    }
-
-    it('classifies rows with matching row IDs as unchanged when data is same', () => {
-      const existingWasteRecords = [
+  describe('edge cases', () => {
+    it('handles record with missing summaryLog gracefully (classifies as unchanged)', () => {
+      const transformedRecords = [
         {
-          type: 'received',
-          rowId: '10001',
-          data: {
-            ROW_ID: '10001',
-            DATE_RECEIVED: '2025-05-28',
-            EWC_CODE: '03 03 08'
-          }
+          record: {
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            rowId: 'row-1',
+            type: 'received',
+            data: {},
+            versions: [
+              {
+                createdAt: new Date().toISOString(),
+                status: VERSION_STATUS.CREATED,
+                summaryLog: null, // Missing summaryLog
+                data: {}
+              }
+            ]
+          },
+          issues: []
         }
       ]
 
       const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords
+        transformedRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
+      // When summaryLog.id doesn't match (null !== string), should be unchanged
       expect(result.unchanged.valid).toBe(1)
-      expect(result.new.valid).toBe(2)
     })
 
-    it('classifies rows with matching row IDs as adjusted when data differs', () => {
-      const existingWasteRecords = [
+    it('handles empty versions array gracefully', () => {
+      const transformedRecords = [
         {
-          type: 'received',
-          rowId: '10001',
-          data: {
-            ROW_ID: '10001',
-            DATE_RECEIVED: '2025-01-01',
-            EWC_CODE: '03 03 08'
-          }
+          record: {
+            organisationId: 'org-1',
+            registrationId: 'reg-1',
+            rowId: 'row-1',
+            type: 'received',
+            data: {},
+            versions: []
+          },
+          issues: []
         }
       ]
 
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords
-      })
-
-      expect(result.adjusted.valid).toBe(1)
-      expect(result.new.valid).toBe(2)
+      // This would throw due to accessing versions[-1]
+      // But this is an invalid state that shouldn't occur in practice
+      expect(() =>
+        classifyLoads({
+          transformedRecords,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID
+        })
+      ).toThrow()
     })
-
-    it('handles multiple existing records of the same type', () => {
-      const existingWasteRecords = [
-        {
-          type: 'received',
-          rowId: '10001',
-          data: {
-            ROW_ID: '10001',
-            DATE_RECEIVED: '2025-05-28',
-            EWC_CODE: '03 03 08'
-          }
-        },
-        {
-          type: 'received',
-          rowId: '10002',
-          data: {
-            ROW_ID: '10002',
-            DATE_RECEIVED: '2025-05-29',
-            EWC_CODE: '03 03 09'
-          }
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords
-      })
-
-      // Two rows match existing records (unchanged), one is new
-      expect(result.unchanged.valid).toBe(2)
-      expect(result.new.valid).toBe(1)
-    })
-  })
-
-  describe('skips unknown tables', () => {
-    it('does not count rows from tables without schemas', () => {
-      const parsed = {
-        meta: {},
-        data: {
-          UNKNOWN_TABLE: {
-            location: { sheet: 'Unknown', row: 1, column: 'A' },
-            headers: ['FIELD_A', 'FIELD_B'],
-            rows: [['value1', 'value2']]
-          }
-        }
-      }
-
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords: []
-      })
-
-      expect(result).toEqual({
-        new: { valid: 0, invalid: 0 },
-        unchanged: { valid: 0, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
-      })
-    })
-  })
-
-  describe('edge cases in validation issue processing', () => {
-    const parsed = {
-      meta: {},
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: ['ROW_ID', 'DATE_RECEIVED'],
-          rows: [['10001', '2025-05-28']]
-        }
-      }
-    }
-
-    it('ignores issues without location context', () => {
-      const issues = [
-        { severity: 'error', context: {} },
-        { severity: 'error', context: { location: null } }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues,
-        existingWasteRecords: []
-      })
-
-      // Row should still be valid since issues without location are ignored
-      expect(result.new.valid).toBe(1)
-      expect(result.new.invalid).toBe(0)
-    })
-
-    it('ignores issues without table in location', () => {
-      const issues = [
-        {
-          severity: 'error',
-          context: {
-            location: { sheet: 'Received', row: 8, column: 'B' }
-            // No table property
-          }
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues,
-        existingWasteRecords: []
-      })
-
-      expect(result.new.valid).toBe(1)
-      expect(result.new.invalid).toBe(0)
-    })
-
-    it('ignores issues without row in location', () => {
-      const issues = [
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Received',
-              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-              column: 'B'
-            }
-            // No row property
-          }
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues,
-        existingWasteRecords: []
-      })
-
-      expect(result.new.valid).toBe(1)
-      expect(result.new.invalid).toBe(0)
-    })
-
-    it('ignores issues referencing tables not in parsed data', () => {
-      const issues = [
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Other',
-              table: 'NONEXISTENT_TABLE',
-              row: 8,
-              column: 'B'
-            }
-          }
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues,
-        existingWasteRecords: []
-      })
-
-      expect(result.new.valid).toBe(1)
-      expect(result.new.invalid).toBe(0)
-    })
-
-    it('ignores issues referencing tables without location metadata', () => {
-      const parsedWithMissingLocation = {
-        meta: {},
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            // No location property
-            headers: ['ROW_ID', 'DATE_RECEIVED'],
-            rows: [['10001', '2025-05-28']]
-          }
-        }
-      }
-
-      const issues = [
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Received',
-              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-              row: 8,
-              column: 'B'
-            }
-          }
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed: parsedWithMissingLocation,
-        issues,
-        existingWasteRecords: []
-      })
-
-      // Row still counted but issue can't be mapped without location.row
-      expect(result.new.valid).toBe(1)
-    })
-
-    it('ignores issues with row index before header row', () => {
-      const issues = [
-        {
-          severity: 'error',
-          context: {
-            location: {
-              sheet: 'Received',
-              table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-              row: 6, // Row 6 is before header row 7, so rowIndex would be negative
-              column: 'B'
-            }
-          }
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues,
-        existingWasteRecords: []
-      })
-
-      // Row should still be valid since issue with negative row index is ignored
-      expect(result.new.valid).toBe(1)
-      expect(result.new.invalid).toBe(0)
-    })
-  })
-
-  describe('edge cases in existing record comparison', () => {
-    const parsed = {
-      meta: {},
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Received', row: 7, column: 'B' },
-          headers: ['ROW_ID', 'DATE_RECEIVED'],
-          rows: [['10001', '2025-05-28']]
-        }
-      }
-    }
-
-    it('classifies as unchanged when existing record has undefined data', () => {
-      const existingWasteRecords = [
-        {
-          type: 'received',
-          rowId: '10001',
-          data: undefined
-        }
-      ]
-
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords
-      })
-
-      // When existing data is undefined, hasRowChanged returns false
-      // so the row is classified as unchanged
-      expect(result.unchanged.valid).toBe(1)
-      expect(result.adjusted.valid).toBe(0)
-    })
-
-    it('handles null existingWasteRecords gracefully', () => {
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords: null
-      })
-
-      // All rows should be classified as new since there are no existing records
-      expect(result.new.valid).toBe(1)
-      expect(result.unchanged.valid).toBe(0)
-      expect(result.adjusted.valid).toBe(0)
-    })
-
-    it('handles undefined existingWasteRecords gracefully', () => {
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords: undefined
-      })
-
-      // All rows should be classified as new since there are no existing records
-      expect(result.new.valid).toBe(1)
-      expect(result.unchanged.valid).toBe(0)
-      expect(result.adjusted.valid).toBe(0)
-    })
-  })
-
-  describe('edge cases in row processing', () => {
-    it('handles headers with falsy values', () => {
-      const parsed = {
-        meta: {},
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            location: { sheet: 'Received', row: 7, column: 'B' },
-            // Headers array has empty string and null values
-            headers: ['ROW_ID', '', null, 'DATE_RECEIVED'],
-            rows: [['10001', 'ignored1', 'ignored2', '2025-05-28']]
-          }
-        }
-      }
-
-      const result = classifyLoads({
-        parsed,
-        issues: [],
-        existingWasteRecords: []
-      })
-
-      // Should still process row correctly, ignoring falsy headers
-      expect(result.new.valid).toBe(1)
-    })
-  })
-})
-
-describe('getRowId', () => {
-  it('returns row ID for known table with ID field', () => {
-    const rowObject = { ROW_ID: '12345', OTHER_FIELD: 'value' }
-    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
-    expect(result).toBe('12345')
-  })
-
-  it('returns null for unknown table without ID field mapping', () => {
-    const rowObject = { SOME_FIELD: '12345' }
-    const result = getRowId(rowObject, 'UNKNOWN_TABLE')
-    expect(result).toBeNull()
-  })
-
-  it('returns null when ID field value is null', () => {
-    const rowObject = { ROW_ID: null }
-    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
-    expect(result).toBeNull()
-  })
-
-  it('returns null when ID field value is undefined', () => {
-    const rowObject = { ROW_ID: undefined }
-    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
-    expect(result).toBeNull()
-  })
-
-  it('converts numeric ID to string', () => {
-    const rowObject = { ROW_ID: 12345 }
-    const result = getRowId(rowObject, 'RECEIVED_LOADS_FOR_REPROCESSING')
-    expect(result).toBe('12345')
   })
 })

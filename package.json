@@ -50,8 +50,8 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.940.0",
-    "@aws-sdk/credential-providers": "3.940.0",
+    "@aws-sdk/client-s3": "3.937.0",
+    "@aws-sdk/credential-providers": "3.936.0",
     "@defra/cdp-auditing": "0.5.0",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.29.0",
@@ -73,7 +73,7 @@
     "immer": "11.0.0",
     "joi": "17.13.3",
     "joi-to-json": "5.0.0",
-    "mongo-locks": "3.1.2",
+    "mongo-locks": "3.0.2",
     "mongodb": "7.0.0",
     "notifications-node-client": "8.2.1",
     "obfuscate-mail": "1.5.1",
@@ -87,11 +87,12 @@
     "glob": "11.1.0"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.14",
+    "@vitest/coverage-v8": "4.0.13",
+    "@vitest/ui": "4.0.13",
     "eslint": "9.39.1",
     "eslint-plugin-n": "17.23.1",
     "husky": "9.1.7",
-    "knip": "5.70.2",
+    "knip": "5.70.1",
     "lint-staged": "16.2.7",
     "msw": "2.12.3",
     "neostandard": "0.12.2",
@@ -99,7 +100,7 @@
     "prettier": "3.6.2",
     "testcontainers": "11.8.1",
     "tinybench": "5.1.0",
-    "vitest": "4.0.14",
+    "vitest": "4.0.13",
     "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.3"
   }

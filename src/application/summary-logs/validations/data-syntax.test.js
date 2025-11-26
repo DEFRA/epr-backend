@@ -82,9 +82,9 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
-      expect(result.hasIssues()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
+      expect(result.issues.hasIssues()).toBe(false)
     })
 
     it('allows headers in different order', () => {
@@ -142,8 +142,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('allows additional headers beyond required ones', () => {
@@ -191,8 +191,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('ignores null headers', () => {
@@ -240,8 +240,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('ignores special marker headers starting with __', () => {
@@ -287,8 +287,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
 
     describe('header validation errors', () => {
@@ -305,10 +305,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(true)
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(true)
 
-        const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+        const fatals = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
         expect(fatals.length).toBeGreaterThanOrEqual(1)
         expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
         expect(fatals[0].message).toContain('Missing required header')
@@ -331,10 +331,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(true)
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(true)
 
-        const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+        const fatals = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
         expect(fatals.length).toBeGreaterThanOrEqual(2)
         const messages = fatals.map((f) => f.message).join(' ')
         expect(messages).toContain('DATE_RECEIVED_FOR_REPROCESSING')
@@ -370,10 +370,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
         expect(errors[0].message).toContain('ROW_ID')
@@ -415,10 +415,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('ROW_ID')
         expect(errors[0].message).toContain('must be at least 10000')
@@ -453,10 +453,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(errors[0].message).toContain('must be a valid date')
@@ -491,10 +491,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('EWC_CODE')
         expect(errors[0].message).toContain('must be in format "XX XX XX"')
@@ -527,8 +527,8 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
       })
     })
 
@@ -588,10 +588,10 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors.length).toBe(3) // All 3 errors from row 2
         expect(errors.every((e) => e.context.location?.row === 9)).toBe(true) // Row 7 (headers) + 2 (second data row)
       })
@@ -643,7 +643,7 @@ describe('validateDataSyntax', () => {
 
         const result = validateDataSyntax({ parsed })
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors[0].context.location).toEqual({
           sheet: 'Received (sections 1, 2, 3)',
           table: 'RECEIVED_LOADS_FOR_REPROCESSING',
@@ -697,7 +697,7 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
 
         expect(errors).toHaveLength(3)
 
@@ -761,7 +761,7 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
 
         const refError = errors.find(
           (e) => e.context.location?.header === 'ROW_ID'
@@ -818,7 +818,7 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
 
         // Location now always includes header name, even without spreadsheet coordinates
         expect(errors[0].context.location.header).toBe('ROW_ID')
@@ -854,10 +854,10 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
-        expect(result.isFatal()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
+        expect(result.issues.isFatal()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('GROSS_WEIGHT')
         expect(errors[0].message).toContain('must be a number')
@@ -889,9 +889,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors[0].message).toContain('GROSS_WEIGHT')
         expect(errors[0].message).toContain('must be greater than 0')
       })
@@ -924,9 +924,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('BAILING_WIRE')
         expect(errors[0].message).toContain('must be a string')
@@ -960,9 +960,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors).toHaveLength(1)
         expect(errors[0].message).toContain('HOW_CALCULATE_RECYCLABLE')
         expect(errors[0].message).toContain('must be a string')
@@ -996,9 +996,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors[0].message).toContain('RECYCLABLE_PROPORTION')
         expect(errors[0].message).toContain('must be a number')
       })
@@ -1029,9 +1029,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors[0].message).toContain('RECYCLABLE_PROPORTION')
         expect(errors[0].message).toContain('must be greater than 0')
       })
@@ -1062,9 +1062,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors[0].message).toContain('RECYCLABLE_PROPORTION')
         expect(errors[0].message).toContain('must be less than 1')
       })
@@ -1097,9 +1097,9 @@ describe('validateDataSyntax', () => {
         }
 
         const result = validateDataSyntax({ parsed })
-        expect(result.isValid()).toBe(false)
+        expect(result.issues.isValid()).toBe(false)
 
-        const errors = result.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
+        const errors = result.issues.getIssuesBySeverity(VALIDATION_SEVERITY.ERROR)
         expect(errors[0].message).toContain('TONNAGE_RECEIVED_FOR_EXPORT')
         expect(errors[0].message).toContain('must be a number')
       })
@@ -1122,8 +1122,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
   })
 
@@ -1133,8 +1133,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('handles empty data section gracefully', () => {
@@ -1142,8 +1142,8 @@ describe('validateDataSyntax', () => {
 
       const result = validateDataSyntax({ parsed })
 
-      expect(result.isValid()).toBe(true)
-      expect(result.isFatal()).toBe(false)
+      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isFatal()).toBe(false)
     })
   })
 })

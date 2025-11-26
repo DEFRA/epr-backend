@@ -1,4 +1,61 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
+import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
+import { isEprMarker } from '#domain/summary-logs/markers.js'
+
+/**
+ * Converts raw rows to validated row format expected by transformFromSummaryLog
+ *
+ * Since sync is called after validation passes, we don't need to run validation again.
+ * We just need to convert the row format and extract row IDs.
+ *
+ * @param {string} tableName - The table name
+ * @param {Array<string|null>} headers - Array of header names
+ * @param {Array<Array<*>>} rows - Array of raw row value arrays
+ */
+const convertToValidatedRows = (tableName, headers, rows) => {
+  const idField = getRowIdField(tableName)
+
+  // Build header to index map, excluding EPR markers and nulls
+  const headerToIndexMap = new Map()
+  for (const [index, header] of headers.entries()) {
+    if (header !== null && !isEprMarker(header)) {
+      headerToIndexMap.set(header, index)
+    }
+  }
+
+  const idFieldIndex = idField ? headerToIndexMap.get(idField) : null
+
+  for (let i = 0; i < rows.length; i++) {
+    const originalRow = rows[i]
+    const rowId =
+      idFieldIndex !== null && idFieldIndex !== undefined
+        ? String(originalRow[idFieldIndex] ?? '')
+        : null
+
+    rows[i] = {
+      values: originalRow,
+      rowId,
+      issues: []
+    }
+  }
+}
+
+/**
+ * Prepares parsed data by converting raw rows to validated row format
+ *
+ * @param {Object} parsedData - The parsed summary log data
+ */
+const prepareRowsForTransformation = (parsedData) => {
+  if (!parsedData.data) {
+    return
+  }
+
+  for (const [tableName, tableData] of Object.entries(parsedData.data)) {
+    if (tableData?.rows && Array.isArray(tableData.rows)) {
+      convertToValidatedRows(tableName, tableData.headers || [], tableData.rows)
+    }
+  }
+}
 
 /**
  * Orchestrates the extraction, transformation, and persistence of waste records from a summary log
@@ -25,13 +82,16 @@ export const syncFromSummaryLog = (dependencies) => {
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog)
 
-    // 2. Load all existing waste records for this org/reg
+    // 2. Convert raw rows to validated row format
+    prepareRowsForTransformation(parsedData)
+
+    // 3. Load all existing waste records for this org/reg
     const existingRecordsArray = await wasteRecordRepository.findByRegistration(
       summaryLog.organisationId,
       summaryLog.registrationId
     )
 
-    // 3. Convert to Map keyed by type:rowId for efficient lookup
+    // 4. Convert to Map keyed by type:rowId for efficient lookup
     const existingRecords = new Map(
       existingRecordsArray.map((record) => [
         `${record.type}:${record.rowId}`,
@@ -39,7 +99,7 @@ export const syncFromSummaryLog = (dependencies) => {
       ])
     )
 
-    // 4. Transform to waste records
+    // 5. Transform to waste records
     const summaryLogContext = {
       summaryLog: {
         id: summaryLog.file.id,
@@ -50,15 +110,15 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationId: summaryLog.accreditationId
     }
 
-    const wasteRecords = transformFromSummaryLog(
+    const transformedRecords = transformFromSummaryLog(
       parsedData,
       summaryLogContext,
       existingRecords
     )
 
-    // 5. Convert waste records to wasteRecordVersions Map structure
+    // 6. Convert waste records to wasteRecordVersions Map structure
     const wasteRecordVersions = new Map()
-    for (const record of wasteRecords) {
+    for (const { record } of transformedRecords) {
       if (!wasteRecordVersions.has(record.type)) {
         wasteRecordVersions.set(record.type, new Map())
       }
@@ -71,7 +131,7 @@ export const syncFromSummaryLog = (dependencies) => {
       })
     }
 
-    // 6. Append versions
+    // 7. Append versions
     await wasteRecordRepository.appendVersions(
       summaryLog.organisationId,
       summaryLog.registrationId,
