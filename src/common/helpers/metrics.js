@@ -1,9 +1,9 @@
+import { config } from '#root/config.js'
 import {
   createMetricsLogger,
-  Unit,
-  StorageResolution
+  StorageResolution,
+  Unit
 } from 'aws-embedded-metrics'
-import { config } from '../../config.js'
 import { logger } from './logging/logger.js'
 
 const metricsCounter = async (metricName, value = 1) => {

@@ -1,5 +1,5 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { getConfig } from '../../../config.js'
+import { getConfig } from '#root/config.js'
 
 export async function getEntraUserRoles(tokenPayload) {
   const userEmail = tokenPayload.email || tokenPayload.preferred_username
