@@ -18,6 +18,52 @@
  */
 
 /**
+ * @typedef {{
+ *   code: (statusCode: number) => HapiResponseObject,
+ *   message: (httpMessage: string) => HapiResponseObject,
+ *   header: (name: string, value: string, options?: {append?: boolean, separator?: string, override?: boolean, duplicate?: boolean}) => HapiResponseObject,
+ *   type: (mimeType: string) => HapiResponseObject,
+ *   bytes: (length: number) => HapiResponseObject,
+ *   charset: (charset?: string) => HapiResponseObject | undefined,
+ *   compressed: (encoding: string) => HapiResponseObject,
+ *   created: (uri: string) => HapiResponseObject,
+ *   encoding: (encoding: 'ascii' | 'utf8' | 'utf16le' | 'ucs2' | 'base64' | 'latin1' | 'binary' | 'hex') => HapiResponseObject,
+ *   etag: (tag: string, options?: {weak?: boolean, vary?: boolean}) => HapiResponseObject,
+ *   location: (uri: string) => HapiResponseObject,
+ *   redirect: (uri: string) => HapiResponseObject,
+ *   replacer: (method: Function | Array) => HapiResponseObject,
+ *   spaces: (count: number) => HapiResponseObject,
+ *   state: (name: string, value: Object | string, options?: Object) => HapiResponseObject,
+ *   suffix: (suffix: string) => HapiResponseObject,
+ *   ttl: (msec: number) => HapiResponseObject,
+ *   unstate: (name: string, options?: Object) => HapiResponseObject,
+ *   vary: (header: string) => HapiResponseObject,
+ *   takeover: () => HapiResponseObject,
+ *   temporary: (isTemporary?: boolean) => HapiResponseObject,
+ *   permanent: (isPermanent?: boolean) => HapiResponseObject,
+ *   rewritable: (isRewritable?: boolean) => HapiResponseObject
+ * }} HapiResponseObject
+ */
+
+/**
+ * @typedef {{
+ *   abandon: symbol,
+ *   close: symbol,
+ *   context: *,
+ *   continue: symbol,
+ *   realm: Object,
+ *   request: Object,
+ *   authenticated: (data: {credentials: Object, artifacts?: Object}) => Object,
+ *   entity: (options?: {etag?: string, modified?: string, vary?: boolean}) => HapiResponseObject | undefined,
+ *   redirect: (uri?: string) => HapiResponseObject,
+ *   response: (value?: *) => HapiResponseObject,
+ *   state: (name: string, value: string | Object, options?: Object) => void,
+ *   unauthenticated: (error: Error, data?: {credentials: Object, artifacts?: Object}) => Object,
+ *   unstate: (name: string, options?: Object) => void
+ * }} HapiResponseToolkit
+ */
+
+/**
  * @typedef {Object} HapiServer
  * @property {TypedLogger} logger - CDP-compliant typed logger
  * @property {import('mongodb').Db} [db] - MongoDB database (added by mongoDb plugin)
