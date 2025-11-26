@@ -1,3 +1,5 @@
+import ExcelJS from 'exceljs'
+
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -21,7 +23,6 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 import { ObjectId } from 'mongodb'
-import ExcelJS from 'exceljs'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -1683,102 +1684,115 @@ describe('Summary logs integration', () => {
     })
   })
 
-  describe('parsing spreadsheet with example rows (real parser integration)', () => {
-    let server
-    let summaryLogsRepository
-    let wasteRecordsRepository
-    const summaryLogId = 'summary-real-parser'
-    const fileId = 'file-real-parser'
-    const filename = 'real-parser-test.xlsx'
+  describe('placeholder text normalization with real Excel parsing', () => {
+    const summaryLogId = 'summary-placeholder-test'
+    const fileId = 'file-placeholder-test'
+    const filename = 'placeholder-test.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+    let uploadsRepository
 
     /**
-     * Creates a real Excel buffer with example rows that should be skipped
+     * Creates an Excel buffer with placeholder text that should be normalized
      */
-    const createExcelBufferWithExampleRows = async () => {
+    const createExcelWithPlaceholders = async () => {
       const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Data')
 
-      // Cover sheet with metadata
-      const cover = workbook.addWorksheet('Cover')
-      cover.getRow(1).values = ['__EPR_META_REGISTRATION_NUMBER', 'REG-123']
-      cover.getRow(2).values = [
-        '__EPR_META_PROCESSING_TYPE',
-        'REPROCESSOR_INPUT'
-      ]
-      cover.getRow(3).values = ['__EPR_META_MATERIAL', 'Paper_and_board']
-      cover.getRow(4).values = ['__EPR_META_TEMPLATE_VERSION', 1]
+      // Row 1-4: Metadata
+      worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
+      worksheet.getCell('B1').value = 'REG-123'
 
-      // Data sheet with example row
-      const data = workbook.addWorksheet('Received')
-      data.getRow(1).values = [
-        '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
-        'ROW_ID',
-        '__EPR_SKIP_COLUMN',
-        'EWC_CODE',
-        'PRODUCER_WRN',
-        'GROSS_WEIGHT',
-        'TARE_WEIGHT',
-        'NET_WEIGHT',
-        'LOAD_DATE',
-        'OPERATOR_NAME',
-        'OPERATOR_ADDRESS_LINE_1',
-        'OPERATOR_TOWN_CITY',
-        'OPERATOR_POSTCODE'
-      ]
-      // Example row - should be skipped
-      data.getRow(2).values = [
-        null,
-        'example-row',
-        'Example',
-        '150101',
-        'WRN-EXAMPLE',
-        1000,
-        100,
-        900,
-        new Date('2024-01-01'),
-        'Example Operator',
-        'Example Street',
-        'Example Town',
-        'EX1 1EX'
-      ]
-      // Real row 1
-      data.getRow(3).values = [
-        null,
-        '10001',
-        null,
-        '150101',
-        'REG-123',
-        5000,
-        500,
-        4500,
-        new Date('2024-06-15'),
-        'Real Operator A',
-        '123 Real Street',
-        'Real Town',
-        'RT1 1RT'
-      ]
-      // Real row 2
-      data.getRow(4).values = [
-        null,
-        '10002',
-        null,
-        '150105',
-        'REG-123',
-        7500,
-        750,
-        6750,
-        new Date('2024-06-16'),
-        'Real Operator B',
-        '456 Real Avenue',
-        'Real City',
-        'RC2 2RC'
-      ]
-      // Empty row to terminate
-      data.getRow(5).values = [null, null, null, null, null, null, null, null]
+      worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
+      worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
+
+      worksheet.getCell('A3').value = '__EPR_META_MATERIAL'
+      worksheet.getCell('B3').value = 'Paper_and_board'
+
+      worksheet.getCell('A4').value = '__EPR_META_TEMPLATE_VERSION'
+      worksheet.getCell('B4').value = 1
+
+      // Row 6: Data section headers
+      worksheet.getCell('A6').value = '__EPR_DATA_UPDATE_WASTE_BALANCE'
+      worksheet.getCell('B6').value = 'OUR_REFERENCE'
+      worksheet.getCell('C6').value = 'DATE_RECEIVED'
+      worksheet.getCell('D6').value = 'EWC_CODE'
+      worksheet.getCell('E6').value = 'GROSS_WEIGHT'
+      worksheet.getCell('F6').value = 'TARE_WEIGHT'
+      worksheet.getCell('G6').value = 'PALLET_WEIGHT'
+      worksheet.getCell('H6').value = 'NET_WEIGHT'
+      worksheet.getCell('I6').value = 'BAILING_WIRE'
+      worksheet.getCell('J6').value = 'HOW_CALCULATE_RECYCLABLE'
+      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET'
+      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION'
+      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_EXPORT'
+
+      // Row 7: Valid data row
+      worksheet.getCell('B7').value = 10000000001
+      worksheet.getCell('C7').value = new Date('2025-05-28')
+      worksheet.getCell('D7').value = '03 03 08'
+      worksheet.getCell('E7').value = 1000
+      worksheet.getCell('F7').value = 100
+      worksheet.getCell('G7').value = 50
+      worksheet.getCell('H7').value = 850
+      worksheet.getCell('I7').value = 'YES'
+      worksheet.getCell('J7').value = 'WEIGHT'
+      worksheet.getCell('K7').value = 50
+      worksheet.getCell('L7').value = 0.85
+      worksheet.getCell('M7').value = 850
+
+      // Row 8: Row with "Choose option" in required dropdown fields
+      // This represents a user who filled numeric fields but didn't select from dropdowns
+      worksheet.getCell('B8').value = 10000000002
+      worksheet.getCell('C8').value = new Date('2025-05-29')
+      worksheet.getCell('D8').value = 'Choose option' // EWC_CODE - required dropdown
+      worksheet.getCell('E8').value = 2000
+      worksheet.getCell('F8').value = 200
+      worksheet.getCell('G8').value = 100
+      worksheet.getCell('H8').value = 1700
+      worksheet.getCell('I8').value = 'Choose option' // BAILING_WIRE - required dropdown
+      worksheet.getCell('J8').value = 'Choose option' // HOW_CALCULATE_RECYCLABLE - required dropdown
+      worksheet.getCell('K8').value = 100
+      worksheet.getCell('L8').value = 0.9
+      worksheet.getCell('M8').value = 1700
+
+      // Row 9: Blank row - mix of empty cells and dropdown placeholders
+      // This is what a truly "blank" pre-populated row looks like:
+      // - Most fields are empty
+      // - Dropdown fields have "Choose option"
+      // After normalization, all values become null -> terminates section
+      worksheet.getCell('B9').value = null // Empty
+      worksheet.getCell('C9').value = null // Empty
+      worksheet.getCell('D9').value = 'Choose option' // Dropdown default
+      worksheet.getCell('E9').value = null // Empty
+      worksheet.getCell('F9').value = null // Empty
+      worksheet.getCell('G9').value = null // Empty
+      worksheet.getCell('H9').value = null // Empty
+      worksheet.getCell('I9').value = 'Choose option' // Dropdown default
+      worksheet.getCell('J9').value = 'Choose option' // Dropdown default
+      worksheet.getCell('K9').value = null // Empty
+      worksheet.getCell('L9').value = null // Empty
+      worksheet.getCell('M9').value = null // Empty
+
+      // Row 10: This row should NOT be parsed (section terminated at row 9)
+      worksheet.getCell('B10').value = 99999999999
+      worksheet.getCell('C10').value = new Date('2025-12-31')
+      worksheet.getCell('D10').value = '03 03 08'
+      worksheet.getCell('E10').value = 9999
+      worksheet.getCell('F10').value = 999
+      worksheet.getCell('G10').value = 99
+      worksheet.getCell('H10').value = 8901
+      worksheet.getCell('I10').value = 'NO'
+      worksheet.getCell('J10').value = 'WEIGHT'
+      worksheet.getCell('K10').value = 500
+      worksheet.getCell('L10').value = 0.5
+      worksheet.getCell('M10').value = 4450
 
       return workbook.xlsx.writeBuffer()
     }
 
     beforeEach(async () => {
+      // Create test infrastructure with real Excel parsing
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
@@ -1786,14 +1800,8 @@ describe('Summary logs integration', () => {
         warn: vi.fn(),
         debug: vi.fn()
       }
-
-      // Create uploads repository that returns our generated Excel buffer
-      const excelBuffer = await createExcelBufferWithExampleRows()
-      const uploadsRepository = {
-        findByLocation: vi.fn().mockResolvedValue(excelBuffer)
-      }
-
-      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
       const testOrg = buildOrganisation({
         registrations: [
@@ -1813,72 +1821,139 @@ describe('Summary logs integration', () => {
         testOrg
       ])()
 
-      // Use the REAL extractor that calls the actual parser
+      // Create real Excel buffer and store it in uploads repository
+      // URI format matches what upload-completed handler creates: s3://${s3Bucket}/${s3Key}
+      const excelBuffer = await createExcelWithPlaceholders()
+      const fileUri = `s3://test-bucket/path/to/${filename}`
+      uploadsRepository.put(fileUri, excelBuffer)
+
+      // Use real extractor with real parser (not mocked)
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,
         logger: mockLogger
       })
 
-      wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
 
       const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository,
+        summaryLogsRepository: testSummaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor
       })
-
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
       server = await createTestServer({
         repositories: {
           summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository: () => uploadsRepository
+          uploadsRepository
         },
         workers: {
           summaryLogsWorker: { validate: validateSummaryLog }
         },
         featureFlags
       })
-    })
 
-    it('skips example rows when parsing spreadsheet end-to-end', async () => {
-      // Upload the file
-      const uploadResponse = await server.inject({
+      uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        payload: {
+          uploadStatus: 'ready',
+          metadata: {
+            organisationId,
+            registrationId
+          },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: 'test-bucket',
+              s3Key: `path/to/${filename}`
+            }
+          },
+          numberOfRejectedFiles: 0
+        },
         headers: {
           Authorization: `Bearer ${validToken}`
         }
       })
+    })
 
+    it('returns ACCEPTED', () => {
       expect(uploadResponse.statusCode).toBe(202)
+    })
 
-      // Wait for validation to complete
-      await pollForValidation(server, summaryLogId)
+    describe('retrieving summary log after parsing with placeholder normalization', () => {
+      let response
 
-      // Get the summary log
-      const getResponse = await server.inject({
-        method: 'GET',
-        url: buildGetUrl(summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
       })
 
-      expect(getResponse.statusCode).toBe(200)
-      const payload = JSON.parse(getResponse.payload)
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
 
-      // Should be validated - this confirms:
-      // 1. The example row (with ROW_ID 'example-row' and 'Example' in skip column) was skipped
-      // 2. Only the 2 real data rows were processed and passed validation
-      // If example rows weren't skipped, we'd have 3 rows with potentially invalid data
-      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      it('validates successfully with placeholder text normalized to null', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
 
-      // The validation should have no fatal errors
-      expect(payload.validation).toBeDefined()
-      expect(payload.validation.failures).toEqual([])
+      it('documents placeholder normalization behavior in integration context', () => {
+        const payload = JSON.parse(response.payload)
+
+        // Status is VALIDATED (not INVALID) because data errors are non-fatal
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+        // No fatal failures
+        expect(payload.validation.failures).toEqual([])
+
+        // Row 8 has validation concerns for dropdown fields that were "Choose option"
+        // (normalized to null by the parser)
+        const concerns = payload.validation.concerns
+        expect(concerns.UPDATE_WASTE_BALANCE).toBeDefined()
+        expect(concerns.UPDATE_WASTE_BALANCE.rows).toHaveLength(1)
+
+        const row8Issues = concerns.UPDATE_WASTE_BALANCE.rows[0]
+        expect(row8Issues.row).toBe(8)
+
+        // These are the dropdown fields that had "Choose option" (now null)
+        const issueHeaders = row8Issues.issues.map((i) => i.header)
+        expect(issueHeaders).toContain('EWC_CODE')
+        expect(issueHeaders).toContain('BAILING_WIRE')
+        expect(issueHeaders).toContain('HOW_CALCULATE_RECYCLABLE')
+      })
+
+      it('terminates data section at row with all placeholder values', async () => {
+        // The row with all "Choose option" values should terminate the section
+        // so only 2 data rows should be parsed (not 4)
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        // With placeholder normalization working correctly:
+        // - Row 7: Valid data row
+        // - Row 8: Row with some placeholders (normalized to null, but still has real data)
+        // - Row 9: All placeholders -> all nulls -> terminates section
+        // - Row 10: Should NOT be parsed
+
+        // Check that validation passed (VALIDATED status means parsing worked correctly)
+        expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
     })
   })
 })

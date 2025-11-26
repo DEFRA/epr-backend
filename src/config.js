@@ -255,9 +255,9 @@ const baseConfig = {
         env: 'DEFRA_ID_OIDC_WELL_KNOWN_URL'
       },
       clientId: {
-        doc: 'The Defra Identity client ID.',
+        doc: 'EPR Frontend as audience',
         format: String,
-        default: 'f0b82f82-0698-4938-a874-6fd215c0c592',
+        default: 'dbc093e4-3e78-411d-898d-88e45c1e8bc3',
         env: 'DEFRA_ID_CLIENT_ID'
       }
     }
@@ -288,6 +288,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_LOG_FILE_UPLOADS_FROM_FORMS'
+    },
+    defraIdAuth: {
+      doc: 'Feature Flag: Enable Defra Id authentication strategy',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
     }
   }
 }

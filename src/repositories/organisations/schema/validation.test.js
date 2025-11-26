@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest'
-import { validateRegistration, validateStatusHistory } from './validation.js'
+import {
+  validateRegistration,
+  validateStatusHistory,
+  validateAccreditation
+} from './validation.js'
 import { STATUS, REGULATOR, MATERIAL } from '#domain/organisations/model.js'
-import { buildRegistration } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildRegistration,
+  buildAccreditation
+} from '#repositories/organisations/contract/test-data.js'
 
 describe('validateStatusHistory', () => {
   it('throws badImplementation when statusHistory item has invalid status', () => {
@@ -384,10 +391,136 @@ describe('validateRegistration', () => {
     it('non-glass: accepts when glassRecyclingProcess is omitted', () => {
       const registration = buildRegistration({
         material: MATERIAL.PAPER,
-        glassRecyclingProcess: undefined
+        glassRecyclingProcess: null
       })
 
       expect(() => validateRegistration(registration)).not.toThrow()
+    })
+  })
+})
+
+describe('validateAccreditation', () => {
+  describe('conditional field validation by wasteProcessingType', () => {
+    it('reprocessor: rejects when missing site', () => {
+      const accreditation = buildAccreditation({
+        wasteProcessingType: 'reprocessor',
+        site: undefined
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*site.*any.required/
+      )
+    })
+
+    it('exporter: accepts when site is omitted (optional for exporter)', () => {
+      const accreditation = buildAccreditation({
+        wasteProcessingType: 'exporter',
+        site: undefined,
+        orsFileUploads: [
+          {
+            defraFormUploadedFileId: 'test-file-id',
+            defraFormUserDownloadLink: 'https://example.com/test-file'
+          }
+        ]
+      })
+
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+
+    it('exporter: rejects when missing orsFileUploads', () => {
+      const accreditation = buildAccreditation({
+        wasteProcessingType: 'exporter',
+        orsFileUploads: undefined
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*orsFileUploads.*any.required/
+      )
+    })
+
+    it('reprocessor: accepts when orsFileUploads is omitted (optional for reprocessor)', () => {
+      const accreditation = buildAccreditation({
+        wasteProcessingType: 'reprocessor',
+        site: {
+          line1: '123 Test Street',
+          postcode: 'AB12 3CD'
+        },
+        orsFileUploads: undefined
+      })
+
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+
+    it('reprocessor: accepts when site is provided', () => {
+      const accreditation = buildAccreditation({
+        wasteProcessingType: 'reprocessor',
+        site: {
+          line1: '123 Test Street',
+          postcode: 'AB12 3CD'
+        }
+      })
+
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+  })
+
+  describe('material-specific field validation', () => {
+    it('glass: rejects when missing glassRecyclingProcess', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: undefined
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*glassRecyclingProcess.*any.required/
+      )
+    })
+
+    it('glass: accepts valid glassRecyclingProcess', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: ['glass_re_melt']
+      })
+
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+
+    it('non-glass: accepts when glassRecyclingProcess is null', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.PAPER,
+        glassRecyclingProcess: null
+      })
+
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+  })
+
+  describe('PRN issuance business plan validation', () => {
+    it('rejects when incomeBusinessPlan has fewer than 7 items', () => {
+      const accreditation = buildAccreditation({
+        prnIssuance: {
+          tonnageBand: 'up_to_10000',
+          signatories: [
+            {
+              fullName: 'Test Person',
+              email: 'test@example.com',
+              phone: '1234567890',
+              title: 'Director'
+            }
+          ],
+          incomeBusinessPlan: [
+            {
+              usageDescription: 'Infrastructure',
+              detailedExplanation: 'Details',
+              percentIncomeSpent: 100
+            }
+          ]
+        }
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*incomeBusinessPlan.*array.length/
+      )
     })
   })
 })

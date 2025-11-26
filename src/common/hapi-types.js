@@ -32,3 +32,5 @@
  * @property {Function} inject - Inject a request for testing
  * @property {Function} ext - Register extension points
  */
+
+export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

@@ -49,6 +49,7 @@
       },
       "material": "steel",
       "wasteProcessingType": "reprocessor",
+      "glassRecyclingProcess": null,
       "accreditationId": "68f6a147c117aec8a1ab749a",
       "cbduNumber": "CBDU345678",
       "wasteManagementPermits": [
@@ -114,12 +115,7 @@
           "defraFormUploadedFileId": "file-345",
           "defraFormUserDownloadLink": "https://example.com/file-345"
         }
-      ],
-      "noticeAddress": {
-        "line1": "100 Trust Road",
-        "town": "Belfast",
-        "postcode": "BT1 1AA"
-      }
+      ]
     },
     {
       "id": "6507f1f77bcf86cd79943933",
@@ -134,6 +130,7 @@
       "formSubmissionTime": "2025-11-01T11:30:00.000Z",
       "material": "aluminium",
       "wasteProcessingType": "exporter",
+      "glassRecyclingProcess": null,
       "cbduNumber": "CBDU345679",
       "approvedPersons": [
         {
@@ -164,7 +161,7 @@
         }
       ],
       "noticeAddress": {
-        "line1": "100 Trust Road",
+        "line1": "101 Export Centre",
         "town": "Belfast",
         "postcode": "BT1 1AA"
       }
@@ -183,10 +180,13 @@
       "submittedToRegulator": "niea",
       "orgName": "Green Future Trust",
       "site": {
-        "line1": "100 Trust Road",
-        "postcode": "BT1 1AA"
+        "address": {
+          "line1": "100 Trust Road",
+          "postcode": "BT1 1AA"
+        }
       },
       "material": "steel",
+      "glassRecyclingProcess": null,
       "wasteProcessingType": "reprocessor",
       "prnIssuance": {
         "tonnageBand": "up_to_10000",
@@ -200,9 +200,39 @@
         ],
         "incomeBusinessPlan": [
           {
-            "usageDescription": "Expand charity operations",
+            "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
             "detailedExplanation": "Open new recycling centers",
             "percentIncomeSpent": 50
+          },
+          {
+            "usageDescription": "Price support for buying packaging waste or selling recycled packaging waste",
+            "detailedExplanation": "Price support",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Support for business collections",
+            "detailedExplanation": "Collection support",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Communications, including information campaigns",
+            "detailedExplanation": "Communications",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Developing new markets for products made from recycled packaging waste",
+            "detailedExplanation": "Market development",
+            "percentIncomeSpent": 5
+          },
+          {
+            "usageDescription": "Developing new uses for recycled packaging waste",
+            "detailedExplanation": "New uses",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Activities or investment not covered by the other categories",
+            "detailedExplanation": "Other activities",
+            "percentIncomeSpent": 5
           }
         ]
       },

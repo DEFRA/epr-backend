@@ -4,18 +4,22 @@ import {
   REGULATOR,
   MATERIAL,
   WASTE_PROCESSING_TYPE,
-  TONNAGE_BAND
+  TONNAGE_BAND,
+  GLASS_RECYCLING_PROCESS
 } from '#domain/organisations/model.js'
 import { idSchema, userSchema, formFileUploadSchema } from './base.js'
 import {
   whenReprocessor,
   whenExporter,
-  requiredWhenApprovedOrSuspended
+  requiredWhenApprovedOrSuspended,
+  whenMaterial
 } from './helpers.js'
 
 const accreditationSiteSchema = Joi.object({
-  line1: Joi.string().required(),
-  postcode: Joi.string().required()
+  address: Joi.object({
+    line1: Joi.string().required(),
+    postcode: Joi.string().required()
+  })
 })
 
 const prnIncomeBusinessPlanSchema = Joi.object({
@@ -24,6 +28,7 @@ const prnIncomeBusinessPlanSchema = Joi.object({
   detailedExplanation: Joi.string().required()
 })
 
+const REQUIRED_NUMBER_OF_BUSINESS_INCOME_PLAN = 7
 const prnIssuanceSchema = Joi.object({
   tonnageBand: Joi.string()
     .valid(
@@ -37,7 +42,7 @@ const prnIssuanceSchema = Joi.object({
   incomeBusinessPlan: Joi.array()
     .items(prnIncomeBusinessPlanSchema)
     .required()
-    .min(1)
+    .length(REQUIRED_NUMBER_OF_BUSINESS_INCOME_PLAN)
 })
 
 export const accreditationSchema = Joi.object({
@@ -74,6 +79,17 @@ export const accreditationSchema = Joi.object({
       MATERIAL.WOOD
     )
     .required(),
+  glassRecyclingProcess: whenMaterial(
+    MATERIAL.GLASS,
+    Joi.array()
+      .items(
+        Joi.string().valid(
+          GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+          GLASS_RECYCLING_PROCESS.GLASS_OTHER
+        )
+      )
+      .min(1)
+  ),
   wasteProcessingType: Joi.string()
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
     .required(),
@@ -81,8 +97,7 @@ export const accreditationSchema = Joi.object({
   submitterContactDetails: userSchema.required(),
   samplingInspectionPlanPart2FileUploads: Joi.array()
     .items(formFileUploadSchema)
-    .required()
-    .min(1),
+    .required(),
   orsFileUploads: whenExporter(
     Joi.array().items(formFileUploadSchema).required().min(1)
   )

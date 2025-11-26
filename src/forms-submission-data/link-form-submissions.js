@@ -1,9 +1,18 @@
 import { logger } from '#common/helpers/logging/logger.js'
+import {
+  comparePostcodes,
+  postCodeForLogging
+} from './parsing-common/postcode.js'
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+
+/**
+ * @import {OrganisationWithAccreditations} from './types.js'
+ */
 
 function getItemsBySystemReference(items) {
   return items.reduce((itemsMap, item) => {
     itemsMap.set(item.systemReference, [
-      ...(itemsMap.get(item.systemReference) || []),
+      ...(itemsMap.get(item.systemReference) ?? []),
       item
     ])
     return itemsMap
@@ -19,15 +28,15 @@ function getOrganisationsById(organisations) {
 
 function logOrganisationsWithoutItems(organisations, propertyName) {
   const orgsWithoutItems = organisations.filter(
-    (org) => !org[propertyName] || org[propertyName].length === 0
+    (org) => (org[propertyName] ?? []).length === 0
   )
 
   if (orgsWithoutItems.length > 0) {
-    logger.warn({
+    logger.info({
       message: `${orgsWithoutItems.length} organisations without ${propertyName}`
     })
     for (const org of orgsWithoutItems) {
-      logger.warn({
+      logger.info({
         message: `Organisation without any ${propertyName}: id=${org.id}`
       })
     }
@@ -62,7 +71,7 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   }
 
   if (unlinked.length > 0) {
-    logger.error({
+    logger.warn({
       message: `${unlinked.length} ${propertyName} not linked to an organisation`
     })
     for (const item of unlinked) {
@@ -73,5 +82,97 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   }
   logOrganisationsWithoutItems(organisations, propertyName)
 
-  return [...organisationsById.values()]
+  return organisations
+}
+
+function formatRegistrationForLogging(registration) {
+  const isReprocessor =
+    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+  const siteInfo = isReprocessor
+    ? `, site.postcodeHash=${postCodeForLogging(registration.site.address.postcode)}`
+    : ''
+  return `{id=${registration.id}, wasteProcessingType=${registration.wasteProcessingType}, material=${registration.material}${siteInfo}}`
+}
+
+function formatAccreditationComparisonLog(accreditation, registrations, org) {
+  const isReprocessor =
+    accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+  const siteInfo = isReprocessor
+    ? `, site.postcodeHash=${postCodeForLogging(accreditation.site.address.postcode)}`
+    : ''
+  const registrationsInfo = registrations
+    .map(formatRegistrationForLogging)
+    .join(', ')
+  return `accreditationId=${accreditation.id}, wasteProcessingType=${accreditation.wasteProcessingType}, material=${accreditation.material}${siteInfo}, registrations=[${registrationsInfo}], orgId=${org.orgId}, org id:${org.id}`
+}
+
+function sitesMatch(site1, site2) {
+  return comparePostcodes(site1.address.postcode, site2.address.postcode)
+}
+
+function isAccreditationForRegistration(accreditation, registration) {
+  const typeAndMaterialMatch =
+    registration.wasteProcessingType === accreditation.wasteProcessingType &&
+    registration.material === accreditation.material
+
+  if (!typeAndMaterialMatch) {
+    return false
+  }
+
+  return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+    ? sitesMatch(registration.site, accreditation.site)
+    : true
+}
+
+/**
+ * Link registration to accredidations
+ *
+ * @param {OrganisationWithAccreditations[]} organisations
+ * @returns {OrganisationWithAccreditations[]}
+ */
+export function linkRegistrationToAccreditations(organisations) {
+  let linkedCount = 0
+  const totalAccreditationsCount = organisations.flatMap(
+    (org) => org.accreditations ?? []
+  ).length
+
+  for (const org of organisations) {
+    const accreditations = org.accreditations ?? []
+    const registrations = org.registrations ?? []
+
+    for (const accreditation of accreditations) {
+      const matchedRegistrations = registrations.filter((registration) =>
+        isAccreditationForRegistration(accreditation, registration)
+      )
+
+      if (matchedRegistrations.length === 1) {
+        matchedRegistrations[0].accreditationId = accreditation.id
+        linkedCount++
+      } else if (matchedRegistrations.length > 1) {
+        logger.warn({
+          message: `Multiple registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, org)}`
+        })
+      } else {
+        logger.warn({
+          message: `No registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, org)}`
+        })
+      }
+    }
+  }
+
+  logger.info({
+    message: `Accreditation linking complete: ${linkedCount}/${totalAccreditationsCount} linked, ${totalAccreditationsCount - linkedCount} unlinked`
+  })
+
+  const registrationsCount = organisations.flatMap(
+    (org) => org.registrations ?? []
+  ).length
+  const registrationsWithoutAcc = organisations.flatMap((org) =>
+    (org.registrations ?? []).filter((r) => !r.accreditationId)
+  ).length
+  logger.info({
+    message: `Registrations : ${registrationsCount - registrationsWithoutAcc}/${registrationsCount} linked to accreditations, ${registrationsWithoutAcc} unlinked`
+  })
+
+  return organisations
 }

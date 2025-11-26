@@ -34,6 +34,7 @@
       "formSubmissionTime": "2025-10-01T08:00:00.000Z",
       "material": "plastic",
       "wasteProcessingType": "exporter",
+      "glassRecyclingProcess": null,
       "cbduNumber": "CBDU789012",
       "wasteManagementPermits": [
         {
@@ -64,10 +65,16 @@
         "title": "Owner",
         "phone": "2223334444"
       },
-      "samplingInspectionPlanFileUploads": [
+      "samplingInspectionPlanPart1FileUploads": [
         {
           "defraFormUploadedFileId": "file-789",
           "defraFormUserDownloadLink": "https://example.com/file-789"
+        }
+      ],
+      "orsFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789-ors",
+          "defraFormUserDownloadLink": "https://example.com/file-789-ors"
         }
       ],
       "noticeAddress": {
@@ -89,15 +96,10 @@
       ],
       "submittedToRegulator": "nrw",
       "orgName": "Plastic Exporters",
-      "site": {
-        "address": {
-          "line1": "22 Export Lane",
-          "postcode": "CF10 1AA"
-        }
-      },
       "material": "plastic",
+      "glassRecyclingProcess": null,
       "wasteProcessingType": "exporter",
-      "pernIssuance": {
+      "prnIssuance": {
         "tonnageBand": "up_to_5000",
         "signatories": [
           {
@@ -107,19 +109,62 @@
             "phone": "5556667777"
           }
         ],
-        "pernIncomeBusinessPlan": [
+        "incomeBusinessPlan": [
           {
-            "usageDescription": "Expand export fleet",
+            "usageDescription": "New reprocessing infrastructure and maintaining existing infrastructure",
             "detailedExplanation": "Purchase new trucks",
             "percentIncomeSpent": 40
+          },
+          {
+            "usageDescription": "Price support for buying packaging waste or selling recycled packaging waste",
+            "detailedExplanation": "Price support",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Support for business collections",
+            "detailedExplanation": "Collection support",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Communications, including information campaigns",
+            "detailedExplanation": "Communications",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Developing new markets for products made from recycled packaging waste",
+            "detailedExplanation": "Market development",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Developing new uses for recycled packaging waste",
+            "detailedExplanation": "New uses",
+            "percentIncomeSpent": 10
+          },
+          {
+            "usageDescription": "Activities or investment not covered by the other categories",
+            "detailedExplanation": "Other activities",
+            "percentIncomeSpent": 10
           }
         ]
       },
-      "noticeAddress": {
-        "line1": "22 Export Lane",
-        "town": "Cardiff",
-        "postcode": "CF10 1AA"
-      }
+      "submitterContactDetails": {
+        "fullName": "Dave Green",
+        "email": "dave.green@export.com",
+        "title": "PERN signatory",
+        "phone": "5556667777"
+      },
+      "samplingInspectionPlanPart2FileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789-part2",
+          "defraFormUserDownloadLink": "https://example.com/file-789-part2"
+        }
+      ],
+      "orsFileUploads": [
+        {
+          "defraFormUploadedFileId": "file-789-ors-accred",
+          "defraFormUserDownloadLink": "https://example.com/file-789-ors-accred"
+        }
+      ]
     }
   ],
   "companyDetails": {

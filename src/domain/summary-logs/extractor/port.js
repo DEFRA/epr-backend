@@ -48,3 +48,5 @@
  * @typedef {Object} SummaryLogExtractor
  * @property {(summaryLog: SummaryLog) => Promise<ParsedSummaryLog>} extract
  */
+
+export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
