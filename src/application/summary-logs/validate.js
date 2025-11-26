@@ -24,14 +24,7 @@ import { classifyLoads } from './classify-loads.js'
 /** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
 /** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
 
-/**
- * A waste record with validation issues attached
- *
- * In the validation pipeline, issues are always present (from validateRows).
- * In the sync pipeline, issues are undefined (no validation runs).
- *
- * @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} ValidatedWasteRecord
- */
+/** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
 
 const extractSummaryLog = async ({
   summaryLogExtractor,

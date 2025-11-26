@@ -10,12 +10,12 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  */
 
 /**
- * A transformed record with optional validation issues
+ * A waste record bundled with its validation issues
  *
  * Issues are present when transforming validated rows (from validation pipeline)
  * Issues are absent when transforming unvalidated rows (from sync pipeline)
  *
- * @typedef {Object} TransformedRecord
+ * @typedef {Object} ValidatedWasteRecord
  * @property {WasteRecord} record - The waste record
  * @property {ValidationIssue[]} [issues] - Validation issues (present if input was validated)
  */
@@ -49,7 +49,7 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {TransformedRecord[]} Array of transformed records
+ * @returns {ValidatedWasteRecord[]} Array of waste records with issues
  */
 const transformTable = (
   tableData,
@@ -150,7 +150,7 @@ const transformTable = (
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {TransformedRecord[]} Array of transformed records with issues
+ * @returns {ValidatedWasteRecord[]} Array of waste records with issues
  */
 export const transformFromSummaryLog = (
   parsedData,
