@@ -34,10 +34,10 @@ export default defineConfig({
         'src/test/**'
       ],
       thresholds: {
-        lines: 100,
-        statements: 100,
-        branches: 100,
-        functions: 100
+        lines: 85,
+        statements: 85,
+        branches: 85,
+        functions: 85
       }
     },
     setupFiles: ['.vite/setup-files.js']

@@ -259,6 +259,19 @@ const baseConfig = {
         format: String,
         default: 'dbc093e4-3e78-411d-898d-88e45c1e8bc3',
         env: 'DEFRA_ID_CLIENT_ID'
+      },
+      clientSecret: {
+        doc: 'The Defra Identity client secret.',
+        format: String,
+        sensitive: true,
+        default: 'test-value',
+        env: 'DEFRA_ID_CLIENT_SECRET'
+      },
+      serviceId: {
+        doc: 'The Defra Identity service ID.',
+        format: String,
+        default: 'f8a7d2b2-1eb0-f011-bbd3-000d3a2a3cff',
+        env: 'DEFRA_ID_SERVICE_ID'
       }
     }
   },

@@ -1,6 +1,6 @@
 {
   "id": "6507f1f77bcf86cd79943931",
-  "orgId": 50005,
+  "orgId": 500005,
   "schemaVersion": 1,
   "version": 1,
   "statusHistory": [
@@ -23,6 +23,9 @@
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943932",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
@@ -71,6 +74,12 @@
           "email": "eve.black@charity.org",
           "title": "Director",
           "phone": "3334445555"
+        },
+        {
+          "fullName": "Yoda",
+          "email": "yoda@starwars.com",
+          "title": "PRN signatory",
+          "phone": "1234567890"
         }
       ],
       "suppliers": "Local steel suppliers",
@@ -119,6 +128,9 @@
     },
     {
       "id": "6507f1f77bcf86cd79943933",
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "statusHistory": [
         {
           "status": "created",
@@ -170,6 +182,9 @@
   "accreditations": [
     {
       "id": "68f6a147c117aec8a1ab749a",
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null,
       "formSubmissionTime": "2025-11-01T13:00:00.000Z",
       "statusHistory": [
         {

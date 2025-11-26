@@ -77,5 +77,5 @@ export const requiredWhenApprovedOrSuspended = {
     { is: STATUS.APPROVED, then: Joi.required() },
     { is: STATUS.SUSPENDED, then: Joi.required() }
   ],
-  otherwise: Joi.optional()
+  otherwise: Joi.allow(null).optional()
 }

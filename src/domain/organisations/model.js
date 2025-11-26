@@ -2,6 +2,7 @@ export const STATUS = Object.freeze({
   CREATED: 'created',
   APPROVED: 'approved',
   REJECTED: 'rejected',
+  ACTIVE: 'active',
   SUSPENDED: 'suspended',
   ARCHIVED: 'archived'
 })
