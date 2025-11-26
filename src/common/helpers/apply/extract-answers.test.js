@@ -1,3 +1,5 @@
+import { getConfig } from '#root/config.js'
+import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 import {
   extractAnswers,
   extractEmail,
@@ -6,10 +8,8 @@ import {
   extractReferenceNumber,
   getRegulatorEmail
 } from './extract-answers.js'
-import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
-import { getConfig } from '../../../config.js'
 
-vi.mock('../../../config.js', async (importOriginal) => {
+vi.mock('#root/config.js', async (importOriginal) => {
   const configImportOriginal = await importOriginal()
 
   return {

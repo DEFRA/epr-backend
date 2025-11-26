@@ -1,20 +1,20 @@
+import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
-import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
-import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 
-import { config } from '../../../config.js'
+import { config } from '#root/config.js'
 
 patchTlsSecureContext()
 

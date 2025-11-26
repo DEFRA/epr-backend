@@ -2,17 +2,17 @@ import { LockManager } from 'mongo-locks'
 
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
 import {
+  cleanupSeedData,
   createIndexes,
   createOrUpdateCollections,
-  createSeedData,
-  cleanupSeedData
+  createSeedData
 } from '../collections/create-update.js'
-import { config } from '../../../config.js'
 
 export const mongoDbPlugin = {
   plugin: {

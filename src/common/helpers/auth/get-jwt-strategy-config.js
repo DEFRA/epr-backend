@@ -1,7 +1,7 @@
+import { config } from '#root/config.js'
 import Boom from '@hapi/boom'
-import { getEntraUserRoles } from './get-entra-user-roles.js'
 import { getDefraUserRoles } from './get-defra-user-roles.js'
-import { config } from '../../../config.js'
+import { getEntraUserRoles } from './get-entra-user-roles.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
