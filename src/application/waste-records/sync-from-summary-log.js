@@ -4,16 +4,16 @@ import { getTableSchema } from '#application/summary-logs/validations/table-sche
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 
 /**
- * Converts raw rows to validated row format expected by transformFromSummaryLog
+ * Extracts row IDs from raw rows based on the table's ID field
  *
  * Only called for tables with schemas, so idField is guaranteed to exist.
  *
  * @param {string} tableName - The table name
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<Array<*>>} rows - Array of raw row value arrays
- * @returns {Array<{values: Array<*>, rowId: string, issues: Array<*>}>}
+ * @returns {Array<{values: Array<*>, rowId: string}>}
  */
-const convertToValidatedRows = (tableName, headers, rows) => {
+const extractRowIds = (tableName, headers, rows) => {
   const idField = getRowIdField(tableName)
 
   // Build header to index map, excluding EPR markers and nulls
@@ -28,13 +28,12 @@ const convertToValidatedRows = (tableName, headers, rows) => {
 
   return rows.map((row) => ({
     values: row,
-    rowId: String(row[idFieldIndex]),
-    issues: []
+    rowId: String(row[idFieldIndex])
   }))
 }
 
 /**
- * Prepares parsed data by converting raw rows to validated row format
+ * Prepares parsed data by extracting row IDs
  *
  * Only processes tables that have schemas defined.
  *
@@ -45,11 +44,7 @@ const prepareRowsForTransformation = (parsedData) => {
     if (!getTableSchema(tableName)) {
       continue
     }
-    tableData.rows = convertToValidatedRows(
-      tableName,
-      tableData.headers,
-      tableData.rows
-    )
+    tableData.rows = extractRowIds(tableName, tableData.headers, tableData.rows)
   }
 }
 

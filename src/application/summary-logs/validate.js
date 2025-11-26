@@ -21,7 +21,15 @@ import { classifyLoads } from './classify-loads.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#repositories/waste-records/port.js').WasteRecordsRepository} WasteRecordsRepository */
 /** @typedef {import('./extractor.js').SummaryLogExtractor} SummaryLogExtractor */
-/** @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord */
+/** @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord */
+/** @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue */
+
+/**
+ * A waste record with validation issues attached
+ * @typedef {Object} ValidatedWasteRecord
+ * @property {WasteRecord} record - The waste record
+ * @property {ValidationIssue[]} issues - Validation issues for this record
+ */
 
 const extractSummaryLog = async ({
   summaryLogExtractor,
@@ -60,8 +68,8 @@ const transformAndValidateData = async ({
     ])
   )
 
-  // Transform validated rows into waste records with issues attached
-  const wasteRecords = transformFromSummaryLog(
+  // Transform rows into waste records (returns { record, source }[])
+  const transformedRecords = transformFromSummaryLog(
     validatedData,
     {
       summaryLog: {
@@ -74,6 +82,13 @@ const transformAndValidateData = async ({
     },
     existingRecordsMap
   )
+
+  // Correlate records with their validation issues using source location
+  /** @type {ValidatedWasteRecord[]} */
+  const wasteRecords = transformedRecords.map(({ record, source }) => ({
+    record,
+    issues: validatedData.data[source.table].rows[source.rowIndex].issues
+  }))
 
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })

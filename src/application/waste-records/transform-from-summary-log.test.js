@@ -15,16 +15,15 @@ const UPDATED_DATE = '2025-01-20'
 const UPDATED_WEIGHT = 250.5
 
 /**
- * Creates a validated row structure as expected by transformFromSummaryLog
+ * Creates a row structure as expected by transformFromSummaryLog
  */
-const createValidatedRow = (values, rowId, issues = []) => ({
+const createRow = (values, rowId) => ({
   values,
-  rowId,
-  issues
+  rowId
 })
 
 describe('transformFromSummaryLog', () => {
-  it('transforms parsed RECEIVED_LOADS data into waste records with issues', () => {
+  it('transforms parsed RECEIVED_LOADS data into waste records', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -36,14 +35,8 @@ describe('transformFromSummaryLog', () => {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
-            createValidatedRow(
-              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
-              FIRST_ROW_ID
-            ),
-            createValidatedRow(
-              ['row-456', '2025-01-16', SECOND_WEIGHT],
-              'row-456'
-            )
+            createRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID),
+            createRow(['row-456', '2025-01-16', SECOND_WEIGHT], 'row-456')
           ]
         }
       }
@@ -100,7 +93,7 @@ describe('transformFromSummaryLog', () => {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-          rows: [createValidatedRow([FIRST_ROW_ID, FIRST_DATE], FIRST_ROW_ID)]
+          rows: [createRow([FIRST_ROW_ID, FIRST_DATE], FIRST_ROW_ID)]
         }
       }
     }
@@ -132,7 +125,7 @@ describe('transformFromSummaryLog', () => {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
-            createValidatedRow(
+            createRow(
               [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
               FIRST_ROW_ID
             )
@@ -219,10 +212,7 @@ describe('transformFromSummaryLog', () => {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
           rows: [
-            createValidatedRow(
-              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
-              FIRST_ROW_ID
-            )
+            createRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID)
           ]
         }
       }
@@ -240,52 +230,6 @@ describe('transformFromSummaryLog', () => {
     const result = transformFromSummaryLog(parsedData, summaryLogContext)
 
     expect(result).toEqual([])
-  })
-
-  it('carries validation issues through transformation', () => {
-    const validationIssue = {
-      severity: 'error',
-      category: 'TECHNICAL',
-      message: 'Invalid value',
-      code: 'INVALID_TYPE',
-      context: {}
-    }
-
-    const parsedData = {
-      meta: {
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
-        }
-      },
-      data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
-          location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-          rows: [
-            createValidatedRow(
-              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
-              FIRST_ROW_ID,
-              [validationIssue]
-            )
-          ]
-        }
-      }
-    }
-
-    const summaryLogContext = {
-      summaryLog: {
-        id: SUMMARY_LOG_ID,
-        uri: SUMMARY_LOG_URI
-      },
-      organisationId: 'org-1',
-      registrationId: 'reg-1'
-    }
-
-    const result = transformFromSummaryLog(parsedData, summaryLogContext)
-
-    expect(result).toHaveLength(1)
-    expect(result[0].issues).toHaveLength(1)
-    expect(result[0].issues[0]).toEqual(validationIssue)
   })
 })
 
@@ -319,9 +263,12 @@ function createExistingWasteRecord() {
 }
 
 function expectValidWasteRecord(result, rowId, dateReceived, grossWeight) {
-  const { record, issues } = result
+  const { record, source } = result
 
-  expect(issues).toEqual([])
+  expect(source).toEqual({
+    table: 'RECEIVED_LOADS_FOR_REPROCESSING',
+    rowIndex: expect.any(Number)
+  })
   expect(record).toMatchObject({
     organisationId: 'org-1',
     registrationId: 'reg-1',

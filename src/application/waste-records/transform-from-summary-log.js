@@ -5,27 +5,22 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
 /**
  * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
- * @typedef {import('#application/summary-logs/validations/data-syntax.js').ValidatedRow} ValidatedRow
  */
 
 /**
- * Transforms parsed summary log data into waste records with issues attached
- *
- * Expects rows in validated structure: { values: [...], rowId: string|null, issues: [...] }
- * Returns nested structure: { record: WasteRecord, issues: [...] }[]
- *
- * @param {ParsedSummaryLog} parsedData - The parsed summary log data (with validated rows)
- * @param {Object} summaryLogContext - Context from the summary log
- * @param {Object} summaryLogContext.summaryLog - The summary log reference
- * @param {string} summaryLogContext.summaryLog.id - The summary log ID
- * @param {string} summaryLogContext.summaryLog.uri - The S3 URI for the summary log
- * @param {string} summaryLogContext.organisationId - The organisation ID
- * @param {string} summaryLogContext.registrationId - The registration ID
- * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
- * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {ValidatedWasteRecord[]} Array of waste records with validation issues
+ * A row structured for transformation
+ * @typedef {Object} StructuredRow
+ * @property {Array<*>} values - Row values array
+ * @property {string} rowId - Extracted row ID
  */
+
+/**
+ * A transformed record with source location for correlation
+ * @typedef {Object} TransformedRecord
+ * @property {WasteRecord} record - The waste record
+ * @property {{ table: string, rowIndex: number }} source - Source location for correlating with validation issues
+ */
+
 /**
  * Dispatch map: processing type → table name → row transformer function
  * Maps each combination of processing type and table to its specific row transformer
@@ -45,25 +40,20 @@ const TABLE_TRANSFORMERS = {
 const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
 
 /**
- * A waste record with validation issues attached
- * @typedef {Object} ValidatedWasteRecord
- * @property {WasteRecord} record - The waste record
- * @property {ValidationIssue[]} issues - Validation issues for this record
- */
-
-/**
  * Generic table transformation function
  * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
  *
- * Rows are expected to be in the validated structure: { values: [...], rowId: string|null, issues: [...] }
+ * Rows are expected in structure: { values: [...], rowId: string }
  *
+ * @param {string} tableName - Name of the table being transformed
  * @param {Object} tableData - Table data with headers and rows
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {ValidatedWasteRecord[]} Array of waste records with validation issues
+ * @returns {TransformedRecord[]} Array of transformed records with source info
  */
 const transformTable = (
+  tableName,
   tableData,
   rowTransformer,
   context,
@@ -74,8 +64,7 @@ const transformTable = (
     context
 
   return rows.map((row, rowIndex) => {
-    // Extract values and issues from validated row structure
-    const { values, issues: rowIssues } = row
+    const { values } = row
 
     // Map row values to object using headers
     const rowData = headers.reduce((acc, header, index) => {
@@ -90,6 +79,8 @@ const transformTable = (
     const existingRecord =
       existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
 
+    const source = { table: tableName, rowIndex }
+
     if (existingRecord) {
       // Calculate delta: find fields that changed (excluding ROW_ID)
       const delta = {}
@@ -101,7 +92,7 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, issues: rowIssues }
+        return { record: existingRecord, source }
       }
 
       // Add new version with only changed fields
@@ -118,7 +109,7 @@ const transformTable = (
           data,
           versions: [...existingRecord.versions, newVersion]
         },
-        issues: rowIssues
+        source
       }
     }
 
@@ -144,10 +135,27 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, issues: rowIssues }
+    return { record: wasteRecord, source }
   })
 }
 
+/**
+ * Transforms parsed summary log data into waste records
+ *
+ * Expects rows in structure: { values: [...], rowId: string }
+ * Returns records with source info for correlation with validation issues
+ *
+ * @param {ParsedSummaryLog} parsedData - The parsed summary log data
+ * @param {Object} summaryLogContext - Context from the summary log
+ * @param {Object} summaryLogContext.summaryLog - The summary log reference
+ * @param {string} summaryLogContext.summaryLog.id - The summary log ID
+ * @param {string} summaryLogContext.summaryLog.uri - The S3 URI for the summary log
+ * @param {string} summaryLogContext.organisationId - The organisation ID
+ * @param {string} summaryLogContext.registrationId - The registration ID
+ * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
+ * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
+ * @returns {TransformedRecord[]} Array of transformed records with source info
+ */
 export const transformFromSummaryLog = (
   parsedData,
   summaryLogContext,
@@ -173,6 +181,7 @@ export const transformFromSummaryLog = (
       }
 
       return transformTable(
+        tableName,
         tableData,
         rowTransformer,
         summaryLogContext,

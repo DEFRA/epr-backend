@@ -3,7 +3,7 @@ import { validateRowContinuity } from './row-continuity.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('#application/waste-records/transform-from-summary-log.js').ValidatedWasteRecord} ValidatedWasteRecord
+ * @typedef {import('../validate.js').ValidatedWasteRecord} ValidatedWasteRecord
  */
 
 /**
