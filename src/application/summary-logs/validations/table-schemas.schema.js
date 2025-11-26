@@ -4,7 +4,7 @@ import Joi from 'joi'
  * Constants for SONAR...
  */
 const EWC_CODE_REGEX = /^\d{2} \d{2} \d{2}$/
-const MIN_OUR_REFERENCE = 10000
+const MIN_ROW_ID = 10000
 const ZERO = 0
 
 const IS_REQUIRED = 'is required'
@@ -15,11 +15,11 @@ const MUST_BE_GREATER_THAN_ZERO = 'must be greater than 0'
 const MUST_BE_LESS_THAN_ONE = 'must be less than 1'
 
 /**
- * Joi schema for UPDATE_WASTE_BALANCE table columns
+ * Joi schema for RECEIVED_LOADS_FOR_REPROCESSING table columns
  * This table tracks waste received for reprocessing
  */
-export const UPDATE_WASTE_BALANCE_SCHEMA = {
-  OUR_REFERENCE: Joi.number().required().min(MIN_OUR_REFERENCE).messages({
+export const RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA = {
+  ROW_ID: Joi.number().required().min(MIN_ROW_ID).messages({
     'number.base': MUST_BE_A_NUMBER,
     'number.min': 'must be at least 10000',
     'any.required': IS_REQUIRED
@@ -83,7 +83,7 @@ export const UPDATE_WASTE_BALANCE_SCHEMA = {
 }
 
 /**
- * Row-level schema for UPDATE_WASTE_BALANCE table
+ * Row-level schema for RECEIVED_LOADS_FOR_REPROCESSING table
  *
  * This validates an entire row object at once, which is more efficient than
  * validating individual cells and enables cross-field validation.
@@ -99,8 +99,8 @@ export const UPDATE_WASTE_BALANCE_SCHEMA = {
  * - Duplicating schema definitions
  * - Early validation termination (we want all errors per row)
  */
-export const UPDATE_WASTE_BALANCE_ROW_SCHEMA = Joi.object(
-  UPDATE_WASTE_BALANCE_SCHEMA
+export const RECEIVED_LOADS_FOR_REPROCESSING_ROW_SCHEMA = Joi.object(
+  RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA
 )
   .unknown(true)
   .prefs({ abortEarly: false })

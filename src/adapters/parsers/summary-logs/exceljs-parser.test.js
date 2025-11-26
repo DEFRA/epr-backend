@@ -102,13 +102,17 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('extracts data section headers', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED']
+          [
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'ROW_ID',
+            'DATE_RECEIVED'
+          ]
         ]
       })
 
-      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+      expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: []
       })
     })
@@ -117,8 +121,8 @@ describe('ExcelJSSummaryLogsParser', () => {
       const result = await parseWorkbook({
         Test: [
           [
-            '__EPR_DATA_UPDATE_WASTE_BALANCE',
-            'OUR_REFERENCE',
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'ROW_ID',
             'DATE_RECEIVED',
             '',
             'IGNORED'
@@ -126,9 +130,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         ]
       })
 
-      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+      expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: []
       })
     })
@@ -136,15 +140,19 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('extracts data section with rows', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'ROW_ID',
+            'DATE_RECEIVED'
+          ],
           [null, 12345678910, '2025-05-25'],
           [null, 98765432100, '2025-05-26']
         ]
       })
 
-      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+      expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
           [12345678910, '2025-05-25'],
           [98765432100, '2025-05-26']
@@ -155,16 +163,20 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('extracts data section terminated by empty row', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'ROW_ID',
+            'DATE_RECEIVED'
+          ],
           [null, 12345678910, '2025-05-25'],
           [null, '', ''],
           [null, 'This should be ignored']
         ]
       })
 
-      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+      expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [[12345678910, '2025-05-25']]
       })
     })
@@ -222,7 +234,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Test: [
           [
             '__EPR_DATA_WASTE_RECEIVED',
-            'OUR_REFERENCE',
+            'ROW_ID',
             'DATE_RECEIVED',
             '__EPR_SKIP_COLUMN',
             'SUPPLIER_REF',
@@ -235,7 +247,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: [
-          'OUR_REFERENCE',
+          'ROW_ID',
           'DATE_RECEIVED',
           null,
           'SUPPLIER_REF',
@@ -270,8 +282,8 @@ describe('ExcelJSSummaryLogsParser', () => {
           [],
           // Data section
           [
-            '__EPR_DATA_UPDATE_WASTE_BALANCE',
-            'OUR_REFERENCE',
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'ROW_ID',
             'DATE_RECEIVED',
             '__EPR_SKIP_COLUMN',
             'SUPPLIER_REF',
@@ -290,10 +302,10 @@ describe('ExcelJSSummaryLogsParser', () => {
         value: 'Paper and board',
         location: { sheet: 'Summary', row: 2, column: 'B' }
       })
-      expect(result.data.UPDATE_WASTE_BALANCE).toEqual({
+      expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toEqual({
         location: { sheet: 'Summary', row: 4, column: 'B' },
         headers: [
-          'OUR_REFERENCE',
+          'ROW_ID',
           'DATE_RECEIVED',
           null,
           'SUPPLIER_REF',
@@ -329,7 +341,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Sheet1: [
           ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
           [],
-          ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'WEIGHT'],
+          ['__EPR_DATA_WASTE_BALANCE', 'ROW_ID', 'WEIGHT'],
           [null, 12345, 100],
           [null, 67890, 200]
         ],
@@ -353,7 +365,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Sheet1', row: 3, column: 'B' },
-        headers: ['OUR_REFERENCE', 'WEIGHT'],
+        headers: ['ROW_ID', 'WEIGHT'],
         rows: [
           [12345, 100],
           [67890, 200]
@@ -404,18 +416,26 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should throw error for duplicate data section names', async () => {
       const result = parseWorkbook({
         Test: [
-          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'ROW_ID',
+            'DATE_RECEIVED'
+          ],
           [null, 12345, '2025-05-25'],
           [null, '', ''],
           [],
-          ['__EPR_DATA_UPDATE_WASTE_BALANCE', 'SUPPLIER_REF', 'WEIGHT'],
+          [
+            '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
+            'SUPPLIER_REF',
+            'WEIGHT'
+          ],
           [null, 'ABC123', 100],
           [null, '', '']
         ]
       })
 
       await expect(result).rejects.toThrow(
-        'Duplicate data section name: UPDATE_WASTE_BALANCE'
+        'Duplicate data section name: RECEIVED_LOADS_FOR_REPROCESSING'
       )
     })
   })
@@ -440,7 +460,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should emit data section that goes to last row without empty terminator', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'DATE_RECEIVED'],
           [null, 12345678910, '2025-05-25'],
           [null, 98765432100, '2025-05-26'],
           [null, 11122233344, '2025-05-27']
@@ -449,7 +469,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
           [12345678910, '2025-05-25'],
           [98765432100, '2025-05-26'],
@@ -505,7 +525,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should extract data section with correct startColumn when marker not in column A', async () => {
       const result = await parseWorkbook({
         Test: [
-          [null, '__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          [null, '__EPR_DATA_WASTE_BALANCE', 'ROW_ID', 'DATE_RECEIVED'],
           [null, null, 12345678910, '2025-05-25'],
           [null, null, 98765432100, '2025-05-26']
         ]
@@ -513,7 +533,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'C' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
           [12345678910, '2025-05-25'],
           [98765432100, '2025-05-26']
@@ -875,7 +895,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const date2 = new Date('2025-06-15')
 
       worksheet.getCell('A1').value = '__EPR_DATA_WASTE_RECEIVED'
-      worksheet.getCell('B1').value = 'OUR_REFERENCE'
+      worksheet.getCell('B1').value = 'ROW_ID'
       worksheet.getCell('C1').value = 'DATE_RECEIVED'
 
       worksheet.getCell('B2').value = 12345678910
@@ -889,7 +909,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
           [12345678910, date1],
           [98765432100, date2]
@@ -927,7 +947,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should allow metadata after complete data section', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          ['__EPR_DATA_WASTE_BALANCE', 'ROW_ID', 'DATE_RECEIVED'],
           [null, 12345678910, '2025-05-25'],
           [null, 98765432100, '2025-05-26'],
           [null, '', ''],
@@ -938,7 +958,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
           [12345678910, '2025-05-25'],
           [98765432100, '2025-05-26']
@@ -959,7 +979,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should allow metadata interspersed with data rows in separate columns', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_WASTE_BALANCE', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          ['__EPR_DATA_WASTE_BALANCE', 'ROW_ID', 'DATE_RECEIVED'],
           [null, 12345678910, '2025-05-25'],
           [
             null,
@@ -976,7 +996,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
           [12345678910, '2025-05-25'],
           [98765432100, '2025-05-26'],
@@ -1077,7 +1097,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Test: [
           [
             '__EPR_DATA_WASTE_BALANCE',
-            'OUR_REFERENCE',
+            'ROW_ID',
             'DATE_RECEIVED',
             null,
             '__EPR_META_PROCESSING_TYPE',
@@ -1090,7 +1110,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED'],
+        headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [[12345678910, '2025-05-25']]
       })
 
@@ -1107,7 +1127,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Test: [
           [
             '__EPR_DATA_WASTE_RECEIVED',
-            'OUR_REFERENCE',
+            'ROW_ID',
             'DATE_RECEIVED',
             '__EPR_SKIP_COLUMN',
             'SUPPLIER_REF'
@@ -1120,7 +1140,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.data.WASTE_RECEIVED).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['OUR_REFERENCE', 'DATE_RECEIVED', null, 'SUPPLIER_REF'],
+        headers: ['ROW_ID', 'DATE_RECEIVED', null, 'SUPPLIER_REF'],
         rows: [
           [98765432100, '2025-05-26', null, 'DEF456'],
           [11122233344, '2025-05-27', null, 'GHI789']
@@ -1133,7 +1153,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Test: [
           [
             '__EPR_DATA_WASTE_RECEIVED',
-            'OUR_REFERENCE',
+            'ROW_ID',
             '__EPR_SKIP_COLUMN',
             'DATE_RECEIVED'
           ],
@@ -1153,7 +1173,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Test: [
           [
             '__EPR_DATA_WASTE_RECEIVED',
-            'OUR_REFERENCE',
+            'ROW_ID',
             '__EPR_SKIP_COLUMN',
             'DATE_RECEIVED'
           ],
@@ -1175,7 +1195,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         Test: [
           [
             '__EPR_DATA_WASTE_RECEIVED',
-            'OUR_REFERENCE',
+            'ROW_ID',
             '__EPR_SKIP_COLUMN',
             'DATE_RECEIVED',
             '__EPR_SKIP_COLUMN'
@@ -1194,7 +1214,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should not skip rows when no skip column is defined', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'DATE_RECEIVED'],
+          ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'DATE_RECEIVED'],
           [null, 12345678910, '2025-05-25'],
           [null, 'Example', '2025-05-26']
         ]
@@ -1211,7 +1231,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should normalize "Choose option" to null in data rows', async () => {
       const result = await parseWorkbook({
         Test: [
-          ['__EPR_DATA_WASTE_RECEIVED', 'OUR_REFERENCE', 'STATUS', 'TYPE'],
+          ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'STATUS', 'TYPE'],
           [null, 12345678910, 'Choose option', 'Choose option'],
           [null, 98765432100, 'Active', 'Choose option']
         ]
@@ -1227,13 +1247,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // Realistic scenario: blank rows have empty cells plus dropdown defaults
       const result = await parseWorkbook({
         Test: [
-          [
-            '__EPR_DATA_WASTE_RECEIVED',
-            'OUR_REFERENCE',
-            'DATE',
-            'EWC_CODE',
-            'WEIGHT'
-          ],
+          ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'DATE', 'EWC_CODE', 'WEIGHT'],
           [null, 12345678910, '2025-01-15', '03 03 08', 1000],
           [null, null, null, 'Choose option', null], // Blank row: empty + dropdown default
           [null, 'This should be ignored', '2025-12-31', '03 03 08', 9999]
