@@ -4,6 +4,7 @@ import { getDefraIdUserRoles } from './get-defra-id-user-roles.js'
 import { getUsersOrganisationInfo } from './get-users-org-info.js'
 import { validateEprOrganisationAccess } from './validate-epr-org-access.js'
 import { config } from '../../../config.js'
+import { isAuthorisedOrgLinkingReq } from './authorise-org-linking.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
@@ -63,12 +64,48 @@ export function getJwtStrategyConfig(oidcConfigs) {
             organisationsRepository
           )
 
+          const isDiscoveryRequest =
+            request.route.path === '/user-status' && request.method === 'get'
+          if (isDiscoveryRequest) {
+            // Any user can check the organisations associated with their token
+            return {
+              isValid: true,
+              credentials: {
+                id: contactId,
+                email,
+                issuer,
+                userOrgs, // Useful for the discovery endpoint
+                linkedEprOrg, // Could be useful in some endpoints
+                scope: []
+              }
+            }
+          }
+
+          const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
+            request,
+            tokenPayload
+          )
+          if (isValidLinkingReq) {
+            return {
+              isValid: true,
+              credentials: {
+                id: contactId,
+                email,
+                issuer,
+                userOrgs, // Useful for the discovery endpoint
+                linkedEprOrg, // Could be useful in some endpoints
+                scope: []
+              }
+            }
+          }
+
+          // Throws an error if:
+          // - the request does not have an organisationId param
+          // - or if the linkedEprOrg does not match the organisationId param
+          validateEprOrganisationAccess(request, linkedEprOrg)
+
           // The roles are determined by the currentRelationship, never by other relationships in the token
           const scope = getDefraIdUserRoles(linkedEprOrg, tokenPayload)
-
-          // Throws an error if the request does not have an organisationId param
-          // or if the linkedEprOrg does not match the organisationId param
-          validateEprOrganisationAccess(request, linkedEprOrg)
 
           return {
             isValid: scope.length > 0,
@@ -76,7 +113,6 @@ export function getJwtStrategyConfig(oidcConfigs) {
               id: contactId,
               email,
               issuer,
-              userOrgs, // Useful for the discovery endpoint
               linkedEprOrg, // Could be useful in some endpoints
               scope
             }
