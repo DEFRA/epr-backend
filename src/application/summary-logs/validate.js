@@ -26,9 +26,11 @@ import { classifyLoads } from './classify-loads.js'
 
 /**
  * A waste record with validation issues attached
- * @typedef {Object} ValidatedWasteRecord
- * @property {WasteRecord} record - The waste record
- * @property {ValidationIssue[]} issues - Validation issues for this record
+ *
+ * In the validation pipeline, issues are always present (from validateRows).
+ * In the sync pipeline, issues are undefined (no validation runs).
+ *
+ * @typedef {import('#application/waste-records/transform-from-summary-log.js').TransformedRecord} ValidatedWasteRecord
  */
 
 const extractSummaryLog = async ({
@@ -68,8 +70,9 @@ const transformAndValidateData = async ({
     ])
   )
 
-  // Transform rows into waste records (returns { record, source }[])
-  const transformedRecords = transformFromSummaryLog(
+  // Transform validated rows into waste records (issues flow through)
+  /** @type {ValidatedWasteRecord[]} */
+  const wasteRecords = transformFromSummaryLog(
     validatedData,
     {
       summaryLog: {
@@ -82,13 +85,6 @@ const transformAndValidateData = async ({
     },
     existingRecordsMap
   )
-
-  // Correlate records with their validation issues using source location
-  /** @type {ValidatedWasteRecord[]} */
-  const wasteRecords = transformedRecords.map(({ record, source }) => ({
-    record,
-    issues: validatedData.data[source.table].rows[source.rowIndex].issues
-  }))
 
   // Data business validation using waste records
   const issues = validateDataBusiness({ wasteRecords, existingWasteRecords })

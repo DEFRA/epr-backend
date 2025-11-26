@@ -15,11 +15,12 @@ const UPDATED_DATE = '2025-01-20'
 const UPDATED_WEIGHT = 250.5
 
 /**
- * Creates a row structure as expected by transformFromSummaryLog
+ * Creates a validated row structure as expected by transformFromSummaryLog
  */
-const createRow = (values, rowId) => ({
+const createRow = (values, rowId, issues = []) => ({
   values,
-  rowId
+  rowId,
+  issues
 })
 
 describe('transformFromSummaryLog', () => {
@@ -263,12 +264,9 @@ function createExistingWasteRecord() {
 }
 
 function expectValidWasteRecord(result, rowId, dateReceived, grossWeight) {
-  const { record, source } = result
+  const { record, issues } = result
 
-  expect(source).toEqual({
-    table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-    rowIndex: expect.any(Number)
-  })
+  expect(issues).toEqual([])
   expect(record).toMatchObject({
     organisationId: 'org-1',
     registrationId: 'reg-1',

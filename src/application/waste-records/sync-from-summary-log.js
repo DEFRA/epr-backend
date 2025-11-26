@@ -73,7 +73,7 @@ export const syncFromSummaryLog = (dependencies) => {
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog)
 
-    // 2. Convert raw rows to validated row format
+    // 2. Extract row IDs for transformation
     prepareRowsForTransformation(parsedData)
 
     // 3. Load all existing waste records for this org/reg

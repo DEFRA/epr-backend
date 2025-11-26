@@ -5,20 +5,19 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
 /**
  * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
+ * @typedef {import('#application/summary-logs/validations/data-syntax.js').ValidatedRow} ValidatedRow
+ * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
  */
 
 /**
- * A row structured for transformation
- * @typedef {Object} StructuredRow
- * @property {Array<*>} values - Row values array
- * @property {string} rowId - Extracted row ID
- */
-
-/**
- * A transformed record with source location for correlation
+ * A transformed record with optional validation issues
+ *
+ * Issues are present when transforming validated rows (from validation pipeline)
+ * Issues are absent when transforming unvalidated rows (from sync pipeline)
+ *
  * @typedef {Object} TransformedRecord
  * @property {WasteRecord} record - The waste record
- * @property {{ table: string, rowIndex: number }} source - Source location for correlating with validation issues
+ * @property {ValidationIssue[]} [issues] - Validation issues (present if input was validated)
  */
 
 /**
@@ -43,17 +42,16 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  * Generic table transformation function
  * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
  *
- * Rows are expected in structure: { values: [...], rowId: string }
+ * Rows may be validated ({ values, rowId, issues }) or unvalidated ({ values, rowId })
+ * If issues are present on input rows, they flow through to the output
  *
- * @param {string} tableName - Name of the table being transformed
  * @param {Object} tableData - Table data with headers and rows
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {TransformedRecord[]} Array of transformed records with source info
+ * @returns {TransformedRecord[]} Array of transformed records
  */
 const transformTable = (
-  tableName,
   tableData,
   rowTransformer,
   context,
@@ -63,8 +61,8 @@ const transformTable = (
   const { summaryLog, organisationId, registrationId, accreditationId } =
     context
 
-  return rows.map((row, rowIndex) => {
-    const { values } = row
+  return rows.map((row) => {
+    const { values, issues } = row
 
     // Map row values to object using headers
     const rowData = headers.reduce((acc, header, index) => {
@@ -73,13 +71,11 @@ const transformTable = (
     }, /** @type {Record<string, any>} */ ({}))
 
     // Transform row using type-specific transformer
-    const { wasteRecordType, rowId, data } = rowTransformer(rowData, rowIndex)
+    const { wasteRecordType, rowId, data } = rowTransformer(rowData)
 
     // Look up existing waste record from Map if provided
     const existingRecord =
       existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
-
-    const source = { table: tableName, rowIndex }
 
     if (existingRecord) {
       // Calculate delta: find fields that changed (excluding ROW_ID)
@@ -92,7 +88,7 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, source }
+        return { record: existingRecord, issues }
       }
 
       // Add new version with only changed fields
@@ -109,7 +105,7 @@ const transformTable = (
           data,
           versions: [...existingRecord.versions, newVersion]
         },
-        source
+        issues
       }
     }
 
@@ -135,17 +131,17 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, source }
+    return { record: wasteRecord, issues }
   })
 }
 
 /**
  * Transforms parsed summary log data into waste records
  *
- * Expects rows in structure: { values: [...], rowId: string }
- * Returns records with source info for correlation with validation issues
+ * Expects validated rows in structure: { values: [...], rowId: string, issues: [...] }
+ * Issues flow through transformation and are returned with each record
  *
- * @param {ParsedSummaryLog} parsedData - The parsed summary log data
+ * @param {ParsedSummaryLog} parsedData - The parsed summary log data with validated rows
  * @param {Object} summaryLogContext - Context from the summary log
  * @param {Object} summaryLogContext.summaryLog - The summary log reference
  * @param {string} summaryLogContext.summaryLog.id - The summary log ID
@@ -154,7 +150,7 @@ const transformTable = (
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {TransformedRecord[]} Array of transformed records with source info
+ * @returns {TransformedRecord[]} Array of transformed records with issues
  */
 export const transformFromSummaryLog = (
   parsedData,
@@ -181,7 +177,6 @@ export const transformFromSummaryLog = (
       }
 
       return transformTable(
-        tableName,
         tableData,
         rowTransformer,
         summaryLogContext,

@@ -14,6 +14,8 @@ import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
 
 /**
  * A validated row with issues attached
+ *
+ * @export
  * @typedef {Object} ValidatedRow
  * @property {Array<*>} values - Original row values array
  * @property {string} rowId - Extracted row ID
