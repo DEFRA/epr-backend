@@ -464,17 +464,17 @@ describe('#getJwtStrategyConfig', () => {
         const result = await config.validate(artifacts)
 
         expect(result).toEqual({
-          isValid: false,
+          isValid: true,
           credentials: {
             id: 'defra-contact-123',
             email: 'defra-user@example.com',
             issuer: defraIdMockOidcWellKnownResponse.issuer,
-            scope: []
+            scope: [ROLES.standardUser]
           }
         })
       })
 
-      test('returns empty scope array for Defra ID tokens', async () => {
+      test('returns standard user scope for valid Defra ID tokens', async () => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
         const artifacts = {
@@ -490,7 +490,7 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts)
 
-        expect(result.credentials.scope).toEqual([])
+        expect(result.credentials.scope).toEqual([ROLES.standardUser])
       })
 
       test('does not call getEntraUserRoles for Defra ID tokens', async () => {
@@ -625,7 +625,7 @@ describe('#getJwtStrategyConfig', () => {
         expect(entraResult.credentials.id).toBe('entra-contact')
         expect(entraResult.credentials.scope).toEqual([ROLES.serviceMaintainer])
         expect(defraResult.credentials.id).toBe('defra-contact')
-        expect(defraResult.credentials.scope).toEqual([])
+        expect(defraResult.credentials.scope).toEqual([ROLES.standardUser])
       })
     })
 

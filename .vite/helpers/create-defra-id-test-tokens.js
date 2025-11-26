@@ -1,10 +1,9 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'crypto'
 
-// Must match oidc.defra.clientId in config.js (ADMIN_UI_ENTRA_CLIENT_ID)
-const VALID_ENTRA_AUDIENCE = 'test'
+const VALID_DEFRA_AUDIENCE = 'test-defra'
 
-const USER_EMAIL = 'someone@test-comppany.com'
+const USER_EMAIL = 'someone@test-company.com'
 
 // Generate key pair once at module load time
 // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
@@ -34,10 +33,10 @@ export const publicKey = {
 
 const baseValidObject = {
   name: 'John Doe',
-  id: 'test-contact-id', // Contact ID for the user
-  preferred_username: USER_EMAIL,
-  aud: VALID_ENTRA_AUDIENCE,
-  iss: `https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0`,
+  id: 'test-contact-id',
+  email: USER_EMAIL,
+  aud: VALID_DEFRA_AUDIENCE,
+  iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
   nbf: new Date().getTime() / 1000,
   exp: new Date().getTime() / 1000 + 3600,
   maxAgeSec: 3600, // 60 minutes
@@ -101,7 +100,7 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
       ...baseValidObject,
-      preferred_username: USER_EMAIL
+      email: USER_EMAIL
     },
     validJwtSecretObject,
     validGenerateTokenOptions

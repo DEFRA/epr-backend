@@ -2,6 +2,7 @@ import { health } from '#routes/health.js'
 import { apply } from '#routes/v1/apply/index.js'
 import * as summaryLogsRoutes from '#routes/v1/organisations/registrations/summary-logs/index.js'
 import * as organisationRoutes from '#routes/v1/organisations/index.js'
+import * as meRoutes from '#routes/v1/me/index.js'
 import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
 
 const router = {
@@ -19,6 +20,7 @@ const router = {
         server.route([
           health,
           ...apply,
+          ...Object.values(meRoutes),
           ...summaryLogsRoutesBehindFeatureFlag,
           ...Object.values(organisationRoutes),
           ...formSubmissionsRoutes
