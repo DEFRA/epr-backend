@@ -30,6 +30,11 @@ import { eprOrganisationFactory } from '#common/helpers/collections/factories/ep
 import { logger } from '#common/helpers/logging/logger.js'
 import { ObjectId } from 'mongodb'
 
+const COLLECTION_ORGANISATION = 'organisation'
+const COLLECTION_REGISTRATION = 'registration'
+const COLLECTION_ACCREDITATION = 'accreditation'
+const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
+
 /**
  * @import {Db} from 'mongodb'
  */
@@ -61,9 +66,13 @@ export async function createOrUpdateCollections(db) {
 export async function createIndexes(db) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
 
-  await db.collection('organisation').createIndex({ orgId: 1 })
-  await db.collection('registration').createIndex({ referenceNumber: 1 })
-  await db.collection('accreditation').createIndex({ referenceNumber: 1 })
+  await db.collection(COLLECTION_ORGANISATION).createIndex({ orgId: 1 })
+  await db
+    .collection(COLLECTION_REGISTRATION)
+    .createIndex({ referenceNumber: 1 })
+  await db
+    .collection(COLLECTION_ACCREDITATION)
+    .createIndex({ referenceNumber: 1 })
 
   await db
     .collection('waste-records')
@@ -85,24 +94,26 @@ export async function createSeedData(db, isProduction) {
     logger.info({ message: 'Creating seed data' })
 
     const organisationDocCount = await db
-      .collection('organisation')
+      .collection(COLLECTION_ORGANISATION)
       .countDocuments()
 
     if (organisationDocCount === 0) {
       const organisationAnswers = extractAnswers(organisationFixture)
 
-      const { insertedIds } = await db.collection('organisation').insertMany([
-        organisationFactory({
-          orgId: ORG_ID_START_NUMBER,
-          orgName: extractOrgName(organisationAnswers),
-          email: extractEmail(organisationAnswers),
-          nations: null,
-          answers: organisationAnswers,
-          rawSubmissionData: organisationFixture
-        })
-      ])
+      const { insertedIds } = await db
+        .collection(COLLECTION_ORGANISATION)
+        .insertMany([
+          organisationFactory({
+            orgId: ORG_ID_START_NUMBER,
+            orgName: extractOrgName(organisationAnswers),
+            email: extractEmail(organisationAnswers),
+            nations: null,
+            answers: organisationAnswers,
+            rawSubmissionData: organisationFixture
+          })
+        ])
 
-      await db.collection('registration').insertMany([
+      await db.collection(COLLECTION_REGISTRATION).insertMany([
         registrationFactory({
           referenceNumber: insertedIds[0]?.toString(),
           orgId: ORG_ID_START_NUMBER,
@@ -111,7 +122,7 @@ export async function createSeedData(db, isProduction) {
         })
       ])
 
-      await db.collection('accreditation').insertMany([
+      await db.collection(COLLECTION_ACCREDITATION).insertMany([
         accreditationFactory({
           referenceNumber: insertedIds[0]?.toString(),
           orgId: ORG_ID_START_NUMBER,
@@ -122,12 +133,12 @@ export async function createSeedData(db, isProduction) {
     }
 
     const eprOrganisationDocCount = await db
-      .collection('epr-organisations')
+      .collection(COLLECTION_EPR_ORGANISATIONS)
       .countDocuments()
 
     if (eprOrganisationDocCount === 0) {
       await db
-        .collection('epr-organisations')
+        .collection(COLLECTION_EPR_ORGANISATIONS)
         .insertMany([
           eprOrganisationFactory(eprOrganisation1),
           eprOrganisationFactory(eprOrganisation2),
@@ -165,16 +176,16 @@ export async function cleanupSeedData(db, isProduction) {
       }
     }
 
-    findAndDeleteOne('organisation', {
+    findAndDeleteOne(COLLECTION_ORGANISATION, {
       orgName: organisationFixture.data.main.JbEBvr,
       email: organisationFixture.data.main.aSoxDO
     })
 
-    findAndDeleteOne('registration', {
+    findAndDeleteOne(COLLECTION_REGISTRATION, {
       'rawSubmissionData.data.main.RIXIzA': registrationFixture.data.main.RIXIzA // system reference
     })
 
-    findAndDeleteOne('accreditation', {
+    findAndDeleteOne(COLLECTION_ACCREDITATION, {
       'rawSubmissionData.data.main.MyWHms':
         accreditationFixture.data.main.MyWHms // system reference
     })
@@ -188,6 +199,6 @@ export async function cleanupSeedData(db, isProduction) {
       .map((record) => record.id)
       .map(ObjectId.createFromHexString)
 
-    await deleteDocuments('epr-organisations', eprOrganisationIds)
+    await deleteDocuments(COLLECTION_EPR_ORGANISATIONS, eprOrganisationIds)
   }
 }

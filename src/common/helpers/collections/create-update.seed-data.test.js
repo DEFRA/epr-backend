@@ -18,10 +18,13 @@ const IS_NOT_PRODUCTION = () => false
 describe('seed data', () => {
   describe('environment is production', () => {
     it('does not create seed data', async () => {
+      const insertions = []
       const mockDb = createMockDb({
-        countDocuments: async () => 0
+        countDocuments: async () => 0,
+        insertions
       })
       await createSeedData(mockDb, IS_PRODUCTION)
+      expect(insertions).toHaveLength(0)
     })
 
     it('deletes fixture data', async () => {
