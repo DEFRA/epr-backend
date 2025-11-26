@@ -888,7 +888,7 @@ describe('Summary logs integration', () => {
               ],
               rows: [
                 [
-                  9999, // Invalid OUR_REFERENCE
+                  9999, // Invalid ROW_ID
                   'invalid-date', // Invalid DATE_RECEIVED
                   '03 03 08',
                   1000,
@@ -1069,7 +1069,7 @@ describe('Summary logs integration', () => {
               headers: ['INVALID_HEADER'], // Missing required headers
               rows: [
                 [
-                  9999, // Below minimum OUR_REFERENCE
+                  9999, // Below minimum ROW_ID
                   'invalid-date',
                   'bad-code',
                   'not-a-number',
