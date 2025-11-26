@@ -165,15 +165,26 @@ export async function createSeedData(db, isProduction) {
   }
 }
 
-export async function cleanupSeedData(db, isProduction) {
+export async function cleanupSeedData(db, { isProduction, isDryRun }) {
+  logger.info({
+    message: `Seed data clean up: requested, isProduction-${isProduction()}, dry run-${isDryRun()}`
+  })
   if (isProduction()) {
+    logger.info({ message: 'Seed data clean up: start' })
     const deleteDocuments = async (collectionName, ids) => {
-      const result = await db
-        .collection(collectionName)
-        .deleteMany({ _id: { $in: ids } })
-      logger.info({
-        message: `Seed data clean up: deleted ${result.deletedCount} documents from ${collectionName} collection`
-      })
+      if (isDryRun()) {
+        const idStrings = ids.map((id) => id.toString())
+        logger.info({
+          message: `Seed data clean up: dry run delete documents ${idStrings} from ${collectionName} collection`
+        })
+      } else {
+        const result = await db
+          .collection(collectionName)
+          .deleteMany({ _id: { $in: ids } })
+        logger.info({
+          message: `Seed data clean up: deleted ${result.deletedCount} documents from ${collectionName} collection`
+        })
+      }
     }
 
     const findAndDeleteOne = async (collectionName, query) => {

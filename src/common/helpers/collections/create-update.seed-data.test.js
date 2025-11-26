@@ -87,6 +87,9 @@ describe('createSeedData', () => {
 })
 
 describe('cleanupSeedData', () => {
+  const DRY_RUN = () => true
+  const ACTUAL_RUN = () => false
+
   it('deletes fixture data in production', async () => {
     const deletions = []
 
@@ -118,7 +121,10 @@ describe('cleanupSeedData', () => {
 
     const mockDb = createMockDb({ deletions, find: findResults })
 
-    await cleanupSeedData(mockDb, PRODUCTION)
+    await cleanupSeedData(mockDb, {
+      isProduction: PRODUCTION,
+      isDryRun: ACTUAL_RUN
+    })
 
     expect(deletions).toContainEqual({
       collectionName: 'organisation',
@@ -185,7 +191,10 @@ describe('cleanupSeedData', () => {
 
     const mockDb = createMockDb({ deletions, find: findResults })
 
-    await cleanupSeedData(mockDb, PRODUCTION)
+    await cleanupSeedData(mockDb, {
+      isProduction: PRODUCTION,
+      isDryRun: ACTUAL_RUN
+    })
 
     expect(deletions).toContainEqual({
       collectionName: 'epr-organisations',
@@ -205,10 +214,24 @@ describe('cleanupSeedData', () => {
     expect(deletions).toHaveLength(1)
   })
 
+  it('does not remove seed data in production on a dry run', async () => {
+    const deletions = []
+    const mockDb = createMockDb({ deletions })
+    await cleanupSeedData(mockDb, {
+      isProduction: PRODUCTION,
+      isDryRun: DRY_RUN
+    })
+
+    expect(deletions).toHaveLength(0)
+  })
+
   it('does not remove seed data when in environments that are not production', async () => {
     const deletions = []
     const mockDb = createMockDb({ deletions })
-    await cleanupSeedData(mockDb, NON_PRODUCTION)
+    await cleanupSeedData(mockDb, {
+      isProduction: NON_PRODUCTION,
+      isDryRun: ACTUAL_RUN
+    })
 
     expect(deletions).toHaveLength(0)
   })
