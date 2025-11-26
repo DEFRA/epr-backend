@@ -46,10 +46,6 @@ vi.mock('./validate-epr-org-access.js', () => ({
 // Mock getDefraIdUserRoles
 const mockGetDefraIdUserRoles = vi.fn()
 
-vi.mock('./get-defra-id-user-roles.js', () => ({
-  getDefraIdUserRoles: (...args) => mockGetDefraIdUserRoles(...args)
-}))
-
 describe('#getJwtStrategyConfig', () => {
   const mockOidcConfigs = {
     entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
