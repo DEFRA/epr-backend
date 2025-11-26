@@ -108,35 +108,17 @@ By adopting i18next-cli, we consolidate translation extraction, validation, and 
 
 The complete workflow integrates i18next-cli commands with custom Excel export/import scripts:
 
-```
-┌─────────────────┐
-│  Development    │ Add new features with translation keys
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ i18next extract │ Extract keys from .js, .njk, templates
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Export Script   │ Generate Excel with missing translations
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Translation Team│ Fill in Welsh translations in Excel
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ Import Script   │ Update cy.json files from Excel
-└────────┬────────┘
-         │
-         ▼
-┌─────────────────┐
-│ i18next status  │ Verify completion increased (e.g., 24% → 80%)
-└─────────────────┘
+```mermaid
+flowchart TD
+
+    A[Development<br/><sub>Add new features with translation keys</sub>]
+    B[i18next extract<br/><sub>Extract keys from .js, .njk, templates</sub>]
+    C[Export Script<br/><sub>Generate Excel with missing translations</sub>]
+    D[Translation Team<br/><sub>Fill in Welsh translations in Excel</sub>]
+    E[Import Script<br/><sub>Update cy.json files from Excel</sub>]
+    F[i18next status<br/><sub>Verify completion increased 24% -> 80%</sub>]
+
+    A --> B --> C --> D --> E --> F
 ```
 
 ### Summary Table
