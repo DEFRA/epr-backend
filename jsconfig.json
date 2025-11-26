@@ -16,6 +16,7 @@
       "#formsubmission/*": ["./src/forms-submission-data/*"],
       "#plugins/*": ["./src/plugins/*"],
       "#repositories/*": ["./src/repositories/*"],
+      "#root/*": ["./src/*"],
       "#routes/*": ["./src/routes/*"],
       "#server/*": ["./src/server/*"],
       "#test/*": ["./src/test/*"],
