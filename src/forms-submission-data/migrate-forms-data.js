@@ -16,7 +16,7 @@ import { parseRegistrationSubmission } from '#formsubmission/registration/transf
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {BaseOrganisation, Organisation, OrganisationWithAccreditations, OrganisationWithRegistrations} from './types.js'
+ * @import {BaseOrganisation, OrganisationWithAccreditations, OrganisationWithRegistrations} from './types.js'
  */
 
 /**
