@@ -125,7 +125,7 @@ function linkAccreditationsForOrg(organisation) {
     }
   }
 
-  logUnmatchedItems(organisation, accToRegs, regToAccs)
+  logUnlinkedAccreditations(organisation)
 }
 
 function formatAccreditationDetails(accreditation) {
@@ -144,41 +144,41 @@ function formatRegistrationDetails(registration) {
   return `id=${registration.id},type=${registration.wasteProcessingType},material=${registration.material}${siteInfo}`
 }
 
-function logUnmatchedItems(organisation, accToRegs, regToAccs) {
-  const unmatchedAccs = accToRegs.filter(
-    (am) => am.matchedRegistrations.length === 0
+function logUnlinkedAccreditations(organisation) {
+  const registrations = organisation.registrations ?? []
+  const accreditations = organisation.accreditations ?? []
+  const linkedRegistrations = registrations.filter(
+    (reg) => reg.accreditationId !== undefined
   )
-  const multiMatchAccs = accToRegs.filter(
-    (am) => am.matchedRegistrations.length > 1
+  const unlinkedRegistrations = registrations.filter(
+    (reg) => reg.accreditationId === undefined
   )
 
-  if (unmatchedAccs.length === 0 && multiMatchAccs.length === 0) {
+  const linkedAccreditationIds = new Set(
+    linkedRegistrations.map((reg) => reg.accreditationId)
+  )
+  const unlinkedAccreditations = accreditations.filter(
+    (acc) => !linkedAccreditationIds.has(acc.accreditationId)
+  )
+
+  if (unlinkedAccreditations.length === 0) {
     return
   }
 
-  const unmatchedRegs = regToAccs.filter(
-    (rm) => rm.matchedAccreditations.length === 0
-  )
-  const multiMatchRegs = regToAccs.filter(
-    (rm) => rm.matchedAccreditations.length > 1
-  )
-
-  const totalUnlinkedAccs = unmatchedAccs.length + multiMatchAccs.length
-
-  const allAccDetails = [...unmatchedAccs, ...multiMatchAccs]
-    .map((item) => formatAccreditationDetails(item.acc))
+  const unlinkedAccDetails = unlinkedAccreditations
+    .map((item) => formatAccreditationDetails(item))
     .join(';')
 
-  const allRegDetails = [...unmatchedRegs, ...multiMatchRegs]
-    .map((item) => formatRegistrationDetails(item.reg))
+  const unlinkedRegDetails = unlinkedRegistrations
+    .map((item) => formatRegistrationDetails(item))
     .join(';')
 
   const message =
     `Organisation has accreditations that cant be linked to registrations: ` +
     `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
-    `totalUnlinkedAccs=${totalUnlinkedAccs},noMatchAccs=${unmatchedAccs.length},multiMatchAccs=${multiMatchAccs.length},` +
-    `accreditations=[${allAccDetails}],` +
-    `registrations=[${allRegDetails}]`
+    `unlinked accreditations count=${unlinkedAccreditations.length},` +
+    `unlinked accreditations=[${unlinkedAccDetails}],` +
+    `unlinked registrations=[${unlinkedRegDetails}]`
 
   logger.warn({ message })
 }

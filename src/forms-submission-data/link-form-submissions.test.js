@@ -6,6 +6,7 @@ import {
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -304,16 +305,14 @@ describe('linkRegistrationToAccreditations', () => {
       expect(reg.accreditationId).toBeUndefined()
     }
 
-    const expectedPattern =
+    const expectedMessage =
       `Organisation has accreditations that cant be linked to registrations: ` +
-      `orgId=100,orgDbId=${org1Id},totalUnlinkedAccs=2,noMatchAccs=2,multiMatchAccs=0,` +
-      `accreditations=\\[id=${acc1Id},type=reprocessor,material=aluminium,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64};` +
-      `id=${acc2Id},type=exporter,material=paper\\],` +
-      `registrations=\\[id=${reg1Id},type=exporter,material=wood;` +
-      `id=${reg2Id},type=reprocessor,material=aluminium,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64}\\]`
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: expect.stringMatching(new RegExp(expectedPattern))
-    })
+      `orgId=100,orgDbId=${org1Id},unlinked accreditations count=2,` +
+      `unlinked accreditations=[id=${acc1Id},type=reprocessor,material=aluminium,${siteInfoToLog(organisations[0].accreditations[0].site)};` +
+      `id=${acc2Id},type=exporter,material=paper],` +
+      `unlinked registrations=[id=${reg1Id},type=exporter,material=wood;` +
+      `id=${reg2Id},type=reprocessor,material=aluminium,${siteInfoToLog(organisations[0].registrations[1].site)}]`
+    expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/2 linked'
     })
@@ -388,7 +387,7 @@ describe('linkRegistrationToAccreditations', () => {
     })
   })
 
-  it('dont link when multiple registrations match to accreditation', () => {
+  it('dont link when multiple registrations match to single accreditation', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
@@ -434,14 +433,13 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
     expect(result[0].registrations[1].accreditationId).toBeUndefined()
 
-    const expectedPattern =
+    const expectedMessage =
       `Organisation has accreditations that cant be linked to registrations: ` +
-      `orgId=100,orgDbId=${org1Id},totalUnlinkedAccs=1,noMatchAccs=0,multiMatchAccs=1,` +
-      `accreditations=\\[id=${accId1},type=reprocessor,material=wood,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64}\\],` +
-      `registrations=\\[\\]`
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: expect.stringMatching(new RegExp(expectedPattern))
-    })
+      `orgId=100,orgDbId=${org1Id},unlinked accreditations count=1,` +
+      `unlinked accreditations=[id=${accId1},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[0].site)}],` +
+      `unlinked registrations=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)};` +
+      `id=${reg2Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[1].site)}]`
+    expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/1 linked'
     })
