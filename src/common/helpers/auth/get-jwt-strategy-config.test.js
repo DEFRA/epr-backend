@@ -11,12 +11,7 @@ import {
   defraIdMockOidcWellKnownResponse,
   defraIdMockJwksUrl
 } from '#vite/helpers/mock-defra-id-oidc.js'
-import {
-  defraIdMockAuthTokens,
-  baseDefraIdTokenPayload
-} from '#vite/helpers/create-defra-id-test-tokens.js'
-
-const { validToken: baseDefraIdMockToken } = defraIdMockAuthTokens
+import { baseDefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 
 // Mock config
 const mockConfigGet = vi.fn()

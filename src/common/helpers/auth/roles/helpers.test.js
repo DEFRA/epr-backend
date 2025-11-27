@@ -439,8 +439,8 @@ describe('findOrganisationMatches', () => {
     // organisations that might appear in both linked and unlinked arrays
 
     // Create a mock that would return duplicates if deduplication didn't work
-    const org1 = { id: 'org-1', name: 'Org One' }
-    const org2 = { id: 'org-2', name: 'Org Two' }
+    // const org1 = { id: 'org-1', name: 'Org One' }
+    // const org2 = { id: 'org-2', name: 'Org Two' }
 
     // Even though the current implementation doesn't populate these arrays,
     // the deduplication logic (line 97) is designed to handle duplicates
