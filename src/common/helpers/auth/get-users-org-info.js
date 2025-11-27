@@ -12,6 +12,7 @@ import {
 
 /**
  * @param {object} tokenPayload - The OIDC token payload containing user and organization data
+ * @param {OrganisationsRepository} organisationsRepository - The organisations repository
  */
 export async function getUsersOrganisationInfo(
   tokenPayload,
