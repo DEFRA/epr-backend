@@ -87,8 +87,9 @@ sequenceDiagram
 
 ```mermaid
 stateDiagram-v2
-    [*] --> preprocessing: Upload
-    preprocessing --> validating: Start validation
+    [*] --> preprocessing: Initiate upload
+    preprocessing --> validating: CDP callback (scan passed)
+    preprocessing --> rejected: CDP callback (scan failed)
     validating --> validated: Validation passes
     validating --> invalid: Validation fails
     validated --> submitting: User confirms submit
@@ -99,10 +100,18 @@ stateDiagram-v2
     validating --> superseded: New upload for org/reg
     validated --> superseded: New upload for org/reg
 
+    rejected --> [*]
     invalid --> [*]
     superseded --> [*]
     submitted --> [*]
     submission_failed --> [*]
+
+    note right of preprocessing
+        Created when backend
+        proxies CDP initiate.
+        Covers: upload pending,
+        file transfer, virus scan.
+    end note
 
     note right of superseded
         Terminal state:
