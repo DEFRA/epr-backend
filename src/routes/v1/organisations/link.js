@@ -10,11 +10,7 @@ export const organisationsLink = {
   method: 'POST',
   path: organisationsLinkPath,
   options: {
-    auth: {
-      access: {
-        scope: []
-      }
-    }
+    auth: 'access-token'
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
