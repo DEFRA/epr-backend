@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 
 const commonMessages = {
   'any.required': '{#label} is required',
@@ -44,21 +45,6 @@ export const summaryLogInsertSchema = Joi.object({
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()
 }).messages(commonMessages)
-
-const loadRowIdsSchema = Joi.object({
-  valid: Joi.array()
-    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
-    .required(),
-  invalid: Joi.array()
-    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
-    .required()
-})
-
-const loadsSchema = Joi.object({
-  added: loadRowIdsSchema.required(),
-  unchanged: loadRowIdsSchema.required(),
-  adjusted: loadRowIdsSchema.required()
-})
 
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),

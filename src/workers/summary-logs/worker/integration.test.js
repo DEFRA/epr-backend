@@ -158,7 +158,12 @@ describe('SummaryLogsValidator integration', () => {
         loads: {
           added: { valid: [], invalid: [] },
           unchanged: { valid: [], invalid: [] },
-          adjusted: { valid: [], invalid: [] }
+          adjusted: { valid: [], invalid: [] },
+          totals: {
+            added: { valid: 0, invalid: 0 },
+            unchanged: { valid: 0, invalid: 0 },
+            adjusted: { valid: 0, invalid: 0 }
+          }
         }
       }
     })
@@ -246,7 +251,12 @@ describe('SummaryLogsValidator integration', () => {
               loads: {
                 added: { valid: [], invalid: [] },
                 unchanged: { valid: [], invalid: [] },
-                adjusted: { valid: [], invalid: [] }
+                adjusted: { valid: [], invalid: [] },
+                totals: {
+                  added: { valid: 0, invalid: 0 },
+                  unchanged: { valid: 0, invalid: 0 },
+                  adjusted: { valid: 0, invalid: 0 }
+                }
               }
             }
           })

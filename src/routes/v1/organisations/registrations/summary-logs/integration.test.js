@@ -265,7 +265,12 @@ describe('Summary logs integration', () => {
           loads: {
             added: { valid: [], invalid: [] },
             unchanged: { valid: [], invalid: [] },
-            adjusted: { valid: [], invalid: [] }
+            adjusted: { valid: [], invalid: [] },
+            totals: {
+              added: { valid: 0, invalid: 0 },
+              unchanged: { valid: 0, invalid: 0 },
+              adjusted: { valid: 0, invalid: 0 }
+            }
           }
         })
       })
@@ -658,7 +663,12 @@ describe('Summary logs integration', () => {
         expect(payload.loads).toEqual({
           added: { valid: [10000], invalid: [9999] },
           unchanged: { valid: [], invalid: [] },
-          adjusted: { valid: [], invalid: [] }
+          adjusted: { valid: [], invalid: [] },
+          totals: {
+            added: { valid: 1, invalid: 1 },
+            unchanged: { valid: 0, invalid: 0 },
+            adjusted: { valid: 0, invalid: 0 }
+          }
         })
       })
     })

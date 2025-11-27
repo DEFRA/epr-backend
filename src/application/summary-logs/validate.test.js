@@ -585,7 +585,12 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads).toEqual({
         added: { valid: [10000], invalid: [9999] },
         unchanged: { valid: [], invalid: [] },
-        adjusted: { valid: [], invalid: [] }
+        adjusted: { valid: [], invalid: [] },
+        totals: {
+          added: { valid: 1, invalid: 1 },
+          unchanged: { valid: 0, invalid: 0 },
+          adjusted: { valid: 0, invalid: 0 }
+        }
       })
     })
 
@@ -630,7 +635,12 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads).toEqual({
         added: { valid: [], invalid: [] },
         unchanged: { valid: ['10000'], invalid: [] },
-        adjusted: { valid: [], invalid: [] }
+        adjusted: { valid: [], invalid: [] },
+        totals: {
+          added: { valid: 0, invalid: 0 },
+          unchanged: { valid: 1, invalid: 0 },
+          adjusted: { valid: 0, invalid: 0 }
+        }
       })
 
       // Reset the mock for other tests

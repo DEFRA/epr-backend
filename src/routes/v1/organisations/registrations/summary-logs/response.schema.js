@@ -1,6 +1,7 @@
 import Joi from 'joi'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { loadsSchema } from '#domain/summary-logs/loads-schema.js'
 
 const validationIssueSchema = Joi.object({
   type: Joi.string().valid('error', 'warning').optional(),
@@ -34,21 +35,6 @@ const validationConcernsSchema = Joi.object().pattern(
       .required()
   })
 )
-
-const loadRowIdsSchema = Joi.object({
-  valid: Joi.array()
-    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
-    .required(),
-  invalid: Joi.array()
-    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
-    .required()
-})
-
-const loadsSchema = Joi.object({
-  added: loadRowIdsSchema.required(),
-  unchanged: loadRowIdsSchema.required(),
-  adjusted: loadRowIdsSchema.required()
-})
 
 export const summaryLogResponseSchema = Joi.object({
   status: Joi.string()

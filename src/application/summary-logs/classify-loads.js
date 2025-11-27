@@ -7,8 +7,14 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 /**
  * @typedef {Object} LoadRowIds
- * @property {string[]} valid - Row IDs for valid loads
- * @property {string[]} invalid - Row IDs for invalid loads
+ * @property {string[]} valid - Row IDs for valid loads (truncated to MAX_ROW_IDS)
+ * @property {string[]} invalid - Row IDs for invalid loads (truncated to MAX_ROW_IDS)
+ */
+
+/**
+ * @typedef {Object} LoadTotals
+ * @property {number} valid - Total count of valid loads
+ * @property {number} invalid - Total count of invalid loads
  */
 
 /**
@@ -16,7 +22,13 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
  * @property {LoadRowIds} added - Row IDs for added loads
  * @property {LoadRowIds} unchanged - Row IDs for unchanged loads
  * @property {LoadRowIds} adjusted - Row IDs for adjusted loads
+ * @property {Object} totals - Total counts (not truncated)
+ * @property {LoadTotals} totals.added - Totals for added loads
+ * @property {LoadTotals} totals.unchanged - Totals for unchanged loads
+ * @property {LoadTotals} totals.adjusted - Totals for adjusted loads
  */
+
+const MAX_ROW_IDS = 100
 
 /**
  * Creates an empty loads structure
@@ -26,7 +38,12 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 const createEmptyLoads = () => ({
   added: { valid: [], invalid: [] },
   unchanged: { valid: [], invalid: [] },
-  adjusted: { valid: [], invalid: [] }
+  adjusted: { valid: [], invalid: [] },
+  totals: {
+    added: { valid: 0, invalid: 0 },
+    unchanged: { valid: 0, invalid: 0 },
+    adjusted: { valid: 0, invalid: 0 }
+  }
 })
 
 /**
@@ -65,6 +82,8 @@ const classifyRecord = (record, summaryLogId) => {
  * - valid: Load passes all validation rules (issues.length === 0)
  * - invalid: Load has validation errors (issues.length > 0)
  *
+ * Row ID arrays are truncated to 100 entries; totals always reflect the full count.
+ *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues
  * @param {string} params.summaryLogId - The current summary log ID
@@ -76,7 +95,12 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   for (const { record, issues } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
-    loads[classification][validityKey].push(record.rowId)
+
+    loads.totals[classification][validityKey]++
+
+    if (loads[classification][validityKey].length < MAX_ROW_IDS) {
+      loads[classification][validityKey].push(record.rowId)
+    }
   }
 
   return loads
