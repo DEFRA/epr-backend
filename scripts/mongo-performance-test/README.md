@@ -9,7 +9,7 @@ The scripts generate test data and measure performance metrics (insert, read, up
 1. **Single Nested Collection**: Organisations with embedded registrations and accreditations
 2. **Separate Collections**: Organisations, registrations, and accreditations in separate collections
 
-[This is to aid ADR decision](../../docs/architecture/decisions/0008-forms-physical-data-model.md)
+[This is to aid ADR decision](https://github.com/DEFRA/epr-re-ex-service/tree/main/docs/architecture/decisions/0012-forms-physical-data-model.md)
 
 ## Directory Structure
 
