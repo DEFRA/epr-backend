@@ -43,3 +43,11 @@ runs:
       with:
         args: >
           -Dsonar.qualitygate.wait=true
+
+    - name: SonarQube Quality Gate check
+      if: ${{ github.actor != 'dependabot[bot]' }}
+      uses: SonarSource/sonarqube-quality-gate-action@v1.2.0
+      with:
+        pollingTimeoutSec: 600
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
