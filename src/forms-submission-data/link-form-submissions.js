@@ -1,8 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  comparePostcodes,
-  postCodeForLogging
-} from './parsing-common/postcode.js'
+import { compareSite, siteInfoToLog } from './parsing-common/site.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
@@ -89,7 +86,7 @@ function formatRegistrationForLogging(registration) {
   const isReprocessor =
     registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const siteInfo = isReprocessor
-    ? `, site.postcodeHash=${postCodeForLogging(registration.site.address.postcode)}`
+    ? `, site: ${siteInfoToLog(registration.site)}`
     : ''
   return `{id=${registration.id}, wasteProcessingType=${registration.wasteProcessingType}, material=${registration.material}${siteInfo}}`
 }
@@ -98,16 +95,12 @@ function formatAccreditationComparisonLog(accreditation, registrations, org) {
   const isReprocessor =
     accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const siteInfo = isReprocessor
-    ? `, site.postcodeHash=${postCodeForLogging(accreditation.site.address.postcode)}`
+    ? `, site: ${siteInfoToLog(accreditation.site)}`
     : ''
   const registrationsInfo = registrations
     .map(formatRegistrationForLogging)
     .join(', ')
   return `accreditationId=${accreditation.id}, wasteProcessingType=${accreditation.wasteProcessingType}, material=${accreditation.material}${siteInfo}, registrations=[${registrationsInfo}], orgId=${org.orgId}, org id:${org.id}`
-}
-
-function sitesMatch(site1, site2) {
-  return comparePostcodes(site1.address.postcode, site2.address.postcode)
 }
 
 function isAccreditationForRegistration(accreditation, registration) {
@@ -120,8 +113,44 @@ function isAccreditationForRegistration(accreditation, registration) {
   }
 
   return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-    ? sitesMatch(registration.site, accreditation.site)
+    ? compareSite(registration.site, accreditation.site)
     : true
+}
+
+function linkAccreditationsForOrg(organisation) {
+  const accreditations = organisation.accreditations ?? []
+  const registrations = organisation.registrations ?? []
+
+  for (const accreditation of accreditations) {
+    const matchedRegistrations = registrations.filter((registration) =>
+      isAccreditationForRegistration(accreditation, registration)
+    )
+
+    if (matchedRegistrations.length === 1) {
+      matchedRegistrations[0].accreditationId = accreditation.id
+    } else if (matchedRegistrations.length > 1) {
+      logger.warn({
+        message: `Multiple registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, organisation)}`
+      })
+    } else {
+      logger.warn({
+        message: `No registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, organisation)}`
+      })
+    }
+  }
+}
+
+function countItems(organisations, propertyName, filter = () => true) {
+  return organisations.flatMap((org) => org[propertyName] ?? []).filter(filter)
+    .length
+}
+
+function getLinkedRegCount(organisations) {
+  return countItems(
+    organisations,
+    'registrations',
+    (reg) => reg.accreditationId !== undefined
+  )
 }
 
 /**
@@ -131,47 +160,18 @@ function isAccreditationForRegistration(accreditation, registration) {
  * @returns {OrganisationWithAccreditations[]}
  */
 export function linkRegistrationToAccreditations(organisations) {
-  let linkedCount = 0
-  const totalAccreditationsCount = organisations.flatMap(
-    (org) => org.accreditations ?? []
-  ).length
-
+  const accCount = countItems(organisations, 'accreditations')
   for (const org of organisations) {
-    const accreditations = org.accreditations ?? []
-    const registrations = org.registrations ?? []
-
-    for (const accreditation of accreditations) {
-      const matchedRegistrations = registrations.filter((registration) =>
-        isAccreditationForRegistration(accreditation, registration)
-      )
-
-      if (matchedRegistrations.length === 1) {
-        matchedRegistrations[0].accreditationId = accreditation.id
-        linkedCount++
-      } else if (matchedRegistrations.length > 1) {
-        logger.warn({
-          message: `Multiple registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, org)}`
-        })
-      } else {
-        logger.warn({
-          message: `No registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, org)}`
-        })
-      }
-    }
+    linkAccreditationsForOrg(org)
   }
 
+  const linkedRegCount = getLinkedRegCount(organisations)
   logger.info({
-    message: `Accreditation linking complete: ${linkedCount}/${totalAccreditationsCount} linked, ${totalAccreditationsCount - linkedCount} unlinked`
+    message: `Accreditation linking complete: ${linkedRegCount}/${accCount} linked`
   })
-
-  const registrationsCount = organisations.flatMap(
-    (org) => org.registrations ?? []
-  ).length
-  const registrationsWithoutAcc = organisations.flatMap((org) =>
-    (org.registrations ?? []).filter((r) => !r.accreditationId)
-  ).length
+  const regCount = countItems(organisations, 'registrations')
   logger.info({
-    message: `Registrations : ${registrationsCount - registrationsWithoutAcc}/${registrationsCount} linked to accreditations, ${registrationsWithoutAcc} unlinked`
+    message: `Registrations : ${linkedRegCount}/${regCount} linked to accreditations`
   })
 
   return organisations
