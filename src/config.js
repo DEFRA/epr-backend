@@ -196,12 +196,36 @@ const baseConfig = {
       env: 'TRACING_HEADER'
     }
   },
+  appBaseUrl: {
+    doc: 'Frontend base URL for redirects',
+    format: String,
+    default: 'http://localhost:3000',
+    env: 'APP_BASE_URL'
+  },
+  eprBackendUrl: {
+    doc: 'Backend base URL for callbacks',
+    format: String,
+    default: 'http://localhost:3001',
+    env: 'EPR_BACKEND_URL'
+  },
   cdpUploader: {
     url: {
       doc: 'CDP Uploader service URL',
-      format: 'url',
-      default: 'https://cdp-uploader.local.cdp-int.defra.cloud',
+      format: String,
+      default: 'http://localhost:7337',
       env: 'CDP_UPLOADER_URL'
+    },
+    maxFileSize: {
+      doc: 'Maximum file size for uploads in bytes (10MB default)',
+      format: 'nat',
+      default: 10485760,
+      env: 'CDP_UPLOADER_MAX_FILE_SIZE'
+    },
+    s3Bucket: {
+      doc: 'S3 bucket for summary log uploads',
+      format: String,
+      default: 're-ex-summary-logs',
+      env: 'CDP_UPLOADER_S3_BUCKET_SUMMARY_LOGS'
     }
   },
   regulator: {

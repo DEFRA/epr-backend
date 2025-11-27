@@ -160,7 +160,11 @@ describe('summaryLogsWorkerThread', () => {
       summaryLogId
     })
 
-    expect(createUploadsRepository).toHaveBeenCalledWith(mockS3Client)
+    expect(createUploadsRepository).toHaveBeenCalledWith(
+      expect.objectContaining({
+        s3Client: mockS3Client
+      })
+    )
   })
 
   it('should create summary log extractor', async () => {

@@ -2,6 +2,9 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
+import { config } from '#root/config.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
@@ -9,6 +12,7 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
  * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepositoryFactory} [wasteRecordsRepository] - Optional test override for waste records repository factory
+ * @property {import('#domain/uploads/repository/port.js').UploadsRepository} [uploadsRepository] - Optional test override for uploads repository
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
@@ -86,6 +90,48 @@ export const repositories = {
 
       for (const [name, creator] of Object.entries(repositoryFactories)) {
         registerRepository(name, creator, options?.[name])
+      }
+
+      // Register uploads repository (S3-based, not MongoDB)
+      if (options?.uploadsRepository) {
+        // Test override provided
+        server.ext('onRequest', (request, h) => {
+          Object.defineProperty(request, 'uploadsRepository', {
+            get() {
+              return options.uploadsRepository
+            },
+            enumerable: true,
+            configurable: true
+          })
+          return h.continue
+        })
+      } else if (!skipMongoDb) {
+        // Production: create S3-based uploads repository
+        const s3Client = createS3Client({
+          region: config.get('awsRegion'),
+          endpoint: config.get('s3Endpoint'),
+          forcePathStyle: config.get('isDevelopment')
+        })
+
+        const uploadsRepository = createUploadsRepository({
+          s3Client,
+          cdpUploaderUrl: config.get('cdpUploader.url'),
+          frontendUrl: config.get('appBaseUrl'),
+          backendUrl: config.get('eprBackendUrl'),
+          s3Bucket: config.get('cdpUploader.s3Bucket'),
+          maxFileSize: config.get('cdpUploader.maxFileSize')
+        })
+
+        server.ext('onRequest', (request, h) => {
+          Object.defineProperty(request, 'uploadsRepository', {
+            get() {
+              return uploadsRepository
+            },
+            enumerable: true,
+            configurable: true
+          })
+          return h.continue
+        })
       }
     }
   }

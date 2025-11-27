@@ -1,17 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
-import {
-  vi,
-  describe,
-  it,
-  expect,
-  beforeAll,
-  beforeEach,
-  afterAll,
-  afterEach
-} from 'vitest'
+import { vi, describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
 
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
+import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
@@ -23,25 +15,11 @@ const { validToken } = entraIdMockAuthTokens
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
 
-const createPayload = (overrides = {}) => ({
-  mimeTypes: [
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
-  ],
-  maxFileSize: 10485760,
-  ...overrides
-})
-
 describe(`${summaryLogsCreatePath} route`, () => {
   setupAuthContext()
   let server
   let summaryLogsRepository
-  const originalFetch = global.fetch
-
-  const mockCdpResponse = {
-    uploadId: 'cdp-upload-123',
-    uploadUrl: '/upload-and-scan/cdp-upload-123',
-    statusUrl: 'https://cdp-uploader.test/status/cdp-upload-123'
-  }
+  let uploadsRepository
 
   beforeAll(async () => {
     summaryLogsRepository = {
@@ -50,11 +28,14 @@ describe(`${summaryLogsCreatePath} route`, () => {
       findById: vi.fn().mockResolvedValue(null)
     }
 
+    uploadsRepository = createInMemoryUploadsRepository()
+
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: () => summaryLogsRepository
+        summaryLogsRepository: () => summaryLogsRepository,
+        uploadsRepository
       },
       featureFlags
     })
@@ -62,17 +43,9 @@ describe(`${summaryLogsCreatePath} route`, () => {
     await server.initialize()
   })
 
-  beforeEach(() => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => mockCdpResponse,
-      headers: new Map()
-    })
-  })
-
   afterEach(() => {
-    global.fetch = originalFetch
     vi.resetAllMocks()
+    uploadsRepository.initiateCalls.length = 0
   })
 
   afterAll(async () => {
@@ -84,7 +57,6 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload: createPayload(),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -94,16 +66,15 @@ describe(`${summaryLogsCreatePath} route`, () => {
 
       const body = JSON.parse(response.payload)
       expect(body.summaryLogId).toBeDefined()
-      expect(body.uploadId).toBe(mockCdpResponse.uploadId)
-      expect(body.uploadUrl).toBe(mockCdpResponse.uploadUrl)
-      expect(body.statusUrl).toBe(mockCdpResponse.statusUrl)
+      expect(body.uploadId).toBeDefined()
+      expect(body.uploadUrl).toContain(body.uploadId)
+      expect(body.statusUrl).toContain(body.uploadId)
     })
 
     it('creates summary log with preprocessing status', async () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload: createPayload(),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -119,31 +90,23 @@ describe(`${summaryLogsCreatePath} route`, () => {
       )
     })
 
-    it('calls CDP Uploader with correct options', async () => {
-      const payload = createPayload()
-
-      await server.inject({
+    it('initiates upload via uploads repository', async () => {
+      const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload,
         headers: {
           Authorization: `Bearer ${validToken}`
         }
       })
 
-      expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/initiate'),
-        expect.objectContaining({
-          method: 'POST',
-          body: expect.stringContaining('"mimeTypes"')
-        })
-      )
+      const body = JSON.parse(response.payload)
 
-      const fetchCall = global.fetch.mock.calls[0]
-      const body = JSON.parse(fetchCall[1].body)
-      expect(body.mimeTypes).toEqual(payload.mimeTypes)
-      expect(body.maxFileSize).toBe(payload.maxFileSize)
-      expect(body.metadata.summaryLogId).toBeDefined()
+      expect(uploadsRepository.initiateCalls).toHaveLength(1)
+      expect(uploadsRepository.initiateCalls[0]).toEqual({
+        organisationId,
+        registrationId,
+        summaryLogId: body.summaryLogId
+      })
     })
 
     it('generates unique summaryLogId for each request', async () => {
@@ -151,47 +114,17 @@ describe(`${summaryLogsCreatePath} route`, () => {
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          payload: createPayload(),
           headers: { Authorization: `Bearer ${validToken}` }
         }),
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          payload: createPayload(),
           headers: { Authorization: `Bearer ${validToken}` }
         })
       ])
 
       const ids = responses.map((r) => JSON.parse(r.payload).summaryLogId)
       expect(ids[0]).not.toBe(ids[1])
-    })
-  })
-
-  describe('validation errors', () => {
-    it('returns 422 when mimeTypes is missing', async () => {
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload: { maxFileSize: 10485760 },
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-    })
-
-    it('returns 422 when mimeTypes is empty array', async () => {
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload: createPayload({ mimeTypes: [] }),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
   })
 
@@ -208,7 +141,6 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload: createPayload(),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -219,27 +151,21 @@ describe(`${summaryLogsCreatePath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
     })
 
-    it('returns error when CDP Uploader fails', async () => {
-      global.fetch = vi
-        .fn()
-        .mockRejectedValue(new Error('CDP Uploader unavailable'))
-
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {})
+    it('re-throws Boom errors with original status', async () => {
+      const Boom = await import('@hapi/boom')
+      summaryLogsRepository.insert.mockRejectedValue(
+        Boom.default.forbidden('Access denied')
+      )
 
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        payload: createPayload(),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
       })
 
-      consoleErrorSpy.mockRestore()
-
-      expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
   })
 })

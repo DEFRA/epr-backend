@@ -29,7 +29,9 @@ Creates a summary log and proxies to CDP Uploader.
 
 ```json
 {
-  "mimeTypes": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  "mimeTypes": [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  ],
   "maxFileSize": 10485760
 }
 ```
@@ -65,7 +67,9 @@ Creates a summary log and proxies to CDP Uploader.
   "callback": "https://epr-backend.{env}.../v1/organisations/{orgId}/registrations/{regId}/summary-logs/{summaryLogId}/upload-completed",
   "s3Bucket": "tenant-bucket",
   "s3Path": "/organisations/{orgId}/registrations/{regId}",
-  "mimeTypes": ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"],
+  "mimeTypes": [
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  ],
   "maxFileSize": 10485760,
   "metadata": {
     "summaryLogId": "the-generated-uuid"
@@ -84,6 +88,7 @@ Creates a summary log and proxies to CDP Uploader.
 ```
 
 **Notes:**
+
 - `callback` is optional but we use it
 - `redirect` is relative - gets appended to frontend URL after upload
 - `s3Path` is optional prefix for file organisation
@@ -117,6 +122,7 @@ When virus scan completes, CDP calls our existing `upload-completed` endpoint:
 ```
 
 **`fileStatus` values:**
+
 - `complete` - scan passed, file in S3
 - `rejected` - scan failed (virus), file deleted
 - `pending` - still scanning (rare to see in callback)
@@ -133,7 +139,7 @@ const { uploadId, uploadUrl, statusUrl } = await initUpload({
   redirect: `/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
   callback: `${eprBackendUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
   s3Bucket,
-  s3path: `/organisations/${organisationId}/registrations/${registrationId}`,  // Note: lowercase bug!
+  s3path: `/organisations/${organisationId}/registrations/${registrationId}`, // Note: lowercase bug!
   mimeTypes: [mimeTypes.xlsx],
   metadata: { summaryLogId }
 })
@@ -214,12 +220,14 @@ export const summaryLogsCreate = {
     })
 
     // 5. Return to frontend
-    return h.response({
-      summaryLogId,
-      uploadId: cdpResponse.uploadId,
-      uploadUrl: cdpResponse.uploadUrl,
-      statusUrl: cdpResponse.statusUrl
-    }).code(201)
+    return h
+      .response({
+        summaryLogId,
+        uploadId: cdpResponse.uploadId,
+        uploadUrl: cdpResponse.uploadUrl,
+        statusUrl: cdpResponse.statusUrl
+      })
+      .code(201)
   }
 }
 ```
@@ -266,7 +274,10 @@ The existing endpoint already handles both create and update (lines 108-115 in `
 ```javascript
 if (!existing) {
   // This shouldn't happen after PAE-556 - log warning
-  logger.warn({ summaryLogId }, 'upload-completed called for non-existent summary log')
+  logger.warn(
+    { summaryLogId },
+    'upload-completed called for non-existent summary log'
+  )
   // Still create for backwards compatibility during rollout
   await summaryLogsRepository.insert(summaryLogId, summaryLog)
 }

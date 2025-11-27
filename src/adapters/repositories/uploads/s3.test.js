@@ -3,10 +3,18 @@ import { CreateBucketCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { it as s3It } from '#vite/fixtures/s3.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from './s3.js'
-import { testUploadsRepositoryContract } from './port.contract.js'
+import { testUploadsRepositoryFileContract } from './port.contract.js'
 
 const bucket = 'test-bucket'
 const key = 'path/to/summary-log.xlsx'
+
+const testConfig = {
+  cdpUploaderUrl: 'https://cdp-uploader.test',
+  frontendUrl: 'https://frontend.test',
+  backendUrl: 'https://backend.test',
+  s3Bucket: 'test-bucket',
+  maxFileSize: 10485760
+}
 
 const it = s3It.extend({
   s3Client: async ({ s3 }, use) => {
@@ -45,12 +53,18 @@ const it = s3It.extend({
   },
 
   uploadsRepository: async ({ s3Client }, use) => {
-    await use(createUploadsRepository(s3Client))
+    await use(
+      createUploadsRepository({
+        s3Client,
+        ...testConfig
+      })
+    )
   }
 })
 
 describe('S3 uploads repository', () => {
-  testUploadsRepositoryContract(it)
+  // Only run file contract tests - initiate requires external HTTP calls
+  testUploadsRepositoryFileContract(it)
 
   describe('S3-specific error handling', () => {
     it('throws error when response.Body is undefined', async () => {
@@ -58,7 +72,10 @@ describe('S3 uploads repository', () => {
         send: vi.fn().mockResolvedValue({ Body: undefined })
       }
 
-      const repository = createUploadsRepository(mockS3Client)
+      const repository = createUploadsRepository({
+        s3Client: mockS3Client,
+        ...testConfig
+      })
 
       await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
         'S3 GetObject returned no body for s3://test/test'
@@ -70,7 +87,10 @@ describe('S3 uploads repository', () => {
         send: vi.fn().mockRejectedValue(new Error('Network error'))
       }
 
-      const repository = createUploadsRepository(mockS3Client)
+      const repository = createUploadsRepository({
+        s3Client: mockS3Client,
+        ...testConfig
+      })
 
       await expect(repository.findByLocation('s3://test/test')).rejects.toThrow(
         'Network error'

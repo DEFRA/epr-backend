@@ -1,23 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import Boom from '@hapi/boom'
-import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
 
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { initiateCdpUpload } from '#common/helpers/cdp-uploader.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { config } from '#root/config.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
-
-const payloadSchema = Joi.object({
-  mimeTypes: Joi.array().items(Joi.string()).min(1).required(),
-  maxFileSize: Joi.number().optional()
-})
+/** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
 
 export const summaryLogsCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
@@ -26,22 +18,15 @@ export const summaryLogsCreate = {
   method: 'POST',
   path: summaryLogsCreatePath,
   options: {
-    auth: false,
-    validate: {
-      payload: payloadSchema,
-      failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message)
-      }
-    }
+    auth: false
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository, uploadsRepository: UploadsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, payload, params, logger } = request
+    const { summaryLogsRepository, uploadsRepository, params, logger } = request
     const { organisationId, registrationId } = params
-    const { mimeTypes, maxFileSize } = payload
 
     const summaryLogId = randomUUID()
 
@@ -53,16 +38,11 @@ export const summaryLogsCreate = {
         registrationId
       })
 
-      // Call CDP Uploader to initiate upload
-      const cdpUploaderUrl = config.get('cdpUploader.url')
-      const cdpResponse = await initiateCdpUpload(cdpUploaderUrl, {
-        redirect: `/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
-        callback: `${request.server.info.uri}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        s3Bucket: 'epr-uploads',
-        s3Path: `/organisations/${organisationId}/registrations/${registrationId}`,
-        mimeTypes,
-        maxFileSize,
-        metadata: { summaryLogId }
+      // Initiate upload via CDP Uploader
+      const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId,
+        registrationId,
+        summaryLogId
       })
 
       logger.info({

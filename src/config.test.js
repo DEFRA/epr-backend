@@ -9,7 +9,35 @@ describe('#config', () => {
 
       expect(url).toBeDefined()
       expect(typeof url).toBe('string')
-      expect(url).toContain('cdp-uploader')
+      expect(url).toBe('http://localhost:7337')
+    })
+
+    test('has s3Bucket property with default value', () => {
+      const bucket = config.get('cdpUploader.s3Bucket')
+
+      expect(bucket).toBe('re-ex-summary-logs')
+    })
+
+    test('has maxFileSize property with default value', () => {
+      const maxFileSize = config.get('cdpUploader.maxFileSize')
+
+      expect(maxFileSize).toBe(10485760)
+    })
+  })
+
+  describe('appBaseUrl', () => {
+    test('has default value', () => {
+      const url = config.get('appBaseUrl')
+
+      expect(url).toBe('http://localhost:3000')
+    })
+  })
+
+  describe('eprBackendUrl', () => {
+    test('has default value', () => {
+      const url = config.get('eprBackendUrl')
+
+      expect(url).toBe('http://localhost:3001')
     })
   })
 })
