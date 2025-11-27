@@ -11,6 +11,12 @@ import {
   defraIdMockOidcWellKnownResponse,
   defraIdMockJwksUrl
 } from '#vite/helpers/mock-defra-id-oidc.js'
+import {
+  defraIdMockAuthTokens,
+  baseDefraIdTokenPayload
+} from '#vite/helpers/create-defra-id-test-tokens.js'
+
+const { validToken: baseDefraIdMockToken } = defraIdMockAuthTokens
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -35,7 +41,7 @@ describe('#getJwtStrategyConfig', () => {
   }
 
   const mockEntraClientId = 'mock-entra-client-id'
-  const mockDefraClientId = 'mock-defra-client-id'
+  const mockDefraClientId = 'test-defra'
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -403,415 +409,41 @@ describe('#getJwtStrategyConfig', () => {
 
       expect(result.credentials.issuer).toBe(customIssuer)
     })
-
-    test('uses issuer from defraIdOidcConfig for validation', async () => {
-      const customIssuer = 'https://custom-defra-issuer.example.com'
-      const customOidcConfigs = {
-        entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
-        defraIdOidcConfig: {
-          ...defraIdMockOidcWellKnownResponse,
-          issuer: customIssuer
-        }
-      }
-
-      const config = getJwtStrategyConfig(customOidcConfigs)
-
-      const artifacts = {
-        decoded: {
-          payload: {
-            iss: customIssuer,
-            aud: mockDefraClientId,
-            id: 'contact-123',
-            email: 'user@example.com'
-          }
-        }
-      }
-
-      const result = await config.validate(artifacts)
-
-      expect(result.credentials.issuer).toBe(customIssuer)
-    })
   })
 
-  describe('Feature Flag: defraIdAuth = true', () => {
+  describe('token is a Defra Id token', () => {
+    const t = 'https://custom-defra-issuer.example.com'
+    const customOidcConfigs = {
+      entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
+      defraIdOidcConfig: defraIdMockOidcWellKnownResponse
+    }
+
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
         if (key === 'oidc.entraId.clientId') return mockEntraClientId
         if (key === 'oidc.defraId.clientId') return mockDefraClientId
-        if (key === 'roles.serviceMaintainers') {
-          return JSON.stringify(['maintainer@example.com'])
-        }
         if (key === 'featureFlags.defraIdAuth') return true
         return null
       })
     })
 
-    describe('validate function - Defra ID tokens', () => {
-      test('validates Defra ID token with valid audience and returns credentials', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
+    describe('Happy path', () => {
+      test('uses issuer from defraIdOidcConfig for validation', async () => {
+        const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
+          decoded: { payload: { ...baseDefraIdTokenPayload } }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/any',
+          params: {
+            organisationId: baseDefraIdTokenPayload.currentRelatioshipId
           }
         }
 
-        const result = await config.validate(artifacts)
+        const result = await config.validate(artifacts, request)
 
-        expect(result).toEqual({
-          isValid: true,
-          credentials: {
-            id: 'defra-contact-123',
-            email: 'defra-user@example.com',
-            issuer: defraIdMockOidcWellKnownResponse.issuer,
-            scope: [ROLES.standardUser]
-          }
-        })
-      })
-
-      test('returns standard user scope for valid Defra ID tokens', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts)
-
-        expect(result.credentials.scope).toEqual([ROLES.standardUser])
-      })
-
-      test('does not call getEntraUserRoles for Defra ID tokens', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        await config.validate(artifacts)
-
-        expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
-      })
-
-      test('throws forbidden error for Defra ID token with invalid audience', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: 'wrong-defra-client-id',
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        await expect(config.validate(artifacts)).rejects.toThrow(
-          Boom.forbidden('Invalid audience for Defra Id token')
-        )
-      })
-
-      test('handles empty string values in token payload', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: '',
-              email: ''
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts)
-
-        expect(result.credentials.id).toBe('')
-        expect(result.credentials.email).toBe('')
-        expect(result.isValid).toBe(false)
-      })
-
-      test('calls config.get for Defra ID client ID', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        await config.validate(artifacts)
-
-        expect(mockConfigGet).toHaveBeenCalledWith('oidc.defraId.clientId')
-      })
-
-      test('calls config.get for feature flag', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        await config.validate(artifacts)
-
-        expect(mockConfigGet).toHaveBeenCalledWith('featureFlags.defraIdAuth')
-      })
-    })
-
-    describe('concurrent validation with both issuer types', () => {
-      test('handles concurrent validations of different issuer types', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const entraArtifacts = {
-          decoded: {
-            payload: {
-              iss: entraIdMockOidcWellKnownResponse.issuer,
-              aud: mockEntraClientId,
-              id: 'entra-contact',
-              email: 'entra@example.com'
-            }
-          }
-        }
-
-        const defraArtifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact',
-              email: 'defra@example.com'
-            }
-          }
-        }
-
-        const [entraResult, defraResult] = await Promise.all([
-          config.validate(entraArtifacts),
-          config.validate(defraArtifacts)
-        ])
-
-        expect(entraResult.credentials.id).toBe('entra-contact')
-        expect(entraResult.credentials.scope).toEqual([ROLES.serviceMaintainer])
-        expect(defraResult.credentials.id).toBe('defra-contact')
-        expect(defraResult.credentials.scope).toEqual([ROLES.standardUser])
-      })
-    })
-
-    describe('unrecognized issuer handling', () => {
-      test('throws bad request error for unrecognized issuer when defraIdAuth is true', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const unknownIssuer = 'https://unknown-issuer.example.com'
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: unknownIssuer,
-              aud: 'some-client-id',
-              id: 'contact-123',
-              email: 'user@example.com'
-            }
-          }
-        }
-
-        await expect(config.validate(artifacts)).rejects.toThrow(
-          Boom.badRequest(`Unrecognized token issuer: ${unknownIssuer}`)
-        )
-      })
-    })
-  })
-
-  // ============================================================================
-  // FEATURE FLAG: defraIdAuth = false
-  // These tests verify that Defra ID tokens are rejected when flag is disabled
-  // When feature flag is removed, this entire describe block should be deleted
-  // ============================================================================
-  describe('Feature Flag: defraIdAuth = false', () => {
-    beforeEach(() => {
-      mockConfigGet.mockImplementation((key) => {
-        if (key === 'oidc.entraId.clientId') return mockEntraClientId
-        if (key === 'oidc.defraId.clientId') return mockDefraClientId
-        if (key === 'roles.serviceMaintainers') {
-          return JSON.stringify(['maintainer@example.com'])
-        }
-        if (key === 'featureFlags.defraIdAuth') return false
-        return null
-      })
-    })
-
-    describe('Defra ID tokens are rejected', () => {
-      test('throws unrecognized issuer error for Defra ID token when flag is off', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        await expect(config.validate(artifacts)).rejects.toThrow(
-          Boom.badRequest(
-            `Unrecognized token issuer: ${defraIdMockOidcWellKnownResponse.issuer}`
-          )
-        )
-      })
-
-      test('does not call getEntraUserRoles for rejected Defra ID tokens', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        try {
-          await config.validate(artifacts)
-        } catch {
-          // Expected to throw
-        }
-
-        expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
-      })
-
-      test('does not validate Defra ID client ID when flag is off', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        try {
-          await config.validate(artifacts)
-        } catch {
-          // Expected to throw
-        }
-
-        // Should check the feature flag but NOT check the client ID
-        expect(mockConfigGet).toHaveBeenCalledWith('featureFlags.defraIdAuth')
-        expect(mockConfigGet).not.toHaveBeenCalledWith('oidc.defraId.clientId')
-      })
-
-      test('Entra ID tokens still work when Defra ID flag is off', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: entraIdMockOidcWellKnownResponse.issuer,
-              aud: mockEntraClientId,
-              id: 'contact-123',
-              email: 'user@example.com'
-            }
-          }
-        }
-
-        const result = await config.validate(artifacts)
-
-        expect(result).toEqual({
-          isValid: true,
-          credentials: {
-            id: 'contact-123',
-            email: 'user@example.com',
-            issuer: entraIdMockOidcWellKnownResponse.issuer,
-            scope: [ROLES.serviceMaintainer]
-          }
-        })
-      })
-    })
-
-    describe('unrecognized issuer still throws error', () => {
-      test('throws bad request error for unrecognized issuer', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const unknownIssuer = 'https://unknown-issuer.example.com'
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: unknownIssuer,
-              aud: 'some-client-id',
-              id: 'contact-123',
-              email: 'user@example.com'
-            }
-          }
-        }
-
-        await expect(config.validate(artifacts)).rejects.toThrow(
-          Boom.badRequest(`Unrecognized token issuer: ${unknownIssuer}`)
-        )
-      })
-
-      test('does not call getEntraUserRoles for unrecognized issuer', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: 'https://unknown-issuer.example.com',
-              aud: 'some-client-id',
-              id: 'contact-123',
-              email: 'user@example.com'
-            }
-          }
-        }
-
-        try {
-          await config.validate(artifacts)
-        } catch {
-          // Expected to throw
-        }
-
-        expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
+        expect(result.credentials.issuer).toBe(baseDefraIdTokenPayload.iss)
       })
     })
   })

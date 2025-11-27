@@ -28,6 +28,8 @@ export function isInitialUser(organisation, email) {
 export function getOrgDataFromDefraIdToken(tokenPayload) {
   const { currentRelationshipId, relationships } = tokenPayload
 
+  console.log('relationships', relationships)
+
   return relationships.map((relationship) => {
     const [relationshipId, organisationId, organisationName] =
       relationship.split(':')
