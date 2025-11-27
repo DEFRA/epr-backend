@@ -40,7 +40,11 @@ export const summaryLogInsertSchema = Joi.object({
   validation: Joi.object({
     issues: Joi.array().items(Joi.object()).optional()
   }).optional(),
-  file: fileSchema.required(),
+  file: Joi.when('status', {
+    is: SUMMARY_LOG_STATUS.PREPROCESSING,
+    then: fileSchema.optional(),
+    otherwise: fileSchema.required()
+  }),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional()
 }).messages(commonMessages)

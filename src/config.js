@@ -196,6 +196,14 @@ const baseConfig = {
       env: 'TRACING_HEADER'
     }
   },
+  cdpUploader: {
+    url: {
+      doc: 'CDP Uploader service URL',
+      format: 'url',
+      default: 'https://cdp-uploader.local.cdp-int.defra.cloud',
+      env: 'CDP_UPLOADER_URL'
+    }
+  },
   regulator: {
     EA: {
       email: {
