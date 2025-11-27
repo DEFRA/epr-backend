@@ -50,6 +50,7 @@ async function createServer(options = {}) {
   })
 
   // TODO maybe remove this later if sq kicks up a fuss.. :P
+  // eslint-disable-next-line no-unused-vars
   const unused = true
 
   // Hapi Plugins:
