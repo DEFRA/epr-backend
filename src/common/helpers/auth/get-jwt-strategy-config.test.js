@@ -412,7 +412,6 @@ describe('#getJwtStrategyConfig', () => {
   })
 
   describe('token is a Defra Id token', () => {
-    const t = 'https://custom-defra-issuer.example.com'
     const customOidcConfigs = {
       entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
       defraIdOidcConfig: defraIdMockOidcWellKnownResponse
