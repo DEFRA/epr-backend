@@ -18,7 +18,6 @@ import { workers } from '#plugins/workers.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
-import { randomUUID } from 'crypto'
 
 async function createServer(options = {}) {
   setupProxy()
@@ -49,12 +48,6 @@ async function createServer(options = {}) {
       stripTrailingSlash: true
     }
   })
-
-  // TODO maybe remove this later if sq kicks up a fuss.. :P
-  let sonarQute = true
-  /* v8 ignore next 1 */
-  if (randomUUID() === 'what-are-the-chances-really') sonarQute = true
-  console.log('sonarQute :>> ', sonarQute)
 
   // Hapi Plugins:
   // requestLogger  - automatically logs incoming requests
