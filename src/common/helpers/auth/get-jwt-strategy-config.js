@@ -1,6 +1,7 @@
+import { config } from '#root/config.js'
 import Boom from '@hapi/boom'
+import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
-import { config } from '../../../config.js'
 
 export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
@@ -56,8 +57,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Defra Id token')
         }
 
-        // Placeholder for Defra Id token scope/roles
-        const scope = []
+        const scope = await getDefraUserRoles(tokenPayload)
 
         return {
           isValid: scope.length > 0,

@@ -509,6 +509,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
 
     expect(() => validateRegistration(result)).not.toThrow()
 
+    expect(result.systemReference).toBe('68e68d9c78f83083f0f17a76')
     // Verify SEPA-specific values are parsed correctly
     expect(result.submittedToRegulator).toBe(REGULATOR.SEPA)
     expect(result.cbduNumber).toBe('SEPA-WML-2024-001')

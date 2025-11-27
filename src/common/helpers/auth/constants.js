@@ -1,3 +1,4 @@
 export const ROLES = {
-  serviceMaintainer: 'service-maintainer'
+  serviceMaintainer: 'service_maintainer',
+  standardUser: 'standard_user'
 }

@@ -4,8 +4,6 @@ import { publicKey } from '#vite/helpers/create-defra-id-test-tokens.js'
 const defraIdBaseUrl =
   'https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com'
 
-// const bypassSufix = `?p=B2C_1A_CUI_CPDEV_SIGNUPSIGNIN`
-
 export const defraIdMockWellKnownUrl = `${defraIdBaseUrl}/v2.0/.well-known/openid-configuration`
 export const defraIdMockJwksUrl = `${defraIdBaseUrl}/discovery/v2.0/keys`
 

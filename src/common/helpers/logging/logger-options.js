@@ -1,6 +1,6 @@
-import { ecsFormat } from '@elastic/ecs-pino-format'
-import { config } from '../../../config.js'
+import { config } from '#root/config.js'
 import { getTraceId } from '@defra/hapi-tracing'
+import { ecsFormat } from '@elastic/ecs-pino-format'
 
 const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
