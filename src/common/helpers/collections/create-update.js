@@ -170,7 +170,6 @@ export async function cleanupSeedData(_db, { isProduction, isDryRun }) {
     message: `Seed data clean up: requested, isProduction-${isProduction()}, dry run-${isDryRun()}`
   })
   if (isProduction()) {
-    logger.info({ message: 'Seed data clean up: start' })
     return true
   }
   return false
