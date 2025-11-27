@@ -21,3 +21,4 @@
 * [19. Layered Transformation Strategy for Summary Log to Waste Records](0019-waste-record-transformation-pipeline.md)
 * [20. Summary Log Validation Output Formats](0020-summary-log-validation-output-formats.md)
 * [21. Idempotent Operations and Retry Mechanisms for Resilient Data Processing](0021-idempotent-operations-and-retry-mechanisms.md)
+* [22. Translation process for English/Welsh strings](0022-translation-process-for-english-welsh-strings.md)
