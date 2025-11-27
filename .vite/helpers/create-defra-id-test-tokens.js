@@ -58,12 +58,23 @@ const generateValidDefraIdToken = () => {
 }
 
 const generateDefraIdTokenWithWrongSignature = () => {
-  const mockDefraIdToken = Jwt.token.generate(
-    {
-      ...baseValidObject,
-      iss: `https://wrong-issuer.com/v2.0`
+  // Generate a different key pair to create an invalid signature
+  // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format
+  const wrongKeyPair = generateKeyPairSync('rsa', {
+    modulusLength: 4096,
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'jwk'
     },
-    validJwtSecretObject,
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem'
+    }
+  })
+
+  const mockDefraIdToken = Jwt.token.generate(
+    baseValidObject,
+    { key: wrongKeyPair.privateKey, algorithm: 'RS256' },
     validGenerateTokenOptions
   )
 
