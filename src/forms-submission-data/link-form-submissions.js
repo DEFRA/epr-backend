@@ -82,27 +82,6 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   return organisations
 }
 
-function formatRegistrationForLogging(registration) {
-  const isReprocessor =
-    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-  const siteInfo = isReprocessor
-    ? `, site: ${siteInfoToLog(registration.site)}`
-    : ''
-  return `{id=${registration.id}, wasteProcessingType=${registration.wasteProcessingType}, material=${registration.material}${siteInfo}}`
-}
-
-function formatAccreditationComparisonLog(accreditation, registrations, org) {
-  const isReprocessor =
-    accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-  const siteInfo = isReprocessor
-    ? `, site: ${siteInfoToLog(accreditation.site)}`
-    : ''
-  const registrationsInfo = registrations
-    .map(formatRegistrationForLogging)
-    .join(', ')
-  return `accreditationId=${accreditation.id}, wasteProcessingType=${accreditation.wasteProcessingType}, material=${accreditation.material}${siteInfo}, registrations=[${registrationsInfo}], orgId=${org.orgId}, org id:${org.id}`
-}
-
 function isAccreditationForRegistration(accreditation, registration) {
   const typeAndMaterialMatch =
     registration.wasteProcessingType === accreditation.wasteProcessingType &&
@@ -121,23 +100,87 @@ function linkAccreditationsForOrg(organisation) {
   const accreditations = organisation.accreditations ?? []
   const registrations = organisation.registrations ?? []
 
-  for (const accreditation of accreditations) {
-    const matchedRegistrations = registrations.filter((registration) =>
-      isAccreditationForRegistration(accreditation, registration)
+  const accToRegs = accreditations.map((acc) => ({
+    acc,
+    matchedRegistrations: registrations.filter((reg) =>
+      isAccreditationForRegistration(acc, reg)
     )
+  }))
+  const regToAccs = registrations.map((reg) => ({
+    reg,
+    matchedAccreditations: accreditations.filter((acc) =>
+      isAccreditationForRegistration(acc, reg)
+    )
+  }))
 
+  // Link only 1:1 matches
+  for (const { acc, matchedRegistrations } of accToRegs) {
     if (matchedRegistrations.length === 1) {
-      matchedRegistrations[0].accreditationId = accreditation.id
-    } else if (matchedRegistrations.length > 1) {
-      logger.warn({
-        message: `Multiple registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, organisation)}`
-      })
-    } else {
-      logger.warn({
-        message: `No registrations matched for accreditation: ${formatAccreditationComparisonLog(accreditation, registrations, organisation)}`
-      })
+      const registrationsLinkingToAcc = regToAccs.find(
+        (rm) => rm.reg.id === matchedRegistrations[0].id
+      )
+      if (registrationsLinkingToAcc.matchedAccreditations.length === 1) {
+        matchedRegistrations[0].accreditationId = acc.id
+      }
     }
   }
+
+  logUnmatchedItems(organisation, accToRegs, regToAccs)
+}
+
+function formatAccreditationDetails(accreditation) {
+  const siteInfo =
+    accreditation.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+      ? `,${siteInfoToLog(accreditation.site)}`
+      : ''
+  return `id=${accreditation.id},type=${accreditation.wasteProcessingType},material=${accreditation.material}${siteInfo}`
+}
+
+function formatRegistrationDetails(registration) {
+  const siteInfo =
+    registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+      ? `,${siteInfoToLog(registration.site)}`
+      : ''
+  return `id=${registration.id},type=${registration.wasteProcessingType},material=${registration.material}${siteInfo}`
+}
+
+function logUnmatchedItems(organisation, accToRegs, regToAccs) {
+  const unmatchedAccs = accToRegs.filter(
+    (am) => am.matchedRegistrations.length === 0
+  )
+  const multiMatchAccs = accToRegs.filter(
+    (am) => am.matchedRegistrations.length > 1
+  )
+
+  if (unmatchedAccs.length === 0 && multiMatchAccs.length === 0) {
+    return
+  }
+
+  const unmatchedRegs = regToAccs.filter(
+    (rm) => rm.matchedAccreditations.length === 0
+  )
+  const multiMatchRegs = regToAccs.filter(
+    (rm) => rm.matchedAccreditations.length > 1
+  )
+
+  const totalUnlinkedAccs = unmatchedAccs.length + multiMatchAccs.length
+
+  const allAccDetails = [...unmatchedAccs, ...multiMatchAccs]
+    .map((item) => formatAccreditationDetails(item.acc))
+    .join(';')
+
+  const allRegDetails = [...unmatchedRegs, ...multiMatchRegs]
+    .map((item) => formatRegistrationDetails(item.reg))
+    .join(';')
+
+  const message =
+    `Organisation has accreditations that cant be linked to registrations: ` +
+    `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
+    `totalUnlinkedAccs=${totalUnlinkedAccs},noMatchAccs=${unmatchedAccs.length},multiMatchAccs=${multiMatchAccs.length},` +
+    `accreditations=[${allAccDetails}],` +
+    `registrations=[${allRegDetails}]`
+
+  logger.warn({ message })
 }
 
 function countItems(organisations, propertyName, filter = () => true) {

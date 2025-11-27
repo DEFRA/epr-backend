@@ -36,8 +36,7 @@ describe('compareSite', () => {
       false
     )
     expect(compareSite(site, { address: { postcode: 'W1B 1NT' } })).toBe(false)
-    expect(compareSite(site, {})).toBe(false)
-    expect(compareSite(site, null)).toBe(false)
+    expect(compareSite(site, { address: {} })).toBe(false)
   })
 })
 
@@ -61,7 +60,9 @@ describe('siteInfoToLog', () => {
   })
 
   it('handles missing fields gracefully', () => {
-    expect(siteInfoToLog({})).toBe('line1=undefined, postcode=undefined')
+    expect(siteInfoToLog({ address: {} })).toBe(
+      'line1=undefined, postcode=undefined'
+    )
     expect(
       siteInfoToLog({ address: { line1: '78 Portland Place' } })
     ).toContain('postcode=undefined')

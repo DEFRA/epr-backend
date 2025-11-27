@@ -5,7 +5,6 @@ import {
   linkRegistrationToAccreditations
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { siteInfoToLog } from './parsing-common/site.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -304,18 +303,16 @@ describe('linkRegistrationToAccreditations', () => {
     for (const reg of result[0].registrations) {
       expect(reg.accreditationId).toBeUndefined()
     }
-    const acc1SiteInfo = siteInfoToLog({
-      address: { line1: '78', postcode: 'W1B 1NT' }
-    })
-    const reg2SiteInfo = siteInfoToLog({
-      address: { line1: '78 Portland Place', postcode: 'W1C 1NT' }
-    })
 
+    const expectedPattern =
+      `Organisation has accreditations that cant be linked to registrations: ` +
+      `orgId=100,orgDbId=${org1Id},totalUnlinkedAccs=2,noMatchAccs=2,multiMatchAccs=0,` +
+      `accreditations=\\[id=${acc1Id},type=reprocessor,material=aluminium,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64};` +
+      `id=${acc2Id},type=exporter,material=paper\\],` +
+      `registrations=\\[id=${reg1Id},type=exporter,material=wood;` +
+      `id=${reg2Id},type=reprocessor,material=aluminium,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64}\\]`
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `No registrations matched for accreditation: accreditationId=${acc1Id}, wasteProcessingType=reprocessor, material=aluminium, site: ${acc1SiteInfo}, registrations=[{id=${reg1Id}, wasteProcessingType=exporter, material=wood}, {id=${reg2Id}, wasteProcessingType=reprocessor, material=aluminium, site: ${reg2SiteInfo}}], orgId=100, org id:${org1Id}`
-    })
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: `No registrations matched for accreditation: accreditationId=${acc2Id}, wasteProcessingType=exporter, material=paper, registrations=[{id=${reg1Id}, wasteProcessingType=exporter, material=wood}, {id=${reg2Id}, wasteProcessingType=reprocessor, material=aluminium, site: ${reg2SiteInfo}}], orgId=100, org id:${org1Id}`
+      message: expect.stringMatching(new RegExp(expectedPattern))
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/2 linked'
@@ -437,12 +434,13 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
     expect(result[0].registrations[1].accreditationId).toBeUndefined()
 
-    const siteInfo = siteInfoToLog({
-      address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-    })
-
+    const expectedPattern =
+      `Organisation has accreditations that cant be linked to registrations: ` +
+      `orgId=100,orgDbId=${org1Id},totalUnlinkedAccs=1,noMatchAccs=0,multiMatchAccs=1,` +
+      `accreditations=\\[id=${accId1},type=reprocessor,material=wood,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64}\\],` +
+      `registrations=\\[\\]`
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `Multiple registrations matched for accreditation: accreditationId=${accId1}, wasteProcessingType=reprocessor, material=wood, site: ${siteInfo}, registrations=[{id=${reg1Id}, wasteProcessingType=reprocessor, material=wood, site: ${siteInfo}}, {id=${reg2Id}, wasteProcessingType=reprocessor, material=wood, site: ${siteInfo}}], orgId=100, org id:${org1Id}`
+      message: expect.stringMatching(new RegExp(expectedPattern))
     })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/1 linked'
@@ -450,6 +448,52 @@ describe('linkRegistrationToAccreditations', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Registrations : 0/2 linked to accreditations'
     })
+  })
+
+  it('dont link when multiple accreditations match to single registration', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const accId2 = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
+          },
+          {
+            id: accId2,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+            material: MATERIAL.WOOD,
+            site: {
+              address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+            }
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toBeUndefined()
   })
 
   it('handle organisations without any registrations or accreditations', () => {

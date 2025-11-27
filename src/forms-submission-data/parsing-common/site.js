@@ -20,10 +20,10 @@ function hashValue(value) {
  */
 export function compareSite(site1, site2) {
   if (
-    !site1?.address?.line1 ||
-    !site2?.address?.line1 ||
-    !site1?.address?.postcode ||
-    !site2?.address?.postcode
+    !site1.address.line1 ||
+    !site2.address.line1 ||
+    !site1.address.postcode ||
+    !site2.address.postcode
   ) {
     return false
   }
@@ -42,7 +42,7 @@ export function compareSite(site1, site2) {
  * @returns {string} String with hashed line1 and postcode
  */
 export function siteInfoToLog(site) {
-  const line1Hash = hashValue(site?.address?.line1)
-  const postcodeHash = hashValue(site?.address?.postcode)
+  const line1Hash = hashValue(site.address.line1)
+  const postcodeHash = hashValue(site.address.postcode)
   return `line1=${line1Hash}, postcode=${postcodeHash}`
 }
