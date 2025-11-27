@@ -35,15 +35,19 @@ const validationConcernsSchema = Joi.object().pattern(
   })
 )
 
-const loadCountCategorySchema = Joi.object({
-  valid: Joi.number().integer().min(0).required(),
-  invalid: Joi.number().integer().min(0).required()
+const loadRowIdsSchema = Joi.object({
+  valid: Joi.array()
+    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
+    .required(),
+  invalid: Joi.array()
+    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
+    .required()
 })
 
-const loadCountsSchema = Joi.object({
-  added: loadCountCategorySchema.required(),
-  unchanged: loadCountCategorySchema.required(),
-  adjusted: loadCountCategorySchema.required()
+const loadsSchema = Joi.object({
+  added: loadRowIdsSchema.required(),
+  unchanged: loadRowIdsSchema.required(),
+  adjusted: loadRowIdsSchema.required()
 })
 
 export const summaryLogResponseSchema = Joi.object({
@@ -62,7 +66,7 @@ export const summaryLogResponseSchema = Joi.object({
     failures: Joi.array().items(validationIssueSchema).required(),
     concerns: validationConcernsSchema.required()
   }).optional(),
-  loadCounts: loadCountsSchema.optional(),
+  loads: loadsSchema.optional(),
   failureReason: Joi.string().optional(),
   accreditationNumber: Joi.string().allow(null).optional()
 })

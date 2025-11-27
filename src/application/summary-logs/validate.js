@@ -284,10 +284,10 @@ export const createSummaryLogsValidator =
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    // Calculate load counts only for validated summary logs
+    // Classify loads only for validated summary logs
     // wasteRecords is guaranteed to be non-null when status is VALIDATED
     // because we only reach VALIDATED if we passed all short-circuits
-    const loadCounts =
+    const loads =
       status === SUMMARY_LOG_STATUS.VALIDATED && wasteRecords
         ? classifyLoads({
             wasteRecords,
@@ -300,7 +300,7 @@ export const createSummaryLogsValidator =
       validation: {
         issues: issues.getAllIssues()
       },
-      ...(loadCounts && { loadCounts }),
+      ...(loads && { loads }),
       ...(issues.isFatal() && {
         failureReason: issues.getAllIssues()[0].message
       })

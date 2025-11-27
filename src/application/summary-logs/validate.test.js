@@ -559,13 +559,13 @@ describe('SummaryLogsValidator', () => {
   })
 
   describe('Load classification', () => {
-    it('stores loadCounts when validation passes with data rows', async () => {
+    it('stores loads with rowIds when validation passes with data rows', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
-                buildReceivedLoadRow(), // Valid row
+                buildReceivedLoadRow(), // Valid row (ROW_ID: 10000)
                 buildReceivedLoadRow({
                   ROW_ID: 9999, // Invalid - below minimum
                   DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date',
@@ -581,14 +581,15 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loadCounts).toEqual({
-        added: { valid: 1, invalid: 1 },
-        unchanged: { valid: 0, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
+      // Note: ROW_ID values come directly from test data as numbers
+      expect(updateCall.loads).toEqual({
+        added: { valid: [10000], invalid: [9999] },
+        unchanged: { valid: [], invalid: [] },
+        adjusted: { valid: [], invalid: [] }
       })
     })
 
-    it('does not store loadCounts when validation fails with fatal error', async () => {
+    it('does not store loads when validation fails with fatal error', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal error
@@ -599,7 +600,7 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loadCounts).toBeUndefined()
+      expect(updateCall.loads).toBeUndefined()
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
     })
 
@@ -625,10 +626,11 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loadCounts).toEqual({
-        added: { valid: 0, invalid: 0 },
-        unchanged: { valid: 1, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
+      // Note: ROW_ID for unchanged comes from existing record (string)
+      expect(updateCall.loads).toEqual({
+        added: { valid: [], invalid: [] },
+        unchanged: { valid: ['10000'], invalid: [] },
+        adjusted: { valid: [], invalid: [] }
       })
 
       // Reset the mock for other tests

@@ -6,27 +6,27 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
  */
 
 /**
- * @typedef {Object} ValidityCount
- * @property {number} valid - Count of valid loads
- * @property {number} invalid - Count of invalid loads
+ * @typedef {Object} LoadRowIds
+ * @property {string[]} valid - Row IDs for valid loads
+ * @property {string[]} invalid - Row IDs for invalid loads
  */
 
 /**
- * @typedef {Object} LoadCounts
- * @property {ValidityCount} added - Counts for added loads
- * @property {ValidityCount} unchanged - Counts for unchanged loads
- * @property {ValidityCount} adjusted - Counts for adjusted loads
+ * @typedef {Object} Loads
+ * @property {LoadRowIds} added - Row IDs for added loads
+ * @property {LoadRowIds} unchanged - Row IDs for unchanged loads
+ * @property {LoadRowIds} adjusted - Row IDs for adjusted loads
  */
 
 /**
- * Creates an empty load counts structure
+ * Creates an empty loads structure
  *
- * @returns {LoadCounts}
+ * @returns {Loads}
  */
-const createEmptyLoadCounts = () => ({
-  added: { valid: 0, invalid: 0 },
-  unchanged: { valid: 0, invalid: 0 },
-  adjusted: { valid: 0, invalid: 0 }
+const createEmptyLoads = () => ({
+  added: { valid: [], invalid: [] },
+  unchanged: { valid: [], invalid: [] },
+  adjusted: { valid: [], invalid: [] }
 })
 
 /**
@@ -54,7 +54,7 @@ const classifyRecord = (record, summaryLogId) => {
 }
 
 /**
- * Classifies loads from transformed records and returns counts
+ * Classifies loads from transformed records and returns row IDs grouped by classification
  *
  * Classification dimensions:
  * - added: Load was created in this upload
@@ -68,16 +68,16 @@ const classifyRecord = (record, summaryLogId) => {
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues
  * @param {string} params.summaryLogId - The current summary log ID
- * @returns {LoadCounts} Counts of loads by classification
+ * @returns {Loads} Row IDs grouped by classification and validity
  */
 export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
-  const counts = createEmptyLoadCounts()
+  const loads = createEmptyLoads()
 
   for (const { record, issues } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
-    counts[classification][validityKey]++
+    loads[classification][validityKey].push(record.rowId)
   }
 
-  return counts
+  return loads
 }
