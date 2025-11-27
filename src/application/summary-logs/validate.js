@@ -64,6 +64,7 @@ const transformAndValidateData = async ({
   )
 
   // Transform validated rows into waste records (issues flow through)
+  // Timestamp is required but won't be persisted during validation
   /** @type {ValidatedWasteRecord[]} */
   const wasteRecords = transformFromSummaryLog(
     validatedData,
@@ -74,7 +75,8 @@ const transformAndValidateData = async ({
       },
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      accreditationId: summaryLog.accreditationId
+      accreditationId: summaryLog.accreditationId,
+      timestamp: new Date().toISOString()
     },
     existingRecordsMap
   )

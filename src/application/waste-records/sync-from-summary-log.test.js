@@ -543,4 +543,66 @@ describe('syncFromSummaryLog', () => {
     expect(savedRecords).toHaveLength(1)
     expect(savedRecords[0].rowId).toBe('row-999')
   })
+
+  it('all records from same sync have identical timestamps', async () => {
+    const fileId = 'test-file-timestamps'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key-timestamps'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            ['row-001', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5],
+            ['row-002', '2025-01-16', TEST_WEIGHT_200_75],
+            ['row-003', '2025-01-17', TEST_WEIGHT_250_5]
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository
+    })
+
+    await sync(summaryLog)
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords).toHaveLength(3)
+
+    // All records should have identical timestamps
+    const timestamps = savedRecords.map((r) => r.versions[0].createdAt)
+    expect(timestamps[0]).toBe(timestamps[1])
+    expect(timestamps[1]).toBe(timestamps[2])
+
+    // Timestamp should be a valid ISO string
+    expect(timestamps[0]).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+    )
+  })
 })
