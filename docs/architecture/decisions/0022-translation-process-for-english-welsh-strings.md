@@ -155,6 +155,7 @@ npm run import:translations
 - i18next-cli documentation: https://github.com/i18next/i18next-cli
 - i18next plugin system: https://github.com/i18next/i18next-cli#plugins
 - ExcelJS documentation: https://github.com/exceljs/exceljs
-- Frontend i18n implementation: ADR 0013
+- Frontend i18n implementation: [ADR 0013](./0013-i18n-options.md)
+
 
 ---
