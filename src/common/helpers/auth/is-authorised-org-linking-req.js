@@ -1,6 +1,6 @@
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import Boom from '@hapi/boom'
-import { isInitialUser } from './roles/helpers'
+import { isInitialUser } from './roles/helpers.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
