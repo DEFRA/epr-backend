@@ -20,6 +20,10 @@
     * [Formatting](#formatting)
       * [Windows prettier issue](#windows-prettier-issue)
     * [Database GUI](#database-gui)
+    * [Database export/restore](#database-exportrestore)
+      * [Exporting from a non-prod CDP environment](#exporting-from-a-non-prod-cdp-environment)
+      * [Exporting a database from a local environment](#exporting-a-database-from-a-local-environment)
+      * [Restoring a database to a local environment](#restoring-a-database-to-a-local-environment)
   * [Development helpers](#development-helpers)
     * [MongoDB Locks](#mongodb-locks)
     * [Proxy](#proxy)
@@ -28,6 +32,7 @@
     * [Production image](#production-image)
     * [Docker Compose](#docker-compose)
     * [Logging](#logging)
+      * [Request-scoped vs Global Logger](#request-scoped-vs-global-logger)
       * [Handling errors](#handling-errors)
       * [Logging Events](#logging-events)
     * [Auditing](#auditing)
@@ -43,7 +48,8 @@
     * [Access](#access)
     * [Using Templates](#using-templates)
     * [Development Notes](#development-notes)
-  * [Further Documentation](#further-documentation)
+  * [Scripts](#scripts)
+      * [Mongo performance tests](#mongo-performance-tests)
 <!-- TOC -->
 
 <!-- prettier-ignore-end -->
@@ -551,12 +557,4 @@ We use [GOV.UK Notify](https://www.notifications.service.gov.uk/) to send automa
 #### Mongo performance tests
 
 [Mongo performance test](scripts/mongo-performance-test/README.md) contains set of scripts used for evaluating storing organisation data from form submissions as single nested collection vs 3 separate collection.
-These scripts were written and used to finalise the [ADR](docs/architecture/decisions/0008-forms-physical-data-model.md)
-
-## Further Documentation
-
-This `CONTRIBUTING.md` focuses on repository-specific guidance such as setup, development, and deployment.
-
-For wider engineering documentation (including runbooks, hotfix process, non-technical resources, and dummy data assets), please see our Confluence space:
-
-[Engineering Documentation Home](https://eaflood.atlassian.net/wiki/spaces/MWR/pages/5895749782/Engineering)
+These scripts were written and used to finalise the [ADR](https://github.com/DEFRA/epr-re-ex-service/tree/main/docs/architecture/decisions/0012-forms-physical-data-model.md)

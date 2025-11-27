@@ -2,17 +2,22 @@
 
 Backend APIs for: Packaging Extended Producer Responsibilities
 
+<!-- prettier-ignore-start -->
+<!-- TOC -->
+* [pEPR Backend](#pepr-backend)
+  * [API endpoints](#api-endpoints)
+  * [Docker](#docker)
+    * [Running with Docker Compose](#running-with-docker-compose)
+  * [Contributing](#contributing)
+  * [Architecture](#architecture)
+  * [Runbooks](#runbooks)
+  * [Known issues](#known-issues)
+  * [Workarounds](#workarounds)
+  * [Licence](#licence)
+    * [About the licence](#about-the-licence)
 <!-- TOC -->
 
-- [pEPR Backend](#pepr-backend)
-  - [API endpoints](#api-endpoints)
-  - [Contributing](#contributing)
-  - [Architecture](#architecture)
-  - [Runbooks](#runbooks)
-  - [Known issues](#known-issues)
-  - [Workarounds](#workarounds)
-  - [Licence](#licence) \* [About the licence](#about-the-licence)
-  <!-- TOC -->
+<!-- prettier-ignore-end -->
 
 ## API endpoints
 
@@ -80,8 +85,8 @@ If you intend to contribute to this repository and/or run the application locall
 
 ## Architecture
 
-You can find more information about [the project's architecture here](./docs/architecture/index.md),
-also see the [Architecture Decision Records](docs/architecture/decisions/index.md).
+You can find more information about [the project's architecture here](https://github.com/DEFRA/epr-re-ex-service/tree/main/docs/architecture/index.md),
+also see the [Architecture Decision Records](https://github.com/DEFRA/epr-re-ex-service/tree/main/docs/architecture/decisions/index.md).
 
 ## Runbooks
 
@@ -103,7 +108,7 @@ THIS INFORMATION IS LICENSED UNDER THE CONDITIONS OF THE OPEN GOVERNMENT LICENCE
 
 The following attribution statement MUST be cited in your products and applications when using this information.
 
-> Contains public sector information licensed under the Open Government license v3
+> Contains public sector information licensed under the Open Government licence v3
 
 ### About the licence
 
