@@ -453,14 +453,25 @@ describe('#isAuthorisedOrgLinkingReq', () => {
   })
 
   describe('integration with organisationsLinkPath', () => {
-    test('uses the correct path constant from domain', () => {
+    test('uses the correct path constant from domain', async () => {
       // This test verifies the path constant is used correctly
       mockRequest.path = '/v1/organisations/{organisationId}/link'
 
-      const result = isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
+      const mockOrganisation = {
+        id: mockOrganisationId,
+        users: [{ email: mockEmail, isInitialUser: true }]
+      }
+
+      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+      mockIsInitialUser.mockReturnValue(true)
+
+      const result = await isAuthorisedOrgLinkingReq(
+        mockRequest,
+        mockTokenPayload
+      )
 
       // Should process the request since path matches
-      expect(result).toBeInstanceOf(Promise)
+      expect(result).toBe(true)
     })
 
     test('handles path with actual organisation ID instead of placeholder', async () => {
