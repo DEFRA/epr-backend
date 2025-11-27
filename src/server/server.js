@@ -49,6 +49,9 @@ async function createServer(options = {}) {
     }
   })
 
+  // TODO maybe remove this later if sq kicks up a fuss.. :P
+  const unused = true
+
   // Hapi Plugins:
   // requestLogger  - automatically logs incoming requests
   // requestTracing - trace header logging and propagation
