@@ -582,7 +582,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.loadCounts).toEqual({
-        new: { valid: 1, invalid: 1 },
+        added: { valid: 1, invalid: 1 },
         unchanged: { valid: 0, invalid: 0 },
         adjusted: { valid: 0, invalid: 0 }
       })
@@ -626,7 +626,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       expect(updateCall.loadCounts).toEqual({
-        new: { valid: 0, invalid: 0 },
+        added: { valid: 0, invalid: 0 },
         unchanged: { valid: 1, invalid: 0 },
         adjusted: { valid: 0, invalid: 0 }
       })

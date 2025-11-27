@@ -51,7 +51,7 @@ const loadCountCategorySchema = Joi.object({
 })
 
 const loadCountsSchema = Joi.object({
-  new: loadCountCategorySchema.required(),
+  added: loadCountCategorySchema.required(),
   unchanged: loadCountCategorySchema.required(),
   adjusted: loadCountCategorySchema.required()
 })

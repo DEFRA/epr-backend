@@ -156,7 +156,7 @@ describe('SummaryLogsValidator integration', () => {
           issues: []
         },
         loadCounts: {
-          new: { valid: 0, invalid: 0 },
+          added: { valid: 0, invalid: 0 },
           unchanged: { valid: 0, invalid: 0 },
           adjusted: { valid: 0, invalid: 0 }
         }
@@ -244,7 +244,7 @@ describe('SummaryLogsValidator integration', () => {
                 issues: []
               },
               loadCounts: {
-                new: { valid: 0, invalid: 0 },
+                added: { valid: 0, invalid: 0 },
                 unchanged: { valid: 0, invalid: 0 },
                 adjusted: { valid: 0, invalid: 0 }
               }

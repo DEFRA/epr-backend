@@ -46,7 +46,7 @@ describe('classifyLoads', () => {
       })
 
       expect(result).toEqual({
-        new: { valid: 0, invalid: 0 },
+        added: { valid: 0, invalid: 0 },
         unchanged: { valid: 0, invalid: 0 },
         adjusted: { valid: 0, invalid: 0 }
       })
@@ -54,7 +54,7 @@ describe('classifyLoads', () => {
   })
 
   describe('classification based on version status', () => {
-    it('classifies as new when last version has CREATED status and matches current summaryLogId', () => {
+    it('classifies as added when last version has CREATED status and matches current summaryLogId', () => {
       const wasteRecords = [
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
@@ -67,7 +67,7 @@ describe('classifyLoads', () => {
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
-      expect(result.new.valid).toBe(1)
+      expect(result.added.valid).toBe(1)
       expect(result.unchanged.valid).toBe(0)
       expect(result.adjusted.valid).toBe(0)
     })
@@ -97,7 +97,7 @@ describe('classifyLoads', () => {
       })
 
       expect(result.adjusted.valid).toBe(1)
-      expect(result.new.valid).toBe(0)
+      expect(result.added.valid).toBe(0)
       expect(result.unchanged.valid).toBe(0)
     })
 
@@ -115,7 +115,7 @@ describe('classifyLoads', () => {
       })
 
       expect(result.unchanged.valid).toBe(1)
-      expect(result.new.valid).toBe(0)
+      expect(result.added.valid).toBe(0)
       expect(result.adjusted.valid).toBe(0)
     })
   })
@@ -135,8 +135,8 @@ describe('classifyLoads', () => {
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
-      expect(result.new.valid).toBe(1)
-      expect(result.new.invalid).toBe(0)
+      expect(result.added.valid).toBe(1)
+      expect(result.added.invalid).toBe(0)
     })
 
     it('classifies as invalid when issues array has items', () => {
@@ -161,8 +161,8 @@ describe('classifyLoads', () => {
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
-      expect(result.new.invalid).toBe(1)
-      expect(result.new.valid).toBe(0)
+      expect(result.added.invalid).toBe(1)
+      expect(result.added.valid).toBe(0)
     })
 
     it('classifies adjusted records as invalid when they have issues', () => {
@@ -198,13 +198,13 @@ describe('classifyLoads', () => {
   describe('mixed scenarios', () => {
     it('correctly counts mixed classifications and validities', () => {
       const wasteRecords = [
-        // New, valid
+        // Added, valid
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
           issues: []
         }),
-        // New, invalid
+        // Added, invalid
         createValidatedWasteRecord({
           status: VERSION_STATUS.CREATED,
           summaryLogId: CURRENT_SUMMARY_LOG_ID,
@@ -247,7 +247,7 @@ describe('classifyLoads', () => {
       })
 
       expect(result).toEqual({
-        new: { valid: 1, invalid: 1 },
+        added: { valid: 1, invalid: 1 },
         unchanged: { valid: 1, invalid: 1 },
         adjusted: { valid: 1, invalid: 0 }
       })

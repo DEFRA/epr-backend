@@ -13,7 +13,7 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 /**
  * @typedef {Object} LoadCounts
- * @property {ValidityCount} new - Counts for new loads
+ * @property {ValidityCount} added - Counts for added loads
  * @property {ValidityCount} unchanged - Counts for unchanged loads
  * @property {ValidityCount} adjusted - Counts for adjusted loads
  */
@@ -24,7 +24,7 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
  * @returns {LoadCounts}
  */
 const createEmptyLoadCounts = () => ({
-  new: { valid: 0, invalid: 0 },
+  added: { valid: 0, invalid: 0 },
   unchanged: { valid: 0, invalid: 0 },
   adjusted: { valid: 0, invalid: 0 }
 })
@@ -33,13 +33,13 @@ const createEmptyLoadCounts = () => ({
  * Determines the classification for a transformed record
  *
  * Classification is based on whether a version was added in this upload:
- * - new: Record was created in this upload (1 version, status CREATED, matching summaryLogId)
+ * - added: Record was created in this upload (1 version, status CREATED, matching summaryLogId)
  * - adjusted: Record had a version added in this upload (last version has status UPDATED and matching summaryLogId)
  * - unchanged: No version was added in this upload
  *
  * @param {ValidatedWasteRecord['record']} record - The waste record
  * @param {string} summaryLogId - The current summary log ID
- * @returns {'new'|'unchanged'|'adjusted'} The classification
+ * @returns {'added'|'unchanged'|'adjusted'} The classification
  */
 const classifyRecord = (record, summaryLogId) => {
   const lastVersion = record.versions[record.versions.length - 1]
@@ -49,15 +49,15 @@ const classifyRecord = (record, summaryLogId) => {
     return 'unchanged'
   }
 
-  // Version was added in this upload - determine if new or adjusted
-  return lastVersion.status === VERSION_STATUS.CREATED ? 'new' : 'adjusted'
+  // Version was added in this upload - determine if added or adjusted
+  return lastVersion.status === VERSION_STATUS.CREATED ? 'added' : 'adjusted'
 }
 
 /**
  * Classifies loads from transformed records and returns counts
  *
  * Classification dimensions:
- * - new: Load was created in this upload
+ * - added: Load was created in this upload
  * - unchanged: Load existed before and wasn't modified in this upload
  * - adjusted: Load existed before and was modified in this upload
  *
