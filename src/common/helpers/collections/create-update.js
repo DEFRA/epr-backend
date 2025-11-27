@@ -197,10 +197,13 @@ export async function cleanupSeedData(db, { isProduction, isDryRun }) {
     }
 
     const findAndDelete = async (collectionName, query) => {
-      const docs = await db.collection(collectionName).find(query).toArray()
-      const documentIds = docs.map((doc) => doc._id)
-      await deleteDocuments(collectionName, documentIds)
-      return documentIds
+      const foundDocs = await db
+        .collection(collectionName)
+        .find(query)
+        .toArray()
+      const foundDocumentIds = foundDocs.map((doc) => doc._id)
+      await deleteDocuments(collectionName, foundDocumentIds)
+      return foundDocumentIds
     }
 
     const documentIds = await findAndDelete(COLLECTION_EPR_ORGANISATIONS, {
