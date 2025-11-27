@@ -6,6 +6,21 @@ import {
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 import { getTableSchema } from './table-schemas.js'
+import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
+
+/**
+ * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ */
+
+/**
+ * A validated row with issues attached
+ *
+ * @export
+ * @typedef {Object} ValidatedRow
+ * @property {Array<*>} values - Original row values array
+ * @property {string} rowId - Extracted row ID
+ * @property {ValidationIssue[]} issues - Validation issues for this row
+ */
 
 /**
  * Maps Joi validation error types to application error codes
@@ -71,26 +86,25 @@ const validateHeaders = ({
 }
 
 /**
- * Processes validation errors for a single row
+ * Creates validation issues for a single row's errors
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
  * @param {number} params.rowIndex - Zero-based row index
- * @param {Object} params.error - Joi validation error object
- * @param {Map} params.headerToIndexMap - Map of header names to column indices
+ * @param {import('joi').ValidationError} params.error - Joi validation error object
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
  * @param {Object} params.location - Table location in spreadsheet
- * @param {Object} params.issues - Validation issues collector
+ * @returns {ValidationIssue[]} Array of validation issues for this row
  */
-const processRowErrors = ({
+const createRowIssues = ({
   tableName,
   rowIndex,
   error,
   headerToIndexMap,
-  location,
-  issues
-}) => {
-  for (const detail of error.details) {
-    const fieldName = detail.path[0]
+  location
+}) =>
+  error.details.map((detail) => {
+    const fieldName = String(detail.path[0])
     const colIndex = headerToIndexMap.get(fieldName)
 
     const cellLocation =
@@ -104,31 +118,47 @@ const processRowErrors = ({
           }
         : { table: tableName, header: fieldName }
 
-    issues.addError(
-      VALIDATION_CATEGORY.TECHNICAL,
-      `Invalid value in column '${fieldName}': ${detail.message}`,
-      mapJoiTypeToErrorCode(detail.type),
-      {
+    return {
+      severity: 'error',
+      category: VALIDATION_CATEGORY.TECHNICAL,
+      message: `Invalid value in column '${fieldName}': ${detail.message}`,
+      code: mapJoiTypeToErrorCode(detail.type),
+      context: {
         location: cellLocation,
         actual: detail.context.value
       }
-    )
-  }
+    }
+  })
+
+/**
+ * Extracts the row ID from a row object based on the table's ID field
+ *
+ * Only called for tables with schemas, so idField is guaranteed to exist.
+ * The row ID value is required by schema validation, so it's guaranteed to be present.
+ *
+ * @param {Object} rowObject - Row data as object with header keys
+ * @param {string} tableName - Name of the table
+ * @returns {string} The row ID
+ */
+const extractRowId = (rowObject, tableName) => {
+  const idField = getRowIdField(tableName)
+  return String(rowObject[idField])
 }
 
 /**
- * Validates data rows using row-level schema validation
+ * Validates data rows and returns validated row structures with issues attached
  *
  * This validates each row as a complete object, which is more efficient than
  * cell-by-cell validation and enables cross-field validation rules.
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
- * @param {Array<string>} params.headers - Array of header names
- * @param {Array<Array<*>>} params.rows - Array of data rows
- * @param {Object} params.rowSchema - Pre-compiled Joi object schema for rows
+ * @param {Array<string|null>} params.headers - Array of header names (may include nulls)
+ * @param {Array<Array<*>>} params.rows - Array of raw data rows
+ * @param {import('joi').ObjectSchema} params.rowSchema - Pre-compiled Joi object schema for rows
  * @param {Object} params.location - Table location in spreadsheet
- * @param {Object} params.issues - Validation issues collector
+ * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
+ * @returns {ValidatedRow[]} Array of validated rows with issues attached
  */
 const validateRows = ({
   tableName,
@@ -146,36 +176,48 @@ const validateRows = ({
     }
   }
 
-  for (const [rowIndex, row] of rows.entries()) {
+  return rows.map((originalRow, rowIndex) => {
     const rowObject = {}
 
     for (const [headerName, colIndex] of headerToIndexMap) {
-      rowObject[headerName] = row[colIndex]
+      rowObject[headerName] = originalRow[colIndex]
     }
 
     const { error } = rowSchema.validate(rowObject)
 
-    if (error) {
-      processRowErrors({
-        tableName,
-        rowIndex,
-        error,
-        headerToIndexMap,
-        location,
-        issues
-      })
+    const rowIssues = error
+      ? createRowIssues({
+          tableName,
+          rowIndex,
+          error,
+          headerToIndexMap,
+          location
+        })
+      : []
+
+    // Add issues to shared collector for isFatal checks
+    for (const issue of rowIssues) {
+      issues.addError(issue.category, issue.message, issue.code, issue.context)
     }
-  }
+
+    const rowId = extractRowId(rowObject, tableName)
+    return {
+      values: originalRow,
+      rowId,
+      issues: rowIssues
+    }
+  })
 }
 
 /**
- * Validates a single table's data syntax
+ * Validates a single table's data syntax and returns validated table data
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table
  * @param {Object} params.tableData - The table data with headers, rows, and location
  * @param {Object} params.schema - The validation schema for this table
  * @param {Object} params.issues - Validation issues collector
+ * @returns {Object} Validated table data with rows converted to ValidatedRow[]
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
   const { headers, rows, location } = tableData
@@ -189,17 +231,30 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     issues
   })
 
-  if (!issues.isFatal()) {
-    validateRows({
-      tableName,
-      headers,
-      rows,
-      rowSchema,
-      location,
-      issues
-    })
+  if (issues.isFatal()) {
+    return { ...tableData, rows: [] }
+  }
+
+  const validatedRows = validateRows({
+    tableName,
+    headers,
+    rows,
+    rowSchema,
+    location,
+    issues
+  })
+
+  return {
+    ...tableData,
+    rows: validatedRows
   }
 }
+
+/**
+ * @typedef {Object} DataSyntaxValidationResult
+ * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues
+ * @property {Object} validatedData - Parsed data with rows converted to ValidatedRow[]
+ */
 
 /**
  * Validates the syntax of data tables in a summary log
@@ -219,21 +274,24 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure
- * @returns {Object} Validation issues object
+ * @returns {DataSyntaxValidationResult} Validation issues and validated data
  */
 export const validateDataSyntax = ({ parsed }) => {
   const issues = createValidationIssues()
 
   const data = parsed?.data || {}
+  const validatedTables = {}
 
   for (const [tableName, tableData] of Object.entries(data)) {
     const schema = getTableSchema(tableName)
 
     if (!schema) {
+      // Keep unvalidated tables as-is
+      validatedTables[tableName] = tableData
       continue
     }
 
-    validateTable({
+    validatedTables[tableName] = validateTable({
       tableName,
       tableData,
       schema,
@@ -241,5 +299,11 @@ export const validateDataSyntax = ({ parsed }) => {
     })
   }
 
-  return issues
+  return {
+    issues,
+    validatedData: {
+      ...parsed,
+      data: validatedTables
+    }
+  }
 }

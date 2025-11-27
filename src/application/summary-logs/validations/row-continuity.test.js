@@ -3,34 +3,67 @@ import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
-import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import {
+  VERSION_STATUS,
+  WASTE_RECORD_TYPE
+} from '#domain/waste-records/model.js'
 
 describe('validateRowContinuity', () => {
-  const createSummaryLog = (overrides = {}) => ({
-    id: 'summary-log-123',
-    organisationId: 'org-456',
-    registrationId: 'reg-789',
-    accreditationId: 'acc-111',
-    file: {
-      uri: 's3://bucket/file.xlsx'
+  /**
+   * Creates a transformed record for testing
+   * @param {Object} options
+   * @param {string} options.rowId - The row ID
+   * @param {string} [options.type] - The waste record type
+   * @param {Array} [options.issues] - Validation issues
+   * @returns {{ record: Object, issues: Array }}
+   */
+  const createValidatedWasteRecord = ({
+    rowId,
+    type = WASTE_RECORD_TYPE.RECEIVED,
+    issues = []
+  }) => ({
+    record: {
+      organisationId: 'org-456',
+      registrationId: 'reg-789',
+      accreditationId: 'acc-111',
+      rowId,
+      type,
+      data: {
+        ROW_ID: rowId,
+        DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+        GROSS_WEIGHT: 100
+      },
+      versions: [
+        {
+          createdAt: new Date().toISOString(),
+          status: VERSION_STATUS.CREATED,
+          summaryLog: {
+            id: 'current-summary-log-id',
+            uri: 's3://bucket/current-file.xlsx'
+          },
+          data: {
+            ROW_ID: rowId,
+            DATE_RECEIVED_FOR_REPROCESSING: '2024-01-15',
+            GROSS_WEIGHT: 100
+          }
+        }
+      ]
     },
-    ...overrides
+    issues
   })
 
-  const createParsedData = (rows = []) => ({
-    meta: {
-      PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
-    },
-    data: {
-      RECEIVED_LOADS_FOR_REPROCESSING: {
-        location: { sheet: 'Received', row: 1, column: 'A' },
-        headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
-        rows
-      }
-    }
-  })
-
-  const createWasteRecord = (rowId, type = 'received', overrides = {}) => ({
+  /**
+   * Creates an existing waste record for testing
+   * @param {string} rowId - The row ID
+   * @param {string} [type] - The waste record type
+   * @param {Object} [overrides] - Property overrides
+   * @returns {Object} Waste record
+   */
+  const createWasteRecord = (
+    rowId,
+    type = WASTE_RECORD_TYPE.RECEIVED,
+    overrides = {}
+  ) => ({
     organisationId: 'org-456',
     registrationId: 'reg-789',
     accreditationId: 'acc-111',
@@ -61,13 +94,11 @@ describe('validateRowContinuity', () => {
 
   describe('first-time uploads (no existing records)', () => {
     it('returns valid result when no existing records exist', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([['row-1', '2024-01-15', 100]])
+      const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
       const existingWasteRecords = []
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -77,13 +108,11 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when existingWasteRecords is null', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([['row-1', '2024-01-15', 100]])
+      const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
       const existingWasteRecords = null
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -92,13 +121,11 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when existingWasteRecords is undefined', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([['row-1', '2024-01-15', 100]])
+      const wasteRecords = [createValidatedWasteRecord({ rowId: 'row-1' })]
       const existingWasteRecords = undefined
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -109,19 +136,17 @@ describe('validateRowContinuity', () => {
 
   describe('subsequent uploads with all rows present', () => {
     it('returns valid result when all existing rows are present', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-1', '2024-01-15', 100],
-        ['row-2', '2024-01-15', 200]
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }),
+        createValidatedWasteRecord({ rowId: 'row-2' })
+      ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -131,15 +156,13 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when existing rows are present with updated values', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-1', '2024-02-15', 150] // Updated date and tonnage
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }) // Updated date and tonnage
+      ]
       const existingWasteRecords = [createWasteRecord('row-1')]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -150,20 +173,18 @@ describe('validateRowContinuity', () => {
 
   describe('subsequent uploads with new rows added', () => {
     it('returns valid result when new rows are added alongside existing rows', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-1', '2024-01-15', 100], // Existing
-        ['row-2', '2024-01-15', 200], // Existing
-        ['row-3', '2024-01-15', 300] // New row added
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }), // Existing
+        createValidatedWasteRecord({ rowId: 'row-2' }), // Existing
+        createValidatedWasteRecord({ rowId: 'row-3' }) // New row added
+      ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -172,17 +193,15 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns valid result when only new rows are added', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-1', '2024-01-15', 100], // Existing
-        ['row-3', '2024-01-15', 300], // New
-        ['row-4', '2024-01-15', 400] // New
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }), // Existing
+        createValidatedWasteRecord({ rowId: 'row-3' }), // New
+        createValidatedWasteRecord({ rowId: 'row-4' }) // New
+      ]
       const existingWasteRecords = [createWasteRecord('row-1')]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -193,18 +212,16 @@ describe('validateRowContinuity', () => {
 
   describe('subsequent uploads with missing rows', () => {
     it('returns fatal business error when a single row is missing', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-2', '2024-01-15', 200] // row-1 is missing
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-2' }) // row-1 is missing
+      ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -225,10 +242,9 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns fatal errors for multiple missing rows', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-2', '2024-01-15', 200] // row-1 and row-3 are missing
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-2' }) // row-1 and row-3 are missing
+      ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2'),
@@ -236,8 +252,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -254,18 +269,16 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns fatal error when all existing rows are removed', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-3', '2024-01-15', 300] // All previous rows removed
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-3' }) // All previous rows removed
+      ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -279,13 +292,11 @@ describe('validateRowContinuity', () => {
 
   describe('edge cases', () => {
     it('returns valid result when upload has no data rows but no existing records either', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([]) // No rows
+      const wasteRecords = []
       const existingWasteRecords = []
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -294,16 +305,14 @@ describe('validateRowContinuity', () => {
     })
 
     it('returns fatal error when upload has no data rows but existing records exist', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([]) // No rows
+      const wasteRecords = []
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -314,43 +323,13 @@ describe('validateRowContinuity', () => {
       expect(fatals).toHaveLength(2)
     })
 
-    it('returns fatal error when transformation fails', () => {
-      const summaryLog = createSummaryLog()
-      // Invalid parsed data that will cause transformation to fail
-      const parsed = {
-        meta: {
-          PROCESSING_TYPE: { value: 'UNKNOWN_TYPE' }
-        },
-        data: {}
-      }
-      const existingWasteRecords = [createWasteRecord('row-1')]
-
-      const result = validateRowContinuity({
-        parsed,
-        summaryLog,
-        existingWasteRecords
-      })
-
-      // Should fail validation if transformation fails at this stage
-      expect(result.isValid()).toBe(false)
-      expect(result.isFatal()).toBe(true)
-
-      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-      expect(fatals).toHaveLength(1)
-      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-      expect(fatals[0].code).toBe('VALIDATION_SYSTEM_ERROR')
-      // Message is the error message from the transformation failure
-      expect(fatals[0].message).toBeTruthy()
-    })
-
     it('includes previous summary log information in error context', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([])
+      const wasteRecords = []
       const previousSummaryLogId = 'prev-123'
       const previousSubmitTime = '2024-01-10T10:00:00.000Z'
 
       const existingWasteRecords = [
-        createWasteRecord('row-1', 'received', {
+        createWasteRecord('row-1', WASTE_RECORD_TYPE.RECEIVED, {
           versions: [
             {
               createdAt: previousSubmitTime,
@@ -366,8 +345,7 @@ describe('validateRowContinuity', () => {
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -382,20 +360,18 @@ describe('validateRowContinuity', () => {
 
   describe('different waste record types', () => {
     it('validates rows across different waste record types', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-1', '2024-01-15', 100],
-        ['row-2', '2024-01-15', 200]
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }),
+        createValidatedWasteRecord({ rowId: 'row-2' })
+      ]
       const existingWasteRecords = [
-        createWasteRecord('row-1', 'received'),
-        createWasteRecord('row-2', 'received'),
-        createWasteRecord('row-3', 'received') // Missing from upload
+        createWasteRecord('row-1', WASTE_RECORD_TYPE.RECEIVED),
+        createWasteRecord('row-2', WASTE_RECORD_TYPE.RECEIVED),
+        createWasteRecord('row-3', WASTE_RECORD_TYPE.RECEIVED) // Missing from upload
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -410,20 +386,18 @@ describe('validateRowContinuity', () => {
 
     it('correctly maps different waste record types to sheets', () => {
       const testCases = [
-        { type: 'received', expectedSheet: 'Received' },
-        { type: 'processed', expectedSheet: 'Processed' },
-        { type: 'sentOn', expectedSheet: 'Sent on' },
-        { type: 'exported', expectedSheet: 'Exported' }
+        { type: WASTE_RECORD_TYPE.RECEIVED, expectedSheet: 'Received' },
+        { type: WASTE_RECORD_TYPE.PROCESSED, expectedSheet: 'Processed' },
+        { type: WASTE_RECORD_TYPE.SENT_ON, expectedSheet: 'Sent on' },
+        { type: WASTE_RECORD_TYPE.EXPORTED, expectedSheet: 'Exported' }
       ]
 
       for (const { type, expectedSheet } of testCases) {
-        const summaryLog = createSummaryLog()
-        const parsed = createParsedData([])
+        const wasteRecords = []
         const existingWasteRecords = [createWasteRecord('row-1', type)]
 
         const result = validateRowContinuity({
-          parsed,
-          summaryLog,
+          wasteRecords,
           existingWasteRecords
         })
 
@@ -435,19 +409,17 @@ describe('validateRowContinuity', () => {
 
   describe('idempotent uploads (same file uploaded twice)', () => {
     it('returns valid result when exact same data is uploaded again', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([
-        ['row-1', '2024-01-15', 100],
-        ['row-2', '2024-01-15', 200]
-      ])
+      const wasteRecords = [
+        createValidatedWasteRecord({ rowId: 'row-1' }),
+        createValidatedWasteRecord({ rowId: 'row-2' })
+      ]
       const existingWasteRecords = [
         createWasteRecord('row-1'),
         createWasteRecord('row-2')
       ]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 
@@ -459,13 +431,11 @@ describe('validateRowContinuity', () => {
 
   describe('unknown waste record types', () => {
     it('handles unknown waste record type with fallback sheet and table names', () => {
-      const summaryLog = createSummaryLog()
-      const parsed = createParsedData([])
+      const wasteRecords = []
       const existingWasteRecords = [createWasteRecord('row-1', 'unknownType')]
 
       const result = validateRowContinuity({
-        parsed,
-        summaryLog,
+        wasteRecords,
         existingWasteRecords
       })
 

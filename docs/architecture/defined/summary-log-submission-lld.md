@@ -67,11 +67,11 @@ sequenceDiagram
 
     API->>SummaryLogs: Extract & validate file
     API->>WasteRecords: Read existing records
-    API->>API: Calculate preview stats (create/update/unchanged)
-    API->>SummaryLogs: Store stats (status: validated)
+    API->>API: Classify loads (added/unchanged/adjusted × valid/invalid)
+    API->>SummaryLogs: Store loadCounts (status: validated)
 
     User->>API: View preview
-    API-->>User: Show stats from summary log
+    API-->>User: Show loadCounts from summary log
 
     User->>API: Submit (confirm)
     API->>SummaryLogs: Verify still current for org/reg
@@ -229,22 +229,126 @@ flowchart TD
     H --> K[Build version with versionTimestamp]
     I --> K
     J --> L[No new version]
-    K --> M[Calculate stats]
+    K --> M[Classify loads]
     L --> M
-    M --> N[Return wasteRecords + stats]
+    M --> N[Return wasteRecords + loadCounts]
 ```
+
+**Load classification:**
+
+Each row is classified on two dimensions:
+
+1. **Change type** (based on version status):
+   - `added` - New record (status: CREATED)
+   - `adjusted` - Existing record modified (status: UPDATED)
+   - `unchanged` - No version added this upload
+
+2. **Validity** (based on validation issues):
+   - `valid` - No validation issues
+   - `invalid` - Has validation issues
+
+Result: `loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} }`
 
 **Rationale:**
 
 - Single source of truth for transformation logic
 - Both phases use identical code path - no divergence possible
 - Reusing `validatedAt` timestamp keeps times consistent across rows
-- Returns both waste records (for submission) and stats (for preview)
+- Returns both waste records (for submission) and loadCounts (for preview)
 - Recalculation prevents possiblity of partially-stored preview data
+
+### Row transformation detail
+
+The following diagram shows the journey a single row takes from the spreadsheet through validation and transformation to become a persisted waste record:
+
+```mermaid
+flowchart TD
+    subgraph "1. Parsing (exceljs-parser)"
+        A[Excel File] --> B[Extract meta fields]
+        A --> C[Extract data tables]
+        C --> D["Raw row values<br/>[10001, '2025-01-15', 1000, ...]"]
+    end
+
+    subgraph "2. Meta Validation"
+        B --> E[validateMetaSyntax]
+        E --> F{Fatal?}
+        F -->|Yes| STOP1[Stop - return issues]
+        F -->|No| G[validateMetaBusiness]
+        G --> H{Fatal?}
+        H -->|Yes| STOP2[Stop - return issues]
+    end
+
+    subgraph "3. Data Syntax Validation (validateDataSyntax)"
+        H -->|No| I[Parse row against table schema]
+        D --> I
+        I --> J[Validate field types & constraints]
+        J --> K["ValidatedRow<br/>{ values, rowId, issues[] }"]
+    end
+
+    subgraph "4. Transformation (transformFromSummaryLog)"
+        K --> L[Lookup existing record by type:rowId]
+        L --> M{Exists?}
+        M -->|No| N["Create new record<br/>status: CREATED"]
+        M -->|Yes| O{Data changed?}
+        O -->|No| P["Skip version<br/>status: UNCHANGED"]
+        O -->|Yes| Q["Add version<br/>status: UPDATED"]
+        N --> R["ValidatedWasteRecord<br/>{ record, issues[] }"]
+        Q --> R
+        P --> R
+    end
+
+    subgraph "5. Data Business Validation"
+        R --> S[validateRowContinuity]
+        S --> T{Missing rows?}
+        T -->|Yes| STOP3[Add fatal issues]
+    end
+
+    subgraph "6. Classification (classifyLoads)"
+        T -->|No| U{Version added<br/>this upload?}
+        U -->|No| V[unchanged]
+        U -->|Yes| W{CREATED?}
+        W -->|Yes| X[added]
+        W -->|No| Y[adjusted]
+        V --> Z["loadCounts<br/>{added, unchanged, adjusted}<br/>× {valid, invalid}"]
+        X --> Z
+        Y --> Z
+    end
+
+    subgraph "7. Persistence (on submit)"
+        Z --> AA[Build versionsByKey Map]
+        AA --> AB[wasteRecordsRepository.appendVersions]
+        AB --> AC[(MongoDB<br/>waste_records)]
+    end
+
+    style STOP1 fill:#f66
+    style STOP2 fill:#f66
+    style STOP3 fill:#f66
+```
+
+**Key data structures through the pipeline:**
+
+| Stage       | Structure              | Key Fields                                                       |
+| ----------- | ---------------------- | ---------------------------------------------------------------- |
+| Parsing     | Raw row                | `[value1, value2, ...]` array matching header order              |
+| Data Syntax | `ValidatedRow`         | `{ values: {ROW_ID, DATE_RECEIVED, ...}, rowId, issues[] }`      |
+| Transform   | `ValidatedWasteRecord` | `{ record: WasteRecord, issues[] }`                              |
+| Classify    | `LoadCounts`           | `{ added: {valid, invalid}, unchanged: {...}, adjusted: {...} }` |
+| Persist     | `WasteRecord`          | `{ type, rowId, data, versions[] }`                              |
+
+**Issue attachment flow:**
+
+Issues are attached to rows during data syntax validation and flow through transformation:
+
+1. `validateDataSyntax` validates each row and attaches issues to create `ValidatedRow`
+2. `transformFromSummaryLog` preserves issues when creating `ValidatedWasteRecord`
+3. `classifyLoads` uses `issues.length` to determine valid/invalid counts
+4. Issues are stored in the summary log for user feedback
+
+This design eliminates the need to correlate issues back to rows by location after the fact.
 
 ### Validation phase
 
-During validation, calculate preview statistics and summary for user review:
+During validation, classify loads and calculate counts for user review:
 
 ```mermaid
 flowchart LR
@@ -252,15 +356,15 @@ flowchart LR
     B --> C{Valid?}
     C -->|No| D[Mark invalid<br/>Store errors]
     C -->|Yes| E[Transform with validatedAt timestamp]
-    E --> F[Calculate stats:<br/>created/updated/unchanged]
-    F --> G[Store stats in summary log<br/>status: validated]
+    E --> F[Classify loads:<br/>added/unchanged/adjusted × valid/invalid]
+    F --> G[Store loadCounts in summary log<br/>status: validated]
 ```
 
 **Key points:**
 
-- Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89, ... } }`
+- Load counts stored in summary log: `{ loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} } }`
 - Full waste records NOT stored (would exceed 16MB for 15k records, or could be partially stored if split up)
-- User views preview page showing the stored `previewStats`
+- User views preview page showing the stored `loadCounts`
 
 ### Submission phase
 
@@ -350,7 +454,7 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 
 1. Reusing `validatedAt` timestamp keeps version timestamps consistent across all rows
 2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
-3. Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
+3. Load counts stored in summary log: `{ loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} } }`
 4. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
 5. Map key format `"type:rowId"` naturally groups versions by waste record
 6. New uploads must supersede existing unsubmitted summary logs for the same org/reg
