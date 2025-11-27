@@ -17,7 +17,8 @@ import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
  */
 export function isInitialUser(organisation, email) {
   return !!organisation.users.find(
-    (user) => user.email === email && !!user.isInitialUser
+    (user) =>
+      user.email.toLowerCase() === email.toLowerCase() && !!user.isInitialUser
   )
 }
 
