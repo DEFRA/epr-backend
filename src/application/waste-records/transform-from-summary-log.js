@@ -58,8 +58,13 @@ const transformTable = (
   existingRecords
 ) => {
   const { headers, rows } = tableData
-  const { summaryLog, organisationId, registrationId, accreditationId } =
-    context
+  const {
+    summaryLog,
+    organisationId,
+    registrationId,
+    accreditationId,
+    timestamp
+  } = context
 
   return rows.map((row) => {
     const { values, issues } = row
@@ -93,7 +98,7 @@ const transformTable = (
 
       // Add new version with only changed fields
       const newVersion = {
-        createdAt: new Date().toISOString(),
+        createdAt: timestamp,
         status: VERSION_STATUS.UPDATED,
         summaryLog,
         data: delta
@@ -111,7 +116,7 @@ const transformTable = (
 
     // Create new waste record
     const version = {
-      createdAt: new Date().toISOString(),
+      createdAt: timestamp,
       status: VERSION_STATUS.CREATED,
       summaryLog,
       data
@@ -149,6 +154,7 @@ const transformTable = (
  * @param {string} summaryLogContext.organisationId - The organisation ID
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
+ * @param {string} summaryLogContext.timestamp - ISO timestamp for version createdAt
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues
  */

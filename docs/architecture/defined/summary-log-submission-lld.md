@@ -253,7 +253,7 @@ Result: `loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adj
 
 - Single source of truth for transformation logic
 - Both phases use identical code path - no divergence possible
-- Reusing `validatedAt` timestamp keeps times consistent across rows
+- Submission captures a timestamp at the start and uses it for all versions
 - Returns both waste records (for submission) and loadCounts (for preview)
 - Recalculation prevents possiblity of partially-stored preview data
 
@@ -355,7 +355,7 @@ flowchart LR
     A[Summary Log<br/>status: validating] --> B[Extract & validate file]
     B --> C{Valid?}
     C -->|No| D[Mark invalid<br/>Store errors]
-    C -->|Yes| E[Transform with validatedAt timestamp]
+    C -->|Yes| E[Transform]
     E --> F[Classify loads:<br/>added/unchanged/adjusted × valid/invalid]
     F --> G[Store loadCounts in summary log<br/>status: validated]
 ```
@@ -376,7 +376,7 @@ flowchart TD
     B --> C{Still current?}
     C -->|No| D[Error: Newer upload exists]
     C -->|Yes| E[Transition to submitting]
-    E --> F[Transform using validatedAt timestamp]
+    E --> F[Transform using submission timestamp]
     F --> G[Filter: only versions from this summary log]
     G --> H[Build versionsByKey Map]
     H --> I[Bulk append versions to waste records]
@@ -387,7 +387,7 @@ flowchart TD
 **Key points:**
 
 - Uses same transformation logic as validation phase
-- Reuses `validatedAt` timestamp for consistent times across rows
+- Captures timestamp at submission start for consistent times across all rows
 - Org/reg constraint check prevents stale submissions
 - Bulk operation handles up to 15k records efficiently
 - On failure, leaves in 'submitting' state for recovery
@@ -410,7 +410,7 @@ versionsByKey.set(`${type}:${rowId}`, {
   data: newData,
   version: {
     summaryLogId: currentSummaryLog.id,
-    versionTimestamp: currentSummaryLog.validatedAt,
+    createdAt: submissionTimestamp,
     // ... other version fields
   }
 })
@@ -452,7 +452,7 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 
 **Implementation notes:**
 
-1. Reusing `validatedAt` timestamp keeps version timestamps consistent across all rows
+1. Capturing timestamp at submission start keeps version timestamps consistent across all rows
 2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
 3. Load counts stored in summary log: `{ loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} } }`
 4. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
