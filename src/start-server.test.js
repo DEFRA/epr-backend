@@ -1,13 +1,13 @@
-import { vi, describe, expect, beforeEach, beforeAll, afterAll } from 'vitest'
-import hapi from '@hapi/hapi'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import hapi from '@hapi/hapi'
+import { afterAll, beforeAll, beforeEach, describe, expect, vi } from 'vitest'
 
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
 
-import { getConfig } from './config.js'
+import { getConfig } from '#root/config.js'
 import { it as test } from '#vite/fixtures/server-with-db.js'
 
 const mockLoggerInfo = vi.fn()
@@ -25,7 +25,7 @@ const configOverrides = {
   port: 3098
 }
 
-vi.mock('./config.js', async (importOriginal) => {
+vi.mock('#root/config.js', async (importOriginal) => {
   const configImportOriginal = await importOriginal()
 
   return {

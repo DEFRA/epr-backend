@@ -1,4 +1,4 @@
-import { getConfig } from '../../../config.js'
+import { getConfig } from '#root/config.js'
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '../../enums/index.js'
 
 /**

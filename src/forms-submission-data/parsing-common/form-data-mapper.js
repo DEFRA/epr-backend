@@ -11,6 +11,7 @@ import {
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { ObjectId } from 'mongodb'
 
 const WASTE_PROCESSING_TYPES_MAPPING = {
   'Reprocessor and exporter': [
@@ -315,4 +316,12 @@ export function mapTonnageBand(value) {
   }
 
   return result
+}
+
+export function normalizeObjectId(value) {
+  if (!value) {
+    return value
+  }
+
+  return new ObjectId(value).toString()
 }
