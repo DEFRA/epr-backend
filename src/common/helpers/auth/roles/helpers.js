@@ -14,7 +14,7 @@ import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
  * @param {Object} organisation
  * @param {string} email
  * @returns {boolean}
- * /
+ */
 export function isInitialUser(organisation, email) {
   return !!organisation.users.find(
     (user) => user.email === email && !!user.isInitialUser
@@ -22,7 +22,7 @@ export function isInitialUser(organisation, email) {
 }
 
 /**
-/* @param {TokenPayload} tokenPayload
+ * @param {TokenPayload} tokenPayload
  * @returns {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>}
  */
 export function getOrgDataFromDefraIdToken(tokenPayload) {
@@ -41,6 +41,16 @@ export function getOrgDataFromDefraIdToken(tokenPayload) {
   })
 }
 
+/**
+ * Finds and returns the current relationship from an array of relationships
+ * @param {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>} relationships - Array of relationship objects
+ * @returns {{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean} | undefined} The current relationship or undefined if none found
+ */
+/**
+ * Finds and returns the current relationship from an array of relationships
+ * @param {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>} relationships - Array of relationship objects
+ * @returns {{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean} | undefined} The current relationship or undefined if none found
+ */
 export function getCurrentRelationship(relationships) {
   return relationships.find(({ isCurrent }) => isCurrent)
 }
