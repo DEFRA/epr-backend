@@ -124,6 +124,7 @@ export const repositories = {
 
         server.ext('onRequest', (request, h) => {
           Object.defineProperty(request, 'uploadsRepository', {
+            // istanbul ignore next -- production wiring, equivalent getter tested via options path
             get() {
               return uploadsRepository
             },

@@ -1,5 +1,6 @@
 import { test as baseTest } from 'vitest'
 import { GenericContainer, Wait } from 'testcontainers'
+import { S3Client, CreateBucketCommand } from '@aws-sdk/client-s3'
 
 const LOCALSTACK_IMAGE = 'localstack/localstack:3.0.2'
 const LOCALSTACK_PORT = 4566
@@ -9,8 +10,16 @@ const CREDENTIALS = {
   secretAccessKey: 'test'
 }
 
-const s3Fixture = {
-  s3: [
+const BUCKETS = ['cdp-uploader-quarantine', 're-ex-summary-logs']
+
+async function createBuckets(s3Client) {
+  for (const bucket of BUCKETS) {
+    await s3Client.send(new CreateBucketCommand({ Bucket: bucket }))
+  }
+}
+
+const localstackFixture = {
+  localstack: [
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
       const container = await new GenericContainer(LOCALSTACK_IMAGE)
@@ -32,6 +41,16 @@ const s3Fixture = {
       const port = container.getMappedPort(LOCALSTACK_PORT)
       const endpoint = `http://127.0.0.1:${port}`
 
+      const s3Client = new S3Client({
+        region: REGION,
+        endpoint,
+        forcePathStyle: true,
+        credentials: CREDENTIALS
+      })
+
+      await createBuckets(s3Client)
+      s3Client.destroy()
+
       await use({
         endpoint,
         region: REGION,
@@ -44,4 +63,4 @@ const s3Fixture = {
   ]
 }
 
-export const it = baseTest.extend(s3Fixture)
+export const it = baseTest.extend(localstackFixture)

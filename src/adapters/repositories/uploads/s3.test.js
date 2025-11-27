@@ -19,13 +19,10 @@ const testConfig = {
 const it = s3It.extend({
   s3Client: async ({ s3 }, use) => {
     const client = createS3Client({
-      region: 'us-east-1',
-      endpoint: s3,
+      region: s3.region,
+      endpoint: s3.endpoint,
       forcePathStyle: true,
-      credentials: {
-        accessKeyId: globalThis.__S3_ACCESS_KEY__,
-        secretAccessKey: globalThis.__S3_SECRET_KEY__
-      }
+      credentials: s3.credentials
     })
 
     try {
