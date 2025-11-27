@@ -34,7 +34,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
 
   // The endpoint will show info based on the user's email and contactId
   if (isOrganisationsDiscoveryReq(request)) {
-    return []
+    return [ROLES.inquirer]
   }
 
   const { linkedEprOrg } = await getUsersOrganisationInfo(
