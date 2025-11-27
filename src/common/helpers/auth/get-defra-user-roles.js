@@ -2,6 +2,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
 import { isOrganisationsDiscoveryReq } from './roles/helpers.js'
 import { getUsersOrganisationInfo } from './get-users-org-info.js'
+import { isValidEprOrganisationAccess } from './validate-epr-org-access.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -13,37 +14,38 @@ import { getUsersOrganisationInfo } from './get-users-org-info.js'
  * @returns {Promise<string[]>}
  */
 export async function getDefraUserRoles(tokenPayload, request) {
-  const { id, email } = tokenPayload
+  const { email } = tokenPayload
 
-  if (!id || !email) {
+  if (!email) {
     return []
   }
 
+  // This throws if the user is unauthorised
   const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
     request,
     tokenPayload
   )
+
   if (isValidLinkingReq) {
-    return []
+    return [ROLES.linker]
   }
 
   const { organisationsRepository } = request
 
-  // TODO: Prevent this from throwin an error if user isn't linked yet
-  const { linkedEprOrg, userOrgs } = getUsersOrganisationInfo(
+  // The endpoint will show info based on the user's email and contactId
+  if (isOrganisationsDiscoveryReq(request)) {
+    return []
+  }
+
+  const { linkedEprOrg } = await getUsersOrganisationInfo(
     tokenPayload,
     organisationsRepository
   )
 
-  if (isOrganisationsDiscoveryReq(request)) {
-    // The route is responsible for determining what info the user can see
-    return [ROLES.linker]
-  }
-
   // Throws an error if:
   // - the request does not have an organisationId param
   // - or if the linkedEprOrg does not match the organisationId param
-  validateEprOrganisationAccess(request, linkedEprOrg)
+  const isValid = isValidEprOrganisationAccess(request, linkedEprOrg)
 
-  return [ROLES.standardUser]
+  return isValid ? [ROLES.standardUser] : []
 }

@@ -1,6 +1,6 @@
 import Boom from '@hapi/boom'
 
-export const validateEprOrganisationAccess = (request, linkedEprOg) => {
+export const isValidEprOrganisationAccess = (request, linkedEprOg) => {
   const { organisationId } = request.params
 
   if (!organisationId) {
@@ -10,4 +10,6 @@ export const validateEprOrganisationAccess = (request, linkedEprOg) => {
   if (organisationId !== linkedEprOg) {
     throw Boom.forbidden('Access denied: organisation mismatch')
   }
+
+  return true
 }

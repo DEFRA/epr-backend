@@ -53,3 +53,40 @@ export function isOrganisationsDiscoveryReq(request) {
     request.method === 'get'
   )
 }
+
+/**
+ * @param {string} email
+ * @param {string} defraIdOrgId
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+ * @returns {Promise<string[]>}
+ */
+export async function findOrganisationMatches(email, defraIdOrgId, request) {
+  const { organisationsRepository } = request
+  let linkedOrganisations
+  let unlinkedOrganisations
+
+  try {
+    unlinkedOrganisations =
+      await organisationsRepository.findAllUnlinkedOrganisationsByUser({
+        email,
+        isInitialUser: true
+      })
+    linkedOrganisations =
+      await organisationsRepository.findAllByDefraIdOrgId(defraIdOrgId)
+  } catch (error) {
+    linkedOrganisations = []
+    unlinkedOrganisations = []
+  }
+
+  return {
+    all: [...unlinkedOrganisations, ...linkedOrganisations].reduce(
+      (prev, organisation) =>
+        prev.find(({ id }) => id === organisation.id)
+          ? prev
+          : [...prev, organisation],
+      []
+    ),
+    unlinked: unlinkedOrganisations,
+    linked: linkedOrganisations
+  }
+}
