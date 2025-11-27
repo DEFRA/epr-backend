@@ -39,10 +39,13 @@ export const mongoDbPlugin = {
 
       const locker = new LockManager(db.collection('mongo-locks'))
 
+      const isProduction = () => config.get('cdpEnvironment') === 'prod'
+      const isDryRun = () => config.get('seedDataCleanUpDryRun')
+
       await createOrUpdateCollections(db)
       await createIndexes(db)
-      await createSeedData(db, () => config.get('isProduction'))
-      await cleanupSeedData(db, () => config.get('isProduction'))
+      await createSeedData(db, isProduction)
+      await cleanupSeedData(db, { isProduction, isDryRun })
 
       server.logger.info({
         message: `MongoDb connected to ${options.databaseName}`,
