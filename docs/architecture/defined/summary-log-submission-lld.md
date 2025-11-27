@@ -242,6 +242,95 @@ flowchart TD
 - Returns both waste records (for submission) and stats (for preview)
 - Recalculation prevents possiblity of partially-stored preview data
 
+### Row transformation detail
+
+The following diagram shows the journey a single row takes from the spreadsheet through validation and transformation to become a persisted waste record:
+
+```mermaid
+flowchart TD
+    subgraph "1. Parsing (exceljs-parser)"
+        A[Excel File] --> B[Extract meta fields]
+        A --> C[Extract data tables]
+        C --> D["Raw row values<br/>[10001, '2025-01-15', 1000, ...]"]
+    end
+
+    subgraph "2. Meta Validation"
+        B --> E[validateMetaSyntax]
+        E --> F{Fatal?}
+        F -->|Yes| STOP1[Stop - return issues]
+        F -->|No| G[validateMetaBusiness]
+        G --> H{Fatal?}
+        H -->|Yes| STOP2[Stop - return issues]
+    end
+
+    subgraph "3. Data Syntax Validation (validateDataSyntax)"
+        H -->|No| I[Parse row against table schema]
+        D --> I
+        I --> J[Validate field types & constraints]
+        J --> K["ValidatedRow<br/>{ values, rowId, issues[] }"]
+    end
+
+    subgraph "4. Transformation (transformFromSummaryLog)"
+        K --> L[Lookup existing record by type:rowId]
+        L --> M{Exists?}
+        M -->|No| N["Create new record<br/>status: CREATED"]
+        M -->|Yes| O{Data changed?}
+        O -->|No| P["Skip version<br/>status: UNCHANGED"]
+        O -->|Yes| Q["Add version<br/>status: UPDATED"]
+        N --> R["ValidatedWasteRecord<br/>{ record, issues[] }"]
+        Q --> R
+        P --> R
+    end
+
+    subgraph "5. Data Business Validation"
+        R --> S[validateRowContinuity]
+        S --> T{Missing rows?}
+        T -->|Yes| STOP3[Add fatal issues]
+    end
+
+    subgraph "6. Classification (classifyLoads)"
+        T -->|No| U{Version added<br/>this upload?}
+        U -->|No| V[unchanged]
+        U -->|Yes| W{CREATED?}
+        W -->|Yes| X[added]
+        W -->|No| Y[adjusted]
+        V --> Z["loadCounts<br/>{added, unchanged, adjusted}<br/>× {valid, invalid}"]
+        X --> Z
+        Y --> Z
+    end
+
+    subgraph "7. Persistence (on submit)"
+        Z --> AA[Build versionsByKey Map]
+        AA --> AB[wasteRecordsRepository.appendVersions]
+        AB --> AC[(MongoDB<br/>waste_records)]
+    end
+
+    style STOP1 fill:#f66
+    style STOP2 fill:#f66
+    style STOP3 fill:#f66
+```
+
+**Key data structures through the pipeline:**
+
+| Stage       | Structure              | Key Fields                                                       |
+| ----------- | ---------------------- | ---------------------------------------------------------------- |
+| Parsing     | Raw row                | `[value1, value2, ...]` array matching header order              |
+| Data Syntax | `ValidatedRow`         | `{ values: {ROW_ID, DATE_RECEIVED, ...}, rowId, issues[] }`      |
+| Transform   | `ValidatedWasteRecord` | `{ record: WasteRecord, issues[] }`                              |
+| Classify    | `LoadCounts`           | `{ added: {valid, invalid}, unchanged: {...}, adjusted: {...} }` |
+| Persist     | `WasteRecord`          | `{ type, rowId, data, versions[] }`                              |
+
+**Issue attachment flow:**
+
+Issues are attached to rows during data syntax validation and flow through transformation:
+
+1. `validateDataSyntax` validates each row and attaches issues to create `ValidatedRow`
+2. `transformFromSummaryLog` preserves issues when creating `ValidatedWasteRecord`
+3. `classifyLoads` uses `issues.length` to determine valid/invalid counts
+4. Issues are stored in the summary log for user feedback
+
+This design eliminates the need to correlate issues back to rows by location after the fact.
+
 ### Validation phase
 
 During validation, calculate preview statistics and summary for user review:
