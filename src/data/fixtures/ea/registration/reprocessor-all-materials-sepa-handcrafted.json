@@ -3,7 +3,7 @@
     "$oid": "674b8a1234567890abcdef12"
   },
   "orgId": 503176,
-  "referenceNumber": "68e68d9c78f83083f0f17a76",
+  "referenceNumber": "68e68d9C78f83083f0f17a76",
   "schemaVersion": 1,
   "createdAt": {
     "$date": "2025-10-08T17:40:07.408Z"
@@ -1797,7 +1797,7 @@
         "aDpeKT": "true",
         "DDVUrr": "Green Recycling Solutions Ltd",
         "rJMICz": "503176",
-        "DAcLmf": "68e68d9c78f83083f0f17a76",
+        "DAcLmf": "68e68d9C78f83083f0f17a76",
         "jSlhCJ": "James Patterson",
         "WOnymw": "reexserviceteam@defra.gov.uk",
         "lScMYi": "020 7946 0123",
@@ -1924,7 +1924,7 @@
       "shortDescription": "System Reference",
       "title": "What is your System Reference number?",
       "type": "TextField",
-      "value": "68e68d9c78f83083f0f17a76"
+      "value": "68e68d9C78f83083f0f17a76"
     },
     {
       "shortDescription": "App contact name",
