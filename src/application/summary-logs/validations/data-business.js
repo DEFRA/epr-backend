@@ -3,6 +3,7 @@ import { validateRowContinuity } from './row-continuity.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
+ * @typedef {import('../validate.js').ValidatedWasteRecord} ValidatedWasteRecord
  */
 
 /**
@@ -21,14 +22,12 @@ import { validateRowContinuity } from './row-continuity.js'
  * - Unchanged (carried forward as-is)
  *
  * @param {Object} params
- * @param {Object} params.parsed - The parsed summary log data
- * @param {Object} params.summaryLog - The summary log being validated
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Waste records from the current upload
  * @param {WasteRecord[]} params.existingWasteRecords - Existing waste records from previous uploads
  * @returns {Object} Validation issues object
  */
 export const validateDataBusiness = ({
-  parsed,
-  summaryLog,
+  wasteRecords,
   existingWasteRecords
 }) => {
   const issues = createValidationIssues()
@@ -40,7 +39,7 @@ export const validateDataBusiness = ({
     // validateTonnageAccuracy,
     // etc.
   ]) {
-    issues.merge(validate({ parsed, summaryLog, existingWasteRecords }))
+    issues.merge(validate({ wasteRecords, existingWasteRecords }))
   }
 
   return issues

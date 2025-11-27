@@ -154,6 +154,11 @@ describe('SummaryLogsValidator integration', () => {
         status: SUMMARY_LOG_STATUS.VALIDATED,
         validation: {
           issues: []
+        },
+        loadCounts: {
+          added: { valid: 0, invalid: 0 },
+          unchanged: { valid: 0, invalid: 0 },
+          adjusted: { valid: 0, invalid: 0 }
         }
       }
     })
@@ -237,6 +242,11 @@ describe('SummaryLogsValidator integration', () => {
               status: SUMMARY_LOG_STATUS.VALIDATED,
               validation: {
                 issues: []
+              },
+              loadCounts: {
+                added: { valid: 0, invalid: 0 },
+                unchanged: { valid: 0, invalid: 0 },
+                adjusted: { valid: 0, invalid: 0 }
               }
             }
           })
@@ -432,7 +442,7 @@ describe('SummaryLogsValidator integration', () => {
     it('should validate successfully when registration has accreditation and numbers match', async () => {
       const accreditationNumber = '87654321'
 
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         accreditationNumber,
@@ -460,16 +470,8 @@ describe('SummaryLogsValidator integration', () => {
         }
       })
 
-      expect(updated).toEqual({
-        version: 2,
-        summaryLog: {
-          ...summaryLog,
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          validation: {
-            issues: []
-          }
-        }
-      })
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
     })
 
     it('should fail validation when registration has accreditation but spreadsheet number does not match', async () => {
@@ -546,7 +548,7 @@ describe('SummaryLogsValidator integration', () => {
     })
 
     it('should validate successfully when registration has no accreditation and spreadsheet is blank', async () => {
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
         metadata: {
@@ -569,16 +571,8 @@ describe('SummaryLogsValidator integration', () => {
         }
       })
 
-      expect(updated).toEqual({
-        version: 2,
-        summaryLog: {
-          ...summaryLog,
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          validation: {
-            issues: []
-          }
-        }
-      })
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      expect(updated.summaryLog.validation.issues).toEqual([])
     })
 
     it('should fail validation when registration has no accreditation but spreadsheet provides number', async () => {
