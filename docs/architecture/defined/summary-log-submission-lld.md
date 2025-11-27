@@ -67,11 +67,11 @@ sequenceDiagram
 
     API->>SummaryLogs: Extract & validate file
     API->>WasteRecords: Read existing records
-    API->>API: Calculate preview stats (create/update/unchanged)
-    API->>SummaryLogs: Store stats (status: validated)
+    API->>API: Classify loads (added/unchanged/adjusted × valid/invalid)
+    API->>SummaryLogs: Store loadCounts (status: validated)
 
     User->>API: View preview
-    API-->>User: Show stats from summary log
+    API-->>User: Show loadCounts from summary log
 
     User->>API: Submit (confirm)
     API->>SummaryLogs: Verify still current for org/reg
@@ -229,17 +229,32 @@ flowchart TD
     H --> K[Build version with versionTimestamp]
     I --> K
     J --> L[No new version]
-    K --> M[Calculate stats]
+    K --> M[Classify loads]
     L --> M
-    M --> N[Return wasteRecords + stats]
+    M --> N[Return wasteRecords + loadCounts]
 ```
+
+**Load classification:**
+
+Each row is classified on two dimensions:
+
+1. **Change type** (based on version status):
+   - `added` - New record (status: CREATED)
+   - `adjusted` - Existing record modified (status: UPDATED)
+   - `unchanged` - No version added this upload
+
+2. **Validity** (based on validation issues):
+   - `valid` - No validation issues
+   - `invalid` - Has validation issues
+
+Result: `loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} }`
 
 **Rationale:**
 
 - Single source of truth for transformation logic
 - Both phases use identical code path - no divergence possible
 - Reusing `validatedAt` timestamp keeps times consistent across rows
-- Returns both waste records (for submission) and stats (for preview)
+- Returns both waste records (for submission) and loadCounts (for preview)
 - Recalculation prevents possiblity of partially-stored preview data
 
 ### Row transformation detail
@@ -333,7 +348,7 @@ This design eliminates the need to correlate issues back to rows by location aft
 
 ### Validation phase
 
-During validation, calculate preview statistics and summary for user review:
+During validation, classify loads and calculate counts for user review:
 
 ```mermaid
 flowchart LR
@@ -341,15 +356,15 @@ flowchart LR
     B --> C{Valid?}
     C -->|No| D[Mark invalid<br/>Store errors]
     C -->|Yes| E[Transform with validatedAt timestamp]
-    E --> F[Calculate stats:<br/>created/updated/unchanged]
-    F --> G[Store stats in summary log<br/>status: validated]
+    E --> F[Classify loads:<br/>added/unchanged/adjusted × valid/invalid]
+    F --> G[Store loadCounts in summary log<br/>status: validated]
 ```
 
 **Key points:**
 
-- Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89, ... } }`
+- Load counts stored in summary log: `{ loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} } }`
 - Full waste records NOT stored (would exceed 16MB for 15k records, or could be partially stored if split up)
-- User views preview page showing the stored `previewStats`
+- User views preview page showing the stored `loadCounts`
 
 ### Submission phase
 
@@ -439,7 +454,7 @@ The MongoDB adapter uses bulk operations for efficient version appending:
 
 1. Reusing `validatedAt` timestamp keeps version timestamps consistent across all rows
 2. The `versions` array in waste records naturally supports idempotency via `summaryLog.id` checking
-3. Preview stats stored in summary log: `{ previewStats: { created: 1234, updated: 567, unchanged: 89 } }`
+3. Load counts stored in summary log: `{ loadCounts: { added: {valid, invalid}, unchanged: {valid, invalid}, adjusted: {valid, invalid} } }`
 4. Idempotency check happens in application layer before building the Map (avoids unnecessary writes)
 5. Map key format `"type:rowId"` naturally groups versions by waste record
 6. New uploads must supersede existing unsubmitted summary logs for the same org/reg
