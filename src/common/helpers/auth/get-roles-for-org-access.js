@@ -32,5 +32,7 @@ export const getRolesForOrganisationAccess = async (request, linkedEprOg) => {
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
 
+  // Placeholder for checking whether the user is part of the EPROrganisation
+
   return [ROLES.standardUser]
 }
