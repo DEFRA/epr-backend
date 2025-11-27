@@ -1,4 +1,6 @@
-import { organisationsDiscoveryPath } from '#domain/organisations/paths.js'
+import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
+
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export function isInitialUser(organisation, email) {
   return !!organisation.users.find(
@@ -26,6 +28,11 @@ export function getCurrentRelationship(relationships) {
   return relationships.find(({ isCurrent }) => isCurrent)
 }
 
+/**
+ * @param {Object} tokenPayload
+ * @param {string} tokenPayload.id
+ * @param {string} tokenPayload.email
+ */
 export function getDefraTokenSummary(tokenPayload) {
   const defraIdRelationships = getOrgDataFromDefraIdToken(tokenPayload)
   const { defraIdOrgId, defraIdOrgName } =
@@ -34,10 +41,13 @@ export function getDefraTokenSummary(tokenPayload) {
   return { defraIdOrgId, defraIdOrgName, defraIdRelationships }
 }
 
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+ * @returns {boolean}
+ */
 export function isOrganisationsDiscoveryReq(request) {
   return (
-    request.route.path === organisationsDiscoveryPath &&
-    request.method === 'get'
+    request.path === organisationsLinkedGetAllPath && request.method === 'get'
   )
 }
 

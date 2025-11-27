@@ -2,10 +2,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
 import { isOrganisationsDiscoveryReq } from './roles/helpers.js'
 import { getUsersOrganisationInfo } from './get-users-org-info.js'
-import {
-  getRolesForOrganisationAccess,
-  isValidEprOrganisationAccess
-} from './get-roles-for-org-access.js'
+import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
