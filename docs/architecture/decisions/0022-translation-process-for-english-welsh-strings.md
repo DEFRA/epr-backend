@@ -157,5 +157,4 @@ npm run import:translations
 - ExcelJS documentation: https://github.com/exceljs/exceljs
 - Frontend i18n implementation: [ADR 0013](./0013-i18n-options.md)
 
-
 ---
