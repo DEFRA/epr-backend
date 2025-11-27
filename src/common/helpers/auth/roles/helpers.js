@@ -83,22 +83,46 @@ export function isOrganisationsDiscoveryReq(request) {
  * @param {OrganisationsRepository} organisationsRepository - The organisations repository
  * @returns {Promise<{all: Array, unlinked: Array, linked: Array}>}
  */
+/**
+ * Helper function to deduplicate organisations by ID
+ * Exported for testing purposes
+ * @param {Array} unlinkedOrganisations
+ * @param {Array} linkedOrganisations
+ * @returns {Array}
+ */
+export function deduplicateOrganisations(
+  unlinkedOrganisations,
+  linkedOrganisations
+) {
+  return [...unlinkedOrganisations, ...linkedOrganisations].reduce(
+    (prev, organisation) =>
+      prev.find(({ id }) => id === organisation.id)
+        ? prev
+        : [...prev, organisation],
+    []
+  )
+}
+
 export async function findOrganisationMatches(
   email,
   defraIdOrgId,
   organisationsRepository
 ) {
+  // Note: This function currently returns empty arrays as the organization matching
+  // logic is not yet implemented. The arrays below will be populated in a future
+  // implementation when the repository queries are added.
+
   const linkedOrganisations = []
   const unlinkedOrganisations = []
 
+  // Deduplicate organizations to ensure each organization appears only once in the 'all' array
+  const all = deduplicateOrganisations(
+    unlinkedOrganisations,
+    linkedOrganisations
+  )
+
   return {
-    all: [...unlinkedOrganisations, ...linkedOrganisations].reduce(
-      (prev, organisation) =>
-        prev.find(({ id }) => id === organisation.id)
-          ? prev
-          : [...prev, organisation],
-      []
-    ),
+    all,
     unlinked: unlinkedOrganisations,
     linked: linkedOrganisations
   }
