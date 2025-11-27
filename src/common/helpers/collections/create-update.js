@@ -35,15 +35,6 @@ const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 
-const eprOrganisationFixturesIds = [
-  eprOrganisation1,
-  eprOrganisation2,
-  eprOrganisation3,
-  eprOrganisation4
-]
-  .map((record) => record.id)
-  .map(ObjectId.createFromHexString)
-
 /**
  * @import {Db} from 'mongodb'
  */
@@ -144,6 +135,15 @@ export async function createSeedData(db, isProduction) {
       ])
     }
 
+    const eprOrganisationFixturesIds = [
+      eprOrganisation1,
+      eprOrganisation2,
+      eprOrganisation3,
+      eprOrganisation4
+    ]
+      .map((record) => record.id)
+      .map(ObjectId.createFromHexString)
+
     const eprOrganisationFixturesDocs = await db
       .collection(COLLECTION_EPR_ORGANISATIONS)
       .find({ _id: { $in: eprOrganisationFixturesIds } })
@@ -171,55 +171,7 @@ export async function cleanupSeedData(db, { isProduction, isDryRun }) {
   })
   if (isProduction()) {
     logger.info({ message: 'Seed data clean up: start' })
-    const deleteDocuments = async (collectionName, ids) => {
-      if (isDryRun()) {
-        const idStrings = ids.map((id) => id.toString())
-        logger.info({
-          message: `Seed data clean up: dry run delete documents ${idStrings} from ${collectionName} collection`
-        })
-      } else {
-        const result = await db
-          .collection(collectionName)
-          .deleteMany({ _id: { $in: ids } })
-        logger.info({
-          message: `Seed data clean up: deleted ${result.deletedCount} documents from ${collectionName} collection`
-        })
-      }
-    }
-
-    const findAndDeleteOne = async (collectionName, query) => {
-      const docs = await db.collection(collectionName).find(query).toArray()
-
-      if (docs.length === 1) {
-        await deleteDocuments(collectionName, [docs[0]._id])
-      } else if (docs.length > 1) {
-        logger.info({
-          message: `Seed data clean up: more than one seed data candidate document found for ${collectionName} collection - not deleting`
-        })
-      } else {
-        logger.info({
-          message: `Seed data clean up: no seed data found for ${collectionName} collection`
-        })
-      }
-    }
-
-    findAndDeleteOne(COLLECTION_ORGANISATION, {
-      orgName: organisationFixture.data.main.JbEBvr,
-      email: organisationFixture.data.main.aSoxDO
-    })
-
-    findAndDeleteOne(COLLECTION_REGISTRATION, {
-      'rawSubmissionData.data.main.RIXIzA': registrationFixture.data.main.RIXIzA // system reference
-    })
-
-    findAndDeleteOne(COLLECTION_ACCREDITATION, {
-      'rawSubmissionData.data.main.MyWHms':
-        accreditationFixture.data.main.MyWHms // system reference
-    })
-
-    await deleteDocuments(
-      COLLECTION_EPR_ORGANISATIONS,
-      eprOrganisationFixturesIds
-    )
+    return true
   }
+  return false
 }
