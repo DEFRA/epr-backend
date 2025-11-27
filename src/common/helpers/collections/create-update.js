@@ -165,7 +165,7 @@ export async function createSeedData(db, isProduction) {
   }
 }
 
-export async function cleanupSeedData(db, { isProduction, isDryRun }) {
+export async function cleanupSeedData(_db, { isProduction, isDryRun }) {
   logger.info({
     message: `Seed data clean up: requested, isProduction-${isProduction()}, dry run-${isDryRun()}`
   })
