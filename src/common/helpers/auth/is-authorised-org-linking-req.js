@@ -1,10 +1,16 @@
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
-import { Boom } from '@hapi/boom'
+import Boom from '@hapi/boom'
 import { isInitialUser } from './roles/helpers'
 
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+ * @param {object} tokenPayload - The OIDC token payload containing user and organization data
+ */
 export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
   const isOrganisationLinkingRequest =
-    request.route.path === organisationsLinkPath && request.method === 'post'
+    request.path === organisationsLinkPath && request.method === 'post'
 
   if (!isOrganisationLinkingRequest) {
     return false
