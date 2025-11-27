@@ -16,7 +16,7 @@ import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
  * @returns {boolean}
  */
 export function isInitialUser(organisation, email) {
-  return !!organisation.users.find(
+  return organisation.users.some(
     (user) =>
       user.email.toLowerCase() === email.toLowerCase() && !!user.isInitialUser
   )
@@ -96,7 +96,7 @@ export function deduplicateOrganisations(
 ) {
   return [...unlinkedOrganisations, ...linkedOrganisations].reduce(
     (prev, organisation) =>
-      prev.find(({ id }) => id === organisation.id)
+      prev.some(({ id }) => id === organisation.id)
         ? prev
         : [...prev, organisation],
     []
@@ -104,9 +104,9 @@ export function deduplicateOrganisations(
 }
 
 export async function findOrganisationMatches(
-  email,
-  defraIdOrgId,
-  organisationsRepository
+  _email,
+  _defraIdOrgId,
+  _organisationsRepository
 ) {
   // Note: This function currently returns empty arrays as the organization matching
   // logic is not yet implemented. The arrays below will be populated in a future
