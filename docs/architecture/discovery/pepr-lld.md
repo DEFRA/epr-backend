@@ -124,7 +124,10 @@ Request body matches CDP Uploader's callback payload:
 }
 ```
 
-Updates the SUMMARY-LOG entity (which already exists with status `preprocessing`) with S3 details and sets status to `validating` (if scan succeeded) or `rejected` (if scan failed). If successful, sends a message to SQS to trigger validation.
+Updates the SUMMARY-LOG entity with S3 details and sets status to `validating` (if scan succeeded) or `rejected` (if scan failed). If successful, sends a message to SQS to trigger validation.
+
+> [!NOTE]
+> Currently, this endpoint creates the summary log if it doesn't exist. Once `POST /summary-logs` is implemented, the entity will always exist (created at initiate time with `preprocessing` status), and this endpoint will only update existing records.
 
 #### `POST /v1/organisations/{id}/registrations/{id}/summary-logs/{summaryLogId}/submit`
 
