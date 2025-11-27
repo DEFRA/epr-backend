@@ -445,5 +445,31 @@ describe('#getJwtStrategyConfig', () => {
         expect(result.credentials.issuer).toBe(baseDefraIdTokenPayload.iss)
       })
     })
+
+    describe('Error cases', () => {
+      test('throws forbidden error for Defra ID token with invalid audience', async () => {
+        const config = getJwtStrategyConfig(customOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              ...baseDefraIdTokenPayload,
+              aud: 'wrong-defra-client-id'
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/any',
+          params: {
+            organisationId: baseDefraIdTokenPayload.currentRelatioshipId
+          }
+        }
+
+        await expect(config.validate(artifacts, request)).rejects.toThrow(
+          Boom.forbidden('Invalid audience for Defra Id token')
+        )
+      })
+    })
   })
 })
