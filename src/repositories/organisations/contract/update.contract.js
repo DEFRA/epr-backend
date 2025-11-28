@@ -491,7 +491,7 @@ export const testUpdateBehaviour = (it) => {
       })
 
       describe('accreditation approval', () => {
-        it('rejects accreditation approval without link from approved registration', async () => {
+        it('reject accreditation approval when no approved registration is linked', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
 
@@ -512,7 +512,7 @@ export const testUpdateBehaviour = (it) => {
           )
         })
 
-        it('allows accreditation approval with link from approved registration', async () => {
+        it('allows accreditation approval when there is a linked approved registration', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
           const accreditationToUpdate = {

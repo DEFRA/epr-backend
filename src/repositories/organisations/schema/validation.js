@@ -39,24 +39,32 @@ export const validateOrganisationInsert = (data) => {
   return value
 }
 
-function isAccLinkedToApprovedReg(organisation, accreditation) {
-  return !(organisation.registrations ?? []).some(
+function isAccreditationMissingApprovedRegistration(
+  organisation,
+  accreditation
+) {
+  const hasApprovedRegistration = (organisation.registrations ?? []).some(
     (reg) =>
       reg.accreditationId === accreditation.id &&
       reg.status === STATUS.APPROVED &&
       isAccreditationForRegistration(accreditation, reg)
   )
+  return !hasApprovedRegistration
 }
 
 function validateApprovedAccreditations(organisation) {
-  const unlinkedAccreditationIds = (organisation.accreditations ?? [])
+  const approvedAccreditationsWithoutRegistration = (
+    organisation.accreditations ?? []
+  )
     .filter((acc) => acc.status === STATUS.APPROVED)
-    .filter((acc) => isAccLinkedToApprovedReg(organisation, acc))
+    .filter((acc) =>
+      isAccreditationMissingApprovedRegistration(organisation, acc)
+    )
     .map((acc) => acc.id)
 
-  if (unlinkedAccreditationIds.length > 0) {
+  if (approvedAccreditationsWithoutRegistration.length > 0) {
     throw Boom.badData(
-      `Accreditations with id ${unlinkedAccreditationIds.join(',')} are approved but not linked to an approved registration`
+      `Accreditations with id ${approvedAccreditationsWithoutRegistration.join(',')} are approved but not linked to an approved registration`
     )
   }
 }
