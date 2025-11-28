@@ -1,4 +1,4 @@
-import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'

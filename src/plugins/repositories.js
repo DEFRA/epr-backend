@@ -2,7 +2,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 

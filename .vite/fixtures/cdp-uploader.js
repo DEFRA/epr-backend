@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { test as baseTest } from 'vitest'
 import { GenericContainer, Network, Wait, SocatContainer } from 'testcontainers'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const COMPOSE_DIR = path.resolve(__dirname, '../../compose')
