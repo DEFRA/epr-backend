@@ -6,42 +6,45 @@
  * }} Id
 
 /**
- * Full address used in registrations
- * @typedef {Object} RegistrationAddress
- * @property {string} [line1]
- * @property {string} [line2]
- * @property {string} [town]
- * @property {string} [county]
- * @property {string} [country]
- * @property {string} [postcode]
- * @property {string} [region]
- * @property {string} [fullAddress]
+ * @typedef {{
+ *  line1?: string;
+ *  line2?: string;
+ *  town?: string;
+ *  county?: string;
+ *  country?: string;
+ *  postcode?: string;
+ *  region?: string;
+ *  fullAddress?: string;
+ * }} RegistrationAddress
  */
 
 /**
- * Minimal address used in accreditations (only line1 and postcode required)
- * @typedef {Object} AccreditationAddress
- * @property {string} line1
- * @property {string} postcode
+ * @typedef {{
+ *  line1: string;
+ *  postcode: string;
+ * }} AccreditationAddress
  */
 
 /**
- * @typedef {Object} AccreditationSite
- * @property {AccreditationAddress} address
+ * @typedef {{
+ *  address: AccreditationAddress;
+ * }} AccreditationSite
  */
 
 /**
- * @typedef {Object} SiteCapacity
- * @property {string} material
- * @property {number} capacity
- * @property {string} siteCapacityTimescale
+ * @typedef {{
+ *  capacity: number;
+ *  material: string;
+ *  siteCapacityTimescale: string;
+ * }} SiteCapacity
  */
 
 /**
- * @typedef {Object} RegistrationSite
- * @property {RegistrationAddress} address
- * @property {string} gridReference
- * @property {SiteCapacity[]} siteCapacity
+ * @typedef {{
+ *  address: RegistrationAddress;
+ *  gridReference: string;
+ *  siteCapacity: SiteCapacity[];
+ * }} RegistrationSite
  */
 
 /**
