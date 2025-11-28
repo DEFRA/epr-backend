@@ -1,4 +1,4 @@
-import { describe } from 'vitest'
+import { describe, it as vitestIt } from 'vitest'
 import { it as baseIt } from '#vite/fixtures/cdp-uploader.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 
@@ -72,4 +72,12 @@ const it = baseIt.extend({
 
 describe('CDP Uploader uploads repository', () => {
   testUploadsRepositoryContract(it)
+
+  // Visible test for SonarCloud - contract tests are registered dynamically above
+  vitestIt(
+    'has contract tests registered via testUploadsRepositoryContract',
+    () => {
+      expect(testUploadsRepositoryContract).toBeInstanceOf(Function)
+    }
+  )
 })

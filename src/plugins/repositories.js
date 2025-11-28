@@ -17,6 +17,57 @@ import { config } from '#root/config.js'
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
 
+/**
+ * Registers the uploads repository with optional test override.
+ * @param {import('#common/hapi-types.js').HapiServer} server
+ * @param {RepositoriesPluginOptions} [options]
+ * @param {boolean} skipMongoDb
+ */
+const registerUploadsRepository = (server, options, skipMongoDb) => {
+  if (options?.uploadsRepository) {
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'uploadsRepository', {
+        get() {
+          return options.uploadsRepository
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  } else if (!skipMongoDb) {
+    const s3Client = createS3Client({
+      region: config.get('awsRegion'),
+      endpoint: config.get('s3Endpoint'),
+      forcePathStyle: config.get('isDevelopment')
+    })
+
+    const uploadsRepository = createUploadsRepository({
+      s3Client,
+      cdpUploaderUrl: config.get('cdpUploader.url'),
+      frontendUrl: config.get('appBaseUrl'),
+      backendUrl: config.get('eprBackendUrl'),
+      s3Bucket: config.get('cdpUploader.s3Bucket'),
+      maxFileSize: config.get('cdpUploader.maxFileSize')
+    })
+
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'uploadsRepository', {
+        // istanbul ignore next -- production wiring, equivalent getter tested via options path
+        get() {
+          return uploadsRepository
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  } else {
+    // skipMongoDb is true and no test override - uploads repository not registered
+    // This is intentional: tests using skipMongoDb must provide their own uploadsRepository
+  }
+}
+
 export const repositories = {
   plugin: {
     name: 'repositories',
@@ -92,48 +143,7 @@ export const repositories = {
         registerRepository(name, creator, options?.[name])
       }
 
-      // Register uploads repository (S3-based, not MongoDB)
-      if (options?.uploadsRepository) {
-        // Test override provided
-        server.ext('onRequest', (request, h) => {
-          Object.defineProperty(request, 'uploadsRepository', {
-            get() {
-              return options.uploadsRepository
-            },
-            enumerable: true,
-            configurable: true
-          })
-          return h.continue
-        })
-      } else if (!skipMongoDb) {
-        // Production: create S3-based uploads repository
-        const s3Client = createS3Client({
-          region: config.get('awsRegion'),
-          endpoint: config.get('s3Endpoint'),
-          forcePathStyle: config.get('isDevelopment')
-        })
-
-        const uploadsRepository = createUploadsRepository({
-          s3Client,
-          cdpUploaderUrl: config.get('cdpUploader.url'),
-          frontendUrl: config.get('appBaseUrl'),
-          backendUrl: config.get('eprBackendUrl'),
-          s3Bucket: config.get('cdpUploader.s3Bucket'),
-          maxFileSize: config.get('cdpUploader.maxFileSize')
-        })
-
-        server.ext('onRequest', (request, h) => {
-          Object.defineProperty(request, 'uploadsRepository', {
-            // istanbul ignore next -- production wiring, equivalent getter tested via options path
-            get() {
-              return uploadsRepository
-            },
-            enumerable: true,
-            configurable: true
-          })
-          return h.continue
-        })
-      }
+      registerUploadsRepository(server, options, skipMongoDb)
     }
   }
 }

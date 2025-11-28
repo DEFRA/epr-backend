@@ -1,5 +1,7 @@
 import { createServer } from 'node:http'
 
+const HTTP_ACCEPTED = 202
+
 /**
  * Creates a minimal HTTP server that captures POST requests for testing.
  *
@@ -26,7 +28,7 @@ export const createCallbackReceiver = async () => {
         payload: JSON.parse(body)
       })
 
-      res.writeHead(202)
+      res.writeHead(HTTP_ACCEPTED)
       res.end()
     })
   })

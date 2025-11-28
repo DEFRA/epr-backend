@@ -49,7 +49,7 @@ describe('In-memory uploads repository', () => {
   it('throws when completing upload with unknown uploadId', async ({
     uploadsRepository
   }) => {
-    await expect(() =>
+    await expect(
       uploadsRepository.completeUpload('unknown-id', Buffer.from('test'))
     ).rejects.toThrow('No pending upload found for uploadId: unknown-id')
   })
