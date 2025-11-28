@@ -188,6 +188,36 @@ export const testInsertBehaviour = (it) => {
         })
       })
 
+      describe('preprocessing status without file', () => {
+        it('accepts preprocessing status without file data', async () => {
+          const id = `contract-preprocessing-no-file-${randomUUID()}`
+          const preprocessingLog = {
+            status: 'preprocessing',
+            organisationId: 'org-123',
+            registrationId: 'reg-456'
+          }
+
+          await repository.insert(id, preprocessingLog)
+
+          const found = await repository.findById(id)
+          expect(found.summaryLog.status).toBe('preprocessing')
+          expect(found.summaryLog.file).toBeUndefined()
+        })
+
+        it('rejects non-preprocessing status without file data', async () => {
+          const id = `contract-validating-no-file-${randomUUID()}`
+          const validatingLogWithoutFile = {
+            status: 'validating',
+            organisationId: 'org-123',
+            registrationId: 'reg-456'
+          }
+
+          await expect(
+            repository.insert(id, validatingLogWithoutFile)
+          ).rejects.toThrow(/Invalid summary log data.*file/)
+        })
+      })
+
       describe('status-based S3 requirements', () => {
         it('accepts rejected file without S3 info', async () => {
           const id = `contract-rejected-no-s3-${randomUUID()}`
