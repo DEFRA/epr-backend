@@ -350,7 +350,7 @@ export const testUpdateBehaviour = (it) => {
 
         const accreditationToUpdate = {
           ...organisation.accreditations[0],
-          status: STATUS.APPROVED,
+          status: STATUS.SUSPENDED,
           accreditationNumber: 'ACC12345',
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31')
@@ -363,10 +363,10 @@ export const testUpdateBehaviour = (it) => {
         const updatedAcc = result.accreditations.find(
           (a) => a.id === accreditationToUpdate.id
         )
-        expect(updatedAcc.status).toBe(STATUS.APPROVED)
+        expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
         expect(updatedAcc.statusHistory).toHaveLength(2)
         expect(updatedAcc.statusHistory[0].status).toBe(STATUS.CREATED)
-        expect(updatedAcc.statusHistory[1].status).toBe(STATUS.APPROVED)
+        expect(updatedAcc.statusHistory[1].status).toBe(STATUS.SUSPENDED)
         expect(updatedAcc.statusHistory[1].updatedAt).toBeInstanceOf(Date)
       })
 
@@ -380,7 +380,7 @@ export const testUpdateBehaviour = (it) => {
           accreditations: [
             {
               ...organisation.accreditations[0],
-              status: STATUS.APPROVED,
+              status: STATUS.SUSPENDED,
               accreditationNumber: 'ACC12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
@@ -391,7 +391,7 @@ export const testUpdateBehaviour = (it) => {
           accreditations: [
             {
               ...organisation.accreditations[0],
-              status: STATUS.SUSPENDED,
+              status: STATUS.ARCHIVED,
               accreditationNumber: 'ACC12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
@@ -401,11 +401,11 @@ export const testUpdateBehaviour = (it) => {
 
         const result = await repository.findById(organisation.id, 3)
         const updatedAcc = result.accreditations.find((a) => a.id === accId)
-        expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
+        expect(updatedAcc.status).toBe(STATUS.ARCHIVED)
         expect(updatedAcc.statusHistory).toHaveLength(3)
         expect(updatedAcc.statusHistory[0].status).toBe(STATUS.CREATED)
-        expect(updatedAcc.statusHistory[1].status).toBe(STATUS.APPROVED)
-        expect(updatedAcc.statusHistory[2].status).toBe(STATUS.SUSPENDED)
+        expect(updatedAcc.statusHistory[1].status).toBe(STATUS.SUSPENDED)
+        expect(updatedAcc.statusHistory[2].status).toBe(STATUS.ARCHIVED)
       })
 
       it('rejects invalid status value', async () => {
@@ -490,6 +490,63 @@ export const testUpdateBehaviour = (it) => {
         })
       })
 
+      describe('accreditation approval', () => {
+        it('rejects accreditation approval without link from approved registration', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.APPROVED,
+            accreditationNumber: 'ACC12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.update(organisation.id, 1, {
+              accreditations: [accreditationToUpdate]
+            })
+          ).rejects.toThrow(
+            'Accreditations with id 68f6a147c117aec8a1ab7495 are approved but not linked to an approved registration'
+          )
+        })
+
+        it('allows accreditation approval with link from approved registration', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const accreditationToUpdate = {
+            ...organisation.accreditations[0],
+            status: STATUS.APPROVED,
+            accreditationNumber: 'ACC12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
+          }
+
+          await repository.update(organisation.id, 1, {
+            accreditations: [accreditationToUpdate],
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                status: STATUS.APPROVED,
+                validFrom: new Date('2025-01-01'),
+                registrationNumber: 'REG12345',
+                validTo: new Date('2025-12-31'),
+                accreditationId: organisation.accreditations[0].id
+              }
+            ]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditationToUpdate.id
+          )
+
+          expect(updatedAcc.status).toBe(STATUS.APPROVED)
+          expect(updatedAcc.accreditationNumber).toBe('ACC12345')
+        })
+      })
+
       describe('accreditationNumber', () => {
         it('rejects update when accreditation status changes to approved without accreditationNumber', async () => {
           const organisation = buildOrganisation()
@@ -512,10 +569,9 @@ export const testUpdateBehaviour = (it) => {
           )
         })
 
-        it('allows update when accreditation status changes to approved with accreditationNumber', async () => {
+        it('allows update when accreditation status changes to approved with accreditationNumber and approved registration', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
-
           const accreditationToUpdate = {
             ...organisation.accreditations[0],
             status: STATUS.APPROVED,
@@ -525,7 +581,17 @@ export const testUpdateBehaviour = (it) => {
           }
 
           await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
+            accreditations: [accreditationToUpdate],
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                status: STATUS.APPROVED,
+                validFrom: new Date('2025-01-01'),
+                registrationNumber: 'REG12345',
+                validTo: new Date('2025-12-31'),
+                accreditationId: organisation.accreditations[0].id
+              }
+            ]
           })
 
           const result = await repository.findById(organisation.id, 2)
@@ -844,7 +910,17 @@ export const testUpdateBehaviour = (it) => {
           }
 
           await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
+            accreditations: [accreditationToUpdate],
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                status: STATUS.APPROVED,
+                validFrom: new Date('2025-01-01'),
+                registrationNumber: 'REG12345',
+                validTo: new Date('2025-12-31'),
+                accreditationId: organisation.accreditations[0].id
+              }
+            ]
           })
 
           const result = await repository.findById(organisation.id, 2)
