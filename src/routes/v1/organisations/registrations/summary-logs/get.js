@@ -44,8 +44,8 @@ export const summaryLogsGet = {
       ...transformValidationResponse(summaryLog.validation)
     }
 
-    if (summaryLog.loadCounts) {
-      response.loadCounts = summaryLog.loadCounts
+    if (summaryLog.loads) {
+      response.loads = summaryLog.loads
     }
 
     if (summaryLog.failureReason) {

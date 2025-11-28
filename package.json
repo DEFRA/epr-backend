@@ -25,7 +25,6 @@
     "node": ">=24.11.0"
   },
   "scripts": {
-    "adr:generate:toc": "adr generate toc > docs/architecture/decisions/index.md",
     "docker:dev": "NODE_ENV=development npm run server:watch",
     "dev": "NODE_ENV=development npm run server:watch",
     "dev:debug": "NODE_ENV=development npm run server:debug",
@@ -85,7 +84,8 @@
   },
   "overrides": {
     "brace-expansion": "2.0.2",
-    "glob": "11.1.0"
+    "glob": "11.1.0",
+    "validator": "13.15.23"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "4.0.14",
