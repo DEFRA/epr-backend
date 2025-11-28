@@ -1,3 +1,5 @@
+/** @import {Accreditation, Registration} from '#repositories/organisations/port.js' */
+
 export const STATUS = Object.freeze({
   CREATED: 'created',
   APPROVED: 'approved',
@@ -91,3 +93,116 @@ export const VALUE_TYPE = Object.freeze({
 export const USER_ROLES = Object.freeze({
   STANDARD: 'standard_user'
 })
+
+/**
+ * @typedef {{
+ *   line1?: string;
+ *   line2?: string;
+ *   town?: string;
+ *   county?: string;
+ *   country?: string;
+ *   postcode?: string;
+ *   region?: string;
+ *   fullAddress?: string;
+ * }} Address
+ */
+
+/**
+ * @typedef {{
+ *   name: string;
+ *   tradingName?: string;
+ *   registrationNumber?: string;
+ *   registeredAddress?: Address;
+ *   address?: Address;
+ * }} CompanyDetails
+ */
+
+/**
+ * @typedef {{
+ *   fullName: string;
+ *   email: string;
+ *   phone: string;
+ *   role?: string;
+ *   title?: string;
+ * }} User
+ */
+
+/**
+ * @typedef {{
+ *   fullName: string;
+ *   email: string;
+ *   isInitialUser: boolean;
+ *   roles: UserRoles[];
+ * }} CollatedUser
+ */
+
+/**
+ * @typedef {{
+ *   orgId: string;
+ *   orgName: string;
+ *   linkedBy: {email: string; id: string};
+ *   linkedAt: Date;
+ * }} LinkedDefraOrganisation
+ */
+
+/**
+ * @typedef {'approved'|'archived'|'created'|'rejected'|'suspended'} StatusValue
+ */
+
+/**
+ * @typedef {'ea'|'niea'|'nrw'|'sepa'} RegulatorValue
+ */
+
+/**
+ * @typedef {'individual'|'partnership'|'unincorporated'} BusinessTypeValue
+ */
+
+/**
+ * @typedef {'england'|'northern_ireland'|'scotland'|'wales'} NationValue
+ */
+
+/**
+ * @typedef {{
+ *   status: StatusValue;
+ *   updatedAt: Date;
+ *   updatedBy?: string;
+ * }} StatusHistoryItem
+ */
+
+/**
+ * @typedef {{
+ *   name: string;
+ *   type: 'company'|'individual';
+ * }} Partner
+ */
+
+/**
+ * @typedef {{
+ *   type: 'ltd'|'ltd_liability';
+ *   partners?: Partner[];
+ * }} Partnership
+ */
+
+/**
+ * @typedef {{
+ *   id: string;
+ *   accreditations?: Accreditation[];
+ *   businessType?: BusinessTypeValue;
+ *   companyDetails: CompanyDetails;
+ *   formSubmissionTime: Date;
+ *   linkedDefraOrganisation?: LinkedDefraOrganisation;
+ *   managementContactDetails?: User;
+ *   orgId: number;
+ *   partnership?: Partnership;
+ *   registrations?: Registration[];
+ *   reprocessingNations?: NationValue[];
+ *   schemaVersion: number;
+ *   status: StatusValue;
+ *   statusHistory: StatusHistoryItem[];
+ *   submittedToRegulator: RegulatorValue;
+ *   submitterContactDetails: User;
+ *   users?: CollatedUser[];
+ *   version: number;
+ *   wasteProcessingTypes: WasteProcessingTypeValue[];
+ * }} Organisation
+ */

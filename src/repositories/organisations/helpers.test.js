@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { statusHistoryWithChanges, hasChanges } from './helpers.js'
+import {
+  statusHistoryWithChanges,
+  hasChanges,
+  createUsersFromSubmitter
+} from './helpers.js'
 import { buildOrganisation } from './contract/test-data.js'
 
 describe('statusHistoryWithChanges', () => {
@@ -118,5 +122,17 @@ describe('hasChanges', () => {
     expect(hasChanges(null, null)).toBe(false)
     expect(hasChanges(undefined, undefined)).toBe(false)
     expect(hasChanges(org, null)).toBe(true)
+  })
+})
+
+describe('createUsersFromSubmitter', () => {
+  it('should return empty array when submitterContactDetails is null', () => {
+    const result = createUsersFromSubmitter(null)
+    expect(result).toEqual([])
+  })
+
+  it('should return empty array when submitterContactDetails is undefined', () => {
+    const result = createUsersFromSubmitter(undefined)
+    expect(result).toEqual([])
   })
 })

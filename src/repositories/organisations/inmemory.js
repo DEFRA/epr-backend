@@ -6,11 +6,13 @@ import {
 import {
   SCHEMA_VERSION,
   createInitialStatusHistory,
+  createUsersFromSubmitter,
   getCurrentStatus,
   statusHistoryWithChanges,
   mergeSubcollection,
   hasChanges
 } from './helpers.js'
+import { STATUS } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -116,13 +118,25 @@ const performUpdate =
       validatedUpdates.accreditations
     )
 
-    storage[existingIndex] = {
+    const isStatusChangingToApproved =
+      validatedUpdates.status === STATUS.APPROVED &&
+      getCurrentStatus(existing) !== STATUS.APPROVED
+
+    const updatePayload = {
       ...merged,
       statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
       registrations,
       accreditations,
       version: existing.version + 1
     }
+
+    if (isStatusChangingToApproved) {
+      updatePayload.users = createUsersFromSubmitter(
+        merged.submitterContactDetails
+      )
+    }
+
+    storage[existingIndex] = updatePayload
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)

@@ -1,5 +1,8 @@
-import { validateStatusHistory } from './schema/index.js'
+import { USER_ROLES } from '#domain/organisations/model.js'
 import equal from 'fast-deep-equal'
+import { validateStatusHistory } from './schema/index.js'
+
+/** @import {CollatedUser, User} from '#domain/organisations/model.js' */
 
 export const SCHEMA_VERSION = 1
 
@@ -111,4 +114,25 @@ export const hasChanges = (existing, incoming) => {
   const normalizedIncoming = normalizeForComparison(incoming)
 
   return !equal(normalizedExisting, normalizedIncoming)
+}
+
+/**
+ * Create users from submitter contact details
+ *
+ * @param {User} submitterContactDetails
+ * @returns {CollatedUser[]}
+ */
+export const createUsersFromSubmitter = (submitterContactDetails) => {
+  if (!submitterContactDetails) {
+    return []
+  }
+
+  return [
+    {
+      fullName: submitterContactDetails.fullName,
+      email: submitterContactDetails.email,
+      isInitialUser: true,
+      roles: [USER_ROLES.STANDARD]
+    }
+  ]
 }

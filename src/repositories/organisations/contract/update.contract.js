@@ -1,6 +1,6 @@
-import { describe, beforeEach, expect } from 'vitest'
-import { buildOrganisation, buildRegistration } from './test-data.js'
 import { STATUS } from '#domain/organisations/model.js'
+import { beforeEach, describe, expect } from 'vitest'
+import { buildOrganisation, buildRegistration } from './test-data.js'
 
 export const testUpdateBehaviour = (it) => {
   describe('update', () => {
@@ -417,6 +417,66 @@ export const testUpdateBehaviour = (it) => {
             status: 'invalid'
           })
         ).rejects.toThrow('Invalid organisation data: status: any.only')
+      })
+    })
+
+    describe('users', () => {
+      it('populates users field when organisation status changes to approved', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        await repository.update(organisation.id, 1, {
+          status: STATUS.APPROVED
+        })
+
+        const result = await repository.findById(organisation.id, 2)
+
+        expect(result.status).toBe(STATUS.APPROVED)
+        expect(result.users).toBeDefined()
+        expect(result.users).toHaveLength(1)
+        expect(result.users[0]).toStrictEqual({
+          fullName: organisation.submitterContactDetails.fullName,
+          email: organisation.submitterContactDetails.email,
+          isInitialUser: true,
+          roles: ['standard_user']
+        })
+      })
+
+      it('does not populate users field when status changes but not to approved', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        await repository.update(organisation.id, 1, {
+          status: STATUS.REJECTED
+        })
+
+        const result = await repository.findById(organisation.id, 2)
+
+        expect(result.status).toBe(STATUS.REJECTED)
+        expect(result.users).toBeUndefined()
+      })
+
+      it('does not modify users field when status remains approved', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        await repository.update(organisation.id, 1, {
+          status: STATUS.APPROVED
+        })
+
+        const afterFirstUpdate = await repository.findById(organisation.id, 2)
+
+        expect(afterFirstUpdate.users).toBeDefined()
+        expect(afterFirstUpdate.users).toHaveLength(1)
+
+        await repository.update(organisation.id, 2, {
+          wasteProcessingTypes: ['exporter']
+        })
+
+        const afterSecondUpdate = await repository.findById(organisation.id, 3)
+
+        expect(afterSecondUpdate.status).toBe(STATUS.APPROVED)
+        expect(afterSecondUpdate.users).toStrictEqual(afterFirstUpdate.users)
       })
     })
 
