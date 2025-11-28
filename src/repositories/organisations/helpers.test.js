@@ -171,6 +171,17 @@ describe('collateUsersFromOrganisation', () => {
     expect(result).toEqual([])
   })
 
+  it('should handle organisation with null registrations', () => {
+    const org = buildOrganisation({
+      submitterContactDetails: null,
+      registrations: null
+    })
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result).toEqual([])
+  })
+
   it('should collate users from submitterContactDetails only', () => {
     const org = buildOrganisation({
       registrations: []
@@ -196,8 +207,9 @@ describe('collateUsersFromOrganisation', () => {
 })
 
 describe('collateUsersOnApproval', () => {
-  it('should return existing users when no status change to approved', () => {
+  it('should return existing users when no submitterContactDetails and no status change', () => {
     const existing = buildOrganisation({
+      submitterContactDetails: null,
       users: [
         {
           fullName: 'Existing User',
@@ -207,14 +219,28 @@ describe('collateUsersOnApproval', () => {
         }
       ]
     })
-    const updated = buildOrganisation({
-      id: existing.id,
-      users: []
-    })
+    const updated = {
+      ...existing
+    }
 
     const result = collateUsersOnApproval(existing, updated)
 
     expect(result).toBe(existing.users)
+  })
+
+  it('should include submitter when no registration status change to approved', () => {
+    const existing = buildOrganisation({
+      users: []
+    })
+    const updated = {
+      ...existing
+    }
+
+    const result = collateUsersOnApproval(existing, updated)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].email).toBe(existing.submitterContactDetails.email)
+    expect(result[0].fullName).toBe(existing.submitterContactDetails.fullName)
   })
 
   it('should collate users when organisation status changes to approved', () => {

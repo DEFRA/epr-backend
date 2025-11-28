@@ -442,7 +442,7 @@ export const testUpdateBehaviour = (it) => {
         })
       })
 
-      it('does not populate users field when status changes but not to approved', async () => {
+      it('populates users field with submitter when status changes but not to approved', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
@@ -453,7 +453,14 @@ export const testUpdateBehaviour = (it) => {
         const result = await repository.findById(organisation.id, 2)
 
         expect(result.status).toBe(STATUS.REJECTED)
-        expect(result.users).toEqual([])
+        expect(result.users).toEqual([
+          {
+            fullName: organisation.submitterContactDetails.fullName,
+            email: organisation.submitterContactDetails.email,
+            isInitialUser: true,
+            roles: ['standard_user']
+          }
+        ])
       })
 
       it('does not modify users field when status remains approved', async () => {

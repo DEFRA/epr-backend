@@ -122,24 +122,42 @@ export const hasChanges = (existing, incoming) => {
  * @returns {CollatedUser[]}
  */
 export const collateUsersOnApproval = (existing, updated) => {
-  const isOrgStatusChangingToApproved =
-    getCurrentStatus(updated) === STATUS.APPROVED &&
-    getCurrentStatus(existing) !== STATUS.APPROVED
+  const users = []
 
-  const isAnyRegistrationChangingToApproval =
-    updated.registrations?.some((reg) => {
-      const regStatus = getCurrentStatus(reg)
-      const existingReg = existing.registrations?.find((r) => r.id === reg.id)
-      const existingRegStatus = existingReg
-        ? getCurrentStatus(existingReg)
-        : null
-      return (
-        regStatus === STATUS.APPROVED && existingRegStatus !== STATUS.APPROVED
-      )
-    }) || false
+  if (updated.submitterContactDetails) {
+    users.push({
+      fullName: updated.submitterContactDetails.fullName,
+      email: updated.submitterContactDetails.email
+    })
+  }
 
-  if (isOrgStatusChangingToApproved || isAnyRegistrationChangingToApproval) {
-    return collateUsersFromOrganisation(updated)
+  for (const registration of updated.registrations || []) {
+    const regStatus = getCurrentStatus(registration)
+    const existingReg = existing.registrations?.find(
+      (r) => r.id === registration.id
+    )
+    const existingRegStatus = existingReg ? getCurrentStatus(existingReg) : null
+
+    if (
+      regStatus === STATUS.APPROVED &&
+      existingRegStatus !== STATUS.APPROVED
+    ) {
+      users.push({
+        fullName: registration.submitterContactDetails.fullName,
+        email: registration.submitterContactDetails.email
+      })
+
+      for (const person of registration.approvedPersons) {
+        users.push({
+          fullName: person.fullName,
+          email: person.email
+        })
+      }
+    }
+  }
+
+  if (users.length > 0) {
+    return deduplicateUsers(users)
   }
 
   return existing.users
