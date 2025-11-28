@@ -5,14 +5,13 @@ import {
 } from './schema/index.js'
 import {
   SCHEMA_VERSION,
+  collateUsersOnApproval,
   createInitialStatusHistory,
-  createUsersFromSubmitter,
   getCurrentStatus,
   statusHistoryWithChanges,
   mergeSubcollection,
   hasChanges
 } from './helpers.js'
-import { STATUS } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -118,22 +117,28 @@ const performUpdate =
       validatedUpdates.accreditations
     )
 
-    const isStatusChangingToApproved =
-      validatedUpdates.status === STATUS.APPROVED &&
-      getCurrentStatus(existing) !== STATUS.APPROVED
+    const updatedStatusHistory = statusHistoryWithChanges(
+      validatedUpdates,
+      existing
+    )
 
     const updatePayload = {
       ...merged,
-      statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+      statusHistory: updatedStatusHistory,
       registrations,
       accreditations,
       version: existing.version + 1
     }
 
-    if (isStatusChangingToApproved) {
-      updatePayload.users = createUsersFromSubmitter(
-        merged.submitterContactDetails
-      )
+    const users = collateUsersOnApproval(existing, {
+      ...merged,
+      statusHistory: updatedStatusHistory,
+      registrations,
+      accreditations
+    })
+
+    if (users) {
+      updatePayload.users = users
     }
 
     storage[existingIndex] = updatePayload

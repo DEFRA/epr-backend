@@ -1,4 +1,4 @@
-import { USER_ROLES } from '#domain/organisations/model.js'
+import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import equal from 'fast-deep-equal'
 import { validateStatusHistory } from './schema/index.js'
 
@@ -117,7 +117,102 @@ export const hasChanges = (existing, incoming) => {
 }
 
 /**
- * Create users from submitter contact details
+ * Collates users if organisation or registration status changes to approved
+ *
+ * @param {object} existing - Existing organisation data
+ * @param {object} updated - Updated organisation data with merged changes
+ * @returns {CollatedUser[] | undefined} Users array if status changed to approved, undefined otherwise
+ */
+export const collateUsersOnApproval = (existing, updated) => {
+  const isOrgStatusChangingToApproved =
+    getCurrentStatus(updated) === STATUS.APPROVED &&
+    getCurrentStatus(existing) !== STATUS.APPROVED
+
+  const isAnyRegistrationChangingToApproved =
+    updated.registrations?.some((reg) => {
+      const regStatus = getCurrentStatus(reg)
+      const existingReg = existing.registrations?.find((r) => r.id === reg.id)
+      const existingRegStatus = existingReg
+        ? getCurrentStatus(existingReg)
+        : null
+      return (
+        regStatus === STATUS.APPROVED && existingRegStatus !== STATUS.APPROVED
+      )
+    }) || false
+
+  if (isOrgStatusChangingToApproved || isAnyRegistrationChangingToApproved) {
+    return collateUsersFromOrganisation(updated)
+  }
+
+  return undefined
+}
+
+/**
+ * Collates users from organisation and approved registrations, deduplicating by email
+ *
+ * @param {object} organisation - Organisation with submitterContactDetails and registrations
+ * @returns {CollatedUser[]}
+ */
+export const collateUsersFromOrganisation = (organisation) => {
+  const users = []
+
+  if (organisation.submitterContactDetails) {
+    users.push({
+      fullName: organisation.submitterContactDetails.fullName,
+      email: organisation.submitterContactDetails.email
+    })
+  }
+
+  for (const registration of organisation.registrations || []) {
+    const regStatus = getCurrentStatus(registration)
+
+    if (regStatus === STATUS.APPROVED) {
+      if (registration.submitterContactDetails) {
+        users.push({
+          fullName: registration.submitterContactDetails.fullName,
+          email: registration.submitterContactDetails.email
+        })
+      }
+
+      for (const person of registration.approvedPersons || []) {
+        users.push({
+          fullName: person.fullName,
+          email: person.email
+        })
+      }
+    }
+  }
+
+  return deduplicateUsers(users)
+}
+
+/**
+ * Deduplicates users by email address (case-insensitive)
+ *
+ * @param {Array<{fullName: string, email: string}>} users
+ * @returns {CollatedUser[]}
+ */
+const deduplicateUsers = (users) => {
+  const userMap = new Map()
+
+  for (const user of users) {
+    const key = user.email.toLowerCase()
+
+    if (!userMap.has(key)) {
+      userMap.set(key, {
+        fullName: user.fullName,
+        email: user.email,
+        isInitialUser: true,
+        roles: [USER_ROLES.STANDARD]
+      })
+    }
+  }
+
+  return Array.from(userMap.values())
+}
+
+/**
+ * Create users from submitter contact details (legacy - use collateUsersFromOrganisation)
  *
  * @param {User} submitterContactDetails
  * @returns {CollatedUser[]}

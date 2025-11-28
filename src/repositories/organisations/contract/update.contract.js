@@ -478,6 +478,171 @@ export const testUpdateBehaviour = (it) => {
         expect(afterSecondUpdate.status).toBe(STATUS.APPROVED)
         expect(afterSecondUpdate.users).toStrictEqual(afterFirstUpdate.users)
       })
+
+      it('collates users from organisation and approved registration', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        const registration = organisation.registrations[0]
+
+        await repository.update(organisation.id, 1, {
+          registrations: [
+            {
+              ...registration,
+              status: STATUS.APPROVED,
+              registrationNumber: 'REG123',
+              validFrom: new Date('2025-01-01'),
+              validTo: new Date('2025-12-31')
+            }
+          ]
+        })
+
+        const result = await repository.findById(organisation.id, 2)
+        const updatedReg = result.registrations.find(
+          (r) => r.id === registration.id
+        )
+
+        expect(updatedReg.status).toBe(STATUS.APPROVED)
+        expect(result.users).toBeDefined()
+        expect(result.users.length).toBeGreaterThanOrEqual(1)
+
+        const emails = result.users.map((u) => u.email.toLowerCase())
+        expect(emails).toContain(
+          organisation.submitterContactDetails.email.toLowerCase()
+        )
+        expect(emails).toContain(
+          registration.submitterContactDetails.email.toLowerCase()
+        )
+
+        for (const person of registration.approvedPersons) {
+          expect(emails).toContain(person.email.toLowerCase())
+        }
+      })
+
+      it('deduplicates users by email when registration is approved', async () => {
+        const organisation = buildOrganisation({
+          submitterContactDetails: {
+            fullName: 'John Doe',
+            email: 'john@example.com',
+            phone: '1234567890',
+            title: 'Director'
+          }
+        })
+        await repository.insert(organisation)
+
+        const registration = {
+          ...organisation.registrations[0],
+          submitterContactDetails: {
+            fullName: 'John Doe Different Name',
+            email: 'JOHN@EXAMPLE.COM',
+            phone: '9876543210',
+            title: 'Manager'
+          },
+          approvedPersons: [
+            {
+              fullName: 'Jane Smith',
+              email: 'jane@example.com',
+              phone: '1111111111',
+              title: 'Executive'
+            },
+            {
+              fullName: 'John Doe Yet Another Name',
+              email: 'john@example.com',
+              phone: '2222222222',
+              title: 'Supervisor'
+            }
+          ]
+        }
+
+        await repository.update(organisation.id, 1, {
+          registrations: [
+            {
+              ...registration,
+              status: STATUS.APPROVED,
+              registrationNumber: 'REG123',
+              validFrom: new Date('2025-01-01'),
+              validTo: new Date('2025-12-31')
+            }
+          ]
+        })
+
+        const result = await repository.findById(organisation.id, 2)
+        const updatedReg = result.registrations.find(
+          (r) => r.id === registration.id
+        )
+
+        expect(updatedReg.status).toBe(STATUS.APPROVED)
+        expect(result.users).toBeDefined()
+        expect(result.users).toHaveLength(2)
+
+        const emails = result.users.map((u) => u.email.toLowerCase())
+        expect(emails).toContain('john@example.com')
+        expect(emails).toContain('jane@example.com')
+      })
+
+      it('only includes users from approved registrations', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        const reg1 = organisation.registrations[0]
+        const reg2 = buildRegistration({
+          wasteProcessingType: 'exporter',
+          submitterContactDetails: {
+            fullName: 'Han Solo',
+            email: 'han.solo@starwars.com',
+            phone: '9999999999',
+            title: 'Smuggler'
+          },
+          approvedPersons: [
+            {
+              fullName: 'Chewbacca',
+              email: 'chewie@starwars.com',
+              phone: '8888888888',
+              title: 'Co-pilot'
+            }
+          ]
+        })
+
+        await repository.update(organisation.id, 1, {
+          registrations: [
+            {
+              ...reg1,
+              status: STATUS.APPROVED,
+              registrationNumber: 'REG123',
+              validFrom: new Date('2025-01-01'),
+              validTo: new Date('2025-12-31')
+            },
+            {
+              ...reg2,
+              status: STATUS.CREATED
+            }
+          ]
+        })
+
+        const result = await repository.findById(organisation.id, 2)
+        const updatedReg1 = result.registrations.find((r) => r.id === reg1.id)
+        const updatedReg2 = result.registrations.find((r) => r.id === reg2.id)
+
+        expect(updatedReg1.status).toBe(STATUS.APPROVED)
+        expect(updatedReg2.status).toBe(STATUS.CREATED)
+        expect(result.users).toBeDefined()
+
+        const emails = result.users.map((u) => u.email.toLowerCase())
+
+        expect(emails).toContain(
+          reg1.submitterContactDetails.email.toLowerCase()
+        )
+        for (const person of reg1.approvedPersons) {
+          expect(emails).toContain(person.email.toLowerCase())
+        }
+
+        expect(emails).not.toContain(
+          reg2.submitterContactDetails.email.toLowerCase()
+        )
+        for (const person of reg2.approvedPersons) {
+          expect(emails).not.toContain(person.email.toLowerCase())
+        }
+      })
     })
 
     describe('conditional field validation', () => {

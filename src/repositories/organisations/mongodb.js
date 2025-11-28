@@ -1,10 +1,9 @@
-import { STATUS } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
   SCHEMA_VERSION,
+  collateUsersOnApproval,
   createInitialStatusHistory,
-  createUsersFromSubmitter,
   getCurrentStatus,
   hasChanges,
   mergeSubcollection,
@@ -97,22 +96,28 @@ const performUpdate = (db) => async (id, version, updates) => {
     validatedUpdates.accreditations
   )
 
-  const isStatusChangingToApproved =
-    validatedUpdates.status === STATUS.APPROVED &&
-    getCurrentStatus(existing) !== STATUS.APPROVED
+  const updatedStatusHistory = statusHistoryWithChanges(
+    validatedUpdates,
+    existing
+  )
 
   const updatePayload = {
     ...merged,
-    statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+    statusHistory: updatedStatusHistory,
     registrations,
     accreditations,
     version: existing.version + 1
   }
 
-  if (isStatusChangingToApproved) {
-    updatePayload.users = createUsersFromSubmitter(
-      merged.submitterContactDetails
-    )
+  const users = collateUsersOnApproval(existing, {
+    ...merged,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations
+  })
+
+  if (users) {
+    updatePayload.users = users
   }
 
   const result = await db.collection(COLLECTION_NAME).updateOne(
