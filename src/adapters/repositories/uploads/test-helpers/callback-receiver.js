@@ -5,17 +5,20 @@ const MAX_POLL_ATTEMPTS = 150
 const POLL_INTERVAL_MS = 100
 
 /**
+ * @typedef {Object} CallbackReceiver
+ * @property {number} port - Port the server is listening on
+ * @property {string} url - URL for localhost access (http://127.0.0.1:port)
+ * @property {string} testcontainersUrl - URL for testcontainers access (http://host.testcontainers.internal:port)
+ * @property {Array<{ path: string, payload: unknown }>} requests - Captured requests
+ * @property {() => void} clear - Clears captured requests
+ * @property {() => Promise<void>} stop - Stops the server
+ */
+
+/**
  * Creates a minimal HTTP server that captures POST requests for testing.
  *
  * @param {{ bindToAllInterfaces?: boolean }} [options] - Configuration options
- * @returns {Promise<{
- *   port: number,
- *   url: string,
- *   testcontainersUrl: string,
- *   requests: Array<{ path: string, payload: unknown }>,
- *   clear: () => void,
- *   stop: () => Promise<void>
- * }>}
+ * @returns {Promise<CallbackReceiver>}
  */
 export const createCallbackReceiver = async (options = {}) => {
   const { bindToAllInterfaces = false } = options
@@ -65,7 +68,7 @@ export const createCallbackReceiver = async (options = {}) => {
 /**
  * Polls callback receiver until a callback arrives or timeout occurs.
  *
- * @param {{ requests: Array<{ path: string, payload: unknown }> }} callbackReceiver
+ * @param {CallbackReceiver} callbackReceiver
  * @returns {Promise<{ path: string, payload: unknown }>}
  * @throws {Error} If no callback received after MAX_POLL_ATTEMPTS
  */

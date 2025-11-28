@@ -15,7 +15,7 @@ const TEST_FILE_PATH = path.resolve(
  * @typedef {Object} ContractTestFixtures
  * @property {import('#domain/uploads/repository/port.js').UploadsRepository} uploadsRepository - The adapter under test
  * @property {(uploadId: string, buffer: Buffer) => Promise<void>} performUpload - Uploads the file to the upload service
- * @property {Awaited<ReturnType<typeof import('./test-helpers/callback-receiver.js').createCallbackReceiver>>} callbackReceiver - Captures HTTP callbacks
+ * @property {import('./test-helpers/callback-receiver.js').CallbackReceiver} callbackReceiver - Captures HTTP callbacks
  */
 
 /**
