@@ -82,7 +82,7 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   return organisations
 }
 
-function isAccreditationForRegistration(accreditation, registration) {
+export function isAccreditationForRegistration(accreditation, registration) {
   const typeAndMaterialMatch =
     registration.wasteProcessingType === accreditation.wasteProcessingType &&
     registration.material === accreditation.material
@@ -100,31 +100,15 @@ function linkAccreditationsForOrg(organisation) {
   const accreditations = organisation.accreditations ?? []
   const registrations = organisation.registrations ?? []
 
-  const accToRegs = accreditations.map((acc) => ({
-    acc,
-    matchedRegistrations: registrations.filter((reg) =>
-      isAccreditationForRegistration(acc, reg)
+  for (const registration of registrations) {
+    const matchedAccreditations = accreditations.filter((acc) =>
+      isAccreditationForRegistration(registration, acc)
     )
-  }))
-  const regToAccs = registrations.map((reg) => ({
-    reg,
-    matchedAccreditations: accreditations.filter((acc) =>
-      isAccreditationForRegistration(acc, reg)
-    )
-  }))
 
-  // Link only 1:1 matches
-  for (const { acc, matchedRegistrations } of accToRegs) {
-    if (matchedRegistrations.length === 1) {
-      const registrationsLinkingToAcc = regToAccs.find(
-        (rm) => rm.reg.id === matchedRegistrations[0].id
-      )
-      if (registrationsLinkingToAcc.matchedAccreditations.length === 1) {
-        matchedRegistrations[0].accreditationId = acc.id
-      }
+    if (matchedAccreditations.length === 1) {
+      registration.accreditationId = matchedAccreditations[0].id
     }
   }
-
   logUnlinkedAccreditations(organisation)
 }
 
@@ -196,8 +180,17 @@ function getLinkedRegCount(organisations) {
   )
 }
 
+function getLinkedAccCount(organisations) {
+  return new Set(
+    organisations
+      .flatMap((org) => org.registrations ?? [])
+      .map((reg) => reg.accreditationId)
+      .filter(Boolean)
+  ).size
+}
+
 /**
- * Link registration to accredidations
+ * Link registrations to accreditations
  *
  * @param {OrganisationWithAccreditations[]} organisations
  * @returns {OrganisationWithAccreditations[]}
@@ -209,8 +202,9 @@ export function linkRegistrationToAccreditations(organisations) {
   }
 
   const linkedRegCount = getLinkedRegCount(organisations)
+  const linkedAccCount = getLinkedAccCount(organisations)
   logger.info({
-    message: `Accreditation linking complete: ${linkedRegCount}/${accCount} linked`
+    message: `Accreditation linking complete: ${linkedAccCount}/${accCount} linked`
   })
   const regCount = countItems(organisations, 'registrations')
   logger.info({
