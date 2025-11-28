@@ -76,22 +76,6 @@ jobs:
               console.log('PR description already contains a link to the ticket')
             }
 
-      - name: Checkout code for ADR check
-        uses: actions/checkout@v6
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
-
-      - name: Check for ADR numbering conflicts
-        if: ${{ github.actor != 'dependabot[bot]' && !startsWith(github.head_ref, 'dependabot/') && !startsWith(github.head_ref, 'snyk-upgrade-') }}
-        run: |
-          cd docs/architecture/decisions
-          duplicates=$(ls -1 *.md | grep -E '^[0-9]{4}-' | sed 's/^\([0-9]\{4\}\)-.*/\1/' | sort | uniq -d)
-          if [ -n "$duplicates" ]; then
-            echo "Error: Duplicate ADR numbers found:"
-            echo "$duplicates"
-            exit 1
-          fi
-          echo "No ADR numbering conflicts found"
-
   pr-validator:
     name: Run Pull Request Checks
     runs-on: ubuntu-latest

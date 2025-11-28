@@ -256,16 +256,26 @@ describe('Summary logs integration', () => {
 
       it('returns complete validation response with no issues', () => {
         const payload = JSON.parse(response.payload)
+        // Note: loads is empty because mock data has no data rows
         expect(payload).toEqual({
           status: SUMMARY_LOG_STATUS.VALIDATED,
           validation: {
             failures: [],
             concerns: {}
           },
-          loadCounts: {
-            added: { valid: 0, invalid: 0 },
-            unchanged: { valid: 0, invalid: 0 },
-            adjusted: { valid: 0, invalid: 0 }
+          loads: {
+            added: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            },
+            unchanged: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            },
+            adjusted: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            }
           }
         })
       })
@@ -648,16 +658,26 @@ describe('Summary logs integration', () => {
         expect(rowsWithIssues).toBe(1)
       })
 
-      it('returns loadCounts classifying loads as added/valid/invalid', () => {
+      it('returns loads with rowIds classifying loads as added/valid/invalid', () => {
         const payload = JSON.parse(response.payload)
 
         // Both rows are added (first submission, no prior records)
         // Row 1 (ROW_ID 10000) is valid
         // Row 2 (ROW_ID 9999) is invalid (has validation errors)
-        expect(payload.loadCounts).toEqual({
-          added: { valid: 1, invalid: 1 },
-          unchanged: { valid: 0, invalid: 0 },
-          adjusted: { valid: 0, invalid: 0 }
+        // Note: ROW_ID values come from mock data as numbers
+        expect(payload.loads).toEqual({
+          added: {
+            valid: { count: 1, rowIds: [10000] },
+            invalid: { count: 1, rowIds: [9999] }
+          },
+          unchanged: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          },
+          adjusted: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          }
         })
       })
     })

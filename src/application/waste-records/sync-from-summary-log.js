@@ -70,6 +70,9 @@ export const syncFromSummaryLog = (dependencies) => {
    * @returns {Promise<void>}
    */
   return async (summaryLog) => {
+    // Capture timestamp at start of submission for consistent versioning
+    const timestamp = new Date().toISOString()
+
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog)
 
@@ -98,7 +101,8 @@ export const syncFromSummaryLog = (dependencies) => {
       },
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      accreditationId: summaryLog.accreditationId
+      accreditationId: summaryLog.accreditationId,
+      timestamp
     }
 
     const wasteRecords = transformFromSummaryLog(
