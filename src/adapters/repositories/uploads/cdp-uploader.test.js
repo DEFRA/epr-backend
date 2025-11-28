@@ -1,4 +1,4 @@
-import { describe, it as vitestIt, expect } from 'vitest'
+import { describe, expect } from 'vitest'
 import { it as baseIt } from '#vite/fixtures/cdp-uploader.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createUploadsRepository } from './cdp-uploader.js'
@@ -60,11 +60,12 @@ describe('CDP Uploader uploads repository', () => {
 
   testUploadsRepositoryContract(it)
 
-  // Visible test for SonarCloud - contract tests are registered dynamically above
-  vitestIt(
-    'has contract tests registered via testUploadsRepositoryContract',
-    () => {
-      expect(testUploadsRepositoryContract).toBeInstanceOf(Function)
-    }
-  )
+  it('returns null for non-existent S3 location', async ({
+    uploadsRepository
+  }) => {
+    const result = await uploadsRepository.findByLocation(
+      's3://non-existent-bucket/non-existent-key'
+    )
+    expect(result).toBeNull()
+  })
 })
