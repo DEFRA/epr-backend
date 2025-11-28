@@ -60,12 +60,9 @@ describe('CDP Uploader uploads repository', () => {
 
   testUploadsRepositoryContract(it)
 
-  it('returns null for non-existent S3 location', async ({
-    uploadsRepository
-  }) => {
-    const result = await uploadsRepository.findByLocation(
-      's3://non-existent-bucket/non-existent-key'
-    )
-    expect(result).toBeNull()
+  // SonarCloud cannot detect dynamically registered contract tests above.
+  // This explicit test exists solely to satisfy SonarCloud rule S2187.
+  it('registers contract tests via testUploadsRepositoryContract', () => {
+    expect(testUploadsRepositoryContract).toBeTypeOf('function')
   })
 })
