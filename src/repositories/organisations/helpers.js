@@ -189,61 +189,6 @@ export const collateUsersOnApproval = (existing, updated) => {
 }
 
 /**
- * Collates users from organisation, approved registrations, and approved accreditations, deduplicating by email
- *
- * @param {object} organisation - Organisation with submitterContactDetails, registrations, and accreditations
- * @returns {CollatedUser[]}
- */
-export const collateUsersFromOrganisation = (organisation) => {
-  const users = []
-
-  if (organisation.submitterContactDetails) {
-    users.push({
-      fullName: organisation.submitterContactDetails.fullName,
-      email: organisation.submitterContactDetails.email
-    })
-  }
-
-  for (const registration of organisation.registrations || []) {
-    const regStatus = getCurrentStatus(registration)
-
-    if (regStatus === STATUS.APPROVED) {
-      users.push({
-        fullName: registration.submitterContactDetails.fullName,
-        email: registration.submitterContactDetails.email
-      })
-
-      for (const person of registration.approvedPersons) {
-        users.push({
-          fullName: person.fullName,
-          email: person.email
-        })
-      }
-    }
-  }
-
-  for (const accreditation of organisation.accreditations || []) {
-    const accStatus = getCurrentStatus(accreditation)
-
-    if (accStatus === STATUS.APPROVED) {
-      users.push({
-        fullName: accreditation.submitterContactDetails.fullName,
-        email: accreditation.submitterContactDetails.email
-      })
-
-      for (const signatory of accreditation.prnIssuance.signatories) {
-        users.push({
-          fullName: signatory.fullName,
-          email: signatory.email
-        })
-      }
-    }
-  }
-
-  return deduplicateUsers(users)
-}
-
-/**
  * Deduplicates users by email address (case-insensitive)
  *
  * @param {Array<{fullName: string, email: string}>} users
@@ -266,25 +211,4 @@ const deduplicateUsers = (users) => {
   }
 
   return Array.from(userMap.values())
-}
-
-/**
- * Create users from submitter contact details (legacy - use collateUsersFromOrganisation)
- *
- * @param {User} submitterContactDetails
- * @returns {CollatedUser[]}
- */
-export const createUsersFromSubmitter = (submitterContactDetails) => {
-  if (!submitterContactDetails) {
-    return []
-  }
-
-  return [
-    {
-      fullName: submitterContactDetails.fullName,
-      email: submitterContactDetails.email,
-      isInitialUser: true,
-      roles: [USER_ROLES.STANDARD]
-    }
-  ]
 }
