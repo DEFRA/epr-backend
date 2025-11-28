@@ -149,7 +149,7 @@ function logUnlinkedAccreditations(organisation) {
     linkedRegistrations.map((reg) => reg.accreditationId)
   )
   const unlinkedAccreditations = accreditations.filter(
-    (acc) => !linkedAccreditationIds.has(acc.accreditationId)
+    (acc) => !linkedAccreditationIds.has(acc.id)
   )
 
   if (unlinkedAccreditations.length === 0) {
