@@ -3,6 +3,7 @@ import equal from 'fast-deep-equal'
 import { validateStatusHistory } from './schema/index.js'
 
 /** @import {CollatedUser, Organisation, User} from '#domain/organisations/model.js' */
+/** @import {Accreditation, Registration} from './port.js' */
 
 export const SCHEMA_VERSION = 1
 
@@ -121,34 +122,36 @@ export const hasChanges = (existing, incoming) => {
 /**
  * @param {Organisation} existing
  * @param {Organisation} updated
+ * @param {'accreditations'|'registrations'} collectionKey
+ * @param {(item: Accreditation|Registration) => SlimUser[]} extractAdditionalUsers
  * @returns {SlimUser[]}
  */
-const collateApprovedRegistrations = (existing, updated) => {
+const collateApprovedItems = (
+  existing,
+  updated,
+  collectionKey,
+  extractAdditionalUsers
+) => {
   /** @type {SlimUser[]} */
   const users = []
 
-  for (const registration of updated.registrations || []) {
-    const regStatus = getCurrentStatus(registration)
-    const existingReg = existing.registrations?.find(
-      (r) => r.id === registration.id
-    )
-    const existingRegStatus = existingReg ? getCurrentStatus(existingReg) : null
+  for (const item of updated[collectionKey] || []) {
+    const itemStatus = getCurrentStatus(item)
+    const existingItem = existing[collectionKey]?.find((i) => i.id === item.id)
+    const existingItemStatus = existingItem
+      ? getCurrentStatus(existingItem)
+      : null
 
     if (
-      regStatus === STATUS.APPROVED &&
-      existingRegStatus !== STATUS.APPROVED
+      itemStatus === STATUS.APPROVED &&
+      existingItemStatus !== STATUS.APPROVED
     ) {
       users.push({
-        fullName: registration.submitterContactDetails.fullName,
-        email: registration.submitterContactDetails.email
+        fullName: item.submitterContactDetails.fullName,
+        email: item.submitterContactDetails.email
       })
 
-      for (const person of registration.approvedPersons) {
-        users.push({
-          fullName: person.fullName,
-          email: person.email
-        })
-      }
+      users.push(...extractAdditionalUsers(item))
     }
   }
 
@@ -160,37 +163,34 @@ const collateApprovedRegistrations = (existing, updated) => {
  * @param {Organisation} updated
  * @returns {SlimUser[]}
  */
-const collateApprovedAccreditations = (existing, updated) => {
-  /** @type {SlimUser[]} */
-  const users = []
+const collateApprovedRegistrations = (existing, updated) =>
+  collateApprovedItems(
+    existing,
+    updated,
+    'registrations',
+    (/** @type {Registration} */ registration) =>
+      registration.approvedPersons.map(({ email, fullName }) => ({
+        fullName,
+        email
+      }))
+  )
 
-  for (const accreditation of updated.accreditations || []) {
-    const accStatus = getCurrentStatus(accreditation)
-    const existingAcc = existing.accreditations?.find(
-      (a) => a.id === accreditation.id
-    )
-    const existingAccStatus = existingAcc ? getCurrentStatus(existingAcc) : null
-
-    if (
-      accStatus === STATUS.APPROVED &&
-      existingAccStatus !== STATUS.APPROVED
-    ) {
-      users.push({
-        fullName: accreditation.submitterContactDetails.fullName,
-        email: accreditation.submitterContactDetails.email
-      })
-
-      for (const signatory of accreditation.prnIssuance.signatories) {
-        users.push({
-          fullName: signatory.fullName,
-          email: signatory.email
-        })
-      }
-    }
-  }
-
-  return users
-}
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {SlimUser[]}
+ */
+const collateApprovedAccreditations = (existing, updated) =>
+  collateApprovedItems(
+    existing,
+    updated,
+    'accreditations',
+    (/** @type {Accreditation} */ accreditation) =>
+      accreditation.prnIssuance.signatories.map(({ email, fullName }) => ({
+        fullName,
+        email
+      }))
+  )
 
 /**
  * @param {Organisation} existing
@@ -200,6 +200,7 @@ const collateApprovedAccreditations = (existing, updated) => {
 export const collateUsersOnApproval = (existing, updated) => {
   /** @type {SlimUser[]} */
   const root = []
+
   if (updated.submitterContactDetails) {
     root.push({
       fullName: updated.submitterContactDetails.fullName,
@@ -207,10 +208,11 @@ export const collateUsersOnApproval = (existing, updated) => {
     })
   }
 
-  const registrations = collateApprovedRegistrations(existing, updated)
-  const accreditations = collateApprovedAccreditations(existing, updated)
-
-  const users = [...root, ...registrations, ...accreditations]
+  const users = [
+    ...root,
+    ...collateApprovedRegistrations(existing, updated),
+    ...collateApprovedAccreditations(existing, updated)
+  ]
   if (users.length > 0) {
     return deduplicateUsers(users)
   }
