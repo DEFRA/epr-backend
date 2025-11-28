@@ -116,20 +116,16 @@ export const hasChanges = (existing, incoming) => {
   return !equal(normalizedExisting, normalizedIncoming)
 }
 
+/** @typedef {Pick<User, 'fullName'|'email'>} SlimUser */
+
 /**
  * @param {Organisation} existing
  * @param {Organisation} updated
- * @returns {CollatedUser[]}
+ * @returns {SlimUser[]}
  */
-export const collateUsersOnApproval = (existing, updated) => {
+const collateApprovedRegistrations = (existing, updated) => {
+  /** @type {SlimUser[]} */
   const users = []
-
-  if (updated.submitterContactDetails) {
-    users.push({
-      fullName: updated.submitterContactDetails.fullName,
-      email: updated.submitterContactDetails.email
-    })
-  }
 
   for (const registration of updated.registrations || []) {
     const regStatus = getCurrentStatus(registration)
@@ -156,6 +152,18 @@ export const collateUsersOnApproval = (existing, updated) => {
     }
   }
 
+  return users
+}
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {SlimUser[]}
+ */
+const collateApprovedAccreditations = (existing, updated) => {
+  /** @type {SlimUser[]} */
+  const users = []
+
   for (const accreditation of updated.accreditations || []) {
     const accStatus = getCurrentStatus(accreditation)
     const existingAcc = existing.accreditations?.find(
@@ -181,6 +189,28 @@ export const collateUsersOnApproval = (existing, updated) => {
     }
   }
 
+  return users
+}
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {CollatedUser[]}
+ */
+export const collateUsersOnApproval = (existing, updated) => {
+  /** @type {SlimUser[]} */
+  const root = []
+  if (updated.submitterContactDetails) {
+    root.push({
+      fullName: updated.submitterContactDetails.fullName,
+      email: updated.submitterContactDetails.email
+    })
+  }
+
+  const registrations = collateApprovedRegistrations(existing, updated)
+  const accreditations = collateApprovedAccreditations(existing, updated)
+
+  const users = [...root, ...registrations, ...accreditations]
   if (users.length > 0) {
     return deduplicateUsers(users)
   }
@@ -191,7 +221,7 @@ export const collateUsersOnApproval = (existing, updated) => {
 /**
  * Deduplicates users by email address (case-insensitive)
  *
- * @param {Array<{fullName: string, email: string}>} users
+ * @param {SlimUser[]} users
  * @returns {CollatedUser[]}
  */
 const deduplicateUsers = (users) => {
