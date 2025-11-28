@@ -33,7 +33,7 @@ const it = base.extend({
 
   performUpload: async ({ uploadsRepository }, use) => {
     await use(async (uploadId, buffer) => {
-      return await uploadsRepository.completeUpload(uploadId, buffer)
+      await uploadsRepository.completeUpload(uploadId, buffer)
     })
   },
 

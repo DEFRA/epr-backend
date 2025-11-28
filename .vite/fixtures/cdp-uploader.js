@@ -1,9 +1,16 @@
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { test as baseTest } from 'vitest'
-import { GenericContainer, Network, Wait, SocatContainer } from 'testcontainers'
+import {
+  GenericContainer,
+  Network,
+  Wait,
+  SocatContainer,
+  TestContainers
+} from 'testcontainers'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createCallbackReceiver } from '#adapters/repositories/uploads/test-helpers/callback-receiver.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const COMPOSE_DIR = path.resolve(__dirname, '../../compose')
@@ -31,6 +38,15 @@ const cdpUploaderStackFixture = {
       if (globalThis.fetchMock) {
         globalThis.fetchMock.disableMocks()
       }
+
+      // IMPORTANT: Create callback receiver and expose host port BEFORE starting containers
+      // This allows testcontainers to automatically connect containers to both:
+      // 1. Our custom network (for inter-container communication via aliases)
+      // 2. The port forwarder network (for host.testcontainers.internal access)
+      const callbackReceiver = await createCallbackReceiver({
+        bindToAllInterfaces: true
+      })
+      await TestContainers.exposeHostPorts(callbackReceiver.port)
 
       // Create shared network for containers to communicate
       const network = await new Network().start()
@@ -97,6 +113,10 @@ const cdpUploaderStackFixture = {
           SQS_ENDPOINT: 'http://localstack:4566',
           USE_SINGLE_INSTANCE_CACHE: 'true'
         })
+        // Enable host.docker.internal on Linux (already available on Docker Desktop)
+        .withExtraHosts([
+          { host: 'host.docker.internal', ipAddress: 'host-gateway' }
+        ])
         .withWaitStrategy(
           Wait.forLogMessage(/Server started successfully/).withStartupTimeout(
             120000
@@ -120,6 +140,7 @@ const cdpUploaderStackFixture = {
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       await use({
+        network,
         localstack: {
           endpoint: localstackEndpoint,
           region: REGION,
@@ -132,7 +153,8 @@ const cdpUploaderStackFixture = {
         },
         cdpUploader: {
           url: cdpUploaderUrl
-        }
+        },
+        callbackReceiver
       })
 
       // Cleanup in reverse order
@@ -140,6 +162,7 @@ const cdpUploaderStackFixture = {
       await cdpUploaderContainer.stop()
       await Promise.all([localstackContainer.stop(), redisContainer.stop()])
       await network.stop()
+      await callbackReceiver.stop()
 
       // Re-enable fetch mock for other tests
       if (globalThis.fetchMock) {

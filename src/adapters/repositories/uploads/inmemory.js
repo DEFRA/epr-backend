@@ -74,9 +74,9 @@ export const createInMemoryUploadsRepository = (config = {}) => {
 
         const payload = {
           form: {
-            summaryLogUpload: {
-              fileId: uploadId,
-              filename: `${uploadId}.xlsx`,
+            file: {
+              fileId: randomUUID(),
+              filename: 'summary-log.xlsx',
               fileStatus: 'complete',
               s3Bucket,
               s3Key

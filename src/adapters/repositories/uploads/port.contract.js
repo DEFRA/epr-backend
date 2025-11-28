@@ -2,6 +2,7 @@ import { describe, beforeEach } from 'vitest'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { waitForCallback } from './test-helpers/callback-receiver.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -13,12 +14,12 @@ const TEST_FILE_PATH = path.resolve(
 /**
  * Contract test for the uploads repository.
  *
- * Tests the full round-trip: initiate upload → file uploaded → retrieve file.
+ * Tests the full round-trip: initiate upload → callback received → retrieve file.
  *
  * The fixture must provide:
  * - uploadsRepository: the adapter under test
- * - performUpload: function(uploadId, buffer) that simulates/performs the upload
- *   and returns { s3Uri } where the file can be retrieved
+ * - performUpload: function(uploadId, buffer) that initiates the upload
+ * - callbackReceiver: captures HTTP callbacks made by the upload service
  */
 export const testUploadsRepositoryContract = (it) => {
   describe('uploads repository contract', () => {
@@ -54,8 +55,10 @@ export const testUploadsRepositoryContract = (it) => {
       expect(result.statusUrl).toContain(result.uploadId)
     })
 
-    it('completes full upload flow: initiate, upload file, retrieve', async () => {
+    it('completes full upload flow: initiate, upload file, callback, retrieve', async () => {
       const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
+
+      callbackReceiver.clear()
 
       // 1. Initiate upload
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
@@ -67,11 +70,16 @@ export const testUploadsRepositoryContract = (it) => {
       expect(uploadId).toBeDefined()
 
       // 2. Perform upload (infrastructure-specific)
-      const { s3Uri } = await performUpload(uploadId, testFileBuffer)
+      await performUpload(uploadId, testFileBuffer)
 
-      expect(s3Uri).toBeDefined()
+      // 3. Wait for callback
+      const callback = await waitForCallback(callbackReceiver)
 
-      // 3. Retrieve file
+      // 4. Extract S3 URI from callback
+      const { s3Bucket, s3Key } = callback.payload.form.file
+      const s3Uri = `s3://${s3Bucket}/${s3Key}`
+
+      // 5. Retrieve file
       const retrievedFile = await uploadsRepository.findByLocation(s3Uri)
 
       expect(retrievedFile).toBeInstanceOf(Buffer)
@@ -87,10 +95,6 @@ export const testUploadsRepositoryContract = (it) => {
     })
 
     it('makes HTTP callback when upload completes', async () => {
-      if (!callbackReceiver) {
-        return
-      }
-
       callbackReceiver.clear()
 
       const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
@@ -105,15 +109,17 @@ export const testUploadsRepositoryContract = (it) => {
       // Perform upload
       await performUpload(uploadId, testFileBuffer)
 
-      // Verify callback was made
-      expect(callbackReceiver.requests).toHaveLength(1)
-      expect(callbackReceiver.requests[0]).toMatchObject({
+      // Wait for callback
+      const callback = await waitForCallback(callbackReceiver)
+
+      // Verify callback contents
+      expect(callback).toMatchObject({
         path: '/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed',
         payload: {
           form: {
-            summaryLogUpload: {
-              fileId: uploadId,
-              filename: `${uploadId}.xlsx`,
+            file: {
+              fileId: expect.any(String),
+              filename: 'summary-log.xlsx',
               fileStatus: 'complete',
               s3Bucket: expect.any(String),
               s3Key: expect.any(String)
