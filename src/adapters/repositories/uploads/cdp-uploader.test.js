@@ -1,4 +1,4 @@
-import { describe, it as vitestIt } from 'vitest'
+import { describe, it as vitestIt, expect } from 'vitest'
 import { it as baseIt } from '#vite/fixtures/cdp-uploader.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createUploadsRepository } from './cdp-uploader.js'

@@ -1,4 +1,4 @@
-import { describe, it as base, beforeEach, afterEach } from 'vitest'
+import { describe, it as base, beforeEach, afterEach, expect } from 'vitest'
 import { createInMemoryUploadsRepository } from './inmemory.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createCallbackReceiver } from './test-helpers/callback-receiver.js'

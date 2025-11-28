@@ -35,7 +35,10 @@ const registerUploadsRepository = (server, options, skipMongoDb) => {
       })
       return h.continue
     })
-  } else if (!skipMongoDb) {
+  } else if (skipMongoDb) {
+    // skipMongoDb is true and no test override - uploads repository not registered
+    // This is intentional: tests using skipMongoDb must provide their own uploadsRepository
+  } else {
     const s3Client = createS3Client({
       region: config.get('awsRegion'),
       endpoint: config.get('s3Endpoint'),
@@ -62,9 +65,6 @@ const registerUploadsRepository = (server, options, skipMongoDb) => {
       })
       return h.continue
     })
-  } else {
-    // skipMongoDb is true and no test override - uploads repository not registered
-    // This is intentional: tests using skipMongoDb must provide their own uploadsRepository
   }
 }
 
