@@ -3,7 +3,7 @@ import { compareSite, siteInfoToLog } from './parsing-common/site.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
- * @import {OrganisationWithAccreditations} from './types.js'
+ * @import {Organisation, OrganisationWithRegistrations} from './types.js'
  */
 
 function getItemsBySystemReference(items) {
@@ -199,8 +199,8 @@ function getLinkedRegCount(organisations) {
 /**
  * Link registration to accredidations
  *
- * @param {OrganisationWithAccreditations[]} organisations
- * @returns {OrganisationWithAccreditations[]}
+ * @param {OrganisationWithRegistrations[]} organisations
+ * @returns {Organisation[]}
  */
 export function linkRegistrationToAccreditations(organisations) {
   const accCount = countItems(organisations, 'accreditations')
