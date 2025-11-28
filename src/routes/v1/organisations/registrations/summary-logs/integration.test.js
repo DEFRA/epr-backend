@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -1856,10 +1857,7 @@ describe('Summary logs integration', () => {
       })
       const { s3Uri } = uploadsRepository.completeUpload(uploadId, excelBuffer)
 
-      // Parse s3Uri to get bucket and key for webhook payload
-      const s3Match = s3Uri.match(/^s3:\/\/([^/]+)\/(.+)$/)
-      const s3Bucket = s3Match[1]
-      const s3Key = s3Match[2]
+      const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
 
       // Use real extractor with real parser (not mocked)
       const summaryLogExtractor = createSummaryLogExtractor({
