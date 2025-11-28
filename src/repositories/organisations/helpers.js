@@ -146,12 +146,13 @@ const collateApprovedItems = (
       itemStatus === STATUS.APPROVED &&
       existingItemStatus !== STATUS.APPROVED
     ) {
-      users.push({
-        fullName: item.submitterContactDetails.fullName,
-        email: item.submitterContactDetails.email
-      })
-
-      users.push(...extractAdditionalUsers(item))
+      users.push(
+        {
+          fullName: item.submitterContactDetails.fullName,
+          email: item.submitterContactDetails.email
+        },
+        ...extractAdditionalUsers(item)
+      )
     }
   }
 
