@@ -12,11 +12,18 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-
 import { summaryLogsCreatePath } from './post.js'
+
+const mockLogger = {
+  info: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  debug: vi.fn()
+}
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -25,42 +32,36 @@ const registrationId = 'reg-456'
 
 describe(`${summaryLogsCreatePath} route`, () => {
   setupAuthContext()
-  let server
-  let summaryLogsRepository
-  let uploadsRepository
-
-  beforeAll(async () => {
-    summaryLogsRepository = {
-      insert: vi.fn().mockResolvedValue(undefined),
-      update: vi.fn().mockResolvedValue(undefined),
-      findById: vi.fn().mockResolvedValue(null)
-    }
-
-    uploadsRepository = createInMemoryUploadsRepository()
-
-    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-    server = await createTestServer({
-      repositories: {
-        summaryLogsRepository: () => summaryLogsRepository,
-        uploadsRepository
-      },
-      featureFlags
-    })
-
-    await server.initialize()
-  })
-
-  afterEach(() => {
-    vi.resetAllMocks()
-    uploadsRepository.initiateCalls.length = 0
-  })
-
-  afterAll(async () => {
-    await server.stop()
-  })
 
   describe('successful requests', () => {
+    let server
+    let summaryLogsRepository
+    let uploadsRepository
+
+    beforeAll(async () => {
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      uploadsRepository = createInMemoryUploadsRepository()
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () => summaryLogsRepository,
+          uploadsRepository
+        },
+        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      })
+
+      await server.initialize()
+    })
+
+    afterEach(() => {
+      uploadsRepository.initiateCalls.length = 0
+    })
+
+    afterAll(async () => {
+      await server.stop()
+    })
+
     it('returns 201 with summary log and upload details', async () => {
       const response = await server.inject({
         method: 'POST',
@@ -80,7 +81,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
     })
 
     it('creates summary log with preprocessing status', async () => {
-      await server.inject({
+      const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         headers: {
@@ -88,14 +89,14 @@ describe(`${summaryLogsCreatePath} route`, () => {
         }
       })
 
-      expect(summaryLogsRepository.insert).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          status: SUMMARY_LOG_STATUS.PREPROCESSING,
-          organisationId,
-          registrationId
-        })
-      )
+      const body = JSON.parse(response.payload)
+      const stored = await summaryLogsRepository.findById(body.summaryLogId)
+
+      expect(stored.summaryLog).toMatchObject({
+        status: SUMMARY_LOG_STATUS.PREPROCESSING,
+        organisationId,
+        registrationId
+      })
     })
 
     it('initiates upload via uploads repository', async () => {
@@ -137,6 +138,35 @@ describe(`${summaryLogsCreatePath} route`, () => {
   })
 
   describe('error handling', () => {
+    let server
+    let summaryLogsRepository
+
+    beforeAll(async () => {
+      summaryLogsRepository = {
+        insert: vi.fn().mockResolvedValue(undefined),
+        update: vi.fn().mockResolvedValue(undefined),
+        findById: vi.fn().mockResolvedValue(null)
+      }
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () => summaryLogsRepository,
+          uploadsRepository: createInMemoryUploadsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      })
+
+      await server.initialize()
+    })
+
+    afterEach(() => {
+      vi.resetAllMocks()
+    })
+
+    afterAll(async () => {
+      await server.stop()
+    })
+
     it('returns 500 when repository insert fails', async () => {
       summaryLogsRepository.insert.mockRejectedValue(
         new Error('Database error')
