@@ -421,7 +421,7 @@ export const testUpdateBehaviour = (it) => {
     })
 
     describe('users', () => {
-      it('populates users field when organisation status changes to approved', async () => {
+      it('populates users field with submitter on any update', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
@@ -442,213 +442,275 @@ export const testUpdateBehaviour = (it) => {
         })
       })
 
-      it('populates users field with submitter when status changes but not to approved', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        await repository.update(organisation.id, 1, {
-          status: STATUS.REJECTED
-        })
-
-        const result = await repository.findById(organisation.id, 2)
-
-        expect(result.status).toBe(STATUS.REJECTED)
-        expect(result.users).toEqual([
-          {
-            fullName: organisation.submitterContactDetails.fullName,
-            email: organisation.submitterContactDetails.email,
-            isInitialUser: true,
-            roles: ['standard_user']
-          }
-        ])
-      })
-
-      it('does not modify users field when status remains approved', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        await repository.update(organisation.id, 1, {
-          status: STATUS.APPROVED
-        })
-
-        const afterFirstUpdate = await repository.findById(organisation.id, 2)
-
-        expect(afterFirstUpdate.users).toBeDefined()
-        expect(afterFirstUpdate.users).toHaveLength(1)
-
-        await repository.update(organisation.id, 2, {
-          wasteProcessingTypes: ['exporter']
-        })
-
-        const afterSecondUpdate = await repository.findById(organisation.id, 3)
-
-        expect(afterSecondUpdate.status).toBe(STATUS.APPROVED)
-        expect(afterSecondUpdate.users).toStrictEqual(afterFirstUpdate.users)
-      })
-
-      it('collates users from organisation and approved registration', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        const registration = organisation.registrations[0]
-
-        await repository.update(organisation.id, 1, {
-          registrations: [
-            {
-              ...registration,
-              status: STATUS.APPROVED,
-              registrationNumber: 'REG123',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+      describe('registrations', () => {
+        it('collates users when registration is approved and deduplicates by email', async () => {
+          const organisation = buildOrganisation({
+            submitterContactDetails: {
+              fullName: 'John Doe',
+              email: 'john@example.com',
+              phone: '1234567890',
+              title: 'Director'
             }
-          ]
-        })
+          })
+          await repository.insert(organisation)
 
-        const result = await repository.findById(organisation.id, 2)
-        const updatedReg = result.registrations.find(
-          (r) => r.id === registration.id
-        )
-
-        expect(updatedReg.status).toBe(STATUS.APPROVED)
-        expect(result.users).toBeDefined()
-        expect(result.users.length).toBeGreaterThanOrEqual(1)
-
-        const emails = result.users.map((u) => u.email.toLowerCase())
-        expect(emails).toContain(
-          organisation.submitterContactDetails.email.toLowerCase()
-        )
-        expect(emails).toContain(
-          registration.submitterContactDetails.email.toLowerCase()
-        )
-
-        for (const person of registration.approvedPersons) {
-          expect(emails).toContain(person.email.toLowerCase())
-        }
-      })
-
-      it('deduplicates users by email when registration is approved', async () => {
-        const organisation = buildOrganisation({
-          submitterContactDetails: {
-            fullName: 'John Doe',
-            email: 'john@example.com',
-            phone: '1234567890',
-            title: 'Director'
+          const registration = {
+            ...organisation.registrations[0],
+            submitterContactDetails: {
+              fullName: 'John Doe Different Name',
+              email: 'JOHN@EXAMPLE.COM',
+              phone: '9876543210',
+              title: 'Manager'
+            },
+            approvedPersons: [
+              {
+                fullName: 'Jane Smith',
+                email: 'jane@example.com',
+                phone: '1111111111',
+                title: 'Executive'
+              },
+              {
+                fullName: 'John Doe Yet Another Name',
+                email: 'john@example.com',
+                phone: '2222222222',
+                title: 'Supervisor'
+              }
+            ]
           }
-        })
-        await repository.insert(organisation)
 
-        const registration = {
-          ...organisation.registrations[0],
-          submitterContactDetails: {
-            fullName: 'John Doe Different Name',
-            email: 'JOHN@EXAMPLE.COM',
-            phone: '9876543210',
-            title: 'Manager'
-          },
-          approvedPersons: [
+          await repository.update(organisation.id, 1, {
+            registrations: [
+              {
+                ...registration,
+                status: STATUS.APPROVED,
+                cbduNumber: 'CBDU12345',
+                registrationNumber: 'REG123',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              }
+            ]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg = result.registrations.find(
+            (r) => r.id === registration.id
+          )
+
+          expect(updatedReg.status).toBe(STATUS.APPROVED)
+          expect(result.users).toEqual([
+            {
+              fullName: 'John Doe',
+              email: 'john@example.com',
+              isInitialUser: true,
+              roles: ['standard_user']
+            },
             {
               fullName: 'Jane Smith',
               email: 'jane@example.com',
-              phone: '1111111111',
-              title: 'Executive'
-            },
-            {
-              fullName: 'John Doe Yet Another Name',
-              email: 'john@example.com',
-              phone: '2222222222',
-              title: 'Supervisor'
+              isInitialUser: true,
+              roles: ['standard_user']
             }
-          ]
-        }
-
-        await repository.update(organisation.id, 1, {
-          registrations: [
-            {
-              ...registration,
-              status: STATUS.APPROVED,
-              registrationNumber: 'REG123',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
-            }
-          ]
+          ])
         })
 
-        const result = await repository.findById(organisation.id, 2)
-        const updatedReg = result.registrations.find(
-          (r) => r.id === registration.id
-        )
+        it('only includes users from approved registrations', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
 
-        expect(updatedReg.status).toBe(STATUS.APPROVED)
-        expect(result.users).toBeDefined()
-        expect(result.users).toHaveLength(2)
+          const reg1 = organisation.registrations[0]
+          const reg2 = buildRegistration({
+            wasteProcessingType: 'exporter',
+            submitterContactDetails: {
+              fullName: 'Han Solo',
+              email: 'han.solo@starwars.com',
+              phone: '9999999999',
+              title: 'Smuggler'
+            },
+            approvedPersons: [
+              {
+                fullName: 'Chewbacca',
+                email: 'chewie@starwars.com',
+                phone: '8888888888',
+                title: 'Co-pilot'
+              }
+            ]
+          })
 
-        const emails = result.users.map((u) => u.email.toLowerCase())
-        expect(emails).toContain('john@example.com')
-        expect(emails).toContain('jane@example.com')
+          await repository.update(organisation.id, 1, {
+            registrations: [
+              {
+                ...reg1,
+                status: STATUS.APPROVED,
+                registrationNumber: 'REG123',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              },
+              {
+                ...reg2,
+                status: STATUS.CREATED
+              }
+            ]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedReg1 = result.registrations.find((r) => r.id === reg1.id)
+          const updatedReg2 = result.registrations.find((r) => r.id === reg2.id)
+
+          expect(updatedReg1.status).toBe(STATUS.APPROVED)
+          expect(updatedReg2.status).toBe(STATUS.CREATED)
+          expect(result.users).toEqual([
+            {
+              fullName: 'Luke Skywalker',
+              email: 'anakin.skywalker@starwars.com',
+              isInitialUser: true,
+              roles: ['standard_user']
+            },
+            {
+              fullName: 'Luke Skywalker',
+              email: 'luke.skywalker@starwars.com',
+              isInitialUser: true,
+              roles: ['standard_user']
+            }
+          ])
+        })
       })
 
-      it('only includes users from approved registrations', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
-
-        const reg1 = organisation.registrations[0]
-        const reg2 = buildRegistration({
-          wasteProcessingType: 'exporter',
-          submitterContactDetails: {
-            fullName: 'Han Solo',
-            email: 'han.solo@starwars.com',
-            phone: '9999999999',
-            title: 'Smuggler'
-          },
-          approvedPersons: [
-            {
-              fullName: 'Chewbacca',
-              email: 'chewie@starwars.com',
-              phone: '8888888888',
-              title: 'Co-pilot'
+      describe('accreditations', () => {
+        it('collates users when accreditation is approved and deduplicates by email', async () => {
+          const organisation = buildOrganisation({
+            submitterContactDetails: {
+              fullName: 'Alice Cooper',
+              email: 'alice@example.com',
+              phone: '1234567890',
+              title: 'CEO'
             }
-          ]
-        })
+          })
+          await repository.insert(organisation)
 
-        await repository.update(organisation.id, 1, {
-          registrations: [
+          const accreditation = {
+            ...organisation.accreditations[0],
+            submitterContactDetails: {
+              fullName: 'Alice Cooper Alt',
+              email: 'ALICE@EXAMPLE.COM',
+              phone: '9876543210',
+              title: 'Director'
+            },
+            prnIssuance: {
+              tonnageBand: 'up_to_500',
+              signatories: [
+                {
+                  fullName: 'Bob Builder',
+                  email: 'bob@example.com',
+                  phone: '1111111111',
+                  title: 'Manager'
+                },
+                {
+                  fullName: 'Alice Cooper Different',
+                  email: 'alice@example.com',
+                  phone: '2222222222',
+                  title: 'Officer'
+                }
+              ],
+              incomeBusinessPlan: Array(7).fill({
+                percentIncomeSpent: 10,
+                usageDescription: 'Test',
+                detailedExplanation: 'Test explanation'
+              })
+            }
+          }
+
+          await repository.update(organisation.id, 1, {
+            accreditations: [
+              {
+                ...accreditation,
+                status: STATUS.APPROVED,
+                accreditationNumber: 'ACC123',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              }
+            ]
+          })
+
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc = result.accreditations.find(
+            (a) => a.id === accreditation.id
+          )
+
+          expect(updatedAcc.status).toBe(STATUS.APPROVED)
+          expect(result.users).toEqual([
             {
-              ...reg1,
-              status: STATUS.APPROVED,
-              registrationNumber: 'REG123',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              fullName: 'Alice Cooper',
+              email: 'alice@example.com',
+              isInitialUser: true,
+              roles: ['standard_user']
             },
             {
-              ...reg2,
-              status: STATUS.CREATED
+              fullName: 'Bob Builder',
+              email: 'bob@example.com',
+              isInitialUser: true,
+              roles: ['standard_user']
             }
-          ]
+          ])
         })
 
-        const result = await repository.findById(organisation.id, 2)
-        const updatedReg1 = result.registrations.find((r) => r.id === reg1.id)
-        const updatedReg2 = result.registrations.find((r) => r.id === reg2.id)
+        it('only includes users from approved accreditations', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
 
-        expect(updatedReg1.status).toBe(STATUS.APPROVED)
-        expect(updatedReg2.status).toBe(STATUS.CREATED)
-        expect(result.users).toBeDefined()
+          const acc1 = organisation.accreditations[0]
+          const acc2 = {
+            ...organisation.accreditations[1],
+            submitterContactDetails: {
+              ...organisation.accreditations[1].submitterContactDetails,
+              email: 'notapproved@example.com'
+            },
+            prnIssuance: {
+              ...organisation.accreditations[1].prnIssuance,
+              signatories:
+                organisation.accreditations[1].prnIssuance.signatories.map(
+                  (sig) => ({ ...sig, email: 'notapprovedsig@example.com' })
+                )
+            }
+          }
 
-        const emails = result.users.map((u) => u.email.toLowerCase())
+          await repository.update(organisation.id, 1, {
+            accreditations: [
+              {
+                ...acc1,
+                status: STATUS.APPROVED,
+                accreditationNumber: 'ACC123',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              },
+              acc2
+            ]
+          })
 
-        expect(emails).toContain(
-          reg1.submitterContactDetails.email.toLowerCase()
-        )
-        for (const person of reg1.approvedPersons) {
-          expect(emails).toContain(person.email.toLowerCase())
-        }
+          const result = await repository.findById(organisation.id, 2)
+          const updatedAcc1 = result.accreditations.find(
+            (a) => a.id === acc1.id
+          )
+          const updatedAcc2 = result.accreditations.find(
+            (a) => a.id === acc2.id
+          )
 
-        expect(emails).not.toContain(
-          reg2.submitterContactDetails.email.toLowerCase()
-        )
-        for (const person of reg2.approvedPersons) {
-          expect(emails).not.toContain(person.email.toLowerCase())
-        }
+          expect(updatedAcc1.status).toBe(STATUS.APPROVED)
+          expect(updatedAcc2.status).toBe(STATUS.CREATED)
+          expect(result.users).toEqual([
+            {
+              fullName: 'Luke Skywalker',
+              email: 'anakin.skywalker@starwars.com',
+              isInitialUser: true,
+              roles: ['standard_user']
+            },
+            {
+              fullName: 'Yoda',
+              email: 'yoda@starwars.com',
+              isInitialUser: true,
+              roles: ['standard_user']
+            }
+          ])
+        })
       })
     })
 
