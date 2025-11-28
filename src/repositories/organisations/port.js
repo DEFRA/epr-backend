@@ -1,10 +1,50 @@
 /**
+ * Full address used in registrations
+ * @typedef {Object} RegistrationAddress
+ * @property {string} [line1]
+ * @property {string} [line2]
+ * @property {string} [town]
+ * @property {string} [county]
+ * @property {string} [country]
+ * @property {string} [postcode]
+ * @property {string} [region]
+ * @property {string} [fullAddress]
+ */
+
+/**
+ * Minimal address used in accreditations (only line1 and postcode required)
+ * @typedef {Object} AccreditationAddress
+ * @property {string} line1
+ * @property {string} postcode
+ */
+
+/**
+ * @typedef {Object} AccreditationSite
+ * @property {AccreditationAddress} address
+ */
+
+/**
+ * @typedef {Object} SiteCapacity
+ * @property {string} material
+ * @property {number} capacity
+ * @property {string} siteCapacityTimescale
+ */
+
+/**
+ * @typedef {Object} RegistrationSite
+ * @property {RegistrationAddress} address
+ * @property {string} gridReference
+ * @property {SiteCapacity[]} siteCapacity
+ */
+
+/**
  * @typedef {Object} AccreditationBase
  * @property {string} id
  * @property {string} material
  * @property {string} wasteProcessingType
  * @property {Date} formSubmissionTime
  * @property {string} submittedToRegulator
+ * @property {AccreditationSite} [site] - Required for reprocessors, optional for exporters
  */
 
 /**
@@ -27,6 +67,7 @@
  * @property {string} wasteProcessingType
  * @property {Date} formSubmissionTime
  * @property {string} submittedToRegulator
+ * @property {RegistrationSite} [site] - Required for reprocessors, optional for exporters
  * @property {string} [accreditationId]
  * @property {Accreditation} [accreditation] - Hydrated accreditation object when accreditationId exists
  */

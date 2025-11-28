@@ -4,6 +4,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
  * @import {OrganisationWithAccreditations} from './types.js'
+ * @import {Accreditation, Registration} from '#repositories/organisations/port.js'
  */
 
 function getItemsBySystemReference(items) {
@@ -82,6 +83,12 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   return organisations
 }
 
+/**
+ * Check if an accreditation matches a registration based on type, material, and site
+ * @param {Accreditation} accreditation - The accreditation to check
+ * @param {Registration} registration - The registration to match against
+ * @returns {boolean} True if the accreditation matches the registration
+ */
 export function isAccreditationForRegistration(accreditation, registration) {
   const typeAndMaterialMatch =
     registration.wasteProcessingType === accreditation.wasteProcessingType &&
@@ -102,7 +109,7 @@ function linkAccreditationsForOrg(organisation) {
 
   for (const registration of registrations) {
     const matchedAccreditations = accreditations.filter((acc) =>
-      isAccreditationForRegistration(registration, acc)
+      isAccreditationForRegistration(acc, registration)
     )
 
     if (matchedAccreditations.length === 1) {
