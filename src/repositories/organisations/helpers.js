@@ -156,6 +156,31 @@ export const collateUsersOnApproval = (existing, updated) => {
     }
   }
 
+  for (const accreditation of updated.accreditations || []) {
+    const accStatus = getCurrentStatus(accreditation)
+    const existingAcc = existing.accreditations?.find(
+      (a) => a.id === accreditation.id
+    )
+    const existingAccStatus = existingAcc ? getCurrentStatus(existingAcc) : null
+
+    if (
+      accStatus === STATUS.APPROVED &&
+      existingAccStatus !== STATUS.APPROVED
+    ) {
+      users.push({
+        fullName: accreditation.submitterContactDetails.fullName,
+        email: accreditation.submitterContactDetails.email
+      })
+
+      for (const signatory of accreditation.prnIssuance.signatories) {
+        users.push({
+          fullName: signatory.fullName,
+          email: signatory.email
+        })
+      }
+    }
+  }
+
   if (users.length > 0) {
     return deduplicateUsers(users)
   }
@@ -164,9 +189,9 @@ export const collateUsersOnApproval = (existing, updated) => {
 }
 
 /**
- * Collates users from organisation and approved registrations, deduplicating by email
+ * Collates users from organisation, approved registrations, and approved accreditations, deduplicating by email
  *
- * @param {object} organisation - Organisation with submitterContactDetails and registrations
+ * @param {object} organisation - Organisation with submitterContactDetails, registrations, and accreditations
  * @returns {CollatedUser[]}
  */
 export const collateUsersFromOrganisation = (organisation) => {
@@ -192,6 +217,24 @@ export const collateUsersFromOrganisation = (organisation) => {
         users.push({
           fullName: person.fullName,
           email: person.email
+        })
+      }
+    }
+  }
+
+  for (const accreditation of organisation.accreditations || []) {
+    const accStatus = getCurrentStatus(accreditation)
+
+    if (accStatus === STATUS.APPROVED) {
+      users.push({
+        fullName: accreditation.submitterContactDetails.fullName,
+        email: accreditation.submitterContactDetails.email
+      })
+
+      for (const signatory of accreditation.prnIssuance.signatories) {
+        users.push({
+          fullName: signatory.fullName,
+          email: signatory.email
         })
       }
     }

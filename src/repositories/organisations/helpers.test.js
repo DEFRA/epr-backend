@@ -204,6 +204,61 @@ describe('collateUsersFromOrganisation', () => {
 
     expect(result.length).toBeGreaterThan(0)
   })
+
+  it('should collate users from approved accreditation', () => {
+    const org = buildOrganisation()
+    org.accreditations[0].statusHistory.push(
+      createStatusHistoryEntry(STATUS.APPROVED)
+    )
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  it('should not collate users from non-approved accreditation', () => {
+    const org = buildOrganisation({
+      submitterContactDetails: {
+        fullName: 'Test User',
+        email: 'test@example.com'
+      },
+      accreditations: [
+        {
+          id: 'acc1',
+          statusHistory: [createStatusHistoryEntry('created')],
+          submitterContactDetails: {
+            fullName: 'Acc Submitter',
+            email: 'acc@example.com'
+          },
+          prnIssuance: {
+            signatories: [
+              { fullName: 'Signatory 1', email: 'sig1@example.com' }
+            ]
+          }
+        }
+      ]
+    })
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].email).toBe('test@example.com')
+  })
+
+  it('should handle organisation with null accreditations', () => {
+    const org = buildOrganisation({
+      submitterContactDetails: {
+        fullName: 'Test User',
+        email: 'test@example.com'
+      },
+      accreditations: null
+    })
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].email).toBe('test@example.com')
+  })
 })
 
 describe('collateUsersOnApproval', () => {
@@ -269,6 +324,27 @@ describe('collateUsersOnApproval', () => {
         ...reg,
         statusHistory: [
           ...reg.statusHistory,
+          createStatusHistoryEntry(STATUS.APPROVED)
+        ]
+      }))
+    }
+
+    const result = collateUsersOnApproval(existing, updated)
+
+    expect(result.length).toBeGreaterThan(0)
+  })
+
+  it('should collate users when accreditation status changes to approved', () => {
+    const existing = buildOrganisation({
+      users: []
+    })
+
+    const updated = {
+      ...existing,
+      accreditations: existing.accreditations.map((acc) => ({
+        ...acc,
+        statusHistory: [
+          ...acc.statusHistory,
           createStatusHistoryEntry(STATUS.APPROVED)
         ]
       }))

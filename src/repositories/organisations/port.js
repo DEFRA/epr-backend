@@ -7,20 +7,48 @@
  */
 
 /**
+ * @typedef {{
+ *  detailedExplanation: string;
+ *  percentIncomeSpent: number;
+ *  usageDescription: string;
+ * }} PrnIncomeBusinessPlan
+ */
+
+/**
+ * @typedef {{
+ *  incomeBusinessPlan: PrnIncomeBusinessPlan[];
+ *  signatories: User[];
+ *  tonnageBand: string;
+ * }} PrnIssuance
+ */
+
+/**
  * @typedef {Id & {
  *  formSubmissionTime: Date;
  *  material: string;
+ *  prnIssuance: PrnIssuance;
  *  submittedToRegulator: string;
+ *  submitterContactDetails: User;
  *  wasteProcessingType: string;
  * }} AccreditationBase
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'approved'|'suspended', accreditationNumber: string, validFrom: Date, validTo: Date}} AccreditationApproved
+ * @typedef {AccreditationBase & {
+ *  accreditationNumber: string;
+ *  status: 'approved'|'suspended';
+ *  validFrom: Date;
+ *  validTo: Date
+ * }} AccreditationApproved
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'created'|'rejected'|'archived', accreditationNumber?: string, validFrom?: Date, validTo?: Date}} AccreditationOther
+ * @typedef {AccreditationBase & {
+ *  accreditationNumber?: string;
+ *  status: 'created'|'rejected'|'archived';
+ *  validFrom?: Date;
+ *  validTo?: Date
+ * }} AccreditationOther
  */
 
 /**
