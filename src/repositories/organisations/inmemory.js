@@ -77,7 +77,8 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     ...orgFields,
     formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
-    accreditations
+    accreditations,
+    users: []
   })
 
   storage.push(newOrg)
@@ -122,14 +123,6 @@ const performUpdate =
       existing
     )
 
-    const updatePayload = {
-      ...merged,
-      statusHistory: updatedStatusHistory,
-      registrations,
-      accreditations,
-      version: existing.version + 1
-    }
-
     const users = collateUsersOnApproval(existing, {
       ...merged,
       statusHistory: updatedStatusHistory,
@@ -137,8 +130,13 @@ const performUpdate =
       accreditations
     })
 
-    if (users) {
-      updatePayload.users = users
+    const updatePayload = {
+      ...merged,
+      statusHistory: updatedStatusHistory,
+      registrations,
+      accreditations,
+      users,
+      version: existing.version + 1
     }
 
     storage[existingIndex] = updatePayload

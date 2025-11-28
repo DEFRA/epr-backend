@@ -2,7 +2,7 @@ import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import equal from 'fast-deep-equal'
 import { validateStatusHistory } from './schema/index.js'
 
-/** @import {CollatedUser, User} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, Organisation, User} from '#domain/organisations/model.js' */
 
 export const SCHEMA_VERSION = 1
 
@@ -98,7 +98,7 @@ export const normalizeForComparison = (org) => {
     return org
   }
 
-  const { version, schemaVersion, status, statusHistory, ...rest } = org
+  const { version, schemaVersion, status, statusHistory, users, ...rest } = org
 
   const normalized = {
     ...rest,
@@ -117,18 +117,16 @@ export const hasChanges = (existing, incoming) => {
 }
 
 /**
- * Collates users if organisation or registration status changes to approved
- *
- * @param {object} existing - Existing organisation data
- * @param {object} updated - Updated organisation data with merged changes
- * @returns {CollatedUser[] | undefined} Users array if status changed to approved, undefined otherwise
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {CollatedUser[]}
  */
 export const collateUsersOnApproval = (existing, updated) => {
   const isOrgStatusChangingToApproved =
     getCurrentStatus(updated) === STATUS.APPROVED &&
     getCurrentStatus(existing) !== STATUS.APPROVED
 
-  const isAnyRegistrationChangingToApproved =
+  const isAnyRegistrationChangingToApproval =
     updated.registrations?.some((reg) => {
       const regStatus = getCurrentStatus(reg)
       const existingReg = existing.registrations?.find((r) => r.id === reg.id)
@@ -140,11 +138,11 @@ export const collateUsersOnApproval = (existing, updated) => {
       )
     }) || false
 
-  if (isOrgStatusChangingToApproved || isAnyRegistrationChangingToApproved) {
+  if (isOrgStatusChangingToApproved || isAnyRegistrationChangingToApproval) {
     return collateUsersFromOrganisation(updated)
   }
 
-  return undefined
+  return existing.users
 }
 
 /**

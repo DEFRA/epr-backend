@@ -60,7 +60,8 @@ const performInsert = (db) => async (organisation) => {
       statusHistory: createInitialStatusHistory(),
       ...orgFields,
       registrations,
-      accreditations
+      accreditations,
+      users: []
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
@@ -101,14 +102,6 @@ const performUpdate = (db) => async (id, version, updates) => {
     existing
   )
 
-  const updatePayload = {
-    ...merged,
-    statusHistory: updatedStatusHistory,
-    registrations,
-    accreditations,
-    version: existing.version + 1
-  }
-
   const users = collateUsersOnApproval(existing, {
     ...merged,
     statusHistory: updatedStatusHistory,
@@ -116,8 +109,13 @@ const performUpdate = (db) => async (id, version, updates) => {
     accreditations
   })
 
-  if (users) {
-    updatePayload.users = users
+  const updatePayload = {
+    ...merged,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations,
+    users,
+    version: existing.version + 1
   }
 
   const result = await db.collection(COLLECTION_NAME).updateOne(

@@ -453,7 +453,7 @@ export const testUpdateBehaviour = (it) => {
         const result = await repository.findById(organisation.id, 2)
 
         expect(result.status).toBe(STATUS.REJECTED)
-        expect(result.users).toBeUndefined()
+        expect(result.users).toEqual([])
       })
 
       it('does not modify users field when status remains approved', async () => {
