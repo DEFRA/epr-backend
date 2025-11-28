@@ -24,7 +24,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
       maxAgeSec: 3600, // 60 minutes
       timeSkewSec: 15
     },
-    validate: async (artifacts) => {
+    validate: async (artifacts, request) => {
       const tokenPayload = artifacts.decoded.payload
       const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
 
@@ -57,7 +57,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Defra Id token')
         }
 
-        const scope = await getDefraUserRoles(tokenPayload)
+        const scope = await getDefraUserRoles(tokenPayload, request)
 
         return {
           isValid: scope.length > 0,

@@ -31,12 +31,14 @@ export const publicKey = {
   alg: 'RS256'
 }
 
-const baseValidObject = {
+export const baseDefraIdTokenPayload = {
   name: 'John Doe',
   id: 'test-contact-id',
   email: USER_EMAIL,
   aud: VALID_DEFRA_AUDIENCE,
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
+  currentRelationshipId: 'rel-1',
+  relationships: ['rel-1'],
   nbf: new Date().getTime() / 1000,
   exp: new Date().getTime() / 1000 + 3600,
   maxAgeSec: 3600, // 60 minutes
@@ -49,7 +51,7 @@ const validGenerateTokenOptions = { header: { kid: publicKey.kid } }
 
 const generateValidDefraIdToken = () => {
   const mockDefraIdToken = Jwt.token.generate(
-    baseValidObject,
+    baseDefraIdTokenPayload,
     validJwtSecretObject,
     validGenerateTokenOptions
   )
@@ -73,7 +75,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
   })
 
   const mockDefraIdToken = Jwt.token.generate(
-    baseValidObject,
+    baseDefraIdTokenPayload,
     { key: wrongKeyPair.privateKey, algorithm: 'RS256' },
     validGenerateTokenOptions
   )
@@ -84,7 +86,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
 const generateDefraIdTokenWithWrongAudience = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseValidObject,
+      ...baseDefraIdTokenPayload,
       aud: 'random-wrong-audience'
     },
     validJwtSecretObject,
@@ -97,7 +99,7 @@ const generateDefraIdTokenWithWrongAudience = () => {
 const generateDefraIdTokenWithWrongIssuer = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseValidObject,
+      ...baseDefraIdTokenPayload,
       iss: `https://wrong-issuer.com/v2.0`
     },
     validJwtSecretObject,
@@ -110,7 +112,7 @@ const generateDefraIdTokenWithWrongIssuer = () => {
 const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseValidObject,
+      ...baseDefraIdTokenPayload,
       email: USER_EMAIL
     },
     validJwtSecretObject,

@@ -185,6 +185,27 @@ describe('#getEntraUserRoles', () => {
       expect(result).toEqual([ROLES.serviceMaintainer])
     })
 
+    test('handles token payload with both email and preferred_username undefined', async () => {
+      const tokenPayload = {
+        email: undefined,
+        preferred_username: undefined
+      }
+
+      const result = await getEntraUserRoles(tokenPayload)
+
+      expect(result).toEqual([])
+    })
+
+    test('handles token payload with no email or preferred_username fields', async () => {
+      const tokenPayload = {
+        sub: 'user-id-123'
+      }
+
+      const result = await getEntraUserRoles(tokenPayload)
+
+      expect(result).toEqual([])
+    })
+
     test('handles whitespace in email addresses', async () => {
       const tokenPayload = {
         email: ' maintainer1@example.com '
@@ -193,6 +214,23 @@ describe('#getEntraUserRoles', () => {
       const result = await getEntraUserRoles(tokenPayload)
 
       expect(result).toEqual([])
+    })
+
+    test('handles token payload where userEmail is undefined and list has items', async () => {
+      // This tests the branch where serviceMaintainersList.some is called
+      // but userEmail is undefined, so the comparison never matches
+      mockConfigGet.mockReturnValue(
+        JSON.stringify(['maintainer@example.com', 'admin@example.com'])
+      )
+
+      const tokenPayload = {
+        // Both email and preferred_username are undefined
+      }
+
+      const result = await getEntraUserRoles(tokenPayload)
+
+      expect(result).toEqual([])
+      expect(mockConfigGet).toHaveBeenCalledWith('roles.serviceMaintainers')
     })
 
     test('handles service maintainers list with single email', async () => {
