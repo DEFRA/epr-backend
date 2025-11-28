@@ -583,13 +583,17 @@ describe('SummaryLogsValidator', () => {
 
       // Note: ROW_ID values come directly from test data as numbers
       expect(updateCall.loads).toEqual({
-        added: { valid: [10000], invalid: [9999] },
-        unchanged: { valid: [], invalid: [] },
-        adjusted: { valid: [], invalid: [] },
-        totals: {
-          added: { valid: 1, invalid: 1 },
-          unchanged: { valid: 0, invalid: 0 },
-          adjusted: { valid: 0, invalid: 0 }
+        added: {
+          valid: { count: 1, rowIds: [10000] },
+          invalid: { count: 1, rowIds: [9999] }
+        },
+        unchanged: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
+        },
+        adjusted: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
         }
       })
     })
@@ -633,13 +637,17 @@ describe('SummaryLogsValidator', () => {
 
       // Note: ROW_ID for unchanged comes from existing record (string)
       expect(updateCall.loads).toEqual({
-        added: { valid: [], invalid: [] },
-        unchanged: { valid: ['10000'], invalid: [] },
-        adjusted: { valid: [], invalid: [] },
-        totals: {
-          added: { valid: 0, invalid: 0 },
-          unchanged: { valid: 1, invalid: 0 },
-          adjusted: { valid: 0, invalid: 0 }
+        added: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
+        },
+        unchanged: {
+          valid: { count: 1, rowIds: ['10000'] },
+          invalid: { count: 0, rowIds: [] }
+        },
+        adjusted: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
         }
       })
 

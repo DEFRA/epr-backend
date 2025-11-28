@@ -6,29 +6,21 @@ import Joi from 'joi'
  * Used by both repository (storage validation) and route (response validation)
  */
 
-export const loadRowIdsSchema = Joi.object({
-  valid: Joi.array()
-    .items(Joi.alternatives().try(Joi.string(), Joi.number()))
-    .max(100)
-    .required(),
-  invalid: Joi.array()
+export const loadCategorySchema = Joi.object({
+  count: Joi.number().integer().min(0).required(),
+  rowIds: Joi.array()
     .items(Joi.alternatives().try(Joi.string(), Joi.number()))
     .max(100)
     .required()
 })
 
-export const loadTotalsSchema = Joi.object({
-  valid: Joi.number().integer().min(0).required(),
-  invalid: Joi.number().integer().min(0).required()
+export const loadValiditySchema = Joi.object({
+  valid: loadCategorySchema.required(),
+  invalid: loadCategorySchema.required()
 })
 
 export const loadsSchema = Joi.object({
-  added: loadRowIdsSchema.required(),
-  unchanged: loadRowIdsSchema.required(),
-  adjusted: loadRowIdsSchema.required(),
-  totals: Joi.object({
-    added: loadTotalsSchema.required(),
-    unchanged: loadTotalsSchema.required(),
-    adjusted: loadTotalsSchema.required()
-  }).required()
+  added: loadValiditySchema.required(),
+  unchanged: loadValiditySchema.required(),
+  adjusted: loadValiditySchema.required()
 })

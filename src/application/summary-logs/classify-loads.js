@@ -6,26 +6,22 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
  */
 
 /**
- * @typedef {Object} LoadRowIds
- * @property {string[]} valid - Row IDs for valid loads (truncated to MAX_ROW_IDS)
- * @property {string[]} invalid - Row IDs for invalid loads (truncated to MAX_ROW_IDS)
+ * @typedef {Object} LoadCategory
+ * @property {number} count - Total count of loads
+ * @property {string[]} rowIds - Row IDs (truncated to MAX_ROW_IDS)
  */
 
 /**
- * @typedef {Object} LoadTotals
- * @property {number} valid - Total count of valid loads
- * @property {number} invalid - Total count of invalid loads
+ * @typedef {Object} LoadValidity
+ * @property {LoadCategory} valid - Valid loads
+ * @property {LoadCategory} invalid - Invalid loads
  */
 
 /**
  * @typedef {Object} Loads
- * @property {LoadRowIds} added - Row IDs for added loads
- * @property {LoadRowIds} unchanged - Row IDs for unchanged loads
- * @property {LoadRowIds} adjusted - Row IDs for adjusted loads
- * @property {Object} totals - Total counts (not truncated)
- * @property {LoadTotals} totals.added - Totals for added loads
- * @property {LoadTotals} totals.unchanged - Totals for unchanged loads
- * @property {LoadTotals} totals.adjusted - Totals for adjusted loads
+ * @property {LoadValidity} added - Loads added in this upload
+ * @property {LoadValidity} unchanged - Loads unchanged from previous uploads
+ * @property {LoadValidity} adjusted - Loads adjusted in this upload
  */
 
 const MAX_ROW_IDS = 100
@@ -36,13 +32,17 @@ const MAX_ROW_IDS = 100
  * @returns {Loads}
  */
 const createEmptyLoads = () => ({
-  added: { valid: [], invalid: [] },
-  unchanged: { valid: [], invalid: [] },
-  adjusted: { valid: [], invalid: [] },
-  totals: {
-    added: { valid: 0, invalid: 0 },
-    unchanged: { valid: 0, invalid: 0 },
-    adjusted: { valid: 0, invalid: 0 }
+  added: {
+    valid: { count: 0, rowIds: [] },
+    invalid: { count: 0, rowIds: [] }
+  },
+  unchanged: {
+    valid: { count: 0, rowIds: [] },
+    invalid: { count: 0, rowIds: [] }
+  },
+  adjusted: {
+    valid: { count: 0, rowIds: [] },
+    invalid: { count: 0, rowIds: [] }
   }
 })
 
@@ -95,11 +95,12 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   for (const { record, issues } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
+    const category = loads[classification][validityKey]
 
-    loads.totals[classification][validityKey]++
+    category.count++
 
-    if (loads[classification][validityKey].length < MAX_ROW_IDS) {
-      loads[classification][validityKey].push(record.rowId)
+    if (category.rowIds.length < MAX_ROW_IDS) {
+      category.rowIds.push(record.rowId)
     }
   }
 

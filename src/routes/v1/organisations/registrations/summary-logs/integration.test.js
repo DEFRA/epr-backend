@@ -263,13 +263,17 @@ describe('Summary logs integration', () => {
             concerns: {}
           },
           loads: {
-            added: { valid: [], invalid: [] },
-            unchanged: { valid: [], invalid: [] },
-            adjusted: { valid: [], invalid: [] },
-            totals: {
-              added: { valid: 0, invalid: 0 },
-              unchanged: { valid: 0, invalid: 0 },
-              adjusted: { valid: 0, invalid: 0 }
+            added: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            },
+            unchanged: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            },
+            adjusted: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
             }
           }
         })
@@ -661,13 +665,17 @@ describe('Summary logs integration', () => {
         // Row 2 (ROW_ID 9999) is invalid (has validation errors)
         // Note: ROW_ID values come from mock data as numbers
         expect(payload.loads).toEqual({
-          added: { valid: [10000], invalid: [9999] },
-          unchanged: { valid: [], invalid: [] },
-          adjusted: { valid: [], invalid: [] },
-          totals: {
-            added: { valid: 1, invalid: 1 },
-            unchanged: { valid: 0, invalid: 0 },
-            adjusted: { valid: 0, invalid: 0 }
+          added: {
+            valid: { count: 1, rowIds: [10000] },
+            invalid: { count: 1, rowIds: [9999] }
+          },
+          unchanged: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          },
+          adjusted: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
           }
         })
       })

@@ -156,13 +156,17 @@ describe('SummaryLogsValidator integration', () => {
           issues: []
         },
         loads: {
-          added: { valid: [], invalid: [] },
-          unchanged: { valid: [], invalid: [] },
-          adjusted: { valid: [], invalid: [] },
-          totals: {
-            added: { valid: 0, invalid: 0 },
-            unchanged: { valid: 0, invalid: 0 },
-            adjusted: { valid: 0, invalid: 0 }
+          added: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          },
+          unchanged: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          },
+          adjusted: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
           }
         }
       }
@@ -249,13 +253,17 @@ describe('SummaryLogsValidator integration', () => {
                 issues: []
               },
               loads: {
-                added: { valid: [], invalid: [] },
-                unchanged: { valid: [], invalid: [] },
-                adjusted: { valid: [], invalid: [] },
-                totals: {
-                  added: { valid: 0, invalid: 0 },
-                  unchanged: { valid: 0, invalid: 0 },
-                  adjusted: { valid: 0, invalid: 0 }
+                added: {
+                  valid: { count: 0, rowIds: [] },
+                  invalid: { count: 0, rowIds: [] }
+                },
+                unchanged: {
+                  valid: { count: 0, rowIds: [] },
+                  invalid: { count: 0, rowIds: [] }
+                },
+                adjusted: {
+                  valid: { count: 0, rowIds: [] },
+                  invalid: { count: 0, rowIds: [] }
                 }
               }
             }
