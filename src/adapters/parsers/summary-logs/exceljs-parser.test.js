@@ -35,24 +35,33 @@ describe('ExcelJSSummaryLogsParser', () => {
     return parse(buffer)
   }
 
-  describe('sheet with no markers', () => {
-    it('should return empty metadata and data', async () => {
-      const excelBuffer = await readFile(
-        path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
-      )
-      const result = await parse(excelBuffer)
+  describe('reprocessor.xlsx fixture', () => {
+    it(
+      'should parse metadata and data sections',
+      { timeout: 30000 },
+      async () => {
+        const excelBuffer = await readFile(
+          path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
+        )
+        const result = await parse(excelBuffer)
 
-      expect(result).toBeDefined()
-      expect(result.meta).toBeDefined()
-      // Note: reprocessor.xlsx fixture contains old markers - REGISTRATION not REGISTRATION_NUMBER
-      // This test validates the parser works with the fixture file as-is
-      expect(result.meta).toMatchObject({
-        PROCESSING_TYPE: expect.any(Object),
-        REGISTRATION: expect.any(Object),
-        TEMPLATE_VERSION: expect.any(Object)
-      })
-      expect(result.data).toBeDefined()
-    })
+        // Metadata
+        expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
+        expect(result.meta.TEMPLATE_VERSION.value).toBe(3)
+        expect(result.meta.MATERIAL.value).toBe('Paper_and_board')
+        expect(result.meta.ACCREDITATION_NUMBER.value).toBe('ACC123456')
+        expect(result.meta.REGISTRATION_NUMBER.value).toBe('R25SR500030912PA')
+
+        // Data sections exist with correct headers
+        expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
+        expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING.headers).toContain(
+          'ROW_ID'
+        )
+
+        expect(result.data.REPROCESSED_LOADS).toBeDefined()
+        expect(result.data.SENT_ON_LOADS).toBeDefined()
+      }
+    )
   })
 
   it('should throw error for invalid Excel buffer', async () => {
