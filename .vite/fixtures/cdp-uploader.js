@@ -30,7 +30,7 @@ const CREDENTIALS = {
 }
 
 // Configuration flag for whether tests need the callback receiver
-// Use test.scoped({ needsCallbackReceiver: true }) in describe blocks that need it
+// Use it.scoped({ needsCallbackReceiver: true }) in describe blocks that need it
 const configFixtures = {
   needsCallbackReceiver: false
 }
@@ -112,7 +112,8 @@ const cdpUploaderStackFixture = {
       // Start CDP Uploader (depends on LocalStack and Redis being ready)
       // NOTE: CDP Uploader is AMD64-only. On ARM Macs, port forwarding is broken
       // due to Rosetta emulation issues with testcontainers. We use SocatContainer
-      // as a proxy to work around this - socat is ARM-native so its port forwarding works.
+      // as a proxy to work around this. On x86, SocatContainer is unnecessary but
+      // harmless, and keeping the setup consistent across architectures is simpler.
       const cdpUploaderContainer = await new GenericContainer(
         CDP_UPLOADER_IMAGE
       )
@@ -145,8 +146,7 @@ const cdpUploaderStackFixture = {
         .withNetworkAliases('cdp-uploader')
         .start()
 
-      // Use SocatContainer as a TCP proxy to CDP Uploader
-      // SocatContainer uses an ARM-native image, so its port forwarding works correctly
+      // Use SocatContainer as a TCP proxy to CDP Uploader (see ARM note above)
       const socatContainer = await new SocatContainer()
         .withNetwork(network)
         .withTarget(CDP_UPLOADER_PORT, 'cdp-uploader', CDP_UPLOADER_PORT)

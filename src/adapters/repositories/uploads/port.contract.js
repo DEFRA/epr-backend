@@ -12,14 +12,17 @@ const TEST_FILE_PATH = path.resolve(
 )
 
 /**
+ * @typedef {Object} ContractTestFixtures
+ * @property {import('#domain/uploads/repository/port.js').UploadsRepository} uploadsRepository - The adapter under test
+ * @property {(uploadId: string, buffer: Buffer) => Promise<void>} performUpload - Uploads the file to the upload service
+ * @property {Awaited<ReturnType<typeof import('./test-helpers/callback-receiver.js').createCallbackReceiver>>} callbackReceiver - Captures HTTP callbacks
+ */
+
+/**
  * Contract test for the uploads repository.
- *
  * Tests the full round-trip: initiate upload → callback received → retrieve file.
  *
- * The fixture must provide:
- * - uploadsRepository: the adapter under test
- * - performUpload: function(uploadId, buffer) that initiates the upload
- * - callbackReceiver: captures HTTP callbacks made by the upload service
+ * @param {import('vitest').TestAPI<ContractTestFixtures>} it - Vitest test function extended with required fixtures
  */
 export const testUploadsRepositoryContract = (it) => {
   describe('uploads repository contract', () => {
