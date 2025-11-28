@@ -39,7 +39,7 @@ export const testUploadsRepositoryFileContract = (it) => {
 
 /**
  * Contract tests for summary log upload initiation.
- * Use this for adapters where initiate can be tested without external HTTP calls.
+ * Requires a running CDP Uploader service.
  */
 export const testUploadsRepositoryInitiateContract = (it) => {
   describe('uploads repository initiate contract', () => {
