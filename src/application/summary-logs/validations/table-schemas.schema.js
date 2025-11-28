@@ -53,20 +53,25 @@ export const RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA = {
     'number.greater': MUST_BE_GREATER_THAN_ZERO,
     'any.required': IS_REQUIRED
   }),
-  BAILING_WIRE: Joi.string().required().messages({
+  BAILING_WIRE_PROTOCOL: Joi.string().required().messages({
     'string.base': MUST_BE_A_STRING,
     'any.required': IS_REQUIRED
   }),
-  HOW_CALCULATE_RECYCLABLE: Joi.string().required().messages({
-    'string.base': MUST_BE_A_STRING,
-    'any.required': IS_REQUIRED
-  }),
-  WEIGHT_OF_NON_TARGET: Joi.number().required().greater(ZERO).messages({
-    'number.base': MUST_BE_A_NUMBER,
-    'number.greater': MUST_BE_GREATER_THAN_ZERO,
-    'any.required': IS_REQUIRED
-  }),
-  RECYCLABLE_PROPORTION: Joi.number()
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: Joi.string()
+    .required()
+    .messages({
+      'string.base': MUST_BE_A_STRING,
+      'any.required': IS_REQUIRED
+    }),
+  WEIGHT_OF_NON_TARGET_MATERIALS: Joi.number()
+    .required()
+    .greater(ZERO)
+    .messages({
+      'number.base': MUST_BE_A_NUMBER,
+      'number.greater': MUST_BE_GREATER_THAN_ZERO,
+      'any.required': IS_REQUIRED
+    }),
+  RECYCLABLE_PROPORTION_PERCENTAGE: Joi.number()
     .required()
     .greater(ZERO)
     .less(1)
@@ -76,7 +81,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA = {
       'number.less': MUST_BE_LESS_THAN_ONE,
       'any.required': IS_REQUIRED
     }),
-  TONNAGE_RECEIVED_FOR_EXPORT: Joi.number().required().messages({
+  TONNAGE_RECEIVED_FOR_RECYCLING: Joi.number().required().messages({
     'number.base': MUST_BE_A_NUMBER,
     'any.required': IS_REQUIRED
   })

@@ -4,6 +4,44 @@
  * @typedef {{
  *  id: string
  * }} Id
+
+/**
+ * Full address used in registrations
+ * @typedef {Object} RegistrationAddress
+ * @property {string} [line1]
+ * @property {string} [line2]
+ * @property {string} [town]
+ * @property {string} [county]
+ * @property {string} [country]
+ * @property {string} [postcode]
+ * @property {string} [region]
+ * @property {string} [fullAddress]
+ */
+
+/**
+ * Minimal address used in accreditations (only line1 and postcode required)
+ * @typedef {Object} AccreditationAddress
+ * @property {string} line1
+ * @property {string} postcode
+ */
+
+/**
+ * @typedef {Object} AccreditationSite
+ * @property {AccreditationAddress} address
+ */
+
+/**
+ * @typedef {Object} SiteCapacity
+ * @property {string} material
+ * @property {number} capacity
+ * @property {string} siteCapacityTimescale
+ */
+
+/**
+ * @typedef {Object} RegistrationSite
+ * @property {RegistrationAddress} address
+ * @property {string} gridReference
+ * @property {SiteCapacity[]} siteCapacity
  */
 
 /**
@@ -27,6 +65,7 @@
  *  formSubmissionTime: Date;
  *  material: string;
  *  prnIssuance: PrnIssuance;
+ *  site?: AccreditationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
  *  wasteProcessingType: string;
@@ -63,6 +102,7 @@
  *  formSubmissionTime: Date;
  *  material: string;
  *  orgName: string;
+ *  site: RegistrationSite;
  *  submittedToRegulator: string;
  *  submitterContactDetails: User;
  *  wasteProcessingType: string;
