@@ -112,8 +112,21 @@ function linkAccreditationsForOrg(organisation) {
       isAccreditationForRegistration(acc, registration)
     )
 
-    if (matchedAccreditations.length === 1) {
-      registration.accreditationId = matchedAccreditations[0].id
+    if (matchedAccreditations.length > 0) {
+      const latestMatchedAccreditation = matchedAccreditations.sort(
+        (a, b) => b.formSubmissionTime - a.formSubmissionTime
+      )[0]
+      registration.accreditationId = latestMatchedAccreditation.id
+
+      if (matchedAccreditations.length > 1) {
+        logger.warn({
+          message:
+            `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
+            `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
+            `registration=[${formatRegistrationDetails(registration)}],` +
+            `selected accreditation=[${formatAccreditationDetails(latestMatchedAccreditation)}]`
+        })
+      }
     }
   }
   logUnlinkedAccreditations(organisation)
