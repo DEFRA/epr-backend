@@ -596,7 +596,7 @@ export const testUpdateBehaviour = (it) => {
               title: 'Director'
             },
             prnIssuance: {
-              tonnageBand: 'up_to_500',
+              ...organisation.accreditations[0].prnIssuance,
               signatories: [
                 {
                   fullName: 'Bob Builder',
@@ -610,12 +610,7 @@ export const testUpdateBehaviour = (it) => {
                   phone: '2222222222',
                   title: 'Officer'
                 }
-              ],
-              incomeBusinessPlan: Array(7).fill({
-                percentIncomeSpent: 10,
-                usageDescription: 'Test',
-                detailedExplanation: 'Test explanation'
-              })
+              ]
             }
           }
 
