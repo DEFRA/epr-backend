@@ -1875,7 +1875,10 @@ describe('Summary logs integration', () => {
         registrationId,
         summaryLogId
       })
-      const { s3Uri } = uploadsRepository.completeUpload(uploadId, excelBuffer)
+      const { s3Uri } = await uploadsRepository.completeUpload(
+        uploadId,
+        excelBuffer
+      )
 
       const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
 

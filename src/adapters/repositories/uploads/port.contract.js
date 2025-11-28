@@ -24,11 +24,19 @@ export const testUploadsRepositoryContract = (it) => {
   describe('uploads repository contract', () => {
     let uploadsRepository
     let performUpload
+    let callbackReceiver
 
-    beforeEach(async ({ uploadsRepository: repo, performUpload: upload }) => {
-      uploadsRepository = repo
-      performUpload = upload
-    })
+    beforeEach(
+      async ({
+        uploadsRepository: repo,
+        performUpload: upload,
+        callbackReceiver: receiver
+      }) => {
+        uploadsRepository = repo
+        performUpload = upload
+        callbackReceiver = receiver
+      }
+    )
 
     it('initiates upload and returns upload details', async () => {
       const result = await uploadsRepository.initiateSummaryLogUpload({
@@ -76,6 +84,43 @@ export const testUploadsRepositoryContract = (it) => {
       )
 
       expect(result).toBeNull()
+    })
+
+    it('makes HTTP callback when upload completes', async () => {
+      if (!callbackReceiver) {
+        return
+      }
+
+      callbackReceiver.clear()
+
+      const testFileBuffer = await fs.readFile(TEST_FILE_PATH)
+
+      // Initiate upload
+      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId: 'org-123',
+        registrationId: 'reg-456',
+        summaryLogId: 'sl-789'
+      })
+
+      // Perform upload
+      await performUpload(uploadId, testFileBuffer)
+
+      // Verify callback was made
+      expect(callbackReceiver.requests).toHaveLength(1)
+      expect(callbackReceiver.requests[0]).toMatchObject({
+        path: '/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed',
+        payload: {
+          form: {
+            summaryLogUpload: {
+              fileId: uploadId,
+              filename: `${uploadId}.xlsx`,
+              fileStatus: 'complete',
+              s3Bucket: expect.any(String),
+              s3Key: expect.any(String)
+            }
+          }
+        }
+      })
     })
   })
 }
