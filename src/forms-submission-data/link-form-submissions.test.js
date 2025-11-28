@@ -2,7 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   linkItemsToOrganisations,
-  linkRegistrationToAccreditations
+  linkRegistrationToAccreditations,
+  isAccreditationForRegistration
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
@@ -206,6 +207,7 @@ describe('linkRegistrationToAccreditations', () => {
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
     })
@@ -248,6 +250,7 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
@@ -379,6 +382,7 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result).toHaveLength(2)
     expect(result[0].registrations[0].accreditationId).toEqual(acc1Id)
     expect(result[1].registrations[0].accreditationId).toEqual(acc2Id)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 2/2 linked'
     })
@@ -387,7 +391,7 @@ describe('linkRegistrationToAccreditations', () => {
     })
   })
 
-  it('dont link when multiple registrations match to single accreditation', () => {
+  it('link when multiple registrations match to single accreditation', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
@@ -430,21 +434,19 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
-    expect(result[0].registrations[0].accreditationId).toBeUndefined()
-    expect(result[0].registrations[1].accreditationId).toBeUndefined()
+    expect(result[0].registrations[0].accreditationId).toBe(
+      result[0].accreditations[0].id
+    )
+    expect(result[0].registrations[1].accreditationId).toBe(
+      result[0].accreditations[0].id
+    )
 
-    const expectedMessage =
-      `Organisation has accreditations that cant be linked to registrations: ` +
-      `orgId=100,orgDbId=${org1Id},unlinked accreditations count=1,` +
-      `unlinked accreditations=[id=${accId1},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[0].site)}],` +
-      `unlinked registrations=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)};` +
-      `id=${reg2Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[1].site)}]`
-    expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Accreditation linking complete: 0/1 linked'
+      message: 'Accreditation linking complete: 1/1 linked'
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Registrations : 0/2 linked to accreditations'
+      message: 'Registrations : 2/2 linked to accreditations'
     })
   })
 
@@ -545,5 +547,87 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
+  })
+})
+
+describe('isAccreditationForRegistration', () => {
+  describe('exporter', () => {
+    it('matches when type and material are the same', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        true
+      )
+    })
+
+    it('does not match when material differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+  })
+
+  describe('reprocessor', () => {
+    it('matches when type, material and site postcode are the same', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        true
+      )
+    })
+
+    it('does not match when material differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.STEEL,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+
+    it('does not match when site postcode differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.PLASTIC,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.PLASTIC,
+        site: { address: { postcode: 'W1C 2AA' } }
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
   })
 })

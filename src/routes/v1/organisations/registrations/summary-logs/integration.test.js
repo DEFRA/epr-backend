@@ -467,11 +467,11 @@ describe('Summary logs integration', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -919,11 +919,11 @@ describe('Summary logs integration', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -1299,11 +1299,11 @@ describe('Summary logs integration', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -1766,11 +1766,12 @@ describe('Summary logs integration', () => {
       worksheet.getCell('F6').value = 'TARE_WEIGHT'
       worksheet.getCell('G6').value = 'PALLET_WEIGHT'
       worksheet.getCell('H6').value = 'NET_WEIGHT'
-      worksheet.getCell('I6').value = 'BAILING_WIRE'
-      worksheet.getCell('J6').value = 'HOW_CALCULATE_RECYCLABLE'
-      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET'
-      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION'
-      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_EXPORT'
+      worksheet.getCell('I6').value = 'BAILING_WIRE_PROTOCOL'
+      worksheet.getCell('J6').value =
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
+      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
+      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
 
       // Row 7: Valid data row
       worksheet.getCell('B7').value = 10000000001
@@ -1795,8 +1796,8 @@ describe('Summary logs integration', () => {
       worksheet.getCell('F8').value = 200
       worksheet.getCell('G8').value = 100
       worksheet.getCell('H8').value = 1700
-      worksheet.getCell('I8').value = 'Choose option' // BAILING_WIRE - required dropdown
-      worksheet.getCell('J8').value = 'Choose option' // HOW_CALCULATE_RECYCLABLE - required dropdown
+      worksheet.getCell('I8').value = 'Choose option' // BAILING_WIRE_PROTOCOL - required dropdown
+      worksheet.getCell('J8').value = 'Choose option' // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION - required dropdown
       worksheet.getCell('K8').value = 100
       worksheet.getCell('L8').value = 0.9
       worksheet.getCell('M8').value = 1700
@@ -1990,8 +1991,10 @@ describe('Summary logs integration', () => {
         // These are the dropdown fields that had "Choose option" (now null)
         const issueHeaders = row8Issues.issues.map((i) => i.header)
         expect(issueHeaders).toContain('EWC_CODE')
-        expect(issueHeaders).toContain('BAILING_WIRE')
-        expect(issueHeaders).toContain('HOW_CALCULATE_RECYCLABLE')
+        expect(issueHeaders).toContain('BAILING_WIRE_PROTOCOL')
+        expect(issueHeaders).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
       })
 
       it('terminates data section at row with all placeholder values', async () => {
