@@ -19,11 +19,11 @@ describe('validateDataSyntax', () => {
       'TARE_WEIGHT',
       'PALLET_WEIGHT',
       'NET_WEIGHT',
-      'BAILING_WIRE',
-      'HOW_CALCULATE_RECYCLABLE',
-      'WEIGHT_OF_NON_TARGET',
-      'RECYCLABLE_PROPORTION',
-      'TONNAGE_RECEIVED_FOR_EXPORT'
+      'BAILING_WIRE_PROTOCOL',
+      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+      'WEIGHT_OF_NON_TARGET_MATERIALS',
+      'RECYCLABLE_PROPORTION_PERCENTAGE',
+      'TONNAGE_RECEIVED_FOR_RECYCLING'
     ],
     rows: [
       [
@@ -100,11 +100,11 @@ describe('validateDataSyntax', () => {
               'TARE_WEIGHT',
               'PALLET_WEIGHT',
               'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT'
+              'BAILING_WIRE_PROTOCOL',
+              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+              'WEIGHT_OF_NON_TARGET_MATERIALS',
+              'RECYCLABLE_PROPORTION_PERCENTAGE',
+              'TONNAGE_RECEIVED_FOR_RECYCLING'
             ],
             rows: [
               [
@@ -159,11 +159,11 @@ describe('validateDataSyntax', () => {
               'TARE_WEIGHT',
               'PALLET_WEIGHT',
               'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT',
+              'BAILING_WIRE_PROTOCOL',
+              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+              'WEIGHT_OF_NON_TARGET_MATERIALS',
+              'RECYCLABLE_PROPORTION_PERCENTAGE',
+              'TONNAGE_RECEIVED_FOR_RECYCLING',
               'EXTRA_FIELD',
               'ANOTHER_FIELD'
             ],
@@ -209,11 +209,11 @@ describe('validateDataSyntax', () => {
               'TARE_WEIGHT',
               'PALLET_WEIGHT',
               'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT',
+              'BAILING_WIRE_PROTOCOL',
+              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+              'WEIGHT_OF_NON_TARGET_MATERIALS',
+              'RECYCLABLE_PROPORTION_PERCENTAGE',
+              'TONNAGE_RECEIVED_FOR_RECYCLING',
               null
             ],
             rows: [
@@ -257,11 +257,11 @@ describe('validateDataSyntax', () => {
               'TARE_WEIGHT',
               'PALLET_WEIGHT',
               'NET_WEIGHT',
-              'BAILING_WIRE',
-              'HOW_CALCULATE_RECYCLABLE',
-              'WEIGHT_OF_NON_TARGET',
-              'RECYCLABLE_PROPORTION',
-              'TONNAGE_RECEIVED_FOR_EXPORT',
+              'BAILING_WIRE_PROTOCOL',
+              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+              'WEIGHT_OF_NON_TARGET_MATERIALS',
+              'RECYCLABLE_PROPORTION_PERCENTAGE',
+              'TONNAGE_RECEIVED_FOR_RECYCLING',
               '__EPR_DATA_MARKER'
             ],
             rows: [
@@ -629,11 +629,11 @@ describe('validateDataSyntax', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -686,11 +686,11 @@ describe('validateDataSyntax', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -752,11 +752,11 @@ describe('validateDataSyntax', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -811,11 +811,11 @@ describe('validateDataSyntax', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -923,8 +923,8 @@ describe('validateDataSyntax', () => {
       })
     })
 
-    describe('cell validation errors - BAILING_WIRE', () => {
-      it('returns error when BAILING_WIRE is not a string', () => {
+    describe('cell validation errors - BAILING_WIRE_PROTOCOL', () => {
+      it('returns error when BAILING_WIRE_PROTOCOL is not a string', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -956,13 +956,13 @@ describe('validateDataSyntax', () => {
           VALIDATION_SEVERITY.ERROR
         )
         expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('BAILING_WIRE')
+        expect(errors[0].message).toContain('BAILING_WIRE_PROTOCOL')
         expect(errors[0].message).toContain('must be a string')
       })
     })
 
-    describe('cell validation errors - HOW_CALCULATE_RECYCLABLE', () => {
-      it('returns error when HOW_CALCULATE_RECYCLABLE is not a string', () => {
+    describe('cell validation errors - HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION', () => {
+      it('returns error when HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION is not a string', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -994,13 +994,15 @@ describe('validateDataSyntax', () => {
           VALIDATION_SEVERITY.ERROR
         )
         expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('HOW_CALCULATE_RECYCLABLE')
+        expect(errors[0].message).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
         expect(errors[0].message).toContain('must be a string')
       })
     })
 
-    describe('cell validation errors - RECYCLABLE_PROPORTION', () => {
-      it('returns error when RECYCLABLE_PROPORTION is not a number', () => {
+    describe('cell validation errors - RECYCLABLE_PROPORTION_PERCENTAGE', () => {
+      it('returns error when RECYCLABLE_PROPORTION_PERCENTAGE is not a number', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -1031,11 +1033,11 @@ describe('validateDataSyntax', () => {
         const errors = result.issues.getIssuesBySeverity(
           VALIDATION_SEVERITY.ERROR
         )
-        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION')
+        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
         expect(errors[0].message).toContain('must be a number')
       })
 
-      it('returns error when RECYCLABLE_PROPORTION is zero or negative', () => {
+      it('returns error when RECYCLABLE_PROPORTION_PERCENTAGE is zero or negative', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -1066,11 +1068,11 @@ describe('validateDataSyntax', () => {
         const errors = result.issues.getIssuesBySeverity(
           VALIDATION_SEVERITY.ERROR
         )
-        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION')
+        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
         expect(errors[0].message).toContain('must be greater than 0')
       })
 
-      it('returns error when RECYCLABLE_PROPORTION is 1 or greater', () => {
+      it('returns error when RECYCLABLE_PROPORTION_PERCENTAGE is 1 or greater', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -1101,13 +1103,13 @@ describe('validateDataSyntax', () => {
         const errors = result.issues.getIssuesBySeverity(
           VALIDATION_SEVERITY.ERROR
         )
-        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION')
+        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
         expect(errors[0].message).toContain('must be less than 1')
       })
     })
 
-    describe('cell validation errors - TONNAGE_RECEIVED_FOR_EXPORT', () => {
-      it('returns error when TONNAGE_RECEIVED_FOR_EXPORT is not a number', () => {
+    describe('cell validation errors - TONNAGE_RECEIVED_FOR_RECYCLING', () => {
+      it('returns error when TONNAGE_RECEIVED_FOR_RECYCLING is not a number', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -1138,7 +1140,7 @@ describe('validateDataSyntax', () => {
         const errors = result.issues.getIssuesBySeverity(
           VALIDATION_SEVERITY.ERROR
         )
-        expect(errors[0].message).toContain('TONNAGE_RECEIVED_FOR_EXPORT')
+        expect(errors[0].message).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
         expect(errors[0].message).toContain('must be a number')
       })
     })
