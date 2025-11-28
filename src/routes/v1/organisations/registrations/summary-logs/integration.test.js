@@ -1845,11 +1845,21 @@ describe('Summary logs integration', () => {
         testOrg
       ])()
 
-      // Create real Excel buffer and store it in uploads repository
-      // URI format matches what upload-completed handler creates: s3://${s3Bucket}/${s3Key}
+      // Create real Excel buffer and upload via proper flow
       const excelBuffer = await createExcelWithPlaceholders()
-      const fileUri = `s3://test-bucket/path/to/${filename}`
-      uploadsRepository.put(fileUri, excelBuffer)
+
+      // Initiate upload and complete it (simulates user uploading file)
+      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId,
+        registrationId,
+        summaryLogId
+      })
+      const { s3Uri } = uploadsRepository.completeUpload(uploadId, excelBuffer)
+
+      // Parse s3Uri to get bucket and key for webhook payload
+      const s3Match = s3Uri.match(/^s3:\/\/([^/]+)\/(.+)$/)
+      const s3Bucket = s3Match[1]
+      const s3Key = s3Match[2]
 
       // Use real extractor with real parser (not mocked)
       const summaryLogExtractor = createSummaryLogExtractor({
@@ -1894,12 +1904,12 @@ describe('Summary logs integration', () => {
               fileStatus: UPLOAD_STATUS.COMPLETE,
               contentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              contentLength: 12345,
+              contentLength: excelBuffer.length,
               checksumSha256: 'abc123def456',
               detectedContentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              s3Bucket: 'test-bucket',
-              s3Key: `path/to/${filename}`
+              s3Bucket,
+              s3Key
             }
           },
           numberOfRejectedFiles: 0

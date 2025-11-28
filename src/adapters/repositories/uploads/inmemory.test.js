@@ -5,20 +5,24 @@ import { testUploadsRepositoryContract } from './port.contract.js'
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
   uploadsRepository: async ({}, use) => {
-    const repository = createInMemoryUploadsRepository()
+    await use(createInMemoryUploadsRepository())
+  },
 
-    // Set up test data
-    repository.put(
-      's3://test-bucket/path/to/summary-log.xlsx',
-      Buffer.from('test file content')
-    )
-
-    await use(repository)
+  performUpload: async ({ uploadsRepository }, use) => {
+    await use((uploadId, buffer) => {
+      return uploadsRepository.completeUpload(uploadId, buffer)
+    })
   }
 })
 
 describe('In-memory uploads repository', () => {
-  describe('uploads repository contract', () => {
-    testUploadsRepositoryContract(it)
+  testUploadsRepositoryContract(it)
+
+  it('throws when completing upload with unknown uploadId', ({
+    uploadsRepository
+  }) => {
+    expect(() => {
+      uploadsRepository.completeUpload('unknown-id', Buffer.from('test'))
+    }).toThrow('No pending upload found for uploadId: unknown-id')
   })
 })

@@ -5,15 +5,29 @@ import { randomUUID } from 'node:crypto'
  */
 
 /**
- * Creates an in-memory uploads repository for testing.
- * Files can be added using the put method.
- * Upload initiations are tracked in the initiateCalls array.
- *
- * @param {Map<string, Buffer>} [initialData] - Optional initial data as a Map where keys are S3 URIs and values are Buffers
- * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & { put: (uri: string, content: Buffer) => void, initiateCalls: InitiateSummaryLogUploadOptions[] }}
+ * @typedef {Object} PendingUpload
+ * @property {string} uploadId
+ * @property {InitiateSummaryLogUploadOptions} options
  */
-export const createInMemoryUploadsRepository = (initialData = new Map()) => {
-  const storage = new Map(initialData)
+
+/**
+ * Creates an in-memory uploads repository for testing.
+ *
+ * @param {{ s3Bucket?: string }} [config] - Optional configuration
+ * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
+ *   completeUpload: (uploadId: string, buffer: Buffer) => { s3Uri: string },
+ *   initiateCalls: InitiateSummaryLogUploadOptions[]
+ * }}
+ */
+export const createInMemoryUploadsRepository = (config = {}) => {
+  const s3Bucket = config.s3Bucket ?? 'test-bucket'
+
+  /** @type {Map<string, Buffer>} */
+  const storage = new Map()
+
+  /** @type {Map<string, PendingUpload>} */
+  const pendingUploads = new Map()
+
   /** @type {InitiateSummaryLogUploadOptions[]} */
   const initiateCalls = []
 
@@ -24,20 +38,35 @@ export const createInMemoryUploadsRepository = (initialData = new Map()) => {
       return storage.get(uri) ?? null
     },
 
-    put(uri, content) {
-      storage.set(uri, content)
-    },
-
     async initiateSummaryLogUpload(options) {
       initiateCalls.push(options)
 
       const uploadId = randomUUID()
 
+      pendingUploads.set(uploadId, { uploadId, options })
+
       return {
         uploadId,
-        uploadUrl: `/upload-and-scan/${uploadId}`,
+        uploadUrl: `https://cdp-uploader.test/upload-and-scan/${uploadId}`,
         statusUrl: `https://cdp-uploader.test/status/${uploadId}`
       }
+    },
+
+    completeUpload(uploadId, buffer) {
+      const pending = pendingUploads.get(uploadId)
+
+      if (!pending) {
+        throw new Error(`No pending upload found for uploadId: ${uploadId}`)
+      }
+
+      const { organisationId, registrationId } = pending.options
+      const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
+      const s3Uri = `s3://${s3Bucket}/${s3Key}`
+
+      storage.set(s3Uri, buffer)
+      pendingUploads.delete(uploadId)
+
+      return { s3Uri }
     }
   }
 }
