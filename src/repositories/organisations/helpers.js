@@ -165,14 +165,12 @@ export const collateUsersFromOrganisation = (organisation) => {
     const regStatus = getCurrentStatus(registration)
 
     if (regStatus === STATUS.APPROVED) {
-      if (registration.submitterContactDetails) {
-        users.push({
-          fullName: registration.submitterContactDetails.fullName,
-          email: registration.submitterContactDetails.email
-        })
-      }
+      users.push({
+        fullName: registration.submitterContactDetails.fullName,
+        email: registration.submitterContactDetails.email
+      })
 
-      for (const person of registration.approvedPersons || []) {
+      for (const person of registration.approvedPersons) {
         users.push({
           fullName: person.fullName,
           email: person.email

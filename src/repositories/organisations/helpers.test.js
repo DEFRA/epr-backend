@@ -2,9 +2,13 @@ import { describe, it, expect } from 'vitest'
 import {
   statusHistoryWithChanges,
   hasChanges,
-  createUsersFromSubmitter
+  createUsersFromSubmitter,
+  collateUsersFromOrganisation,
+  collateUsersOnApproval,
+  createStatusHistoryEntry
 } from './helpers.js'
 import { buildOrganisation } from './contract/test-data.js'
+import { STATUS } from '#domain/organisations/model.js'
 
 describe('statusHistoryWithChanges', () => {
   it('returns initial status history when existingItem is null', () => {
@@ -134,5 +138,118 @@ describe('createUsersFromSubmitter', () => {
   it('should return empty array when submitterContactDetails is undefined', () => {
     const result = createUsersFromSubmitter(undefined)
     expect(result).toEqual([])
+  })
+
+  it('should create user when submitterContactDetails is provided', () => {
+    const submitter = {
+      fullName: 'John Doe',
+      email: 'john@example.com'
+    }
+
+    const result = createUsersFromSubmitter(submitter)
+
+    expect(result).toEqual([
+      {
+        fullName: 'John Doe',
+        email: 'john@example.com',
+        isInitialUser: true,
+        roles: ['standard_user']
+      }
+    ])
+  })
+})
+
+describe('collateUsersFromOrganisation', () => {
+  it('should collate users when organisation has no submitterContactDetails', () => {
+    const org = buildOrganisation({
+      submitterContactDetails: null,
+      registrations: []
+    })
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result).toEqual([])
+  })
+
+  it('should collate users from submitterContactDetails only', () => {
+    const org = buildOrganisation({
+      registrations: []
+    })
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result).toHaveLength(1)
+    expect(result[0].email).toBe(org.submitterContactDetails.email)
+  })
+
+  it('should collate users from approved registration', () => {
+    const org = buildOrganisation()
+    org.statusHistory.push(createStatusHistoryEntry(STATUS.APPROVED))
+    org.registrations[0].statusHistory.push(
+      createStatusHistoryEntry(STATUS.APPROVED)
+    )
+
+    const result = collateUsersFromOrganisation(org)
+
+    expect(result.length).toBeGreaterThan(0)
+  })
+})
+
+describe('collateUsersOnApproval', () => {
+  it('should return existing users when no status change to approved', () => {
+    const existing = buildOrganisation({
+      users: [
+        {
+          fullName: 'Existing User',
+          email: 'existing@example.com',
+          isInitialUser: true,
+          roles: ['standard_user']
+        }
+      ]
+    })
+    const updated = buildOrganisation({
+      id: existing.id,
+      users: []
+    })
+
+    const result = collateUsersOnApproval(existing, updated)
+
+    expect(result).toBe(existing.users)
+  })
+
+  it('should collate users when organisation status changes to approved', () => {
+    const existing = buildOrganisation({
+      users: []
+    })
+    const updated = buildOrganisation({
+      id: existing.id
+    })
+    updated.statusHistory.push(createStatusHistoryEntry(STATUS.APPROVED))
+
+    const result = collateUsersOnApproval(existing, updated)
+
+    expect(result.length).toBeGreaterThan(0)
+    expect(result[0].email).toBe(updated.submitterContactDetails.email)
+  })
+
+  it('should collate users when registration status changes to approved', () => {
+    const existing = buildOrganisation({
+      users: []
+    })
+
+    const updated = {
+      ...existing,
+      registrations: existing.registrations.map((reg) => ({
+        ...reg,
+        statusHistory: [
+          ...reg.statusHistory,
+          createStatusHistoryEntry(STATUS.APPROVED)
+        ]
+      }))
+    }
+
+    const result = collateUsersOnApproval(existing, updated)
+
+    expect(result.length).toBeGreaterThan(0)
   })
 })
