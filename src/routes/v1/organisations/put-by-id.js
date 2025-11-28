@@ -1,8 +1,15 @@
+import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
+
+/** @import {Organisation} from '#domain/organisations/model.js' */
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+
+/**
+ * Organisation update payload with system fields removed
+ * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationUpdateFragment
+ */
 
 export const organisationsPutByIdPath = '/v1/organisations/{id}'
 
@@ -55,8 +62,11 @@ export const organisationsPutById = {
       ...sanitisedFragment
     } = updateFragment
 
+    /** @type {OrganisationUpdateFragment} */
+    const updates = sanitisedFragment
+
     try {
-      await organisationsRepository.update(id, version, sanitisedFragment)
+      await organisationsRepository.update(id, version, updates)
       const updated = await organisationsRepository.findById(id, version + 1)
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {

@@ -105,13 +105,7 @@
 /**
  * Organisation with linked registrations and accreditations
  *
- * @typedef {OrganisationWithRegistrations & {accreditations?: Accreditation[]}} OrganisationWithAccreditations
- */
-
-/**
- * Complete organisation with collated users
- *
- * @typedef {OrganisationWithAccreditations & {users?: OrganisationUser[]}} Organisation
+ * @typedef {OrganisationWithRegistrations & {accreditations?: Accreditation[]}} Organisation
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
