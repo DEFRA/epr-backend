@@ -3,26 +3,22 @@ import { it as baseIt } from '#vite/fixtures/cdp-uploader.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createUploadsRepository } from './cdp-uploader.js'
 
-// The callback receiver is now created in the fixture BEFORE containers start,
-// which allows testcontainers to automatically connect containers to both:
-// 1. Our custom network (for inter-container communication via aliases)
-// 2. The port forwarder network (for host.testcontainers.internal access)
+// Extend base fixture with contract test specific fixtures
 const it = baseIt.extend({
-  uploadsRepository: async ({ s3Client, cdpUploaderStack }, use) => {
+  uploadsRepository: async (
+    { s3Client, cdpUploaderStack, callbackReceiver },
+    use
+  ) => {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
       frontendUrl: 'https://frontend.test',
-      backendUrl: cdpUploaderStack.callbackReceiver.testcontainersUrl,
+      backendUrl: callbackReceiver.testcontainersUrl,
       s3Bucket: 're-ex-summary-logs',
       maxFileSize: 10485760
     })
 
     await use(repository)
-  },
-
-  callbackReceiver: async ({ cdpUploaderStack }, use) => {
-    await use(cdpUploaderStack.callbackReceiver)
   },
 
   performUpload: async ({ cdpUploaderStack }, use) => {
@@ -59,6 +55,9 @@ const it = baseIt.extend({
 })
 
 describe('CDP Uploader uploads repository', () => {
+  // Enable callback receiver for contract tests - must be called before tests run
+  it.scoped({ needsCallbackReceiver: true })
+
   testUploadsRepositoryContract(it)
 
   // Visible test for SonarCloud - contract tests are registered dynamically above

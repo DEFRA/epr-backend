@@ -29,24 +29,43 @@ const CREDENTIALS = {
   secretAccessKey: 'test'
 }
 
+// Configuration flag for whether tests need the callback receiver
+// Use test.scoped({ needsCallbackReceiver: true }) in describe blocks that need it
+const configFixtures = {
+  needsCallbackReceiver: false
+}
+
+// Callback receiver fixture - only creates if needsCallbackReceiver is true
+// Must be file-scoped and run BEFORE cdpUploaderStack to ensure exposeHostPorts
+// is called before containers start
+const callbackReceiverFixture = {
+  callbackReceiver: [
+    async ({ needsCallbackReceiver }, use) => {
+      if (!needsCallbackReceiver) {
+        await use(null)
+        return
+      }
+
+      const receiver = await createCallbackReceiver({
+        bindToAllInterfaces: true
+      })
+      await TestContainers.exposeHostPorts(receiver.port)
+      await use(receiver)
+      await receiver.stop()
+    },
+    { scope: 'file' }
+  ]
+}
+
 const cdpUploaderStackFixture = {
+  // Depends on callbackReceiver to ensure correct initialisation order
   cdpUploaderStack: [
-    // eslint-disable-next-line no-empty-pattern
-    async ({}, use) => {
+    async ({ callbackReceiver }, use) => {
       // Disable vitest-fetch-mock so we can make real HTTP requests to containers
       // The global fetch is mocked by default in .vite/setup-files.js
       if (globalThis.fetchMock) {
         globalThis.fetchMock.disableMocks()
       }
-
-      // IMPORTANT: Create callback receiver and expose host port BEFORE starting containers
-      // This allows testcontainers to automatically connect containers to both:
-      // 1. Our custom network (for inter-container communication via aliases)
-      // 2. The port forwarder network (for host.testcontainers.internal access)
-      const callbackReceiver = await createCallbackReceiver({
-        bindToAllInterfaces: true
-      })
-      await TestContainers.exposeHostPorts(callbackReceiver.port)
 
       // Create shared network for containers to communicate
       const network = await new Network().start()
@@ -153,8 +172,7 @@ const cdpUploaderStackFixture = {
         },
         cdpUploader: {
           url: cdpUploaderUrl
-        },
-        callbackReceiver
+        }
       })
 
       // Cleanup in reverse order
@@ -162,7 +180,6 @@ const cdpUploaderStackFixture = {
       await cdpUploaderContainer.stop()
       await Promise.all([localstackContainer.stop(), redisContainer.stop()])
       await network.stop()
-      await callbackReceiver.stop()
 
       // Re-enable fetch mock for other tests
       if (globalThis.fetchMock) {
@@ -175,6 +192,8 @@ const cdpUploaderStackFixture = {
 
 // Extended fixture with commonly needed test utilities
 const extendedFixtures = {
+  ...configFixtures,
+  ...callbackReceiverFixture,
   ...cdpUploaderStackFixture,
 
   s3Client: async ({ cdpUploaderStack }, use) => {
