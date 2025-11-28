@@ -207,6 +207,7 @@ describe('linkRegistrationToAccreditations', () => {
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
     })
@@ -249,6 +250,7 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
@@ -380,6 +382,7 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result).toHaveLength(2)
     expect(result[0].registrations[0].accreditationId).toEqual(acc1Id)
     expect(result[1].registrations[0].accreditationId).toEqual(acc2Id)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 2/2 linked'
     })
@@ -438,7 +441,7 @@ describe('linkRegistrationToAccreditations', () => {
       result[0].accreditations[0].id
     )
 
-    //epect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
     })
