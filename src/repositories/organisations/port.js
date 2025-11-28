@@ -1,10 +1,18 @@
+/** @import {User} from '#domain/organisations/model.js' */
+
 /**
- * @typedef {Object} AccreditationBase
- * @property {string} id
- * @property {string} material
- * @property {string} wasteProcessingType
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
+ * @typedef {{
+ *  id: string
+ * }} Id
+ */
+
+/**
+ * @typedef {Id & {
+ *  formSubmissionTime: Date;
+ *  material: string;
+ *  submittedToRegulator: string;
+ *  wasteProcessingType: string;
+ * }} AccreditationBase
  */
 
 /**
@@ -20,23 +28,35 @@
  */
 
 /**
- * @typedef {Object} RegistrationBase
- * @property {string} id
- * @property {string} orgName
- * @property {string} material
- * @property {string} wasteProcessingType
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
- * @property {string} [accreditationId]
- * @property {Accreditation} [accreditation] - Hydrated accreditation object when accreditationId exists
+ * @typedef {Id & {
+ *  accreditation?: Accreditation;
+ *  accreditationId?: string;
+ *  approvedPersons: User[]
+ *  formSubmissionTime: Date;
+ *  material: string;
+ *  orgName: string;
+ *  submittedToRegulator: string;
+ *  submitterContactDetails: User;
+ *  wasteProcessingType: string;
+ * }} RegistrationBase
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'approved'|'suspended', cbduNumber: string, validFrom: Date, validTo: Date}} RegistrationApproved
+ * @typedef {RegistrationBase & {
+ *  cbduNumber: string;
+ *  status: 'approved'|'suspended';
+ *  validFrom: Date;
+ *  validTo: Date;
+ * }} RegistrationApproved
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', cbduNumber?: string, validFrom?: Date, validTo?: Date}} RegistrationOther
+ * @typedef {RegistrationBase & {
+ *  cbduNumber?: string;
+ *  status: 'created'|'rejected'|'archived';
+ *  validFrom?: Date;
+ *  validTo?: Date
+ * }} RegistrationOther
  */
 
 /**
