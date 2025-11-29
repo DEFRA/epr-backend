@@ -127,5 +127,5 @@ export const entraIdMockAuthTokens = {
   wrongSignatureToken: generateEntraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateEntraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateEntraIdTokenWithWrongAudience(),
-  unauthorisedUserToken: generateEntraIdTokenForUnauthorisedUser()
+  nonServiceMaintainerUserToken: generateEntraIdTokenForUnauthorisedUser()
 }

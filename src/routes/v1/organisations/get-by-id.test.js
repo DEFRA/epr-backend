@@ -4,7 +4,8 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
+import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 const { validToken } = entraIdMockAuthTokens
@@ -107,7 +108,7 @@ describe('GET /v1/organisations/{id}', () => {
     })
   })
 
-  testAuthScenarios({
+  testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
       const org1 = buildOrganisation()
@@ -121,6 +122,18 @@ describe('GET /v1/organisations/{id}', () => {
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
+    }
+  })
+
+  testOnlyServiceMaintainerCanAccess({
+    server: () => server,
+    makeRequest: async () => {
+      const org1 = buildOrganisation()
+      await organisationsRepository.insert(org1)
+      return {
+        method: 'GET',
+        url: `/v1/organisations/${org1.id}`
+      }
     }
   })
 })
