@@ -499,7 +499,7 @@ describe('linkRegistrationToAccreditations', () => {
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
             },
-            formSubmissionTime: oneDayAgo
+            formSubmissionTime: twoDaysAgo
           },
           {
             id: accId2,
@@ -508,7 +508,7 @@ describe('linkRegistrationToAccreditations', () => {
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
             },
-            formSubmissionTime: twoDaysAgo
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -516,13 +516,13 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
-    expect(result[0].registrations[0].accreditationId).toBe(accId1)
+    expect(result[0].registrations[0].accreditationId).toBe(accId2)
 
     const expectedMessage =
       `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
       `orgId=100,orgDbId=${org1Id},` +
       `registration=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)}],` +
-      `selected accreditation=[id=${accId1},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[0].site)}]`
+      `selected accreditation=[id=${accId2},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[1].site)}]`
     expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
   })
 
