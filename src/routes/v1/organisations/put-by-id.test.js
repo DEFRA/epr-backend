@@ -7,6 +7,7 @@ import { ObjectId } from 'mongodb'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
+import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -303,7 +304,7 @@ describe('PUT /v1/organisations/{id}', () => {
     }
   })
 
-  testInvalidTokenScenarios({
+  testOnlyServiceMaintainerCanAccess({
     server: () => server,
     makeRequest: async () => {
       const org1 = buildOrganisation()

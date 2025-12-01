@@ -2,6 +2,12 @@ import { StatusCodes } from 'http-status-codes'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 
+/**
+ * @param {Object} params
+ * @param {() => import('@hapi/hapi').Server} params.server
+ * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
+ * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
+ */
 export function testInvalidTokenScenarios({
   server,
   makeRequest,
@@ -9,12 +15,8 @@ export function testInvalidTokenScenarios({
 }) {
   describe('Invalid tokens', () => {
     describe('user has an Entra token with the wrong credentials', () => {
-      const {
-        wrongSignatureToken,
-        wrongIssuerToken,
-        wrongAudienceToken,
-        nonServiceMaintainerUserToken
-      } = entraIdMockAuthTokens
+      const { wrongSignatureToken, wrongIssuerToken, wrongAudienceToken } =
+        entraIdMockAuthTokens
 
       const invalidEntraTokenScenarios = [
         {
@@ -31,11 +33,6 @@ export function testInvalidTokenScenarios({
           token: wrongAudienceToken,
           description: 'token from an unknown Audience (client)',
           expectedStatus: StatusCodes.UNAUTHORIZED
-        },
-        {
-          token: nonServiceMaintainerUserToken,
-          description: 'user without the service maintainer role',
-          expectedStatus: StatusCodes.FORBIDDEN
         }
       ]
 
@@ -95,11 +92,6 @@ export function testInvalidTokenScenarios({
           description: 'token from an unknown Audience (client)',
           expectedStatus: StatusCodes.UNAUTHORIZED
         }
-        // {
-        //   token: unauthorisedUserToken,
-        //   description: 'user without the service maintainer role',
-        //   expectedStatus: StatusCodes.FORBIDDEN
-        // }
       ]
 
       it.each(invalidDefraIdTokenScenarios)(

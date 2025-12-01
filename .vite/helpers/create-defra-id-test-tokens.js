@@ -113,7 +113,8 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
       ...baseDefraIdTokenPayload,
-      email: USER_EMAIL
+      id: 'unknownId',
+      email: 'unknown.email@example.com'
     },
     validJwtSecretObject,
     validGenerateTokenOptions
@@ -127,5 +128,5 @@ export const defraIdMockAuthTokens = {
   wrongSignatureToken: generateDefraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),
-  unauthorisedUserToken: generateDefraIdTokenForUnauthorisedUser()
+  unknownUserToken: generateDefraIdTokenForUnauthorisedUser()
 }

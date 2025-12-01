@@ -1,7 +1,13 @@
 import { StatusCodes } from 'http-status-codes'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-// import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
+import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 
+/**
+ * @param {Object} params
+ * @param {() => import('@hapi/hapi').Server} params.server
+ * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
+ * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
+ */
 export function testOnlyServiceMaintainerCanAccess({
   server,
   makeRequest,
@@ -12,8 +18,14 @@ export function testOnlyServiceMaintainerCanAccess({
       {
         token: entraIdMockAuthTokens.nonServiceMaintainerUserToken,
         description:
-          'user a valid Entra Id but without the service maintainer role',
+          'a valid Entra token but without the service maintainer role',
         expectedStatus: StatusCodes.FORBIDDEN
+      },
+      {
+        token: defraIdMockAuthTokens.unknownUserToken,
+        description:
+          'a valid Defra Id token but with an unknown email and contactId',
+        expectedStatus: StatusCodes.UNAUTHORIZED
       }
     ]
 
