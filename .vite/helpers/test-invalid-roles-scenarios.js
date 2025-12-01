@@ -7,7 +7,7 @@ export function testOnlyServiceMaintainerCanAccess({
   makeRequest,
   additionalExpectations
 }) {
-  describe('A user withou the service maintainer role', () => {
+  describe('A user without the service maintainer role', () => {
     const wrongRoleTokenScenarios = [
       {
         token: entraIdMockAuthTokens.nonServiceMaintainerUserToken,

@@ -302,4 +302,16 @@ describe('PUT /v1/organisations/{id}', () => {
       )
     }
   })
+
+  testInvalidTokenScenarios({
+    server: () => server,
+    makeRequest: async () => {
+      const org1 = buildOrganisation()
+      await organisationsRepository.insert(org1)
+      return {
+        method: 'PUT',
+        url: `/v1/organisations/${org1.id}`
+      }
+    }
+  })
 })
