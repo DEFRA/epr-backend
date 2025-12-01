@@ -6,7 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testInvalidTokenScenarios } from '#vite/helpers/test-entra-token-scenarios.js'
+import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 

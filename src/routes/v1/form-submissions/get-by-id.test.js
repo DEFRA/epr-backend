@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testInvalidTokenScenarios } from '#vite/helpers/test-entra-token-scenarios.js'
+import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 const { validToken } = entraIdMockAuthTokens
