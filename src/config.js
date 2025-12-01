@@ -295,12 +295,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
     }
-  },
-  seedDataCleanUpDryRun: {
-    doc: 'Seed data cleanup only runs when this is false',
-    format: Boolean,
-    default: true,
-    env: 'SEED_DATA_CLEAN_UP_DRY_RUN'
   }
 }
 
