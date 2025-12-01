@@ -196,11 +196,11 @@ const baseConfig = {
       env: 'TRACING_HEADER'
     }
   },
-  eprBackendUrl: {
+  appBaseUrl: {
     doc: 'Backend base URL for callbacks',
     format: String,
     default: 'http://localhost:3001',
-    env: 'EPR_BACKEND_URL'
+    env: 'APP_BASE_URL'
   },
   cdpUploader: {
     url: {

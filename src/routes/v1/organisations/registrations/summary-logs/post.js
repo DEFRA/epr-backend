@@ -48,8 +48,8 @@ export const summaryLogsCreate = {
       '{summaryLogId}',
       summaryLogId
     )
-    const eprBackendUrl = config.get('eprBackendUrl')
-    const callbackUrl = `${eprBackendUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+    const appBaseUrl = config.get('appBaseUrl')
+    const callbackUrl = `${appBaseUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
     try {
       // Create summary log with preprocessing status
