@@ -1,7 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
-export function testBadEntraTokenScenarios({
+export function testInvalidTokenScenarios({
   server,
   makeRequest,
   additionalExpectations
