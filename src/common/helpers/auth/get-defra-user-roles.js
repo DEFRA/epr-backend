@@ -1,15 +1,23 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 
+/** @import {Roles} from '#common/helpers/auth/constants.js' */
+
 /**
- * @param {Object} tokenPayload
- * @param {string} tokenPayload.id
- * @param {string} tokenPayload.email
- * @returns {Promise<string[]>}
+ * @typedef {{
+ *  contactId: string;
+ *  email: string;
+ * }} TokenPayload
+ */
+
+/**
+ * @param {TokenPayload} tokenPayload
+ * @returns {Promise<Roles[]>}
  */
 export async function getDefraUserRoles(tokenPayload) {
-  const { id, email } = tokenPayload
+  const { contactId, email } = tokenPayload
 
-  if (!id || !email) {
+  console.log('contactId, email :>> ', contactId, email)
+  if (!contactId || !email) {
     return []
   }
 

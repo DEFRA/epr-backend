@@ -33,7 +33,7 @@ export const publicKey = {
 
 const baseValidObject = {
   name: 'John Doe',
-  id: 'test-contact-id',
+  contactId: 'test-contact-id',
   email: USER_EMAIL,
   aud: VALID_DEFRA_AUDIENCE,
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,

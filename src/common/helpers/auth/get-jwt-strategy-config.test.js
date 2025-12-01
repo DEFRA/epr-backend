@@ -1,16 +1,16 @@
-import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 import Boom from '@hapi/boom'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
-import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
-import { ROLES } from './constants.js'
 import {
-  entraIdMockOidcWellKnownResponse,
-  entraIdMockJwksUrl
-} from '#vite/helpers/mock-entra-oidc.js'
-import {
-  defraIdMockOidcWellKnownResponse,
-  defraIdMockJwksUrl
+  defraIdMockJwksUrl,
+  defraIdMockOidcWellKnownResponse
 } from '#vite/helpers/mock-defra-id-oidc.js'
+import {
+  entraIdMockJwksUrl,
+  entraIdMockOidcWellKnownResponse
+} from '#vite/helpers/mock-entra-oidc.js'
+import { ROLES } from './constants.js'
+import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -453,10 +453,10 @@ describe('#getJwtStrategyConfig', () => {
         const artifacts = {
           decoded: {
             payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
               aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
             }
           }
         }
@@ -480,10 +480,10 @@ describe('#getJwtStrategyConfig', () => {
         const artifacts = {
           decoded: {
             payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
               aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
             }
           }
         }
@@ -537,10 +537,10 @@ describe('#getJwtStrategyConfig', () => {
         const artifacts = {
           decoded: {
             payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
               aud: mockDefraClientId,
-              id: '',
-              email: ''
+              contactId: '',
+              email: '',
+              iss: defraIdMockOidcWellKnownResponse.issuer
             }
           }
         }
@@ -609,10 +609,10 @@ describe('#getJwtStrategyConfig', () => {
         const defraArtifacts = {
           decoded: {
             payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
               aud: mockDefraClientId,
-              id: 'defra-contact',
-              email: 'defra@example.com'
+              contactId: 'defra-contact',
+              email: 'defra@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
             }
           }
         }

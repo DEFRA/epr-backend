@@ -18,10 +18,27 @@ export const organisationsLinkedGetAll = {
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
    */
   handler: async (request, h) => {
-    const { organisationsRepository } = request
+    const { organisationsRepository, auth } = request
 
-    const organisations = await organisationsRepository.findAll()
+    const userEmail = auth.credentials.email
 
-    return h.response(organisations).code(StatusCodes.OK)
+    const allOrganisations = await organisationsRepository.findAll()
+
+    // Filter to only organisations where user's email exists in users array
+    const userOrganisations = allOrganisations.filter((org) =>
+      org.users?.some((user) => user.email === userEmail)
+    )
+
+    // Split based on linkedDefraOrganisation field
+    const linked = userOrganisations.filter(
+      (org) => org.linkedDefraOrganisation
+    )
+    const unlinked = userOrganisations.filter(
+      (org) => !org.linkedDefraOrganisation
+    )
+
+    return h
+      .response({ organisations: { linked, unlinked } })
+      .code(StatusCodes.OK)
   }
 }
