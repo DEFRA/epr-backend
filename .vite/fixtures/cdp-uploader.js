@@ -47,7 +47,8 @@ const callbackReceiverFixture = {
       }
 
       const receiver = await createCallbackReceiver({
-        bindToAllInterfaces: true
+        bindAddress: '0.0.0.0',
+        callbackHost: 'host.testcontainers.internal'
       })
       await TestContainers.exposeHostPorts(receiver.port)
       await use(receiver)

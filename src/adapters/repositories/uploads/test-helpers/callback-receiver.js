@@ -4,12 +4,12 @@ const HTTP_ACCEPTED = 202
 const MAX_POLL_ATTEMPTS = 150
 const POLL_INTERVAL_MS = 100
 
+const DEFAULT_HOST = '127.0.0.1'
+
 /**
  * @typedef {Object} CallbackReceiver
  * @property {number} port - Port the server is listening on
- * @property {string} url - URL for localhost access (http://127.0.0.1:port)
- * @property {string} testcontainersUrl - URL for testcontainers access (http://host.testcontainers.internal:port)
- * @property {string} callbackUrl - URL that external systems should use for callbacks (testcontainersUrl when bound to all interfaces, url otherwise)
+ * @property {string} callbackUrl - URL that external systems should use for callbacks
  * @property {Array<{ path: string, payload: unknown }>} requests - Captured requests
  * @property {() => void} clear - Clears captured requests
  * @property {() => Promise<void>} stop - Stops the server
@@ -18,12 +18,11 @@ const POLL_INTERVAL_MS = 100
 /**
  * Creates a minimal HTTP server that captures POST requests for testing.
  *
- * @param {{ bindToAllInterfaces?: boolean }} [options] - Configuration options
+ * @param {{ bindAddress?: string, callbackHost?: string }} [options] - Configuration options
  * @returns {Promise<CallbackReceiver>}
  */
 export const createCallbackReceiver = async (options = {}) => {
-  const { bindToAllInterfaces = false } = options
-  const bindAddress = bindToAllInterfaces ? '0.0.0.0' : '127.0.0.1'
+  const { bindAddress = DEFAULT_HOST, callbackHost = DEFAULT_HOST } = options
 
   const requests = []
 
@@ -50,14 +49,10 @@ export const createCallbackReceiver = async (options = {}) => {
   })
 
   const { port } = server.address()
-  const url = `http://127.0.0.1:${port}`
-  const testcontainersUrl = `http://host.testcontainers.internal:${port}`
 
   return {
     port,
-    url,
-    testcontainersUrl,
-    callbackUrl: bindToAllInterfaces ? testcontainersUrl : url,
+    callbackUrl: `http://${callbackHost}:${port}`,
     requests,
     clear: () => {
       requests.length = 0
