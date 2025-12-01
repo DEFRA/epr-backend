@@ -1,8 +1,9 @@
 function extractFilesFromSubmissions(submissions) {
   return submissions.flatMap((submission) => {
-    const filesByField = submission?.rawSubmissionData?.data?.files
-    const formName = submission?.rawSubmissionData?.meta?.definition?.name
-    const id = submission?.id
+    const filesByField = submission.rawSubmissionData.data.files
+    const formName = submission.rawSubmissionData.meta.definition.name
+    const id = submission.id
+    const orgId = submission.orgId
 
     if (!filesByField) {
       return []
@@ -12,7 +13,8 @@ function extractFilesFromSubmissions(submissions) {
       fileArray.map((file) => ({
         formName,
         fileId: file.fileId,
-        id
+        id,
+        orgId
       }))
     )
   })

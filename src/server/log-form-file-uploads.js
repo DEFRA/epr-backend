@@ -11,7 +11,7 @@ const logFileDetails = async (server) => {
   })
   for (const file of uploadedFiles) {
     logger.info({
-      message: `${file.formName},${file.id},${file.fileId}`
+      message: `${file.formName},${file.id},${file.fileId},${file.orgId}`
     })
   }
 }

@@ -174,6 +174,10 @@ describe('linkItemsToOrganisations', () => {
 })
 
 describe('linkRegistrationToAccreditations', () => {
+  const ONE_HOUR = 60 * 60 * 1000
+  const ONE_DAY = 24 * ONE_HOUR
+  const oneDayAgo = new Date(Date.now() - ONE_DAY)
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -191,14 +195,16 @@ describe('linkRegistrationToAccreditations', () => {
           {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
           {
             id: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -232,7 +238,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: '   W1b 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -242,7 +249,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B1NT ' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -275,7 +283,8 @@ describe('linkRegistrationToAccreditations', () => {
           {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           },
           {
             id: reg2Id,
@@ -283,7 +292,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.ALUMINIUM,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1C 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -291,12 +301,14 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { address: { line1: '78', postcode: 'W1B 1NT' } }
+            site: { address: { line1: '78', postcode: 'W1B 1NT' } },
+            formSubmissionTime: oneDayAgo
           },
           {
             id: acc2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.PAPER
+            material: MATERIAL.PAPER,
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -340,14 +352,16 @@ describe('linkRegistrationToAccreditations', () => {
           {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
           {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ]
       },
@@ -362,7 +376,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.ALUMINIUM,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -372,7 +387,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.ALUMINIUM,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -408,7 +424,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           },
           {
             id: reg2Id,
@@ -416,7 +433,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -426,7 +444,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -450,11 +469,12 @@ describe('linkRegistrationToAccreditations', () => {
     })
   })
 
-  it('dont link when multiple accreditations match to single registration', () => {
+  it('links to latest accreditation when multiple accreditations match a registration', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const accId2 = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
     const organisations = [
       {
         id: org1Id,
@@ -467,7 +487,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -477,7 +498,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: twoDaysAgo
           },
           {
             id: accId2,
@@ -485,7 +507,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -493,7 +516,14 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
-    expect(result[0].registrations[0].accreditationId).toBeUndefined()
+    expect(result[0].registrations[0].accreditationId).toBe(accId2)
+
+    const expectedMessage =
+      `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
+      `orgId=100,orgDbId=${org1Id},` +
+      `registration=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)}],` +
+      `selected accreditation=[id=${accId2},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[1].site)}]`
+    expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
   })
 
   it('handle organisations without any registrations or accreditations', () => {
@@ -531,7 +561,8 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { address: {} }
+            site: { address: {} },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -539,7 +570,8 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { address: {} }
+            site: { address: {} },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
