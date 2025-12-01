@@ -1,134 +1,24 @@
-import { STATUS } from '#domain/organisations/model.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
-import { organisationsLinkPath } from '#domain/organisations/paths.js'
-import { StatusCodes } from 'http-status-codes'
-
-function getCurrentRelationship(relationships) {
-  return relationships.find(({ isCurrent }) => isCurrent)
-}
-
-async function findOrganisationMatches(email, defraIdOrgId, request) {
-  const { organisationsRepository } = request
-  let linkedOrganisations
-  let unlinkedOrganisations
-
-  try {
-    unlinkedOrganisations =
-      await organisationsRepository.findAllUnlinkedOrganisationsByUser({
-        email,
-        isInitialUser: true
-      })
-    linkedOrganisations =
-      await organisationsRepository.findAllByDefraIdOrgId(defraIdOrgId)
-  } catch (error) {
-    linkedOrganisations = []
-    unlinkedOrganisations = []
-
-    request.logger.error(error, 'defra-id: failed to find Organisation matches')
-  }
-
-  request.logger.info(
-    {
-      unlinkedOrganisations,
-      linkedOrganisations,
-      defraIdOrgId
-    },
-    'defra-id: organisation matches found'
-  )
-
-  return {
-    all: [...unlinkedOrganisations, ...linkedOrganisations].reduce(
-      (prev, organisation) =>
-        prev.find(({ id }) => id === organisation.id)
-          ? prev
-          : [...prev, organisation],
-      []
-    ),
-    unlinked: unlinkedOrganisations,
-    linked: linkedOrganisations
-  }
-}
-
-function isLinkedUser(organisation, defraIdOrgId) {
-  return organisation.defraIdOrgId === defraIdOrgId
-}
-
-function isInitialUser(organisation, email) {
-  return !!organisation.users.find(
-    (user) => user.email === email && !!user.isInitialUser
-  )
-}
-
-function getOrgDataFromToken(tokenPayload) {
-  const { currentRelationshipId, relationships } = tokenPayload
-
-  return relationships.map((relationship) => {
-    const [relationshipId, organisationId, organisationName] =
-      relationship.split(':')
-
-    return {
-      defraIdRelationshipId: relationshipId,
-      defraIdOrgId: organisationId,
-      defraIdOrgName: organisationName?.trim(),
-      isCurrent: currentRelationshipId === relationshipId
-    }
-  })
-}
-
-function getOrganisationsSummary(organisations) {
-  return organisations.map(({ orgId, id, companyDetails }) => ({
-    id,
-    orgId,
-    name: companyDetails.name,
-    tradingName: companyDetails.tradingName
-  }))
-}
-
 export async function getDefraIdUserRoles(tokenPayload, request, h) {
   const { email } = tokenPayload
   const { organisationsRepository, params = {} } = request
   const { organisationId } = params
 
   try {
-    const defraIdRelationships = getOrgDataFromToken(tokenPayload)
-    const { defraIdOrgId, defraIdOrgName } =
-      getCurrentRelationship(defraIdRelationships) || {}
-
-    request.logger.info(
-      { tokenPayload, params, defraIdOrgId, defraIdOrgName },
-      'defra-id: validateRequest'
-    )
-
-    // No defraIdOrgId to link
-    if (!defraIdOrgId) {
-      request.logger.warn('defra-id: defraIdOrgId not found in token')
-
-      return { scope: [] }
-    }
-
-    request.server.app.defraIdOrgId = defraIdOrgId
-    request.server.app.defraIdOrgName = defraIdOrgName
+    // If the token is a DefraId token
+    // And the currentRelationship in the token matches one (and only one) EPR organisation via `defraIdOrgId`
+    // If an `organisationId` parameter can be extracted from the url
+    // And the organisationId matches the organisation assigned to the currentRelationship
+    // And the url is not the /link url
+    // And the status of the organisation is Active or Suspended
+    // Then the user is assigned a role of "standardUser"
+    // And they must be added to the organisation list of users (if not already present)
 
     // Request is for a specific organisation
     if (organisationId) {
       request.logger.info({ organisationId }, 'defra-id: has organisationId')
 
-      const organisationById =
-        await organisationsRepository.findById(organisationId)
-      const isInitial = isInitialUser(organisationById, email)
-
-      if (request.route.path === organisationsLinkPath && isInitial) {
-        // Linking organisation is allowed because a known user is requesting to link it
-        request.logger.info(organisationById, 'defra-id: approve organisation')
-
-        request.server.app.organisationId = organisationId
-
-        return { scope: ['user_can_link_organisation'] }
-      }
-
       // Organisation has a status allowing it to be accessed
       if ([STATUS.ACTIVE, STATUS.SUSPENDED].includes(organisationById.status)) {
-        const isOrgMatch = organisationById.defraIdOrgId === defraIdOrgId
         const isLinked = isLinkedUser(organisationById, defraIdOrgId)
         const isAuthorised = isOrgMatch && isLinked
         const shouldAddUser = isLinked && !isInitial

@@ -8,7 +8,7 @@ const {
   unauthorisedUserToken
 } = entraIdMockAuthTokens
 
-export const authScenarios = [
+const authScenarios = [
   {
     token: wrongSignatureToken,
     description: 'made-up token',
@@ -31,7 +31,7 @@ export const authScenarios = [
   }
 ]
 
-export function testAuthScenarios({
+export function testEntraTokenScenarios({
   server,
   makeRequest,
   additionalExpectations
