@@ -4,7 +4,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testEntraTokenScenarios } from '#vite/helpers/test-auth-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 const { validToken } = entraIdMockAuthTokens
@@ -107,7 +107,7 @@ describe('GET /v1/organisations/{id}', () => {
     })
   })
 
-  testAuthScenarios({
+  testEntraTokenScenarios({
     server: () => server,
     makeRequest: async () => {
       const org1 = buildOrganisation()

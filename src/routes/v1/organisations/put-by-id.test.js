@@ -6,7 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testEntraTokenScenarios } from '#vite/helpers/test-auth-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -286,7 +286,7 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
-  testAuthScenarios({
+  testEntraTokenScenarios({
     server: () => server,
     makeRequest: async () => {
       const org1 = buildOrganisation()
