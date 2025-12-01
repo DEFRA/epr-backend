@@ -1,3 +1,5 @@
+import { produce } from 'immer'
+
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
@@ -24,7 +26,7 @@ export const createInMemorySummaryLogExtractor = (testDataMap) => {
         )
       }
 
-      return testDataMap[fileId]
+      return produce(testDataMap[fileId], () => {})
     }
   }
 }
