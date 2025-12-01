@@ -50,8 +50,7 @@ const registerUploadsRepository = (server, options, skipMongoDb) => {
       cdpUploaderUrl: config.get('cdpUploader.url'),
       frontendUrl: config.get('appBaseUrl'),
       backendUrl: config.get('eprBackendUrl'),
-      s3Bucket: config.get('cdpUploader.s3Bucket'),
-      maxFileSize: config.get('cdpUploader.maxFileSize')
+      s3Bucket: config.get('cdpUploader.s3Bucket')
     })
 
     server.ext('onRequest', (request, h) => {

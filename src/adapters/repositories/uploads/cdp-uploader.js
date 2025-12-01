@@ -12,7 +12,6 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * @property {string} frontendUrl - Frontend base URL for redirects
  * @property {string} backendUrl - Backend base URL for callbacks
  * @property {string} s3Bucket - S3 bucket for summary log uploads
- * @property {number} maxFileSize - Maximum file size in bytes
  */
 
 const SUMMARY_LOG_MIME_TYPES = [
@@ -28,8 +27,7 @@ export const createUploadsRepository = ({
   cdpUploaderUrl,
   frontendUrl,
   backendUrl,
-  s3Bucket,
-  maxFileSize
+  s3Bucket
 }) => ({
   async findByLocation(uri) {
     const s3Location = parseS3Uri(uri)
@@ -73,7 +71,6 @@ export const createUploadsRepository = ({
         s3Bucket,
         s3Path,
         mimeTypes: SUMMARY_LOG_MIME_TYPES,
-        maxFileSize,
         metadata: { summaryLogId }
       })
     })

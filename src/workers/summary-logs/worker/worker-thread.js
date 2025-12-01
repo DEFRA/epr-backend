@@ -105,8 +105,7 @@ export default async function summaryLogsWorkerThread(command) {
         cdpUploaderUrl: config.get('cdpUploader.url'),
         frontendUrl: config.get('appBaseUrl'),
         backendUrl: config.get('eprBackendUrl'),
-        s3Bucket: config.get('cdpUploader.s3Bucket'),
-        maxFileSize: config.get('cdpUploader.maxFileSize')
+        s3Bucket: config.get('cdpUploader.s3Bucket')
       })
       const organisationsRepository = createOrganisationsRepository(db)()
       const wasteRecordsRepository = createWasteRecordsRepository(db)()

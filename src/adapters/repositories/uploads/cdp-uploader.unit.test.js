@@ -5,8 +5,7 @@ const testConfig = {
   cdpUploaderUrl: 'https://cdp-uploader.test',
   frontendUrl: 'https://frontend.test',
   backendUrl: 'https://backend.test',
-  s3Bucket: 'test-bucket',
-  maxFileSize: 10485760
+  s3Bucket: 'test-bucket'
 }
 
 describe('CDP Uploader error handling', () => {

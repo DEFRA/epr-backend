@@ -215,12 +215,6 @@ const baseConfig = {
       default: 'http://localhost:7337',
       env: 'CDP_UPLOADER_URL'
     },
-    maxFileSize: {
-      doc: 'Maximum file size for uploads in bytes (10MB default)',
-      format: 'nat',
-      default: 10485760,
-      env: 'CDP_UPLOADER_MAX_FILE_SIZE'
-    },
     s3Bucket: {
       doc: 'S3 bucket for summary log uploads',
       format: String,

@@ -14,8 +14,7 @@ const it = baseIt.extend({
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
       frontendUrl: 'https://frontend.test',
       backendUrl: callbackReceiver.testcontainersUrl,
-      s3Bucket: 're-ex-summary-logs',
-      maxFileSize: 10485760
+      s3Bucket: 're-ex-summary-logs'
     })
 
     await use(repository)

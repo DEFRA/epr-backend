@@ -214,8 +214,7 @@ const extendedFixtures = {
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
       frontendUrl: 'https://frontend.test',
       backendUrl: 'https://backend.test',
-      s3Bucket: 're-ex-summary-logs',
-      maxFileSize: 10485760
+      s3Bucket: 're-ex-summary-logs'
     })
 
     await use(repository)
