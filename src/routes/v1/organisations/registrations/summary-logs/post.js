@@ -43,6 +43,10 @@ export const summaryLogsCreate = {
     const { redirectUrl } = payload
 
     const summaryLogId = randomUUID()
+    const resolvedRedirectUrl = redirectUrl.replace(
+      '{summaryLogId}',
+      summaryLogId
+    )
 
     try {
       // Create summary log with preprocessing status
@@ -57,7 +61,7 @@ export const summaryLogsCreate = {
         organisationId,
         registrationId,
         summaryLogId,
-        redirectUrl
+        redirectUrl: resolvedRedirectUrl
       })
 
       logger.info({
