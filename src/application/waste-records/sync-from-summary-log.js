@@ -38,13 +38,25 @@ const extractRowIds = (tableName, headers, rows) => {
  * Only processes tables that have schemas defined.
  *
  * @param {Object} parsedData - The parsed summary log data
+ * @returns {Object} New structure with row IDs extracted
  */
 const prepareRowsForTransformation = (parsedData) => {
+  const transformedData = {}
+
   for (const [tableName, tableData] of Object.entries(parsedData.data)) {
     if (!getTableSchema(tableName)) {
+      transformedData[tableName] = tableData
       continue
     }
-    tableData.rows = extractRowIds(tableName, tableData.headers, tableData.rows)
+    transformedData[tableName] = {
+      ...tableData,
+      rows: extractRowIds(tableName, tableData.headers, tableData.rows)
+    }
+  }
+
+  return {
+    ...parsedData,
+    data: transformedData
   }
 }
 
@@ -77,7 +89,7 @@ export const syncFromSummaryLog = (dependencies) => {
     const parsedData = await extractor.extract(summaryLog)
 
     // 2. Extract row IDs for transformation
-    prepareRowsForTransformation(parsedData)
+    const preparedData = prepareRowsForTransformation(parsedData)
 
     // 3. Load all existing waste records for this org/reg
     const existingRecordsArray = await wasteRecordRepository.findByRegistration(
@@ -106,7 +118,7 @@ export const syncFromSummaryLog = (dependencies) => {
     }
 
     const wasteRecords = transformFromSummaryLog(
-      parsedData,
+      preparedData,
       summaryLogContext,
       existingRecords
     )
