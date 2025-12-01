@@ -9,7 +9,6 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * @typedef {Object} UploadsRepositoryConfig
  * @property {S3Client} s3Client - AWS S3 client
  * @property {string} cdpUploaderUrl - CDP Uploader service URL
- * @property {string} frontendUrl - Frontend base URL for redirects
  * @property {string} backendUrl - Backend base URL for callbacks
  * @property {string} s3Bucket - S3 bucket for summary log uploads
  */
@@ -25,7 +24,6 @@ const SUMMARY_LOG_MIME_TYPES = [
 export const createUploadsRepository = ({
   s3Client,
   cdpUploaderUrl,
-  frontendUrl,
   backendUrl,
   s3Bucket
 }) => ({
@@ -59,14 +57,15 @@ export const createUploadsRepository = ({
   async initiateSummaryLogUpload({
     organisationId,
     registrationId,
-    summaryLogId
+    summaryLogId,
+    redirectUrl
   }) {
     const s3Path = `/organisations/${organisationId}/registrations/${registrationId}`
 
     return fetchJson(`${cdpUploaderUrl}/initiate`, {
       method: 'POST',
       body: JSON.stringify({
-        redirect: `${frontendUrl}/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        redirect: redirectUrl,
         callback: `${backendUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
         s3Bucket,
         s3Path,

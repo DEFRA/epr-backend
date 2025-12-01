@@ -3,7 +3,6 @@ import { createUploadsRepository } from './cdp-uploader.js'
 
 const testConfig = {
   cdpUploaderUrl: 'https://cdp-uploader.test',
-  frontendUrl: 'https://frontend.test',
   backendUrl: 'https://backend.test',
   s3Bucket: 'test-bucket'
 }

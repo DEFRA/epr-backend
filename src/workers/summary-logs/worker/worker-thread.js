@@ -103,7 +103,6 @@ export default async function summaryLogsWorkerThread(command) {
       const uploadsRepository = createUploadsRepository({
         s3Client,
         cdpUploaderUrl: config.get('cdpUploader.url'),
-        frontendUrl: config.get('appBaseUrl'),
         backendUrl: config.get('eprBackendUrl'),
         s3Bucket: config.get('cdpUploader.s3Bucket')
       })

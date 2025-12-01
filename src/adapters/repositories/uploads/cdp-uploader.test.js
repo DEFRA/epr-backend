@@ -12,7 +12,6 @@ const it = baseIt.extend({
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
-      frontendUrl: 'https://frontend.test',
       backendUrl: callbackReceiver.testcontainersUrl,
       s3Bucket: 're-ex-summary-logs'
     })

@@ -196,12 +196,6 @@ const baseConfig = {
       env: 'TRACING_HEADER'
     }
   },
-  appBaseUrl: {
-    doc: 'Frontend base URL for redirects',
-    format: String,
-    default: 'http://localhost:3000',
-    env: 'APP_BASE_URL'
-  },
   eprBackendUrl: {
     doc: 'Backend base URL for callbacks',
     format: String,

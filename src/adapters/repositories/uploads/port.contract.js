@@ -46,7 +46,8 @@ export const testUploadsRepositoryContract = (it) => {
       const result = await uploadsRepository.initiateSummaryLogUpload({
         organisationId: 'org-123',
         registrationId: 'reg-456',
-        summaryLogId: 'sl-789'
+        summaryLogId: 'sl-789',
+        redirectUrl: 'https://frontend.test/redirect'
       })
 
       expect(result).toMatchObject({
@@ -67,7 +68,8 @@ export const testUploadsRepositoryContract = (it) => {
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
         organisationId: 'org-123',
         registrationId: 'reg-456',
-        summaryLogId: 'sl-789'
+        summaryLogId: 'sl-789',
+        redirectUrl: 'https://frontend.test/redirect'
       })
 
       expect(uploadId).toBeDefined()
@@ -106,7 +108,8 @@ export const testUploadsRepositoryContract = (it) => {
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
         organisationId: 'org-123',
         registrationId: 'reg-456',
-        summaryLogId: 'sl-789'
+        summaryLogId: 'sl-789',
+        redirectUrl: 'https://frontend.test/redirect'
       })
 
       // Perform upload

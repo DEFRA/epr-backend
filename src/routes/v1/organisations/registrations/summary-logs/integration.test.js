@@ -1874,7 +1874,8 @@ describe('Summary logs integration', () => {
       const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
         organisationId,
         registrationId,
-        summaryLogId
+        summaryLogId,
+        redirectUrl: 'https://frontend.test/redirect'
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,

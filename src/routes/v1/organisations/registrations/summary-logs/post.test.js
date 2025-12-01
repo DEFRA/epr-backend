@@ -68,6 +68,9 @@ describe(`${summaryLogsCreatePath} route`, () => {
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         headers: {
           Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
         }
       })
 
@@ -86,6 +89,9 @@ describe(`${summaryLogsCreatePath} route`, () => {
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         headers: {
           Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
         }
       })
 
@@ -105,6 +111,9 @@ describe(`${summaryLogsCreatePath} route`, () => {
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         headers: {
           Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
         }
       })
 
@@ -114,7 +123,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
       expect(uploadsRepository.initiateCalls[0]).toEqual({
         organisationId,
         registrationId,
-        summaryLogId: body.summaryLogId
+        summaryLogId: body.summaryLogId,
+        redirectUrl: 'https://frontend.test/redirect'
       })
     })
 
@@ -123,12 +133,14 @@ describe(`${summaryLogsCreatePath} route`, () => {
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          headers: { Authorization: `Bearer ${validToken}` }
+          headers: { Authorization: `Bearer ${validToken}` },
+          payload: { redirectUrl: 'https://frontend.test/redirect' }
         }),
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          headers: { Authorization: `Bearer ${validToken}` }
+          headers: { Authorization: `Bearer ${validToken}` },
+          payload: { redirectUrl: 'https://frontend.test/redirect' }
         })
       ])
 
@@ -181,6 +193,9 @@ describe(`${summaryLogsCreatePath} route`, () => {
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         headers: {
           Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
         }
       })
 
@@ -200,10 +215,62 @@ describe(`${summaryLogsCreatePath} route`, () => {
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
         headers: {
           Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
         }
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+  })
+
+  describe('payload validation', () => {
+    let server
+
+    beforeAll(async () => {
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () =>
+            createInMemorySummaryLogsRepository()(mockLogger),
+          uploadsRepository: createInMemoryUploadsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      })
+
+      await server.initialize()
+    })
+
+    afterAll(async () => {
+      await server.stop()
+    })
+
+    it('returns 422 when redirectUrl is missing', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {}
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+    })
+
+    it('returns 422 when redirectUrl is not a valid URI', async () => {
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          redirectUrl: 'not-a-valid-uri'
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
   })
 })

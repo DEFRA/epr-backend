@@ -7,6 +7,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
@@ -18,15 +19,28 @@ export const summaryLogsCreate = {
   method: 'POST',
   path: summaryLogsCreatePath,
   options: {
-    auth: false
+    auth: false,
+    validate: {
+      payload: summaryLogsCreatePayloadSchema,
+      failAction: (_request, _h, err) => {
+        throw Boom.badData(err.message)
+      }
+    }
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository, uploadsRepository: UploadsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { summaryLogsRepository, uploadsRepository, params, logger } = request
+    const {
+      summaryLogsRepository,
+      uploadsRepository,
+      params,
+      payload,
+      logger
+    } = request
     const { organisationId, registrationId } = params
+    const { redirectUrl } = payload
 
     const summaryLogId = randomUUID()
 
@@ -42,7 +56,8 @@ export const summaryLogsCreate = {
       const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({
         organisationId,
         registrationId,
-        summaryLogId
+        summaryLogId,
+        redirectUrl
       })
 
       logger.info({

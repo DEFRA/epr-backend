@@ -2,7 +2,8 @@
  * @typedef {Object} InitiateSummaryLogUploadOptions
  * @property {string} organisationId - Organisation ID
  * @property {string} registrationId - Registration ID
- * @property {string} summaryLogId - Summary log ID (for callback and redirect)
+ * @property {string} summaryLogId - Summary log ID (for callback)
+ * @property {string} redirectUrl - URL to redirect user after upload completes
  */
 
 /**
