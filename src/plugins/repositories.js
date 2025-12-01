@@ -2,6 +2,9 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
+import { config } from '#root/config.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
@@ -9,9 +12,58 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
  * @property {import('#repositories/organisations/port.js').OrganisationsRepositoryFactory} [organisationsRepository] - Optional test override for organisations repository factory
  * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepositoryFactory} [wasteRecordsRepository] - Optional test override for waste records repository factory
+ * @property {import('#domain/uploads/repository/port.js').UploadsRepository} [uploadsRepository] - Optional test override for uploads repository
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
+
+/**
+ * Registers the uploads repository with optional test override.
+ * @param {import('#common/hapi-types.js').HapiServer} server
+ * @param {RepositoriesPluginOptions} [options]
+ * @param {boolean} skipMongoDb
+ */
+const registerUploadsRepository = (server, options, skipMongoDb) => {
+  if (options?.uploadsRepository) {
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'uploadsRepository', {
+        get() {
+          return options.uploadsRepository
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  } else if (skipMongoDb) {
+    // skipMongoDb is true and no test override - uploads repository not registered
+    // This is intentional: tests using skipMongoDb must provide their own uploadsRepository
+  } else {
+    const s3Client = createS3Client({
+      region: config.get('awsRegion'),
+      endpoint: config.get('s3Endpoint'),
+      forcePathStyle: config.get('isDevelopment')
+    })
+
+    const uploadsRepository = createUploadsRepository({
+      s3Client,
+      cdpUploaderUrl: config.get('cdpUploader.url'),
+      s3Bucket: config.get('cdpUploader.s3Bucket')
+    })
+
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'uploadsRepository', {
+        // istanbul ignore next -- production wiring, equivalent getter tested via options path
+        get() {
+          return uploadsRepository
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  }
+}
 
 export const repositories = {
   plugin: {
@@ -87,6 +139,8 @@ export const repositories = {
       for (const [name, creator] of Object.entries(repositoryFactories)) {
         registerRepository(name, creator, options?.[name])
       }
+
+      registerUploadsRepository(server, options, skipMongoDb)
     }
   }
 }

@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -1866,11 +1867,23 @@ describe('Summary logs integration', () => {
         testOrg
       ])()
 
-      // Create real Excel buffer and store it in uploads repository
-      // URI format matches what upload-completed handler creates: s3://${s3Bucket}/${s3Key}
+      // Create real Excel buffer and upload via proper flow
       const excelBuffer = await createExcelWithPlaceholders()
-      const fileUri = `s3://test-bucket/path/to/${filename}`
-      uploadsRepository.put(fileUri, excelBuffer)
+
+      // Initiate upload and complete it (simulates user uploading file)
+      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId,
+        registrationId,
+        summaryLogId,
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+      })
+      const { s3Uri } = await uploadsRepository.completeUpload(
+        uploadId,
+        excelBuffer
+      )
+
+      const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
 
       // Use real extractor with real parser (not mocked)
       const summaryLogExtractor = createSummaryLogExtractor({
@@ -1915,12 +1928,12 @@ describe('Summary logs integration', () => {
               fileStatus: UPLOAD_STATUS.COMPLETE,
               contentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              contentLength: 12345,
+              contentLength: excelBuffer.length,
               checksumSha256: 'abc123def456',
               detectedContentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              s3Bucket: 'test-bucket',
-              s3Key: `path/to/${filename}`
+              s3Bucket,
+              s3Key
             }
           },
           numberOfRejectedFiles: 0
