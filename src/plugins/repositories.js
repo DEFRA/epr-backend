@@ -48,7 +48,6 @@ const registerUploadsRepository = (server, options, skipMongoDb) => {
     const uploadsRepository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: config.get('cdpUploader.url'),
-      backendUrl: config.get('eprBackendUrl'),
       s3Bucket: config.get('cdpUploader.s3Bucket')
     })
 

@@ -5,14 +5,10 @@ import { createUploadsRepository } from './cdp-uploader.js'
 
 // Extend base fixture with contract test specific fixtures
 const it = baseIt.extend({
-  uploadsRepository: async (
-    { s3Client, cdpUploaderStack, callbackReceiver },
-    use
-  ) => {
+  uploadsRepository: async ({ s3Client, cdpUploaderStack }, use) => {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
-      backendUrl: callbackReceiver.testcontainersUrl,
       s3Bucket: 're-ex-summary-logs'
     })
 

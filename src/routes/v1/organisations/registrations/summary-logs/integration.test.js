@@ -1875,7 +1875,8 @@ describe('Summary logs integration', () => {
         organisationId,
         registrationId,
         summaryLogId,
-        redirectUrl: 'https://frontend.test/redirect'
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
       })
       const { s3Uri } = await uploadsRepository.completeUpload(
         uploadId,

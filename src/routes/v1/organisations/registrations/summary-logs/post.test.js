@@ -124,7 +124,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
         organisationId,
         registrationId,
         summaryLogId: body.summaryLogId,
-        redirectUrl: 'https://frontend.test/redirect'
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${body.summaryLogId}/upload-completed`
       })
     })
 

@@ -26,9 +26,7 @@ afterEach(async () => {
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
   uploadsRepository: async ({}, use) => {
-    await use(
-      createInMemoryUploadsRepository({ backendUrl: callbackReceiver.url })
-    )
+    await use(createInMemoryUploadsRepository())
   },
 
   performUpload: async ({ uploadsRepository }, use) => {

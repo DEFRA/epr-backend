@@ -13,7 +13,7 @@ import { randomUUID } from 'node:crypto'
 /**
  * Creates an in-memory uploads repository for testing.
  *
- * @param {{ s3Bucket?: string, backendUrl?: string }} [config] - Optional configuration
+ * @param {{ s3Bucket?: string }} [config] - Optional configuration
  * @returns {import('#domain/uploads/repository/port.js').UploadsRepository & {
  *   completeUpload: (uploadId: string, buffer: Buffer) => Promise<{ s3Uri: string }>,
  *   initiateCalls: InitiateSummaryLogUploadOptions[]
@@ -21,7 +21,6 @@ import { randomUUID } from 'node:crypto'
  */
 export const createInMemoryUploadsRepository = (config = {}) => {
   const s3Bucket = config.s3Bucket ?? 'test-bucket'
-  const backendUrl = config.backendUrl
 
   /** @type {Map<string, Buffer>} */
   const storage = new Map()
@@ -60,38 +59,32 @@ export const createInMemoryUploadsRepository = (config = {}) => {
         throw new Error(`No pending upload found for uploadId: ${uploadId}`)
       }
 
-      const { organisationId, registrationId, summaryLogId } = pending.options
+      const { organisationId, registrationId, callbackUrl } = pending.options
       const s3Key = `organisations/${organisationId}/registrations/${registrationId}/${uploadId}.xlsx`
       const s3Uri = `s3://${s3Bucket}/${s3Key}`
 
       storage.set(s3Uri, buffer)
       pendingUploads.delete(uploadId)
 
-      // Make callback if backendUrl is configured
-      if (backendUrl) {
-        const callbackPath = `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
-        const callbackUrl = `${backendUrl}${callbackPath}`
-
-        const payload = {
-          form: {
-            file: {
-              fileId: randomUUID(),
-              filename: 'summary-log.xlsx',
-              fileStatus: 'complete',
-              s3Bucket,
-              s3Key
-            }
+      const payload = {
+        form: {
+          file: {
+            fileId: randomUUID(),
+            filename: 'summary-log.xlsx',
+            fileStatus: 'complete',
+            s3Bucket,
+            s3Key
           }
         }
-
-        await fetch(callbackUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(payload)
-        })
       }
+
+      await fetch(callbackUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      })
 
       return { s3Uri }
     }

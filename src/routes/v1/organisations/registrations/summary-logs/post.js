@@ -6,6 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { config } from '#root/config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 
@@ -47,6 +48,8 @@ export const summaryLogsCreate = {
       '{summaryLogId}',
       summaryLogId
     )
+    const eprBackendUrl = config.get('eprBackendUrl')
+    const callbackUrl = `${eprBackendUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
     try {
       // Create summary log with preprocessing status
@@ -61,7 +64,8 @@ export const summaryLogsCreate = {
         organisationId,
         registrationId,
         summaryLogId,
-        redirectUrl: resolvedRedirectUrl
+        redirectUrl: resolvedRedirectUrl,
+        callbackUrl
       })
 
       logger.info({

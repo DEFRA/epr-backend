@@ -47,7 +47,8 @@ export const testUploadsRepositoryContract = (it) => {
         organisationId: 'org-123',
         registrationId: 'reg-456',
         summaryLogId: 'sl-789',
-        redirectUrl: 'https://frontend.test/redirect'
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`
       })
 
       expect(result).toMatchObject({
@@ -69,7 +70,8 @@ export const testUploadsRepositoryContract = (it) => {
         organisationId: 'org-123',
         registrationId: 'reg-456',
         summaryLogId: 'sl-789',
-        redirectUrl: 'https://frontend.test/redirect'
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`
       })
 
       expect(uploadId).toBeDefined()
@@ -109,7 +111,8 @@ export const testUploadsRepositoryContract = (it) => {
         organisationId: 'org-123',
         registrationId: 'reg-456',
         summaryLogId: 'sl-789',
-        redirectUrl: 'https://frontend.test/redirect'
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `${callbackReceiver.callbackUrl}/v1/organisations/org-123/registrations/reg-456/summary-logs/sl-789/upload-completed`
       })
 
       // Perform upload

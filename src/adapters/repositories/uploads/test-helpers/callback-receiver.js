@@ -9,6 +9,7 @@ const POLL_INTERVAL_MS = 100
  * @property {number} port - Port the server is listening on
  * @property {string} url - URL for localhost access (http://127.0.0.1:port)
  * @property {string} testcontainersUrl - URL for testcontainers access (http://host.testcontainers.internal:port)
+ * @property {string} callbackUrl - URL that external systems should use for callbacks (testcontainersUrl when bound to all interfaces, url otherwise)
  * @property {Array<{ path: string, payload: unknown }>} requests - Captured requests
  * @property {() => void} clear - Clears captured requests
  * @property {() => Promise<void>} stop - Stops the server
@@ -49,11 +50,14 @@ export const createCallbackReceiver = async (options = {}) => {
   })
 
   const { port } = server.address()
+  const url = `http://127.0.0.1:${port}`
+  const testcontainersUrl = `http://host.testcontainers.internal:${port}`
 
   return {
     port,
-    url: `http://127.0.0.1:${port}`,
-    testcontainersUrl: `http://host.testcontainers.internal:${port}`,
+    url,
+    testcontainersUrl,
+    callbackUrl: bindToAllInterfaces ? testcontainersUrl : url,
     requests,
     clear: () => {
       requests.length = 0
