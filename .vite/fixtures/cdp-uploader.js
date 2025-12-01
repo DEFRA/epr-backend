@@ -213,7 +213,6 @@ const extendedFixtures = {
     const repository = createUploadsRepository({
       s3Client,
       cdpUploaderUrl: cdpUploaderStack.cdpUploader.url,
-      backendUrl: 'https://backend.test',
       s3Bucket: 're-ex-summary-logs'
     })
 
