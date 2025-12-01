@@ -258,7 +258,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
     })
 
-    it('returns 422 when redirectUrl is not a valid URI', async () => {
+    it('accepts relative paths for redirectUrl', async () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
@@ -266,11 +266,12 @@ describe(`${summaryLogsCreatePath} route`, () => {
           Authorization: `Bearer ${validToken}`
         },
         payload: {
-          redirectUrl: 'not-a-valid-uri'
+          redirectUrl:
+            '/organisations/org-123/registrations/reg-456/summary-logs/sl-789'
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
   })
 })
