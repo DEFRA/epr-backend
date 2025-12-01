@@ -61,11 +61,15 @@ export const createUploadsRepository = ({
     redirectUrl
   }) {
     const s3Path = `/organisations/${organisationId}/registrations/${registrationId}`
+    const resolvedRedirectUrl = redirectUrl.replace(
+      '{summaryLogId}',
+      summaryLogId
+    )
 
     return fetchJson(`${cdpUploaderUrl}/initiate`, {
       method: 'POST',
       body: JSON.stringify({
-        redirect: redirectUrl,
+        redirect: resolvedRedirectUrl,
         callback: `${backendUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
         s3Bucket,
         s3Path,
