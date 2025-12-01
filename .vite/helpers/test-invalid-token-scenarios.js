@@ -13,7 +13,7 @@ export function testInvalidTokenScenarios({
         wrongSignatureToken,
         wrongIssuerToken,
         wrongAudienceToken,
-        unauthorisedUserToken
+        nonServiceMaintainerUserToken
       } = entraIdMockAuthTokens
 
       const invalidEntraTokenScenarios = [
@@ -33,7 +33,7 @@ export function testInvalidTokenScenarios({
           expectedStatus: StatusCodes.UNAUTHORIZED
         },
         {
-          token: unauthorisedUserToken,
+          token: nonServiceMaintainerUserToken,
           description: 'user without the service maintainer role',
           expectedStatus: StatusCodes.FORBIDDEN
         }
