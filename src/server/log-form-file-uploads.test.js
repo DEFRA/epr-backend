@@ -50,8 +50,8 @@ describe('logFilesUploadedFromForms', () => {
       true
     )
     const mockFiles = [
-      { formName: 'Form A', fileId: 'file-1', id: 'id-1' },
-      { formName: 'Form B', fileId: 'file-2', id: 'id-2' }
+      { formName: 'Form A', fileId: 'file-1', id: 'id-1', orgId: 500000 },
+      { formName: 'Form B', fileId: 'file-2', id: 'id-2', orgId: 500001 }
     ]
     mockGetUploadedFileInfo.mockResolvedValue(mockFiles)
 
@@ -65,10 +65,10 @@ describe('logFilesUploadedFromForms', () => {
         'Total files uploaded from registration and accreditation forms 2'
     })
     expect(mockLoggerInfo).toHaveBeenCalledWith({
-      message: 'Form A,id-1,file-1'
+      message: 'Form A,id-1,file-1,500000'
     })
     expect(mockLoggerInfo).toHaveBeenCalledWith({
-      message: 'Form B,id-2,file-2'
+      message: 'Form B,id-2,file-2,500001'
     })
   })
 
