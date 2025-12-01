@@ -2,7 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testEntraTokenScenarios } from '#vite/helpers/test-entra-token-scenarios.js'
+import { testBadEntraTokenScenarios } from '#vite/helpers/test-entra-token-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 const { validToken } = entraIdMockAuthTokens
@@ -179,7 +179,7 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     })
   })
 
-  testEntraTokenScenarios({
+  testBadEntraTokenScenarios({
     server: () => server,
     makeRequest: async () => {
       return {
