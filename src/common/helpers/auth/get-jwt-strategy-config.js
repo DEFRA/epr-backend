@@ -31,15 +31,11 @@ export function getJwtStrategyConfig(oidcConfigs) {
       if (issuer === entraIdOidcConfig.issuer) {
         // For Entra Id tokens, we only accept them if they were signed for Admin UI
         const adminUiEntraClientId = config.get('oidc.entraId.clientId')
-        console.log('--------------------------------------------------- 1')
         if (audience !== adminUiEntraClientId) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
         const scope = await getEntraUserRoles(tokenPayload)
-
-        console.log('--------------------------------------------------- 2')
-        console.log('scope', scope)
 
         return {
           isValid: true,
@@ -51,10 +47,6 @@ export function getJwtStrategyConfig(oidcConfigs) {
           }
         }
       }
-
-      console.log(
-        '--------------------------------------------------- not here, please'
-      )
 
       if (
         config.get('featureFlags.defraIdAuth') &&

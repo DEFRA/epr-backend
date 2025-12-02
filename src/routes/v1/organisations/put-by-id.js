@@ -42,9 +42,6 @@ export const organisationsPutById = {
 
     const id = request.params.id.trim()
 
-    console.log('--------------------------------------------------- 4')
-    console.log('id', id)
-
     if (!id) {
       throw Boom.notFound('Organisation not found')
     }
