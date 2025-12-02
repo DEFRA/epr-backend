@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -255,16 +256,26 @@ describe('Summary logs integration', () => {
 
       it('returns complete validation response with no issues', () => {
         const payload = JSON.parse(response.payload)
+        // Note: loads is empty because mock data has no data rows
         expect(payload).toEqual({
           status: SUMMARY_LOG_STATUS.VALIDATED,
           validation: {
             failures: [],
             concerns: {}
           },
-          loadCounts: {
-            added: { valid: 0, invalid: 0 },
-            unchanged: { valid: 0, invalid: 0 },
-            adjusted: { valid: 0, invalid: 0 }
+          loads: {
+            added: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            },
+            unchanged: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            },
+            adjusted: {
+              valid: { count: 0, rowIds: [] },
+              invalid: { count: 0, rowIds: [] }
+            }
           }
         })
       })
@@ -456,11 +467,11 @@ describe('Summary logs integration', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -647,16 +658,26 @@ describe('Summary logs integration', () => {
         expect(rowsWithIssues).toBe(1)
       })
 
-      it('returns loadCounts classifying loads as added/valid/invalid', () => {
+      it('returns loads with rowIds classifying loads as added/valid/invalid', () => {
         const payload = JSON.parse(response.payload)
 
         // Both rows are added (first submission, no prior records)
         // Row 1 (ROW_ID 10000) is valid
         // Row 2 (ROW_ID 9999) is invalid (has validation errors)
-        expect(payload.loadCounts).toEqual({
-          added: { valid: 1, invalid: 1 },
-          unchanged: { valid: 0, invalid: 0 },
-          adjusted: { valid: 0, invalid: 0 }
+        // Note: ROW_ID values come from mock data as numbers
+        expect(payload.loads).toEqual({
+          added: {
+            valid: { count: 1, rowIds: [10000] },
+            invalid: { count: 1, rowIds: [9999] }
+          },
+          unchanged: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          },
+          adjusted: {
+            valid: { count: 0, rowIds: [] },
+            invalid: { count: 0, rowIds: [] }
+          }
         })
       })
     })
@@ -898,11 +919,11 @@ describe('Summary logs integration', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -1278,11 +1299,11 @@ describe('Summary logs integration', () => {
                 'TARE_WEIGHT',
                 'PALLET_WEIGHT',
                 'NET_WEIGHT',
-                'BAILING_WIRE',
-                'HOW_CALCULATE_RECYCLABLE',
-                'WEIGHT_OF_NON_TARGET',
-                'RECYCLABLE_PROPORTION',
-                'TONNAGE_RECEIVED_FOR_EXPORT'
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
                 [
@@ -1745,11 +1766,12 @@ describe('Summary logs integration', () => {
       worksheet.getCell('F6').value = 'TARE_WEIGHT'
       worksheet.getCell('G6').value = 'PALLET_WEIGHT'
       worksheet.getCell('H6').value = 'NET_WEIGHT'
-      worksheet.getCell('I6').value = 'BAILING_WIRE'
-      worksheet.getCell('J6').value = 'HOW_CALCULATE_RECYCLABLE'
-      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET'
-      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION'
-      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_EXPORT'
+      worksheet.getCell('I6').value = 'BAILING_WIRE_PROTOCOL'
+      worksheet.getCell('J6').value =
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
+      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
+      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
 
       // Row 7: Valid data row
       worksheet.getCell('B7').value = 10000000001
@@ -1774,8 +1796,8 @@ describe('Summary logs integration', () => {
       worksheet.getCell('F8').value = 200
       worksheet.getCell('G8').value = 100
       worksheet.getCell('H8').value = 1700
-      worksheet.getCell('I8').value = 'Choose option' // BAILING_WIRE - required dropdown
-      worksheet.getCell('J8').value = 'Choose option' // HOW_CALCULATE_RECYCLABLE - required dropdown
+      worksheet.getCell('I8').value = 'Choose option' // BAILING_WIRE_PROTOCOL - required dropdown
+      worksheet.getCell('J8').value = 'Choose option' // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION - required dropdown
       worksheet.getCell('K8').value = 100
       worksheet.getCell('L8').value = 0.9
       worksheet.getCell('M8').value = 1700
@@ -1845,11 +1867,23 @@ describe('Summary logs integration', () => {
         testOrg
       ])()
 
-      // Create real Excel buffer and store it in uploads repository
-      // URI format matches what upload-completed handler creates: s3://${s3Bucket}/${s3Key}
+      // Create real Excel buffer and upload via proper flow
       const excelBuffer = await createExcelWithPlaceholders()
-      const fileUri = `s3://test-bucket/path/to/${filename}`
-      uploadsRepository.put(fileUri, excelBuffer)
+
+      // Initiate upload and complete it (simulates user uploading file)
+      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+        organisationId,
+        registrationId,
+        summaryLogId,
+        redirectUrl: 'https://frontend.test/redirect',
+        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+      })
+      const { s3Uri } = await uploadsRepository.completeUpload(
+        uploadId,
+        excelBuffer
+      )
+
+      const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
 
       // Use real extractor with real parser (not mocked)
       const summaryLogExtractor = createSummaryLogExtractor({
@@ -1894,12 +1928,12 @@ describe('Summary logs integration', () => {
               fileStatus: UPLOAD_STATUS.COMPLETE,
               contentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              contentLength: 12345,
+              contentLength: excelBuffer.length,
               checksumSha256: 'abc123def456',
               detectedContentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              s3Bucket: 'test-bucket',
-              s3Key: `path/to/${filename}`
+              s3Bucket,
+              s3Key
             }
           },
           numberOfRejectedFiles: 0
@@ -1959,8 +1993,10 @@ describe('Summary logs integration', () => {
         // These are the dropdown fields that had "Choose option" (now null)
         const issueHeaders = row8Issues.issues.map((i) => i.header)
         expect(issueHeaders).toContain('EWC_CODE')
-        expect(issueHeaders).toContain('BAILING_WIRE')
-        expect(issueHeaders).toContain('HOW_CALCULATE_RECYCLABLE')
+        expect(issueHeaders).toContain('BAILING_WIRE_PROTOCOL')
+        expect(issueHeaders).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
       })
 
       it('terminates data section at row with all placeholder values', async () => {

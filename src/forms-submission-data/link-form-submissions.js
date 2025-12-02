@@ -4,6 +4,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 
 /**
  * @import {OrganisationWithAccreditations} from './types.js'
+ * @import {Accreditation, Registration} from '#repositories/organisations/port.js'
  */
 
 function getItemsBySystemReference(items) {
@@ -82,7 +83,13 @@ export function linkItemsToOrganisations(organisations, items, propertyName) {
   return organisations
 }
 
-function isAccreditationForRegistration(accreditation, registration) {
+/**
+ * Check if an accreditation matches a registration based on type, material, and site
+ * @param {Accreditation} accreditation - The accreditation to check
+ * @param {Registration} registration - The registration to match against
+ * @returns {boolean} True if the accreditation matches the registration
+ */
+export function isAccreditationForRegistration(accreditation, registration) {
   const typeAndMaterialMatch =
     registration.wasteProcessingType === accreditation.wasteProcessingType &&
     registration.material === accreditation.material
@@ -100,32 +107,29 @@ function linkAccreditationsForOrg(organisation) {
   const accreditations = organisation.accreditations ?? []
   const registrations = organisation.registrations ?? []
 
-  const accToRegs = accreditations.map((acc) => ({
-    acc,
-    matchedRegistrations: registrations.filter((reg) =>
-      isAccreditationForRegistration(acc, reg)
+  for (const registration of registrations) {
+    const matchedAccreditations = accreditations.filter((acc) =>
+      isAccreditationForRegistration(acc, registration)
     )
-  }))
-  const regToAccs = registrations.map((reg) => ({
-    reg,
-    matchedAccreditations: accreditations.filter((acc) =>
-      isAccreditationForRegistration(acc, reg)
-    )
-  }))
 
-  // Link only 1:1 matches
-  for (const { acc, matchedRegistrations } of accToRegs) {
-    if (matchedRegistrations.length === 1) {
-      const registrationsLinkingToAcc = regToAccs.find(
-        (rm) => rm.reg.id === matchedRegistrations[0].id
-      )
-      if (registrationsLinkingToAcc.matchedAccreditations.length === 1) {
-        matchedRegistrations[0].accreditationId = acc.id
+    if (matchedAccreditations.length > 0) {
+      const latestMatchedAccreditation = matchedAccreditations.sort(
+        (a, b) => b.formSubmissionTime - a.formSubmissionTime
+      )[0]
+      registration.accreditationId = latestMatchedAccreditation.id
+
+      if (matchedAccreditations.length > 1) {
+        logger.warn({
+          message:
+            `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
+            `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
+            `registration=[${formatRegistrationDetails(registration)}],` +
+            `selected accreditation=[${formatAccreditationDetails(latestMatchedAccreditation)}]`
+        })
       }
     }
   }
-
-  logUnmatchedItems(organisation, accToRegs, regToAccs)
+  logUnlinkedAccreditations(organisation)
 }
 
 function formatAccreditationDetails(accreditation) {
@@ -144,41 +148,41 @@ function formatRegistrationDetails(registration) {
   return `id=${registration.id},type=${registration.wasteProcessingType},material=${registration.material}${siteInfo}`
 }
 
-function logUnmatchedItems(organisation, accToRegs, regToAccs) {
-  const unmatchedAccs = accToRegs.filter(
-    (am) => am.matchedRegistrations.length === 0
+function logUnlinkedAccreditations(organisation) {
+  const registrations = organisation.registrations ?? []
+  const accreditations = organisation.accreditations ?? []
+  const linkedRegistrations = registrations.filter(
+    (reg) => reg.accreditationId !== undefined
   )
-  const multiMatchAccs = accToRegs.filter(
-    (am) => am.matchedRegistrations.length > 1
+  const unlinkedRegistrations = registrations.filter(
+    (reg) => reg.accreditationId === undefined
   )
 
-  if (unmatchedAccs.length === 0 && multiMatchAccs.length === 0) {
+  const linkedAccreditationIds = new Set(
+    linkedRegistrations.map((reg) => reg.accreditationId)
+  )
+  const unlinkedAccreditations = accreditations.filter(
+    (acc) => !linkedAccreditationIds.has(acc.id)
+  )
+
+  if (unlinkedAccreditations.length === 0) {
     return
   }
 
-  const unmatchedRegs = regToAccs.filter(
-    (rm) => rm.matchedAccreditations.length === 0
-  )
-  const multiMatchRegs = regToAccs.filter(
-    (rm) => rm.matchedAccreditations.length > 1
-  )
-
-  const totalUnlinkedAccs = unmatchedAccs.length + multiMatchAccs.length
-
-  const allAccDetails = [...unmatchedAccs, ...multiMatchAccs]
-    .map((item) => formatAccreditationDetails(item.acc))
+  const unlinkedAccDetails = unlinkedAccreditations
+    .map((item) => formatAccreditationDetails(item))
     .join(';')
 
-  const allRegDetails = [...unmatchedRegs, ...multiMatchRegs]
-    .map((item) => formatRegistrationDetails(item.reg))
+  const unlinkedRegDetails = unlinkedRegistrations
+    .map((item) => formatRegistrationDetails(item))
     .join(';')
 
   const message =
     `Organisation has accreditations that cant be linked to registrations: ` +
     `orgId=${organisation.orgId},orgDbId=${organisation.id},` +
-    `totalUnlinkedAccs=${totalUnlinkedAccs},noMatchAccs=${unmatchedAccs.length},multiMatchAccs=${multiMatchAccs.length},` +
-    `accreditations=[${allAccDetails}],` +
-    `registrations=[${allRegDetails}]`
+    `unlinked accreditations count=${unlinkedAccreditations.length},` +
+    `unlinked accreditations=[${unlinkedAccDetails}],` +
+    `unlinked registrations=[${unlinkedRegDetails}]`
 
   logger.warn({ message })
 }
@@ -196,8 +200,17 @@ function getLinkedRegCount(organisations) {
   )
 }
 
+function getLinkedAccCount(organisations) {
+  return new Set(
+    organisations
+      .flatMap((org) => org.registrations ?? [])
+      .map((reg) => reg.accreditationId)
+      .filter(Boolean)
+  ).size
+}
+
 /**
- * Link registration to accredidations
+ * Link registrations to accreditations
  *
  * @param {OrganisationWithAccreditations[]} organisations
  * @returns {OrganisationWithAccreditations[]}
@@ -209,8 +222,9 @@ export function linkRegistrationToAccreditations(organisations) {
   }
 
   const linkedRegCount = getLinkedRegCount(organisations)
+  const linkedAccCount = getLinkedAccCount(organisations)
   logger.info({
-    message: `Accreditation linking complete: ${linkedRegCount}/${accCount} linked`
+    message: `Accreditation linking complete: ${linkedAccCount}/${accCount} linked`
   })
   const regCount = countItems(organisations, 'registrations')
   logger.info({

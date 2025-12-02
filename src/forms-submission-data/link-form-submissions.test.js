@@ -2,10 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   linkItemsToOrganisations,
-  linkRegistrationToAccreditations
+  linkRegistrationToAccreditations,
+  isAccreditationForRegistration
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -172,6 +174,10 @@ describe('linkItemsToOrganisations', () => {
 })
 
 describe('linkRegistrationToAccreditations', () => {
+  const ONE_HOUR = 60 * 60 * 1000
+  const ONE_DAY = 24 * ONE_HOUR
+  const oneDayAgo = new Date(Date.now() - ONE_DAY)
+
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -189,14 +195,16 @@ describe('linkRegistrationToAccreditations', () => {
           {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
           {
             id: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -205,6 +213,7 @@ describe('linkRegistrationToAccreditations', () => {
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
     })
@@ -229,7 +238,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: '   W1b 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -239,7 +249,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B1NT ' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -247,6 +258,7 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(result[0].registrations[0].accreditationId).toEqual(accId1)
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 1/1 linked'
@@ -271,7 +283,8 @@ describe('linkRegistrationToAccreditations', () => {
           {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           },
           {
             id: reg2Id,
@@ -279,7 +292,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.ALUMINIUM,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1C 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -287,12 +301,14 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { address: { line1: '78', postcode: 'W1B 1NT' } }
+            site: { address: { line1: '78', postcode: 'W1B 1NT' } },
+            formSubmissionTime: oneDayAgo
           },
           {
             id: acc2Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.PAPER
+            material: MATERIAL.PAPER,
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -304,16 +320,14 @@ describe('linkRegistrationToAccreditations', () => {
       expect(reg.accreditationId).toBeUndefined()
     }
 
-    const expectedPattern =
+    const expectedMessage =
       `Organisation has accreditations that cant be linked to registrations: ` +
-      `orgId=100,orgDbId=${org1Id},totalUnlinkedAccs=2,noMatchAccs=2,multiMatchAccs=0,` +
-      `accreditations=\\[id=${acc1Id},type=reprocessor,material=aluminium,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64};` +
-      `id=${acc2Id},type=exporter,material=paper\\],` +
-      `registrations=\\[id=${reg1Id},type=exporter,material=wood;` +
-      `id=${reg2Id},type=reprocessor,material=aluminium,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64}\\]`
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: expect.stringMatching(new RegExp(expectedPattern))
-    })
+      `orgId=100,orgDbId=${org1Id},unlinked accreditations count=2,` +
+      `unlinked accreditations=[id=${acc1Id},type=reprocessor,material=aluminium,${siteInfoToLog(organisations[0].accreditations[0].site)};` +
+      `id=${acc2Id},type=exporter,material=paper],` +
+      `unlinked registrations=[id=${reg1Id},type=exporter,material=wood;` +
+      `id=${reg2Id},type=reprocessor,material=aluminium,${siteInfoToLog(organisations[0].registrations[1].site)}]`
+    expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 0/2 linked'
     })
@@ -338,14 +352,16 @@ describe('linkRegistrationToAccreditations', () => {
           {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
           {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-            material: MATERIAL.WOOD
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
           }
         ]
       },
@@ -360,7 +376,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.ALUMINIUM,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -370,7 +387,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.ALUMINIUM,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -380,6 +398,7 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result).toHaveLength(2)
     expect(result[0].registrations[0].accreditationId).toEqual(acc1Id)
     expect(result[1].registrations[0].accreditationId).toEqual(acc2Id)
+    expect(logger.warn).not.toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Accreditation linking complete: 2/2 linked'
     })
@@ -388,7 +407,7 @@ describe('linkRegistrationToAccreditations', () => {
     })
   })
 
-  it('dont link when multiple registrations match to accreditation', () => {
+  it('link when multiple registrations match to single accreditation', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
@@ -405,7 +424,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           },
           {
             id: reg2Id,
@@ -413,7 +433,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -423,7 +444,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -431,30 +453,28 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
-    expect(result[0].registrations[0].accreditationId).toBeUndefined()
-    expect(result[0].registrations[1].accreditationId).toBeUndefined()
+    expect(result[0].registrations[0].accreditationId).toBe(
+      result[0].accreditations[0].id
+    )
+    expect(result[0].registrations[1].accreditationId).toBe(
+      result[0].accreditations[0].id
+    )
 
-    const expectedPattern =
-      `Organisation has accreditations that cant be linked to registrations: ` +
-      `orgId=100,orgDbId=${org1Id},totalUnlinkedAccs=1,noMatchAccs=0,multiMatchAccs=1,` +
-      `accreditations=\\[id=${accId1},type=reprocessor,material=wood,line1=[a-f0-9]{64}, postcode=[a-f0-9]{64}\\],` +
-      `registrations=\\[\\]`
-    expect(logger.warn).toHaveBeenCalledWith({
-      message: expect.stringMatching(new RegExp(expectedPattern))
+    expect(logger.warn).not.toHaveBeenCalled()
+    expect(logger.info).toHaveBeenCalledWith({
+      message: 'Accreditation linking complete: 1/1 linked'
     })
     expect(logger.info).toHaveBeenCalledWith({
-      message: 'Accreditation linking complete: 0/1 linked'
-    })
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Registrations : 0/2 linked to accreditations'
+      message: 'Registrations : 2/2 linked to accreditations'
     })
   })
 
-  it('dont link when multiple accreditations match to single registration', () => {
+  it('links to latest accreditation when multiple accreditations match a registration', () => {
     const org1Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const accId2 = new ObjectId().toString()
     const accId1 = new ObjectId().toString()
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
     const organisations = [
       {
         id: org1Id,
@@ -467,7 +487,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -477,7 +498,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: twoDaysAgo
           },
           {
             id: accId2,
@@ -485,7 +507,8 @@ describe('linkRegistrationToAccreditations', () => {
             material: MATERIAL.WOOD,
             site: {
               address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
-            }
+            },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -493,7 +516,14 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result).toHaveLength(1)
-    expect(result[0].registrations[0].accreditationId).toBeUndefined()
+    expect(result[0].registrations[0].accreditationId).toBe(accId2)
+
+    const expectedMessage =
+      `Multiple accreditations match registration, picking latest by formSubmissionTime: ` +
+      `orgId=100,orgDbId=${org1Id},` +
+      `registration=[id=${reg1Id},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].registrations[0].site)}],` +
+      `selected accreditation=[id=${accId2},type=reprocessor,material=wood,${siteInfoToLog(organisations[0].accreditations[1].site)}]`
+    expect(logger.warn).toHaveBeenCalledWith({ message: expectedMessage })
   })
 
   it('handle organisations without any registrations or accreditations', () => {
@@ -531,7 +561,8 @@ describe('linkRegistrationToAccreditations', () => {
             id: reg1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { address: {} }
+            site: { address: {} },
+            formSubmissionTime: oneDayAgo
           }
         ],
         accreditations: [
@@ -539,7 +570,8 @@ describe('linkRegistrationToAccreditations', () => {
             id: acc1Id,
             wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
             material: MATERIAL.ALUMINIUM,
-            site: { address: {} }
+            site: { address: {} },
+            formSubmissionTime: oneDayAgo
           }
         ]
       }
@@ -547,5 +579,87 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
+  })
+})
+
+describe('isAccreditationForRegistration', () => {
+  describe('exporter', () => {
+    it('matches when type and material are the same', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        true
+      )
+    })
+
+    it('does not match when material differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.PLASTIC
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.GLASS
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+  })
+
+  describe('reprocessor', () => {
+    it('matches when type, material and site postcode are the same', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        true
+      )
+    })
+
+    it('does not match when material differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.STEEL,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
+
+    it('does not match when site postcode differs', () => {
+      const accreditation = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.PLASTIC,
+        site: { address: { postcode: 'W1B 1NT' } }
+      }
+      const registration = {
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.PLASTIC,
+        site: { address: { postcode: 'W1C 2AA' } }
+      }
+      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
+        false
+      )
+    })
   })
 })

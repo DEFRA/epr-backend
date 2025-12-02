@@ -44,7 +44,7 @@ services:
     env_file:
       - 'compose/aws.env'
     environment:
-      EPR_BACKEND_URL: http://epr-backend:3001
+      APP_BASE_URL: http://epr-backend:3001
       LOCALSTACK_ENDPOINT: http://localstack:4566
       NODE_ENV: development
       PORT: 3000

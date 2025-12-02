@@ -18,11 +18,11 @@ const RECEIVED_LOADS_HEADERS = [
   'TARE_WEIGHT',
   'PALLET_WEIGHT',
   'NET_WEIGHT',
-  'BAILING_WIRE',
-  'HOW_CALCULATE_RECYCLABLE',
-  'WEIGHT_OF_NON_TARGET',
-  'RECYCLABLE_PROPORTION',
-  'TONNAGE_RECEIVED_FOR_EXPORT'
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_RECYCLING'
 ]
 
 const buildMeta = (overrides = {}) => ({
@@ -41,11 +41,11 @@ const buildReceivedLoadRow = (overrides = {}) => ({
   TARE_WEIGHT: 100,
   PALLET_WEIGHT: 50,
   NET_WEIGHT: 850,
-  BAILING_WIRE: 'YES',
-  HOW_CALCULATE_RECYCLABLE: 'WEIGHT',
-  WEIGHT_OF_NON_TARGET: 50,
-  RECYCLABLE_PROPORTION: 0.85,
-  TONNAGE_RECEIVED_FOR_EXPORT: 850,
+  BAILING_WIRE_PROTOCOL: 'YES',
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'WEIGHT',
+  WEIGHT_OF_NON_TARGET_MATERIALS: 50,
+  RECYCLABLE_PROPORTION_PERCENTAGE: 0.85,
+  TONNAGE_RECEIVED_FOR_RECYCLING: 850,
   ...overrides
 })
 
@@ -559,13 +559,13 @@ describe('SummaryLogsValidator', () => {
   })
 
   describe('Load classification', () => {
-    it('stores loadCounts when validation passes with data rows', async () => {
+    it('stores loads with rowIds when validation passes with data rows', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
-                buildReceivedLoadRow(), // Valid row
+                buildReceivedLoadRow(), // Valid row (ROW_ID: 10000)
                 buildReceivedLoadRow({
                   ROW_ID: 9999, // Invalid - below minimum
                   DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date',
@@ -581,14 +581,24 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loadCounts).toEqual({
-        added: { valid: 1, invalid: 1 },
-        unchanged: { valid: 0, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
+      // Note: ROW_ID values come directly from test data as numbers
+      expect(updateCall.loads).toEqual({
+        added: {
+          valid: { count: 1, rowIds: [10000] },
+          invalid: { count: 1, rowIds: [9999] }
+        },
+        unchanged: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
+        },
+        adjusted: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
+        }
       })
     })
 
-    it('does not store loadCounts when validation fails with fatal error', async () => {
+    it('does not store loads when validation fails with fatal error', async () => {
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal error
@@ -599,7 +609,7 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loadCounts).toBeUndefined()
+      expect(updateCall.loads).toBeUndefined()
       expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
     })
 
@@ -625,10 +635,20 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      expect(updateCall.loadCounts).toEqual({
-        added: { valid: 0, invalid: 0 },
-        unchanged: { valid: 1, invalid: 0 },
-        adjusted: { valid: 0, invalid: 0 }
+      // Note: ROW_ID for unchanged comes from existing record (string)
+      expect(updateCall.loads).toEqual({
+        added: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
+        },
+        unchanged: {
+          valid: { count: 1, rowIds: ['10000'] },
+          invalid: { count: 0, rowIds: [] }
+        },
+        adjusted: {
+          valid: { count: 0, rowIds: [] },
+          invalid: { count: 0, rowIds: [] }
+        }
       })
 
       // Reset the mock for other tests

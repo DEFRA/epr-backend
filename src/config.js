@@ -196,6 +196,26 @@ const baseConfig = {
       env: 'TRACING_HEADER'
     }
   },
+  appBaseUrl: {
+    doc: 'Backend base URL for callbacks',
+    format: String,
+    default: 'http://localhost:3001',
+    env: 'APP_BASE_URL'
+  },
+  cdpUploader: {
+    url: {
+      doc: 'CDP Uploader service URL',
+      format: String,
+      default: 'http://localhost:7337',
+      env: 'CDP_UPLOADER_URL'
+    },
+    s3Bucket: {
+      doc: 'S3 bucket for summary log uploads',
+      format: String,
+      default: 're-ex-summary-logs',
+      env: 'CDP_UPLOADER_S3_BUCKET_SUMMARY_LOGS'
+    }
+  },
   regulator: {
     EA: {
       email: {
@@ -295,12 +315,6 @@ const baseConfig = {
       default: false,
       env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
     }
-  },
-  seedDataCleanUpDryRun: {
-    doc: 'Seed data cleanup only runs when this is false',
-    format: Boolean,
-    default: true,
-    env: 'SEED_DATA_CLEAN_UP_DRY_RUN'
   }
 }
 

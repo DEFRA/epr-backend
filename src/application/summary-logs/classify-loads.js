@@ -6,27 +6,44 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
  */
 
 /**
- * @typedef {Object} ValidityCount
- * @property {number} valid - Count of valid loads
- * @property {number} invalid - Count of invalid loads
+ * @typedef {Object} LoadCategory
+ * @property {number} count - Total count of loads
+ * @property {string[]} rowIds - Row IDs (truncated to MAX_ROW_IDS)
  */
 
 /**
- * @typedef {Object} LoadCounts
- * @property {ValidityCount} added - Counts for added loads
- * @property {ValidityCount} unchanged - Counts for unchanged loads
- * @property {ValidityCount} adjusted - Counts for adjusted loads
+ * @typedef {Object} LoadValidity
+ * @property {LoadCategory} valid - Valid loads
+ * @property {LoadCategory} invalid - Invalid loads
  */
 
 /**
- * Creates an empty load counts structure
+ * @typedef {Object} Loads
+ * @property {LoadValidity} added - Loads added in this upload
+ * @property {LoadValidity} unchanged - Loads unchanged from previous uploads
+ * @property {LoadValidity} adjusted - Loads adjusted in this upload
+ */
+
+const MAX_ROW_IDS = 100
+
+/**
+ * Creates an empty loads structure
  *
- * @returns {LoadCounts}
+ * @returns {Loads}
  */
-const createEmptyLoadCounts = () => ({
-  added: { valid: 0, invalid: 0 },
-  unchanged: { valid: 0, invalid: 0 },
-  adjusted: { valid: 0, invalid: 0 }
+const createEmptyLoads = () => ({
+  added: {
+    valid: { count: 0, rowIds: [] },
+    invalid: { count: 0, rowIds: [] }
+  },
+  unchanged: {
+    valid: { count: 0, rowIds: [] },
+    invalid: { count: 0, rowIds: [] }
+  },
+  adjusted: {
+    valid: { count: 0, rowIds: [] },
+    invalid: { count: 0, rowIds: [] }
+  }
 })
 
 /**
@@ -54,7 +71,7 @@ const classifyRecord = (record, summaryLogId) => {
 }
 
 /**
- * Classifies loads from transformed records and returns counts
+ * Classifies loads from transformed records and returns row IDs grouped by classification
  *
  * Classification dimensions:
  * - added: Load was created in this upload
@@ -65,19 +82,27 @@ const classifyRecord = (record, summaryLogId) => {
  * - valid: Load passes all validation rules (issues.length === 0)
  * - invalid: Load has validation errors (issues.length > 0)
  *
+ * Row ID arrays are truncated to 100 entries; totals always reflect the full count.
+ *
  * @param {Object} params
  * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues
  * @param {string} params.summaryLogId - The current summary log ID
- * @returns {LoadCounts} Counts of loads by classification
+ * @returns {Loads} Row IDs grouped by classification and validity
  */
 export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
-  const counts = createEmptyLoadCounts()
+  const loads = createEmptyLoads()
 
   for (const { record, issues } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
-    counts[classification][validityKey]++
+    const category = loads[classification][validityKey]
+
+    category.count++
+
+    if (category.rowIds.length < MAX_ROW_IDS) {
+      category.rowIds.push(record.rowId)
+    }
   }
 
-  return counts
+  return loads
 }
