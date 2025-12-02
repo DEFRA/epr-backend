@@ -1,6 +1,6 @@
 import {
-  RECEIVED_LOADS_FOR_REPROCESSING_FATAL_SCHEMA,
-  RECEIVED_LOADS_FOR_REPROCESSING_ROW_SCHEMA
+  RECEIVED_LOADS_FOR_REPROCESSING_FAILURE_SCHEMA,
+  RECEIVED_LOADS_FOR_REPROCESSING_CONCERN_SCHEMA
 } from './table-schemas.schema.js'
 
 /**
@@ -8,13 +8,13 @@ import {
  *
  * Each schema defines:
  * - requiredHeaders: Array of header names that must be present (order-independent)
- * - fatalSchema: Joi object schema for fatal validations (e.g. ROW_ID) - failures reject entire spreadsheet
- * - rowSchema: Joi object schema for row-level validations - failures mark individual rows as invalid
+ * - rowSchemas.failure: Joi schema for critical validations (e.g. ROW_ID) - produces failures that reject entire spreadsheet
+ * - rowSchemas.concern: Joi schema for data validations - produces concerns that mark individual rows as invalid
  *
  * The validation engine will:
  * 1. Check that all required headers exist (allowing extras and different ordering)
- * 2. Validate each row with fatalSchema first (produces FATAL errors)
- * 3. If no fatal errors, validate with rowSchema (produces ERROR severity)
+ * 2. Validate each row with rowSchemas.failure first (produces failures)
+ * 3. If no failures, validate with rowSchemas.concern (produces concerns)
  * 4. Report errors with precise location information
  */
 
@@ -37,8 +37,10 @@ const RECEIVED_LOADS_FOR_REPROCESSING_TABLE_SCHEMA = {
     'RECYCLABLE_PROPORTION_PERCENTAGE',
     'TONNAGE_RECEIVED_FOR_RECYCLING'
   ],
-  fatalSchema: RECEIVED_LOADS_FOR_REPROCESSING_FATAL_SCHEMA,
-  rowSchema: RECEIVED_LOADS_FOR_REPROCESSING_ROW_SCHEMA
+  rowSchemas: {
+    failure: RECEIVED_LOADS_FOR_REPROCESSING_FAILURE_SCHEMA,
+    concern: RECEIVED_LOADS_FOR_REPROCESSING_CONCERN_SCHEMA
+  }
 }
 
 /**
