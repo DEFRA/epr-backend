@@ -100,15 +100,6 @@ const RECEIVED_LOADS_FOR_REPROCESSING_ROW_FIELDS = {
 }
 
 /**
- * Combined column schema for RECEIVED_LOADS_FOR_REPROCESSING table
- * (legacy/reference - used for column-level validation definitions)
- */
-export const RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA = {
-  ...RECEIVED_LOADS_FOR_REPROCESSING_FATAL_FIELDS,
-  ...RECEIVED_LOADS_FOR_REPROCESSING_ROW_FIELDS
-}
-
-/**
  * Fatal-level schema for RECEIVED_LOADS_FOR_REPROCESSING table
  *
  * Validates only ROW_ID. Failures produce FATAL errors that reject

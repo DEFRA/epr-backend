@@ -1,5 +1,4 @@
 import {
-  RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA,
   RECEIVED_LOADS_FOR_REPROCESSING_FATAL_SCHEMA,
   RECEIVED_LOADS_FOR_REPROCESSING_ROW_SCHEMA
 } from './table-schemas.schema.js'
@@ -9,7 +8,6 @@ import {
  *
  * Each schema defines:
  * - requiredHeaders: Array of header names that must be present (order-independent)
- * - columnValidation: Map of header name -> Joi schema for that column's cells (legacy/reference)
  * - fatalSchema: Joi object schema for fatal validations (e.g. ROW_ID) - failures reject entire spreadsheet
  * - rowSchema: Joi object schema for row-level validations - failures mark individual rows as invalid
  *
@@ -39,7 +37,6 @@ const RECEIVED_LOADS_FOR_REPROCESSING_TABLE_SCHEMA = {
     'RECYCLABLE_PROPORTION_PERCENTAGE',
     'TONNAGE_RECEIVED_FOR_RECYCLING'
   ],
-  columnValidation: RECEIVED_LOADS_FOR_REPROCESSING_SCHEMA,
   fatalSchema: RECEIVED_LOADS_FOR_REPROCESSING_FATAL_SCHEMA,
   rowSchema: RECEIVED_LOADS_FOR_REPROCESSING_ROW_SCHEMA
 }
