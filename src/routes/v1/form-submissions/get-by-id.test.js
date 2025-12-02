@@ -4,6 +4,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -184,13 +185,23 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     makeRequest: async () => {
       return {
         method: 'GET',
-        url: '/v1/form-submissions/999999'
+        url: `/v1/form-submissions/${ORG_A.id}`
       }
     },
     additionalExpectations: (response) => {
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
+    }
+  })
+
+  testOnlyServiceMaintainerCanAccess({
+    server: () => server,
+    makeRequest: async () => {
+      return {
+        method: 'GET',
+        url: `/v1/form-submissions/${ORG_A.id}`
+      }
     }
   })
 })
