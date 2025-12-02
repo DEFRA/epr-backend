@@ -84,25 +84,37 @@ describe('migrateFormsData', () => {
     let parseOrgSubmission
     let parseRegistrationSubmission
     let parseAccreditationSubmission
+    let linkItemsToOrganisations
 
     beforeEach(async () => {
       // Import and mock all transform functions
-      const orgModule =
-        await import('#formsubmission/organisation/transform-organisation.js')
+      const orgModule = await import(
+        '#formsubmission/organisation/transform-organisation.js'
+      )
       parseOrgSubmission = vi.spyOn(orgModule, 'parseOrgSubmission')
 
-      const regModule =
-        await import('#formsubmission/registration/transform-registration.js')
+      const regModule = await import(
+        '#formsubmission/registration/transform-registration.js'
+      )
       parseRegistrationSubmission = vi.spyOn(
         regModule,
         'parseRegistrationSubmission'
       )
 
-      const accrModule =
-        await import('#formsubmission/accreditation/transform-accreditation.js')
+      const accrModule = await import(
+        '#formsubmission/accreditation/transform-accreditation.js'
+      )
       parseAccreditationSubmission = vi.spyOn(
         accrModule,
         'parseAccreditationSubmission'
+      )
+
+      const linkModule = await import(
+        '#formsubmission/link-form-submissions.js'
+      )
+      linkItemsToOrganisations = vi.spyOn(
+        linkModule,
+        'linkItemsToOrganisations'
       )
     })
 
@@ -111,6 +123,7 @@ describe('migrateFormsData', () => {
       parseOrgSubmission.mockRestore()
       parseRegistrationSubmission.mockRestore()
       parseAccreditationSubmission.mockRestore()
+      linkItemsToOrganisations.mockRestore()
     })
 
     describe('persistence scenarios', () => {
@@ -153,6 +166,22 @@ describe('migrateFormsData', () => {
         expect(parseRegistrationSubmission).toHaveBeenCalledWith(
           validRegSubmission1.id,
           validRegSubmission1.rawSubmissionData
+        )
+
+        expect(linkItemsToOrganisations).toHaveBeenCalledTimes(2)
+        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
+          1,
+          expect.any(Array),
+          expect.any(Array),
+          'registrations',
+          new Set(['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012'])
+        )
+        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
+          2,
+          expect.any(Array),
+          expect.any(Array),
+          'accreditations',
+          new Set(['65a2f4e8b4c5d9f8e7a6b1c2', '65a2f4e8b4c5d9f8e7a6b1c4'])
         )
 
         expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)

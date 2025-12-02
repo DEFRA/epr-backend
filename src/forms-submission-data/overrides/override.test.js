@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyAccreditationOverrides,
-  applyRegistrationOverrides
+  applyRegistrationOverrides,
+  getAccreditationOverrideIds,
+  getRegistrationOverrideIds
 } from './override.js'
 
 describe('Override Functions', () => {
@@ -72,6 +74,26 @@ describe('Override Functions', () => {
 
       // Should return the submission unchanged
       expect(result).toEqual(testSubmission)
+    })
+  })
+
+  describe('getRegistrationOverrideIds', () => {
+    it('should return set of registration override IDs from config', () => {
+      const result = getRegistrationOverrideIds()
+
+      expect(result).toEqual(
+        new Set(['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012'])
+      )
+    })
+  })
+
+  describe('getAccreditationOverrideIds', () => {
+    it('should return set of accreditation override IDs from config', () => {
+      const result = getAccreditationOverrideIds()
+
+      expect(result).toEqual(
+        new Set(['65a2f4e8b4c5d9f8e7a6b1c2', '65a2f4e8b4c5d9f8e7a6b1c4'])
+      )
     })
   })
 })

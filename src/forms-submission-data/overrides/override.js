@@ -11,7 +11,7 @@ function loadOverrideConfig() {
 }
 
 // Parse override config from environment variable (set via cdp-app-config)
-const overrideConfig = loadOverrideConfig()
+export const overrideConfig = loadOverrideConfig()
 
 /**
  * Applies field overrides to a submission based on its ID
@@ -54,4 +54,22 @@ export function applyRegistrationOverrides(submission) {
  */
 export function applyAccreditationOverrides(submission) {
   return applyOverride(submission, overrideConfig.accreditations)
+}
+
+/**
+ * Gets the set of registration IDs that have overrides configured
+ *
+ * @returns {Set<string>} Set of registration IDs requiring orgId validation
+ */
+export function getRegistrationOverrideIds() {
+  return new Set(overrideConfig.registrations.map((item) => item.id))
+}
+
+/**
+ * Gets the set of accreditation IDs that have overrides configured
+ *
+ * @returns {Set<string>} Set of accreditation IDs requiring orgId validation
+ */
+export function getAccreditationOverrideIds() {
+  return new Set(overrideConfig.accreditations.map((item) => item.id))
 }

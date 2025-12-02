@@ -42,42 +42,99 @@ function logOrganisationsWithoutItems(organisations, propertyName) {
 }
 
 /**
+ * Converts an item to the unlinked item format for logging
+ * @param {Object} item - The item to convert
+ * @returns {Object} Unlinked item with id, systemReference, and orgId
+ */
+function toUnlinkedItem(item) {
+  return {
+    id: item.id,
+    systemReference: item.systemReference,
+    orgId: item.orgId
+  }
+}
+
+/**
+ * Partitions items into matched and unmatched based on orgId requirements
+ * @param {Array} items - Items to partition
+ * @param {Object} org - Organisation to match against
+ * @param {Set<string>} itemsRequiringOrgIdMatch - Set of item IDs requiring orgId validation
+ * @returns {{matched: Array, unmatched: Array}} Partitioned items
+ */
+function partitionItemsByOrgIdMatch(items, org, itemsRequiringOrgIdMatch) {
+  const matched = []
+  const unmatched = []
+
+  for (const item of items) {
+    const requiresOrgIdMatch = itemsRequiringOrgIdMatch.has(item.id)
+
+    if (!requiresOrgIdMatch || item.orgId === org.orgId) {
+      matched.push(item)
+    } else {
+      unmatched.push(item)
+    }
+  }
+
+  return { matched, unmatched }
+}
+
+/**
+ * Logs unlinked items as warnings
+ * @param {Array} unlinkedItems - Array of unlinked items
+ * @param {string} propertyName - Type of items (e.g., 'registrations')
+ */
+function logUnlinkedItems(unlinkedItems, propertyName) {
+  if (unlinkedItems.length === 0) {
+    return
+  }
+
+  logger.warn({
+    message: `${unlinkedItems.length} ${propertyName} not linked to an organisation`
+  })
+  for (const item of unlinkedItems) {
+    logger.warn({
+      message: `${propertyName} not linked: id=${item.id}, systemReference=${item.systemReference}, orgId=${item.orgId}`
+    })
+  }
+}
+
+/**
  * Links child items to organisations by systemReference
  * @param {Array} organisations - Array of organisation objects
  * @param {Array} items - Array of items to link (registrations, accreditations, etc.)
  * @param {string} propertyName - Property name to set on organisation (e.g., 'registrations', 'accreditations')
+ * @param {Set<string>} itemsRequiringOrgIdMatch - Set of item IDs that require orgId to match organisation's orgId for linking
  * @returns {Array} Array of organisations with linked items
  */
-export function linkItemsToOrganisations(organisations, items, propertyName) {
+export function linkItemsToOrganisations(
+  organisations,
+  items,
+  propertyName,
+  itemsRequiringOrgIdMatch
+) {
   const itemsBySystemReference = getItemsBySystemReference(items)
   const organisationsById = getOrganisationsById(organisations)
 
   const unlinked = []
+
   for (const [systemReference, itemsPerOrg] of itemsBySystemReference) {
     const org = organisationsById.get(systemReference)
+
     if (org) {
-      org[propertyName] = itemsPerOrg
-    } else {
-      unlinked.push(
-        ...itemsPerOrg.map((item) => ({
-          id: item.id,
-          systemReference: item.systemReference,
-          orgId: item.orgId
-        }))
+      const { matched, unmatched } = partitionItemsByOrgIdMatch(
+        itemsPerOrg,
+        org,
+        itemsRequiringOrgIdMatch
       )
+
+      org[propertyName] = matched
+      unlinked.push(...unmatched.map(toUnlinkedItem))
+    } else {
+      unlinked.push(...itemsPerOrg.map(toUnlinkedItem))
     }
   }
 
-  if (unlinked.length > 0) {
-    logger.warn({
-      message: `${unlinked.length} ${propertyName} not linked to an organisation`
-    })
-    for (const item of unlinked) {
-      logger.warn({
-        message: `${propertyName} not linked: id=${item.id}, systemReference=${item.systemReference}, orgId=${item.orgId}`
-      })
-    }
-  }
+  logUnlinkedItems(unlinked, propertyName)
   logOrganisationsWithoutItems(organisations, propertyName)
 
   return organisations
