@@ -17,7 +17,7 @@ describe('validateProcessingType', () => {
     vi.resetAllMocks()
   })
 
-  it('returns fatal business error when registration has unexpected waste processing type', () => {
+  it('returns fatal business error when registration has invalid waste processing type', () => {
     const parsed = {
       meta: {
         REGISTRATION_NUMBER: { value: 'REG12345' },
@@ -25,7 +25,7 @@ describe('validateProcessingType', () => {
       }
     }
     const registration = {
-      wasteProcessingType: 'invalid-unexpected-type'
+      wasteProcessingType: 'invalid-type'
     }
 
     const result = validateProcessingType({
@@ -40,10 +40,10 @@ describe('validateProcessingType', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Invalid summary log: registration has unexpected waste processing type'
+      'Invalid summary log: registration has invalid waste processing type'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.actual).toBe('invalid-unexpected-type')
+    expect(fatals[0].context.actual).toBe('invalid-type')
   })
 
   it('returns fatal business error when types do not match', () => {
@@ -81,8 +81,8 @@ describe('validateProcessingType', () => {
       column: 'B',
       field: 'PROCESSING_TYPE'
     })
-    expect(fatals[0].context.expected).toBe('reprocessor')
-    expect(fatals[0].context.actual).toBe('exporter')
+    expect(fatals[0].context.expected).toBe('exporter')
+    expect(fatals[0].context.actual).toBe('REPROCESSOR_INPUT')
   })
 
   it.each([

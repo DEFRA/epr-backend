@@ -17,7 +17,7 @@ describe('validateMaterialType', () => {
     vi.resetAllMocks()
   })
 
-  it('returns fatal business error when registration has unexpected material', () => {
+  it('returns fatal business error when registration has invalid material', () => {
     const parsed = {
       meta: {
         REGISTRATION_NUMBER: { value: 'REG12345' },
@@ -25,7 +25,7 @@ describe('validateMaterialType', () => {
       }
     }
     const registration = {
-      material: 'invalid-unexpected-material'
+      material: 'invalid-material'
     }
 
     const result = validateMaterialType({
@@ -40,10 +40,10 @@ describe('validateMaterialType', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toBe(
-      'Invalid summary log: registration has unexpected material'
+      'Invalid summary log: registration has invalid material'
     )
     expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
-    expect(fatals[0].context.actual).toBe('invalid-unexpected-material')
+    expect(fatals[0].context.actual).toBe('invalid-material')
   })
 
   it('returns fatal business error when materials do not match', () => {
