@@ -134,7 +134,7 @@ const buildCellLocation = ({
     : { table: tableName, header: fieldName }
 
 /**
- * Creates concern issues for a single row's validation errors
+ * Creates validation issues from Joi validation errors
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
@@ -144,7 +144,7 @@ const buildCellLocation = ({
  * @param {Object} params.location - Table location in spreadsheet
  * @returns {ValidationIssue[]} Array of validation issues for this row
  */
-const createConcernIssues = ({
+const createRowIssues = ({
   tableName,
   rowIndex,
   error,
@@ -156,7 +156,6 @@ const createConcernIssues = ({
     const colIndex = headerToIndexMap.get(fieldName)
 
     return {
-      severity: 'error',
       category: VALIDATION_CATEGORY.TECHNICAL,
       message: `Invalid value in column '${fieldName}': ${detail.message}`,
       code: mapJoiTypeToErrorCode(detail.type),
@@ -224,24 +223,20 @@ const validateRows = ({
     // Validate against failure schema (e.g. ROW_ID)
     const failureResult = rowSchemas.failure.validate(rowObject)
     if (failureResult.error) {
-      for (const detail of failureResult.error.details) {
-        const fieldName = String(detail.path[0])
-        const colIndex = headerToIndexMap.get(fieldName)
+      const failureIssues = createRowIssues({
+        tableName,
+        rowIndex,
+        error: failureResult.error,
+        headerToIndexMap,
+        location
+      })
 
+      for (const issue of failureIssues) {
         issues.addFatal(
-          VALIDATION_CATEGORY.TECHNICAL,
-          `Invalid ROW_ID: ${detail.message}`,
-          VALIDATION_CODE.INVALID_ROW_ID,
-          {
-            location: buildCellLocation({
-              tableName,
-              rowIndex,
-              fieldName,
-              colIndex,
-              location
-            }),
-            actual: detail.context.value
-          }
+          issue.category,
+          issue.message,
+          issue.code,
+          issue.context
         )
       }
 
@@ -257,7 +252,7 @@ const validateRows = ({
     // Validate against concern schema (other field validations)
     const concernResult = rowSchemas.concern.validate(rowObject)
     const rowIssues = concernResult.error
-      ? createConcernIssues({
+      ? createRowIssues({
           tableName,
           rowIndex,
           error: concernResult.error,
