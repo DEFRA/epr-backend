@@ -31,6 +31,11 @@ export function testOnlyServiceMaintainerCanAccess({
         description:
           'a valid Defra Id token but with an unknown email and contactId',
         expectedStatus: StatusCodes.UNAUTHORIZED
+      },
+      {
+        token: defraIdMockAuthTokens.validToken,
+        description: 'a valid Defra Id token for a known public user',
+        expectedStatus: StatusCodes.UNAUTHORIZED
       }
     ]
 
