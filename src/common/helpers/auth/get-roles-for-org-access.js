@@ -1,6 +1,7 @@
 import Boom from '@hapi/boom'
 import { STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { addUserIfNotInitial } from './add-user-if-not-initial.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
@@ -9,7 +10,11 @@ import { ROLES } from '#common/helpers/auth/constants.js'
  * @param {string} linkedEprOg
  * @returns {Promise<string[]>}
  */
-export const getRolesForOrganisationAccess = async (request, linkedEprOg) => {
+export const getRolesForOrganisationAccess = async (
+  request,
+  linkedEprOg,
+  tokenPayload
+) => {
   const { organisationId } = request.params
 
   if (!organisationId) {
@@ -32,7 +37,7 @@ export const getRolesForOrganisationAccess = async (request, linkedEprOg) => {
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
 
-  // Placeholder for checking whether the user is part of the EPROrganisation
+  addUserIfNotInitial(request, tokenPayload, organisationById)
 
   return [ROLES.standardUser]
 }

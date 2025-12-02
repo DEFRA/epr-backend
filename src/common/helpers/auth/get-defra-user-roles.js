@@ -46,7 +46,12 @@ export async function getDefraUserRoles(tokenPayload, request) {
   // - the request does not have an organisationId param
   // - or if the linkedEprOrg does not match the organisationId param
   // - or if the organisation status is not accessible
-  const roles = await getRolesForOrganisationAccess(request, linkedEprOrg)
+  // Adds the user to the organisation if they are not already present
+  const roles = await getRolesForOrganisationAccess(
+    request,
+    linkedEprOrg,
+    tokenPayload
+  )
 
   return roles
 }
