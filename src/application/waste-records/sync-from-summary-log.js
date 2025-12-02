@@ -1,5 +1,4 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
@@ -9,16 +8,14 @@ import { isEprMarker } from '#domain/summary-logs/markers.js'
 /**
  * Extracts row IDs from raw rows based on the table's ID field
  *
- * Only called for tables with schemas, so idField is guaranteed to exist.
+ * Only called for tables with schemas, so rowIdField is guaranteed to exist.
  *
- * @param {string} tableName - The table name
+ * @param {string} rowIdField - The field name containing the row ID
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<Array<*>>} rows - Array of raw row value arrays
  * @returns {Array<{values: Array<*>, rowId: string}>}
  */
-const extractRowIds = (tableName, headers, rows) => {
-  const idField = getRowIdField(tableName)
-
+const extractRowIds = (rowIdField, headers, rows) => {
   // Build header to index map, excluding EPR markers and nulls
   const headerToIndexMap = new Map()
   for (const [index, header] of headers.entries()) {
@@ -27,7 +24,7 @@ const extractRowIds = (tableName, headers, rows) => {
     }
   }
 
-  const idFieldIndex = headerToIndexMap.get(idField)
+  const idFieldIndex = headerToIndexMap.get(rowIdField)
 
   return rows.map((row) => ({
     values: row,
@@ -52,13 +49,18 @@ const prepareRowsForTransformation = (parsedData) => {
   const transformedData = {}
 
   for (const [tableName, tableData] of Object.entries(parsedData.data)) {
-    if (!getTableSchema(tableName)) {
+    const tableSchema = getTableSchema(tableName)
+    if (!tableSchema) {
       transformedData[tableName] = tableData
       continue
     }
     transformedData[tableName] = {
       ...tableData,
-      rows: extractRowIds(tableName, tableData.headers, tableData.rows)
+      rows: extractRowIds(
+        tableSchema.rowIdField,
+        tableData.headers,
+        tableData.rows
+      )
     }
   }
 
