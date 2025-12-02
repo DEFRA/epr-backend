@@ -1,19 +1,14 @@
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('../types.js').DefraIdTokenPayload} DefraIdTokenPayload */
+/** @typedef {import('../types.js').DefraIdRelationship} DefraIdRelationship */
 
 /**
- * @typedef {Object} TokenPayload
- * @property {string} id - The user ID
- * @property {string} email - The user email
- * @property {string} currentRelationshipId - The current relationship ID
- * @property {string[]} relationships - Array of relationship strings in format "relationshipId:organisationId:organisationName"
- */
-
-/**
- * @param {Object} organisation
- * @param {string} email
- * @returns {boolean}
+ * Checks if a user is the initial user of an organisation
+ * @param {Object} organisation - The organisation object
+ * @param {string} email - The user's email address
+ * @returns {boolean} True if the user is the initial user
  */
 export function isInitialUser(organisation, email) {
   return organisation.users.some(
@@ -23,8 +18,9 @@ export function isInitialUser(organisation, email) {
 }
 
 /**
- * @param {TokenPayload} tokenPayload
- * @returns {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>}
+ * Extracts and parses organization data from a Defra ID token
+ * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
+ * @returns {DefraIdRelationship[]} Array of parsed relationship objects
  */
 export function getOrgDataFromDefraIdToken(tokenPayload) {
   const { currentRelationshipId, relationships } = tokenPayload
@@ -44,20 +40,17 @@ export function getOrgDataFromDefraIdToken(tokenPayload) {
 
 /**
  * Finds and returns the current relationship from an array of relationships
- * @param {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>} relationships - Array of relationship objects
- * @returns {{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean} | undefined} The current relationship or undefined if none found
- */
-/**
- * Finds and returns the current relationship from an array of relationships
- * @param {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>} relationships - Array of relationship objects
- * @returns {{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean} | undefined} The current relationship or undefined if none found
+ * @param {DefraIdRelationship[]} relationships - Array of relationship objects
+ * @returns {DefraIdRelationship | undefined} The current relationship or undefined if none found
  */
 export function getCurrentRelationship(relationships) {
   return relationships.find(({ isCurrent }) => isCurrent)
 }
 
 /**
- * @param {TokenPayload} tokenPayload
+ * Extracts a summary of organization data from a Defra ID token
+ * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
+ * @returns {{defraIdOrgId?: string, defraIdOrgName?: string, defraIdRelationships: DefraIdRelationship[]}} Summary object containing current org ID, name, and all relationships
  */
 export function getDefraTokenSummary(tokenPayload) {
   const defraIdRelationships = getOrgDataFromDefraIdToken(tokenPayload)
@@ -78,17 +71,13 @@ export function isOrganisationsDiscoveryReq(request) {
 }
 
 /**
- * @param {string} email
- * @param {string} defraIdOrgId
- * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns {Promise<{all: Array, unlinked: Array, linked: Array}>}
- */
-/**
  * Helper function to deduplicate organisations by ID
+ *
  * Exported for testing purposes
- * @param {Array} unlinkedOrganisations
- * @param {Array} linkedOrganisations
- * @returns {Array}
+ *
+ * @param {Array} unlinkedOrganisations - Array of unlinked organisations
+ * @param {Array} linkedOrganisations - Array of linked organisations
+ * @returns {Array} Deduplicated array of organisations
  */
 export function deduplicateOrganisations(
   unlinkedOrganisations,
@@ -103,6 +92,13 @@ export function deduplicateOrganisations(
   )
 }
 
+/**
+ * Finds organization matches for a user based on email and Defra ID org ID
+ * @param {string} _email - The user's email address
+ * @param {string} _defraIdOrgId - The Defra ID organization ID
+ * @param {OrganisationsRepository} _organisationsRepository - The organisations repository
+ * @returns {Promise<{all: Array, unlinked: Array, linked: Array}>} Object containing all, unlinked, and linked organizations
+ */
 export async function findOrganisationMatches(
   _email,
   _defraIdOrgId,

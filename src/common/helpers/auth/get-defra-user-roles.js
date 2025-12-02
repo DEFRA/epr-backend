@@ -5,13 +5,13 @@ import { getUsersOrganisationInfo } from './get-users-org-info.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /**
- * @param {Object} tokenPayload
- * @param {string} tokenPayload.id
- * @param {string} tokenPayload.email
- * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
- * @returns {Promise<string[]>}
+ * Determines the roles for a Defra ID user based on their token and request context
+ * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
+ * @returns {Promise<string[]>} Array of role strings
  */
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
