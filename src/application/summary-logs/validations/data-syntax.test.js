@@ -346,8 +346,8 @@ describe('validateDataSyntax', () => {
       })
     })
 
-    describe('cell validation errors - ROW_ID', () => {
-      it('returns error (not fatal) when ROW_ID is not a number', () => {
+    describe('ROW_ID validation (FATAL)', () => {
+      it('returns FATAL error when ROW_ID is not a number', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -375,26 +375,25 @@ describe('validateDataSyntax', () => {
         const result = validateDataSyntax({ parsed })
 
         expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isFatal()).toBe(true)
 
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
+        const fatals = result.issues.getIssuesBySeverity(
+          VALIDATION_SEVERITY.FATAL
         )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-        expect(errors[0].message).toContain('ROW_ID')
-        expect(errors[0].message).toContain('must be a number')
-        expect(errors[0].context.location).toEqual({
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+        expect(fatals[0].message).toContain('ROW_ID')
+        expect(fatals[0].context.location).toEqual({
           sheet: 'Received (sections 1, 2, 3)',
           table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-          row: 8, // Row 7 (headers) + 1 (first data row)
-          column: 'B', // First column (ROW_ID)
+          row: 8,
+          column: 'B',
           header: 'ROW_ID'
         })
-        expect(errors[0].context.actual).toBe('not-a-number')
+        expect(fatals[0].context.actual).toBe('not-a-number')
       })
 
-      it('returns error when ROW_ID is below minimum', () => {
+      it('returns FATAL error when ROW_ID is below minimum (10000)', () => {
         const parsed = {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -422,14 +421,172 @@ describe('validateDataSyntax', () => {
         const result = validateDataSyntax({ parsed })
 
         expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
+        expect(result.issues.isFatal()).toBe(true)
 
+        const fatals = result.issues.getIssuesBySeverity(
+          VALIDATION_SEVERITY.FATAL
+        )
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0].message).toContain('ROW_ID')
+        expect(fatals[0].context.actual).toBe(9999)
+      })
+
+      it('returns FATAL error for each row with invalid ROW_ID', () => {
+        const parsed = {
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              ...createValidReceivedLoadsForReprocessingTable(),
+              rows: [
+                [
+                  10000,
+                  '2025-05-28T00:00:00.000Z',
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ], // Valid
+                [
+                  'invalid',
+                  '2025-05-28T00:00:00.000Z',
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ], // Invalid - not a number
+                [
+                  5000,
+                  '2025-05-28T00:00:00.000Z',
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ] // Invalid - below minimum
+              ]
+            }
+          }
+        }
+
+        const result = validateDataSyntax({ parsed })
+
+        expect(result.issues.isFatal()).toBe(true)
+
+        const fatals = result.issues.getIssuesBySeverity(
+          VALIDATION_SEVERITY.FATAL
+        )
+        expect(fatals).toHaveLength(2)
+      })
+
+      it('skips row validation when ROW_ID validation fails', () => {
+        const parsed = {
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              ...createValidReceivedLoadsForReprocessingTable(),
+              rows: [
+                [
+                  'invalid-row-id',
+                  'also-invalid-date',
+                  'also-invalid-ewc',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            }
+          }
+        }
+
+        const result = validateDataSyntax({ parsed })
+
+        expect(result.issues.isFatal()).toBe(true)
+
+        // Should only have FATAL ROW_ID error, not other cell errors
+        const fatals = result.issues.getIssuesBySeverity(
+          VALIDATION_SEVERITY.FATAL
+        )
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0].message).toContain('ROW_ID')
+
+        // No row-level errors should be present
         const errors = result.issues.getIssuesBySeverity(
           VALIDATION_SEVERITY.ERROR
         )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('ROW_ID')
-        expect(errors[0].message).toContain('must be at least 10000')
+        expect(errors).toHaveLength(0)
+      })
+
+      it('handles missing location gracefully for FATAL ROW_ID errors', () => {
+        const parsed = {
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              // No location provided
+              headers: [
+                'ROW_ID',
+                'DATE_RECEIVED_FOR_REPROCESSING',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
+              ],
+              rows: [
+                [
+                  9999,
+                  '2025-05-28T00:00:00.000Z',
+                  '03 03 08',
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            }
+          }
+        }
+
+        const result = validateDataSyntax({ parsed })
+
+        expect(result.issues.isFatal()).toBe(true)
+
+        const fatals = result.issues.getIssuesBySeverity(
+          VALIDATION_SEVERITY.FATAL
+        )
+        expect(fatals).toHaveLength(1)
+        expect(fatals[0].context.location.header).toBe('ROW_ID')
+        expect(fatals[0].context.location.row).toBeUndefined()
+        expect(fatals[0].context.location.column).toBeUndefined()
       })
     })
 
@@ -566,7 +723,7 @@ describe('validateDataSyntax', () => {
                   850
                 ], // Valid
                 [
-                  9999,
+                  10001,
                   'invalid-date',
                   'bad-code',
                   1000,
@@ -578,9 +735,9 @@ describe('validateDataSyntax', () => {
                   50,
                   0.85,
                   850
-                ], // Row 2: 3 errors
+                ], // Row 2: 2 errors (date and EWC code)
                 [
-                  10001,
+                  10002,
                   '2025-08-01T00:00:00.000Z',
                   '16 03 10',
                   2000,
@@ -606,7 +763,7 @@ describe('validateDataSyntax', () => {
         const errors = result.issues.getIssuesBySeverity(
           VALIDATION_SEVERITY.ERROR
         )
-        expect(errors.length).toBe(3) // All 3 errors from row 2
+        expect(errors.length).toBe(2) // 2 errors from row 2 (date and EWC code)
         expect(errors.every((e) => e.context.location?.row === 9)).toBe(true) // Row 7 (headers) + 2 (second data row)
       })
     })
@@ -637,8 +794,8 @@ describe('validateDataSyntax', () => {
               ],
               rows: [
                 [
-                  9999,
-                  '2025-05-28T00:00:00.000Z',
+                  10000,
+                  'invalid-date',
                   '03 03 08',
                   1000,
                   100,
@@ -664,8 +821,8 @@ describe('validateDataSyntax', () => {
           sheet: 'Received (sections 1, 2, 3)',
           table: 'RECEIVED_LOADS_FOR_REPROCESSING',
           row: 8, // 7 + 1 (for data row)
-          column: 'B', // Column B for ROW_ID
-          header: 'ROW_ID'
+          column: 'C', // Column C for DATE_RECEIVED_FOR_REPROCESSING
+          header: 'DATE_RECEIVED_FOR_REPROCESSING'
         })
       })
 
@@ -694,7 +851,7 @@ describe('validateDataSyntax', () => {
               ],
               rows: [
                 [
-                  9999,
+                  10000,
                   'invalid-date',
                   'bad-code',
                   1000,
@@ -707,7 +864,7 @@ describe('validateDataSyntax', () => {
                   0.85,
                   850
                 ]
-              ] // First 3 fields invalid
+              ] // DATE and EWC_CODE invalid
             }
           }
         }
@@ -717,12 +874,9 @@ describe('validateDataSyntax', () => {
           VALIDATION_SEVERITY.ERROR
         )
 
-        expect(errors).toHaveLength(3)
+        expect(errors).toHaveLength(2)
 
         // Find errors by checking header to determine which field
-        const refError = errors.find(
-          (e) => e.context.location?.header === 'ROW_ID'
-        )
         const dateError = errors.find(
           (e) => e.context.location?.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
@@ -730,7 +884,6 @@ describe('validateDataSyntax', () => {
           (e) => e.context.location?.header === 'EWC_CODE'
         )
 
-        expect(refError.context.location.column).toBe('B') // First column
         expect(dateError.context.location.column).toBe('C') // Second column
         expect(ewcError.context.location.column).toBe('D') // Third column
       })
@@ -760,7 +913,7 @@ describe('validateDataSyntax', () => {
               ],
               rows: [
                 [
-                  9999,
+                  10000,
                   'invalid',
                   'bad',
                   1000,
@@ -783,9 +936,6 @@ describe('validateDataSyntax', () => {
           VALIDATION_SEVERITY.ERROR
         )
 
-        const refError = errors.find(
-          (e) => e.context.location?.header === 'ROW_ID'
-        )
         const dateError = errors.find(
           (e) => e.context.location?.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
@@ -793,7 +943,6 @@ describe('validateDataSyntax', () => {
           (e) => e.context.location?.header === 'EWC_CODE'
         )
 
-        expect(refError.context.location.column).toBe('Z') // Column 26
         expect(dateError.context.location.column).toBe('AA') // Column 27
         expect(ewcError.context.location.column).toBe('AB') // Column 28
       })
@@ -819,8 +968,8 @@ describe('validateDataSyntax', () => {
               ],
               rows: [
                 [
-                  9999,
-                  '2025-05-28T00:00:00.000Z',
+                  10000,
+                  'invalid-date',
                   '03 03 08',
                   1000,
                   100,
@@ -843,7 +992,9 @@ describe('validateDataSyntax', () => {
         )
 
         // Location now always includes header name, even without spreadsheet coordinates
-        expect(errors[0].context.location.header).toBe('ROW_ID')
+        expect(errors[0].context.location.header).toBe(
+          'DATE_RECEIVED_FOR_REPROCESSING'
+        )
         expect(errors[0].context.location.row).toBeUndefined()
         expect(errors[0].context.location.column).toBeUndefined()
       })

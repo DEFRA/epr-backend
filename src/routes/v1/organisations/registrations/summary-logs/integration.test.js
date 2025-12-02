@@ -489,7 +489,7 @@ describe('Summary logs integration', () => {
                   850
                 ], // Valid row
                 [
-                  9999,
+                  10001,
                   'invalid-date',
                   'bad-code',
                   1000,
@@ -501,7 +501,7 @@ describe('Summary logs integration', () => {
                   50,
                   0.85,
                   850
-                ] // Invalid row - first 3 cells invalid
+                ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
               ]
             }
           }
@@ -583,20 +583,19 @@ describe('Summary logs integration', () => {
           await testSummaryLogsRepository.findById(summaryLogId)
 
         expect(summaryLog.validation).toBeDefined()
-        expect(summaryLog.validation.issues).toHaveLength(3)
+        expect(summaryLog.validation.issues).toHaveLength(2)
 
-        // All 3 errors should be from row 9 (headers at row 7 + second data row)
+        // All 2 errors should be from row 9 (headers at row 7 + second data row)
         expect(
           summaryLog.validation.issues.every(
             (i) => i.context.location?.row === 9
           )
         ).toBe(true)
 
-        // Should have errors for all 3 invalid cells
+        // Should have errors for 2 invalid cells (DATE and EWC_CODE)
         const errorFields = summaryLog.validation.issues.map(
           (i) => i.context.location?.header
         )
-        expect(errorFields).toContain('ROW_ID')
         expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(errorFields).toContain('EWC_CODE')
 
@@ -623,18 +622,18 @@ describe('Summary logs integration', () => {
         const rowWithIssues =
           payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(rowWithIssues.row).toBe(9)
-        expect(rowWithIssues.issues).toHaveLength(3)
+        expect(rowWithIssues.issues).toHaveLength(2)
 
         // Spot check one issue has the complete structure per ADR 0020
-        const ourReferenceIssue = rowWithIssues.issues.find(
-          (issue) => issue.header === 'ROW_ID'
+        const dateIssue = rowWithIssues.issues.find(
+          (issue) => issue.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
-        expect(ourReferenceIssue).toMatchObject({
+        expect(dateIssue).toMatchObject({
           type: 'error',
           code: expect.any(String),
-          header: 'ROW_ID',
-          column: 'B',
-          actual: 9999
+          header: 'DATE_RECEIVED_FOR_REPROCESSING',
+          column: 'C',
+          actual: 'invalid-date'
         })
 
         // All issues should have consistent structure
@@ -663,12 +662,12 @@ describe('Summary logs integration', () => {
 
         // Both rows are added (first submission, no prior records)
         // Row 1 (ROW_ID 10000) is valid
-        // Row 2 (ROW_ID 9999) is invalid (has validation errors)
+        // Row 2 (ROW_ID 10001) is invalid (has validation errors)
         // Note: ROW_ID values come from mock data as numbers
         expect(payload.loads).toEqual({
           added: {
             valid: { count: 1, rowIds: [10000] },
-            invalid: { count: 1, rowIds: [9999] }
+            invalid: { count: 1, rowIds: [10001] }
           },
           unchanged: {
             valid: { count: 0, rowIds: [] },
