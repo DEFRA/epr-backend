@@ -36,19 +36,6 @@
       "wasteProcessingType": "exporter",
       "glassRecyclingProcess": null,
       "cbduNumber": "CBDU789012",
-      "wasteManagementPermits": [
-        {
-          "type": "environmental_permit",
-          "permitNumber": "WML789012",
-          "authorisedMaterials": [
-            {
-              "material": "plastic",
-              "authorisedWeightInTonnes": 30,
-              "timeScale": "yearly"
-            }
-          ]
-        }
-      ],
       "approvedPersons": [
         {
           "fullName": "Carol White",
