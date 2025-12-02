@@ -5,8 +5,7 @@ import {
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
-import { getTableSchema } from './table-schemas.js'
-import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
+import { createTableSchemaGetter } from './table-schemas.js'
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
@@ -173,18 +172,14 @@ const createRowIssues = ({
   })
 
 /**
- * Extracts the row ID from a row object based on the table's ID field
- *
- * Only called for tables with schemas, so idField is guaranteed to exist.
- * The row ID value is required by schema validation, so it's guaranteed to be present.
+ * Extracts the row ID from a row object based on the schema's row ID field
  *
  * @param {Object} rowObject - Row data as object with header keys
- * @param {string} tableName - Name of the table
+ * @param {string} rowIdField - The field name for the row ID (from schema)
  * @returns {string} The row ID
  */
-const extractRowId = (rowObject, tableName) => {
-  const idField = getRowIdField(tableName)
-  return String(rowObject[idField])
+const extractRowId = (rowObject, rowIdField) => {
+  return String(rowObject[rowIdField])
 }
 
 /**
@@ -244,6 +239,7 @@ const validateRowAgainstSchema = ({
  * @param {Object} params.rowSchemas - Schemas for row validation
  * @param {import('joi').ObjectSchema} params.rowSchemas.failure - Schema for fatal validations
  * @param {import('joi').ObjectSchema} params.rowSchemas.concern - Schema for concern validations
+ * @param {string} params.rowIdField - Field name for the row ID
  * @param {Object} params.location - Table location in spreadsheet
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with issues attached
@@ -253,6 +249,7 @@ const validateRows = ({
   headerToIndexMap,
   rows,
   rowSchemas,
+  rowIdField,
   location,
   issues
 }) => {
@@ -283,7 +280,7 @@ const validateRows = ({
       recordIssue: issues.addError.bind(issues)
     })
 
-    const rowId = extractRowId(rowObject, tableName)
+    const rowId = extractRowId(rowObject, rowIdField)
     return {
       values: originalRow,
       rowId,
@@ -304,7 +301,7 @@ const validateRows = ({
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
   const { headers, rows, location } = tableData
-  const { requiredHeaders, rowSchemas } = schema
+  const { requiredHeaders, rowSchemas, rowIdField } = schema
 
   validateHeaders({
     tableName,
@@ -325,6 +322,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     headerToIndexMap,
     rows,
     rowSchemas,
+    rowIdField,
     location,
     issues
   })
@@ -348,13 +346,13 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
 /**
  * Validates the syntax of data tables in a summary log
  *
- * Validates each table in parsed.data that has a defined schema:
+ * Validates each table in parsed.data that has a defined schema for the processing type:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
  * - Validates each row as a complete object using pre-compiled Joi schemas (ERROR severity)
  * - Reports precise error locations for all validation failures
  *
  * Row-level validation is more efficient than cell-by-cell validation and enables
- * cross-field validation rules (e.g., ensuring related fields have consistent values).
+ * cross-field validation rules (e.g. ensuring related fields have consistent values).
  *
  * Severity levels:
  * - FATAL: Missing required headers prevent processing the entire table
@@ -363,12 +361,15 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  *
  * @param {Object} params
  * @param {Object} params.parsed - The parsed summary log structure
+ * @param {Object} [params.schemaRegistry] - Schema registry to use (for testing)
  * @returns {DataSyntaxValidationResult} Validation issues and validated data
  */
-export const validateDataSyntax = ({ parsed }) => {
+export const validateDataSyntax = ({ parsed, schemaRegistry }) => {
   const issues = createValidationIssues()
 
   const data = parsed?.data || {}
+  const processingType = parsed?.meta?.PROCESSING_TYPE?.value
+  const getTableSchema = createTableSchemaGetter(processingType, schemaRegistry)
   const validatedTables = {}
 
   for (const [tableName, tableData] of Object.entries(data)) {
