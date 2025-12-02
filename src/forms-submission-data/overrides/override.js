@@ -57,19 +57,27 @@ export function applyAccreditationOverrides(submission) {
 }
 
 /**
- * Gets the set of registration IDs that have overrides configured
+ * Gets the set of systemReferences from registration overrides
  *
- * @returns {Set<string>} Set of registration IDs requiring orgId validation
+ * @returns {Set<string>} Set of systemReferences requiring orgId validation
  */
-export function getRegistrationOverrideIds() {
-  return new Set(overrideConfig.registrations.map((item) => item.id))
+export function getRegistrationOverrideSystemReferences() {
+  return new Set(
+    overrideConfig.registrations
+      .filter((item) => item.overrides.systemReference)
+      .map((item) => item.overrides.systemReference)
+  )
 }
 
 /**
- * Gets the set of accreditation IDs that have overrides configured
+ * Gets the set of systemReferences from accreditation overrides
  *
- * @returns {Set<string>} Set of accreditation IDs requiring orgId validation
+ * @returns {Set<string>} Set of systemReferences requiring orgId validation
  */
-export function getAccreditationOverrideIds() {
-  return new Set(overrideConfig.accreditations.map((item) => item.id))
+export function getAccreditationOverrideSystemReferences() {
+  return new Set(
+    overrideConfig.accreditations
+      .filter((item) => item.overrides.systemReference)
+      .map((item) => item.overrides.systemReference)
+  )
 }

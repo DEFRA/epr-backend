@@ -176,43 +176,52 @@ describe('linkItemsToOrganisations', () => {
     expect(logger.error).not.toHaveBeenCalled()
   })
 
-  it('requires orgId match for items specified in itemsRequiringOrgIdMatch', () => {
+  it('requires orgId match for systemReferences in systemReferencesRequiringOrgIdMatch', () => {
     const org1Id = new ObjectId().toString()
+    const org2Id = new ObjectId().toString()
     const reg1Id = new ObjectId().toString()
     const reg2Id = new ObjectId().toString()
     const reg3Id = new ObjectId().toString()
 
-    const organisations = [{ id: org1Id, orgId: 100, name: 'Org 1' }]
-
-    const registrations = [
-      { id: reg1Id, systemReference: org1Id, orgId: 100 }, // orgId matches - linked
-      { id: reg2Id, systemReference: org1Id, orgId: 200 }, // orgId doesn't match, but not in set - linked
-      { id: reg3Id, systemReference: org1Id, orgId: 300 } // orgId doesn't match, in set - unlinked
+    const organisations = [
+      { id: org1Id, orgId: 100, name: 'Org 1' },
+      { id: org2Id, orgId: 200, name: 'Org 2' }
     ]
 
-    // Only reg3Id requires orgId validation
-    const itemsRequiringOrgIdMatch = new Set([reg3Id])
+    const registrations = [
+      { id: reg1Id, systemReference: org1Id, orgId: 100 }, // orgId matches, systemRef in set - linked
+      { id: reg2Id, systemReference: org1Id, orgId: 300 }, // orgId doesn't match, systemRef in set - unlinked
+      { id: reg3Id, systemReference: org2Id, orgId: 400 } // orgId doesn't match, systemRef NOT in set - linked
+    ]
+
+    // Only items linking to org1Id require orgId validation
+    const systemReferencesRequiringOrgIdMatch = new Set([org1Id])
 
     const result = linkItemsToOrganisations(
       organisations,
       registrations,
       'registrations',
-      itemsRequiringOrgIdMatch
+      systemReferencesRequiringOrgIdMatch
     )
 
-    expect(result).toHaveLength(1)
+    expect(result).toHaveLength(2)
 
     const org1 = result.find((org) => org.id === org1Id)
-    // Should only link reg1Id and reg2Id (reg3Id excluded because orgId doesn't match)
-    expect(org1.registrations).toHaveLength(2)
-    expect(org1.registrations.map((r) => r.id)).toEqual([reg1Id, reg2Id])
+    // Only reg1Id linked (reg2Id excluded because orgId doesn't match and org1Id is in validation set)
+    expect(org1.registrations).toHaveLength(1)
+    expect(org1.registrations.map((r) => r.id)).toEqual([reg1Id])
 
-    // reg3Id should be logged as unlinked
+    const org2 = result.find((org) => org.id === org2Id)
+    // reg3Id linked even though orgId doesn't match (org2Id not in validation set)
+    expect(org2.registrations).toHaveLength(1)
+    expect(org2.registrations.map((r) => r.id)).toEqual([reg3Id])
+
+    // reg2Id should be logged as unlinked
     expect(logger.warn).toHaveBeenCalledWith({
       message: '1 registrations not linked to an organisation'
     })
     expect(logger.warn).toHaveBeenCalledWith({
-      message: `registrations not linked: id=${reg3Id}, systemReference=${org1Id}, orgId=300`
+      message: `registrations not linked: id=${reg2Id}, systemReference=${org1Id}, orgId=300`
     })
   })
 })

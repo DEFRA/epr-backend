@@ -170,14 +170,14 @@ describe('migrateFormsData', () => {
           expect.any(Array),
           expect.any(Array),
           'registrations',
-          new Set(['507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012'])
+          new Set(['507f191e810c19729de860ea', '507f191e810c19729de860eb'])
         )
         expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
           2,
           expect.any(Array),
           expect.any(Array),
           'accreditations',
-          new Set(['65a2f4e8b4c5d9f8e7a6b1c2', '65a2f4e8b4c5d9f8e7a6b1c4'])
+          new Set(['65a2f5a1b4c5d9f8e7a6b1c3', '65a2f5a1b4c5d9f8e7a6b1c5'])
         )
 
         expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)

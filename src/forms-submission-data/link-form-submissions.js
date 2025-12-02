@@ -58,15 +58,21 @@ function toUnlinkedItem(item) {
  * Partitions items into matched and unmatched based on orgId requirements
  * @param {Array} items - Items to partition
  * @param {Object} org - Organisation to match against
- * @param {Set<string>} itemsRequiringOrgIdMatch - Set of item IDs requiring orgId validation
+ * @param {Set<string>} systemReferencesRequiringOrgIdMatch - Set of systemReferences requiring orgId validation
  * @returns {{matched: Array, unmatched: Array}} Partitioned items
  */
-function partitionItemsByOrgIdMatch(items, org, itemsRequiringOrgIdMatch) {
+function partitionItemsByOrgIdMatch(
+  items,
+  org,
+  systemReferencesRequiringOrgIdMatch
+) {
   const matched = []
   const unmatched = []
 
   for (const item of items) {
-    const requiresOrgIdMatch = itemsRequiringOrgIdMatch.has(item.id)
+    const requiresOrgIdMatch = systemReferencesRequiringOrgIdMatch.has(
+      item.systemReference
+    )
 
     if (!requiresOrgIdMatch || item.orgId === org.orgId) {
       matched.push(item)
@@ -103,14 +109,14 @@ function logUnlinkedItems(unlinkedItems, propertyName) {
  * @param {Array} organisations - Array of organisation objects
  * @param {Array} items - Array of items to link (registrations, accreditations, etc.)
  * @param {string} propertyName - Property name to set on organisation (e.g., 'registrations', 'accreditations')
- * @param {Set<string>} itemsRequiringOrgIdMatch - Set of item IDs that require orgId to match organisation's orgId for linking
+ * @param {Set<string>} systemReferencesRequiringOrgIdMatch - Set of systemReferences that require orgId to match organisation's orgId for linking
  * @returns {Array} Array of organisations with linked items
  */
 export function linkItemsToOrganisations(
   organisations,
   items,
   propertyName,
-  itemsRequiringOrgIdMatch
+  systemReferencesRequiringOrgIdMatch
 ) {
   const itemsBySystemReference = getItemsBySystemReference(items)
   const organisationsById = getOrganisationsById(organisations)
@@ -124,7 +130,7 @@ export function linkItemsToOrganisations(
       const { matched, unmatched } = partitionItemsByOrgIdMatch(
         itemsPerOrg,
         org,
-        itemsRequiringOrgIdMatch
+        systemReferencesRequiringOrgIdMatch
       )
 
       org[propertyName] = matched
