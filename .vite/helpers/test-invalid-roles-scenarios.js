@@ -60,3 +60,62 @@ export function testOnlyServiceMaintainerCanAccess({
     )
   })
 }
+
+/**
+ * @param {Object} params
+ * @param {() => import('@hapi/hapi').Server} params.server
+ * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
+ * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
+ */
+export function testOnlyStandardUserCanAccess({
+  server,
+  makeRequest,
+  additionalExpectations
+}) {
+  describe('A user with', () => {
+    const tokenScenarios = [
+      {
+        token: entraIdMockAuthTokens.validToken,
+        description: 'a valid Entra token with the service maintainer role',
+        expectedStatus: StatusCodes.UNAUTHORIZED
+      },
+      {
+        token: entraIdMockAuthTokens.nonServiceMaintainerUserToken,
+        description:
+          'a valid Entra token but without the service maintainer role',
+        expectedStatus: StatusCodes.FORBIDDEN
+      },
+      {
+        token: defraIdMockAuthTokens.unknownUserToken,
+        description:
+          'a valid Defra Id token but with an unknown email and contactId',
+        expectedStatus: StatusCodes.UNAUTHORIZED
+      },
+      {
+        token: defraIdMockAuthTokens.validToken,
+        description: 'a valid Defra Id token for a known public user',
+        expectedStatus: StatusCodes.OK
+      }
+    ]
+
+    it.each(tokenScenarios)(
+      'returns $expectedStatus for user with $description',
+      async ({ token, expectedStatus }) => {
+        const requestConfig = await makeRequest()
+        const response = await server().inject({
+          ...requestConfig,
+          headers: {
+            ...requestConfig.headers,
+            Authorization: `Bearer ${token}`
+          }
+        })
+
+        expect(response.statusCode).toBe(expectedStatus)
+
+        if (additionalExpectations) {
+          additionalExpectations(response)
+        }
+      }
+    )
+  })
+}
