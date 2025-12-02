@@ -127,13 +127,10 @@ export const PROCESSING_TYPE_TABLES = {
  * Creates a table schema getter bound to a specific processing type
  *
  * @param {string} processingType - The processing type from meta.PROCESSING_TYPE
- * @param {Object} [registry=PROCESSING_TYPE_TABLES] - Schema registry to use (for testing)
+ * @param {Object} registry - Schema registry mapping processing types to table schemas
  * @returns {function(string): Object|null} A function that takes a table name and returns its schema
  */
-export const createTableSchemaGetter = (
-  processingType,
-  registry = PROCESSING_TYPE_TABLES
-) => {
+export const createTableSchemaGetter = (processingType, registry) => {
   const tables = registry[processingType]
   return (tableName) => tables?.[tableName] || null
 }

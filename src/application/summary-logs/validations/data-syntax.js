@@ -344,7 +344,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  */
 
 /**
- * Validates the syntax of data tables in a summary log
+ * Creates a data syntax validator bound to a specific schema registry
  *
  * Validates each table in parsed.data that has a defined schema for the processing type:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
@@ -359,12 +359,10 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  * - ERROR: Invalid row values mark specific rows as invalid but don't block
  *          submission of the entire spreadsheet - other valid rows can still be processed
  *
- * @param {Object} params
- * @param {Object} params.parsed - The parsed summary log structure
- * @param {Object} [params.schemaRegistry] - Schema registry to use (for testing)
- * @returns {DataSyntaxValidationResult} Validation issues and validated data
+ * @param {Object} schemaRegistry - Schema registry mapping processing types to table schemas
+ * @returns {function(Object): DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
-export const validateDataSyntax = ({ parsed, schemaRegistry }) => {
+export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
   const issues = createValidationIssues()
 
   const data = parsed?.data || {}

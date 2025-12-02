@@ -1,6 +1,9 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
-import { createTableSchemaGetter } from '#application/summary-logs/validations/table-schemas.js'
+import {
+  createTableSchemaGetter,
+  PROCESSING_TYPE_TABLES
+} from '#application/summary-logs/validations/table-schemas.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 
 /**
@@ -42,7 +45,10 @@ const extractRowIds = (tableName, headers, rows) => {
  */
 const prepareRowsForTransformation = (parsedData) => {
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
-  const getTableSchema = createTableSchemaGetter(processingType)
+  const getTableSchema = createTableSchemaGetter(
+    processingType,
+    PROCESSING_TYPE_TABLES
+  )
   const transformedData = {}
 
   for (const [tableName, tableData] of Object.entries(parsedData.data)) {

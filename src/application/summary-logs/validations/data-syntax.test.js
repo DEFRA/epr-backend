@@ -1,11 +1,11 @@
 import Joi from 'joi'
-import { validateDataSyntax } from './data-syntax.js'
+import { createDataSyntaxValidator } from './data-syntax.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
-describe('validateDataSyntax', () => {
+describe('createDataSyntaxValidator', () => {
   // Minimal test schemas - decoupled from production schemas
   const TEST_SCHEMAS = {
     TEST: {
@@ -110,11 +110,10 @@ describe('validateDataSyntax', () => {
     }
   }
 
+  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS)
+
   const validate = (tables, options = {}) =>
-    validateDataSyntax({
-      parsed: createParsedData(tables, options),
-      schemaRegistry: TEST_SCHEMAS
-    })
+    validateDataSyntax(createParsedData(tables, options))
 
   describe('valid data', () => {
     it('returns valid result when all data is correct', () => {
@@ -150,10 +149,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -169,10 +165,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -188,10 +181,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -212,10 +202,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -233,10 +220,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(true)
@@ -261,10 +245,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isFatal()).toBe(true)
 
@@ -562,10 +543,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -573,19 +551,13 @@ describe('validateDataSyntax', () => {
 
   describe('edge cases', () => {
     it('handles missing data section gracefully', () => {
-      const result = validateDataSyntax({
-        parsed: {},
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax({})
 
       expect(result.issues.isValid()).toBe(true)
     })
 
     it('handles empty data section gracefully', () => {
-      const result = validateDataSyntax({
-        parsed: { data: {} },
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax({ data: {} })
 
       expect(result.issues.isValid()).toBe(true)
     })
@@ -628,10 +600,7 @@ describe('validateDataSyntax', () => {
         }
       }
 
-      const result = validateDataSyntax({
-        parsed,
-        schemaRegistry: TEST_SCHEMAS
-      })
+      const result = validateDataSyntax(parsed)
 
       expect(result.validatedData.data.TEST_TABLE.rows).toEqual([])
     })
