@@ -489,7 +489,7 @@ describe('Summary logs integration', () => {
                   850
                 ], // Valid row
                 [
-                  9999,
+                  10001,
                   'invalid-date',
                   'bad-code',
                   1000,
@@ -501,7 +501,7 @@ describe('Summary logs integration', () => {
                   50,
                   0.85,
                   850
-                ] // Invalid row - first 3 cells invalid
+                ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
               ]
             }
           }
@@ -583,20 +583,19 @@ describe('Summary logs integration', () => {
           await testSummaryLogsRepository.findById(summaryLogId)
 
         expect(summaryLog.validation).toBeDefined()
-        expect(summaryLog.validation.issues).toHaveLength(3)
+        expect(summaryLog.validation.issues).toHaveLength(2)
 
-        // All 3 errors should be from row 9 (headers at row 7 + second data row)
+        // All 2 errors should be from row 9 (headers at row 7 + second data row)
         expect(
           summaryLog.validation.issues.every(
             (i) => i.context.location?.row === 9
           )
         ).toBe(true)
 
-        // Should have errors for all 3 invalid cells
+        // Should have errors for 2 invalid cells (DATE and EWC_CODE)
         const errorFields = summaryLog.validation.issues.map(
           (i) => i.context.location?.header
         )
-        expect(errorFields).toContain('ROW_ID')
         expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(errorFields).toContain('EWC_CODE')
 
@@ -623,18 +622,18 @@ describe('Summary logs integration', () => {
         const rowWithIssues =
           payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(rowWithIssues.row).toBe(9)
-        expect(rowWithIssues.issues).toHaveLength(3)
+        expect(rowWithIssues.issues).toHaveLength(2)
 
         // Spot check one issue has the complete structure per ADR 0020
-        const ourReferenceIssue = rowWithIssues.issues.find(
-          (issue) => issue.header === 'ROW_ID'
+        const dateIssue = rowWithIssues.issues.find(
+          (issue) => issue.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
-        expect(ourReferenceIssue).toMatchObject({
+        expect(dateIssue).toMatchObject({
           type: 'error',
           code: expect.any(String),
-          header: 'ROW_ID',
-          column: 'B',
-          actual: 9999
+          header: 'DATE_RECEIVED_FOR_REPROCESSING',
+          column: 'C',
+          actual: 'invalid-date'
         })
 
         // All issues should have consistent structure
@@ -654,7 +653,7 @@ describe('Summary logs integration', () => {
           payload.validation.concerns
         ).reduce((total, table) => total + table.rows.length, 0)
 
-        // All 3 errors are from row 9, so rowsWithIssues should be 1
+        // Both errors are from row 9, so rowsWithIssues should be 1
         expect(rowsWithIssues).toBe(1)
       })
 
@@ -663,12 +662,12 @@ describe('Summary logs integration', () => {
 
         // Both rows are added (first submission, no prior records)
         // Row 1 (ROW_ID 10000) is valid
-        // Row 2 (ROW_ID 9999) is invalid (has validation errors)
+        // Row 2 (ROW_ID 10001) is invalid (has validation errors)
         // Note: ROW_ID values come from mock data as numbers
         expect(payload.loads).toEqual({
           added: {
             valid: { count: 1, rowIds: [10000] },
-            invalid: { count: 1, rowIds: [9999] }
+            invalid: { count: 1, rowIds: [10001] }
           },
           unchanged: {
             valid: { count: 0, rowIds: [] },
@@ -679,6 +678,198 @@ describe('Summary logs integration', () => {
             invalid: { count: 0, rowIds: [] }
           }
         })
+      })
+    })
+  })
+
+  describe('data syntax validation with invalid ROW_ID (fatal row error)', () => {
+    const summaryLogId = 'summary-invalid-row-id'
+    const fileId = 'file-invalid-row-id'
+    const filename = 'invalid-row-id.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: 'REG-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Mock extractor with invalid ROW_ID AND other invalid fields
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION_NUMBER: {
+              value: 'REG-123',
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR_INPUT',
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
+          },
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: [
+                'ROW_ID',
+                'DATE_RECEIVED_FOR_REPROCESSING',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
+              ],
+              rows: [
+                [
+                  9999, // Invalid ROW_ID (below minimum 10000)
+                  'invalid-date', // Also invalid
+                  'bad-ewc-code', // Also invalid
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            }
+          }
+        }
+      })
+
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsWorker: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with fatal ROW_ID error', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns invalid status due to fatal ROW_ID error', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(payload.failureReason).toContain('ROW_ID')
+      })
+
+      it('persists both fatal and error severity issues', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        expect(summaryLog.validation).toBeDefined()
+        expect(summaryLog.validation.issues.length).toBeGreaterThan(1)
+
+        // Should have fatal error for ROW_ID
+        const fatalErrors = summaryLog.validation.issues.filter(
+          (i) => i.severity === 'fatal'
+        )
+        expect(fatalErrors).toHaveLength(1)
+        expect(fatalErrors[0].message).toContain('ROW_ID')
+
+        // Should also have error-level issues for other invalid fields
+        const errors = summaryLog.validation.issues.filter(
+          (i) => i.severity === 'error'
+        )
+        expect(errors).toHaveLength(2)
+        const errorHeaders = errors.map((e) => e.context.location?.header)
+        expect(errorHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+        expect(errorHeaders).toContain('EWC_CODE')
+      })
+
+      it('returns fatal failures in HTTP response', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.validation.failures).toHaveLength(1)
+        expect(payload.validation.failures[0].location.header).toBe('ROW_ID')
+      })
+
+      it('returns empty concerns in HTTP response', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.validation.concerns).toEqual({})
       })
     })
   })
