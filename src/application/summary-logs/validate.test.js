@@ -505,7 +505,11 @@ describe('SummaryLogsValidator', () => {
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
-              rows: [buildReceivedLoadRow({ ROW_ID: 9999 })] // Below minimum - non-fatal error
+              rows: [
+                buildReceivedLoadRow({
+                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date' // Non-fatal row error
+                })
+              ]
             })
           }
         })
@@ -567,9 +571,9 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow(), // Valid row (ROW_ID: 10000)
                 buildReceivedLoadRow({
-                  ROW_ID: 9999, // Invalid - below minimum
-                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date',
-                  EWC_CODE: 'bad-code'
+                  ROW_ID: 10001, // Valid ROW_ID
+                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date', // Row-level error
+                  EWC_CODE: 'bad-code' // Row-level error
                 })
               ]
             })
@@ -585,7 +589,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads).toEqual({
         added: {
           valid: { count: 1, rowIds: [10000] },
-          invalid: { count: 1, rowIds: [9999] }
+          invalid: { count: 1, rowIds: [10001] }
         },
         unchanged: {
           valid: { count: 0, rowIds: [] },

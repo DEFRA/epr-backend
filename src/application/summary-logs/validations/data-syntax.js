@@ -46,6 +46,26 @@ const mapJoiTypeToErrorCode = (joiType) => {
 }
 
 /**
+ * Builds a map from header names to their column indices
+ *
+ * Filters out null headers and EPR markers, returning only valid data headers.
+ *
+ * @param {Array<string|null>} headers - Array of header names from the table
+ * @returns {Map<string, number>} Map of header name to column index
+ */
+const buildHeaderToIndexMap = (headers) => {
+  const headerToIndexMap = new Map()
+
+  for (const [index, header] of headers.entries()) {
+    if (header !== null && !isEprMarker(header)) {
+      headerToIndexMap.set(header, index)
+    }
+  }
+
+  return headerToIndexMap
+}
+
+/**
  * Validates that required headers are present in the table
  *
  * Missing headers are FATAL because without them we cannot map cell values
@@ -86,7 +106,35 @@ const validateHeaders = ({
 }
 
 /**
- * Creates validation issues for a single row's errors
+ * Builds cell location for error reporting
+ *
+ * @param {Object} params
+ * @param {string} params.tableName - Name of the table
+ * @param {number} params.rowIndex - Zero-based row index
+ * @param {string} params.fieldName - Name of the field with the error
+ * @param {number|undefined} params.colIndex - Column index for the field
+ * @param {Object} params.location - Table location in spreadsheet
+ * @returns {Object} Cell location object
+ */
+const buildCellLocation = ({
+  tableName,
+  rowIndex,
+  fieldName,
+  colIndex,
+  location
+}) =>
+  location?.column && colIndex !== undefined
+    ? {
+        sheet: location.sheet,
+        table: tableName,
+        row: location.row + rowIndex + 1,
+        column: offsetColumn(location.column, colIndex),
+        header: fieldName
+      }
+    : { table: tableName, header: fieldName }
+
+/**
+ * Creates validation issues from Joi validation errors
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
@@ -107,24 +155,18 @@ const createRowIssues = ({
     const fieldName = String(detail.path[0])
     const colIndex = headerToIndexMap.get(fieldName)
 
-    const cellLocation =
-      location?.column && colIndex !== undefined
-        ? {
-            sheet: location.sheet,
-            table: tableName,
-            row: location.row + rowIndex + 1,
-            column: offsetColumn(location.column, colIndex),
-            header: fieldName
-          }
-        : { table: tableName, header: fieldName }
-
     return {
-      severity: 'error',
       category: VALIDATION_CATEGORY.TECHNICAL,
       message: `Invalid value in column '${fieldName}': ${detail.message}`,
       code: mapJoiTypeToErrorCode(detail.type),
       context: {
-        location: cellLocation,
+        location: buildCellLocation({
+          tableName,
+          rowIndex,
+          fieldName,
+          colIndex,
+          location
+        }),
         actual: detail.context.value
       }
     }
@@ -146,36 +188,74 @@ const extractRowId = (rowObject, tableName) => {
 }
 
 /**
- * Validates data rows and returns validated row structures with issues attached
+ * Validates a row against a schema and records any issues
  *
- * This validates each row as a complete object, which is more efficient than
- * cell-by-cell validation and enables cross-field validation rules.
+ * @param {Object} params
+ * @param {Object} params.rowObject - Row data as object with header keys
+ * @param {import('joi').ObjectSchema} params.schema - Joi schema to validate against
+ * @param {string} params.tableName - Name of the table being validated
+ * @param {number} params.rowIndex - Zero-based row index
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
+ * @param {Object} params.location - Table location in spreadsheet
+ * @param {Function} params.recordIssue - Function to record validation issues
+ * @returns {ValidationIssue[]} Array of validation issues for this row
+ */
+const validateRowAgainstSchema = ({
+  rowObject,
+  schema,
+  tableName,
+  rowIndex,
+  headerToIndexMap,
+  location,
+  recordIssue
+}) => {
+  const result = schema.validate(rowObject)
+
+  if (!result.error) {
+    return []
+  }
+
+  const rowIssues = createRowIssues({
+    tableName,
+    rowIndex,
+    error: result.error,
+    headerToIndexMap,
+    location
+  })
+
+  for (const issue of rowIssues) {
+    recordIssue(issue.category, issue.message, issue.code, issue.context)
+  }
+
+  return rowIssues
+}
+
+/**
+ * Validates all rows in a single pass against both failure and concern schemas
+ *
+ * ROW_ID validation (failure schema) produces FATAL errors that reject the
+ * entire spreadsheet. Other field validations (concern schema) produce ERROR
+ * severity issues that mark individual rows as invalid.
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
- * @param {Array<string|null>} params.headers - Array of header names (may include nulls)
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
  * @param {Array<Array<*>>} params.rows - Array of raw data rows
- * @param {import('joi').ObjectSchema} params.rowSchema - Pre-compiled Joi object schema for rows
+ * @param {Object} params.rowSchemas - Schemas for row validation
+ * @param {import('joi').ObjectSchema} params.rowSchemas.failure - Schema for fatal validations
+ * @param {import('joi').ObjectSchema} params.rowSchemas.concern - Schema for concern validations
  * @param {Object} params.location - Table location in spreadsheet
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with issues attached
  */
 const validateRows = ({
   tableName,
-  headers,
+  headerToIndexMap,
   rows,
-  rowSchema,
+  rowSchemas,
   location,
   issues
 }) => {
-  const headerToIndexMap = new Map()
-
-  for (const [index, header] of headers.entries()) {
-    if (header !== null && !isEprMarker(header)) {
-      headerToIndexMap.set(header, index)
-    }
-  }
-
   return rows.map((originalRow, rowIndex) => {
     const rowObject = {}
 
@@ -183,28 +263,31 @@ const validateRows = ({
       rowObject[headerName] = originalRow[colIndex]
     }
 
-    const { error } = rowSchema.validate(rowObject)
+    const failureIssues = validateRowAgainstSchema({
+      rowObject,
+      schema: rowSchemas.failure,
+      tableName,
+      rowIndex,
+      headerToIndexMap,
+      location,
+      recordIssue: issues.addFatal.bind(issues)
+    })
 
-    const rowIssues = error
-      ? createRowIssues({
-          tableName,
-          rowIndex,
-          error,
-          headerToIndexMap,
-          location
-        })
-      : []
-
-    // Add issues to shared collector for isFatal checks
-    for (const issue of rowIssues) {
-      issues.addError(issue.category, issue.message, issue.code, issue.context)
-    }
+    const concernIssues = validateRowAgainstSchema({
+      rowObject,
+      schema: rowSchemas.concern,
+      tableName,
+      rowIndex,
+      headerToIndexMap,
+      location,
+      recordIssue: issues.addError.bind(issues)
+    })
 
     const rowId = extractRowId(rowObject, tableName)
     return {
       values: originalRow,
       rowId,
-      issues: rowIssues
+      issues: [...failureIssues, ...concernIssues]
     }
   })
 }
@@ -221,7 +304,7 @@ const validateRows = ({
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
   const { headers, rows, location } = tableData
-  const { requiredHeaders, rowSchema } = schema
+  const { requiredHeaders, rowSchemas } = schema
 
   validateHeaders({
     tableName,
@@ -235,14 +318,20 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     return { ...tableData, rows: [] }
   }
 
+  const headerToIndexMap = buildHeaderToIndexMap(headers)
+
   const validatedRows = validateRows({
     tableName,
-    headers,
+    headerToIndexMap,
     rows,
-    rowSchema,
+    rowSchemas,
     location,
     issues
   })
+
+  if (issues.isFatal()) {
+    return { ...tableData, rows: [] }
+  }
 
   return {
     ...tableData,
