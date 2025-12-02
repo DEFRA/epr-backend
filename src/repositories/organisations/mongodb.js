@@ -1,18 +1,19 @@
+import Boom from '@hapi/boom'
+import { ObjectId } from 'mongodb'
+import {
+  SCHEMA_VERSION,
+  collateUsersOnApproval,
+  createInitialStatusHistory,
+  getCurrentStatus,
+  hasChanges,
+  mergeSubcollection,
+  statusHistoryWithChanges
+} from './helpers.js'
 import {
   validateId,
   validateOrganisationInsert,
   validateOrganisationUpdate
 } from './schema/index.js'
-import {
-  SCHEMA_VERSION,
-  createInitialStatusHistory,
-  getCurrentStatus,
-  statusHistoryWithChanges,
-  mergeSubcollection,
-  hasChanges
-} from './helpers.js'
-import Boom from '@hapi/boom'
-import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -59,7 +60,8 @@ const performInsert = (db) => async (organisation) => {
       statusHistory: createInitialStatusHistory(),
       ...orgFields,
       registrations,
-      accreditations
+      accreditations,
+      users: []
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
@@ -95,16 +97,31 @@ const performUpdate = (db) => async (id, version, updates) => {
     validatedUpdates.accreditations
   )
 
+  const updatedStatusHistory = statusHistoryWithChanges(
+    validatedUpdates,
+    existing
+  )
+
+  const users = collateUsersOnApproval(existing, {
+    ...merged,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations
+  })
+
+  const updatePayload = {
+    ...merged,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations,
+    users,
+    version: existing.version + 1
+  }
+
   const result = await db.collection(COLLECTION_NAME).updateOne(
     { _id: ObjectId.createFromHexString(validatedId), version },
     {
-      $set: {
-        ...merged,
-        statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
-        registrations,
-        accreditations,
-        version: existing.version + 1
-      }
+      $set: updatePayload
     }
   )
 
