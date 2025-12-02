@@ -22,7 +22,7 @@ export const transformReceivedLoadsRow = (rowData, rowIndex) => {
 
   return {
     wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
-    rowId: rowData[rowIdField],
+    rowId: String(rowData[rowIdField]),
     data: rowData
   }
 }

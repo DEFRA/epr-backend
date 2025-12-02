@@ -664,11 +664,11 @@ describe('Summary logs integration', () => {
         // Both rows are added (first submission, no prior records)
         // Row 1 (ROW_ID 10000) is valid
         // Row 2 (ROW_ID 9999) is invalid (has validation errors)
-        // Note: ROW_ID values come from mock data as numbers
+        // Note: ROW_ID values are converted to strings during transformation
         expect(payload.loads).toEqual({
           added: {
-            valid: { count: 1, rowIds: [10000] },
-            invalid: { count: 1, rowIds: [9999] }
+            valid: { count: 1, rowIds: ['10000'] },
+            invalid: { count: 1, rowIds: ['9999'] }
           },
           unchanged: {
             valid: { count: 0, rowIds: [] },
@@ -1581,11 +1581,17 @@ describe('Summary logs integration', () => {
                 'EWC_CODE',
                 'GROSS_WEIGHT',
                 'TARE_WEIGHT',
-                'NET_WEIGHT'
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
-                ['10001', '2025-01-15', '15 01 01', 1000, 100, 900],
-                ['10002', '2025-01-16', '15 01 02', 2000, 200, 1800]
+                [10001, '2025-01-15', '15 01 01', 1000, 100, 50, 850, 'Yes', 'Actual weight (100%)', 10, 0.95, 807.5],
+                [10002, '2025-01-16', '15 01 02', 2000, 200, 100, 1700, 'No', 'Actual weight (100%)', 20, 0.9, 1530]
               ]
             }
           }

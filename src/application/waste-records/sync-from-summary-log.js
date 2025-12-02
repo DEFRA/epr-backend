@@ -1,62 +1,29 @@
 import { transformFromSummaryLog } from './transform-from-summary-log.js'
-import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
-import { getTableSchema } from '#application/summary-logs/validations/table-schemas.js'
-import { isEprMarker } from '#domain/summary-logs/markers.js'
+import { validateDataSyntax } from '#application/summary-logs/validations/data-syntax.js'
 
 /**
- * Extracts row IDs from raw rows based on the table's ID field
+ * Filters validated data to only include rows without validation errors
  *
- * Only called for tables with schemas, so idField is guaranteed to exist.
- *
- * @param {string} tableName - The table name
- * @param {Array<string|null>} headers - Array of header names
- * @param {Array<Array<*>>} rows - Array of raw row value arrays
- * @returns {Array<{values: Array<*>, rowId: string}>}
+ * @param {Object} validatedData - Data from validateDataSyntax with rows as { values, rowId, issues }
+ * @returns {Object} Filtered data with only valid rows
  */
-const extractRowIds = (tableName, headers, rows) => {
-  const idField = getRowIdField(tableName)
+const filterValidRows = (validatedData) => {
+  const filteredData = {}
 
-  // Build header to index map, excluding EPR markers and nulls
-  const headerToIndexMap = new Map()
-  for (const [index, header] of headers.entries()) {
-    if (header !== null && !isEprMarker(header)) {
-      headerToIndexMap.set(header, index)
-    }
-  }
+  for (const [tableName, tableData] of Object.entries(validatedData.data)) {
+    const validRows = tableData.rows?.filter(
+      (row) => !row.issues || row.issues.length === 0
+    )
 
-  const idFieldIndex = headerToIndexMap.get(idField)
-
-  return rows.map((row) => ({
-    values: row,
-    rowId: String(row[idFieldIndex])
-  }))
-}
-
-/**
- * Prepares parsed data by extracting row IDs
- *
- * Only processes tables that have schemas defined.
- *
- * @param {Object} parsedData - The parsed summary log data
- * @returns {Object} New structure with row IDs extracted
- */
-const prepareRowsForTransformation = (parsedData) => {
-  const transformedData = {}
-
-  for (const [tableName, tableData] of Object.entries(parsedData.data)) {
-    if (!getTableSchema(tableName)) {
-      transformedData[tableName] = tableData
-      continue
-    }
-    transformedData[tableName] = {
+    filteredData[tableName] = {
       ...tableData,
-      rows: extractRowIds(tableName, tableData.headers, tableData.rows)
+      rows: validRows ?? tableData.rows
     }
   }
 
   return {
-    ...parsedData,
-    data: transformedData
+    ...validatedData,
+    data: filteredData
   }
 }
 
@@ -88,8 +55,14 @@ export const syncFromSummaryLog = (dependencies) => {
     // 1. Extract/parse the summary log
     const parsedData = await extractor.extract(summaryLog)
 
-    // 2. Extract row IDs for transformation
-    const preparedData = prepareRowsForTransformation(parsedData)
+    // 2. Validate data syntax and filter to only valid rows
+    const { issues, validatedData } = validateDataSyntax({ parsed: parsedData })
+
+    if (issues.isFatal()) {
+      throw new Error('Validation failed with fatal errors during submission')
+    }
+
+    const preparedData = filterValidRows(validatedData)
 
     // 3. Load all existing waste records for this org/reg
     const existingRecordsArray = await wasteRecordRepository.findByRegistration(

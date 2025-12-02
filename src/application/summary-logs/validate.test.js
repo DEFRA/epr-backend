@@ -581,11 +581,11 @@ describe('SummaryLogsValidator', () => {
 
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
-      // Note: ROW_ID values come directly from test data as numbers
+      // Note: ROW_ID values are converted to strings during transformation
       expect(updateCall.loads).toEqual({
         added: {
-          valid: { count: 1, rowIds: [10000] },
-          invalid: { count: 1, rowIds: [9999] }
+          valid: { count: 1, rowIds: ['10000'] },
+          invalid: { count: 1, rowIds: ['9999'] }
         },
         unchanged: {
           valid: { count: 0, rowIds: [] },
