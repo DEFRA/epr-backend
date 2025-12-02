@@ -188,6 +188,49 @@ const extractRowId = (rowObject, tableName) => {
 }
 
 /**
+ * Validates a row against a schema and records any issues
+ *
+ * @param {Object} params
+ * @param {Object} params.rowObject - Row data as object with header keys
+ * @param {import('joi').ObjectSchema} params.schema - Joi schema to validate against
+ * @param {string} params.tableName - Name of the table being validated
+ * @param {number} params.rowIndex - Zero-based row index
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
+ * @param {Object} params.location - Table location in spreadsheet
+ * @param {Function} params.recordIssue - Function to record validation issues
+ * @returns {ValidationIssue[]} Array of validation issues for this row
+ */
+const validateRowAgainstSchema = ({
+  rowObject,
+  schema,
+  tableName,
+  rowIndex,
+  headerToIndexMap,
+  location,
+  recordIssue
+}) => {
+  const result = schema.validate(rowObject)
+
+  if (!result.error) {
+    return []
+  }
+
+  const rowIssues = createRowIssues({
+    tableName,
+    rowIndex,
+    error: result.error,
+    headerToIndexMap,
+    location
+  })
+
+  for (const issue of rowIssues) {
+    recordIssue(issue.category, issue.message, issue.code, issue.context)
+  }
+
+  return rowIssues
+}
+
+/**
  * Validates all rows in a single pass against both failure and concern schemas
  *
  * ROW_ID validation (failure schema) produces FATAL errors that reject the
@@ -220,57 +263,31 @@ const validateRows = ({
       rowObject[headerName] = originalRow[colIndex]
     }
 
-    // Validate against failure schema (e.g. ROW_ID)
-    const failureResult = rowSchemas.failure.validate(rowObject)
-    if (failureResult.error) {
-      const failureIssues = createRowIssues({
-        tableName,
-        rowIndex,
-        error: failureResult.error,
-        headerToIndexMap,
-        location
-      })
+    const failureIssues = validateRowAgainstSchema({
+      rowObject,
+      schema: rowSchemas.failure,
+      tableName,
+      rowIndex,
+      headerToIndexMap,
+      location,
+      recordIssue: issues.addFatal.bind(issues)
+    })
 
-      for (const issue of failureIssues) {
-        issues.addFatal(
-          issue.category,
-          issue.message,
-          issue.code,
-          issue.context
-        )
-      }
-
-      // Skip concern validation for rows with fatal failures
-      const rowId = extractRowId(rowObject, tableName)
-      return {
-        values: originalRow,
-        rowId,
-        issues: []
-      }
-    }
-
-    // Validate against concern schema (other field validations)
-    const concernResult = rowSchemas.concern.validate(rowObject)
-    const rowIssues = concernResult.error
-      ? createRowIssues({
-          tableName,
-          rowIndex,
-          error: concernResult.error,
-          headerToIndexMap,
-          location
-        })
-      : []
-
-    // Add concern issues to shared collector
-    for (const issue of rowIssues) {
-      issues.addError(issue.category, issue.message, issue.code, issue.context)
-    }
+    const concernIssues = validateRowAgainstSchema({
+      rowObject,
+      schema: rowSchemas.concern,
+      tableName,
+      rowIndex,
+      headerToIndexMap,
+      location,
+      recordIssue: issues.addError.bind(issues)
+    })
 
     const rowId = extractRowId(rowObject, tableName)
     return {
       values: originalRow,
       rowId,
-      issues: rowIssues
+      issues: [...failureIssues, ...concernIssues]
     }
   })
 }

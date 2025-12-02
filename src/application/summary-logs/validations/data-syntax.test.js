@@ -494,49 +494,6 @@ describe('validateDataSyntax', () => {
         expect(fatals).toHaveLength(2)
       })
 
-      it('skips row validation when ROW_ID validation fails', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  'invalid-row-id',
-                  'also-invalid-date',
-                  'also-invalid-ewc',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isFatal()).toBe(true)
-
-        // Should only have FATAL ROW_ID error, not other cell errors
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0].message).toContain('ROW_ID')
-
-        // No row-level errors should be present
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors).toHaveLength(0)
-      })
-
       it('handles missing location gracefully for FATAL ROW_ID errors', () => {
         const parsed = {
           data: {
