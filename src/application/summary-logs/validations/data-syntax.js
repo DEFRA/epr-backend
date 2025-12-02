@@ -46,6 +46,26 @@ const mapJoiTypeToErrorCode = (joiType) => {
 }
 
 /**
+ * Builds a map from header names to their column indices
+ *
+ * Filters out null headers and EPR markers, returning only valid data headers.
+ *
+ * @param {Array<string|null>} headers - Array of header names from the table
+ * @returns {Map<string, number>} Map of header name to column index
+ */
+const buildHeaderToIndexMap = (headers) => {
+  const headerToIndexMap = new Map()
+
+  for (const [index, header] of headers.entries()) {
+    if (header !== null && !isEprMarker(header)) {
+      headerToIndexMap.set(header, index)
+    }
+  }
+
+  return headerToIndexMap
+}
+
+/**
  * Validates that required headers are present in the table
  *
  * Missing headers are FATAL because without them we cannot map cell values
@@ -94,7 +114,7 @@ const validateHeaders = ({
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
- * @param {Array<string|null>} params.headers - Array of header names from the table
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
  * @param {Array<Array<*>>} params.rows - Array of raw data rows
  * @param {import('joi').ObjectSchema} params.failureSchema - Joi schema for failure validations
  * @param {Object} params.location - Table location in spreadsheet
@@ -102,20 +122,12 @@ const validateHeaders = ({
  */
 const validateRowForFailures = ({
   tableName,
-  headers,
+  headerToIndexMap,
   rows,
   failureSchema,
   location,
   issues
 }) => {
-  const headerToIndexMap = new Map()
-
-  for (const [index, header] of headers.entries()) {
-    if (header !== null && !isEprMarker(header)) {
-      headerToIndexMap.set(header, index)
-    }
-  }
-
   for (const [rowIndex, originalRow] of rows.entries()) {
     const rowObject = {}
 
@@ -223,7 +235,7 @@ const extractRowId = (rowObject, tableName) => {
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
- * @param {Array<string|null>} params.headers - Array of header names (may include nulls)
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
  * @param {Array<Array<*>>} params.rows - Array of raw data rows
  * @param {import('joi').ObjectSchema} params.concernSchema - Pre-compiled Joi object schema for row concerns
  * @param {Object} params.location - Table location in spreadsheet
@@ -232,20 +244,12 @@ const extractRowId = (rowObject, tableName) => {
  */
 const validateRowForConcerns = ({
   tableName,
-  headers,
+  headerToIndexMap,
   rows,
   concernSchema,
   location,
   issues
 }) => {
-  const headerToIndexMap = new Map()
-
-  for (const [index, header] of headers.entries()) {
-    if (header !== null && !isEprMarker(header)) {
-      headerToIndexMap.set(header, index)
-    }
-  }
-
   return rows.map((originalRow, rowIndex) => {
     const rowObject = {}
 
@@ -305,9 +309,11 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     return { ...tableData, rows: [] }
   }
 
+  const headerToIndexMap = buildHeaderToIndexMap(headers)
+
   validateRowForFailures({
     tableName,
-    headers,
+    headerToIndexMap,
     rows,
     failureSchema: rowSchemas.failure,
     location,
@@ -320,7 +326,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
 
   const validatedRows = validateRowForConcerns({
     tableName,
-    headers,
+    headerToIndexMap,
     rows,
     concernSchema: rowSchemas.concern,
     location,
