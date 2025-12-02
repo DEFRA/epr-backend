@@ -7,7 +7,7 @@ import { VALIDATION_SEVERITY } from '#common/enums/index.js'
  * @property {string} severity - One of VALIDATION_SEVERITY (fatal, error, warning)
  * @property {string} category - One of VALIDATION_CATEGORY (technical, business, parsing)
  * @property {string} message - Human-readable description for developers/logging (not sent to clients)
- * @property {string} code - Specific error code for i18n/translation (e.g., 'MISSING_REQUIRED_HEADER')
+ * @property {string} code - Specific error code for i18n/translation (e.g., 'HEADER_REQUIRED')
  * @property {Object} [context] - Additional context about the issue
  * @property {Object} [context.location] - Spreadsheet location information
  * @property {string} [context.location.sheet] - Sheet name (e.g., 'Cover', 'Received')

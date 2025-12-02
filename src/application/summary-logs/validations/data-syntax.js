@@ -74,7 +74,7 @@ const validateHeaders = ({
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
         `Missing required header '${requiredHeader}' in table '${tableName}'`,
-        VALIDATION_CODE.MISSING_REQUIRED_HEADER,
+        VALIDATION_CODE.HEADER_REQUIRED,
         {
           location,
           expected: requiredHeader,

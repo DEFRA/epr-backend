@@ -1,9 +1,9 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { compareSite, siteInfoToLog } from './parsing-common/site.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { compareSite, siteInfoToLog } from './parsing-common/site.js'
 
 /**
- * @import {OrganisationWithAccreditations} from './types.js'
+ * @import {Organisation, OrganisationWithRegistrations} from './types.js'
  * @import {Accreditation, Registration} from '#repositories/organisations/port.js'
  */
 
@@ -212,8 +212,8 @@ function getLinkedAccCount(organisations) {
 /**
  * Link registrations to accreditations
  *
- * @param {OrganisationWithAccreditations[]} organisations
- * @returns {OrganisationWithAccreditations[]}
+ * @param {OrganisationWithRegistrations[]} organisations
+ * @returns {Organisation[]}
  */
 export function linkRegistrationToAccreditations(organisations) {
   const accCount = countItems(organisations, 'accreditations')

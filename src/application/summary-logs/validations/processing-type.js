@@ -1,8 +1,11 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
 import {
-  SUMMARY_LOG_META_FIELDS,
-  PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
+} from '#common/enums/validation.js'
+import {
+  PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE,
+  SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
@@ -48,8 +51,8 @@ export const validateProcessingType = ({
   if (!VALID_WASTE_PROCESSING_TYPES.includes(wasteProcessingType)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has unexpected waste processing type',
-      'UNEXPECTED_PROCESSING_TYPE',
+      'Invalid summary log: registration has invalid waste processing type',
+      VALIDATION_CODE.PROCESSING_TYPE_DATA_INVALID,
       {
         expected: VALID_WASTE_PROCESSING_TYPES,
         actual: wasteProcessingType
@@ -65,11 +68,11 @@ export const validateProcessingType = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Summary log processing type does not match registration waste processing type',
-      'PROCESSING_TYPE_MISMATCH',
+      VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
       {
         location,
-        expected: expectedWasteProcessingType,
-        actual: wasteProcessingType
+        expected: wasteProcessingType,
+        actual: spreadsheetProcessingType
       }
     )
     return issues

@@ -339,8 +339,8 @@ describe('SummaryLogsValidator integration', () => {
                         column: 'B',
                         field: 'PROCESSING_TYPE'
                       },
-                      expected: expectedWasteProcessingType,
-                      actual: registrationType
+                      expected: registrationType,
+                      actual: spreadsheetType
                     }
                   }
                 ]
@@ -386,7 +386,7 @@ describe('SummaryLogsValidator integration', () => {
                 severity: 'fatal',
                 category: 'technical',
                 message: "Invalid meta field 'PROCESSING_TYPE': is required",
-                code: 'INVALID_META_FIELD',
+                code: 'PROCESSING_TYPE_REQUIRED',
                 context: {
                   location: { field: 'PROCESSING_TYPE' },
                   actual: undefined
@@ -423,6 +423,7 @@ describe('SummaryLogsValidator integration', () => {
         }
       })
 
+      // Unrecognized type now fails at Level 1 (meta-syntax) with PROCESSING_TYPE_INVALID
       expect(updated).toEqual({
         version: 2,
         summaryLog: {
@@ -432,10 +433,10 @@ describe('SummaryLogsValidator integration', () => {
             issues: [
               {
                 severity: 'fatal',
-                category: 'business',
+                category: 'technical',
                 message:
-                  'Summary log processing type does not match registration waste processing type',
-                code: 'PROCESSING_TYPE_MISMATCH',
+                  "Invalid meta field 'PROCESSING_TYPE': must be one of: REPROCESSOR_INPUT, REPROCESSOR_OUTPUT, EXPORTER",
+                code: 'PROCESSING_TYPE_INVALID',
                 context: {
                   location: {
                     sheet: 'Cover',
@@ -443,14 +444,13 @@ describe('SummaryLogsValidator integration', () => {
                     column: 'B',
                     field: 'PROCESSING_TYPE'
                   },
-                  expected: undefined,
-                  actual: 'reprocessor'
+                  actual: 'INVALID_TYPE'
                 }
               }
             ]
           },
           failureReason:
-            'Summary log processing type does not match registration waste processing type'
+            "Invalid meta field 'PROCESSING_TYPE': must be one of: REPROCESSOR_INPUT, REPROCESSOR_OUTPUT, EXPORTER"
         }
       })
     })

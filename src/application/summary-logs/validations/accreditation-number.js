@@ -1,5 +1,8 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
+import {
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
+} from '#common/enums/validation.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
@@ -41,7 +44,7 @@ export const validateAccreditationNumber = ({
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         'Invalid summary log: missing accreditation number',
-        'MISSING_ACCREDITATION_NUMBER',
+        VALIDATION_CODE.ACCREDITATION_MISSING,
         {
           location
         }
@@ -53,7 +56,7 @@ export const validateAccreditationNumber = ({
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         "Summary log's accreditation number does not match this registration",
-        'ACCREDITATION_MISMATCH',
+        VALIDATION_CODE.ACCREDITATION_MISMATCH,
         {
           location,
           expected: accreditationNumber,
@@ -69,7 +72,7 @@ export const validateAccreditationNumber = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: accreditation number provided but registration has no accreditation',
-      'UNEXPECTED_ACCREDITATION_NUMBER',
+      VALIDATION_CODE.ACCREDITATION_UNEXPECTED,
       {
         location,
         actual: spreadsheetAccreditationNumber

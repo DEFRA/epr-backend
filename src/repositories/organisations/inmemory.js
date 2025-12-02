@@ -5,6 +5,7 @@ import {
 } from './schema/index.js'
 import {
   SCHEMA_VERSION,
+  collateUsersOnApproval,
   createInitialStatusHistory,
   getCurrentStatus,
   statusHistoryWithChanges,
@@ -76,7 +77,8 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     ...orgFields,
     formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
-    accreditations
+    accreditations,
+    users: []
   })
 
   storage.push(newOrg)
@@ -116,13 +118,28 @@ const performUpdate =
       validatedUpdates.accreditations
     )
 
-    storage[existingIndex] = {
+    const updatedStatusHistory = statusHistoryWithChanges(
+      validatedUpdates,
+      existing
+    )
+
+    const users = collateUsersOnApproval(existing, {
       ...merged,
-      statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+      statusHistory: updatedStatusHistory,
+      registrations,
+      accreditations
+    })
+
+    const updatePayload = {
+      ...merged,
+      statusHistory: updatedStatusHistory,
       registrations,
       accreditations,
+      users,
       version: existing.version + 1
     }
+
+    storage[existingIndex] = updatePayload
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)

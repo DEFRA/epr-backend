@@ -1,5 +1,8 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
+import {
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
+} from '#common/enums/validation.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
@@ -40,7 +43,7 @@ export const validateRegistrationNumber = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Invalid summary log: registration has no registration number',
-      'MISSING_REGISTRATION_NUMBER'
+      VALIDATION_CODE.REGISTRATION_DATA_INVALID
     )
     return issues
   }
@@ -49,7 +52,7 @@ export const validateRegistrationNumber = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       "Summary log's registration number does not match this registration",
-      'REGISTRATION_MISMATCH',
+      VALIDATION_CODE.REGISTRATION_MISMATCH,
       {
         location,
         expected: registrationNumber,

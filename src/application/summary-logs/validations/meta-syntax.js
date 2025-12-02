@@ -1,6 +1,39 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
+import {
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
+} from '#common/enums/validation.js'
 import { metaSchema } from './meta-syntax.schema.js'
+
+/**
+ * Maps Joi error types to validation codes based on field name
+ * @param {string} fieldName - The meta field name
+ * @param {string} joiType - The Joi error type (e.g., 'any.required', 'string.pattern.base')
+ * @returns {string} The appropriate validation code
+ */
+const mapJoiErrorToCode = (fieldName, joiType) => {
+  const codeMap = {
+    'any.required': {
+      PROCESSING_TYPE: VALIDATION_CODE.PROCESSING_TYPE_REQUIRED,
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_REQUIRED,
+      MATERIAL: VALIDATION_CODE.MATERIAL_REQUIRED,
+      REGISTRATION_NUMBER: VALIDATION_CODE.REGISTRATION_REQUIRED
+    },
+    'any.only': {
+      PROCESSING_TYPE: VALIDATION_CODE.PROCESSING_TYPE_INVALID
+    },
+    'number.min': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+    },
+    'number.base': {
+      TEMPLATE_VERSION: VALIDATION_CODE.TEMPLATE_VERSION_INVALID
+    }
+  }
+
+  return (
+    codeMap[joiType]?.[fieldName] ?? VALIDATION_CODE.VALIDATION_FALLBACK_ERROR
+  )
+}
 
 /**
  * Validates the syntax and format of meta section fields
@@ -33,10 +66,12 @@ export const validateMetaSyntax = ({ parsed }) => {
         field: fieldName
       }
 
+      const code = mapJoiErrorToCode(fieldName, detail.type)
+
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
         `Invalid meta field '${fieldName}': ${detail.message}`,
-        'INVALID_META_FIELD',
+        code,
         {
           location,
           actual: metaValues[fieldName]

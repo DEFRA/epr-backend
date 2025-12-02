@@ -1,5 +1,8 @@
 import { createValidationIssues } from '#common/validation/validation-issues.js'
-import { VALIDATION_CATEGORY } from '#common/enums/validation.js'
+import {
+  VALIDATION_CATEGORY,
+  VALIDATION_CODE
+} from '#common/enums/validation.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import {
   buildMetaFieldLocation,
@@ -56,8 +59,8 @@ export const validateMaterialType = ({
   if (!VALID_REGISTRATION_MATERIALS.includes(material)) {
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
-      'Invalid summary log: registration has unexpected material',
-      'UNEXPECTED_MATERIAL',
+      'Invalid summary log: registration has invalid material',
+      VALIDATION_CODE.MATERIAL_DATA_INVALID,
       {
         expected: VALID_REGISTRATION_MATERIALS,
         actual: material
@@ -72,7 +75,7 @@ export const validateMaterialType = ({
     issues.addFatal(
       VALIDATION_CATEGORY.BUSINESS,
       'Material does not match registration material',
-      'MATERIAL_MISMATCH',
+      VALIDATION_CODE.MATERIAL_MISMATCH,
       {
         location,
         expected: expectedMaterial,
