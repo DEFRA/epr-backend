@@ -1,10 +1,9 @@
 import Joi from 'joi'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
-/**
- * Constants for SONAR...
- */
+const VALID_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
+
 const MAX_MATERIAL_LENGTH = 50
-const MAX_PROCESSING_TYPE_LENGTH = 30
 
 const MIN_TEMPLATE_VERSION = 1
 
@@ -16,25 +15,28 @@ const IS_REQUIRED = 'is required'
  */
 export const metaSchema = Joi.object({
   PROCESSING_TYPE: Joi.string()
-    .max(MAX_PROCESSING_TYPE_LENGTH)
-    .pattern(/^[A-Z0-9_]+$/)
+    .valid(...VALID_PROCESSING_TYPES)
     .required()
     .messages({
-      'string.max': 'must be at most 30 characters',
-      'string.pattern.base':
-        'must be in SCREAMING_SNAKE_CASE format (uppercase letters, numbers, and underscores only)',
+      'any.only': `must be one of: ${VALID_PROCESSING_TYPES.join(', ')}`,
       'any.required': IS_REQUIRED
     }),
-  TEMPLATE_VERSION: Joi.number().min(MIN_TEMPLATE_VERSION).required().messages({
-    'number.min': 'must be at least 1',
-    'any.required': IS_REQUIRED
-  }),
-  MATERIAL: Joi.string().max(MAX_MATERIAL_LENGTH).required().messages({
-    'string.max': 'must be at most 50 characters',
-    'any.required': IS_REQUIRED
-  }),
-  ACCREDITATION_NUMBER: Joi.string().optional().allow(null, ''),
+  TEMPLATE_VERSION: Joi.number()
+    .min(MIN_TEMPLATE_VERSION)
+    .required()
+    .messages({
+      'number.min': `must be at least ${MIN_TEMPLATE_VERSION}`,
+      'any.required': IS_REQUIRED
+    }),
+  MATERIAL: Joi.string()
+    .max(MAX_MATERIAL_LENGTH)
+    .required()
+    .messages({
+      'string.max': `must be at most ${MAX_MATERIAL_LENGTH} characters`,
+      'any.required': IS_REQUIRED
+    }),
   REGISTRATION_NUMBER: Joi.string().required().messages({
     'any.required': IS_REQUIRED
-  })
+  }),
+  ACCREDITATION_NUMBER: Joi.string().optional().allow(null, '')
 }).unknown(true) // Allow other fields that might be present

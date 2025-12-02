@@ -76,11 +76,11 @@ describe('validateMetaSyntax', () => {
     expect(fatals[0].message).toContain('is required')
   })
 
-  it('returns fatal technical error when PROCESSING_TYPE exceeds max length', () => {
+  it('returns fatal technical error when PROCESSING_TYPE is not a valid value', () => {
     const parsed = {
       meta: {
         ...createValidMeta(),
-        PROCESSING_TYPE: { value: 'A'.repeat(31) }
+        PROCESSING_TYPE: { value: 'INVALID_TYPE' }
       }
     }
 
@@ -92,26 +92,7 @@ describe('validateMetaSyntax', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toContain('PROCESSING_TYPE')
-    expect(fatals[0].message).toContain('at most 30 characters')
-  })
-
-  it('returns fatal technical error when PROCESSING_TYPE is not in SCREAMING_SNAKE_CASE format', () => {
-    const parsed = {
-      meta: {
-        ...createValidMeta(),
-        PROCESSING_TYPE: { value: 'Reprocessor' }
-      }
-    }
-
-    const result = validateMetaSyntax({ parsed })
-
-    expect(result.isValid()).toBe(false)
-    expect(result.isFatal()).toBe(true)
-
-    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
-    expect(fatals).toHaveLength(1)
-    expect(fatals[0].message).toContain('PROCESSING_TYPE')
-    expect(fatals[0].message).toContain('SCREAMING_SNAKE_CASE')
+    expect(fatals[0].message).toContain('must be one of')
   })
 
   it('returns fatal technical error when TEMPLATE_VERSION is missing', () => {
@@ -322,5 +303,24 @@ describe('validateMetaSyntax', () => {
       column: 'E',
       field: 'TEMPLATE_VERSION'
     })
+  })
+
+  it('returns fallback error code for unmapped validation errors', () => {
+    const parsed = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+        TEMPLATE_VERSION: { value: 1 },
+        // MATERIAL exceeds max length - triggers string.max which is not mapped
+        MATERIAL: { value: 'A'.repeat(51) },
+        REGISTRATION_NUMBER: { value: 'REG12345' }
+      }
+    }
+
+    const result = validateMetaSyntax({ parsed })
+
+    expect(result.isValid()).toBe(false)
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals).toHaveLength(1)
+    expect(fatals[0].code).toBe('VALIDATION_FALLBACK_ERROR')
   })
 })

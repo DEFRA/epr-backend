@@ -549,7 +549,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.validation.issues).toContainEqual(
         expect.objectContaining({
           severity: 'fatal',
-          code: 'MISSING_REQUIRED_HEADER'
+          code: 'HEADER_REQUIRED'
         })
       )
 
