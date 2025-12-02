@@ -1,15 +1,23 @@
 import Boom from '@hapi/boom'
 import { STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { addUserIfNotInitial } from './add-user-if-not-initial.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /**
- * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
- * @param {string} linkedEprOg
- * @returns {Promise<string[]>}
+ * Determines roles for organization access based on token and organization status
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
+ * @param {string} linkedEprOg - The linked EPR organization ID
+ * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
+ * @returns {Promise<string[]>} Array of role strings
  */
-export const getRolesForOrganisationAccess = async (request, linkedEprOg) => {
+export const getRolesForOrganisationAccess = async (
+  request,
+  linkedEprOg,
+  tokenPayload
+) => {
   const { organisationId } = request.params
 
   if (!organisationId) {
@@ -32,7 +40,7 @@ export const getRolesForOrganisationAccess = async (request, linkedEprOg) => {
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
 
-  // Placeholder for checking whether the user is part of the EPROrganisation
+  addUserIfNotInitial(request, tokenPayload, organisationById)
 
   return [ROLES.standardUser]
 }

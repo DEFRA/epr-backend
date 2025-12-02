@@ -3,6 +3,17 @@ import Boom from '@hapi/boom'
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { getEntraUserRoles } from './get-entra-user-roles.js'
 
+/** @typedef {import('./types.js').TokenPayload} TokenPayload */
+/** @typedef {import('./types.js').EntraIdTokenPayload} EntraIdTokenPayload */
+/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
+
+/**
+ * Configures JWT authentication strategy for both Entra ID and Defra ID
+ * @param {Object} oidcConfigs - OIDC configuration for both identity providers
+ * @param {Object} oidcConfigs.entraIdOidcConfig - Entra ID OIDC configuration
+ * @param {Object} oidcConfigs.defraIdOidcConfig - Defra ID OIDC configuration
+ * @returns {Object} JWT strategy configuration object
+ */
 export function getJwtStrategyConfig(oidcConfigs) {
   const { entraIdOidcConfig, defraIdOidcConfig } = oidcConfigs
 

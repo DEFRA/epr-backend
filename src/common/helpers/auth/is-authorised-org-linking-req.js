@@ -3,10 +3,13 @@ import Boom from '@hapi/boom'
 import { isInitialUser } from './roles/helpers.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /**
- * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
- * @param {object} tokenPayload - The OIDC token payload containing user and organization data
+ * Checks if the request is an authorized organization linking request
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
+ * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user and organization data
+ * @returns {Promise<boolean>} True if the request is authorized, false otherwise
  */
 export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
   const isOrganisationLinkingRequest =
