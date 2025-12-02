@@ -100,7 +100,7 @@ const validateHeaders = ({
  * @param {Object} params.location - Table location in spreadsheet
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  */
-const validateFailureFields = ({
+const validateRowForFailures = ({
   tableName,
   headers,
   rows,
@@ -230,7 +230,7 @@ const extractRowId = (rowObject, tableName) => {
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
  * @returns {ValidatedRow[]} Array of validated rows with issues attached
  */
-const validateConcernFields = ({
+const validateRowForConcerns = ({
   tableName,
   headers,
   rows,
@@ -305,7 +305,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     return { ...tableData, rows: [] }
   }
 
-  validateFailureFields({
+  validateRowForFailures({
     tableName,
     headers,
     rows,
@@ -318,7 +318,7 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     return { ...tableData, rows: [] }
   }
 
-  const validatedRows = validateConcernFields({
+  const validatedRows = validateRowForConcerns({
     tableName,
     headers,
     rows,
