@@ -570,4 +570,33 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     ])
   })
+
+  it('should apply systemReference override when registration id matches override config', () => {
+    // Use real fixture but with ID and systemReference that match override config
+    // Note: Uses test MongoDB ObjectIds from setup-files.js, not production IDs
+    const registrationWithTypo = {
+      ...exporter,
+      _id: { $oid: '507f1f77bcf86cd799439011' },
+      rawSubmissionData: {
+        ...exporter.rawSubmissionData,
+        data: {
+          ...exporter.rawSubmissionData.data,
+          main: {
+            ...exporter.rawSubmissionData.data.main,
+            RIXIzA: '65a000000000000000000000' // Incorrect systemReference with typo
+          }
+        }
+      }
+    }
+
+    const result = parseRegistrationSubmission(
+      registrationWithTypo._id.$oid,
+      registrationWithTypo.rawSubmissionData
+    )
+
+    expect(() => validateRegistration(result)).not.toThrow()
+
+    // Verify the systemReference was corrected by the override
+    expect(result.systemReference).toBe('507f191e810c19729de860ea')
+  })
 })
