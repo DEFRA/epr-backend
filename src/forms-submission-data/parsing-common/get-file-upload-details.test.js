@@ -53,47 +53,54 @@ describe('getFormFileUploads', () => {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste exporter (EA)',
         fileId: '12b95c25-6119-4478-a060-79716455036b',
-        id: exporterRegistration._id.$oid
+        id: exporterRegistration._id.$oid,
+        orgId: exporterRegistration.orgId
       },
       {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste exporter (EA)',
         fileId: '92133d12-b525-412a-8328-860dfeaa0718',
-        id: exporterRegistration._id.$oid
+        id: exporterRegistration._id.$oid,
+        orgId: exporterRegistration.orgId
       },
       // Reprocessor All Materials Registration - 1 file
       {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: register as a packaging waste reprocessor (EA)',
         fileId: 'be506501-273f-4770-9d0a-169f4c513465',
-        id: reprocessorAllMaterials._id.$oid
+        id: reprocessorAllMaterials._id.$oid,
+        orgId: reprocessorAllMaterials.orgId
       },
       // Exporter Accreditation - 2 files (2 file upload fields, 1 file each)
       {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: apply for accreditation as a packaging waste exporter (EA)',
         fileId: '8292dc89-a288-4b7e-afa5-6ef6ac0d7068',
-        id: exporterAccreditation._id.$oid
+        id: exporterAccreditation._id.$oid,
+        orgId: exporterAccreditation.orgId
       },
       {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: apply for accreditation as a packaging waste exporter (EA)',
         fileId: '342ea001-3627-4486-b024-3621f9881029',
-        id: exporterAccreditation._id.$oid
+        id: exporterAccreditation._id.$oid,
+        orgId: exporterAccreditation.orgId
       },
       // Reprocessor Paper Accreditation - 1 file
       {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: apply for accreditation as a packaging waste reprocessor (EA)',
         fileId: '704d9252-645d-4d6f-b68c-7907c1d040ef',
-        id: reprocessorPaper._id.$oid
+        id: reprocessorPaper._id.$oid,
+        orgId: reprocessorPaper.orgId
       },
       // Reprocessor Wood Accreditation - 1 file
       {
         formName:
           'Demo for pEPR - Extended Producer Responsibilities: apply for accreditation as a packaging waste reprocessor (EA)',
         fileId: 'd2ffa1d3-49a5-4eba-be63-a22235536c22',
-        id: reprocessorWood._id.$oid
+        id: reprocessorWood._id.$oid,
+        orgId: reprocessorWood.orgId
       }
     ])
 

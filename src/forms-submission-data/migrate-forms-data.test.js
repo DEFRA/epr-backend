@@ -87,22 +87,19 @@ describe('migrateFormsData', () => {
 
     beforeEach(async () => {
       // Import and mock all transform functions
-      const orgModule = await import(
-        '#formsubmission/organisation/transform-organisation.js'
-      )
+      const orgModule =
+        await import('#formsubmission/organisation/transform-organisation.js')
       parseOrgSubmission = vi.spyOn(orgModule, 'parseOrgSubmission')
 
-      const regModule = await import(
-        '#formsubmission/registration/transform-registration.js'
-      )
+      const regModule =
+        await import('#formsubmission/registration/transform-registration.js')
       parseRegistrationSubmission = vi.spyOn(
         regModule,
         'parseRegistrationSubmission'
       )
 
-      const accrModule = await import(
-        '#formsubmission/accreditation/transform-accreditation.js'
-      )
+      const accrModule =
+        await import('#formsubmission/accreditation/transform-accreditation.js')
       parseAccreditationSubmission = vi.spyOn(
         accrModule,
         'parseAccreditationSubmission'

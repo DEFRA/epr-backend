@@ -1,4 +1,4 @@
-import { createUploadsRepository } from '#adapters/repositories/uploads/s3.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
@@ -100,7 +100,11 @@ export default async function summaryLogsWorkerThread(command) {
       const db = mongoClient.db(databaseName)
 
       const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
-      const uploadsRepository = createUploadsRepository(s3Client)
+      const uploadsRepository = createUploadsRepository({
+        s3Client,
+        cdpUploaderUrl: config.get('cdpUploader.url'),
+        s3Bucket: config.get('cdpUploader.s3Bucket')
+      })
       const organisationsRepository = createOrganisationsRepository(db)()
       const wasteRecordsRepository = createWasteRecordsRepository(db)()
 
