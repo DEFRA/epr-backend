@@ -104,10 +104,7 @@ const performUpdate =
       )
     }
 
-    const merged = {
-      ...existing,
-      ...validatedUpdates
-    }
+    const { status, ...merged } = { ...existing, ...validatedUpdates }
 
     const registrations = mergeSubcollection(
       existing.registrations,
@@ -280,7 +277,9 @@ export const createInMemoryOrganisationsRepository = (
         ),
       findAll: performFindAll(staleCache),
       findById,
-      findRegistrationById: performFindRegistrationById(findById)
+      findRegistrationById: performFindRegistrationById(findById),
+      // Test-only method to access internal storage (not part of the port interface)
+      _getStorageForTesting: () => storage
     }
   }
 }
