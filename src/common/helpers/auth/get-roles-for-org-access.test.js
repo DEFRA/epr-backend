@@ -18,7 +18,8 @@ describe('#getRolesForOrganisationAccess', () => {
     vi.clearAllMocks()
 
     mockOrganisationsRepository = {
-      findById: vi.fn()
+      findById: vi.fn(),
+      update: vi.fn()
     }
 
     mockRequest = {
@@ -37,7 +38,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns standard_user role when organisation is ACTIVE', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -57,7 +60,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns standard_user role when organisation is SUSPENDED', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.SUSPENDED
+        status: STATUS.SUSPENDED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -80,7 +85,9 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const mockOrganisation = {
         id: customOrgId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -206,7 +213,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error when organisation status is CREATED', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.CREATED
+        status: STATUS.CREATED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -225,7 +234,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error when organisation status is APPROVED', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.APPROVED
+        status: STATUS.APPROVED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -244,7 +255,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error when organisation status is REJECTED', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.REJECTED
+        status: STATUS.REJECTED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -263,7 +276,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error when organisation status is ARCHIVED', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ARCHIVED
+        status: STATUS.ARCHIVED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -281,8 +296,10 @@ describe('#getRolesForOrganisationAccess', () => {
 
     test('throws forbidden error when organisation status is undefined', async () => {
       const mockOrganisation = {
-        id: mockOrganisationId
+        id: mockOrganisationId,
         // status is missing
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -301,7 +318,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error when organisation status is null', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: null
+        status: null,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -320,7 +339,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error with exact message format for non-accessible status', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.REJECTED
+        status: STATUS.REJECTED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -389,6 +410,7 @@ describe('#getRolesForOrganisationAccess', () => {
         status: STATUS.ACTIVE,
         name: 'Test Organisation',
         users: [{ email: 'test@example.com' }],
+        version: 1,
         createdAt: new Date(),
         metadata: { foo: 'bar' }
       }
@@ -411,7 +433,9 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const mockOrganisation = {
         id: objectIdFormat,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -429,7 +453,9 @@ describe('#getRolesForOrganisationAccess', () => {
       const activeStatus = STATUS.ACTIVE
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: activeStatus
+        status: activeStatus,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -446,7 +472,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns array with single role, not just the role string', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -494,7 +522,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('fetches organisation only after validation passes', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -519,7 +549,9 @@ describe('#getRolesForOrganisationAccess', () => {
           callOrder.push(`findById:${id}`)
           return {
             id: mockOrganisationId,
-            status: STATUS.ACTIVE
+            status: STATUS.ACTIVE,
+            users: [],
+            version: 1
           }
         }
       )
@@ -549,7 +581,9 @@ describe('#getRolesForOrganisationAccess', () => {
       for (const status of accessibleStatuses) {
         const mockOrganisation = {
           id: mockOrganisationId,
-          status
+          status,
+          users: [],
+          version: 1
         }
 
         mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -567,7 +601,9 @@ describe('#getRolesForOrganisationAccess', () => {
       for (const status of nonAccessibleStatuses) {
         const mockOrganisation = {
           id: mockOrganisationId,
-          status
+          status,
+          users: [],
+          version: 1
         }
 
         mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -587,7 +623,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('status comparison is exact match', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: 'active' // Same value as STATUS.ACTIVE
+        status: 'active', // Same value as STATUS.ACTIVE
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -617,7 +655,9 @@ describe('#getRolesForOrganisationAccess', () => {
       mockRequest.params.organisationId = mockOrganisationId
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
@@ -632,7 +672,9 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns array containing only standard_user role constant', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
