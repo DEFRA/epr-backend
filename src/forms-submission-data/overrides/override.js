@@ -1,17 +1,4 @@
-import { config } from '#root/config.js'
-
-/**
- * Loads and parses override configuration from environment variable
- *
- * @returns {Object} Override config with registrations and accreditations arrays
- */
-function loadOverrideConfig() {
-  const overridesJson = config.get('formSubmissionOverrides')
-  return JSON.parse(overridesJson)
-}
-
-// Parse override config from environment variable (set via cdp-app-config)
-const overrideConfig = loadOverrideConfig()
+import { overrideConfig } from '#formsubmission/data-migration-config.js'
 
 /**
  * Applies field overrides to a submission based on its ID

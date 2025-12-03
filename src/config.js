@@ -327,6 +327,12 @@ const baseConfig = {
     format: String,
     default: '{"registrations":[],"accreditations":[]}',
     env: 'FORM_SUBMISSION_OVERRIDES'
+  },
+  systemReferencesRequiringOrgIdMatch: {
+    doc: 'JSON array of systemReference IDs that require orgId validation during linking to prevent misuse',
+    format: String,
+    default: '[]',
+    env: 'SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH'
   }
 }
 
