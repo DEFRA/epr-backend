@@ -49,6 +49,7 @@ export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
       return {
         ...existingItem,
         ...update,
+        status: undefined,
         statusHistory: statusHistoryWithChanges(update, existingItem)
       }
     }
@@ -57,6 +58,7 @@ export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
 
   const newItems = Array.from(updatesById.values()).map((newItem) => ({
     ...newItem,
+    status: undefined,
     statusHistory: createInitialStatusHistory()
   }))
 

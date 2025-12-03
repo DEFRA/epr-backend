@@ -86,5 +86,41 @@ describe('MongoDB organisations repository', () => {
       expect(result.registrations).toBeNull()
       expect(result.accreditations).toBeNull()
     })
+
+    it('does not persist status field to database ', async ({
+      organisationsRepository,
+      mongoClient
+    }) => {
+      const repository = organisationsRepository()
+      const organisation = buildOrganisation()
+      await repository.insert(organisation)
+
+      // Update with status at all levels  (organisation, registration, accreditation)
+      await repository.update(organisation.id, 1, {
+        status: 'rejected',
+        registrations: [
+          {
+            ...organisation.registrations[0],
+            status: 'rejected'
+          }
+        ],
+        accreditations: [
+          {
+            ...organisation.accreditations[0],
+            status: 'archived'
+          }
+        ]
+      })
+
+      // Read directly from MongoDB (bypassing repository mapping)
+      const rawDoc = await mongoClient
+        .db(DATABASE_NAME)
+        .collection(COLLECTION_NAME)
+        .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
+
+      expect(rawDoc.status == null).toBe(true)
+      expect(rawDoc.registrations[0].status == null).toBe(true)
+      expect(rawDoc.accreditations[0].status == null).toBe(true)
+    })
   })
 })

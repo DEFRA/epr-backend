@@ -112,6 +112,7 @@ const performUpdate = (db) => async (id, version, updates) => {
   const updatePayload = {
     ...merged,
     statusHistory: updatedStatusHistory,
+    status: undefined,
     registrations,
     accreditations,
     users,

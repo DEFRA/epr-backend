@@ -133,6 +133,7 @@ const performUpdate =
     const updatePayload = {
       ...merged,
       statusHistory: updatedStatusHistory,
+      status: undefined,
       registrations,
       accreditations,
       users,
@@ -280,7 +281,9 @@ export const createInMemoryOrganisationsRepository = (
         ),
       findAll: performFindAll(staleCache),
       findById,
-      findRegistrationById: performFindRegistrationById(findById)
+      findRegistrationById: performFindRegistrationById(findById),
+      // Test-only method to access internal storage (not part of the port interface)
+      _getStorageForTesting: () => storage
     }
   }
 }
