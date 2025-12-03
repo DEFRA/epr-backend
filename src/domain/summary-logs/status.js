@@ -136,11 +136,11 @@ export const mapUploaderErrorToCode = (errorMessage) => {
   }
 
   for (const mapping of UPLOADER_ERROR_MAPPINGS) {
-    if (mapping.startsWith) {
-      if (errorMessage.startsWith(mapping.message)) {
-        return mapping.code
-      }
-    } else if (errorMessage === mapping.message) {
+    const isMatch = mapping.startsWith
+      ? errorMessage.startsWith(mapping.message)
+      : errorMessage === mapping.message
+
+    if (isMatch) {
       return mapping.code
     }
   }
