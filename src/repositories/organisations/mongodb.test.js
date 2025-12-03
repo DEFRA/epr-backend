@@ -118,9 +118,9 @@ describe('MongoDB organisations repository', () => {
         .collection(COLLECTION_NAME)
         .findOne({ _id: ObjectId.createFromHexString(organisation.id) })
 
-      expect(rawDoc.status == null).toBe(true)
-      expect(rawDoc.registrations[0].status == null).toBe(true)
-      expect(rawDoc.accreditations[0].status == null).toBe(true)
+      expect(rawDoc.status).toBeUndefined()
+      expect(rawDoc.registrations[0].status).toBeUndefined()
+      expect(rawDoc.accreditations[0].status).toBeUndefined()
     })
   })
 })

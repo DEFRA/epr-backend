@@ -48,9 +48,9 @@ describe('In-memory organisations repository', () => {
       const storage = repository._getStorageForTesting()
       const storedOrg = storage.find((o) => o.id === organisation.id)
 
-      expect(storedOrg.status == null).toBe(true)
-      expect(storedOrg.registrations[0].status == null).toBe(true)
-      expect(storedOrg.accreditations[0].status == null).toBe(true)
+      expect(storedOrg.status).toBeUndefined()
+      expect(storedOrg.registrations[0].status).toBeUndefined()
+      expect(storedOrg.accreditations[0].status).toBeUndefined()
     })
   })
 })
