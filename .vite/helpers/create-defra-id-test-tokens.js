@@ -6,7 +6,7 @@ const VALID_DEFRA_AUDIENCE = 'test-defra'
 const USER_EMAIL = 'someone@test-company.com'
 
 // Generate key pair once at module load time
-// @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
+// @ts-ignore
 const keyPair = generateKeyPairSync('rsa', {
   modulusLength: 4096,
   publicKeyEncoding: {
@@ -20,9 +20,10 @@ const keyPair = generateKeyPairSync('rsa', {
 })
 
 const privateKey = keyPair.privateKey
-/** @type {import('crypto').JsonWebKey & {kid: string, use: string, alg: string}} */
 
+/** @type {import('crypto').JsonWebKey & {kid: string, use: string, alg: string}} */
 export const publicKey = {
+  // @ts-ignore - keyPair.publicKey is JsonWebKey but spread causes type issues
   ...keyPair.publicKey,
 
   // Add JWKS-required fields to the public key
@@ -31,18 +32,19 @@ export const publicKey = {
   alg: 'RS256'
 }
 
+/** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
 export const baseDefraIdTokenPayload = {
-  name: 'John Doe',
   id: 'test-contact-id',
   email: USER_EMAIL,
-  aud: VALID_DEFRA_AUDIENCE,
-  iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
+  firstName: 'John',
+  lastName: 'Doe',
   currentRelationshipId: 'rel-1',
   relationships: ['rel-1'],
-  nbf: new Date().getTime() / 1000,
+  iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
+  aud: VALID_DEFRA_AUDIENCE,
   exp: new Date().getTime() / 1000 + 3600,
-  maxAgeSec: 3600, // 60 minutes
-  timeSkewSec: 15
+  iat: new Date().getTime() / 1000,
+  nbf: new Date().getTime() / 1000
 }
 
 /** @type {{key: string, algorithm: 'RS256'}} */
