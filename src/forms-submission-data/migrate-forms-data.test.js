@@ -165,19 +165,25 @@ describe('migrateFormsData', () => {
         )
 
         expect(linkItemsToOrganisations).toHaveBeenCalledTimes(2)
+        const systemReferencesRequiringOrgIdMatch = new Set([
+          '507f191e810c19729de860ea',
+          '507f191e810c19729de860eb',
+          '65a2f5a1b4c5d9f8e7a6b1c3',
+          '65a2f5a1b4c5d9f8e7a6b1c5'
+        ])
         expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
           1,
           expect.any(Array),
           expect.any(Array),
           'registrations',
-          new Set(['507f191e810c19729de860ea', '507f191e810c19729de860eb'])
+          systemReferencesRequiringOrgIdMatch
         )
         expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
           2,
           expect.any(Array),
           expect.any(Array),
           'accreditations',
-          new Set(['65a2f5a1b4c5d9f8e7a6b1c3', '65a2f5a1b4c5d9f8e7a6b1c5'])
+          systemReferencesRequiringOrgIdMatch
         )
 
         expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)

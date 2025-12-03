@@ -11,10 +11,7 @@ import {
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
-import {
-  getAccreditationOverrideSystemReferences,
-  getRegistrationOverrideSystemReferences
-} from '#formsubmission/overrides/override.js'
+import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/overrides/override.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
@@ -216,7 +213,7 @@ function linkRegistrations(organisations, registrations) {
     organisations,
     registrations,
     'registrations',
-    getRegistrationOverrideSystemReferences()
+    systemReferencesRequiringOrgIdMatch()
   )
 }
 
@@ -225,6 +222,6 @@ function linkAccreditations(organisations, accreditations) {
     organisations,
     accreditations,
     'accreditations',
-    getAccreditationOverrideSystemReferences()
+    systemReferencesRequiringOrgIdMatch()
   )
 }

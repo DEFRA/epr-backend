@@ -55,33 +55,23 @@ function toUnlinkedItem(item) {
 }
 
 /**
- * Partitions items into matched and unmatched based on orgId requirements
+ * Partitions items into matched and unmatched based on orgId matching
  * @param {Array} items - Items to partition
  * @param {Object} org - Organisation to match against
- * @param {Set<string>} systemReferencesRequiringOrgIdMatch - Set of systemReferences requiring orgId validation
  * @returns {{matched: Array, unmatched: Array}} Partitioned items
  */
-function partitionItemsByOrgIdMatch(
-  items,
-  org,
-  systemReferencesRequiringOrgIdMatch
-) {
-  const matched = []
-  const unmatched = []
-
-  for (const item of items) {
-    const requiresOrgIdMatch = systemReferencesRequiringOrgIdMatch.has(
-      item.systemReference
-    )
-
-    if (!requiresOrgIdMatch || item.orgId === org.orgId) {
-      matched.push(item)
-    } else {
-      unmatched.push(item)
-    }
-  }
-
-  return { matched, unmatched }
+function partitionItemsByOrgIdMatch(items, org) {
+  return items.reduce(
+    (acc, item) => {
+      if (item.orgId === org.orgId) {
+        acc.matched.push(item)
+      } else {
+        acc.unmatched.push(item)
+      }
+      return acc
+    },
+    { matched: [], unmatched: [] }
+  )
 }
 
 /**
@@ -127,14 +117,16 @@ export function linkItemsToOrganisations(
     const org = organisationsById.get(systemReference)
 
     if (org) {
-      const { matched, unmatched } = partitionItemsByOrgIdMatch(
-        itemsPerOrg,
-        org,
-        systemReferencesRequiringOrgIdMatch
-      )
-
-      org[propertyName] = matched
-      unlinked.push(...unmatched.map(toUnlinkedItem))
+      if (systemReferencesRequiringOrgIdMatch.has(systemReference)) {
+        const { matched, unmatched } = partitionItemsByOrgIdMatch(
+          itemsPerOrg,
+          org
+        )
+        org[propertyName] = matched
+        unlinked.push(...unmatched.map(toUnlinkedItem))
+      } else {
+        org[propertyName] = itemsPerOrg
+      }
     } else {
       unlinked.push(...itemsPerOrg.map(toUnlinkedItem))
     }

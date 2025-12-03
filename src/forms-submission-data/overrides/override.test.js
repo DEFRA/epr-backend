@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyAccreditationOverrides,
   applyRegistrationOverrides,
-  getAccreditationOverrideSystemReferences,
-  getRegistrationOverrideSystemReferences
+  systemReferencesRequiringOrgIdMatch
 } from './override.js'
 
 describe('Override Functions', () => {
@@ -77,22 +76,17 @@ describe('Override Functions', () => {
     })
   })
 
-  describe('getRegistrationOverrideSystemReferences', () => {
-    it('should return set of systemReferences from registration overrides', () => {
-      const result = getRegistrationOverrideSystemReferences()
+  describe('systemReferencesRequiringOrgIdMatch', () => {
+    it('should return set of systemReferences requiring orgId validation', () => {
+      const result = systemReferencesRequiringOrgIdMatch()
 
       expect(result).toEqual(
-        new Set(['507f191e810c19729de860ea', '507f191e810c19729de860eb'])
-      )
-    })
-  })
-
-  describe('getAccreditationOverrideSystemReferences', () => {
-    it('should return set of systemReferences from accreditation overrides', () => {
-      const result = getAccreditationOverrideSystemReferences()
-
-      expect(result).toEqual(
-        new Set(['65a2f5a1b4c5d9f8e7a6b1c3', '65a2f5a1b4c5d9f8e7a6b1c5'])
+        new Set([
+          '507f191e810c19729de860ea',
+          '507f191e810c19729de860eb',
+          '65a2f5a1b4c5d9f8e7a6b1c3',
+          '65a2f5a1b4c5d9f8e7a6b1c5'
+        ])
       )
     })
   })
