@@ -83,10 +83,7 @@ const performUpdate = (db) => async (id, version, updates) => {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
 
-  const merged = {
-    ...existing,
-    ...validatedUpdates
-  }
+  const { status, ...merged } = { ...existing, ...validatedUpdates }
 
   const registrations = mergeSubcollection(
     existing.registrations,

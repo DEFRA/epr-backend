@@ -60,7 +60,10 @@ export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
     statusHistory: createInitialStatusHistory()
   }))
 
-  return [...processedExisting, ...newItems]
+  return [...processedExisting, ...newItems].map((item) => {
+    const { status, ...remainingFields } = item
+    return remainingFields
+  })
 }
 
 export const mergeSubcollection = (existingItems, updateItems) =>
