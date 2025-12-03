@@ -10,7 +10,8 @@ import { createValidationIssues } from '#common/validation/validation-issues.js'
 
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
-import { validateDataSyntax } from './validations/data-syntax.js'
+import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { PROCESSING_TYPE_TABLES } from './validations/table-schemas.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
@@ -154,6 +155,7 @@ const fetchRegistration = async ({
  * @param {SummaryLogExtractor} params.summaryLogExtractor - Extractor service for parsing the file
  * @param {OrganisationsRepository} params.organisationsRepository - Organisation repository for fetching registration data
  * @param {WasteRecordsRepository} params.wasteRecordsRepository - Waste records repository for fetching existing records
+ * @param {Function} params.validateDataSyntax - Data syntax validator function
  * @returns {Promise<ValidationResult>} Validation result with issues and transformed records
  */
 const performValidationChecks = async ({
@@ -162,7 +164,8 @@ const performValidationChecks = async ({
   loggingContext,
   summaryLogExtractor,
   organisationsRepository,
-  wasteRecordsRepository
+  wasteRecordsRepository,
+  validateDataSyntax
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
@@ -194,9 +197,8 @@ const performValidationChecks = async ({
     }
 
     // Data syntax validation returns validated data with issues attached to rows
-    const { issues: dataSyntaxIssues, validatedData } = validateDataSyntax({
-      parsed
-    })
+    const { issues: dataSyntaxIssues, validatedData } =
+      validateDataSyntax(parsed)
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
@@ -242,14 +244,15 @@ const performValidationChecks = async ({
  * @param {SummaryLogExtractor} params.summaryLogExtractor
  * @returns {Function} Function that validates a summary log by ID
  */
-export const createSummaryLogsValidator =
-  ({
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    summaryLogExtractor
-  }) =>
-  async (summaryLogId) => {
+export const createSummaryLogsValidator = ({
+  summaryLogsRepository,
+  organisationsRepository,
+  wasteRecordsRepository,
+  summaryLogExtractor
+}) => {
+  const validateDataSyntax = createDataSyntaxValidator(PROCESSING_TYPE_TABLES)
+
+  return async (summaryLogId) => {
     const result = await summaryLogsRepository.findById(summaryLogId)
 
     if (!result) {
@@ -277,7 +280,8 @@ export const createSummaryLogsValidator =
       loggingContext,
       summaryLogExtractor,
       organisationsRepository,
-      wasteRecordsRepository
+      wasteRecordsRepository,
+      validateDataSyntax
     })
 
     const status = issues.isFatal()
@@ -311,3 +315,4 @@ export const createSummaryLogsValidator =
       }
     })
   }
+}

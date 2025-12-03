@@ -1,1297 +1,608 @@
-import { validateDataSyntax } from './data-syntax.js'
+import Joi from 'joi'
+import { createDataSyntaxValidator } from './data-syntax.js'
 import {
   VALIDATION_CATEGORY,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
-describe('validateDataSyntax', () => {
-  const createValidReceivedLoadsForReprocessingTable = () => ({
-    location: {
-      sheet: 'Received (sections 1, 2, 3)',
-      row: 7,
-      column: 'B'
-    },
-    headers: [
-      'ROW_ID',
-      'DATE_RECEIVED_FOR_REPROCESSING',
-      'EWC_CODE',
-      'GROSS_WEIGHT',
-      'TARE_WEIGHT',
-      'PALLET_WEIGHT',
-      'NET_WEIGHT',
-      'BAILING_WIRE_PROTOCOL',
-      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-      'WEIGHT_OF_NON_TARGET_MATERIALS',
-      'RECYCLABLE_PROPORTION_PERCENTAGE',
-      'TONNAGE_RECEIVED_FOR_RECYCLING'
-    ],
-    rows: [
-      [
-        10000,
-        '2025-05-28T00:00:00.000Z',
-        '03 03 08',
-        1000,
-        100,
-        50,
-        850,
-        'YES',
-        'WEIGHT',
-        50,
-        0.85,
-        850
-      ],
-      [
-        10001,
-        '2025-08-01T00:00:00.000Z',
-        '16 03 10',
-        2000,
-        200,
-        100,
-        1700,
-        'NO',
-        'VISUAL',
-        100,
-        0.9,
-        1700
-      ],
-      [
-        10002,
-        '2025-09-05T00:00:00.000Z',
-        '11 03 10',
-        1500,
-        150,
-        75,
-        1275,
-        'YES',
-        'SAMPLE',
-        75,
-        0.8,
-        1275
-      ]
-    ]
-  })
-
-  describe('RECEIVED_LOADS_FOR_REPROCESSING table', () => {
-    it('returns valid result when all data is correct', () => {
-      const parsed = {
-        data: {
-          RECEIVED_LOADS_FOR_REPROCESSING:
-            createValidReceivedLoadsForReprocessingTable()
+describe('createDataSyntaxValidator', () => {
+  // Minimal test schemas - decoupled from production schemas
+  const TEST_SCHEMAS = {
+    TEST: {
+      TEST_TABLE: {
+        requiredHeaders: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+        rowIdField: 'ROW_ID',
+        rowSchemas: {
+          failure: Joi.object({
+            ROW_ID: Joi.number().required().min(10000).messages({
+              'number.base': 'must be a number',
+              'number.min': 'must be at least 10000',
+              'any.required': 'is required'
+            })
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          concern: Joi.object({
+            TEXT_FIELD: Joi.string().required().messages({
+              'string.base': 'must be a string',
+              'any.required': 'is required'
+            }),
+            NUMBER_FIELD: Joi.number().required().greater(0).messages({
+              'number.base': 'must be a number',
+              'number.greater': 'must be greater than 0',
+              'any.required': 'is required'
+            })
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false })
+        }
+      },
+      DATE_TABLE: {
+        requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
+        rowIdField: 'ROW_ID',
+        rowSchemas: {
+          failure: Joi.object({
+            ROW_ID: Joi.number().required().min(10000)
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          concern: Joi.object({
+            DATE_FIELD: Joi.date().required().messages({
+              'date.base': 'must be a valid date',
+              'any.required': 'is required'
+            })
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false })
+        }
+      },
+      PATTERN_TABLE: {
+        requiredHeaders: ['ROW_ID', 'CODE_FIELD'],
+        rowIdField: 'ROW_ID',
+        rowSchemas: {
+          failure: Joi.object({
+            ROW_ID: Joi.number().required().min(10000)
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          concern: Joi.object({
+            CODE_FIELD: Joi.string()
+              .required()
+              .pattern(/^\d{2} \d{2} \d{2}$/)
+              .messages({
+                'string.pattern.base': 'must be in format "XX XX XX"',
+                'any.required': 'is required'
+              })
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false })
         }
       }
+    }
+  }
 
-      const result = validateDataSyntax({ parsed })
+  /**
+   * Creates parsed data structure from row objects
+   *
+   * @param {Object} tables - Object keyed by table name, values are row objects or arrays of row objects
+   * @param {Object} [options] - Additional options
+   * @param {Object} [options.location] - Spreadsheet location
+   * @returns {Object} Parsed data structure
+   */
+  const createParsedData = (tables, options = {}) => {
+    const data = {}
+
+    for (const [tableName, rowData] of Object.entries(tables)) {
+      const rows = Array.isArray(rowData) ? rowData : [rowData]
+      const headers = Object.keys(rows[0])
+      const values = rows.map((row) => headers.map((h) => row[h]))
+
+      data[tableName] = {
+        headers,
+        rows: values,
+        ...(options.location && { location: options.location })
+      }
+    }
+
+    return {
+      meta: { PROCESSING_TYPE: { value: 'TEST' } },
+      data
+    }
+  }
+
+  const validateDataSyntax = createDataSyntaxValidator(TEST_SCHEMAS)
+
+  const validate = (tables, options = {}) =>
+    validateDataSyntax(createParsedData(tables, options))
+
+  describe('valid data', () => {
+    it('returns valid result when all data is correct', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+      })
 
       expect(result.issues.isValid()).toBe(true)
       expect(result.issues.isFatal()).toBe(false)
       expect(result.issues.hasIssues()).toBe(false)
     })
 
+    it('validates multiple rows', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 10000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
+          { ROW_ID: 10001, TEXT_FIELD: 'second', NUMBER_FIELD: 2 },
+          { ROW_ID: 10002, TEXT_FIELD: 'third', NUMBER_FIELD: 3 }
+        ]
+      })
+
+      expect(result.issues.isValid()).toBe(true)
+    })
+
     it('allows headers in different order', () => {
       const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidReceivedLoadsForReprocessingTable(),
-            headers: [
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'ROW_ID',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE_PROTOCOL',
-              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-              'WEIGHT_OF_NON_TARGET_MATERIALS',
-              'RECYCLABLE_PROPORTION_PERCENTAGE',
-              'TONNAGE_RECEIVED_FOR_RECYCLING'
-            ],
-            rows: [
-              [
-                '2025-05-28T00:00:00.000Z',
-                10000,
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850
-              ],
-              [
-                '2025-08-01T00:00:00.000Z',
-                10001,
-                '16 03 10',
-                2000,
-                200,
-                100,
-                1700,
-                'NO',
-                'VISUAL',
-                100,
-                0.9,
-                1700
-              ]
-            ]
+          TEST_TABLE: {
+            headers: ['NUMBER_FIELD', 'ROW_ID', 'TEXT_FIELD'],
+            rows: [[42, 10000, 'hello']]
           }
         }
       }
 
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
-      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('allows additional headers beyond required ones', () => {
       const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidReceivedLoadsForReprocessingTable(),
-            headers: [
-              'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE_PROTOCOL',
-              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-              'WEIGHT_OF_NON_TARGET_MATERIALS',
-              'RECYCLABLE_PROPORTION_PERCENTAGE',
-              'TONNAGE_RECEIVED_FOR_RECYCLING',
-              'EXTRA_FIELD',
-              'ANOTHER_FIELD'
-            ],
-            rows: [
-              [
-                10000,
-                '2025-05-28T00:00:00.000Z',
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850,
-                'extra',
-                'data'
-              ]
-            ]
+          TEST_TABLE: {
+            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD', 'EXTRA_FIELD'],
+            rows: [[10000, 'hello', 42, 'extra']]
           }
         }
       }
 
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
-      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('ignores null headers', () => {
       const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidReceivedLoadsForReprocessingTable(),
-            headers: [
-              'ROW_ID',
-              null,
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE_PROTOCOL',
-              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-              'WEIGHT_OF_NON_TARGET_MATERIALS',
-              'RECYCLABLE_PROPORTION_PERCENTAGE',
-              'TONNAGE_RECEIVED_FOR_RECYCLING',
-              null
-            ],
-            rows: [
-              [
-                10000,
-                'ignored',
-                '2025-05-28T00:00:00.000Z',
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850,
-                null
-              ]
-            ]
+          TEST_TABLE: {
+            headers: ['ROW_ID', null, 'TEXT_FIELD', 'NUMBER_FIELD', null],
+            rows: [[10000, 'ignored', 'hello', 42, 'also ignored']]
           }
         }
       }
 
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
-      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('ignores special marker headers starting with __', () => {
       const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING: {
-            ...createValidReceivedLoadsForReprocessingTable(),
+          TEST_TABLE: {
             headers: [
               'ROW_ID',
-              'DATE_RECEIVED_FOR_REPROCESSING',
-              'EWC_CODE',
-              'GROSS_WEIGHT',
-              'TARE_WEIGHT',
-              'PALLET_WEIGHT',
-              'NET_WEIGHT',
-              'BAILING_WIRE_PROTOCOL',
-              'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-              'WEIGHT_OF_NON_TARGET_MATERIALS',
-              'RECYCLABLE_PROPORTION_PERCENTAGE',
-              'TONNAGE_RECEIVED_FOR_RECYCLING',
+              'TEXT_FIELD',
+              'NUMBER_FIELD',
               '__EPR_DATA_MARKER'
             ],
-            rows: [
-              [
-                10000,
-                '2025-05-28T00:00:00.000Z',
-                '03 03 08',
-                1000,
-                100,
-                50,
-                850,
-                'YES',
-                'WEIGHT',
-                50,
-                0.85,
-                850,
-                'marker'
-              ]
-            ]
+            rows: [[10000, 'hello', 42, 'marker']]
           }
         }
       }
 
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
+    })
+  })
+
+  describe('header validation (FATAL)', () => {
+    it('returns fatal error when required header is missing', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          TEST_TABLE: {
+            headers: ['ROW_ID', 'TEXT_FIELD'],
+            rows: [[10000, 'hello']]
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatals[0].message).toContain('Missing required header')
+      expect(fatals[0].message).toContain('NUMBER_FIELD')
+    })
+
+    it('returns multiple fatal errors when multiple headers are missing', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          TEST_TABLE: {
+            headers: ['ROW_ID'],
+            rows: [[10000]]
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(2)
+      const messages = fatals.map((f) => f.message).join(' ')
+      expect(messages).toContain('TEXT_FIELD')
+      expect(messages).toContain('NUMBER_FIELD')
+    })
+  })
+
+  describe('ROW_ID validation (FATAL)', () => {
+    it('returns FATAL error when ROW_ID is not a number', () => {
+      const result = validate({
+        TEST_TABLE: {
+          ROW_ID: 'not-a-number',
+          TEXT_FIELD: 'hello',
+          NUMBER_FIELD: 42
+        }
+      })
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('ROW_ID')
+      expect(fatals[0].context.actual).toBe('not-a-number')
+    })
+
+    it('returns FATAL error when ROW_ID is below minimum (10000)', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 9999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+      })
+
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('ROW_ID')
+      expect(fatals[0].context.actual).toBe(9999)
+    })
+
+    it('returns FATAL error for each row with invalid ROW_ID', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 10000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
+          { ROW_ID: 'invalid', TEXT_FIELD: 'bad', NUMBER_FIELD: 2 },
+          { ROW_ID: 5000, TEXT_FIELD: 'also bad', NUMBER_FIELD: 3 }
+        ]
+      })
+
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(2)
+    })
+  })
+
+  describe('cell validation errors', () => {
+    it('returns error when string field is not a string', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+      })
+
+      expect(result.issues.isValid()).toBe(false)
       expect(result.issues.isFatal()).toBe(false)
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain('TEXT_FIELD')
+      expect(errors[0].message).toContain('must be a string')
     })
 
-    describe('header validation errors', () => {
-      it('returns fatal error when required header is missing', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-              rows: [[10000, '2025-05-28T00:00:00.000Z']]
-            }
-          }
+    it('returns error when number field is not a number', () => {
+      const result = validate({
+        TEST_TABLE: {
+          ROW_ID: 10000,
+          TEXT_FIELD: 'hello',
+          NUMBER_FIELD: 'not-a-number'
         }
-
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(true)
-
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals.length).toBeGreaterThanOrEqual(1)
-        expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-        expect(fatals[0].message).toContain('Missing required header')
-
-        // Check that at least some of the missing headers are reported
-        const messages = fatals.map((f) => f.message).join(' ')
-        expect(messages).toContain('EWC_CODE')
       })
 
-      it('returns multiple fatal errors when multiple headers are missing', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              headers: ['ROW_ID'],
-              rows: [[10000]]
-            }
-          }
-        }
+      expect(result.issues.isValid()).toBe(false)
 
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(true)
-
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals.length).toBeGreaterThanOrEqual(2)
-        const messages = fatals.map((f) => f.message).join(' ')
-        expect(messages).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-        expect(messages).toContain('EWC_CODE')
-      })
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain('NUMBER_FIELD')
+      expect(errors[0].message).toContain('must be a number')
     })
 
-    describe('ROW_ID validation (FATAL)', () => {
-      it('returns FATAL error when ROW_ID is not a number', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  'not-a-number',
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(true)
-
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
-        expect(fatals[0].message).toContain('ROW_ID')
-        expect(fatals[0].context.location).toEqual({
-          sheet: 'Received (sections 1, 2, 3)',
-          table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-          row: 8,
-          column: 'B',
-          header: 'ROW_ID'
-        })
-        expect(fatals[0].context.actual).toBe('not-a-number')
+    it('returns error when number field is zero or negative', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
       })
 
-      it('returns FATAL error when ROW_ID is below minimum (10000)', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  9999,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
+      expect(result.issues.isValid()).toBe(false)
 
-        const result = validateDataSyntax({ parsed })
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain('NUMBER_FIELD')
+      expect(errors[0].message).toContain('must be greater than 0')
+    })
 
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(true)
-
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0].message).toContain('ROW_ID')
-        expect(fatals[0].context.actual).toBe(9999)
+    it('returns error when date field is invalid', () => {
+      const result = validate({
+        DATE_TABLE: { ROW_ID: 10000, DATE_FIELD: 'not-a-date' }
       })
 
-      it('returns FATAL error for each row with invalid ROW_ID', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ], // Valid
-                [
-                  'invalid',
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ], // Invalid - not a number
-                [
-                  5000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ] // Invalid - below minimum
-              ]
-            }
-          }
-        }
+      expect(result.issues.isValid()).toBe(false)
 
-        const result = validateDataSyntax({ parsed })
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain('DATE_FIELD')
+      expect(errors[0].message).toContain('must be a valid date')
+    })
 
-        expect(result.issues.isFatal()).toBe(true)
-
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals).toHaveLength(2)
+    it('returns error when pattern field does not match pattern', () => {
+      const result = validate({
+        PATTERN_TABLE: { ROW_ID: 10000, CODE_FIELD: 'invalid' }
       })
 
-      it('handles missing location gracefully for FATAL ROW_ID errors', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              // No location provided
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  9999,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
+      expect(result.issues.isValid()).toBe(false)
 
-        const result = validateDataSyntax({ parsed })
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain('CODE_FIELD')
+      expect(errors[0].message).toContain('must be in format "XX XX XX"')
+    })
 
-        expect(result.issues.isFatal()).toBe(true)
+    it('reports errors for multiple rows', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 10000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
+          { ROW_ID: 10001, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' },
+          { ROW_ID: 10002, TEXT_FIELD: 'valid', NUMBER_FIELD: 3 }
+        ]
+      })
 
-        const fatals = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.FATAL
-        )
-        expect(fatals).toHaveLength(1)
-        expect(fatals[0].context.location.header).toBe('ROW_ID')
-        expect(fatals[0].context.location.row).toBeUndefined()
-        expect(fatals[0].context.location.column).toBeUndefined()
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(false)
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(2) // TEXT_FIELD and NUMBER_FIELD errors from row 2
+    })
+  })
+
+  describe('location context', () => {
+    it('includes spreadsheet location in error context', () => {
+      const result = validate(
+        {
+          TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        },
+        { location: { sheet: 'Sheet1', row: 10, column: 'B' } }
+      )
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].context.location).toEqual({
+        sheet: 'Sheet1',
+        table: 'TEST_TABLE',
+        row: 11, // 10 + 1 (first data row)
+        column: 'C', // B + 1 (TEXT_FIELD is second column)
+        header: 'TEXT_FIELD'
       })
     })
 
-    describe('cell validation errors - DATE_RECEIVED_FOR_REPROCESSING', () => {
-      it('returns error when DATE_RECEIVED_FOR_REPROCESSING is invalid', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  'not-a-date',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
+    it('calculates correct column letters for multiple errors', () => {
+      const result = validate(
+        {
+          TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' }
+        },
+        { location: { sheet: 'Sheet1', row: 10, column: 'B' } }
+      )
 
-        const result = validateDataSyntax({ parsed })
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(2)
 
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
+      const textError = errors.find(
+        (e) => e.context.location?.header === 'TEXT_FIELD'
+      )
+      const numberError = errors.find(
+        (e) => e.context.location?.header === 'NUMBER_FIELD'
+      )
 
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-        expect(errors[0].message).toContain('must be a valid date')
+      expect(textError.context.location.column).toBe('C')
+      expect(numberError.context.location.column).toBe('D')
+    })
+
+    it('handles multi-letter column offsets correctly', () => {
+      const result = validate(
+        {
+          TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        },
+        { location: { sheet: 'Sheet1', row: 5, column: 'Z' } }
+      )
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].context.location.column).toBe('AA') // Z + 1
+    })
+
+    it('handles missing location gracefully', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+      })
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors[0].context.location.header).toBe('TEXT_FIELD')
+      expect(errors[0].context.location.row).toBeUndefined()
+      expect(errors[0].context.location.column).toBeUndefined()
+    })
+
+    it('includes location in FATAL ROW_ID errors', () => {
+      const result = validate(
+        {
+          TEST_TABLE: { ROW_ID: 9999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+        },
+        { location: { sheet: 'Sheet1', row: 7, column: 'B' } }
+      )
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].context.location).toEqual({
+        sheet: 'Sheet1',
+        table: 'TEST_TABLE',
+        row: 8,
+        column: 'B',
+        header: 'ROW_ID'
       })
     })
 
-    describe('cell validation errors - EWC_CODE', () => {
-      it('returns error when EWC_CODE format is invalid', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  'invalid',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('EWC_CODE')
-        expect(errors[0].message).toContain('must be in format "XX XX XX"')
+    it('handles missing location gracefully for FATAL errors', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 9999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
-      it('returns error when EWC_CODE is "Choose option" placeholder', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  'Choose option',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
-      })
-    })
-
-    describe('multiple row errors', () => {
-      it('reports errors for multiple rows', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ], // Valid
-                [
-                  10001,
-                  'invalid-date',
-                  'bad-code',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ], // Row 2: 2 errors (date and EWC code)
-                [
-                  10002,
-                  '2025-08-01T00:00:00.000Z',
-                  '16 03 10',
-                  2000,
-                  200,
-                  100,
-                  1700,
-                  'NO',
-                  'VISUAL',
-                  100,
-                  0.9,
-                  1700
-                ] // Valid
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false) // Cell errors are not fatal
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors.length).toBe(2) // 2 errors from row 2 (date and EWC code)
-        expect(errors.every((e) => e.context.location?.row === 9)).toBe(true) // Row 7 (headers) + 2 (second data row)
-      })
-    })
-
-    describe('location context', () => {
-      it('includes spreadsheet location in error context', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: {
-                sheet: 'Received (sections 1, 2, 3)',
-                row: 7,
-                column: 'B'
-              },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  10000,
-                  'invalid-date',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors[0].context.location).toEqual({
-          sheet: 'Received (sections 1, 2, 3)',
-          table: 'RECEIVED_LOADS_FOR_REPROCESSING',
-          row: 8, // 7 + 1 (for data row)
-          column: 'C', // Column C for DATE_RECEIVED_FOR_REPROCESSING
-          header: 'DATE_RECEIVED_FOR_REPROCESSING'
-        })
-      })
-
-      it('calculates correct column letters for multiple errors', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: {
-                sheet: 'Sheet1',
-                row: 10,
-                column: 'B'
-              },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  10000,
-                  'invalid-date',
-                  'bad-code',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ] // DATE and EWC_CODE invalid
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-
-        expect(errors).toHaveLength(2)
-
-        // Find errors by checking header to determine which field
-        const dateError = errors.find(
-          (e) => e.context.location?.header === 'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        const ewcError = errors.find(
-          (e) => e.context.location?.header === 'EWC_CODE'
-        )
-
-        expect(dateError.context.location.column).toBe('C') // Second column
-        expect(ewcError.context.location.column).toBe('D') // Third column
-      })
-
-      it('handles multi-letter column offsets correctly', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: {
-                sheet: 'Sheet1',
-                row: 5,
-                column: 'Z' // Start at column Z
-              },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  10000,
-                  'invalid',
-                  'bad',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-
-        const dateError = errors.find(
-          (e) => e.context.location?.header === 'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        const ewcError = errors.find(
-          (e) => e.context.location?.header === 'EWC_CODE'
-        )
-
-        expect(dateError.context.location.column).toBe('AA') // Column 27
-        expect(ewcError.context.location.column).toBe('AB') // Column 28
-      })
-
-      it('handles missing location gracefully', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              // No location provided
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  10000,
-                  'invalid-date',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-
-        // Location now always includes header name, even without spreadsheet coordinates
-        expect(errors[0].context.location.header).toBe(
-          'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        expect(errors[0].context.location.row).toBeUndefined()
-        expect(errors[0].context.location.column).toBeUndefined()
-      })
-    })
-
-    describe('cell validation errors - GROSS_WEIGHT', () => {
-      it('returns error when GROSS_WEIGHT is not a number', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  'not-a-number',
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-        expect(result.issues.isFatal()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('GROSS_WEIGHT')
-        expect(errors[0].message).toContain('must be a number')
-      })
-
-      it('returns error when GROSS_WEIGHT is zero or negative', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  0,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors[0].message).toContain('GROSS_WEIGHT')
-        expect(errors[0].message).toContain('must be greater than 0')
-      })
-    })
-
-    describe('cell validation errors - BAILING_WIRE_PROTOCOL', () => {
-      it('returns error when BAILING_WIRE_PROTOCOL is not a string', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  true,
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain('BAILING_WIRE_PROTOCOL')
-        expect(errors[0].message).toContain('must be a string')
-      })
-    })
-
-    describe('cell validation errors - HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION', () => {
-      it('returns error when HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION is not a string', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  123,
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors).toHaveLength(1)
-        expect(errors[0].message).toContain(
-          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-        )
-        expect(errors[0].message).toContain('must be a string')
-      })
-    })
-
-    describe('cell validation errors - RECYCLABLE_PROPORTION_PERCENTAGE', () => {
-      it('returns error when RECYCLABLE_PROPORTION_PERCENTAGE is not a number', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  'invalid',
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-        expect(errors[0].message).toContain('must be a number')
-      })
-
-      it('returns error when RECYCLABLE_PROPORTION_PERCENTAGE is zero or negative', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-        expect(errors[0].message).toContain('must be greater than 0')
-      })
-
-      it('returns error when RECYCLABLE_PROPORTION_PERCENTAGE is 1 or greater', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  1.0,
-                  850
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors[0].message).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-        expect(errors[0].message).toContain('must be less than 1')
-      })
-    })
-
-    describe('cell validation errors - TONNAGE_RECEIVED_FOR_RECYCLING', () => {
-      it('returns error when TONNAGE_RECEIVED_FOR_RECYCLING is not a number', () => {
-        const parsed = {
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              ...createValidReceivedLoadsForReprocessingTable(),
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  'not-a-number'
-                ]
-              ]
-            }
-          }
-        }
-
-        const result = validateDataSyntax({ parsed })
-        expect(result.issues.isValid()).toBe(false)
-
-        const errors = result.issues.getIssuesBySeverity(
-          VALIDATION_SEVERITY.ERROR
-        )
-        expect(errors[0].message).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
-        expect(errors[0].message).toContain('must be a number')
-      })
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].context.location.header).toBe('ROW_ID')
+      expect(fatals[0].context.location.row).toBeUndefined()
     })
   })
 
   describe('multiple tables', () => {
     it('validates multiple tables independently', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 },
+        DATE_TABLE: { ROW_ID: 10001, DATE_FIELD: '2025-01-01' }
+      })
+
+      expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('ignores tables without schemas', () => {
       const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
-          RECEIVED_LOADS_FOR_REPROCESSING:
-            createValidReceivedLoadsForReprocessingTable(),
+          TEST_TABLE: {
+            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+            rows: [[10000, 'hello', 42]]
+          },
           UNKNOWN_TABLE: {
-            // This should be ignored since no schema exists
             headers: ['ANYTHING'],
             rows: [['goes']]
           }
         }
       }
 
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax(parsed)
 
       expect(result.issues.isValid()).toBe(true)
-      expect(result.issues.isFatal()).toBe(false)
     })
   })
 
   describe('edge cases', () => {
     it('handles missing data section gracefully', () => {
-      const parsed = {}
-
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax({})
 
       expect(result.issues.isValid()).toBe(true)
-      expect(result.issues.isFatal()).toBe(false)
     })
 
     it('handles empty data section gracefully', () => {
-      const parsed = { data: {} }
-
-      const result = validateDataSyntax({ parsed })
+      const result = validateDataSyntax({ data: {} })
 
       expect(result.issues.isValid()).toBe(true)
-      expect(result.issues.isFatal()).toBe(false)
+    })
+  })
+
+  describe('validated data output', () => {
+    it('returns validated rows with row IDs extracted', () => {
+      const result = validate({
+        TEST_TABLE: [
+          { ROW_ID: 10000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
+          { ROW_ID: 10001, TEXT_FIELD: 'second', NUMBER_FIELD: 2 }
+        ]
+      })
+
+      const rows = result.validatedData.data.TEST_TABLE.rows
+      expect(rows).toHaveLength(2)
+      expect(rows[0].rowId).toBe('10000')
+      expect(rows[1].rowId).toBe('10001')
+      expect(rows[0].issues).toEqual([])
+    })
+
+    it('attaches issues to validated rows', () => {
+      const result = validate({
+        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+      })
+
+      const rows = result.validatedData.data.TEST_TABLE.rows
+      expect(rows[0].issues).toHaveLength(1)
+      expect(rows[0].issues[0].message).toContain('TEXT_FIELD')
+    })
+
+    it('returns empty rows when headers are missing', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          TEST_TABLE: {
+            headers: ['ROW_ID'],
+            rows: [[10000]]
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      expect(result.validatedData.data.TEST_TABLE.rows).toEqual([])
     })
   })
 })

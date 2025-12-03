@@ -109,3 +109,11 @@ export const RECEIVED_LOADS_FOR_REPROCESSING_CONCERN_SCHEMA = Joi.object({
 })
   .unknown(true)
   .prefs({ abortEarly: false })
+
+/**
+ * Empty schema that accepts any data
+ * Used for tables that don't yet have validation rules defined
+ */
+export const EMPTY_SCHEMA = Joi.object({})
+  .unknown(true)
+  .prefs({ abortEarly: false })
