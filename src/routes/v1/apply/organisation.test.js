@@ -54,7 +54,7 @@ describe(`${url} route`, () => {
       payload: organisationFixture
     })
 
-    const orgId = 500002
+    const orgId = 500025
     const orgName = 'ACME ltd'
 
     expect(response.statusCode).toEqual(StatusCodes.OK)
