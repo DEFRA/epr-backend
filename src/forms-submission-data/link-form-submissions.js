@@ -117,16 +117,14 @@ export function linkItemsToOrganisations(
     const org = organisationsById.get(systemReference)
 
     if (org) {
-      if (systemReferencesRequiringOrgIdMatch.has(systemReference)) {
-        const { matched, unmatched } = partitionItemsByOrgIdMatch(
-          itemsPerOrg,
-          org
-        )
-        org[propertyName] = matched
-        unlinked.push(...unmatched.map(toUnlinkedItem))
-      } else {
-        org[propertyName] = itemsPerOrg
-      }
+      const { matched, unmatched } = systemReferencesRequiringOrgIdMatch.has(
+        systemReference
+      )
+        ? partitionItemsByOrgIdMatch(itemsPerOrg, org)
+        : { matched: itemsPerOrg, unmatched: [] }
+
+      org[propertyName] = matched
+      unlinked.push(...unmatched.map(toUnlinkedItem))
     } else {
       unlinked.push(...itemsPerOrg.map(toUnlinkedItem))
     }
