@@ -300,10 +300,7 @@ export const createSummaryLogsValidator =
       validation: {
         issues: issues.getAllIssues()
       },
-      ...(loads && { loads }),
-      ...(issues.isFatal() && {
-        failureReason: issues.getAllIssues()[0].message
-      })
+      ...(loads && { loads })
     })
 
     logger.info({

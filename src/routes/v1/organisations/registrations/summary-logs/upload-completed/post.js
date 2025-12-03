@@ -5,7 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import {
-  determineFailureReason,
+  createRejectedValidation,
   determineStatusFromUpload,
   SUMMARY_LOG_STATUS,
   transitionStatus,
@@ -40,7 +40,6 @@ const buildSummaryLogData = (
   registrationId
 ) => {
   const status = determineStatusFromUpload(upload.fileStatus)
-  const failureReason = determineFailureReason(status, upload.errorMessage)
 
   const data = {
     status,
@@ -49,8 +48,8 @@ const buildSummaryLogData = (
     registrationId
   }
 
-  if (failureReason) {
-    data.failureReason = failureReason
+  if (status === SUMMARY_LOG_STATUS.REJECTED) {
+    data.validation = createRejectedValidation(upload.errorMessage)
   }
 
   return data

@@ -48,10 +48,6 @@ export const summaryLogsGet = {
       response.loads = summaryLog.loads
     }
 
-    if (summaryLog.failureReason) {
-      response.failureReason = summaryLog.failureReason
-    }
-
     // Add accreditation number if status is SUBMITTED
     if (summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) {
       const registration = await organisationsRepository.findRegistrationById(

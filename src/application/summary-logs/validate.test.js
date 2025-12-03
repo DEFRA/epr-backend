@@ -257,8 +257,7 @@ describe('SummaryLogsValidator', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        }),
-        failureReason: 'Something went wrong while retrieving your file upload'
+        })
       })
     )
   })
@@ -284,8 +283,7 @@ describe('SummaryLogsValidator', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        }),
-        failureReason: 'Registration with id reg-123 not found'
+        })
       })
     )
   })
@@ -319,9 +317,7 @@ describe('SummaryLogsValidator', () => {
               }
             }
           ]
-        }),
-        failureReason:
-          "Summary log's registration number does not match this registration"
+        })
       })
     )
   })
@@ -345,8 +341,7 @@ describe('SummaryLogsValidator', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        }),
-        failureReason: 'S3 access denied'
+        })
       })
     )
   })
@@ -459,8 +454,7 @@ describe('SummaryLogsValidator', () => {
                 message: expect.stringContaining('TEMPLATE_VERSION')
               })
             ])
-          }),
-          failureReason: expect.stringContaining('TEMPLATE_VERSION')
+          })
         })
       )
     })

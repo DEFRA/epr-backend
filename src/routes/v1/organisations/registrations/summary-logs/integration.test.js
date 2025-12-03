@@ -346,12 +346,14 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns rejected status with reason', () => {
+      it('returns rejected status with validation failure code', () => {
         expect(JSON.parse(response.payload)).toEqual(
           expect.objectContaining({
             status: UPLOAD_STATUS.REJECTED,
-            failureReason:
-              'Something went wrong with your file upload. Please try again.'
+            validation: {
+              failures: [{ code: 'FILE_REJECTED' }],
+              concerns: {}
+            }
           })
         )
       })
@@ -834,7 +836,11 @@ describe('Summary logs integration', () => {
       it('returns invalid status due to fatal ROW_ID error', () => {
         const payload = JSON.parse(response.payload)
         expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-        expect(payload.failureReason).toContain('ROW_ID')
+        expect(payload.validation.failures).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE' })
+          ])
+        )
       })
 
       it('persists both fatal and error severity issues', async () => {
@@ -1000,13 +1006,16 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns invalid status with failure reason due to fatal errors', () => {
+      it('returns invalid status with validation failures due to fatal errors', () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toMatchObject({
           status: SUMMARY_LOG_STATUS.INVALID
         })
-        expect(payload.failureReason).toBeDefined()
-        expect(payload.failureReason).toContain('Missing required header')
+        expect(payload.validation.failures).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: 'HEADER_REQUIRED' })
+          ])
+        )
       })
 
       it('persists fatal validation errors in database', async () => {
@@ -1372,9 +1381,13 @@ describe('Summary logs integration', () => {
       it('returns invalid status due to fatal meta syntax error', () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toMatchObject({
-          status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: expect.stringContaining('TEMPLATE_VERSION')
+          status: SUMMARY_LOG_STATUS.INVALID
         })
+        expect(payload.validation.failures).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: 'TEMPLATE_VERSION_REQUIRED' })
+          ])
+        )
       })
 
       it('returns only meta syntax error (no meta business or data errors)', () => {
