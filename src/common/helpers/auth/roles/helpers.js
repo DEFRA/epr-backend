@@ -3,6 +3,28 @@ import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('../types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 /** @typedef {import('../types.js').DefraIdRelationship} DefraIdRelationship */
+/** @typedef {import('#formsubmission/types.js').OrganisationUser} OrganisationUser */
+
+/**
+ * Finds a user in the organisation by email
+ * @param {Object} organisation - The organisation object
+ * @param {string} email - The user's email address in their Defra token
+ * @param {string} contactId - The user's contact Id in their Defra token
+ * @returns {OrganisationUser | null | undefined} The user if found, null if no users array exists, undefined if user not found
+ */
+export function findUserInOrg(organisation, email, contactId) {
+  const { users } = organisation
+
+  if (!users) {
+    return null
+  }
+
+  return organisation.users.find(
+    (user) =>
+      user.email.toLowerCase() === email.toLowerCase() ||
+      user.contactId === contactId
+  )
+}
 
 /**
  * Checks if a user is the initial user of an organisation

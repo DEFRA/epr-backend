@@ -35,7 +35,7 @@ export const publicKey = {
 
 /** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
 export const baseDefraIdTokenPayload = {
-  id: 'test-contact-id',
+  contactId: 'test-contact-id',
   email: USER_EMAIL,
   firstName: 'John',
   lastName: 'Doe',

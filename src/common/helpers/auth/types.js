@@ -23,7 +23,7 @@
  * Used for Frontend application authentication and organization-based access control
  *
  * @typedef {{
- *   id: string
+ *   contactId: string
  *   email: string
  *   firstName: string
  *   lastName: string

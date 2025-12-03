@@ -37,7 +37,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
     },
     validate: async (artifacts, request) => {
       const tokenPayload = artifacts.decoded.payload
-      const { iss: issuer, aud: audience, id: contactId, email } = tokenPayload
+      const { iss: issuer, aud: audience, email } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
         // For Entra Id tokens, we only accept them if they were signed for Admin UI
@@ -51,7 +51,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
         return {
           isValid: true,
           credentials: {
-            id: contactId,
+            id: tokenPayload.id,
             email,
             issuer,
             scope
@@ -73,7 +73,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
         return {
           isValid: scope.length > 0,
           credentials: {
-            id: contactId,
+            id: tokenPayload.contactId,
             email,
             issuer,
             scope

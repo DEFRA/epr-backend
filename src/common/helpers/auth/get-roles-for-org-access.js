@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { addUserIfNotInitial } from './add-user-if-not-initial.js'
+import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -40,7 +40,7 @@ export const getRolesForOrganisationAccess = async (
     throw Boom.forbidden('Access denied: organisation status not accessible')
   }
 
-  addUserIfNotInitial(request, tokenPayload, organisationById)
+  addStandardUserIfNotPresent(request, tokenPayload, organisationById)
 
   return [ROLES.standardUser]
 }
