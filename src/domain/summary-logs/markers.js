@@ -23,6 +23,9 @@ export const SKIP_ROW_TEXT = 'Example'
 /** Default dropdown placeholder text that should be treated as empty/null */
 export const PLACEHOLDER_TEXT = 'Choose option'
 
+/** Material field placeholder text that should be treated as empty/null */
+export const MATERIAL_PLACEHOLDER_TEXT = 'Choose material'
+
 /**
  * Helper to check if a header is an EPR marker
  * @param {string} header - Header value to check
