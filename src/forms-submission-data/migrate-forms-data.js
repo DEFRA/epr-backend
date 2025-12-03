@@ -11,6 +11,7 @@ import {
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migration-config.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
@@ -208,13 +209,19 @@ export async function migrateFormsData(
 }
 
 function linkRegistrations(organisations, registrations) {
-  return linkItemsToOrganisations(organisations, registrations, 'registrations')
-}
-
-function linkAccreditations(organisations, registrations) {
   return linkItemsToOrganisations(
     organisations,
     registrations,
-    'accreditations'
+    'registrations',
+    systemReferencesRequiringOrgIdMatch()
+  )
+}
+
+function linkAccreditations(organisations, accreditations) {
+  return linkItemsToOrganisations(
+    organisations,
+    accreditations,
+    'accreditations',
+    systemReferencesRequiringOrgIdMatch()
   )
 }

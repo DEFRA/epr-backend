@@ -84,6 +84,7 @@ describe('migrateFormsData', () => {
     let parseOrgSubmission
     let parseRegistrationSubmission
     let parseAccreditationSubmission
+    let linkItemsToOrganisations
 
     beforeEach(async () => {
       // Import and mock all transform functions
@@ -104,6 +105,13 @@ describe('migrateFormsData', () => {
         accrModule,
         'parseAccreditationSubmission'
       )
+
+      const linkModule =
+        await import('#formsubmission/link-form-submissions.js')
+      linkItemsToOrganisations = vi.spyOn(
+        linkModule,
+        'linkItemsToOrganisations'
+      )
     })
 
     afterEach(() => {
@@ -111,6 +119,7 @@ describe('migrateFormsData', () => {
       parseOrgSubmission.mockRestore()
       parseRegistrationSubmission.mockRestore()
       parseAccreditationSubmission.mockRestore()
+      linkItemsToOrganisations.mockRestore()
     })
 
     describe('persistence scenarios', () => {
@@ -153,6 +162,28 @@ describe('migrateFormsData', () => {
         expect(parseRegistrationSubmission).toHaveBeenCalledWith(
           validRegSubmission1.id,
           validRegSubmission1.rawSubmissionData
+        )
+
+        expect(linkItemsToOrganisations).toHaveBeenCalledTimes(2)
+        const systemReferencesRequiringOrgIdMatch = new Set([
+          '507f191e810c19729de860ea',
+          '507f191e810c19729de860eb',
+          '65a2f5a1b4c5d9f8e7a6b1c3',
+          '65a2f5a1b4c5d9f8e7a6b1c5'
+        ])
+        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
+          1,
+          expect.any(Array),
+          expect.any(Array),
+          'registrations',
+          systemReferencesRequiringOrgIdMatch
+        )
+        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
+          2,
+          expect.any(Array),
+          expect.any(Array),
+          'accreditations',
+          systemReferencesRequiringOrgIdMatch
         )
 
         expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)
