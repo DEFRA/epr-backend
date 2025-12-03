@@ -1,3 +1,7 @@
+/** @import {SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
+/** @import {MetadataEntry} from '#domain/summary-logs/extractor/port.js' */
+/** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
+
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
@@ -79,11 +83,11 @@ describe('SummaryLogsValidator integration', () => {
 
   /**
    * @typedef {{
-   *  registrationType: string;
+   *  registrationType: WasteProcessingTypeValue;
    *  registrationWRN: string;
    *  accreditationNumber?: string;
-   *  metadata?: any;
-   *  summaryLogExtractor?: any;
+   *  metadata?: Record<string, MetadataEntry>;
+   *  summaryLogExtractor?: SummaryLogExtractor;
    * }} RunValidationParams
    * @param {RunValidationParams} params
    */
