@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
 import { isOrganisationsDiscoveryReq } from './roles/helpers.js'
@@ -41,6 +42,10 @@ export async function getDefraUserRoles(tokenPayload, request) {
     tokenPayload,
     organisationsRepository
   )
+
+  if (!linkedEprOrg) {
+    throw Boom.unauthorized('User token is not linked to an organisation')
+  }
 
   // Throws error if:
   // - the request does not have an organisationId param
