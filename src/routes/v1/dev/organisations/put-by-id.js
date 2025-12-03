@@ -68,17 +68,10 @@ export const devOrganisationsPutById = {
 
     const { organisation } = request.payload
 
-    const {
-      version: _v,
-      id: _,
-      schemaVersion: _s,
-      ...sanitisedFragment
-    } = organisation
-
     /** @type {Organisation} */
-    const merged = deepMerge(current, sanitisedFragment)
+    const merged = deepMerge(current, organisation)
 
-    const { version: __v, id: __id, schemaVersion: __s, ...updates } = merged
+    const { id: _, schemaVersion: _s, version: _v, ...updates } = merged
 
     try {
       await organisationsRepository.update(id, current.version, updates)
