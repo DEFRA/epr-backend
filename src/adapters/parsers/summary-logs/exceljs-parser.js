@@ -6,8 +6,10 @@ import {
   DATA_PREFIX,
   SKIP_COLUMN,
   SKIP_ROW_TEXT,
-  PLACEHOLDER_TEXT
+  PLACEHOLDER_TEXT,
+  MATERIAL_PLACEHOLDER_TEXT
 } from '#domain/summary-logs/markers.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
@@ -52,8 +54,17 @@ const processCellForMetadata = (
         'Malformed sheet: metadata marker found in value position'
       )
     }
-    draftState.result.meta[draftState.metadataContext.metadataName] = {
-      value: cellValue,
+
+    // Normalize MATERIAL placeholder to null
+    const metadataName = draftState.metadataContext.metadataName
+    const normalisedValue =
+      metadataName === SUMMARY_LOG_META_FIELDS.MATERIAL &&
+      cellValue === MATERIAL_PLACEHOLDER_TEXT
+        ? null
+        : cellValue
+
+    draftState.result.meta[metadataName] = {
+      value: normalisedValue,
       location: {
         sheet: worksheet.name,
         row: rowNumber,
