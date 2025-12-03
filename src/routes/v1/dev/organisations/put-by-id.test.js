@@ -41,8 +41,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         method: 'PUT',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
-          version: org.version,
-          updateFragment: { wasteProcessingTypes: ['reprocessor'] }
+          organisation: { wasteProcessingTypes: ['reprocessor'] }
         }
       })
 
@@ -51,7 +50,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
   })
 
   describe('happy path', () => {
-    it('should return 200 and the updated organisation when the org Id exists, the version is correct and the fragment is valid', async () => {
+    it('should return 200 and the updated organisation with auto-fetched version', async () => {
       const org = buildOrganisation()
 
       await organisationsRepository.insert(org)
@@ -60,16 +59,16 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         method: 'PUT',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
-          version: org.version,
-          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+          organisation: { ...org, wasteProcessingTypes: ['reprocessor'] }
         }
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
+
       const body = JSON.parse(response.payload)
-      expect(body.id).toBe(org.id)
-      expect(body.version).toBe(org.version + 1)
-      expect(body.wasteProcessingTypes).toEqual(['reprocessor'])
+      expect(body.organisation.id).toBe(org.id)
+      expect(body.organisation.version).toBe(org.version + 1)
+      expect(body.organisation.wasteProcessingTypes).toEqual(['reprocessor'])
     })
 
     it('should include Cache-Control header in successful response', async () => {
@@ -80,8 +79,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         method: 'PUT',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
-          version: org.version,
-          updateFragment: { wasteProcessingTypes: org.wasteProcessingTypes }
+          organisation: { wasteProcessingTypes: org.wasteProcessingTypes }
         }
       })
 
@@ -98,8 +96,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         method: 'PUT',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
-          version: org.version,
-          updateFragment: { wasteProcessingTypes: ['reprocessor'] }
+          organisation: { wasteProcessingTypes: ['reprocessor'] }
         }
       })
 
@@ -121,8 +118,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
           method: 'PUT',
           url: `/v1/dev/organisations/${nonExistentId}`,
           payload: {
-            version: org.version,
-            updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+            organisation: { ...org, wasteProcessingTypes: ['reprocessor'] }
           }
         })
       })
@@ -138,24 +134,38 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       })
     })
 
-    it('should return 404 when orgId is missing (whitespace-only path segment)', async () => {
-      const org = buildOrganisation()
-
+    it('should return 422 when orgId is whitespace-only', async () => {
       const response = await server.inject({
         method: 'PUT',
         url: '/v1/dev/organisations/%20%20%20',
         payload: {
-          version: org.version,
-          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+          organisation: { wasteProcessingTypes: ['reprocessor'] }
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toBe('"id" cannot be empty')
     })
   })
 
   describe('invalid payload', () => {
-    it('should return 400 when version field is missing', async () => {
+    it('should return 422 when organisation field is missing', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {}
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toBe('"organisation" is required')
+    })
+
+    it('should return 422 when organisation is null', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)
 
@@ -163,18 +173,16 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         method: 'PUT',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
-          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+          organisation: null
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /Payload must include a numeric version field/
-      )
+      expect(body.message).toBe('"organisation" must be an object')
     })
 
-    it('should return 400 when version field is not a number', async () => {
+    it('should return 422 when organisation is not an object', async () => {
       const org = buildOrganisation()
       await organisationsRepository.insert(org)
 
@@ -182,94 +190,14 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         method: 'PUT',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
-          version: 'not-a-number',
-          updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
+          organisation: 'not-an-object'
         }
       })
 
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /Payload must include a numeric version field/
-      )
+      expect(body.message).toBe('"organisation" must be an object')
     })
-
-    it('should return 400 when updateFragment field is missing', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
-
-      const response = await server.inject({
-        method: 'PUT',
-        url: `/v1/dev/organisations/${org.id}`,
-        payload: {
-          version: org.version
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /Payload must include an updateFragment object/
-      )
-    })
-
-    it('should return 400 when updateFragment is null', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
-
-      const response = await server.inject({
-        method: 'PUT',
-        url: `/v1/dev/organisations/${org.id}`,
-        payload: {
-          version: org.version,
-          updateFragment: null
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /Payload must include an updateFragment object/
-      )
-    })
-
-    it('should return 400 when updateFragment is not an object', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
-
-      const response = await server.inject({
-        method: 'PUT',
-        url: `/v1/dev/organisations/${org.id}`,
-        payload: {
-          version: org.version,
-          updateFragment: 'not-an-object'
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toMatch(
-        /Payload must include an updateFragment object/
-      )
-    })
-  })
-
-  it('should return 409 when version number does not match current version', async () => {
-    const org = buildOrganisation()
-    await organisationsRepository.insert(org)
-
-    const response = await server.inject({
-      method: 'PUT',
-      url: `/v1/dev/organisations/${org.id}`,
-      payload: {
-        version: org.version + 1,
-        updateFragment: { ...org, wasteProcessingTypes: ['reprocessor'] }
-      }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-    const body = JSON.parse(response.payload)
-    expect(body.message).toMatch(/Version conflict/)
   })
 
   it('should include validation error information in the response', async () => {
@@ -280,8 +208,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       method: 'PUT',
       url: `/v1/dev/organisations/${org.id}`,
       payload: {
-        version: org.version,
-        updateFragment: { ...org, wasteProcessingTypes: [] }
+        organisation: { ...org, wasteProcessingTypes: [] }
       }
     })
 

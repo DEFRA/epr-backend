@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Joi from 'joi'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -11,20 +12,20 @@ import { StatusCodes } from 'http-status-codes'
 
 export const devOrganisationsPutByIdPath = '/v1/dev/organisations/{id}'
 
-const validateMyPayload = (payload) => {
-  if (typeof payload.version !== 'number') {
-    throw Boom.badRequest('Payload must include a numeric version field')
-  }
+const params = Joi.object({
+  id: Joi.string().trim().min(1).required()
+}).messages({
+  'any.required': '{#label} is required',
+  'string.empty': '{#label} cannot be empty',
+  'string.min': '{#label} cannot be empty'
+})
 
-  if (
-    typeof payload.updateFragment !== 'object' ||
-    payload.updateFragment === null
-  ) {
-    throw Boom.badRequest('Payload must include an updateFragment object')
-  }
-
-  return payload
-}
+const payload = Joi.object({
+  organisation: Joi.object().required()
+}).messages({
+  'any.required': '{#label} is required',
+  'object.base': '{#label} must be an object'
+})
 
 export const devOrganisationsPutById = {
   method: 'PUT',
@@ -32,7 +33,11 @@ export const devOrganisationsPutById = {
   options: {
     auth: false,
     validate: {
-      payload: validateMyPayload
+      params,
+      payload,
+      failAction: (_request, _h, err) => {
+        throw Boom.badData(err.message)
+      }
     }
   },
 
@@ -43,28 +48,29 @@ export const devOrganisationsPutById = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
 
-    const id = request.params.id.trim()
+    const { id } = request.params
 
-    if (!id) {
-      throw Boom.notFound('Organisation not found')
-    }
+    const current = await organisationsRepository.findById(id)
 
-    const { version, updateFragment } = request.payload
+    const { organisation } = request.payload
 
     const {
       version: _v,
       id: _,
       schemaVersion: _s,
       ...sanitisedFragment
-    } = updateFragment
+    } = organisation
 
     /** @type {OrganisationUpdateFragment} */
     const updates = sanitisedFragment
 
     try {
-      await organisationsRepository.update(id, version, updates)
-      const updated = await organisationsRepository.findById(id, version + 1)
-      return h.response(updated).code(StatusCodes.OK)
+      await organisationsRepository.update(id, current.version, updates)
+      const updated = await organisationsRepository.findById(
+        id,
+        current.version + 1
+      )
+      return h.response({ organisation: updated }).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)
     }
