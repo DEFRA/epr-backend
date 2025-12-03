@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
-import { produce } from 'immer'
+import mergeWith from 'lodash.mergewith'
 
 import { mergeSubcollection } from '#repositories/organisations/helpers.js'
 
@@ -31,31 +31,13 @@ const payload = Joi.object({
 })
 
 const deepMerge = (current, updates) => {
-  return produce(current, (draft) => {
-    const merge = (draftObj, sourceObj) => {
-      for (const key in sourceObj) {
-        const value = sourceObj[key]
-
-        if (
-          (key === 'registrations' || key === 'accreditations') &&
-          Array.isArray(value)
-        ) {
-          draftObj[key] = mergeSubcollection(draftObj[key] || [], value)
-        } else if (
-          value &&
-          typeof value === 'object' &&
-          !Array.isArray(value)
-        ) {
-          if (!draftObj[key] || typeof draftObj[key] !== 'object') {
-            draftObj[key] = {}
-          }
-          merge(draftObj[key], value)
-        } else {
-          draftObj[key] = value
-        }
+  return mergeWith({}, current, updates, (objValue, srcValue, key) => {
+    if (Array.isArray(srcValue)) {
+      if (key === 'registrations' || key === 'accreditations') {
+        return mergeSubcollection(objValue || [], srcValue)
       }
+      return srcValue
     }
-    merge(draft, updates)
   })
 }
 
