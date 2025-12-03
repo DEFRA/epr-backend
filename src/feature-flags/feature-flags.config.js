@@ -10,5 +10,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isLogFileUploadsFromFormsEnabled() {
     return config.get('featureFlags.logFileUploadsFromForms')
+  },
+  isDevEndpointsEnabled() {
+    return config.get('featureFlags.devEndpoints')
   }
 })
