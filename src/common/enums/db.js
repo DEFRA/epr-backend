@@ -1,3 +1,5 @@
 export const SCHEMA_VERSION = 1
 
 export const ORG_ID_START_NUMBER = 500000
+
+export const NUMBER_OF_TEST_SUBMISSIONS_DELETED_IN_PROD = 23
