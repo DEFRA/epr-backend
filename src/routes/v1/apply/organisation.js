@@ -6,6 +6,7 @@ import {
   AUDIT_EVENT_CATEGORIES,
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
+  NUMBER_OF_TEST_SUBMISSIONS_DELETED_IN_PROD,
   ORG_ID_START_NUMBER,
   ORGANISATION_SUBMISSION_REGULATOR_CONFIRMATION_EMAIL_TEMPLATE_ID,
   ORGANISATION_SUBMISSION_USER_CONFIRMATION_EMAIL_TEMPLATE_ID
@@ -22,11 +23,12 @@ import { sendEmail } from '#common/helpers/notify.js'
 export const organisationPath = '/v1/apply/organisation'
 
 async function getNextOrgId(collection) {
-  const count = await collection.countDocuments({
-    orgId: {
-      $gte: ORG_ID_START_NUMBER
-    }
-  })
+  const count =
+    (await collection.countDocuments({
+      orgId: {
+        $gte: ORG_ID_START_NUMBER
+      }
+    })) + NUMBER_OF_TEST_SUBMISSIONS_DELETED_IN_PROD
   return ORG_ID_START_NUMBER + count + 1
 }
 
