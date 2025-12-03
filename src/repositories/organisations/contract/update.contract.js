@@ -146,7 +146,7 @@ export const testUpdateBehaviour = (it) => {
         )
         expect(addedReg).toBeDefined()
 
-        const { statusHistory, ...expectedReg } = {
+        const { statusHistory: _, ...expectedReg } = {
           ...newRegistration,
           formSubmissionTime: new Date(newRegistration.formSubmissionTime)
         }
@@ -184,7 +184,7 @@ export const testUpdateBehaviour = (it) => {
         )
         expect(addedAcc).toBeDefined()
 
-        const { statusHistory, ...expectedAcc } = {
+        const { statusHistory: _, ...expectedAcc } = {
           ...newAccreditation,
           formSubmissionTime: new Date(newAccreditation.formSubmissionTime)
         }

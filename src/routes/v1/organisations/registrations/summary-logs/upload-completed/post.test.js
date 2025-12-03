@@ -5,10 +5,10 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createTestServer } from '#test/create-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 
@@ -113,7 +113,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: (logger) => summaryLogsRepository
+        summaryLogsRepository: (_logger) => summaryLogsRepository
       },
       workers: {
         summaryLogsWorker

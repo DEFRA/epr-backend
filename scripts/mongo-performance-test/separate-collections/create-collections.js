@@ -14,7 +14,7 @@ export async function createOrganisationCollection(
     try {
       await db.collection(collectionName).drop()
       console.log('Dropped existing organisation collection')
-    } catch (error) {
+    } catch (_error) {
       console.log('Organisation collection does not exist, creating new')
     }
 
@@ -149,7 +149,7 @@ export async function createRegistrationCollection(
     try {
       await db.collection(collectionName).drop()
       console.log('Dropped existing registration collection')
-    } catch (error) {
+    } catch (_error) {
       console.log('Registration collection does not exist, creating new')
     }
 
@@ -355,7 +355,7 @@ export async function createAccreditationCollection(
     try {
       await db.collection(collectionName).drop()
       console.log('Dropped existing accreditation collection')
-    } catch (error) {
+    } catch (_error) {
       console.log('Accreditation collection does not exist, creating new')
     }
 

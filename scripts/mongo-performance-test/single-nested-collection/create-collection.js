@@ -15,7 +15,7 @@ export async function createOrganisationCollection(
     try {
       await db.collection(collectionName).drop()
       console.log('Dropped existing collection')
-    } catch (error) {
+    } catch (_error) {
       console.log('Collection does not exist, creating new')
     }
 

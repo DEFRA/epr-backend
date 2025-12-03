@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import { buildOrganisation } from './test-data.js'
 
 export const testInsertBehaviour = (it) => {
@@ -24,14 +24,14 @@ export const testInsertBehaviour = (it) => {
           ...orgWithoutStatusHistory,
           formSubmissionTime: new Date(orgData.formSubmissionTime),
           registrations: orgData.registrations.map((reg) => {
-            const { statusHistory, ...regWithoutStatusHistory } = reg
+            const { statusHistory: _, ...regWithoutStatusHistory } = reg
             return {
               ...regWithoutStatusHistory,
               formSubmissionTime: new Date(reg.formSubmissionTime)
             }
           }),
           accreditations: orgData.accreditations.map((acc) => {
-            const { statusHistory, ...accWithoutStatusHistory } = acc
+            const { statusHistory: _, ...accWithoutStatusHistory } = acc
             return {
               ...accWithoutStatusHistory,
               formSubmissionTime: new Date(acc.formSubmissionTime)

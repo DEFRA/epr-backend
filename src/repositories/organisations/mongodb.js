@@ -134,7 +134,7 @@ const performUpdate = (db) => async (id, version, updates) => {
 
 const performUpsert = (db) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
-  const { id, version, schemaVersion, ...updateData } = validated
+  const { id, version: _v, schemaVersion: _s, ...updateData } = validated
 
   const existing = await db
     .collection(COLLECTION_NAME)
@@ -176,7 +176,7 @@ const performFindById =
     let validatedId
     try {
       validatedId = validateId(id)
-    } catch (error) {
+    } catch (_error) {
       throw Boom.notFound(`Organisation with id ${id} not found`)
     }
 
