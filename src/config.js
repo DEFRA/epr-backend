@@ -314,6 +314,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
+    },
+    devEndpoints: {
+      doc: 'Feature Flag: Enable development endpoints',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     }
   },
   formSubmissionOverrides: {

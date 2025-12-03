@@ -3,6 +3,7 @@ import { apply } from '#routes/v1/apply/index.js'
 import * as summaryLogsRoutes from '#routes/v1/organisations/registrations/summary-logs/index.js'
 import * as organisationRoutes from '#routes/v1/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
+import * as devRoutes from '#routes/v1/dev/index.js'
 import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
 
 const router = {
@@ -17,11 +18,16 @@ const router = {
             ? Object.values(summaryLogsRoutes)
             : []
 
+        const devRoutesBehindFeatureFlag = featureFlags.isDevEndpointsEnabled()
+          ? Object.values(devRoutes)
+          : []
+
         server.route([
           health,
           ...apply,
           ...Object.values(meRoutes),
           ...summaryLogsRoutesBehindFeatureFlag,
+          ...devRoutesBehindFeatureFlag,
           ...Object.values(organisationRoutes),
           ...formSubmissionsRoutes
         ])
