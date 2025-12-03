@@ -13,7 +13,7 @@ import { mergeSubcollection } from '#repositories/organisations/helpers.js'
  * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationUpdateFragment
  */
 
-export const devOrganisationsPutByIdPath = '/v1/dev/organisations/{id}'
+export const devOrganisationsPatchByIdPath = '/v1/dev/organisations/{id}'
 
 const params = Joi.object({
   id: Joi.string().trim().min(1).required()
@@ -41,9 +41,9 @@ const deepMerge = (current, updates) => {
   })
 }
 
-export const devOrganisationsPutById = {
-  method: 'PUT',
-  path: devOrganisationsPutByIdPath,
+export const devOrganisationsPatchById = {
+  method: 'PATCH',
+  path: devOrganisationsPatchByIdPath,
   options: {
     auth: false,
     validate: {

@@ -1,1 +1,1 @@
-export { devOrganisationsPutById } from './put-by-id.js'
+export { devOrganisationsPatchById } from './patch-by-id.js'

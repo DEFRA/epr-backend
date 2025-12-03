@@ -6,7 +6,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 
-describe('PUT /v1/dev/organisations/{id}', () => {
+describe('PATCH /v1/dev/organisations/{id}', () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
@@ -37,7 +37,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await testServer.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: { wasteProcessingTypes: ['reprocessor'] }
@@ -55,7 +55,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -75,7 +75,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: { wasteProcessingTypes: org.wasteProcessingTypes }
@@ -92,7 +92,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: { wasteProcessingTypes: ['reprocessor'] }
@@ -114,7 +114,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
         await organisationsRepository.insert(org)
 
         response = await server.inject({
-          method: 'PUT',
+          method: 'PATCH',
           url: `/v1/dev/organisations/${nonExistentId}`,
           payload: {
             organisation: { ...org, wasteProcessingTypes: ['reprocessor'] }
@@ -135,7 +135,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
 
     it('should return 422 when orgId is whitespace-only', async () => {
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: '/v1/dev/organisations/%20%20%20',
         payload: {
           organisation: { wasteProcessingTypes: ['reprocessor'] }
@@ -154,7 +154,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {}
       })
@@ -169,7 +169,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: null
@@ -186,7 +186,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: 'not-an-object'
@@ -204,7 +204,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
     await organisationsRepository.insert(org)
 
     const response = await server.inject({
-      method: 'PUT',
+      method: 'PATCH',
       url: `/v1/dev/organisations/${org.id}`,
       payload: {
         organisation: { ...org, wasteProcessingTypes: [] }
@@ -227,7 +227,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       const originalPhone = org.submitterContactDetails.phone
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: {
@@ -254,7 +254,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       await organisationsRepository.insert(org)
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: {
@@ -276,7 +276,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       const originalOrgName = org.registrations[0].orgName
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: {
@@ -311,7 +311,7 @@ describe('PUT /v1/dev/organisations/{id}', () => {
       const originalOrgName = org.accreditations[0].orgName
 
       const response = await server.inject({
-        method: 'PUT',
+        method: 'PATCH',
         url: `/v1/dev/organisations/${org.id}`,
         payload: {
           organisation: {
