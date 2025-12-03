@@ -11,7 +11,7 @@ import {
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
-import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/overrides/override.js'
+import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migration-config.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'

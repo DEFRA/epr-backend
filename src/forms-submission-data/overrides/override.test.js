@@ -1,8 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyAccreditationOverrides,
-  applyRegistrationOverrides,
-  systemReferencesRequiringOrgIdMatch
+  applyRegistrationOverrides
 } from './override.js'
 
 describe('Override Functions', () => {
@@ -73,21 +72,6 @@ describe('Override Functions', () => {
 
       // Should return the submission unchanged
       expect(result).toEqual(testSubmission)
-    })
-  })
-
-  describe('systemReferencesRequiringOrgIdMatch', () => {
-    it('should return set of systemReferences requiring orgId validation', () => {
-      const result = systemReferencesRequiringOrgIdMatch()
-
-      expect(result).toEqual(
-        new Set([
-          '507f191e810c19729de860ea',
-          '507f191e810c19729de860eb',
-          '65a2f5a1b4c5d9f8e7a6b1c3',
-          '65a2f5a1b4c5d9f8e7a6b1c5'
-        ])
-      )
     })
   })
 })
