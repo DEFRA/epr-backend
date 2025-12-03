@@ -37,9 +37,9 @@ const fileSchema = Joi.object({
 
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
-  failureReason: Joi.string().optional(),
   validation: Joi.object({
-    issues: Joi.array().items(Joi.object()).optional()
+    issues: Joi.array().items(Joi.object()).optional(),
+    failures: Joi.array().items(Joi.object()).optional()
   }).optional(),
   file: Joi.when('status', {
     is: SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -52,9 +52,9 @@ export const summaryLogInsertSchema = Joi.object({
 
 export const summaryLogUpdateSchema = Joi.object({
   status: statusSchema.optional(),
-  failureReason: Joi.string().optional(),
   validation: Joi.object({
-    issues: Joi.array().items(Joi.object()).optional()
+    issues: Joi.array().items(Joi.object()).optional(),
+    failures: Joi.array().items(Joi.object()).optional()
   }).optional(),
   loads: loadsSchema.optional(),
   file: fileSchema.optional(),

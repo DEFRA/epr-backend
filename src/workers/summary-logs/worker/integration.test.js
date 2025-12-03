@@ -199,8 +199,7 @@ describe('SummaryLogsValidator integration', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        },
-        failureReason: errorMessage
+        }
       }
     })
   })
@@ -344,9 +343,7 @@ describe('SummaryLogsValidator integration', () => {
                     }
                   }
                 ]
-              },
-              failureReason:
-                'Summary log processing type does not match registration waste processing type'
+              }
             }
           })
         })
@@ -393,8 +390,7 @@ describe('SummaryLogsValidator integration', () => {
                 }
               }
             ]
-          },
-          failureReason: "Invalid meta field 'PROCESSING_TYPE': is required"
+          }
         }
       })
     })
@@ -448,9 +444,7 @@ describe('SummaryLogsValidator integration', () => {
                 }
               }
             ]
-          },
-          failureReason:
-            "Invalid meta field 'PROCESSING_TYPE': must be one of: REPROCESSOR_INPUT, REPROCESSOR_OUTPUT, EXPORTER"
+          }
         }
       })
     })
@@ -521,14 +515,13 @@ describe('SummaryLogsValidator integration', () => {
         }
       })
 
-      expect(updated).toMatchObject({
-        version: 2,
-        summaryLog: {
-          status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason:
-            "Summary log's accreditation number does not match this registration"
-        }
-      })
+      expect(updated.version).toBe(2)
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'ACCREDITATION_MISMATCH' })
+        ])
+      )
     })
 
     it('should fail validation when registration has accreditation but spreadsheet is missing accreditation number', async () => {
@@ -556,13 +549,13 @@ describe('SummaryLogsValidator integration', () => {
         }
       })
 
-      expect(updated).toMatchObject({
-        version: 2,
-        summaryLog: {
-          status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: 'Invalid summary log: missing accreditation number'
-        }
-      })
+      expect(updated.version).toBe(2)
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'ACCREDITATION_MISSING' })
+        ])
+      )
     })
 
     it('should validate successfully when registration has no accreditation and spreadsheet is blank', async () => {
@@ -621,14 +614,13 @@ describe('SummaryLogsValidator integration', () => {
         }
       })
 
-      expect(updated).toMatchObject({
-        version: 2,
-        summaryLog: {
-          status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason:
-            'Invalid summary log: accreditation number provided but registration has no accreditation'
-        }
-      })
+      expect(updated.version).toBe(2)
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'ACCREDITATION_UNEXPECTED' })
+        ])
+      )
     })
   })
 })

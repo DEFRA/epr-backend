@@ -50,6 +50,15 @@ export const VALIDATION_CODE = Object.freeze({
   INVALID_DATE: 'INVALID_DATE',
   SEQUENTIAL_ROW_REMOVED: 'SEQUENTIAL_ROW_REMOVED',
 
+  // File upload validation codes (from CDP Uploader rejection)
+  FILE_VIRUS_DETECTED: 'FILE_VIRUS_DETECTED',
+  FILE_EMPTY: 'FILE_EMPTY',
+  FILE_TOO_LARGE: 'FILE_TOO_LARGE',
+  FILE_WRONG_TYPE: 'FILE_WRONG_TYPE',
+  FILE_UPLOAD_FAILED: 'FILE_UPLOAD_FAILED',
+  FILE_DOWNLOAD_FAILED: 'FILE_DOWNLOAD_FAILED',
+  FILE_REJECTED: 'FILE_REJECTED', // Fallback for unknown upload errors
+
   // Generic/fallback codes
   VALIDATION_FALLBACK_ERROR: 'VALIDATION_FALLBACK_ERROR', // Unmapped Joi validation types
   VALIDATION_SYSTEM_ERROR: 'VALIDATION_SYSTEM_ERROR' // System failures during validation

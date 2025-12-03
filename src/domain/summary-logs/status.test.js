@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
-  determineFailureReason,
+  createRejectedValidation,
   determineStatusFromUpload,
   getDefaultStatus,
+  mapUploaderErrorToCode,
   SUMMARY_LOG_STATUS,
   transitionStatus,
   UPLOAD_STATUS
@@ -32,40 +33,76 @@ describe('status', () => {
     })
   })
 
-  describe('determineFailureReason', () => {
-    it('returns error message when provided for rejected status', () => {
-      const errorMessage = 'The selected file contains a virus'
-      const result = determineFailureReason(
-        SUMMARY_LOG_STATUS.REJECTED,
-        errorMessage
+  describe('mapUploaderErrorToCode', () => {
+    it('returns FILE_VIRUS_DETECTED for virus error message', () => {
+      const result = mapUploaderErrorToCode(
+        'The selected file contains a virus'
       )
-      expect(result).toBe(errorMessage)
+      expect(result).toBe('FILE_VIRUS_DETECTED')
     })
 
-    it('returns fallback message for rejected status when error message not provided', () => {
-      const result = determineFailureReason(SUMMARY_LOG_STATUS.REJECTED)
-      expect(result).toBe(
-        'Something went wrong with your file upload. Please try again.'
+    it('returns FILE_EMPTY for empty file error message', () => {
+      const result = mapUploaderErrorToCode('The selected file is empty')
+      expect(result).toBe('FILE_EMPTY')
+    })
+
+    it('returns FILE_TOO_LARGE for file size error message', () => {
+      const result = mapUploaderErrorToCode(
+        'The selected file must be smaller than 10MB'
       )
+      expect(result).toBe('FILE_TOO_LARGE')
     })
 
-    it('returns undefined for validating status', () => {
-      const result = determineFailureReason(SUMMARY_LOG_STATUS.VALIDATING)
-      expect(result).toBeUndefined()
-    })
-
-    it('returns undefined for preprocessing status', () => {
-      const result = determineFailureReason(SUMMARY_LOG_STATUS.PREPROCESSING)
-      expect(result).toBeUndefined()
-    })
-
-    it('returns undefined when error message provided but status is not rejected', () => {
-      const errorMessage = 'The selected file contains a virus'
-      const result = determineFailureReason(
-        SUMMARY_LOG_STATUS.VALIDATING,
-        errorMessage
+    it('returns FILE_WRONG_TYPE for mime type error message', () => {
+      const result = mapUploaderErrorToCode(
+        'The selected file must be a PDF or XLSX'
       )
-      expect(result).toBeUndefined()
+      expect(result).toBe('FILE_WRONG_TYPE')
+    })
+
+    it('returns FILE_UPLOAD_FAILED for upload error message', () => {
+      const result = mapUploaderErrorToCode(
+        'The selected file could not be uploaded – try again'
+      )
+      expect(result).toBe('FILE_UPLOAD_FAILED')
+    })
+
+    it('returns FILE_DOWNLOAD_FAILED for download error message', () => {
+      const result = mapUploaderErrorToCode(
+        'The selected file could not be downloaded'
+      )
+      expect(result).toBe('FILE_DOWNLOAD_FAILED')
+    })
+
+    it('returns FILE_REJECTED for unknown error message', () => {
+      const result = mapUploaderErrorToCode('Some unknown error')
+      expect(result).toBe('FILE_REJECTED')
+    })
+
+    it('returns FILE_REJECTED when error message is undefined', () => {
+      const result = mapUploaderErrorToCode(undefined)
+      expect(result).toBe('FILE_REJECTED')
+    })
+
+    it('returns FILE_REJECTED when error message is null', () => {
+      const result = mapUploaderErrorToCode(null)
+      expect(result).toBe('FILE_REJECTED')
+    })
+  })
+
+  describe('createRejectedValidation', () => {
+    it('returns validation object with failures array', () => {
+      const result = createRejectedValidation('The selected file is empty')
+      expect(result).toEqual({
+        failures: [{ code: 'FILE_EMPTY' }]
+      })
+    })
+
+    it('returns FILE_REJECTED code when no error message provided', () => {
+      const result = createRejectedValidation()
+      expect(result).toEqual({
+        failures: [{ code: 'FILE_REJECTED' }]
+      })
     })
   })
 

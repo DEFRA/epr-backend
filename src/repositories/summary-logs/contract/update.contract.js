@@ -324,9 +324,12 @@ export const testUpdateBehaviour = (it) => {
 
           current = await waitForVersion(repository, id, current.version + 1)
 
-          // Second update: update failureReason only
+          // Second update: update file name only
           await repository.update(id, current.version, {
-            failureReason: 'Updated failure reason'
+            file: {
+              ...current.summaryLog.file,
+              name: 'updated-filename.xlsx'
+            }
           })
 
           const found = await waitForVersion(
@@ -334,7 +337,7 @@ export const testUpdateBehaviour = (it) => {
             id,
             current.version + 1
           )
-          expect(found.summaryLog.failureReason).toBe('Updated failure reason')
+          expect(found.summaryLog.file.name).toBe('updated-filename.xlsx')
           expect(found.summaryLog.validation.issues).toHaveLength(1)
           expect(found.summaryLog.validation.issues[0].message).toBe(
             'Original error'
