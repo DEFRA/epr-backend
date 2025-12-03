@@ -1,8 +1,7 @@
-import { LockManager } from 'mongo-locks'
-
 import { createMongoClient } from '#common/helpers/mongo-client.js'
-
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { config } from '#root/config.js'
+import { LockManager } from 'mongo-locks'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -42,7 +41,11 @@ export const mongoDbPlugin = {
 
       await createOrUpdateCollections(db)
       await createIndexes(db)
-      await createSeedData(db, isProduction)
+      await createSeedData(
+        db,
+        isProduction,
+        createOrganisationsRepository(db)()
+      )
 
       server.logger.info({
         message: `MongoDb connected to ${options.databaseName}`,

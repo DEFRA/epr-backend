@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { createSeedData } from './create-update'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { ObjectId } from 'mongodb'
+import { describe, expect, it } from 'vitest'
+import { createSeedData } from './create-update'
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
@@ -10,22 +11,26 @@ describe('createSeedData', () => {
     const { mockDb, insertions } = createMockDb({
       countDocuments: async () => 0
     })
-    await createSeedData(mockDb, PRODUCTION)
+    await createSeedData(
+      mockDb,
+      PRODUCTION,
+      createInMemoryOrganisationsRepository()()
+    )
     expect(insertions).toHaveLength(0)
   })
 
-  it.each([
-    'organisation',
-    'registration',
-    'accreditation',
-    'epr-organisations'
-  ])(
+  it.each(['organisation', 'registration', 'accreditation'])(
     'creates seed data when there are no documents already in collection %s',
     async (collectionName) => {
       const { mockDb, insertions } = createMockDb({
         countDocuments: async () => 0
       })
-      await createSeedData(mockDb, NON_PRODUCTION)
+
+      await createSeedData(
+        mockDb,
+        NON_PRODUCTION,
+        createInMemoryOrganisationsRepository()()
+      )
 
       expect(insertions.map((insertion) => insertion.collectionName)).toContain(
         collectionName
@@ -33,13 +38,31 @@ describe('createSeedData', () => {
     }
   )
 
+  it('creates seed data when there are no documents already in epr-organisations collection', async (collectionName) => {
+    const { mockDb } = createMockDb({
+      countDocuments: async () => 0
+    })
+
+    const repository = createInMemoryOrganisationsRepository()()
+    const spy = vi.spyOn(repository, 'insert')
+
+    await createSeedData(mockDb, NON_PRODUCTION, repository)
+
+    expect(spy).toHaveBeenCalled()
+  })
+
   it.each(['organisation', 'registration', 'accreditation'])(
     'does not creates seed data when the collection contains documents %s',
     async (collectionName) => {
       const { mockDb, insertions } = createMockDb({
         countDocuments: async () => 1
       })
-      await createSeedData(mockDb, NON_PRODUCTION)
+
+      await createSeedData(
+        mockDb,
+        NON_PRODUCTION,
+        createInMemoryOrganisationsRepository()()
+      )
 
       expect(
         insertions.map((insertion) => insertion.collectionName)
@@ -48,7 +71,7 @@ describe('createSeedData', () => {
   )
 
   it('does not create epr-organisation seed data when the fixtures are already present in the collection ', async () => {
-    const { mockDb, insertions } = createMockDb({
+    const { mockDb } = createMockDb({
       countDocuments: async () => 1,
       find: (_query) => ({
         toArray: async () => [
@@ -56,18 +79,20 @@ describe('createSeedData', () => {
         ]
       })
     })
-    await createSeedData(mockDb, NON_PRODUCTION)
 
-    expect(
-      insertions.map((insertion) => insertion.collectionName)
-    ).not.toContain('epr-organisations')
+    const repository = createInMemoryOrganisationsRepository()()
+    const spy = vi.spyOn(repository, 'insert')
+
+    await createSeedData(mockDb, NON_PRODUCTION, repository)
+
+    expect(spy).not.toHaveBeenCalled()
   })
 })
 
 function createMockDb({
   countDocuments = async () => 0,
   find = () => ({ toArray: async () => [] })
-}) {
+} = {}) {
   const insertions = []
   return {
     insertions,

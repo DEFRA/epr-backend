@@ -2,18 +2,17 @@ import { createOrUpdateAccreditationCollection } from './create-update-accredita
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
 
-import {
-  accreditationFactory,
-  organisationFactory,
-  registrationFactory
-} from './factories/index.js'
-
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 import {
   extractAnswers,
   extractEmail,
   extractOrgName
 } from '../apply/extract-answers.js'
+import {
+  accreditationFactory,
+  organisationFactory,
+  registrationFactory
+} from './factories/index.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
@@ -25,10 +24,11 @@ import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
 
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
-import { eprOrganisationFactory } from '#common/helpers/collections/factories/epr-organisation.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { ObjectId } from 'mongodb'
+
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
 const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
@@ -87,9 +87,15 @@ export async function createIndexes(db) {
  *
  * @async
  * @param {Db} db
+ * @param {() => boolean} isProduction
+ * @param {OrganisationsRepository} organisationsRepository
  * @returns {Promise<void>}
  */
-export async function createSeedData(db, isProduction) {
+export async function createSeedData(
+  db,
+  isProduction,
+  organisationsRepository
+) {
   if (!isProduction()) {
     logger.info({ message: 'Create seed data: start' })
 
@@ -153,14 +159,13 @@ export async function createSeedData(db, isProduction) {
       logger.info({
         message: 'Create seed data: inserting epr-organisation fixtures'
       })
-      await db
-        .collection(COLLECTION_EPR_ORGANISATIONS)
-        .insertMany([
-          eprOrganisationFactory(eprOrganisation1),
-          eprOrganisationFactory(eprOrganisation2),
-          eprOrganisationFactory(eprOrganisation3),
-          eprOrganisationFactory(eprOrganisation4)
-        ])
+
+      await Promise.all([
+        organisationsRepository.insert(eprOrganisation1),
+        organisationsRepository.insert(eprOrganisation2),
+        organisationsRepository.insert(eprOrganisation3),
+        organisationsRepository.insert(eprOrganisation4)
+      ])
     }
   }
 }
