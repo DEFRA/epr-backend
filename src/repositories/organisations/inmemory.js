@@ -104,7 +104,7 @@ const performUpdate =
       )
     }
 
-    const { status, ...merged } = { ...existing, ...validatedUpdates }
+    const { status: _, ...merged } = { ...existing, ...validatedUpdates }
 
     const registrations = mergeSubcollection(
       existing.registrations,

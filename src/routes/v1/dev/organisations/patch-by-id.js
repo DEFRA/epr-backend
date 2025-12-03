@@ -1,9 +1,8 @@
+import { mergeSubcollection } from '#repositories/organisations/helpers.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 import mergeWith from 'lodash.mergewith'
-
-import { mergeSubcollection } from '#repositories/organisations/helpers.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */

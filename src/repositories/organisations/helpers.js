@@ -61,7 +61,7 @@ export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
   }))
 
   return [...processedExisting, ...newItems].map((item) => {
-    const { status, ...remainingFields } = item
+    const { status: _, ...remainingFields } = item
     return remainingFields
   })
 }
