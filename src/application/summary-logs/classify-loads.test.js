@@ -48,15 +48,21 @@ describe('classifyLoads', () => {
       expect(result).toEqual({
         added: {
           valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
+          invalid: { count: 0, rowIds: [] },
+          included: { count: 0, rowIds: [] },
+          excluded: { count: 0, rowIds: [] }
         },
         unchanged: {
           valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
+          invalid: { count: 0, rowIds: [] },
+          included: { count: 0, rowIds: [] },
+          excluded: { count: 0, rowIds: [] }
         },
         adjusted: {
           valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
+          invalid: { count: 0, rowIds: [] },
+          included: { count: 0, rowIds: [] },
+          excluded: { count: 0, rowIds: [] }
         }
       })
     })

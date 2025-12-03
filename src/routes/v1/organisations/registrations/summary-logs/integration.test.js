@@ -266,15 +266,21 @@ describe('Summary logs integration', () => {
           loads: {
             added: {
               valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] }
+              invalid: { count: 0, rowIds: [] },
+              included: { count: 0, rowIds: [] },
+              excluded: { count: 0, rowIds: [] }
             },
             unchanged: {
               valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] }
+              invalid: { count: 0, rowIds: [] },
+              included: { count: 0, rowIds: [] },
+              excluded: { count: 0, rowIds: [] }
             },
             adjusted: {
               valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] }
+              invalid: { count: 0, rowIds: [] },
+              included: { count: 0, rowIds: [] },
+              excluded: { count: 0, rowIds: [] }
             }
           }
         })
@@ -669,15 +675,21 @@ describe('Summary logs integration', () => {
         expect(payload.loads).toEqual({
           added: {
             valid: { count: 1, rowIds: [10000] },
-            invalid: { count: 1, rowIds: [10001] }
+            invalid: { count: 1, rowIds: [10001] },
+            included: { count: 1, rowIds: [10000] },
+            excluded: { count: 1, rowIds: [10001] }
           },
           unchanged: {
             valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] }
+            invalid: { count: 0, rowIds: [] },
+            included: { count: 0, rowIds: [] },
+            excluded: { count: 0, rowIds: [] }
           },
           adjusted: {
             valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] }
+            invalid: { count: 0, rowIds: [] },
+            included: { count: 0, rowIds: [] },
+            excluded: { count: 0, rowIds: [] }
           }
         })
       })

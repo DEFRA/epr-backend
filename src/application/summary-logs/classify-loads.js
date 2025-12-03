@@ -13,8 +13,10 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 /**
  * @typedef {Object} LoadValidity
- * @property {LoadCategory} valid - Valid loads
- * @property {LoadCategory} invalid - Invalid loads
+ * @property {LoadCategory} valid - Valid loads (no issues)
+ * @property {LoadCategory} invalid - Invalid loads (has issues)
+ * @property {LoadCategory} included - Loads included in Waste Balance calculation
+ * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
  */
 
 /**
@@ -34,15 +36,21 @@ const MAX_ROW_IDS = 100
 const createEmptyLoads = () => ({
   added: {
     valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] }
+    invalid: { count: 0, rowIds: [] },
+    included: { count: 0, rowIds: [] },
+    excluded: { count: 0, rowIds: [] }
   },
   unchanged: {
     valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] }
+    invalid: { count: 0, rowIds: [] },
+    included: { count: 0, rowIds: [] },
+    excluded: { count: 0, rowIds: [] }
   },
   adjusted: {
     valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] }
+    invalid: { count: 0, rowIds: [] },
+    included: { count: 0, rowIds: [] },
+    excluded: { count: 0, rowIds: [] }
   }
 })
 
@@ -95,12 +103,22 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   for (const { record, issues } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
-    const category = loads[classification][validityKey]
+    const validityCategory = loads[classification][validityKey]
 
-    category.count++
+    validityCategory.count++
+    if (validityCategory.rowIds.length < MAX_ROW_IDS) {
+      validityCategory.rowIds.push(record.rowId)
+    }
 
-    if (category.rowIds.length < MAX_ROW_IDS) {
-      category.rowIds.push(record.rowId)
+    // Included/excluded classification
+    // For now, mirrors valid/invalid until full pipeline integration
+    // TODO: Use classifyRow from validation-pipeline once integrated
+    const inclusionKey = issues.length > 0 ? 'excluded' : 'included'
+    const inclusionCategory = loads[classification][inclusionKey]
+
+    inclusionCategory.count++
+    if (inclusionCategory.rowIds.length < MAX_ROW_IDS) {
+      inclusionCategory.rowIds.push(record.rowId)
     }
   }
 
