@@ -1,11 +1,10 @@
-import { StatusCodes } from 'http-status-codes'
-import { ObjectId } from 'mongodb'
-
+import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { StatusCodes } from 'http-status-codes'
+import { ObjectId } from 'mongodb'
 
 describe('PUT /v1/dev/organisations/{id}', () => {
   setupAuthContext()
@@ -217,5 +216,128 @@ describe('PUT /v1/dev/organisations/{id}', () => {
     expect(body.message).toBe(
       'Invalid organisation data: wasteProcessingTypes: array.min'
     )
+  })
+
+  describe('deep merge', () => {
+    it('should deep merge nested objects preserving existing fields', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const originalEmail = org.submitterContactDetails.email
+      const originalPhone = org.submitterContactDetails.phone
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            submitterContactDetails: {
+              fullName: 'Updated Name'
+            }
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.organisation.submitterContactDetails).toStrictEqual(
+        expect.objectContaining({
+          fullName: 'Updated Name',
+          email: originalEmail,
+          phone: originalPhone
+        })
+      )
+    })
+
+    it('should replace non-special arrays', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            wasteProcessingTypes: ['exporter']
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      expect(body.organisation.wasteProcessingTypes).toEqual(['exporter'])
+    })
+
+    it('should merge registrations by ID', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const registrationId = org.registrations[0].id
+      const originalOrgName = org.registrations[0].orgName
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            registrations: [
+              {
+                id: registrationId,
+                cbduNumber: 'CBDU12345'
+              }
+            ]
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      const updatedReg = body.organisation.registrations.find(
+        (r) => r.id === registrationId
+      )
+      expect(updatedReg).toStrictEqual(
+        expect.objectContaining({
+          cbduNumber: 'CBDU12345',
+          orgName: originalOrgName
+        })
+      )
+    })
+
+    it('should merge accreditations by ID', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const accreditationId = org.accreditations[0].id
+      const originalOrgName = org.accreditations[0].orgName
+
+      const response = await server.inject({
+        method: 'PUT',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            accreditations: [
+              {
+                id: accreditationId,
+                material: 'plastic',
+                glassRecyclingProcess: null
+              }
+            ]
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+      const updatedAcc = body.organisation.accreditations.find(
+        (a) => a.id === accreditationId
+      )
+      expect(updatedAcc).toStrictEqual(
+        expect.objectContaining({
+          material: 'plastic',
+          orgName: originalOrgName,
+          glassRecyclingProcess: null
+        })
+      )
+    })
   })
 })

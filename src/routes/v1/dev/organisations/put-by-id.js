@@ -1,6 +1,9 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
+import { produce } from 'immer'
+
+import { mergeSubcollection } from '#repositories/organisations/helpers.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
@@ -26,6 +29,35 @@ const payload = Joi.object({
   'any.required': '{#label} is required',
   'object.base': '{#label} must be an object'
 })
+
+const deepMerge = (current, updates) => {
+  return produce(current, (draft) => {
+    const merge = (draftObj, sourceObj) => {
+      for (const key in sourceObj) {
+        const value = sourceObj[key]
+
+        if (
+          (key === 'registrations' || key === 'accreditations') &&
+          Array.isArray(value)
+        ) {
+          draftObj[key] = mergeSubcollection(draftObj[key] || [], value)
+        } else if (
+          value &&
+          typeof value === 'object' &&
+          !Array.isArray(value)
+        ) {
+          if (!draftObj[key] || typeof draftObj[key] !== 'object') {
+            draftObj[key] = {}
+          }
+          merge(draftObj[key], value)
+        } else {
+          draftObj[key] = value
+        }
+      }
+    }
+    merge(draft, updates)
+  })
+}
 
 export const devOrganisationsPutById = {
   method: 'PUT',
@@ -61,8 +93,10 @@ export const devOrganisationsPutById = {
       ...sanitisedFragment
     } = organisation
 
-    /** @type {OrganisationUpdateFragment} */
-    const updates = sanitisedFragment
+    /** @type {Organisation} */
+    const merged = deepMerge(current, sanitisedFragment)
+
+    const { version: __v, id: __id, schemaVersion: __s, ...updates } = merged
 
     try {
       await organisationsRepository.update(id, current.version, updates)
