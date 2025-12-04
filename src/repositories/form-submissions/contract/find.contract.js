@@ -67,6 +67,23 @@ export const testFindBehaviour = (it) => {
           expect(results[0].rawSubmissionData).toEqual(seeded.rawSubmissionData)
         }
       })
+
+      it('performs a case-insensitive find', async ({
+        seedAccreditations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedAccreditations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThan(1)
+
+        for (const seeded of seededData) {
+          const results = await repository.findAccreditationsBySystemReference(
+            seeded.referenceNumber.toUpperCase()
+          )
+          expect(results).toHaveLength(1)
+        }
+      })
     })
 
     describe('findAccreditationById', () => {
@@ -157,7 +174,7 @@ export const testFindBehaviour = (it) => {
         expect(result).toEqual([])
       })
 
-      it('returns accreditations with field values', async ({
+      it('returns registrations with field values', async ({
         seedRegistrations,
         formSubmissionsRepository
       }) => {
@@ -175,6 +192,23 @@ export const testFindBehaviour = (it) => {
           expect(results[0].orgId).toBe(seeded.orgId)
           expect(results[0].referenceNumber).toBe(seeded.referenceNumber)
           expect(results[0].rawSubmissionData).toEqual(seeded.rawSubmissionData)
+        }
+      })
+
+      it('performs a case-insensitive find', async ({
+        seedRegistrations,
+        formSubmissionsRepository
+      }) => {
+        const seededData = await seedRegistrations()
+        const repository = formSubmissionsRepository()
+
+        expect(seededData.length).toBeGreaterThan(1)
+
+        for (const seeded of seededData) {
+          const results = await repository.findRegistrationsBySystemReference(
+            seeded.referenceNumber.toUpperCase()
+          )
+          expect(results).toHaveLength(1)
         }
       })
     })
