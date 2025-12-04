@@ -7,7 +7,7 @@ import { testWasteBalancesRepositoryContract } from './port.contract.js'
 const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
-const extendedIt = mongoIt.extend({
+const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
@@ -41,7 +41,7 @@ const extendedIt = mongoIt.extend({
 
 describe('MongoDB waste balances repository', () => {
   describe('repository creation', () => {
-    extendedIt('should create repository instance', async ({ mongoClient }) => {
+    it('should create repository instance', async ({ mongoClient }) => {
       const database = mongoClient.db(DATABASE_NAME)
       const repository = createWasteBalancesRepository(database)
       const instance = repository()
@@ -59,7 +59,7 @@ describe('MongoDB waste balances repository', () => {
     })
 
     describe('waste balances repository contract', () => {
-      testWasteBalancesRepositoryContract(extendedIt)
+      testWasteBalancesRepositoryContract(it)
     })
   })
 })
