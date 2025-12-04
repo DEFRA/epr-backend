@@ -2,7 +2,6 @@ import Boom from '@hapi/boom'
 import {
   organisationIdSchema,
   registrationIdSchema,
-  accreditationIdSchema,
   wasteRecordSchema
 } from './schema.js'
 
@@ -35,16 +34,6 @@ export const validateWasteRecord = (wasteRecord) => {
   if (error) {
     const details = error.details.map((d) => d.message).join('; ')
     throw Boom.badData(`Invalid waste record: ${details}`)
-  }
-
-  return value
-}
-
-export const validateAccreditationId = (accreditationId) => {
-  const { error, value } = accreditationIdSchema.validate(accreditationId)
-
-  if (error) {
-    throw Boom.badData(error.message)
   }
 
   return value

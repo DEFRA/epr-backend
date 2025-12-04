@@ -6,7 +6,6 @@ import { testWasteRecordsRepositoryContract } from './port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'waste-records'
-const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -19,24 +18,6 @@ const it = mongoIt.extend({
     const database = mongoClient.db(DATABASE_NAME)
     const factory = createWasteRecordsRepository(database)
     await use(factory)
-  },
-
-  insertWasteBalance: async ({ mongoClient }, use) => {
-    await use(async (wasteBalance) => {
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .insertOne(wasteBalance)
-    })
-  },
-
-  insertWasteBalances: async ({ mongoClient }, use) => {
-    await use(async (wasteBalances) => {
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection(WASTE_BALANCE_COLLECTION_NAME)
-        .insertMany(wasteBalances)
-    })
   }
 })
 
@@ -45,10 +26,6 @@ describe('MongoDB waste records repository', () => {
     await mongoClient
       .db(DATABASE_NAME)
       .collection(COLLECTION_NAME)
-      .deleteMany({})
-    await mongoClient
-      .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
       .deleteMany({})
   })
 

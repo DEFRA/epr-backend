@@ -5,8 +5,8 @@ export const testFindByAccreditationIdBehaviour = (it) => {
   describe('findByAccreditationId', () => {
     let repository
 
-    beforeEach(async ({ wasteRecordsRepository }) => {
-      repository = await wasteRecordsRepository()
+    beforeEach(async ({ wasteBalancesRepository }) => {
+      repository = await wasteBalancesRepository()
     })
 
     it('returns null when no waste balance exists for the accreditation', async () => {
@@ -113,7 +113,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
       expect(result.transactions).toHaveLength(1)
       expect(result.transactions[0]._id).toBe('txn-1')
       expect(result.transactions[0].type).toBe('credit')
-      expect(result.transactions[0].createdBy.name).toBe('John Doe')
+      expect(result.transactions[0].createdBy.id).toBe('user-1')
       expect(result.transactions[0].entities).toHaveLength(1)
       expect(result.transactions[0].entities[0].type).toBe(
         'waste_record:received'

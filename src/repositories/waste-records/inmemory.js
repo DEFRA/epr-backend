@@ -1,8 +1,4 @@
-import {
-  validateOrganisationId,
-  validateRegistrationId,
-  validateAccreditationId
-} from './validation.js'
+import { validateOrganisationId, validateRegistrationId } from './validation.js'
 
 /**
  * Finds the index of a record matching the composite key
@@ -61,16 +57,10 @@ const appendVersionToRecord = (storage, key, versionData) => {
  * Ensures data isolation by deep-cloning on store and on read.
  *
  * @param {Array} [initialRecords=[]]
- * @param {Array} [initialWasteBalances=[]]
  * @returns {import('./port.js').WasteRecordsRepositoryFactory}
  */
-export const createInMemoryWasteRecordsRepository = (
-  initialRecords = [],
-  initialWasteBalances = []
-) => {
+export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
   const storage = structuredClone(initialRecords)
-  // Don't clone wasteBalanceStorage to maintain reference for testing
-  const wasteBalanceStorage = initialWasteBalances
 
   return () => ({
     async findByRegistration(organisationId, registrationId) {
@@ -104,16 +94,6 @@ export const createInMemoryWasteRecordsRepository = (
           )
         }
       }
-    },
-
-    async findByAccreditationId(accreditationId) {
-      const validatedAccreditationId = validateAccreditationId(accreditationId)
-
-      const balance = wasteBalanceStorage.find(
-        (b) => b.accreditationId === validatedAccreditationId
-      )
-
-      return balance ? structuredClone(balance) : null
     }
   })
 }

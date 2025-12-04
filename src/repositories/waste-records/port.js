@@ -14,7 +14,6 @@
  * @typedef {Object} WasteRecordsRepository
  * @property {(organisationId: string, registrationId: string) => Promise<WasteRecord[]>} findByRegistration
  * @property {(organisationId: string, registrationId: string, wasteRecordVersions: Map<WasteRecordType, Map<string, VersionData>>) => Promise<void>} appendVersions
- * @property {(accreditationId: string) => Promise<import('#domain/waste-records/model.js').WasteBalance | null>} findByAccreditationId
  */
 
 /**
