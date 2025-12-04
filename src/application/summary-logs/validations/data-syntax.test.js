@@ -6,77 +6,60 @@ import {
 } from '#common/enums/validation.js'
 
 describe('createDataSyntaxValidator', () => {
-  // Minimal test schemas - decoupled from production schemas
+  // Minimal test schemas using domain schema structure
   const TEST_SCHEMAS = {
     TEST: {
       TEST_TABLE: {
         requiredHeaders: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
         rowIdField: 'ROW_ID',
-        rowSchemas: {
-          failure: Joi.object({
-            ROW_ID: Joi.number().required().min(10000).messages({
-              'number.base': 'must be a number',
-              'number.min': 'must be at least 10000',
-              'any.required': 'is required'
-            })
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional().messages({
+            'number.base': 'must be a number',
+            'number.min': 'must be at least 10000'
+          }),
+          TEXT_FIELD: Joi.string().optional().messages({
+            'string.base': 'must be a string'
+          }),
+          NUMBER_FIELD: Joi.number().greater(0).optional().messages({
+            'number.base': 'must be a number',
+            'number.greater': 'must be greater than 0'
           })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          concern: Joi.object({
-            TEXT_FIELD: Joi.string().required().messages({
-              'string.base': 'must be a string',
-              'any.required': 'is required'
-            }),
-            NUMBER_FIELD: Joi.number().required().greater(0).messages({
-              'number.base': 'must be a number',
-              'number.greater': 'must be greater than 0',
-              'any.required': 'is required'
-            })
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false })
-        }
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD']
       },
       DATE_TABLE: {
         requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
         rowIdField: 'ROW_ID',
-        rowSchemas: {
-          failure: Joi.object({
-            ROW_ID: Joi.number().required().min(10000)
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          DATE_FIELD: Joi.date().optional().messages({
+            'date.base': 'must be a valid date'
           })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          concern: Joi.object({
-            DATE_FIELD: Joi.date().required().messages({
-              'date.base': 'must be a valid date',
-              'any.required': 'is required'
-            })
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false })
-        }
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'DATE_FIELD']
       },
       PATTERN_TABLE: {
         requiredHeaders: ['ROW_ID', 'CODE_FIELD'],
         rowIdField: 'ROW_ID',
-        rowSchemas: {
-          failure: Joi.object({
-            ROW_ID: Joi.number().required().min(10000)
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          concern: Joi.object({
-            CODE_FIELD: Joi.string()
-              .required()
-              .pattern(/^\d{2} \d{2} \d{2}$/)
-              .messages({
-                'string.pattern.base': 'must be in format "XX XX XX"',
-                'any.required': 'is required'
-              })
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false })
-        }
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          CODE_FIELD: Joi.string()
+            .pattern(/^\d{2} \d{2} \d{2}$/)
+            .optional()
+            .messages({
+              'string.pattern.base': 'must be in format "XX XX XX"'
+            })
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'CODE_FIELD']
       }
     }
   }

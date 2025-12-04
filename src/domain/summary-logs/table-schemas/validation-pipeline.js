@@ -85,7 +85,8 @@ export const classifyRow = (row, tableSchema) => {
       issues: error.details.map((detail) => ({
         code: 'VALIDATION_ERROR',
         field: detail.path[0],
-        message: detail.message
+        message: detail.message,
+        type: detail.type // Include Joi error type for application-layer mapping
       }))
     }
   }
