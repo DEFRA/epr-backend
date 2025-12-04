@@ -61,7 +61,7 @@ export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
   }))
 
   return [...processedExisting, ...newItems].map((item) => {
-    const { status, ...remainingFields } = item
+    const { status: _, ...remainingFields } = item
     return remainingFields
   })
 }
@@ -93,7 +93,7 @@ const normalizeItem = (item) => {
   if (!item) {
     return item
   }
-  const { status, statusHistory, ...rest } = item
+  const { status: _, statusHistory: _s, ...rest } = item
   return rest
 }
 
@@ -102,7 +102,14 @@ export const normalizeForComparison = (org) => {
     return org
   }
 
-  const { version, schemaVersion, status, statusHistory, users, ...rest } = org
+  const {
+    schemaVersion: _sv,
+    status: _s,
+    statusHistory: _sh,
+    users: _u,
+    version: _v,
+    ...rest
+  } = org
 
   const normalized = {
     ...rest,

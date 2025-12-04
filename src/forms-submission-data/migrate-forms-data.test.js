@@ -1,17 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { migrateFormsData } from './migrate-forms-data.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { readdirSync, readFileSync } from 'fs'
-import { join } from 'path'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { MATERIAL } from '#domain/organisations/model.js'
-import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
+import { logger } from '#common/helpers/logging/logger.js'
 import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json'
+import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
+import { MATERIAL } from '#domain/organisations/model.js'
+import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { readdirSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { migrateFormsData } from './migrate-forms-data.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
