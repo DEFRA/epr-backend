@@ -14,6 +14,16 @@ const it = base.extend({
       wasteBalanceStorage
     )
     await use(factory)
+  },
+  insertWasteBalance: async ({ wasteBalanceStorage }, use) => {
+    await use(async (wasteBalance) => {
+      wasteBalanceStorage.push(wasteBalance)
+    })
+  },
+  insertWasteBalances: async ({ wasteBalanceStorage }, use) => {
+    await use(async (wasteBalances) => {
+      wasteBalanceStorage.push(...wasteBalances)
+    })
   }
 })
 

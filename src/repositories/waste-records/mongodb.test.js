@@ -19,6 +19,24 @@ const it = mongoIt.extend({
     const database = mongoClient.db(DATABASE_NAME)
     const factory = createWasteRecordsRepository(database)
     await use(factory)
+  },
+
+  insertWasteBalance: async ({ mongoClient }, use) => {
+    await use(async (wasteBalance) => {
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_COLLECTION_NAME)
+        .insertOne(wasteBalance)
+    })
+  },
+
+  insertWasteBalances: async ({ mongoClient }, use) => {
+    await use(async (wasteBalances) => {
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_COLLECTION_NAME)
+        .insertMany(wasteBalances)
+    })
   }
 })
 

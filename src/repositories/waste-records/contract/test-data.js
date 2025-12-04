@@ -113,11 +113,11 @@ export const buildWasteRecord = (overrides = {}) => {
  * @returns {import('#domain/waste-records/model.js').WasteBalance}
  */
 export const buildWasteBalance = (overrides = {}) => {
-  const _id = overrides._id || randomUUID()
-  const organisationId = overrides.organisationId || 'org-1'
-  const accreditationId = overrides.accreditationId || 'acc-1'
-  const schemaVersion = overrides.schemaVersion || 1
-  const version = overrides.version || 1
+  const _id = overrides._id ?? randomUUID()
+  const organisationId = overrides.organisationId ?? 'org-1'
+  const accreditationId = overrides.accreditationId ?? 'acc-1'
+  const schemaVersion = overrides.schemaVersion ?? 1
+  const version = overrides.version ?? 1
   const amount = overrides.amount ?? 100
   const availableAmount = overrides.availableAmount ?? 100
 

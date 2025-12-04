@@ -16,8 +16,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
     })
 
     it('returns waste balance when it exists for the accreditation', async ({
-      wasteBalanceStorage,
-      mongoClient
+      insertWasteBalance
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-123',
@@ -26,16 +25,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         availableAmount: 200
       })
 
-      // For MongoDB implementation - insert directly
-      if (mongoClient) {
-        await mongoClient
-          .db('epr-backend')
-          .collection('waste-balances')
-          .insertOne(wasteBalance)
-      } else if (wasteBalanceStorage) {
-        // For in-memory implementation
-        wasteBalanceStorage.push(wasteBalance)
-      }
+      await insertWasteBalance(wasteBalance)
 
       const result = await repository.findByAccreditationId('acc-123')
 
@@ -49,8 +39,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
     })
 
     it('returns correct waste balance when multiple balances exist', async ({
-      wasteBalanceStorage,
-      mongoClient
+      insertWasteBalances
     }) => {
       const balance1 = buildWasteBalance({
         accreditationId: 'acc-1',
@@ -65,16 +54,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         amount: 300
       })
 
-      // For MongoDB implementation
-      if (mongoClient) {
-        await mongoClient
-          .db('epr-backend')
-          .collection('waste-balances')
-          .insertMany([balance1, balance2, balance3])
-      } else if (wasteBalanceStorage) {
-        // For in-memory implementation
-        wasteBalanceStorage.push(balance1, balance2, balance3)
-      }
+      await insertWasteBalances([balance1, balance2, balance3])
 
       const result = await repository.findByAccreditationId('acc-2')
 
@@ -98,8 +78,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
     })
 
     it('returns waste balance with all transaction fields intact', async ({
-      wasteBalanceStorage,
-      mongoClient
+      insertWasteBalance
     }) => {
       const wasteBalance = buildWasteBalance({
         accreditationId: 'acc-456',
@@ -128,16 +107,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
         ]
       })
 
-      // For MongoDB implementation
-      if (mongoClient) {
-        await mongoClient
-          .db('epr-backend')
-          .collection('waste-balances')
-          .insertOne(wasteBalance)
-      } else if (wasteBalanceStorage) {
-        // For in-memory implementation
-        wasteBalanceStorage.push(wasteBalance)
-      }
+      await insertWasteBalance(wasteBalance)
 
       const result = await repository.findByAccreditationId('acc-456')
 
