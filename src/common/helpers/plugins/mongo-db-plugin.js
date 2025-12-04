@@ -7,7 +7,6 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
 import {
-  cleanupSeedData,
   createIndexes,
   createOrUpdateCollections,
   createSeedData
@@ -38,8 +37,7 @@ export const mongoDbPlugin = {
 
       const locker = new LockManager(db.collection('mongo-locks'))
 
-      const isProduction = () => config.get('cdpEnvironment') === 'prod'
-      const isDryRun = () => config.get('seedDataCleanUpDryRun')
+      const isProduction = () => true || config.get('cdpEnvironment') === 'prod'
 
       await createOrUpdateCollections(db)
       await createIndexes(db)
@@ -49,7 +47,6 @@ export const mongoDbPlugin = {
         isProduction,
         createOrganisationsRepository(db)()
       )
-      await cleanupSeedData(db, { isProduction, isDryRun })
 
       server.logger.info({
         message: `MongoDb connected to ${options.databaseName}`,
