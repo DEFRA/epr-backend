@@ -1,4 +1,4 @@
-import { describe, beforeEach, it, expect } from 'vitest'
+import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
