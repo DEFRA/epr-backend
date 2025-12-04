@@ -1,6 +1,11 @@
-import { validateOrganisationId, validateRegistrationId } from './validation.js'
+import {
+  validateOrganisationId,
+  validateRegistrationId,
+  validateAccreditationId
+} from './validation.js'
 
 const COLLECTION_NAME = 'waste-records'
+const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 const SCHEMA_VERSION = 1
 
 /**
@@ -125,6 +130,23 @@ const performAppendVersions =
     await db.collection(COLLECTION_NAME).bulkWrite(bulkOps, { ordered: false })
   }
 
+const performFindByAccreditationId = (db) => async (accreditationId) => {
+  const validatedAccreditationId = validateAccreditationId(accreditationId)
+
+  const doc = await db
+    .collection(WASTE_BALANCE_COLLECTION_NAME)
+    .findOne({ accreditationId: validatedAccreditationId })
+
+  if (!doc) {
+    return null
+  }
+
+  // Map MongoDB document to domain model by removing MongoDB _id from root
+  // but keeping it in nested transactions
+  const { _id, ...domainFields } = doc
+  return structuredClone({ _id: _id.toString(), ...domainFields })
+}
+
 /**
  * Creates a MongoDB-backed waste records repository
  * @param {import('mongodb').Db} db - MongoDB database instance
@@ -133,6 +155,7 @@ const performAppendVersions =
 export const createWasteRecordsRepository = (db) => () => {
   return {
     findByRegistration: performFindByRegistration(db),
-    appendVersions: performAppendVersions(db)
+    appendVersions: performAppendVersions(db),
+    findByAccreditationId: performFindByAccreditationId(db)
   }
 }

@@ -31,6 +31,12 @@ export const registrationIdSchema = Joi.string().required().messages({
   'string.base': 'registrationId must be a string'
 })
 
+export const accreditationIdSchema = Joi.string().required().messages({
+  'any.required': 'accreditationId is required',
+  'string.empty': 'accreditationId cannot be empty',
+  'string.base': 'accreditationId must be a string'
+})
+
 const summaryLogReferenceSchema = Joi.object({
   id: Joi.string().required(),
   uri: Joi.string().required()

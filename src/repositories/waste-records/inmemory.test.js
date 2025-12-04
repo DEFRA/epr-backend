@@ -4,8 +4,15 @@ import { testWasteRecordsRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
-  wasteRecordsRepository: async ({}, use) => {
-    const factory = createInMemoryWasteRecordsRepository([])
+  wasteBalanceStorage: async ({}, use) => {
+    const storage = []
+    await use(storage)
+  },
+  wasteRecordsRepository: async ({ wasteBalanceStorage }, use) => {
+    const factory = createInMemoryWasteRecordsRepository(
+      [],
+      wasteBalanceStorage
+    )
     await use(factory)
   }
 })

@@ -6,6 +6,7 @@ import { testWasteRecordsRepositoryContract } from './port.contract.js'
 
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'waste-records'
+const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -26,6 +27,10 @@ describe('MongoDB waste records repository', () => {
     await mongoClient
       .db(DATABASE_NAME)
       .collection(COLLECTION_NAME)
+      .deleteMany({})
+    await mongoClient
+      .db(DATABASE_NAME)
+      .collection(WASTE_BALANCE_COLLECTION_NAME)
       .deleteMany({})
   })
 
