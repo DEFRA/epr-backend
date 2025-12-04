@@ -107,19 +107,8 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    *
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
+   *
+   * TODO: Expand this list when required fields are determined in a later story.
    */
-  fieldsRequiredForWasteBalance: [
-    'ROW_ID',
-    'DATE_RECEIVED_FOR_REPROCESSING',
-    'EWC_CODE',
-    'GROSS_WEIGHT',
-    'TARE_WEIGHT',
-    'PALLET_WEIGHT',
-    'NET_WEIGHT',
-    'BAILING_WIRE_PROTOCOL',
-    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-    'WEIGHT_OF_NON_TARGET_MATERIALS',
-    'RECYCLABLE_PROPORTION_PERCENTAGE',
-    'TONNAGE_RECEIVED_FOR_RECYCLING'
-  ]
+  fieldsRequiredForWasteBalance: ['EWC_CODE', 'TONNAGE_RECEIVED_FOR_RECYCLING']
 }

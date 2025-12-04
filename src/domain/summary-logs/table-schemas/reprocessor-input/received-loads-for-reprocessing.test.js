@@ -22,9 +22,9 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
     it('has fieldsRequiredForWasteBalance array', () => {
       expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
-      expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
+      expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
       expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DATE_RECEIVED_FOR_REPROCESSING'
+        'TONNAGE_RECEIVED_FOR_RECYCLING'
       )
     })
   })

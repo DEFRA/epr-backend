@@ -2172,8 +2172,8 @@ describe('Summary logs integration', () => {
         // No fatal failures
         expect(payload.validation.failures).toEqual([])
 
-        // Row 8 has validation concerns for dropdown fields that were "Choose option"
-        // (normalized to null by the parser)
+        // Row 8 has dropdown fields that were "Choose option" (normalized to null by parser)
+        // EWC_CODE is required for Waste Balance, so this row is EXCLUDED with concerns
         const concerns = payload.validation.concerns
         expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
         expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows).toHaveLength(1)
@@ -2181,13 +2181,9 @@ describe('Summary logs integration', () => {
         const row8Issues = concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(row8Issues.row).toBe(8)
 
-        // These are the dropdown fields that had "Choose option" (now null)
+        // EWC_CODE had "Choose option" (now null) and is required for Waste Balance
         const issueHeaders = row8Issues.issues.map((i) => i.header)
         expect(issueHeaders).toContain('EWC_CODE')
-        expect(issueHeaders).toContain('BAILING_WIRE_PROTOCOL')
-        expect(issueHeaders).toContain(
-          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-        )
       })
 
       it('terminates data section at row with all placeholder values', async () => {
