@@ -16,7 +16,9 @@ export const loadCategorySchema = Joi.object({
 
 export const loadValiditySchema = Joi.object({
   valid: loadCategorySchema.required(),
-  invalid: loadCategorySchema.required()
+  invalid: loadCategorySchema.required(),
+  included: loadCategorySchema.required(),
+  excluded: loadCategorySchema.required()
 })
 
 export const loadsSchema = Joi.object({

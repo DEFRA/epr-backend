@@ -2,7 +2,7 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   PROCESSING_TYPE_TABLES,
   TABLE_NAMES
-} from '#application/summary-logs/validations/table-schemas.js'
+} from '#domain/summary-logs/table-schemas/index.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const { rowIdField } =
