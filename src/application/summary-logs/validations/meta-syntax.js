@@ -64,7 +64,7 @@ export const validateMetaSyntax = ({ parsed }) => {
 
   if (error) {
     for (const detail of error.details) {
-      const fieldName = detail.path[0]
+      const fieldName = String(detail.path[0])
       const location = {
         ...metaLocations[fieldName],
         field: fieldName

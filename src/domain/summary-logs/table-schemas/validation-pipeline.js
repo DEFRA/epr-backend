@@ -68,7 +68,7 @@ export const filterToFilled = (row, unfilledValues) => {
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {string[]} tableSchema.fieldsRequiredForWasteBalance - Fields required for VAL011
- * @returns {{ outcome: string, issues: Array<{ code: string, field?: string, message?: string }> }}
+ * @returns {{ outcome: "REJECTED" | "EXCLUDED" | "INCLUDED", issues: Array<{ code: string, field?: string | number, message?: string, type?: string }> }}
  */
 export const classifyRow = (row, tableSchema) => {
   const { unfilledValues, validationSchema, fieldsRequiredForWasteBalance } =

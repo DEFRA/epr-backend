@@ -200,10 +200,11 @@ const validateRows = ({
 
     // Convert classification issues to application issues with locations
     const rowIssues = classification.issues.map((issue) => {
-      const colIndex = headerToIndexMap.get(issue.field)
+      const fieldName = String(issue.field)
+      const colIndex = headerToIndexMap.get(fieldName)
       const message = issue.message
-        ? `Invalid value in column '${issue.field}': ${issue.message}`
-        : `Missing required field: ${issue.field}`
+        ? `Invalid value in column '${fieldName}': ${issue.message}`
+        : `Missing required field: ${fieldName}`
 
       // Map issue code to application error code
       // Domain layer only produces VALIDATION_ERROR or MISSING_REQUIRED_FIELD
@@ -212,19 +213,26 @@ const validateRows = ({
           ? mapJoiTypeToErrorCode(issue.type)
           : VALIDATION_CODE.FIELD_REQUIRED
 
+      // Determine severity based on whether this is a ROW_ID error
+      const isRowIdError =
+        classification.outcome === ROW_OUTCOME.REJECTED &&
+        fieldName === domainSchema.rowIdField
+      const severity = isRowIdError ? 'fatal' : 'error'
+
       return {
         category: VALIDATION_CATEGORY.TECHNICAL,
+        severity,
         message,
         code,
         context: {
           location: buildCellLocation({
             tableName,
             rowIndex,
-            fieldName: issue.field,
+            fieldName,
             colIndex,
             location
           }),
-          actual: rowObject[issue.field]
+          actual: rowObject[fieldName]
         }
       }
     })
@@ -233,11 +241,7 @@ const validateRows = ({
     // Only ROW_ID validation errors are FATAL (block entire submission)
     // Other validation errors are ERROR (mark row as invalid but don't block submission)
     for (const rowIssue of rowIssues) {
-      const isRowIdError =
-        classification.outcome === ROW_OUTCOME.REJECTED &&
-        rowIssue.context.location.header === domainSchema.rowIdField
-
-      if (isRowIdError) {
+      if (rowIssue.severity === 'fatal') {
         issues.addFatal(
           rowIssue.category,
           rowIssue.message,
