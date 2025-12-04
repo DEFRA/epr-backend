@@ -1,25 +1,12 @@
-export class ValidationError extends Error {
-  constructor(message) {
-    super(message)
-    this.name = 'ValidationError'
-  }
-}
+import Boom from '@hapi/boom'
+import { accreditationIdSchema } from './schema.js'
 
-/**
- * Validate accreditation ID
- * @param {unknown} accreditationId
- * @returns {string}
- * @throws {ValidationError}
- */
 export const validateAccreditationId = (accreditationId) => {
-  if (
-    typeof accreditationId !== 'string' ||
-    accreditationId.trim().length === 0
-  ) {
-    throw new ValidationError(
-      'accreditationId must be a non-empty string but got: ' +
-        JSON.stringify(accreditationId)
-    )
+  const { error, value } = accreditationIdSchema.validate(accreditationId)
+
+  if (error) {
+    throw Boom.badData(error.message)
   }
-  return accreditationId
+
+  return value
 }

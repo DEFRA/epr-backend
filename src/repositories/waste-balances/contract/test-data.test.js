@@ -3,7 +3,7 @@ import { buildWasteBalance } from './test-data.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
-} from '#domain/waste-records/model.js'
+} from '#domain/waste-balances/model.js'
 
 describe('buildWasteBalance', () => {
   it('generates a waste balance with default values', () => {
