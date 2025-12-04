@@ -126,9 +126,7 @@ export const buildWasteBalance = (overrides = {}) => {
     type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
     createdAt: new Date('2025-01-15T10:00:00.000Z').toISOString(),
     createdBy: {
-      id: 'user-1',
-      name: 'Test User',
-      email: 'test@example.com'
+      id: 'user-1'
     },
     amount: 100,
     openingAmount: 0,

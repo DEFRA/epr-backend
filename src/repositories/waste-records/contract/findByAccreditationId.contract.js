@@ -88,9 +88,7 @@ export const testFindByAccreditationIdBehaviour = (it) => {
             type: 'credit',
             createdAt: '2025-01-15T10:00:00.000Z',
             createdBy: {
-              id: 'user-1',
-              name: 'John Doe',
-              email: 'john@example.com'
+              id: 'user-1'
             },
             amount: 150,
             openingAmount: 0,
