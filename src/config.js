@@ -325,7 +325,7 @@ const baseConfig = {
   formSubmissionOverrides: {
     doc: 'JSON configuration for form submission field overrides (registrations and accreditations) on migration to epr-organisations',
     format: String,
-    default: '{"registrations":[],"accreditations":[]}',
+    default: '{"registrations":[],"accreditations":[],"organisations":[]}',
     env: 'FORM_SUBMISSION_OVERRIDES'
   },
   systemReferencesRequiringOrgIdMatch: {
