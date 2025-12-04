@@ -333,6 +333,12 @@ const baseConfig = {
     format: String,
     default: '[]',
     env: 'SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH'
+  },
+  seedDataCleanUpDryRun: {
+    doc: 'Seed data cleanup only runs when this is false',
+    format: Boolean,
+    default: true,
+    env: 'SEED_DATA_CLEAN_UP_DRY_RUN'
   }
 }
 
