@@ -10,12 +10,14 @@ const PREVIOUS_SUMMARY_LOG_ID = 'previous-summary-log'
  * @param {string} options.status - VERSION_STATUS value
  * @param {string} options.summaryLogId - The summary log ID for the last version
  * @param {Array} options.issues - Validation issues (default empty)
- * @returns {{ record: Object, issues: Array }}
+ * @param {string} options.outcome - Outcome from validation pipeline (default 'INCLUDED')
+ * @returns {{ record: Object, issues: Array, outcome: string }}
  */
 const createValidatedWasteRecord = ({
   status,
   summaryLogId,
   issues = [],
+  outcome = 'INCLUDED',
   previousVersions = []
 }) => ({
   record: {
@@ -34,7 +36,8 @@ const createValidatedWasteRecord = ({
       }
     ]
   },
-  issues
+  issues,
+  outcome
 })
 
 describe('classifyLoads', () => {
@@ -213,6 +216,97 @@ describe('classifyLoads', () => {
     })
   })
 
+  describe('inclusion based on outcome', () => {
+    it('classifies as included when outcome is INCLUDED', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [],
+          outcome: 'INCLUDED'
+        })
+      ]
+
+      const result = classifyLoads({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.added.included.rowIds).toHaveLength(1)
+      expect(result.added.excluded.rowIds).toHaveLength(0)
+    })
+
+    it('classifies as excluded when outcome is EXCLUDED', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [{ severity: 'error', message: 'missing required field' }],
+          outcome: 'EXCLUDED'
+        })
+      ]
+
+      const result = classifyLoads({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.added.excluded.rowIds).toHaveLength(1)
+      expect(result.added.included.rowIds).toHaveLength(0)
+    })
+
+    it('classifies as excluded when outcome is REJECTED', () => {
+      const wasteRecords = [
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [{ severity: 'error', message: 'invalid row id' }],
+          outcome: 'REJECTED'
+        })
+      ]
+
+      const result = classifyLoads({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      expect(result.added.excluded.rowIds).toHaveLength(1)
+      expect(result.added.included.rowIds).toHaveLength(0)
+    })
+
+    it('inclusion is independent of validity', () => {
+      const wasteRecords = [
+        // Valid + Included
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [],
+          outcome: 'INCLUDED'
+        }),
+        // Invalid + Excluded (missing required field)
+        createValidatedWasteRecord({
+          status: VERSION_STATUS.CREATED,
+          summaryLogId: CURRENT_SUMMARY_LOG_ID,
+          issues: [{ severity: 'error', message: 'missing required' }],
+          outcome: 'EXCLUDED'
+        })
+      ]
+
+      const result = classifyLoads({
+        wasteRecords,
+        summaryLogId: CURRENT_SUMMARY_LOG_ID
+      })
+
+      // Validity classification
+      expect(result.added.valid.count).toBe(1)
+      expect(result.added.invalid.count).toBe(1)
+
+      // Inclusion classification
+      expect(result.added.included.count).toBe(1)
+      expect(result.added.excluded.count).toBe(1)
+    })
+  })
+
   describe('mixed scenarios', () => {
     it('correctly classifies mixed records and returns rowIds in correct arrays', () => {
       const wasteRecords = [
@@ -299,7 +393,8 @@ describe('classifyLoads', () => {
               }
             ]
           },
-          issues: []
+          issues: [],
+          outcome: 'INCLUDED'
         }
       ]
 
@@ -325,7 +420,8 @@ describe('classifyLoads', () => {
             data: {},
             versions: []
           },
-          issues: []
+          issues: [],
+          outcome: 'INCLUDED'
         }
       ]
 
@@ -362,7 +458,8 @@ describe('classifyLoads', () => {
             }
           ]
         },
-        issues: []
+        issues: [],
+        outcome: 'INCLUDED'
       }))
 
       const result = classifyLoads({
@@ -401,7 +498,8 @@ describe('classifyLoads', () => {
             }
           ]
         },
-        issues: []
+        issues: [],
+        outcome: 'INCLUDED'
       }))
 
       const invalidRecords = Array.from({ length: 120 }, (_, i) => ({
@@ -423,7 +521,8 @@ describe('classifyLoads', () => {
             }
           ]
         },
-        issues: [{ severity: 'error', message: 'test' }]
+        issues: [{ severity: 'error', message: 'test' }],
+        outcome: 'EXCLUDED'
       }))
 
       const result = classifyLoads({

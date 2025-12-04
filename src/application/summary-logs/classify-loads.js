@@ -90,17 +90,21 @@ const classifyRecord = (record, summaryLogId) => {
  * - valid: Load passes all validation rules (issues.length === 0)
  * - invalid: Load has validation errors (issues.length > 0)
  *
+ * Inclusion:
+ * - included: Load has outcome 'INCLUDED' from validation pipeline
+ * - excluded: Load has outcome 'EXCLUDED' or 'REJECTED' from validation pipeline
+ *
  * Row ID arrays are truncated to 100 entries; totals always reflect the full count.
  *
  * @param {Object} params
- * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues and outcome
  * @param {string} params.summaryLogId - The current summary log ID
  * @returns {Loads} Row IDs grouped by classification and validity
  */
 export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   const loads = createEmptyLoads()
 
-  for (const { record, issues } of wasteRecords) {
+  for (const { record, issues, outcome } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
     const validityCategory = loads[classification][validityKey]
@@ -110,10 +114,8 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
       validityCategory.rowIds.push(record.rowId)
     }
 
-    // Included/excluded classification
-    // For now, mirrors valid/invalid until full pipeline integration
-    // TODO: Use classifyRow from validation-pipeline once integrated
-    const inclusionKey = issues.length > 0 ? 'excluded' : 'included'
+    // Included/excluded classification based on outcome from validation pipeline
+    const inclusionKey = outcome === 'INCLUDED' ? 'included' : 'excluded'
     const inclusionCategory = loads[classification][inclusionKey]
 
     inclusionCategory.count++

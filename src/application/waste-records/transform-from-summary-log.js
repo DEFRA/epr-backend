@@ -10,7 +10,7 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  */
 
 /**
- * A waste record bundled with its validation issues
+ * A waste record bundled with its validation issues and outcome
  *
  * Issues are present when transforming validated rows (from validation pipeline)
  * Issues are absent when transforming unvalidated rows (from sync pipeline)
@@ -18,6 +18,7 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * @typedef {Object} ValidatedWasteRecord
  * @property {WasteRecord} record - The waste record
  * @property {ValidationIssue[]} [issues] - Validation issues (present if input was validated)
+ * @property {'REJECTED'|'EXCLUDED'|'INCLUDED'} [outcome] - Classification outcome (present if input was validated)
  */
 
 /**
@@ -42,14 +43,14 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  * Generic table transformation function
  * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
  *
- * Rows may be validated ({ values, rowId, issues }) or unvalidated ({ values, rowId })
- * If issues are present on input rows, they flow through to the output
+ * Rows may be validated ({ values, rowId, outcome, issues }) or unvalidated ({ values, rowId })
+ * If issues and outcome are present on input rows, they flow through to the output
  *
  * @param {Object} tableData - Table data with headers and rows
  * @param {Function} rowTransformer - Function to transform each row
  * @param {Object} context - Context for creating waste records
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {ValidatedWasteRecord[]} Array of waste records with issues
+ * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
 const transformTable = (
   tableData,
@@ -67,7 +68,7 @@ const transformTable = (
   } = context
 
   return rows.map((row) => {
-    const { values, issues } = row
+    const { values, issues, outcome } = row
 
     // Map row values to object using headers
     const rowData = headers.reduce((acc, header, index) => {
@@ -93,7 +94,7 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, issues }
+        return { record: existingRecord, issues, outcome }
       }
 
       // Add new version with only changed fields
@@ -110,7 +111,8 @@ const transformTable = (
           data,
           versions: [...existingRecord.versions, newVersion]
         },
-        issues
+        issues,
+        outcome
       }
     }
 
@@ -136,15 +138,15 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, issues }
+    return { record: wasteRecord, issues, outcome }
   })
 }
 
 /**
  * Transforms parsed summary log data into waste records
  *
- * Expects validated rows in structure: { values: [...], rowId: string, issues: [...] }
- * Issues flow through transformation and are returned with each record
+ * Expects validated rows in structure: { values: [...], rowId: string, outcome: string, issues: [...] }
+ * Issues and outcome flow through transformation and are returned with each record
  *
  * @param {ParsedSummaryLog} parsedData - The parsed summary log data with validated rows
  * @param {Object} summaryLogContext - Context from the summary log
@@ -156,7 +158,7 @@ const transformTable = (
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
  * @param {string} summaryLogContext.timestamp - ISO timestamp for version createdAt
  * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
- * @returns {ValidatedWasteRecord[]} Array of waste records with issues
+ * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
 export const transformFromSummaryLog = (
   parsedData,
