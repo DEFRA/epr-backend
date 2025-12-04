@@ -9,18 +9,7 @@ import {
   classifyRow,
   ROW_OUTCOME
 } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
-
-/**
- * Creates a table schema getter bound to a specific processing type
- *
- * @param {string} processingType - The processing type from meta.PROCESSING_TYPE
- * @param {Object} registry - Schema registry mapping processing types to table schemas
- * @returns {function(string): Object|null} A function that takes a table name and returns its schema
- */
-const createTableSchemaGetter = (processingType, registry) => {
-  const tables = registry[processingType]
-  return (tableName) => tables?.[tableName] || null
-}
+import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
@@ -53,26 +42,38 @@ const adaptDomainSchema = (domainSchema) => ({
 })
 
 /**
+ * Joi error type to application error code mapping
+ *
+ * When adding new Joi validators to table schemas, ensure the error types
+ * they produce are mapped here. Unmapped types will throw an error.
+ */
+const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
+  'any.required': VALIDATION_CODE.FIELD_REQUIRED,
+  'number.base': VALIDATION_CODE.INVALID_TYPE,
+  'number.min': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.greater': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'string.base': VALIDATION_CODE.INVALID_TYPE,
+  'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
+  'date.base': VALIDATION_CODE.INVALID_DATE
+})
+
+/**
  * Maps Joi validation error types to application error codes
  *
  * @param {string} joiType - The Joi error type (e.g., 'number.min', 'string.pattern.base')
  * @returns {string} The application error code
+ * @throws {Error} If the Joi error type is not mapped
  */
 const mapJoiTypeToErrorCode = (joiType) => {
-  const typeMapping = {
-    'any.required': VALIDATION_CODE.FIELD_REQUIRED,
-    'number.base': VALIDATION_CODE.INVALID_TYPE,
-    'number.min': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'number.greater': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'string.base': VALIDATION_CODE.INVALID_TYPE,
-    'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
-    'date.base': VALIDATION_CODE.INVALID_DATE
+  const code = JOI_TYPE_TO_ERROR_CODE[joiType]
+  if (!code) {
+    throw new Error(
+      `Unmapped Joi error type '${joiType}'. Add it to JOI_TYPE_TO_ERROR_CODE in data-syntax.js`
+    )
   }
-
-  /* istanbul ignore next - Defensive fallback for unmapped Joi error types */
-  return typeMapping[joiType] || VALIDATION_CODE.VALIDATION_FALLBACK_ERROR
+  return code
 }
 
 /**

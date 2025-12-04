@@ -60,6 +60,19 @@ describe('createDataSyntaxValidator', () => {
           .unknown(true)
           .prefs({ abortEarly: false }),
         fieldsRequiredForWasteBalance: ['ROW_ID', 'CODE_FIELD']
+      },
+      // Schema with unmapped Joi error type to test error handling
+      UNMAPPED_TABLE: {
+        requiredHeaders: ['ROW_ID', 'EMAIL_FIELD'],
+        rowIdField: 'ROW_ID',
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          EMAIL_FIELD: Joi.string().email().optional() // 'string.email' is not mapped
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'EMAIL_FIELD']
       }
     }
   }
@@ -543,6 +556,14 @@ describe('createDataSyntaxValidator', () => {
       const result = validateDataSyntax({ data: {} })
 
       expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('throws error for unmapped Joi error types', () => {
+      expect(() =>
+        validate({
+          UNMAPPED_TABLE: { ROW_ID: 10000, EMAIL_FIELD: 'not-an-email' }
+        })
+      ).toThrow("Unmapped Joi error type 'string.email'")
     })
   })
 

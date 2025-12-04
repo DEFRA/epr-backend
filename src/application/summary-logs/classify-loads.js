@@ -1,4 +1,5 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
  * @typedef {import('./validate.js').ValidatedWasteRecord} ValidatedWasteRecord
@@ -119,7 +120,8 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
     }
 
     // Included/excluded classification based on outcome from validation pipeline
-    const inclusionKey = outcome === 'INCLUDED' ? 'included' : 'excluded'
+    const inclusionKey =
+      outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
     const inclusionCategory = loads[classification][inclusionKey]
 
     inclusionCategory.count++
