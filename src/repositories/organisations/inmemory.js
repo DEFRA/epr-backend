@@ -1,18 +1,18 @@
-import {
-  validateId,
-  validateOrganisationInsert,
-  validateOrganisationUpdate
-} from './schema/index.js'
+import Boom from '@hapi/boom'
 import {
   SCHEMA_VERSION,
   collateUsersOnApproval,
   createInitialStatusHistory,
   getCurrentStatus,
-  statusHistoryWithChanges,
+  hasChanges,
   mergeSubcollection,
-  hasChanges
+  statusHistoryWithChanges
 } from './helpers.js'
-import Boom from '@hapi/boom'
+import {
+  validateId,
+  validateOrganisationInsert,
+  validateOrganisationUpdate
+} from './schema/index.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
@@ -104,7 +104,7 @@ const performUpdate =
       )
     }
 
-    const { status, ...merged } = { ...existing, ...validatedUpdates }
+    const { status: _, ...merged } = { ...existing, ...validatedUpdates }
 
     const registrations = mergeSubcollection(
       existing.registrations,
@@ -146,7 +146,7 @@ const performUpsert =
   (storage, staleCache, pendingSyncRef, insertFn, updateFn) =>
   async (organisation) => {
     const validated = validateOrganisationInsert(organisation)
-    const { id, version, schemaVersion, ...updateData } = validated
+    const { id, version: _v, schemaVersion: _s, ...updateData } = validated
 
     const existing = storage.find((o) => o.id === id)
 

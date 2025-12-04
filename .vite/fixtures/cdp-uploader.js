@@ -61,7 +61,7 @@ const callbackReceiverFixture = {
 const cdpUploaderStackFixture = {
   // Depends on callbackReceiver to ensure correct initialisation order
   cdpUploaderStack: [
-    async ({ callbackReceiver }, use) => {
+    async ({ callbackReceiver: _ }, use) => {
       // Disable vitest-fetch-mock so we can make real HTTP requests to containers
       // The global fetch is mocked by default in .vite/setup-files.js
       if (globalThis.fetchMock) {

@@ -11,7 +11,7 @@ export const buildFile = (overrides = {}) => ({
 })
 
 export const buildPendingFile = (overrides = {}) => {
-  const { uri, status, ...rest } = overrides
+  const { uri: _u, status: _s, ...rest } = overrides
   return {
     id: generateFileId(),
     name: 'test.xlsx',
@@ -21,7 +21,7 @@ export const buildPendingFile = (overrides = {}) => {
 }
 
 export const buildRejectedFile = (overrides = {}) => {
-  const { uri, status, ...rest } = overrides
+  const { uri: _u, status: _s, ...rest } = overrides
   return {
     id: generateFileId(),
     name: 'test.xlsx',

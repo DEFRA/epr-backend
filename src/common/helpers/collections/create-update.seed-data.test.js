@@ -38,7 +38,7 @@ describe('createSeedData', () => {
     }
   )
 
-  it('creates seed data when there are no documents already in epr-organisations collection', async (collectionName) => {
+  it('creates seed data when there are no documents already in epr-organisations collection', async () => {
     const { mockDb } = createMockDb({
       countDocuments: async () => 0
     })

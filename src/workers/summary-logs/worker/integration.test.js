@@ -1,17 +1,21 @@
+/** @import {SummaryLogExtractor} from '#domain/summary-logs/extractor/port.js' */
+/** @import {MetadataEntry} from '#domain/summary-logs/extractor/port.js' */
+/** @import {WasteProcessingTypeValue} from '#domain/organisations/model.js' */
+
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 
 describe('SummaryLogsValidator integration', () => {
   let summaryLogsRepository
@@ -77,6 +81,16 @@ describe('SummaryLogsValidator integration', () => {
     }
   }
 
+  /**
+   * @typedef {{
+   *  registrationType: WasteProcessingTypeValue;
+   *  registrationWRN: string;
+   *  accreditationNumber?: string;
+   *  metadata?: Record<string, MetadataEntry>;
+   *  summaryLogExtractor?: SummaryLogExtractor;
+   * }} RunValidationParams
+   * @param {RunValidationParams} params
+   */
   const runValidation = async ({
     registrationType,
     registrationWRN,
@@ -277,23 +291,16 @@ describe('SummaryLogsValidator integration', () => {
       {
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        spreadsheetType: 'EXPORTER',
-        expectedWasteProcessingType: 'exporter'
+        spreadsheetType: 'EXPORTER'
       },
       {
         registrationType: 'exporter',
         registrationWRN: 'REG-456',
-        spreadsheetType: 'REPROCESSOR_INPUT',
-        expectedWasteProcessingType: 'reprocessor'
+        spreadsheetType: 'REPROCESSOR_INPUT'
       }
     ])(
       'when $spreadsheetType type does not match $registrationType registration',
-      ({
-        registrationType,
-        registrationWRN,
-        spreadsheetType,
-        expectedWasteProcessingType
-      }) => {
+      ({ registrationType, registrationWRN, spreadsheetType }) => {
         it('should fail validation with mismatch error', async () => {
           const { updated, summaryLog } = await runValidation({
             registrationType,

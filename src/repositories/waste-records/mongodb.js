@@ -15,7 +15,7 @@ const SCHEMA_VERSION = 1
  * @returns {import('./port.js').WasteRecord} Domain waste record
  */
 const mapDocumentToDomain = (doc) => {
-  const { _id, schemaVersion, ...domainFields } = doc
+  const { _id, schemaVersion: _s, ...domainFields } = doc
   return structuredClone(domainFields)
 }
 
