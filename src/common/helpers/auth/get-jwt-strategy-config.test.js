@@ -1,5 +1,6 @@
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 import Boom from '@hapi/boom'
+import { getUsersOrganisationInfo } from './get-users-org-info.js'
 
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 import { ROLES } from './constants.js'
@@ -27,6 +28,13 @@ const mockGetEntraUserRoles = vi.fn()
 
 vi.mock('./get-entra-user-roles.js', () => ({
   getEntraUserRoles: (...args) => mockGetEntraUserRoles(...args)
+}))
+
+// Mock getUsersOrganisationInfo
+const mockGetUsersOrganisationInfo = vi.fn()
+
+vi.mock('./get-users-org-info.js', () => ({
+  getUsersOrganisationInfo: (...args) => mockGetUsersOrganisationInfo(...args)
 }))
 
 describe('#getJwtStrategyConfig', () => {
@@ -423,15 +431,30 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('Happy path', () => {
       test('uses issuer from defraIdOidcConfig for validation', async () => {
+        const testOrgId = baseDefraIdTokenPayload.currentRelationshipId
+
+        mockGetUsersOrganisationInfo.mockResolvedValue({
+          linkedEprOrg: testOrgId,
+          userOrgs: []
+        })
+
         const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
           decoded: { payload: { ...baseDefraIdTokenPayload } }
         }
         const request = {
-          organisationsRepository: {},
+          organisationsRepository: {
+            findById: vi.fn().mockResolvedValue({
+              id: testOrgId,
+              status: 'active',
+              users: [],
+              version: 1
+            }),
+            update: vi.fn().mockResolvedValue()
+          },
           path: '/any',
           params: {
-            organisationId: baseDefraIdTokenPayload.currentRelatioshipId
+            organisationId: testOrgId
           }
         }
 
@@ -457,7 +480,7 @@ describe('#getJwtStrategyConfig', () => {
           organisationsRepository: {},
           path: '/any',
           params: {
-            organisationId: baseDefraIdTokenPayload.currentRelatioshipId
+            organisationId: baseDefraIdTokenPayload.currentRelationshipId
           }
         }
 
