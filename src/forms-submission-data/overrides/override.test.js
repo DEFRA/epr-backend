@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
   applyAccreditationOverrides,
+  applyOrganisationOverrides,
   applyRegistrationOverrides
 } from './override.js'
+import {
+  BUSINESS_TYPE,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 describe('Override Functions', () => {
   describe('applyRegistrationOverrides', () => {
@@ -72,6 +77,31 @@ describe('Override Functions', () => {
 
       // Should return the submission unchanged
       expect(result).toEqual(testSubmission)
+    })
+  })
+
+  describe('applyOrganisationOverrides', () => {
+    it('should apply orgId override when organisation id matches', () => {
+      const testSubmission = {
+        id: '60a1f2b3c4d5e6f7a8b9c0d1',
+        orgId: 123456, // Original incorrect value
+        wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
+        businessType: BUSINESS_TYPE.UNINCORPORATED,
+        companyDetails: {
+          name: 'Test Company'
+        }
+      }
+
+      const result = applyOrganisationOverrides(testSubmission)
+
+      expect(result.orgId).toBe(999999)
+      // Other attributes should remain unchanged
+      expect(result.id).toBe('60a1f2b3c4d5e6f7a8b9c0d1')
+      expect(result.wasteProcessingTypes).toEqual([
+        WASTE_PROCESSING_TYPE.REPROCESSOR
+      ])
+      expect(result.businessType).toBe(BUSINESS_TYPE.UNINCORPORATED)
+      expect(result.companyDetails.name).toBe('Test Company')
     })
   })
 })
