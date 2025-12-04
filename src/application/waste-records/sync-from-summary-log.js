@@ -2,7 +2,7 @@ import { transformFromSummaryLog } from './transform-from-summary-log.js'
 import {
   createTableSchemaGetter,
   PROCESSING_TYPE_TABLES
-} from '#application/summary-logs/validations/table-schemas.js'
+} from '#domain/summary-logs/table-schemas/index.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 
 /**
