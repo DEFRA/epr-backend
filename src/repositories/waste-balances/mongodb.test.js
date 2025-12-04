@@ -40,22 +40,26 @@ const extendedIt = mongoIt.extend({
 })
 
 describe('MongoDB waste balances repository', () => {
-  beforeEach(async ({ mongoClient }) => {
-    await mongoClient
-      .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
-      .deleteMany({})
+  describe('repository creation', () => {
+    extendedIt('should create repository instance', async ({ mongoClient }) => {
+      const database = mongoClient.db(DATABASE_NAME)
+      const repository = createWasteBalancesRepository(database)
+      const instance = repository()
+      expect(instance).toBeDefined()
+      expect(instance.findByAccreditationId).toBeTypeOf('function')
+    })
   })
 
-  extendedIt('should create repository instance', async ({ mongoClient }) => {
-    const database = mongoClient.db(DATABASE_NAME)
-    const repository = createWasteBalancesRepository(database)
-    const instance = repository()
-    expect(instance).toBeDefined()
-    expect(instance.findByAccreditationId).toBeTypeOf('function')
-  })
+  describe('data management', () => {
+    beforeEach(async ({ mongoClient }) => {
+      await mongoClient
+        .db(DATABASE_NAME)
+        .collection(WASTE_BALANCE_COLLECTION_NAME)
+        .deleteMany({})
+    })
 
-  describe('waste balances repository contract', () => {
-    testWasteBalancesRepositoryContract(extendedIt)
+    describe('waste balances repository contract', () => {
+      testWasteBalancesRepositoryContract(extendedIt)
+    })
   })
 })
