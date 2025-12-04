@@ -42,3 +42,16 @@ export function applyRegistrationOverrides(submission) {
 export function applyAccreditationOverrides(submission) {
   return applyOverride(submission, overrideConfig.accreditations)
 }
+
+/**
+ * Applies configured overrides to an organisation submission
+ *
+ * Used to fix data quality issues (e.g., typos in orgId field)
+ * for specific organisations identified in FORM_SUBMISSION_OVERRIDES env var
+ *
+ * @param {Object} submission - The parsed organisation submission
+ * @returns {Object} The organisation with overrides applied (if ID matches config)
+ */
+export function applyOrganisationOverrides(submission) {
+  return applyOverride(submission, overrideConfig.organisations)
+}

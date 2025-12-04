@@ -22,7 +22,7 @@ const performFindAllAccreditations = (db) => async () => {
 const performFindAccreditationsBySystemReference = (db) => async (ref) => {
   const docs = await db
     .collection(ACCREDITATIONS_COLLECTION)
-    .find({ referenceNumber: ref })
+    .find({ referenceNumber: new RegExp(`^${ref}$`, 'i') })
     .toArray()
   return docs.map(mapDocument)
 }
@@ -48,7 +48,7 @@ const performFindAllRegistrations = (db) => async () => {
 const performFindRegistrationsBySystemReference = (db) => async (ref) => {
   const docs = await db
     .collection(REGISTRATIONS_COLLECTION)
-    .find({ referenceNumber: ref })
+    .find({ referenceNumber: new RegExp(`^${ref}$`, 'i') })
     .toArray()
   return docs.map(mapDocument)
 }

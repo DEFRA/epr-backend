@@ -11,10 +11,10 @@ const { validToken } = entraIdMockAuthTokens
 const ORG_A = { id: 'org-a' }
 const ORG_B = { id: 'org-b' }
 const REG_A = { id: 'reg-a', referenceNumber: ORG_B.id }
-const REG_B = { id: 'reg-b', referenceNumber: ORG_B.id }
+const REG_B = { id: 'reg-b', referenceNumber: ORG_B.id.toUpperCase() }
 const REG_C = { id: 'reg-c', referenceNumber: 'tuw' }
 const ACC_A = { id: 'acc-a', referenceNumber: ORG_B.id }
-const ACC_B = { id: 'acc-b', referenceNumber: ORG_B.id }
+const ACC_B = { id: 'acc-b', referenceNumber: ORG_B.id.toUpperCase() }
 const ACC_C = { id: 'acc-c', referenceNumber: 'xyz' }
 
 describe('GET /v1/form-submissions/{documentId}', () => {
