@@ -1,6 +1,5 @@
 import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 import Boom from '@hapi/boom'
-import { getUsersOrganisationInfo } from './get-users-org-info.js'
 
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 import { ROLES } from './constants.js'
