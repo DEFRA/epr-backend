@@ -357,7 +357,18 @@ export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
     const domainSchema = getTableSchema(tableName)
 
     if (!domainSchema) {
-      // Keep unvalidated tables as-is
+      const location = tableData.location
+        ? { sheet: tableData.location.sheet, table: tableName }
+        : { table: tableName }
+
+      issues.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        `Unrecognised table '${tableName}' has no schema for this processing type`,
+        VALIDATION_CODE.TABLE_UNRECOGNISED,
+        { location }
+      )
+
+      // Keep unvalidated tables as-is for downstream processing
       validatedTables[tableName] = tableData
       continue
     }
