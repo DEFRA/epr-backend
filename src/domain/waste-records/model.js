@@ -71,8 +71,6 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
 /**
  * @typedef {Object} UserSummary
  * @property {string} id - User ID
- * @property {string} name - User name
- * @property {string} email - User email
  */
 
 /**
