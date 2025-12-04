@@ -26,7 +26,7 @@ export const addStandardUserIfNotPresent = async (
       organisationById.version,
       {
         users: [
-          ...organisationById.users,
+          ...(organisationById.users || []),
           {
             email,
             fullName: `${firstName} ${lastName}`,

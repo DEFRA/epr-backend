@@ -260,27 +260,81 @@ describe('addStandardUserIfNotPresent', () => {
   })
 
   describe('when organisation has no users property', () => {
-    test('should return null from findUserInOrg and not update', async () => {
-      // When users property is missing, findUserInOrg returns null (not falsy enough to trigger update)
-      // This tests the edge case where organisationById.users is undefined
+    test('should add user when users property is undefined', async () => {
       mockOrganisation = {
         id: new ObjectId().toString(),
         version: 1
-        // users property is missing
+        // users property is missing/undefined
       }
 
-      // When users is undefined, findUserInOrg returns null
-      // null is falsy, so the if (!user) condition is true
-      // But organisationById.users is undefined, which will cause ...organisationById.users to fail
+      await addStandardUserIfNotPresent(
+        mockRequest,
+        mockTokenPayload,
+        mockOrganisation
+      )
 
-      // We need to test what actually happens
-      await expect(
-        addStandardUserIfNotPresent(
-          mockRequest,
-          mockTokenPayload,
-          mockOrganisation
-        )
-      ).rejects.toThrow()
+      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+        mockOrganisation.id,
+        mockOrganisation.version,
+        {
+          users: [
+            {
+              email: 'newuser@example.com',
+              fullName: 'John Doe',
+              isInitialUser: false,
+              roles: [ROLES.standardUser]
+            }
+          ]
+        }
+      )
+    })
+
+    test('should add user when users property is null', async () => {
+      mockOrganisation = {
+        id: new ObjectId().toString(),
+        version: 1,
+        users: null
+      }
+
+      await addStandardUserIfNotPresent(
+        mockRequest,
+        mockTokenPayload,
+        mockOrganisation
+      )
+
+      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+        mockOrganisation.id,
+        mockOrganisation.version,
+        {
+          users: [
+            {
+              email: 'newuser@example.com',
+              fullName: 'John Doe',
+              isInitialUser: false,
+              roles: [ROLES.standardUser]
+            }
+          ]
+        }
+      )
+    })
+
+    test('should initialize empty users array when adding first user', async () => {
+      delete mockOrganisation.users
+
+      await addStandardUserIfNotPresent(
+        mockRequest,
+        mockTokenPayload,
+        mockOrganisation
+      )
+
+      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const usersArray = updateCall[2].users
+
+      expect(usersArray).toHaveLength(1)
+      expect(usersArray[0].email).toBe('newuser@example.com')
+      expect(usersArray[0].fullName).toBe('John Doe')
     })
   })
 
