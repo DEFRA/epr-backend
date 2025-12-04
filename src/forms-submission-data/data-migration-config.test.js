@@ -6,7 +6,7 @@ import {
 
 describe('Data Migration Config', () => {
   describe('overrideConfig', () => {
-    it('should load override configuration with registrations and accreditations', () => {
+    it('should load override configuration with registrations, accreditations, and organisations', () => {
       expect(overrideConfig).toEqual({
         registrations: [
           {
@@ -26,6 +26,12 @@ describe('Data Migration Config', () => {
           {
             id: '65a2f4e8b4c5d9f8e7a6b1c4',
             overrides: { systemReference: '65a2f5a1b4c5d9f8e7a6b1c5' }
+          }
+        ],
+        organisations: [
+          {
+            id: '60a1f2b3c4d5e6f7a8b9c0d1',
+            overrides: { orgId: 999999 }
           }
         ]
       })

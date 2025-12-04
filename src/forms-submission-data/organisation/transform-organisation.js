@@ -15,6 +15,7 @@ import {
   mapWasteProcessingType
 } from '#formsubmission/parsing-common/form-data-mapper.js'
 import { parseUkAddress } from '#formsubmission/parsing-common/parse-address.js'
+import { applyOrganisationOverrides } from '#formsubmission/overrides/override.js'
 
 function extractWasteProcessingTypes(answersByShortDescription) {
   const value =
@@ -192,7 +193,7 @@ function getPartnershipDetails(answersByShortDescription, rawSubmissionData) {
 export function parseOrgSubmission(id, orgId, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
-  return {
+  const parsed = {
     id,
     orgId,
     wasteProcessingTypes: extractWasteProcessingTypes(
@@ -214,4 +215,5 @@ export function parseOrgSubmission(id, orgId, rawSubmissionData) {
       rawSubmissionData
     )
   }
+  return applyOrganisationOverrides(parsed)
 }
