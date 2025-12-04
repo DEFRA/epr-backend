@@ -1,0 +1,30 @@
+{
+  "name": "@epr-backend/adapter-uploads",
+  "version": "0.0.0",
+  "description": "Uploads repository adapters for EPR Backend",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./cdp-uploader": "./src/cdp-uploader.js",
+    "./inmemory": "./src/inmemory.js",
+    "./port": "./src/port.js",
+    "./contract": "./src/port.contract.js",
+    "./test-helpers/callback-receiver": "./src/test-helpers/callback-receiver.js"
+  },
+  "scripts": {
+    "test": "TZ=UTC vitest run --coverage"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "3.940.0",
+    "@hapi/boom": "10.0.1",
+    "http-status-codes": "2.3.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "4.0.14",
+    "vitest": "4.0.14",
+    "vitest-fetch-mock": "0.4.5"
+  },
+  "author": "Defra DDTS",
+  "license": "OGL-UK-3.0"
+}

@@ -1,0 +1,313 @@
+import ExcelJS from 'exceljs'
+import { produce } from 'immer'
+import { columnNumberToLetter } from './columns.js'
+import {
+  META_PREFIX,
+  DATA_PREFIX,
+  SKIP_COLUMN,
+  SKIP_ROW_TEXT,
+  PLACEHOLDER_TEXT,
+  MATERIAL_PLACEHOLDER_TEXT
+} from '@epr-backend/domain-summary-logs/markers'
+import { SUMMARY_LOG_META_FIELDS } from '@epr-backend/domain-summary-logs/meta-fields'
+
+/**
+ * @typedef {Object} CellLocation
+ * @property {string} sheet - Worksheet name
+ * @property {number} row - Row number (1-indexed)
+ * @property {string} column - Column letter (A, B, AA, etc.)
+ */
+
+/**
+ * @typedef {Object} MetadataEntry
+ * @property {*} value - The metadata value
+ * @property {CellLocation} location - Location where the value was found
+ */
+
+/**
+ * @typedef {Object} DataSection
+ * @property {CellLocation} location - Starting location of the data section
+ * @property {Array<string|null>} headers - Column headers (null for skipped columns)
+ * @property {Array<Array<*>>} rows - Data rows
+ */
+
+/**
+ * @typedef {Object} ParsedSummaryLog
+ * @property {Object<string, MetadataEntry>} meta - Metadata extracted from the summary log, keyed by metadata name
+ * @property {Object<string, DataSection>} data - Data sections extracted from the summary log, keyed by section name
+ */
+
+/**
+ * @typedef {(buffer: any) => Promise<ParsedSummaryLog>} SummaryLogParser
+ */
+
+const CollectionState = {
+  HEADERS: 'HEADERS',
+  ROWS: 'ROWS'
+}
+
+const extractCellValue = (cellValue) => {
+  if (
+    cellValue &&
+    typeof cellValue === 'object' &&
+    'formula' in cellValue &&
+    'result' in cellValue
+  ) {
+    return cellValue.result
+  }
+  if (cellValue && typeof cellValue === 'object' && 'formula' in cellValue) {
+    return null
+  }
+  return cellValue
+}
+
+const processCellForMetadata = (
+  cellValue,
+  cellValueStr,
+  worksheet,
+  rowNumber,
+  colNumber,
+  draftState
+) => {
+  if (!draftState.metadataContext && cellValueStr.startsWith(META_PREFIX)) {
+    const metadataName = cellValueStr.replace(META_PREFIX, '')
+    if (draftState.result.meta[metadataName]) {
+      throw new Error(`Duplicate metadata name: ${metadataName}`)
+    }
+    draftState.metadataContext = { metadataName }
+  } else if (draftState.metadataContext) {
+    if (cellValueStr.startsWith(META_PREFIX)) {
+      throw new Error(
+        'Malformed sheet: metadata marker found in value position'
+      )
+    }
+
+    // Normalize MATERIAL placeholder to null
+    const metadataName = draftState.metadataContext.metadataName
+    const normalisedValue =
+      metadataName === SUMMARY_LOG_META_FIELDS.MATERIAL &&
+      cellValue === MATERIAL_PLACEHOLDER_TEXT
+        ? null
+        : cellValue
+
+    draftState.result.meta[metadataName] = {
+      value: normalisedValue,
+      location: {
+        sheet: worksheet.name,
+        row: rowNumber,
+        column: columnNumberToLetter(colNumber)
+      }
+    }
+    draftState.metadataContext = null
+  } else {
+    // Cell is not related to metadata
+  }
+}
+
+const processDataMarker = (
+  cellValueStr,
+  worksheet,
+  rowNumber,
+  colNumber,
+  draftCollections
+) => {
+  if (cellValueStr.startsWith(DATA_PREFIX)) {
+    draftCollections.push({
+      sectionName: cellValueStr.replace(DATA_PREFIX, ''),
+      state: CollectionState.HEADERS,
+      startColumn: colNumber + 1,
+      headers: [],
+      skipColumnIndices: [],
+      rows: [],
+      currentRow: [],
+      location: {
+        sheet: worksheet.name,
+        row: rowNumber,
+        column: columnNumberToLetter(colNumber + 1)
+      }
+    })
+  }
+}
+
+const processHeaderCell = (draftCollection, cellValueStr) => {
+  if (cellValueStr === '') {
+    draftCollection.state = CollectionState.ROWS
+  } else if (cellValueStr === SKIP_COLUMN) {
+    draftCollection.skipColumnIndices.push(draftCollection.headers.length)
+    draftCollection.headers.push(null)
+  } else {
+    draftCollection.headers.push(cellValueStr)
+  }
+}
+
+const processRowCell = (draftCollection, cellValue) => {
+  const normalisedValue =
+    cellValue === null ||
+    cellValue === undefined ||
+    cellValue === '' ||
+    cellValue === PLACEHOLDER_TEXT
+      ? null
+      : cellValue
+  draftCollection.currentRow.push(normalisedValue)
+}
+
+const updateCollectionWithCell = (
+  draftCollection,
+  cellValue,
+  cellValueStr,
+  colNumber
+) => {
+  const columnIndex = colNumber - draftCollection.startColumn
+
+  if (columnIndex >= 0 && draftCollection.state === CollectionState.HEADERS) {
+    processHeaderCell(draftCollection, cellValueStr)
+  } else if (
+    columnIndex >= 0 &&
+    columnIndex < draftCollection.headers.length &&
+    draftCollection.state === CollectionState.ROWS
+  ) {
+    processRowCell(draftCollection, cellValue)
+  } else {
+    // Cell is outside collection boundaries
+  }
+}
+
+const shouldSkipRow = (draftCollection) => {
+  for (const skipIndex of draftCollection.skipColumnIndices) {
+    const cellValue = draftCollection.currentRow[skipIndex]
+    if (cellValue === SKIP_ROW_TEXT) {
+      return true
+    }
+  }
+  return false
+}
+
+const finalizeRowForCollection = (draftCollection) => {
+  if (draftCollection.state === CollectionState.HEADERS) {
+    draftCollection.state = CollectionState.ROWS
+    draftCollection.currentRow = []
+  } else if (
+    draftCollection.state === CollectionState.ROWS &&
+    draftCollection.currentRow.length > 0
+  ) {
+    const isEmptyRow = draftCollection.currentRow.every((val) => val === null)
+    if (isEmptyRow) {
+      draftCollection.complete = true
+    } else if (shouldSkipRow(draftCollection)) {
+      draftCollection.currentRow = []
+    } else {
+      draftCollection.rows.push(draftCollection.currentRow)
+      draftCollection.currentRow = []
+    }
+  } else {
+    // Current row is empty, nothing to finalize
+  }
+}
+
+const emitCollectionsToResult = (draftResult, collections) => {
+  for (const collection of collections) {
+    if (draftResult[collection.sectionName]) {
+      throw new Error(`Duplicate data section name: ${collection.sectionName}`)
+    }
+    draftResult[collection.sectionName] = {
+      location: collection.location,
+      headers: collection.headers,
+      rows: collection.rows
+    }
+  }
+}
+
+const collectRowsFromWorksheet = (worksheet) => {
+  const rows = []
+  worksheet.eachRow((row, rowNumber) => {
+    rows.push({ row, rowNumber })
+  })
+  return rows
+}
+
+const collectCellsFromRow = (row) => {
+  const cells = []
+  row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    cells.push({ cell, colNumber })
+  })
+  return cells
+}
+
+const processRow = (draftState, row, rowNumber, worksheet) => {
+  const cells = collectCellsFromRow(row)
+
+  for (const collection of draftState.activeCollections) {
+    collection.currentRow = []
+  }
+
+  for (const { cell, colNumber } of cells) {
+    const rawCellValue = cell.value
+    const cellValue = extractCellValue(rawCellValue)
+    const cellValueStr = cellValue?.toString() || ''
+
+    processCellForMetadata(
+      cellValue,
+      cellValueStr,
+      worksheet,
+      rowNumber,
+      colNumber,
+      draftState
+    )
+
+    processDataMarker(
+      cellValueStr,
+      worksheet,
+      rowNumber,
+      colNumber,
+      draftState.activeCollections
+    )
+
+    for (const collection of draftState.activeCollections) {
+      updateCollectionWithCell(collection, cellValue, cellValueStr, colNumber)
+    }
+  }
+
+  const completedCollections = []
+  const activeCollections = []
+
+  for (const collection of draftState.activeCollections) {
+    finalizeRowForCollection(collection)
+    if (collection.complete) {
+      completedCollections.push(collection)
+    } else {
+      activeCollections.push(collection)
+    }
+  }
+
+  emitCollectionsToResult(draftState.result.data, completedCollections)
+  draftState.activeCollections = activeCollections
+}
+
+const processWorksheet = (draftState, worksheet) => {
+  const rows = collectRowsFromWorksheet(worksheet)
+
+  for (const { row, rowNumber } of rows) {
+    processRow(draftState, row, rowNumber, worksheet)
+  }
+
+  emitCollectionsToResult(draftState.result.data, draftState.activeCollections)
+  draftState.activeCollections = []
+}
+
+/** @type {SummaryLogParser} */
+export const parse = async (summaryLogBuffer) => {
+  const workbook = new ExcelJS.Workbook()
+  await workbook.xlsx.load(summaryLogBuffer)
+
+  const initialState = {
+    result: { meta: {}, data: {} },
+    activeCollections: [],
+    metadataContext: null
+  }
+
+  return produce(initialState, (draft) => {
+    for (const worksheet of workbook.worksheets) {
+      processWorksheet(draft, worksheet)
+    }
+  }).result
+}

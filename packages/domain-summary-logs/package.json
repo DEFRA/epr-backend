@@ -1,0 +1,17 @@
+{
+  "name": "@epr-backend/domain-summary-logs",
+  "version": "0.0.0",
+  "description": "Summary logs domain constants for EPR Backend",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./markers": "./src/markers.js",
+    "./meta-fields": "./src/meta-fields.js"
+  },
+  "scripts": {
+    "test": "echo \"No tests yet\""
+  },
+  "author": "Defra DDTS",
+  "license": "OGL-UK-3.0"
+}
