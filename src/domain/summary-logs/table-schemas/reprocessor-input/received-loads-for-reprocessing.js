@@ -8,7 +8,7 @@ import { createRowIdSchema } from '../shared/row-id.schema.js'
  * Tracks waste received for reprocessing. This schema defines:
  * - What counts as "unfilled" per field (unfilledValues)
  * - How to validate filled fields (validationSchema for VAL010)
- * - Which fields must be present for Waste Balance (wasteBalanceRequiredFields for VAL011)
+ * - Which fields must be present for Waste Balance (fieldsRequiredForWasteBalance for VAL011)
  */
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: 'ROW_ID',
@@ -108,7 +108,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
    */
-  wasteBalanceRequiredFields: [
+  fieldsRequiredForWasteBalance: [
     'ROW_ID',
     'DATE_RECEIVED_FOR_REPROCESSING',
     'EWC_CODE',

@@ -12,5 +12,5 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   requiredHeaders: [],
   unfilledValues: {},
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
-  wasteBalanceRequiredFields: []
+  fieldsRequiredForWasteBalance: []
 }

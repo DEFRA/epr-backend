@@ -110,7 +110,7 @@ describe('validation-pipeline', () => {
       })
         .unknown(true)
         .prefs({ abortEarly: false }),
-      wasteBalanceRequiredFields: ['ROW_ID', 'TEXT_FIELD']
+      fieldsRequiredForWasteBalance: ['ROW_ID', 'TEXT_FIELD']
     })
 
     describe('REJECTED outcome (VAL010 fails)', () => {

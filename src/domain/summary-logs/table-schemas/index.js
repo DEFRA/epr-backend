@@ -11,7 +11,7 @@ import { PROCESSING_TYPES } from '../meta-fields.js'
  * - requiredHeaders: Headers that must be present in the table
  * - unfilledValues: Per-field values that indicate "unfilled" (e.g. dropdown placeholders)
  * - validationSchema: Joi schema for VAL010 (in-sheet validation of filled fields)
- * - wasteBalanceRequiredFields: Fields required for VAL011 (mandatory for Waste Balance)
+ * - fieldsRequiredForWasteBalance: Fields required for VAL011 (mandatory for Waste Balance)
  */
 export const PROCESSING_TYPE_TABLES = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: REPROCESSOR_INPUT,

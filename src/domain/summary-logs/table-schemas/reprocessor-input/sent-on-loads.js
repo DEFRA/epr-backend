@@ -11,5 +11,5 @@ export const SENT_ON_LOADS = {
   requiredHeaders: [],
   unfilledValues: {},
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
-  wasteBalanceRequiredFields: []
+  fieldsRequiredForWasteBalance: []
 }

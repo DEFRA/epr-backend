@@ -11,5 +11,5 @@ export const REPROCESSED_LOADS = {
   requiredHeaders: [],
   unfilledValues: {},
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
-  wasteBalanceRequiredFields: []
+  fieldsRequiredForWasteBalance: []
 }

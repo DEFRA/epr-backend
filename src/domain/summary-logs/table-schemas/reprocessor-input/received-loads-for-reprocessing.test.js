@@ -20,10 +20,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(typeof schema.unfilledValues).toBe('object')
     })
 
-    it('has wasteBalanceRequiredFields array', () => {
-      expect(Array.isArray(schema.wasteBalanceRequiredFields)).toBe(true)
-      expect(schema.wasteBalanceRequiredFields).toContain('ROW_ID')
-      expect(schema.wasteBalanceRequiredFields).toContain(
+    it('has fieldsRequiredForWasteBalance array', () => {
+      expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
+      expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
+      expect(schema.fieldsRequiredForWasteBalance).toContain(
         'DATE_RECEIVED_FOR_REPROCESSING'
       )
     })
