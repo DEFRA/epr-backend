@@ -1,6 +1,10 @@
 import ExcelJS from 'exceljs'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import {
+  createEmptyLoadValidity,
+  createEmptyLoads
+} from '#application/summary-logs/classify-loads.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -263,26 +267,7 @@ describe('Summary logs integration', () => {
             failures: [],
             concerns: {}
           },
-          loads: {
-            added: {
-              valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] },
-              included: { count: 0, rowIds: [] },
-              excluded: { count: 0, rowIds: [] }
-            },
-            unchanged: {
-              valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] },
-              included: { count: 0, rowIds: [] },
-              excluded: { count: 0, rowIds: [] }
-            },
-            adjusted: {
-              valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] },
-              included: { count: 0, rowIds: [] },
-              excluded: { count: 0, rowIds: [] }
-            }
-          }
+          loads: createEmptyLoads()
         })
       })
 
@@ -679,18 +664,8 @@ describe('Summary logs integration', () => {
             included: { count: 1, rowIds: [10000] },
             excluded: { count: 1, rowIds: [10001] }
           },
-          unchanged: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] },
-            included: { count: 0, rowIds: [] },
-            excluded: { count: 0, rowIds: [] }
-          },
-          adjusted: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] },
-            included: { count: 0, rowIds: [] },
-            excluded: { count: 0, rowIds: [] }
-          }
+          unchanged: createEmptyLoadValidity(),
+          adjusted: createEmptyLoadValidity()
         })
       })
     })

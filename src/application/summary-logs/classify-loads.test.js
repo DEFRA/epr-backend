@@ -1,4 +1,4 @@
-import { classifyLoads } from './classify-loads.js'
+import { classifyLoads, createEmptyLoads } from './classify-loads.js'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 const CURRENT_SUMMARY_LOG_ID = 'current-summary-log'
@@ -48,26 +48,7 @@ describe('classifyLoads', () => {
         summaryLogId: CURRENT_SUMMARY_LOG_ID
       })
 
-      expect(result).toEqual({
-        added: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] },
-          included: { count: 0, rowIds: [] },
-          excluded: { count: 0, rowIds: [] }
-        },
-        unchanged: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] },
-          included: { count: 0, rowIds: [] },
-          excluded: { count: 0, rowIds: [] }
-        },
-        adjusted: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] },
-          included: { count: 0, rowIds: [] },
-          excluded: { count: 0, rowIds: [] }
-        }
-      })
+      expect(result).toEqual(createEmptyLoads())
     })
   })
 

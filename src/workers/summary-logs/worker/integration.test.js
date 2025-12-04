@@ -5,6 +5,7 @@
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createEmptyLoads } from '#application/summary-logs/classify-loads.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -169,26 +170,7 @@ describe('SummaryLogsValidator integration', () => {
         validation: {
           issues: []
         },
-        loads: {
-          added: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] },
-            included: { count: 0, rowIds: [] },
-            excluded: { count: 0, rowIds: [] }
-          },
-          unchanged: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] },
-            included: { count: 0, rowIds: [] },
-            excluded: { count: 0, rowIds: [] }
-          },
-          adjusted: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] },
-            included: { count: 0, rowIds: [] },
-            excluded: { count: 0, rowIds: [] }
-          }
-        }
+        loads: createEmptyLoads()
       }
     })
   })
@@ -271,26 +253,7 @@ describe('SummaryLogsValidator integration', () => {
               validation: {
                 issues: []
               },
-              loads: {
-                added: {
-                  valid: { count: 0, rowIds: [] },
-                  invalid: { count: 0, rowIds: [] },
-                  included: { count: 0, rowIds: [] },
-                  excluded: { count: 0, rowIds: [] }
-                },
-                unchanged: {
-                  valid: { count: 0, rowIds: [] },
-                  invalid: { count: 0, rowIds: [] },
-                  included: { count: 0, rowIds: [] },
-                  excluded: { count: 0, rowIds: [] }
-                },
-                adjusted: {
-                  valid: { count: 0, rowIds: [] },
-                  invalid: { count: 0, rowIds: [] },
-                  included: { count: 0, rowIds: [] },
-                  excluded: { count: 0, rowIds: [] }
-                }
-              }
+              loads: createEmptyLoads()
             }
           })
         })

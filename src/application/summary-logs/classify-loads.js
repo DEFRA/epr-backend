@@ -29,29 +29,33 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 const MAX_ROW_IDS = 100
 
 /**
+ * Creates a fresh empty load category
+ *
+ * @returns {LoadCategory}
+ */
+export const createEmptyLoadCategory = () => ({ count: 0, rowIds: [] })
+
+/**
+ * Creates a fresh empty load validity structure
+ *
+ * @returns {LoadValidity}
+ */
+export const createEmptyLoadValidity = () => ({
+  valid: createEmptyLoadCategory(),
+  invalid: createEmptyLoadCategory(),
+  included: createEmptyLoadCategory(),
+  excluded: createEmptyLoadCategory()
+})
+
+/**
  * Creates an empty loads structure
  *
  * @returns {Loads}
  */
-const createEmptyLoads = () => ({
-  added: {
-    valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] },
-    included: { count: 0, rowIds: [] },
-    excluded: { count: 0, rowIds: [] }
-  },
-  unchanged: {
-    valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] },
-    included: { count: 0, rowIds: [] },
-    excluded: { count: 0, rowIds: [] }
-  },
-  adjusted: {
-    valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] },
-    included: { count: 0, rowIds: [] },
-    excluded: { count: 0, rowIds: [] }
-  }
+export const createEmptyLoads = () => ({
+  added: createEmptyLoadValidity(),
+  unchanged: createEmptyLoadValidity(),
+  adjusted: createEmptyLoadValidity()
 })
 
 /**
