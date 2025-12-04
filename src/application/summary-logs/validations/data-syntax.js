@@ -12,12 +12,13 @@ import { createTableSchemaGetter } from './table-schemas.js'
  */
 
 /**
- * A validated row with issues attached
+ * A validated row with classification outcome and issues attached
  *
  * @export
  * @typedef {Object} ValidatedRow
  * @property {Array<*>} values - Original row values array
  * @property {string} rowId - Extracted row ID
+ * @property {'REJECTED'|'EXCLUDED'|'INCLUDED'} outcome - Classification outcome from validation pipeline
  * @property {ValidationIssue[]} issues - Validation issues for this row
  */
 
