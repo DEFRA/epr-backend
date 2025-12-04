@@ -169,3 +169,59 @@ export async function createSeedData(
     }
   }
 }
+
+export async function cleanupSeedData(db, { isProduction, isDryRun }) {
+  logger.info({
+    message: `Seed data clean up: requested, isProduction-${isProduction()}, dry run-${isDryRun()}`
+  })
+  if (isProduction()) {
+    logger.info({ message: 'Seed data clean up: start' })
+
+    const deleteDocuments = async (collectionName, ids) => {
+      if (!ids.length) {
+        logger.info({
+          message: `Seed data clean up: no documents found to delete from ${collectionName} collection`
+        })
+        return
+      }
+
+      if (isDryRun()) {
+        const idStrings = ids.map((id) => id.toString()).join(', ')
+
+        logger.info({
+          message: `Seed data clean up: dry run delete documents ${idStrings} from ${collectionName} collection`
+        })
+      } else {
+        const result = await db
+          .collection(collectionName)
+          .deleteMany({ _id: { $in: ids } })
+        logger.info({
+          message: `Seed data clean up: deleted ${result.deletedCount} documents from ${collectionName} collection`
+        })
+      }
+    }
+
+    const findAndDelete = async (collectionName, query) => {
+      const foundDocs = await db
+        .collection(collectionName)
+        .find(query)
+        .toArray()
+      const foundDocumentIds = foundDocs.map((doc) => doc._id)
+      await deleteDocuments(collectionName, foundDocumentIds)
+      return foundDocumentIds
+    }
+
+    const testSubmissionSystemReference = '123ab456789cd01e23fabc45'
+
+    await findAndDelete(COLLECTION_REGISTRATION, {
+      referenceNumber: testSubmissionSystemReference
+    })
+
+    await findAndDelete(COLLECTION_ACCREDITATION, {
+      referenceNumber: testSubmissionSystemReference
+    })
+
+    return true
+  }
+  return false
+}

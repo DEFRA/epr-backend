@@ -1,7 +1,7 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { ObjectId } from 'mongodb'
 import { describe, expect, it } from 'vitest'
-import { createSeedData } from './create-update'
+import { cleanupSeedData, createSeedData } from './create-update'
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
@@ -89,15 +89,115 @@ describe('createSeedData', () => {
   })
 })
 
+describe('cleanupSeedData', () => {
+  const DRY_RUN = () => true
+  const ACTUAL_RUN = () => false
+
+  const REGISTRATION_ACCREDITATION_FIXTURE_IDS = [
+    'aaaabbbbccccddddeeee4444',
+    'aaaabbbbccccddddeeee5555'
+  ].map(ObjectId.createFromHexString)
+
+  const findResults = (query) => {
+    let results = []
+
+    if (query.referenceNumber === '123ab456789cd01e23fabc45') {
+      results = REGISTRATION_ACCREDITATION_FIXTURE_IDS.map((_id) => ({ _id }))
+    }
+
+    return {
+      toArray: async () => results
+    }
+  }
+
+  it('deletes seed data in production', async () => {
+    const { mockDb, deletions } = createMockDb({
+      find: findResults
+    })
+
+    const hasRun = await cleanupSeedData(mockDb, {
+      isProduction: PRODUCTION,
+      isDryRun: ACTUAL_RUN
+    })
+
+    expect(hasRun).toBeTruthy()
+
+    expect(deletions).toContainEqual({
+      collectionName: 'registration',
+      query: {
+        _id: {
+          $in: REGISTRATION_ACCREDITATION_FIXTURE_IDS
+        }
+      }
+    })
+    expect(deletions).toContainEqual({
+      collectionName: 'accreditation',
+      query: {
+        _id: {
+          $in: REGISTRATION_ACCREDITATION_FIXTURE_IDS
+        }
+      }
+    })
+
+    expect(deletions).toHaveLength(2)
+  })
+
+  it('does not attempt to delete anything (in production) when no candidate documents are found', async () => {
+    const { mockDb, deletions } = createMockDb({})
+
+    const hasRun = await cleanupSeedData(mockDb, {
+      isProduction: PRODUCTION,
+      isDryRun: ACTUAL_RUN
+    })
+
+    expect(hasRun).toBeTruthy()
+    expect(deletions).toHaveLength(0)
+  })
+
+  it('does not remove seed data in production on a dry run', async () => {
+    const { mockDb, deletions } = createMockDb({
+      find: findResults
+    })
+
+    const hasRun = await cleanupSeedData(mockDb, {
+      isProduction: PRODUCTION,
+      isDryRun: DRY_RUN
+    })
+
+    expect(hasRun).toBeTruthy()
+    expect(deletions).toHaveLength(0)
+  })
+
+  it('does not remove seed data when in environments that are not production', async () => {
+    const { mockDb, deletions } = createMockDb({
+      find: findResults
+    })
+
+    const hasRun = await cleanupSeedData(mockDb, {
+      isProduction: NON_PRODUCTION,
+      isDryRun: ACTUAL_RUN
+    })
+
+    expect(hasRun).not.toBeTruthy()
+    expect(deletions).toHaveLength(0)
+  })
+})
+
 function createMockDb({
   countDocuments = async () => 0,
   find = () => ({ toArray: async () => [] })
 } = {}) {
+  const deletions = []
   const insertions = []
   return {
+    deletions,
     insertions,
     mockDb: {
       collection: (collectionName) => ({
+        deleteMany: (query) => {
+          deletions.push({ collectionName, query })
+          return { deletedCount: 0 }
+        },
         insertMany: (items) => {
           insertions.push({ collectionName, items })
           return { insertedIds: [] }
