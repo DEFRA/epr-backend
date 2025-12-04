@@ -5,20 +5,26 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
 /**
  * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
- * @typedef {import('#application/summary-logs/validations/data-syntax.js').ValidatedRow} ValidatedRow
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
+ */
+
+/**
+ * A row that can be transformed into a waste record
+ *
+ * @typedef {Object} TransformableRow
+ * @property {Record<string, any>} data - Row data as object keyed by header name
+ * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
+ * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
  */
 
 /**
  * A waste record bundled with its validation issues and outcome
  *
- * Issues are present when transforming validated rows (from validation pipeline)
- * Issues are absent when transforming unvalidated rows (from sync pipeline)
- *
  * @typedef {Object} ValidatedWasteRecord
  * @property {WasteRecord} record - The waste record
- * @property {ValidationIssue[]} [issues] - Validation issues (present if input was validated)
- * @property {'REJECTED'|'EXCLUDED'|'INCLUDED'} [outcome] - Classification outcome (present if input was validated)
+ * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
+ * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
  */
 
 /**
@@ -43,13 +49,20 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  * Generic table transformation function
  * Iterates over rows, transforms each using a row transformer, and creates or updates waste records
  *
- * Rows may be validated ({ values, rowId, outcome, issues }) or unvalidated ({ values, rowId })
- * If issues and outcome are present on input rows, they flow through to the output
+ * If issues and outcome are present on input rows, they flow through to the output.
  *
- * @param {Object} tableData - Table data with headers and rows
- * @param {Function} rowTransformer - Function to transform each row
+ * @param {Object} tableData - Table data with rows
+ * @param {TransformableRow[]} tableData.rows - Array of rows to transform
+ * @param {function(Record<string, any>): {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
  * @param {Object} context - Context for creating waste records
- * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
+ * @param {Object} context.summaryLog - Summary log reference
+ * @param {string} context.summaryLog.id - Summary log ID
+ * @param {string} context.summaryLog.uri - Summary log URI
+ * @param {string} context.organisationId - Organisation ID
+ * @param {string} context.registrationId - Registration ID
+ * @param {string} [context.accreditationId] - Accreditation ID
+ * @param {string} context.timestamp - ISO timestamp for version createdAt
+ * @param {Map<string, WasteRecord>} existingRecords - Map of existing records keyed by "${type}:${rowId}"
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
 const transformTable = (
@@ -58,7 +71,7 @@ const transformTable = (
   context,
   existingRecords
 ) => {
-  const { headers, rows } = tableData
+  const { rows } = tableData
   const {
     summaryLog,
     organisationId,
@@ -68,20 +81,14 @@ const transformTable = (
   } = context
 
   return rows.map((row) => {
-    const { values, issues, outcome } = row
-
-    // Map row values to object using headers
-    const rowData = headers.reduce((acc, header, index) => {
-      acc[header] = values[index]
-      return acc
-    }, /** @type {Record<string, any>} */ ({}))
+    const { data: rowData, issues, outcome } = row
 
     // Transform row using type-specific transformer
     const { wasteRecordType, rowId, data } = rowTransformer(rowData)
 
-    // Look up existing waste record from Map if provided
+    // Look up existing waste record from Map
     const existingRecord =
-      existingRecords?.get(`${wasteRecordType}:${rowId}`) ?? null
+      existingRecords.get(`${wasteRecordType}:${rowId}`) ?? null
 
     if (existingRecord) {
       // Calculate delta: find fields that changed (excluding ROW_ID)
@@ -145,10 +152,11 @@ const transformTable = (
 /**
  * Transforms parsed summary log data into waste records
  *
- * Expects validated rows in structure: { values: [...], rowId: string, outcome: string, issues: [...] }
- * Issues and outcome flow through transformation and are returned with each record
+ * Each table's rows must have a `data` property with row values keyed by header name.
+ * If rows have `issues` and `outcome` (from validation pipeline), these flow through
+ * to the output.
  *
- * @param {ParsedSummaryLog} parsedData - The parsed summary log data with validated rows
+ * @param {ParsedSummaryLog} parsedData - Parsed summary log with TransformableRow[] in each table
  * @param {Object} summaryLogContext - Context from the summary log
  * @param {Object} summaryLogContext.summaryLog - The summary log reference
  * @param {string} summaryLogContext.summaryLog.id - The summary log ID
@@ -157,7 +165,7 @@ const transformTable = (
  * @param {string} summaryLogContext.registrationId - The registration ID
  * @param {string} [summaryLogContext.accreditationId] - Optional accreditation ID
  * @param {string} summaryLogContext.timestamp - ISO timestamp for version createdAt
- * @param {Map<string, WasteRecord>} [existingRecords] - Optional map of existing waste records keyed by "${type}:${rowId}"
+ * @param {Map<string, WasteRecord>} existingRecords - Map of existing records keyed by "${type}:${rowId}"
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
 export const transformFromSummaryLog = (

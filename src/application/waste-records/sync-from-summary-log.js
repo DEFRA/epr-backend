@@ -6,16 +6,17 @@ import {
 import { isEprMarker } from '#domain/summary-logs/markers.js'
 
 /**
- * Extracts row IDs from raw rows based on the table's ID field
+ * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
+ */
+
+/**
+ * Prepares rows for transformation by building data objects
  *
- * Only called for tables with schemas, so rowIdField is guaranteed to exist.
- *
- * @param {string} rowIdField - The field name containing the row ID
  * @param {Array<string|null>} headers - Array of header names
  * @param {Array<Array<*>>} rows - Array of raw row value arrays
- * @returns {Array<{values: Array<*>, rowId: string}>}
+ * @returns {TransformableRow[]} Array of rows with data objects built
  */
-const extractRowIds = (rowIdField, headers, rows) => {
+const prepareRows = (headers, rows) => {
   // Build header to index map, excluding EPR markers and nulls
   const headerToIndexMap = new Map()
   for (const [index, header] of headers.entries()) {
@@ -24,21 +25,24 @@ const extractRowIds = (rowIdField, headers, rows) => {
     }
   }
 
-  const idFieldIndex = headerToIndexMap.get(rowIdField)
+  return rows.map((row) => {
+    // Build row data object from values
+    const data = {}
+    for (const [headerName, colIndex] of headerToIndexMap) {
+      data[headerName] = row[colIndex]
+    }
 
-  return rows.map((row) => ({
-    values: row,
-    rowId: String(row[idFieldIndex])
-  }))
+    return { data }
+  })
 }
 
 /**
- * Prepares parsed data by extracting row IDs
+ * Prepares parsed data by building row data objects
  *
  * Only processes tables that have schemas defined.
  *
  * @param {Object} parsedData - The parsed summary log data
- * @returns {Object} New structure with row IDs extracted
+ * @returns {Object} New structure with row data objects built
  */
 const prepareRowsForTransformation = (parsedData) => {
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -56,11 +60,7 @@ const prepareRowsForTransformation = (parsedData) => {
     }
     transformedData[tableName] = {
       ...tableData,
-      rows: extractRowIds(
-        tableSchema.rowIdField,
-        tableData.headers,
-        tableData.rows
-      )
+      rows: prepareRows(tableData.headers, tableData.rows)
     }
   }
 

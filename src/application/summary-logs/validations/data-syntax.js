@@ -13,17 +13,20 @@ import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/inde
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
  */
 
 /**
- * A validated row with classification outcome and issues attached
+ * A validated row from the data syntax validation pipeline
+ *
+ * All fields are required - this is the output of validation, not the input.
  *
  * @export
  * @typedef {Object} ValidatedRow
- * @property {Array<*>} values - Original row values array
+ * @property {Record<string, any>} data - Row data as object keyed by header name
  * @property {string} rowId - Extracted row ID
- * @property {'REJECTED'|'EXCLUDED'|'INCLUDED'} outcome - Classification outcome from validation pipeline
- * @property {ValidationIssue[]} issues - Validation issues for this row
+ * @property {RowOutcome} outcome - Classification outcome from validation pipeline
+ * @property {ValidationIssue[]} issues - Validation issues for this row (empty array if none)
  */
 
 /**
@@ -262,7 +265,7 @@ const validateRows = ({
     const rowId = String(rowObject[domainSchema.rowIdField])
 
     return {
-      values: originalRow,
+      data: rowObject,
       rowId,
       outcome: classification.outcome,
       issues: rowIssues

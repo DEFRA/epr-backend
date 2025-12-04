@@ -17,12 +17,25 @@ const UPDATED_WEIGHT = 250.5
 
 /**
  * Creates a validated row structure as expected by transformFromSummaryLog
+ *
+ * @param {string[]} headers - Column headers
+ * @param {any[]} values - Row values matching headers
+ * @param {string} rowId - Row identifier
+ * @param {any[]} [issues] - Validation issues
  */
-const createRow = (values, rowId, issues = []) => ({
-  values,
-  rowId,
-  issues
-})
+const createRow = (headers, values, rowId, issues = []) => {
+  const data = {}
+  for (let i = 0; i < headers.length; i++) {
+    data[headers[i]] = values[i]
+  }
+  return { data, rowId, issues }
+}
+
+const RECEIVED_LOADS_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'GROSS_WEIGHT'
+]
 
 describe('transformFromSummaryLog', () => {
   it('transforms parsed RECEIVED_LOADS data into waste records', () => {
@@ -35,10 +48,18 @@ describe('transformFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          headers: RECEIVED_LOADS_HEADERS,
           rows: [
-            createRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID),
-            createRow(['row-456', '2025-01-16', SECOND_WEIGHT], 'row-456')
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            ),
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              ['row-456', '2025-01-16', SECOND_WEIGHT],
+              'row-456'
+            )
           ]
         }
       }
@@ -54,7 +75,11 @@ describe('transformFromSummaryLog', () => {
       timestamp: SUBMISSION_TIMESTAMP
     }
 
-    const result = transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      new Map()
+    )
 
     expect(result).toHaveLength(2)
     expectValidWasteRecord(result[0], FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT)
@@ -81,12 +106,17 @@ describe('transformFromSummaryLog', () => {
       timestamp: SUBMISSION_TIMESTAMP
     }
 
-    const result = transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      new Map()
+    )
 
     expect(result).toEqual([])
   })
 
   it('includes optional accreditationId when provided', () => {
+    const headers = ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING']
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
@@ -96,8 +126,8 @@ describe('transformFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-          rows: [createRow([FIRST_ROW_ID, FIRST_DATE], FIRST_ROW_ID)]
+          headers,
+          rows: [createRow(headers, [FIRST_ROW_ID, FIRST_DATE], FIRST_ROW_ID)]
         }
       }
     }
@@ -113,7 +143,11 @@ describe('transformFromSummaryLog', () => {
       timestamp: SUBMISSION_TIMESTAMP
     }
 
-    const result = transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      new Map()
+    )
 
     expect(result[0].record.accreditationId).toBe('acc-1')
   })
@@ -128,9 +162,10 @@ describe('transformFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          headers: RECEIVED_LOADS_HEADERS,
           rows: [
             createRow(
+              RECEIVED_LOADS_HEADERS,
               [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
               FIRST_ROW_ID
             )
@@ -207,7 +242,7 @@ describe('transformFromSummaryLog', () => {
     }
 
     expect(() =>
-      transformFromSummaryLog(parsedData, summaryLogContext)
+      transformFromSummaryLog(parsedData, summaryLogContext, new Map())
     ).toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
   })
 
@@ -217,9 +252,13 @@ describe('transformFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          headers: RECEIVED_LOADS_HEADERS,
           rows: [
-            createRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID)
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            )
           ]
         }
       }
@@ -235,7 +274,11 @@ describe('transformFromSummaryLog', () => {
       timestamp: SUBMISSION_TIMESTAMP
     }
 
-    const result = transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      new Map()
+    )
 
     expect(result).toEqual([])
   })
@@ -250,11 +293,23 @@ describe('transformFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          headers: RECEIVED_LOADS_HEADERS,
           rows: [
-            createRow([FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT], FIRST_ROW_ID),
-            createRow(['row-456', '2025-01-16', SECOND_WEIGHT], 'row-456'),
-            createRow(['row-789', '2025-01-17', 300], 'row-789')
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            ),
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              ['row-456', '2025-01-16', SECOND_WEIGHT],
+              'row-456'
+            ),
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              ['row-789', '2025-01-17', 300],
+              'row-789'
+            )
           ]
         }
       }
@@ -270,7 +325,11 @@ describe('transformFromSummaryLog', () => {
       timestamp: SUBMISSION_TIMESTAMP
     }
 
-    const result = transformFromSummaryLog(parsedData, summaryLogContext)
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      new Map()
+    )
 
     expect(result).toHaveLength(3)
     // All versions should have the exact same timestamp from context
@@ -289,9 +348,10 @@ describe('transformFromSummaryLog', () => {
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
-          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          headers: RECEIVED_LOADS_HEADERS,
           rows: [
             createRow(
+              RECEIVED_LOADS_HEADERS,
               [FIRST_ROW_ID, UPDATED_DATE, UPDATED_WEIGHT],
               FIRST_ROW_ID
             )

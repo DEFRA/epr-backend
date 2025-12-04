@@ -8,7 +8,15 @@
  */
 
 /**
+ * Row classification outcome type
+ *
+ * @typedef {'REJECTED'|'EXCLUDED'|'INCLUDED'} RowOutcome
+ */
+
+/**
  * Row classification outcomes
+ *
+ * @type {Readonly<{REJECTED: 'REJECTED', EXCLUDED: 'EXCLUDED', INCLUDED: 'INCLUDED'}>}
  */
 export const ROW_OUTCOME = Object.freeze({
   REJECTED: 'REJECTED',
