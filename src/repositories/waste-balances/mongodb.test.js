@@ -1,4 +1,4 @@
-import { describe, beforeEach } from 'vitest'
+import { describe, beforeEach, it, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
@@ -7,7 +7,7 @@ import { testWasteBalancesRepositoryContract } from './port.contract.js'
 const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
-const it = mongoIt.extend({
+const extendedIt = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
     await use(client)
@@ -47,7 +47,15 @@ describe('MongoDB waste balances repository', () => {
       .deleteMany({})
   })
 
+  extendedIt('should create repository instance', async ({ mongoClient }) => {
+    const database = mongoClient.db(DATABASE_NAME)
+    const repository = createWasteBalancesRepository(database)
+    const instance = repository()
+    expect(instance).toBeDefined()
+    expect(instance.findByAccreditationId).toBeTypeOf('function')
+  })
+
   describe('waste balances repository contract', () => {
-    testWasteBalancesRepositoryContract(it)
+    testWasteBalancesRepositoryContract(extendedIt)
   })
 })

@@ -1,8 +1,8 @@
-import { describe, it as base } from 'vitest'
+import { describe, it as base, expect, it } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 
-const it = base.extend({
+const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
   wasteBalanceStorage: async ({}, use) => {
     const storage = []
@@ -25,5 +25,12 @@ const it = base.extend({
 })
 
 describe('waste-balances repository - in-memory implementation', () => {
-  testWasteBalancesRepositoryContract(it)
+  it('should create repository instance', () => {
+    const repository = createInMemoryWasteBalancesRepository()
+    const instance = repository()
+    expect(instance).toBeDefined()
+    expect(instance.findByAccreditationId).toBeTypeOf('function')
+  })
+
+  testWasteBalancesRepositoryContract(extendedIt)
 })
