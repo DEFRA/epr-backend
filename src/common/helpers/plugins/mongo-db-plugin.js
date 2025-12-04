@@ -37,7 +37,7 @@ export const mongoDbPlugin = {
 
       const locker = new LockManager(db.collection('mongo-locks'))
 
-      const isProduction = () => true || config.get('cdpEnvironment') === 'prod'
+      const isProduction = () => config.get('cdpEnvironment') === 'prod'
 
       await createOrUpdateCollections(db)
       await createIndexes(db)
