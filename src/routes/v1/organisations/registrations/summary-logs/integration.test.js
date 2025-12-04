@@ -1670,8 +1670,12 @@ describe('Summary logs integration', () => {
     const summaryLogId = 'summary-submit-test'
     const fileId = 'file-submit-123'
     const filename = 'waste-data.xlsx'
+    const secondSummaryLogId = 'summary-submit-test-2'
+    const secondFileId = 'file-submit-456'
+    const secondFilename = 'waste-data-2.xlsx'
     let wasteRecordsRepository
     let submitResponse
+    let server
 
     beforeEach(async () => {
       // Set up test server with waste records repository
@@ -1709,78 +1713,149 @@ describe('Summary logs integration', () => {
         testOrg
       ])()
 
-      // Extractor for validation - uses REPROCESSOR (validation format)
-      const validationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-12345',
-              location: { sheet: 'Data', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Data', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
-            },
-            ACCREDITATION_NUMBER: {
-              value: 'ACC-2025-001',
-              location: { sheet: 'Data', row: 5, column: 'B' }
-            }
-          },
-          data: {}
+      // Shared metadata for both uploads
+      const sharedMeta = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-12345',
+          location: { sheet: 'Data', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT',
+          location: { sheet: 'Data', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Data', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 1,
+          location: { sheet: 'Data', row: 4, column: 'B' }
+        },
+        ACCREDITATION_NUMBER: {
+          value: 'ACC-2025-001',
+          location: { sheet: 'Data', row: 5, column: 'B' }
         }
+      }
+
+      const sharedHeaders = [
+        'ROW_ID',
+        'DATE_RECEIVED_FOR_REPROCESSING',
+        'EWC_CODE',
+        'GROSS_WEIGHT',
+        'TARE_WEIGHT',
+        'PALLET_WEIGHT',
+        'NET_WEIGHT',
+        'BAILING_WIRE_PROTOCOL',
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+        'WEIGHT_OF_NON_TARGET_MATERIALS',
+        'RECYCLABLE_PROPORTION_PERCENTAGE',
+        'TONNAGE_RECEIVED_FOR_RECYCLING'
+      ]
+
+      // Row format: [ROW_ID, DATE, EWC_CODE, GROSS, TARE, PALLET, NET, BAILING, HOW_CALC, NON_TARGET, RECYCLABLE_PCT, TONNAGE]
+      const firstUploadData = {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Received', row: 7, column: 'A' },
+          headers: sharedHeaders,
+          rows: [
+            [
+              10001,
+              '2025-01-15T00:00:00.000Z',
+              '03 03 08',
+              1000,
+              100,
+              50,
+              850,
+              'YES',
+              'WEIGHT',
+              50,
+              0.85,
+              850
+            ],
+            [
+              10002,
+              '2025-01-16T00:00:00.000Z',
+              '03 03 08',
+              2000,
+              200,
+              100,
+              1700,
+              'YES',
+              'WEIGHT',
+              100,
+              0.85,
+              1700
+            ]
+          ]
+        }
+      }
+
+      // Second upload:
+      // - 10001: unchanged (same data)
+      // - 10002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
+      // - 10003: added (new row)
+      const secondUploadData = {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Received', row: 7, column: 'A' },
+          headers: sharedHeaders,
+          rows: [
+            [
+              10001,
+              '2025-01-15T00:00:00.000Z',
+              '03 03 08',
+              1000,
+              100,
+              50,
+              850,
+              'YES',
+              'WEIGHT',
+              50,
+              0.85,
+              850
+            ],
+            [
+              10002,
+              '2025-01-16T00:00:00.000Z',
+              '03 03 08',
+              2500,
+              250,
+              125,
+              2125,
+              'YES',
+              'WEIGHT',
+              125,
+              0.85,
+              2125
+            ],
+            [
+              10003,
+              '2025-01-17T00:00:00.000Z',
+              '03 03 08',
+              3000,
+              300,
+              150,
+              2550,
+              'YES',
+              'WEIGHT',
+              150,
+              0.85,
+              2550
+            ]
+          ]
+        }
+      }
+
+      // Validation extractor: first file has no data (skip data validation),
+      // second file has data (run data validation for classification)
+      const validationExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: { meta: sharedMeta, data: {} },
+        [secondFileId]: { meta: sharedMeta, data: secondUploadData }
       })
 
-      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
+      // Transformation extractor: both files have full data for submission
       const transformationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-12345',
-              location: { sheet: 'Data', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Data', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
-            },
-            ACCREDITATION_NUMBER: {
-              value: 'ACC-2025-001',
-              location: { sheet: 'Data', row: 5, column: 'B' }
-            }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'A' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'NET_WEIGHT'
-              ],
-              rows: [
-                ['10001', '2025-01-15', '15 01 01', 1000, 100, 900],
-                ['10002', '2025-01-16', '15 01 02', 2000, 200, 1800]
-              ]
-            }
-          }
-        }
+        [fileId]: { meta: sharedMeta, data: firstUploadData },
+        [secondFileId]: { meta: sharedMeta, data: secondUploadData }
       })
 
       const wasteRecordsRepositoryFactory =
@@ -1886,8 +1961,8 @@ describe('Summary logs integration', () => {
       )
 
       expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe('10001')
-      expect(wasteRecords[1].rowId).toBe('10002')
+      expect(wasteRecords[0].rowId).toBe(10001)
+      expect(wasteRecords[1].rowId).toBe(10002)
     })
 
     it('updates summary log status to SUBMITTED', async () => {
@@ -1916,6 +1991,42 @@ describe('Summary logs integration', () => {
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBe('ACC-2025-001')
+    })
+
+    it('classifies loads as added, adjusted, and unchanged on second upload', async () => {
+      // Upload and validate a second summary log with modified data
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(secondSummaryLogId),
+        payload: createUploadPayload(
+          UPLOAD_STATUS.COMPLETE,
+          secondFileId,
+          secondFilename
+        ),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      await pollForValidation(server, secondSummaryLogId)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(secondSummaryLogId),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+      // 10001: unchanged (same data as first upload)
+      // 10002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
+      // 10003: added (new row)
+      expect(payload.loads.added.valid.count).toBe(1)
+      expect(payload.loads.added.valid.rowIds).toContain(10003)
+
+      expect(payload.loads.adjusted.valid.count).toBe(1)
+      expect(payload.loads.adjusted.valid.rowIds).toContain(10002)
+
+      expect(payload.loads.unchanged.valid.count).toBe(1)
+      expect(payload.loads.unchanged.valid.rowIds).toContain(10001)
     })
   })
 
