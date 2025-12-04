@@ -101,7 +101,7 @@ describe('cleanupSeedData', () => {
   const findResults = (query) => {
     let results = []
 
-    if (query.referenceNumber === '123ab456789cd01e23fabc45') {
+    if (query.referenceNumber?.$in.includes('123ab456789cd01e23fabc45')) {
       results = REGISTRATION_ACCREDITATION_FIXTURE_IDS.map((_id) => ({ _id }))
     }
 
