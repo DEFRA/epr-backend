@@ -211,7 +211,10 @@ export async function cleanupSeedData(db, { isProduction, isDryRun }) {
       return foundDocumentIds
     }
 
-    const testSubmissionSystemReferences = ['123ab456789cd01e23fabc45', '68b047003ef5214486dbaa53']
+    const testSubmissionSystemReferences = [
+      '123ab456789cd01e23fabc45',
+      '68b047003ef5214486dbaa53'
+    ]
 
     await findAndDelete(COLLECTION_REGISTRATION, {
       referenceNumber: { $in: testSubmissionSystemReferences }
