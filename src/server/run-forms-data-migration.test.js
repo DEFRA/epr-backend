@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runFormsDataMigration } from './run-forms-data-migration.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { migrateFormsData } from '#formsubmission/migrate-forms-data.js'
+import { createFormDataMigrator } from '#formsubmission/migrate-forms-data.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
@@ -16,12 +16,17 @@ describe('runFormsDataMigration', () => {
   let mockFormSubmissionsRepository
   let mockOrganisationsRepository
   let mockLock
+  let mockFormsDataMigration
 
   beforeEach(() => {
     vi.clearAllMocks()
 
     mockFormSubmissionsRepository = { findAllOrganisations: vi.fn() }
     mockOrganisationsRepository = { insert: vi.fn() }
+
+    mockFormsDataMigration = {
+      migrate: vi.fn().mockResolvedValue(undefined)
+    }
 
     mockLock = {
       free: vi.fn().mockResolvedValue(undefined)
@@ -45,6 +50,7 @@ describe('runFormsDataMigration', () => {
     createOrganisationsRepository.mockReturnValue(
       () => mockOrganisationsRepository
     )
+    createFormDataMigrator.mockReturnValue(mockFormsDataMigration)
 
     logger.info = vi.fn()
     logger.error = vi.fn()
@@ -52,8 +58,6 @@ describe('runFormsDataMigration', () => {
 
   it('should run migration when feature flag is enabled', async () => {
     mockFeatureFlags.isFormsDataMigrationEnabled.mockReturnValue(true)
-    const mockStats = { totalSubmissions: 5, insertedCount: 5 }
-    migrateFormsData.mockResolvedValue(mockStats)
 
     await runFormsDataMigration(mockServer)
 
@@ -63,10 +67,11 @@ describe('runFormsDataMigration', () => {
     expect(mockServer.locker.lock).toHaveBeenCalledWith('forms-data-migration')
     expect(createFormSubmissionsRepository).toHaveBeenCalledWith(mockServer.db)
     expect(createOrganisationsRepository).toHaveBeenCalledWith(mockServer.db)
-    expect(migrateFormsData).toHaveBeenCalledWith(
+    expect(createFormDataMigrator).toHaveBeenCalledWith(
       mockFormSubmissionsRepository,
       mockOrganisationsRepository
     )
+    expect(mockFormsDataMigration.migrate).toHaveBeenCalled()
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Form data migration completed successfully'
     })
@@ -81,14 +86,13 @@ describe('runFormsDataMigration', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Starting form data migration. Feature flag enabled: false'
     })
-    expect(migrateFormsData).not.toHaveBeenCalled()
+    expect(createFormDataMigrator).not.toHaveBeenCalled()
   })
 
   it('should use options.featureFlags when provided', async () => {
     const customFeatureFlags = {
       isFormsDataMigrationEnabled: vi.fn().mockReturnValue(true)
     }
-    migrateFormsData.mockResolvedValue({ totalSubmissions: 0 })
 
     await runFormsDataMigration(mockServer, {
       featureFlags: customFeatureFlags
@@ -101,7 +105,7 @@ describe('runFormsDataMigration', () => {
   it('should handle errors gracefully', async () => {
     mockFeatureFlags.isFormsDataMigrationEnabled.mockReturnValue(true)
     const error = new Error('Migration failed')
-    migrateFormsData.mockRejectedValue(error)
+    mockFormsDataMigration.migrate.mockRejectedValue(error)
 
     await runFormsDataMigration(mockServer)
 
@@ -135,6 +139,6 @@ describe('runFormsDataMigration', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Unable to obtain lock, skipping running form data migration'
     })
-    expect(migrateFormsData).not.toHaveBeenCalled()
+    expect(createFormDataMigrator).not.toHaveBeenCalled()
   })
 })
