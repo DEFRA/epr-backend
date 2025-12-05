@@ -9,6 +9,7 @@ import { MATERIAL } from '#domain/organisations/model.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { readdirSync, readFileSync } from 'fs'
+import { ObjectId } from 'mongodb'
 import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createFormDataMigrator } from './migrate-forms-data.js'
@@ -21,46 +22,92 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
+const orgId1 = new ObjectId()
+const orgId2 = new ObjectId()
+const regId1 = new ObjectId()
+const regId2 = new ObjectId()
+const accrId1 = new ObjectId()
+const regId2ForOrg2 = new ObjectId()
+const accrId2ForOrg2 = new ObjectId()
+
 const validSubmission1 = {
-  id: 'sub-1',
+  id: orgId1.toString(),
   orgId: 500001,
   rawSubmissionData: { someData: 'value1' }
 }
 
 const validSubmission2 = {
-  id: 'sub-2',
+  id: orgId2.toString(),
   orgId: 500002,
   rawSubmissionData: { someData: 'value2' }
 }
 
 const transformedOrg1 = {
-  id: 'org-123',
+  id: orgId1.toString(),
   orgId: 500001,
   companyDetails: { name: 'Test Company 1' },
-  users: []
+  users: [],
+  registrations: [],
+  accreditations: []
 }
 
 const transformedOrg2 = {
-  id: 'org-456',
+  id: orgId2.toString(),
   orgId: 500002,
+  version: 1,
   companyDetails: { name: 'Test Company 2' },
-  users: []
+  users: [],
+  registrations: [],
+  accreditations: []
 }
 
 const validRegSubmission1 = {
-  id: 'reg-1',
+  id: regId1.toString(),
   rawSubmissionData: { regData: 'value1' }
 }
 
 const validRegSubmission2 = {
-  id: 'reg-2',
+  id: regId2.toString(),
   rawSubmissionData: { regData: 'value2' }
 }
 
+const validRegSubmission2ForOrg2 = {
+  id: regId2ForOrg2.toString(),
+  rawSubmissionData: { regData: 'value2' }
+}
+
+const validAccrSubmission1 = {
+  id: accrId1.toString(),
+  rawSubmissionData: { accrData: 'value1' }
+}
+
+const validAccrSubmission2ForOrg2 = {
+  id: accrId2ForOrg2.toString(),
+  rawSubmissionData: { accrData: 'value2' }
+}
+
 const transformedReg1 = {
-  id: 'reg-1',
-  orgName: 'Test Org 1',
-  systemReference: 'REF-001'
+  id: regId1.toString(),
+  systemReference: orgId1.toString(),
+  orgId: 500001
+}
+
+const transformedAccr1 = {
+  id: accrId1.toString(),
+  systemReference: orgId1.toString(),
+  orgId: 500001
+}
+
+const transformedReg2ForOrg2 = {
+  id: regId2ForOrg2.toString(),
+  systemReference: orgId2.toString(),
+  orgId: 500002
+}
+
+const transformedAccr2ForOrg2 = {
+  id: accrId2ForOrg2.toString(),
+  systemReference: orgId2.toString(),
+  orgId: 500002
 }
 
 describe('migrateFormsData', () => {
@@ -71,12 +118,16 @@ describe('migrateFormsData', () => {
     vi.clearAllMocks()
 
     formsSubmissionRepository = {
-      findAllOrganisations: vi.fn(),
-      findAllRegistrations: vi.fn(),
-      findAllAccreditations: vi.fn()
+      findOrganisationById: vi.fn(),
+      findRegistrationById: vi.fn(),
+      findAccreditationById: vi.fn(),
+      findAllFormSubmissionIds: vi.fn()
     }
     organisationsRepository = {
-      upsert: vi.fn()
+      insert: vi.fn(),
+      update: vi.fn(),
+      findAllIds: vi.fn(),
+      findById: vi.fn()
     }
   })
 
@@ -84,10 +135,9 @@ describe('migrateFormsData', () => {
     let parseOrgSubmission
     let parseRegistrationSubmission
     let parseAccreditationSubmission
-    let linkItemsToOrganisations
 
     beforeEach(async () => {
-      // Import and mock all transform functions
+      // Import and mock transform functions
       const orgModule =
         await import('#formsubmission/organisation/transform-organisation.js')
       parseOrgSubmission = vi.spyOn(orgModule, 'parseOrgSubmission')
@@ -105,13 +155,6 @@ describe('migrateFormsData', () => {
         accrModule,
         'parseAccreditationSubmission'
       )
-
-      const linkModule =
-        await import('#formsubmission/link-form-submissions.js')
-      linkItemsToOrganisations = vi.spyOn(
-        linkModule,
-        'linkItemsToOrganisations'
-      )
     })
 
     afterEach(() => {
@@ -119,27 +162,42 @@ describe('migrateFormsData', () => {
       parseOrgSubmission.mockRestore()
       parseRegistrationSubmission.mockRestore()
       parseAccreditationSubmission.mockRestore()
-      linkItemsToOrganisations.mockRestore()
     })
 
     describe('persistence scenarios', () => {
-      it('all org transforms and upsert succeed', async () => {
-        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
-          validSubmission1,
-          validSubmission2
-        ])
-        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([
-          validRegSubmission1
-        ])
-        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
+      it('Initial migration - all submissions transforms and upsert succeed', async () => {
+        // Setup: Mock findAllFormSubmissionIds to return submission IDs
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set(),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id, validSubmission2.id]),
+          registrations: new Set([validRegSubmission1.id]),
+          accreditations: new Set([validAccrSubmission1.id])
+        })
 
+        // Mock fetch methods
+        formsSubmissionRepository.findOrganisationById
+          .mockResolvedValueOnce(validSubmission1)
+          .mockResolvedValueOnce(validSubmission2)
+        formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce(
+          validRegSubmission1
+        )
+        formsSubmissionRepository.findAccreditationById.mockResolvedValueOnce(
+          validAccrSubmission1
+        )
+
+        // Mock parse functions
         parseOrgSubmission
           .mockReturnValueOnce(transformedOrg1)
           .mockReturnValueOnce(transformedOrg2)
         parseRegistrationSubmission.mockReturnValueOnce(transformedReg1)
-        organisationsRepository.upsert
-          .mockResolvedValueOnce({ action: 'inserted' })
-          .mockResolvedValueOnce({ action: 'updated' })
+        parseAccreditationSubmission.mockReturnValueOnce(transformedAccr1)
+
+        // Mock insert
+        organisationsRepository.insert.mockResolvedValue()
 
         const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
@@ -147,54 +205,24 @@ describe('migrateFormsData', () => {
         )
         await formsDataMigration.migrate()
 
-        expect(parseOrgSubmission).toHaveBeenCalledTimes(2)
-        expect(parseOrgSubmission).toHaveBeenCalledWith(
-          validSubmission1.id,
-          validSubmission1.orgId,
-          validSubmission1.rawSubmissionData
+        // Verify insert calls - registration and accreditation should be linked to org1
+        expect(organisationsRepository.insert).toHaveBeenCalledTimes(2)
+        expect(organisationsRepository.insert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: transformedOrg1.id,
+            registrations: [transformedReg1],
+            accreditations: [transformedAccr1]
+          })
         )
-        expect(parseOrgSubmission).toHaveBeenCalledWith(
-          validSubmission2.id,
-          validSubmission2.orgId,
-          validSubmission2.rawSubmissionData
-        )
-
-        expect(parseRegistrationSubmission).toHaveBeenCalledTimes(1)
-        expect(parseRegistrationSubmission).toHaveBeenCalledWith(
-          validRegSubmission1.id,
-          validRegSubmission1.rawSubmissionData
-        )
-
-        expect(linkItemsToOrganisations).toHaveBeenCalledTimes(2)
-        const systemReferencesRequiringOrgIdMatch = new Set([
-          '507f191e810c19729de860ea',
-          '507f191e810c19729de860eb',
-          '65a2f5a1b4c5d9f8e7a6b1c3',
-          '65a2f5a1b4c5d9f8e7a6b1c5'
-        ])
-        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
-          1,
-          expect.any(Array),
-          expect.any(Array),
-          'registrations',
-          systemReferencesRequiringOrgIdMatch
-        )
-        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
-          2,
-          expect.any(Array),
-          expect.any(Array),
-          'accreditations',
-          systemReferencesRequiringOrgIdMatch
+        expect(organisationsRepository.insert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: transformedOrg2.id,
+            registrations: [],
+            accreditations: []
+          })
         )
 
-        expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)
-        expect(organisationsRepository.upsert).toHaveBeenCalledWith(
-          transformedOrg1
-        )
-        expect(organisationsRepository.upsert).toHaveBeenCalledWith(
-          transformedOrg2
-        )
-
+        // Verify logs
         expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 2/2 organisation form submissions (0 failed)'
         })
@@ -202,20 +230,108 @@ describe('migrateFormsData', () => {
           message: 'Transformed 1/1 registration form submissions (0 failed)'
         })
         expect(logger.info).toHaveBeenCalledWith({
+          message: 'Transformed 1/1 accreditation form submissions (0 failed)'
+        })
+        expect(logger.info).toHaveBeenCalledWith({
           message:
-            'Migration completed: 2/2 organisations processed (1 inserted, 1 updated, 0 unchanged, 0 failed)'
+            'Migration completed: 2/2 organisations processed (2 inserted, 0 updated, 0 failed)'
         })
       })
 
-      it('one upsert fails', async () => {
-        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
+      it('Incremental data migration - org2 already migrated with new reg and accr, org1 is new', async () => {
+        // Setup: org2 already migrated, org1 is new, reg2 and accr2 are new for org2
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set([validSubmission2.id]),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id, validSubmission2.id]),
+          registrations: new Set([validRegSubmission2ForOrg2.id]),
+          accreditations: new Set([validAccrSubmission2ForOrg2.id])
+        })
+
+        // Mock fetch methods - org1 from forms repo (raw), org2 from orgs repo (already migrated)
+        formsSubmissionRepository.findOrganisationById.mockResolvedValueOnce(
           validSubmission1
-        ])
-        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
-        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
+        )
+        organisationsRepository.findById.mockResolvedValueOnce({
+          ...transformedOrg2,
+          version: 1,
+          registrations: [],
+          accreditations: []
+        })
+        formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce(
+          validRegSubmission2ForOrg2
+        )
+        formsSubmissionRepository.findAccreditationById.mockResolvedValueOnce(
+          validAccrSubmission2ForOrg2
+        )
+
+        // Mock parse functions - only org1 is parsed (org2 is already migrated)
+        parseOrgSubmission.mockReturnValueOnce({
+          ...transformedOrg1,
+          registrations: [],
+          accreditations: []
+        })
+        parseRegistrationSubmission.mockReturnValueOnce(transformedReg2ForOrg2)
+        parseAccreditationSubmission.mockReturnValueOnce(
+          transformedAccr2ForOrg2
+        )
+
+        // Mock insert and update
+        organisationsRepository.insert.mockResolvedValue()
+        organisationsRepository.update.mockResolvedValue()
+
+        const formsDataMigration = createFormDataMigrator(
+          formsSubmissionRepository,
+          organisationsRepository
+        )
+        await formsDataMigration.migrate()
+
+        // Verify org1 inserted without reg/accr, org2 updated with new reg/accr
+        expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
+        expect(organisationsRepository.insert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: transformedOrg1.id,
+            registrations: [],
+            accreditations: []
+          })
+        )
+        expect(organisationsRepository.update).toHaveBeenCalledTimes(1)
+        expect(organisationsRepository.update).toHaveBeenCalledWith(
+          transformedOrg2.id,
+          transformedOrg2.version,
+          expect.objectContaining({
+            registrations: [transformedReg2ForOrg2],
+            accreditations: [transformedAccr2ForOrg2]
+          })
+        )
+
+        expect(logger.info).toHaveBeenCalledWith({
+          message:
+            'Migration completed: 2/2 organisations processed (1 inserted, 1 updated, 0 failed)'
+        })
+      })
+
+      it('insert fails', async () => {
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set(),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id]),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+
+        formsSubmissionRepository.findOrganisationById.mockResolvedValue(
+          validSubmission1
+        )
         parseOrgSubmission.mockReturnValue(transformedOrg1)
-        organisationsRepository.upsert.mockRejectedValue(
-          new Error('Upsert failed')
+        organisationsRepository.insert.mockRejectedValue(
+          new Error('Insert failed')
         )
 
         const formsDataMigration = createFormDataMigrator(
@@ -224,25 +340,14 @@ describe('migrateFormsData', () => {
         )
         await formsDataMigration.migrate()
 
-        expect(parseOrgSubmission).toHaveBeenCalledWith(
-          validSubmission1.id,
-          validSubmission1.orgId,
-          validSubmission1.rawSubmissionData
-        )
-        expect(organisationsRepository.upsert).toHaveBeenCalledWith(
-          transformedOrg1
+        expect(organisationsRepository.insert).toHaveBeenCalledWith(
+          expect.objectContaining({ id: transformedOrg1.id })
         )
 
-        expect(logger.info).toHaveBeenCalledWith({
-          message: 'Transformed 1/1 organisation form submissions (0 failed)'
-        })
-        expect(logger.info).toHaveBeenCalledWith({
-          message: 'Transformed 0/0 registration form submissions (0 failed)'
-        })
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
             error: expect.any(Error),
-            message: 'Error upserting organisation',
+            message: 'Error inserting organisation',
             event: expect.objectContaining({
               category: LOGGING_EVENT_CATEGORIES.DB,
               action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
@@ -252,19 +357,89 @@ describe('migrateFormsData', () => {
         )
         expect(logger.info).toHaveBeenCalledWith({
           message:
-            'Migration completed: 0/1 organisations processed (0 inserted, 0 updated, 0 unchanged, 1 failed)'
+            'Migration completed: 0/1 organisations processed (0 inserted, 0 updated, 1 failed)'
         })
       })
 
-      it('one without any change comparing to whats in db', async () => {
-        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
-          validSubmission1
-        ])
-        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
-        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
-        parseOrgSubmission.mockReturnValue(transformedOrg1)
-        organisationsRepository.upsert.mockResolvedValue({
-          action: 'unchanged'
+      it('update fails', async () => {
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set([validSubmission2.id]),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission2.id]),
+          registrations: new Set([validRegSubmission2ForOrg2.id]),
+          accreditations: new Set()
+        })
+
+        organisationsRepository.findById.mockResolvedValueOnce({
+          ...transformedOrg2,
+          version: 1,
+          registrations: [],
+          accreditations: []
+        })
+        formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce(
+          validRegSubmission2ForOrg2
+        )
+
+        parseRegistrationSubmission.mockReturnValueOnce(transformedReg2ForOrg2)
+        organisationsRepository.update.mockRejectedValue(
+          new Error('Update failed')
+        )
+
+        const formsDataMigration = createFormDataMigrator(
+          formsSubmissionRepository,
+          organisationsRepository
+        )
+        await formsDataMigration.migrate()
+
+        expect(organisationsRepository.update).toHaveBeenCalledWith(
+          transformedOrg2.id,
+          1,
+          expect.objectContaining({
+            orgId: transformedOrg2.orgId,
+            companyDetails: transformedOrg2.companyDetails,
+            users: transformedOrg2.users,
+            registrations: [transformedReg2ForOrg2],
+            accreditations: []
+          })
+        )
+
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            error: expect.any(Error),
+            message: 'Error updating organisation',
+            event: expect.objectContaining({
+              category: LOGGING_EVENT_CATEGORIES.DB,
+              action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+              reference: transformedOrg2.id
+            })
+          })
+        )
+        expect(logger.info).toHaveBeenCalledWith({
+          message:
+            'Migration completed: 0/1 organisations processed (0 inserted, 0 updated, 1 failed)'
+        })
+      })
+    })
+
+    describe('no submissions to migrate', () => {
+      it('no new form submissions to migrate', async () => {
+        const migratedOrgId1 = new ObjectId().toString()
+        const migratedOrgId2 = new ObjectId().toString()
+        const migratedRegId = new ObjectId().toString()
+        const migratedAccrId = new ObjectId().toString()
+
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set([migratedOrgId1, migratedOrgId2]),
+          registrations: new Set([migratedRegId]),
+          accreditations: new Set([migratedAccrId])
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([migratedOrgId1, migratedOrgId2]),
+          registrations: new Set([migratedRegId]),
+          accreditations: new Set([migratedAccrId])
         })
 
         const formsDataMigration = createFormDataMigrator(
@@ -273,39 +448,37 @@ describe('migrateFormsData', () => {
         )
         await formsDataMigration.migrate()
 
-        expect(parseOrgSubmission).toHaveBeenCalledWith(
-          validSubmission1.id,
-          validSubmission1.orgId,
-          validSubmission1.rawSubmissionData
-        )
-        expect(organisationsRepository.upsert).toHaveBeenCalledWith(
-          transformedOrg1
-        )
-
+        expect(organisationsRepository.insert).not.toHaveBeenCalled()
+        expect(organisationsRepository.update).not.toHaveBeenCalled()
         expect(logger.info).toHaveBeenCalledWith({
-          message: 'Transformed 1/1 organisation form submissions (0 failed)'
-        })
-        expect(logger.info).toHaveBeenCalledWith({
-          message:
-            'Migration completed: 1/1 organisations processed (0 inserted, 0 updated, 1 unchanged, 0 failed)'
+          message: 'No new form submissions to migrate'
         })
       })
     })
 
     describe('transformation failure scenarios', () => {
       it('1 org transform fails', async () => {
-        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
-          validSubmission1,
-          validSubmission2
-        ])
-        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
-        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set(),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id, validSubmission2.id]),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+
+        formsSubmissionRepository.findOrganisationById
+          .mockResolvedValueOnce(validSubmission1)
+          .mockResolvedValueOnce(validSubmission2)
+
         parseOrgSubmission
           .mockReturnValueOnce(transformedOrg1)
           .mockImplementationOnce(() => {
             throw new Error('Transform failed')
           })
-        organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
+        organisationsRepository.insert.mockResolvedValue()
 
         const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
@@ -314,10 +487,7 @@ describe('migrateFormsData', () => {
         await formsDataMigration.migrate()
 
         expect(parseOrgSubmission).toHaveBeenCalledTimes(2)
-        expect(organisationsRepository.upsert).toHaveBeenCalledTimes(1)
-        expect(organisationsRepository.upsert).toHaveBeenCalledWith(
-          transformedOrg1
-        )
+        expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -335,19 +505,31 @@ describe('migrateFormsData', () => {
         })
         expect(logger.info).toHaveBeenCalledWith({
           message:
-            'Migration completed: 1/1 organisations processed (1 inserted, 0 updated, 0 unchanged, 0 failed)'
+            'Migration completed: 1/1 organisations processed (1 inserted, 0 updated, 0 failed)'
         })
       })
 
       it('1 registration transform fails', async () => {
-        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set(),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id]),
+          registrations: new Set([
+            validRegSubmission1.id,
+            validRegSubmission2.id
+          ]),
+          accreditations: new Set()
+        })
+
+        formsSubmissionRepository.findOrganisationById.mockResolvedValue(
           validSubmission1
-        ])
-        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([
-          validRegSubmission1,
-          validRegSubmission2
-        ])
-        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([])
+        )
+        formsSubmissionRepository.findRegistrationById
+          .mockResolvedValueOnce(validRegSubmission1)
+          .mockResolvedValueOnce(validRegSubmission2)
 
         parseOrgSubmission.mockReturnValueOnce(transformedOrg1)
         parseRegistrationSubmission
@@ -355,7 +537,7 @@ describe('migrateFormsData', () => {
           .mockImplementationOnce(() => {
             throw new Error('Registration transform failed')
           })
-        organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
+        organisationsRepository.insert.mockResolvedValue()
 
         const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
@@ -378,34 +560,50 @@ describe('migrateFormsData', () => {
       })
 
       it('1 accreditation transform fails', async () => {
+        const accrId1 = new ObjectId()
+        const accrId2 = new ObjectId()
+
         const validAccrSubmission1 = {
-          id: '507f1f77bcf86cd799439011',
+          id: accrId1.toString(),
           rawSubmissionData: { accrData: 'value1' }
         }
         const validAccrSubmission2 = {
-          id: '507f1f77bcf86cd799439012',
+          id: accrId2.toString(),
           rawSubmissionData: { accrData: 'value2' }
         }
 
-        formsSubmissionRepository.findAllOrganisations.mockResolvedValue([
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set(),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id]),
+          registrations: new Set(),
+          accreditations: new Set([
+            validAccrSubmission1.id,
+            validAccrSubmission2.id
+          ])
+        })
+
+        formsSubmissionRepository.findOrganisationById.mockResolvedValue(
           validSubmission1
-        ])
-        formsSubmissionRepository.findAllRegistrations.mockResolvedValue([])
-        formsSubmissionRepository.findAllAccreditations.mockResolvedValue([
-          validAccrSubmission1,
-          validAccrSubmission2
-        ])
+        )
+        formsSubmissionRepository.findAccreditationById
+          .mockResolvedValueOnce(validAccrSubmission1)
+          .mockResolvedValueOnce(validAccrSubmission2)
 
         parseOrgSubmission.mockReturnValueOnce(transformedOrg1)
         parseAccreditationSubmission
           .mockReturnValueOnce({
-            id: '507f1f77bcf86cd799439011',
-            orgName: 'Test Org 1'
+            id: validAccrSubmission1.id,
+            systemReference: transformedOrg1.id,
+            orgId: 500001
           })
           .mockImplementationOnce(() => {
             throw new Error('Accreditation transform failed')
           })
-        organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
+        organisationsRepository.insert.mockResolvedValue()
 
         const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
@@ -425,6 +623,69 @@ describe('migrateFormsData', () => {
         expect(logger.info).toHaveBeenCalledWith({
           message: 'Transformed 1/2 accreditation form submissions (1 failed)'
         })
+      })
+
+      it('unlinked registration and accreditation with new org', async () => {
+        const differentSystemRef = new ObjectId().toString()
+
+        const transformedReg1Unlinked = {
+          ...transformedReg1,
+          systemReference: differentSystemRef
+        }
+
+        const transformedAccr1Unlinked = {
+          ...transformedAccr1,
+          systemReference: differentSystemRef
+        }
+
+        organisationsRepository.findAllIds.mockResolvedValue({
+          organisations: new Set(),
+          registrations: new Set(),
+          accreditations: new Set()
+        })
+        formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+          organisations: new Set([validSubmission1.id]),
+          registrations: new Set([validRegSubmission1.id]),
+          accreditations: new Set([validAccrSubmission1.id])
+        })
+
+        formsSubmissionRepository.findOrganisationById.mockResolvedValueOnce(
+          validSubmission1
+        )
+        formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce(
+          validRegSubmission1
+        )
+        formsSubmissionRepository.findAccreditationById.mockResolvedValueOnce(
+          validAccrSubmission1
+        )
+
+        parseOrgSubmission.mockReturnValueOnce({
+          ...transformedOrg1,
+          registrations: [],
+          accreditations: []
+        })
+        parseRegistrationSubmission.mockReturnValueOnce(transformedReg1Unlinked)
+        parseAccreditationSubmission.mockReturnValueOnce(
+          transformedAccr1Unlinked
+        )
+
+        organisationsRepository.insert.mockResolvedValue()
+
+        const formsDataMigration = createFormDataMigrator(
+          formsSubmissionRepository,
+          organisationsRepository
+        )
+        await formsDataMigration.migrate()
+
+        // Org should be inserted without the reg/accr since they don't link
+        expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
+        expect(organisationsRepository.insert).toHaveBeenCalledWith(
+          expect.objectContaining({
+            id: transformedOrg1.id,
+            registrations: [],
+            accreditations: []
+          })
+        )
       })
     })
   })
@@ -558,6 +819,9 @@ describe('migrateFormsData', () => {
         .flatMap((o) => o.registrations ?? [])) {
         expect(reg.accreditationId).toBeUndefined()
       }
+
+      // rerunning migration should not fail
+      expect(async () => await formsDataMigration.migrate()).not.toThrow()
     })
   })
 })

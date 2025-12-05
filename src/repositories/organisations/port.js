@@ -141,6 +141,13 @@
  */
 
 /**
+ * @typedef {Object} OrganisationIds
+ * @property {Set<string>} organisations - Set of organisation IDs
+ * @property {Set<string>} registrations - Set of registration IDs
+ * @property {Set<string>} accreditations - Set of accreditation IDs
+ */
+
+/**
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Object) => Promise<void>} insert
  * @property {(id: string, version: number, updates: Object) => Promise<void>} update
@@ -148,6 +155,7 @@
  * @property {() => Promise<Object[]>} findAll
  * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration|null>} findRegistrationById
+ * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  */
 
 /**
