@@ -221,6 +221,28 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
+const performFindAllIds = (staleCache) => async () => {
+  const orgs = structuredClone(staleCache)
+
+  return orgs.reduce(
+    (acc, org) => {
+      acc.organisations.add(org.id)
+      for (const r of org.registrations) {
+        acc.registrations.add(r.id)
+      }
+      for (const a of org.accreditations) {
+        acc.accreditations.add(a.id)
+      }
+      return acc
+    },
+    {
+      organisations: new Set(),
+      registrations: new Set(),
+      accreditations: new Set()
+    }
+  )
+}
+
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -276,6 +298,7 @@ export const createInMemoryOrganisationsRepository = (
           performUpsert(storage, staleCache, pendingSyncRef, insertFn, updateFn)
         ),
       findAll: performFindAll(staleCache),
+      findAllIds: performFindAllIds(staleCache),
       findById,
       findRegistrationById: performFindRegistrationById(findById),
       // Test-only method to access internal storage (not part of the port interface)

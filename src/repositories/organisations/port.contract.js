@@ -1,4 +1,5 @@
 import { testFindBehaviour } from './contract/find.contract.js'
+import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testUpdateBehaviour } from './contract/update.contract.js'
 import { testUpsertBehaviour } from './contract/upsert.contract.js'
@@ -10,6 +11,7 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testUpdateBehaviour(repositoryFactory)
   testUpsertBehaviour(repositoryFactory)
   testFindBehaviour(repositoryFactory)
+  testFindAllIdsBehaviour(repositoryFactory)
   testFindRegistrationByIdBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)
 }
