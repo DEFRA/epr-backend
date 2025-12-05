@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 
 const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
-const COLLECTION_NAME = 'organisation'
+const ORGANISATION_COLLECTION = 'organisation'
 
 const mapDocument = (doc) => {
   const { _id, orgId, referenceNumber, rawSubmissionData } = doc
@@ -68,7 +68,7 @@ const performFindRegistrationById = (db) => async (id) => {
 
 const performFindAllOrganisations = (db) => async () => {
   const docs = await db
-    .collection(COLLECTION_NAME)
+    .collection(ORGANISATION_COLLECTION)
     .find({}, { projection: { _id: 1, orgId: 1, rawSubmissionData: 1 } })
     .toArray()
 
@@ -86,7 +86,7 @@ const performFindOrganisationById = (db) => async (id) => {
   }
 
   const doc = await db
-    .collection(COLLECTION_NAME)
+    .collection(ORGANISATION_COLLECTION)
     .findOne(
       { _id: ObjectId.createFromHexString(id) },
       { projection: { _id: 1, orgId: 1, rawSubmissionData: 1 } }
@@ -99,6 +99,22 @@ const performFindOrganisationById = (db) => async (id) => {
         rawSubmissionData: doc.rawSubmissionData
       }
     : null
+}
+
+const findAllFormSubmissionIds = (db) => async () => {
+  const getAllSubmissionIds = async (collectionName) => {
+    const docs = await db
+      .collection(collectionName)
+      .find({}, { projection: { _id: 1 } })
+      .toArray()
+    return new Set(docs.map((doc) => doc._id.toString()))
+  }
+
+  return {
+    organisations: await getAllSubmissionIds(ORGANISATION_COLLECTION),
+    registrations: await getAllSubmissionIds(REGISTRATIONS_COLLECTION),
+    accreditations: await getAllSubmissionIds(ACCREDITATIONS_COLLECTION)
+  }
 }
 
 /**
@@ -116,6 +132,7 @@ export const createFormSubmissionsRepository = (db) => () => {
       performFindRegistrationsBySystemReference(db),
     findRegistrationById: performFindRegistrationById(db),
     findAllOrganisations: performFindAllOrganisations(db),
-    findOrganisationById: performFindOrganisationById(db)
+    findOrganisationById: performFindOrganisationById(db),
+    findAllFormSubmissionIds: findAllFormSubmissionIds(db)
   }
 }
