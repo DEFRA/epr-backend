@@ -2,6 +2,7 @@ import Joi from 'joi'
 import { createDataSyntaxValidator } from './data-syntax.js'
 import {
   VALIDATION_CATEGORY,
+  VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
@@ -523,8 +524,10 @@ describe('createDataSyntaxValidator', () => {
 
       expect(result.issues.isValid()).toBe(true)
     })
+  })
 
-    it('ignores tables without schemas', () => {
+  describe('unrecognised tables', () => {
+    it('returns FATAL when table has no schema for processing type', () => {
       const parsed = {
         meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
@@ -534,14 +537,138 @@ describe('createDataSyntaxValidator', () => {
           },
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
-            rows: [['goes']]
+            rows: [['goes']],
+            location: { sheet: 'Sheet1', row: 5, column: 'A' }
           }
         }
       }
 
       const result = validateDataSyntax(parsed)
 
-      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatals[0].code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
+      expect(fatals[0].message).toContain('UNKNOWN_TABLE')
+      expect(fatals[0].context.location.table).toBe('UNKNOWN_TABLE')
+    })
+
+    it('reports all unrecognised tables when multiple are present', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          UNKNOWN_TABLE_1: {
+            headers: ['FOO'],
+            rows: [['bar']],
+            location: { sheet: 'Sheet1', row: 5, column: 'A' }
+          },
+          UNKNOWN_TABLE_2: {
+            headers: ['BAZ'],
+            rows: [['qux']],
+            location: { sheet: 'Sheet2', row: 10, column: 'B' }
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(2)
+      expect(fatals.map((e) => e.context.location.table)).toContain(
+        'UNKNOWN_TABLE_1'
+      )
+      expect(fatals.map((e) => e.context.location.table)).toContain(
+        'UNKNOWN_TABLE_2'
+      )
+    })
+
+    it('still validates recognised tables when unrecognised tables are present', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          TEST_TABLE: {
+            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+            rows: [[10000, 123, 42]], // TEXT_FIELD should be string, not number
+            location: { sheet: 'Sheet1', row: 2, column: 'A' }
+          },
+          UNKNOWN_TABLE: {
+            headers: ['ANYTHING'],
+            rows: [['goes']],
+            location: { sheet: 'Sheet2', row: 5, column: 'A' }
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      // Should have FATAL for unrecognised table
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
+
+      // Should also have ERROR for invalid TEXT_FIELD in recognised table
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+    })
+
+    it('includes sheet location in error context when available', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          UNKNOWN_TABLE: {
+            headers: ['ANYTHING'],
+            rows: [['goes']],
+            location: { sheet: 'DataSheet', row: 15, column: 'C' }
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].context.location).toEqual({
+        sheet: 'DataSheet',
+        table: 'UNKNOWN_TABLE'
+      })
+    })
+
+    it('handles missing location gracefully', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          UNKNOWN_TABLE: {
+            headers: ['ANYTHING'],
+            rows: [['goes']]
+            // No location
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].context.location).toEqual({
+        table: 'UNKNOWN_TABLE'
+      })
     })
   })
 

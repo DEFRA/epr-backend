@@ -3,10 +3,11 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 
 /**
- * @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
+ * @typedef {import('#domain/waste-records/model.js').WasteRecordType} WasteRecordType
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
  * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
+ * @typedef {import('#domain/summary-logs/extractor/port.js').MetadataEntry} MetadataEntry
  */
 
 /**
@@ -16,6 +17,24 @@ import { transformReceivedLoadsRow } from './row-transformers/received-loads-rep
  * @property {Record<string, any>} data - Row data as object keyed by header name
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
+ */
+
+/**
+ * A validated table section with rows converted to TransformableRow objects
+ *
+ * @typedef {Object} ValidatedTableSection
+ * @property {TransformableRow[]} rows - Validated rows with data objects and optional issues/outcome
+ */
+
+/**
+ * Validated summary log data ready for transformation
+ *
+ * This is the output from data syntax validation, where raw table rows have been
+ * converted to TransformableRow objects with data keyed by header name.
+ *
+ * @typedef {Object} ValidatedSummaryLog
+ * @property {Object<string, MetadataEntry>} meta - Metadata from the summary log
+ * @property {Object<string, ValidatedTableSection>} data - Validated table sections keyed by table name
  */
 
 /**
@@ -53,7 +72,7 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  *
  * @param {Object} tableData - Table data with rows
  * @param {TransformableRow[]} tableData.rows - Array of rows to transform
- * @param {function(Record<string, any>): {wasteRecordType: string, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
+ * @param {function(Record<string, any>): {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
  * @param {Object} context - Context for creating waste records
  * @param {Object} context.summaryLog - Summary log reference
  * @param {string} context.summaryLog.id - Summary log ID
@@ -150,13 +169,13 @@ const transformTable = (
 }
 
 /**
- * Transforms parsed summary log data into waste records
+ * Transforms validated summary log data into waste records
  *
  * Each table's rows must have a `data` property with row values keyed by header name.
  * If rows have `issues` and `outcome` (from validation pipeline), these flow through
  * to the output.
  *
- * @param {ParsedSummaryLog} parsedData - Parsed summary log with TransformableRow[] in each table
+ * @param {ValidatedSummaryLog} parsedData - Validated summary log with TransformableRow[] in each table
  * @param {Object} summaryLogContext - Context from the summary log
  * @param {Object} summaryLogContext.summaryLog - The summary log reference
  * @param {string} summaryLogContext.summaryLog.id - The summary log ID

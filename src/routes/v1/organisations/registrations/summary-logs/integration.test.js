@@ -1514,7 +1514,7 @@ describe('Summary logs integration', () => {
               ]
             },
             UNKNOWN_FUTURE_TABLE: {
-              // No schema defined - should be gracefully skipped
+              // No schema defined - should be rejected with FATAL error
               location: { sheet: 'Unknown', row: 1, column: 'A' },
               headers: ['ANYTHING', 'GOES', 'HERE'],
               rows: [
@@ -1561,7 +1561,7 @@ describe('Summary logs integration', () => {
       expect(uploadResponse.statusCode).toBe(202)
     })
 
-    describe('retrieving summary log with unknown tables', () => {
+    describe('retrieving summary log with unrecognised tables', () => {
       let response
 
       beforeEach(async () => {
@@ -1580,25 +1580,25 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns validated status with no errors', () => {
+      it('returns invalid status with validation failure', () => {
         const payload = JSON.parse(response.payload)
-        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
         expect(payload.validation).toBeDefined()
-        expect(payload.validation.failures).toEqual([])
-        expect(payload.validation.concerns).toEqual({})
+        expect(payload.validation.failures).toHaveLength(1)
+        expect(payload.validation.failures[0].code).toBe('TABLE_UNRECOGNISED')
       })
 
-      it('gracefully ignores tables without schemas', async () => {
+      it('rejects tables without schemas with FATAL error', async () => {
         const { summaryLog } =
           await testSummaryLogsRepository.findById(summaryLogId)
 
-        // Should have no validation issues
-        expect(summaryLog.validation.issues).toEqual([])
-
-        // This documents defensive programming: tables without schemas
-        // are skipped rather than causing validation failures.
-        // This future-proofs against new table types being added to
-        // spreadsheets before validation schemas are implemented.
+        // Should have one FATAL validation issue for unrecognised table
+        expect(summaryLog.validation.issues).toHaveLength(1)
+        expect(summaryLog.validation.issues[0].severity).toBe('fatal')
+        expect(summaryLog.validation.issues[0].code).toBe('TABLE_UNRECOGNISED')
+        expect(summaryLog.validation.issues[0].message).toContain(
+          'UNKNOWN_FUTURE_TABLE'
+        )
       })
     })
   })
