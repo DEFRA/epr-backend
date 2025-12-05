@@ -6,7 +6,8 @@ import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
+import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -286,20 +287,40 @@ describe('PUT /v1/organisations/{id}', () => {
     )
   })
 
-  testAuthScenarios({
+  testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
       const org1 = buildOrganisation()
       await organisationsRepository.insert(org1)
       return {
         method: 'PUT',
-        url: `/v1/organisations/${org1.id}`
+        url: `/v1/organisations/${org1.id}`,
+        payload: {
+          version: org1.version,
+          updateFragment: { ...org1, wasteProcessingTypes: ['reprocessor'] }
+        }
       }
     },
     additionalExpectations: (response) => {
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
+    }
+  })
+
+  testOnlyServiceMaintainerCanAccess({
+    server: () => server,
+    makeRequest: async () => {
+      const org1 = buildOrganisation()
+      await organisationsRepository.insert(org1)
+      return {
+        method: 'PUT',
+        url: `/v1/organisations/${org1.id}`,
+        payload: {
+          version: org1.version,
+          updateFragment: { ...org1, wasteProcessingTypes: ['reprocessor'] }
+        }
+      }
     }
   })
 })

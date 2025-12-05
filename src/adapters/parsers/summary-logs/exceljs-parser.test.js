@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 
 import ExcelJS from 'exceljs'
 
+import { MATERIAL_PLACEHOLDER_TEXT } from '#domain/summary-logs/markers.js'
 import { parse } from './exceljs-parser.js'
 
 const filename = fileURLToPath(import.meta.url)
@@ -503,6 +504,17 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should store null when metadata marker is followed by explicitly null cell', async () => {
       const result = await parseWorkbook({
         Test: [['__EPR_META_MATERIAL', null, 'extra to ensure B2 is visited']]
+      })
+
+      expect(result.meta.MATERIAL).toEqual({
+        value: null,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should normalize MATERIAL placeholder text to null', async () => {
+      const result = await parseWorkbook({
+        Test: [['__EPR_META_MATERIAL', MATERIAL_PLACEHOLDER_TEXT]]
       })
 
       expect(result.meta.MATERIAL).toEqual({

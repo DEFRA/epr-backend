@@ -1,58 +1,96 @@
+/** @import {User} from '#domain/organisations/model.js' */
+
 /**
- * Full address used in registrations
- * @typedef {Object} RegistrationAddress
- * @property {string} [line1]
- * @property {string} [line2]
- * @property {string} [town]
- * @property {string} [county]
- * @property {string} [country]
- * @property {string} [postcode]
- * @property {string} [region]
- * @property {string} [fullAddress]
+ * @typedef {{
+ *  id: string
+ * }} Id
+
+/**
+ * @typedef {{
+ *  line1?: string;
+ *  line2?: string;
+ *  town?: string;
+ *  county?: string;
+ *  country?: string;
+ *  postcode?: string;
+ *  region?: string;
+ *  fullAddress?: string;
+ * }} RegistrationAddress
  */
 
 /**
- * Minimal address used in accreditations (only line1 and postcode required)
- * @typedef {Object} AccreditationAddress
- * @property {string} line1
- * @property {string} postcode
+ * @typedef {{
+ *  line1: string;
+ *  postcode: string;
+ * }} AccreditationAddress
  */
 
 /**
- * @typedef {Object} AccreditationSite
- * @property {AccreditationAddress} address
+ * @typedef {{
+ *  address: AccreditationAddress;
+ * }} AccreditationSite
  */
 
 /**
- * @typedef {Object} SiteCapacity
- * @property {string} material
- * @property {number} capacity
- * @property {string} siteCapacityTimescale
+ * @typedef {{
+ *  capacity: number;
+ *  material: string;
+ *  siteCapacityTimescale: string;
+ * }} SiteCapacity
  */
 
 /**
- * @typedef {Object} RegistrationSite
- * @property {RegistrationAddress} address
- * @property {string} gridReference
- * @property {SiteCapacity[]} siteCapacity
+ * @typedef {{
+ *  address: RegistrationAddress;
+ *  gridReference: string;
+ *  siteCapacity: SiteCapacity[];
+ * }} RegistrationSite
  */
 
 /**
- * @typedef {Object} AccreditationBase
- * @property {string} id
- * @property {string} material
- * @property {string} wasteProcessingType
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
- * @property {AccreditationSite} [site] - Required for reprocessors, optional for exporters
+ * @typedef {{
+ *  detailedExplanation: string;
+ *  percentIncomeSpent: number;
+ *  usageDescription: string;
+ * }} PrnIncomeBusinessPlan
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'approved'|'suspended', accreditationNumber: string, validFrom: Date, validTo: Date}} AccreditationApproved
+ * @typedef {{
+ *  incomeBusinessPlan: PrnIncomeBusinessPlan[];
+ *  signatories: User[];
+ *  tonnageBand: string;
+ * }} PrnIssuance
  */
 
 /**
- * @typedef {AccreditationBase & {status: 'created'|'rejected'|'archived', accreditationNumber?: string, validFrom?: Date, validTo?: Date}} AccreditationOther
+ * @typedef {Id & {
+ *  formSubmissionTime: Date;
+ *  material: string;
+ *  prnIssuance: PrnIssuance;
+ *  site?: AccreditationSite;
+ *  submittedToRegulator: string;
+ *  submitterContactDetails: User;
+ *  wasteProcessingType: string;
+ * }} AccreditationBase
+ */
+
+/**
+ * @typedef {AccreditationBase & {
+ *  accreditationNumber: string;
+ *  status: 'approved'|'suspended';
+ *  validFrom: Date;
+ *  validTo: Date
+ * }} AccreditationApproved
+ */
+
+/**
+ * @typedef {AccreditationBase & {
+ *  accreditationNumber?: string;
+ *  status: 'created'|'rejected'|'archived';
+ *  validFrom?: Date;
+ *  validTo?: Date
+ * }} AccreditationOther
  */
 
 /**
@@ -60,24 +98,36 @@
  */
 
 /**
- * @typedef {Object} RegistrationBase
- * @property {string} id
- * @property {string} orgName
- * @property {string} material
- * @property {string} wasteProcessingType
- * @property {Date} formSubmissionTime
- * @property {string} submittedToRegulator
- * @property {RegistrationSite} [site] - Required for reprocessors, optional for exporters
- * @property {string} [accreditationId]
- * @property {Accreditation} [accreditation] - Hydrated accreditation object when accreditationId exists
+ * @typedef {Id & {
+ *  accreditation?: Accreditation;
+ *  accreditationId?: string;
+ *  approvedPersons: User[]
+ *  formSubmissionTime: Date;
+ *  material: string;
+ *  orgName: string;
+ *  site: RegistrationSite;
+ *  submittedToRegulator: string;
+ *  submitterContactDetails: User;
+ *  wasteProcessingType: string;
+ * }} RegistrationBase
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'approved'|'suspended', cbduNumber: string, validFrom: Date, validTo: Date}} RegistrationApproved
+ * @typedef {RegistrationBase & {
+ *  cbduNumber: string;
+ *  status: 'approved'|'suspended';
+ *  validFrom: Date;
+ *  validTo: Date;
+ * }} RegistrationApproved
  */
 
 /**
- * @typedef {RegistrationBase & {status: 'created'|'rejected'|'archived', cbduNumber?: string, validFrom?: Date, validTo?: Date}} RegistrationOther
+ * @typedef {RegistrationBase & {
+ *  cbduNumber?: string;
+ *  status: 'created'|'rejected'|'archived';
+ *  validFrom?: Date;
+ *  validTo?: Date
+ * }} RegistrationOther
  */
 
 /**

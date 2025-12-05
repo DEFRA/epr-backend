@@ -5,6 +5,10 @@ import {
 import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'
+import {
+  createEmptyLoadCategory,
+  createEmptyLoadValidity
+} from './classify-loads.js'
 
 // ============================================================================
 // Test Builders
@@ -257,8 +261,7 @@ describe('SummaryLogsValidator', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        }),
-        failureReason: 'Something went wrong while retrieving your file upload'
+        })
       })
     )
   })
@@ -284,8 +287,7 @@ describe('SummaryLogsValidator', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        }),
-        failureReason: 'Registration with id reg-123 not found'
+        })
       })
     )
   })
@@ -319,9 +321,7 @@ describe('SummaryLogsValidator', () => {
               }
             }
           ]
-        }),
-        failureReason:
-          "Summary log's registration number does not match this registration"
+        })
       })
     )
   })
@@ -345,8 +345,7 @@ describe('SummaryLogsValidator', () => {
               code: 'VALIDATION_SYSTEM_ERROR'
             }
           ]
-        }),
-        failureReason: 'S3 access denied'
+        })
       })
     )
   })
@@ -459,8 +458,7 @@ describe('SummaryLogsValidator', () => {
                 message: expect.stringContaining('TEMPLATE_VERSION')
               })
             ])
-          }),
-          failureReason: expect.stringContaining('TEMPLATE_VERSION')
+          })
         })
       )
     })
@@ -505,7 +503,11 @@ describe('SummaryLogsValidator', () => {
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
-              rows: [buildReceivedLoadRow({ ROW_ID: 9999 })] // Below minimum - non-fatal error
+              rows: [
+                buildReceivedLoadRow({
+                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date' // Non-fatal row error
+                })
+              ]
             })
           }
         })
@@ -549,7 +551,7 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.validation.issues).toContainEqual(
         expect.objectContaining({
           severity: 'fatal',
-          code: 'MISSING_REQUIRED_HEADER'
+          code: 'HEADER_REQUIRED'
         })
       )
 
@@ -567,9 +569,9 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow(), // Valid row (ROW_ID: 10000)
                 buildReceivedLoadRow({
-                  ROW_ID: 9999, // Invalid - below minimum
-                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date',
-                  EWC_CODE: 'bad-code'
+                  ROW_ID: 10001, // Valid ROW_ID
+                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date', // Row-level error
+                  EWC_CODE: 'bad-code' // Row-level error
                 })
               ]
             })
@@ -585,16 +587,12 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads).toEqual({
         added: {
           valid: { count: 1, rowIds: [10000] },
-          invalid: { count: 1, rowIds: [9999] }
+          invalid: { count: 1, rowIds: [10001] },
+          included: { count: 1, rowIds: [10000] },
+          excluded: { count: 1, rowIds: [10001] }
         },
-        unchanged: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        },
-        adjusted: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        }
+        unchanged: createEmptyLoadValidity(),
+        adjusted: createEmptyLoadValidity()
       })
     })
 
@@ -637,18 +635,14 @@ describe('SummaryLogsValidator', () => {
 
       // Note: ROW_ID for unchanged comes from existing record (string)
       expect(updateCall.loads).toEqual({
-        added: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        },
+        added: createEmptyLoadValidity(),
         unchanged: {
           valid: { count: 1, rowIds: ['10000'] },
-          invalid: { count: 0, rowIds: [] }
+          invalid: createEmptyLoadCategory(),
+          included: { count: 1, rowIds: ['10000'] },
+          excluded: createEmptyLoadCategory()
         },
-        adjusted: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        }
+        adjusted: createEmptyLoadValidity()
       })
 
       // Reset the mock for other tests

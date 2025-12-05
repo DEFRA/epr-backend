@@ -1,17 +1,17 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { migrateFormsData } from './migrate-forms-data.js'
-import { logger } from '#common/helpers/logging/logger.js'
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { readdirSync, readFileSync } from 'fs'
-import { join } from 'path'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { MATERIAL } from '#domain/organisations/model.js'
-import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
+import { logger } from '#common/helpers/logging/logger.js'
 import exporterAccreditation from '#data/fixtures/ea/accreditation/exporter.json'
+import reprocessorGlassAccreditation from '#data/fixtures/ea/accreditation/reprocessor-glass.json'
+import { MATERIAL } from '#domain/organisations/model.js'
+import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { readdirSync, readFileSync } from 'fs'
+import { join } from 'path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { migrateFormsData } from './migrate-forms-data.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -84,28 +84,33 @@ describe('migrateFormsData', () => {
     let parseOrgSubmission
     let parseRegistrationSubmission
     let parseAccreditationSubmission
+    let linkItemsToOrganisations
 
     beforeEach(async () => {
       // Import and mock all transform functions
-      const orgModule = await import(
-        '#formsubmission/organisation/transform-organisation.js'
-      )
+      const orgModule =
+        await import('#formsubmission/organisation/transform-organisation.js')
       parseOrgSubmission = vi.spyOn(orgModule, 'parseOrgSubmission')
 
-      const regModule = await import(
-        '#formsubmission/registration/transform-registration.js'
-      )
+      const regModule =
+        await import('#formsubmission/registration/transform-registration.js')
       parseRegistrationSubmission = vi.spyOn(
         regModule,
         'parseRegistrationSubmission'
       )
 
-      const accrModule = await import(
-        '#formsubmission/accreditation/transform-accreditation.js'
-      )
+      const accrModule =
+        await import('#formsubmission/accreditation/transform-accreditation.js')
       parseAccreditationSubmission = vi.spyOn(
         accrModule,
         'parseAccreditationSubmission'
+      )
+
+      const linkModule =
+        await import('#formsubmission/link-form-submissions.js')
+      linkItemsToOrganisations = vi.spyOn(
+        linkModule,
+        'linkItemsToOrganisations'
       )
     })
 
@@ -114,6 +119,7 @@ describe('migrateFormsData', () => {
       parseOrgSubmission.mockRestore()
       parseRegistrationSubmission.mockRestore()
       parseAccreditationSubmission.mockRestore()
+      linkItemsToOrganisations.mockRestore()
     })
 
     describe('persistence scenarios', () => {
@@ -156,6 +162,28 @@ describe('migrateFormsData', () => {
         expect(parseRegistrationSubmission).toHaveBeenCalledWith(
           validRegSubmission1.id,
           validRegSubmission1.rawSubmissionData
+        )
+
+        expect(linkItemsToOrganisations).toHaveBeenCalledTimes(2)
+        const systemReferencesRequiringOrgIdMatch = new Set([
+          '507f191e810c19729de860ea',
+          '507f191e810c19729de860eb',
+          '65a2f5a1b4c5d9f8e7a6b1c3',
+          '65a2f5a1b4c5d9f8e7a6b1c5'
+        ])
+        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
+          1,
+          expect.any(Array),
+          expect.any(Array),
+          'registrations',
+          systemReferencesRequiringOrgIdMatch
+        )
+        expect(linkItemsToOrganisations).toHaveBeenNthCalledWith(
+          2,
+          expect.any(Array),
+          expect.any(Array),
+          'accreditations',
+          systemReferencesRequiringOrgIdMatch
         )
 
         expect(organisationsRepository.upsert).toHaveBeenCalledTimes(2)

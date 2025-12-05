@@ -19,7 +19,7 @@ export const createFormSubmissionsRepository = (
     },
     async findAccreditationsBySystemReference(ref) {
       return structuredClone(accreditations).filter(
-        (acc) => acc.referenceNumber === ref
+        (acc) => acc.referenceNumber.toLowerCase() === ref.toLowerCase()
       )
     },
     async findAccreditationById(id) {
@@ -44,7 +44,7 @@ export const createFormSubmissionsRepository = (
     },
     async findRegistrationsBySystemReference(ref) {
       return structuredClone(registrations).filter(
-        (reg) => reg.referenceNumber === ref
+        (reg) => reg.referenceNumber.toLowerCase() === ref.toLowerCase()
       )
     },
     async findRegistrationById(id) {

@@ -1,5 +1,14 @@
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
+import {
+  PROCESSING_TYPE_TABLES,
+  TABLE_NAMES
+} from '#domain/summary-logs/table-schemas/index.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+
+const { rowIdField } =
+  PROCESSING_TYPE_TABLES[PROCESSING_TYPES.REPROCESSOR_INPUT][
+    TABLE_NAMES.RECEIVED_LOADS_FOR_REPROCESSING
+  ]
 
 /**
  * Transforms a row from RECEIVED_LOADS_FOR_REPROCESSING table into waste record metadata
@@ -10,8 +19,6 @@ import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
  * @throws {Error} If required fields are missing
  */
 export const transformReceivedLoadsRow = (rowData, rowIndex) => {
-  const rowIdField = getRowIdField('RECEIVED_LOADS_FOR_REPROCESSING')
-
   if (!rowData[rowIdField]) {
     throw new Error(`Missing ${rowIdField} at row ${rowIndex}`)
   }

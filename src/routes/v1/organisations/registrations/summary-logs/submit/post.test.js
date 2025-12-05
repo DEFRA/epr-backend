@@ -38,7 +38,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: (logger) => summaryLogsRepository
+        summaryLogsRepository: (_logger) => summaryLogsRepository
       },
       workers: {
         summaryLogsWorker

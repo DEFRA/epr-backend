@@ -2,18 +2,17 @@ import { createOrUpdateAccreditationCollection } from './create-update-accredita
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
 
-import {
-  accreditationFactory,
-  organisationFactory,
-  registrationFactory
-} from './factories/index.js'
-
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 import {
   extractAnswers,
   extractEmail,
   extractOrgName
 } from '../apply/extract-answers.js'
+import {
+  accreditationFactory,
+  organisationFactory,
+  registrationFactory
+} from './factories/index.js'
 
 import accreditationFixture from '#data/fixtures/accreditation.json' with { type: 'json' }
 import organisationFixture from '#data/fixtures/organisation.json' with { type: 'json' }
@@ -25,10 +24,11 @@ import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
 
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
-import { eprOrganisationFactory } from '#common/helpers/collections/factories/epr-organisation.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { ObjectId } from 'mongodb'
+
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
 const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
@@ -87,9 +87,15 @@ export async function createIndexes(db) {
  *
  * @async
  * @param {Db} db
+ * @param {() => boolean} isProduction
+ * @param {OrganisationsRepository} organisationsRepository
  * @returns {Promise<void>}
  */
-export async function createSeedData(db, isProduction) {
+export async function createSeedData(
+  db,
+  isProduction,
+  organisationsRepository
+) {
   if (!isProduction()) {
     logger.info({ message: 'Create seed data: start' })
 
@@ -153,14 +159,72 @@ export async function createSeedData(db, isProduction) {
       logger.info({
         message: 'Create seed data: inserting epr-organisation fixtures'
       })
-      await db
-        .collection(COLLECTION_EPR_ORGANISATIONS)
-        .insertMany([
-          eprOrganisationFactory(eprOrganisation1),
-          eprOrganisationFactory(eprOrganisation2),
-          eprOrganisationFactory(eprOrganisation3),
-          eprOrganisationFactory(eprOrganisation4)
-        ])
+
+      await Promise.all([
+        organisationsRepository.insert(eprOrganisation1),
+        organisationsRepository.insert(eprOrganisation2),
+        organisationsRepository.insert(eprOrganisation3),
+        organisationsRepository.insert(eprOrganisation4)
+      ])
     }
   }
+}
+
+export async function cleanupSeedData(db, { isProduction, isDryRun }) {
+  logger.info({
+    message: `Seed data clean up: requested, isProduction-${isProduction()}, dry run-${isDryRun()}`
+  })
+  if (isProduction()) {
+    logger.info({ message: 'Seed data clean up: start' })
+
+    const deleteDocuments = async (collectionName, ids) => {
+      if (!ids.length) {
+        logger.info({
+          message: `Seed data clean up: no documents found to delete from ${collectionName} collection`
+        })
+        return
+      }
+
+      if (isDryRun()) {
+        const idStrings = ids.map((id) => id.toString()).join(', ')
+
+        logger.info({
+          message: `Seed data clean up: dry run delete documents ${idStrings} from ${collectionName} collection`
+        })
+      } else {
+        const result = await db
+          .collection(collectionName)
+          .deleteMany({ _id: { $in: ids } })
+        logger.info({
+          message: `Seed data clean up: deleted ${result.deletedCount} documents from ${collectionName} collection`
+        })
+      }
+    }
+
+    const findAndDelete = async (collectionName, query) => {
+      const foundDocs = await db
+        .collection(collectionName)
+        .find(query)
+        .toArray()
+      const foundDocumentIds = foundDocs.map((doc) => doc._id)
+      await deleteDocuments(collectionName, foundDocumentIds)
+      return foundDocumentIds
+    }
+
+    const testSubmissionSystemReferences = [
+      '123ab456789cd01e23fabc45',
+      '68b047003ef5214486dbaa53'
+    ]
+
+    await findAndDelete(COLLECTION_REGISTRATION, {
+      referenceNumber: { $in: testSubmissionSystemReferences }
+    })
+
+    await findAndDelete(COLLECTION_ACCREDITATION, {
+      referenceNumber: { $in: testSubmissionSystemReferences }
+    })
+
+    return true
+  }
+  return false
 }

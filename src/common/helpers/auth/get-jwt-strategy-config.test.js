@@ -11,6 +11,7 @@ import {
 } from '#vite/helpers/mock-entra-oidc.js'
 import { ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
+import { baseDefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -35,7 +36,7 @@ describe('#getJwtStrategyConfig', () => {
   }
 
   const mockEntraClientId = 'mock-entra-client-id'
-  const mockDefraClientId = 'mock-defra-client-id'
+  const mockDefraClientId = 'test-defra'
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -403,75 +404,40 @@ describe('#getJwtStrategyConfig', () => {
 
       expect(result.credentials.issuer).toBe(customIssuer)
     })
-
-    test('uses issuer from defraIdOidcConfig for validation', async () => {
-      const customIssuer = 'https://custom-defra-issuer.example.com'
-      const customOidcConfigs = {
-        entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
-        defraIdOidcConfig: {
-          ...defraIdMockOidcWellKnownResponse,
-          issuer: customIssuer
-        }
-      }
-
-      const config = getJwtStrategyConfig(customOidcConfigs)
-
-      const artifacts = {
-        decoded: {
-          payload: {
-            iss: customIssuer,
-            aud: mockDefraClientId,
-            id: 'contact-123',
-            email: 'user@example.com'
-          }
-        }
-      }
-
-      const result = await config.validate(artifacts)
-
-      expect(result.credentials.issuer).toBe(customIssuer)
-    })
   })
 
-  describe('Feature Flag: defraIdAuth = true', () => {
+  describe('token is a Defra Id token', () => {
+    const customOidcConfigs = {
+      entraIdOidcConfig: entraIdMockOidcWellKnownResponse,
+      defraIdOidcConfig: defraIdMockOidcWellKnownResponse
+    }
+
     beforeEach(() => {
       mockConfigGet.mockImplementation((key) => {
         if (key === 'oidc.entraId.clientId') return mockEntraClientId
         if (key === 'oidc.defraId.clientId') return mockDefraClientId
-        if (key === 'roles.serviceMaintainers') {
-          return JSON.stringify(['maintainer@example.com'])
-        }
         if (key === 'featureFlags.defraIdAuth') return true
         return null
       })
     })
 
-    describe('validate function - Defra ID tokens', () => {
-      test('validates Defra ID token with valid audience and returns credentials', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
+    describe('Happy path', () => {
+      test('uses issuer from defraIdOidcConfig for validation', async () => {
+        const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
-          decoded: {
-            payload: {
-              aud: mockDefraClientId,
-              contactId: 'defra-contact-123',
-              email: 'defra-user@example.com',
-              iss: defraIdMockOidcWellKnownResponse.issuer
-            }
+          decoded: { payload: { ...baseDefraIdTokenPayload } }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/any',
+          params: {
+            organisationId: baseDefraIdTokenPayload.currentRelatioshipId
           }
         }
 
-        const result = await config.validate(artifacts)
+        const result = await config.validate(artifacts, request)
 
-        expect(result).toEqual({
-          isValid: true,
-          credentials: {
-            id: 'defra-contact-123',
-            email: 'defra-user@example.com',
-            issuer: defraIdMockOidcWellKnownResponse.issuer,
-            scope: [ROLES.standardUser]
-          }
-        })
+        expect(result.credentials.issuer).toBe(baseDefraIdTokenPayload.iss)
       })
 
       test('returns standard user scope for valid Defra ID tokens', async () => {
@@ -487,10 +453,15 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
 
-        const result = await config.validate(artifacts)
+        const result = await config.validate(artifacts, request)
 
-        expect(result.credentials.scope).toEqual([ROLES.standardUser])
+        expect(result.credentials.scope).toEqual([ROLES.inquirer])
       })
 
       test('does not call getEntraUserRoles for Defra ID tokens', async () => {
@@ -506,27 +477,40 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
 
-        await config.validate(artifacts)
+        const result = await config.validate(artifacts, request)
 
         expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
+        expect(result.credentials.issuer).toBe(baseDefraIdTokenPayload.iss)
       })
+    })
 
+    describe('Error cases', () => {
       test('throws forbidden error for Defra ID token with invalid audience', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
+        const config = getJwtStrategyConfig(customOidcConfigs)
 
         const artifacts = {
           decoded: {
             payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: 'wrong-defra-client-id',
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
+              ...baseDefraIdTokenPayload,
+              aud: 'wrong-defra-client-id'
             }
           }
         }
+        const request = {
+          organisationsRepository: {},
+          path: '/any',
+          params: {
+            organisationId: baseDefraIdTokenPayload.currentRelatioshipId
+          }
+        }
 
-        await expect(config.validate(artifacts)).rejects.toThrow(
+        await expect(config.validate(artifacts, request)).rejects.toThrow(
           Boom.forbidden('Invalid audience for Defra Id token')
         )
       })
@@ -544,8 +528,13 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
 
-        const result = await config.validate(artifacts)
+        const result = await config.validate(artifacts, request)
 
         expect(result.credentials.id).toBe('')
         expect(result.credentials.email).toBe('')
@@ -565,8 +554,13 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
 
-        await config.validate(artifacts)
+        await config.validate(artifacts, request)
 
         expect(mockConfigGet).toHaveBeenCalledWith('oidc.defraId.clientId')
       })
@@ -584,8 +578,13 @@ describe('#getJwtStrategyConfig', () => {
             }
           }
         }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
 
-        await config.validate(artifacts)
+        await config.validate(artifacts, request)
 
         expect(mockConfigGet).toHaveBeenCalledWith('featureFlags.defraIdAuth')
       })
@@ -617,15 +616,21 @@ describe('#getJwtStrategyConfig', () => {
           }
         }
 
+        const defraRequest = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
         const [entraResult, defraResult] = await Promise.all([
           config.validate(entraArtifacts),
-          config.validate(defraArtifacts)
+          config.validate(defraArtifacts, defraRequest)
         ])
 
         expect(entraResult.credentials.id).toBe('entra-contact')
         expect(entraResult.credentials.scope).toEqual([ROLES.serviceMaintainer])
         expect(defraResult.credentials.id).toBe('defra-contact')
-        expect(defraResult.credentials.scope).toEqual([ROLES.standardUser])
+        expect(defraResult.credentials.scope).toEqual([ROLES.inquirer])
       })
     })
 

@@ -1,6 +1,10 @@
 import ExcelJS from 'exceljs'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import {
+  createEmptyLoadValidity,
+  createEmptyLoads
+} from '#application/summary-logs/classify-loads.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
   LOGGING_EVENT_ACTIONS,
@@ -263,20 +267,7 @@ describe('Summary logs integration', () => {
             failures: [],
             concerns: {}
           },
-          loads: {
-            added: {
-              valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] }
-            },
-            unchanged: {
-              valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] }
-            },
-            adjusted: {
-              valid: { count: 0, rowIds: [] },
-              invalid: { count: 0, rowIds: [] }
-            }
-          }
+          loads: createEmptyLoads()
         })
       })
 
@@ -346,12 +337,14 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns rejected status with reason', () => {
+      it('returns rejected status with validation failure code', () => {
         expect(JSON.parse(response.payload)).toEqual(
           expect.objectContaining({
             status: UPLOAD_STATUS.REJECTED,
-            failureReason:
-              'Something went wrong with your file upload. Please try again.'
+            validation: {
+              failures: [{ code: 'FILE_REJECTED' }],
+              concerns: {}
+            }
           })
         )
       })
@@ -489,7 +482,7 @@ describe('Summary logs integration', () => {
                   850
                 ], // Valid row
                 [
-                  9999,
+                  10001,
                   'invalid-date',
                   'bad-code',
                   1000,
@@ -501,7 +494,7 @@ describe('Summary logs integration', () => {
                   50,
                   0.85,
                   850
-                ] // Invalid row - first 3 cells invalid
+                ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
               ]
             }
           }
@@ -583,20 +576,19 @@ describe('Summary logs integration', () => {
           await testSummaryLogsRepository.findById(summaryLogId)
 
         expect(summaryLog.validation).toBeDefined()
-        expect(summaryLog.validation.issues).toHaveLength(3)
+        expect(summaryLog.validation.issues).toHaveLength(2)
 
-        // All 3 errors should be from row 9 (headers at row 7 + second data row)
+        // All 2 errors should be from row 9 (headers at row 7 + second data row)
         expect(
           summaryLog.validation.issues.every(
             (i) => i.context.location?.row === 9
           )
         ).toBe(true)
 
-        // Should have errors for all 3 invalid cells
+        // Should have errors for 2 invalid cells (DATE and EWC_CODE)
         const errorFields = summaryLog.validation.issues.map(
           (i) => i.context.location?.header
         )
-        expect(errorFields).toContain('ROW_ID')
         expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         expect(errorFields).toContain('EWC_CODE')
 
@@ -623,18 +615,18 @@ describe('Summary logs integration', () => {
         const rowWithIssues =
           payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(rowWithIssues.row).toBe(9)
-        expect(rowWithIssues.issues).toHaveLength(3)
+        expect(rowWithIssues.issues).toHaveLength(2)
 
         // Spot check one issue has the complete structure per ADR 0020
-        const ourReferenceIssue = rowWithIssues.issues.find(
-          (issue) => issue.header === 'ROW_ID'
+        const dateIssue = rowWithIssues.issues.find(
+          (issue) => issue.header === 'DATE_RECEIVED_FOR_REPROCESSING'
         )
-        expect(ourReferenceIssue).toMatchObject({
+        expect(dateIssue).toMatchObject({
           type: 'error',
           code: expect.any(String),
-          header: 'ROW_ID',
-          column: 'B',
-          actual: 9999
+          header: 'DATE_RECEIVED_FOR_REPROCESSING',
+          column: 'C',
+          actual: 'invalid-date'
         })
 
         // All issues should have consistent structure
@@ -654,7 +646,7 @@ describe('Summary logs integration', () => {
           payload.validation.concerns
         ).reduce((total, table) => total + table.rows.length, 0)
 
-        // All 3 errors are from row 9, so rowsWithIssues should be 1
+        // Both errors are from row 9, so rowsWithIssues should be 1
         expect(rowsWithIssues).toBe(1)
       })
 
@@ -663,22 +655,214 @@ describe('Summary logs integration', () => {
 
         // Both rows are added (first submission, no prior records)
         // Row 1 (ROW_ID 10000) is valid
-        // Row 2 (ROW_ID 9999) is invalid (has validation errors)
+        // Row 2 (ROW_ID 10001) is invalid (has validation errors)
         // Note: ROW_ID values come from mock data as numbers
         expect(payload.loads).toEqual({
           added: {
             valid: { count: 1, rowIds: [10000] },
-            invalid: { count: 1, rowIds: [9999] }
+            invalid: { count: 1, rowIds: [10001] },
+            included: { count: 1, rowIds: [10000] },
+            excluded: { count: 1, rowIds: [10001] }
           },
-          unchanged: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] }
+          unchanged: createEmptyLoadValidity(),
+          adjusted: createEmptyLoadValidity()
+        })
+      })
+    })
+  })
+
+  describe('data syntax validation with invalid ROW_ID (fatal row error)', () => {
+    const summaryLogId = 'summary-invalid-row-id'
+    const fileId = 'file-invalid-row-id'
+    const filename = 'invalid-row-id.xlsx'
+    let uploadResponse
+    let testSummaryLogsRepository
+
+    beforeEach(async () => {
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      const mockLogger = {
+        info: vi.fn(),
+        error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn()
+      }
+      const uploadsRepository = createInMemoryUploadsRepository()
+      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      const testOrg = buildOrganisation({
+        registrations: [
+          {
+            id: registrationId,
+            registrationNumber: 'REG-123',
+            material: 'paper',
+            wasteProcessingType: 'reprocessor',
+            formSubmissionTime: new Date(),
+            submittedToRegulator: 'ea'
+          }
+        ]
+      })
+      testOrg.id = organisationId
+
+      const organisationsRepository = createInMemoryOrganisationsRepository([
+        testOrg
+      ])()
+
+      // Mock extractor with invalid ROW_ID AND other invalid fields
+      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: {
+          meta: {
+            REGISTRATION_NUMBER: {
+              value: 'REG-123',
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: 'REPROCESSOR_INPUT',
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
           },
-          adjusted: {
-            valid: { count: 0, rowIds: [] },
-            invalid: { count: 0, rowIds: [] }
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers: [
+                'ROW_ID',
+                'DATE_RECEIVED_FOR_REPROCESSING',
+                'EWC_CODE',
+                'GROSS_WEIGHT',
+                'TARE_WEIGHT',
+                'PALLET_WEIGHT',
+                'NET_WEIGHT',
+                'BAILING_WIRE_PROTOCOL',
+                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                'WEIGHT_OF_NON_TARGET_MATERIALS',
+                'RECYCLABLE_PROPORTION_PERCENTAGE',
+                'TONNAGE_RECEIVED_FOR_RECYCLING'
+              ],
+              rows: [
+                [
+                  9999, // Invalid ROW_ID (below minimum 10000)
+                  'invalid-date', // Also invalid
+                  'bad-ewc-code', // Also invalid
+                  1000,
+                  100,
+                  50,
+                  850,
+                  'YES',
+                  'WEIGHT',
+                  50,
+                  0.85,
+                  850
+                ]
+              ]
+            }
+          }
+        }
+      })
+
+      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+      const validateSummaryLog = createSummaryLogsValidator({
+        summaryLogsRepository: testSummaryLogsRepository,
+        organisationsRepository,
+        wasteRecordsRepository,
+        summaryLogExtractor
+      })
+      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: summaryLogsRepositoryFactory,
+          uploadsRepository
+        },
+        workers: {
+          summaryLogsWorker: { validate: validateSummaryLog }
+        },
+        featureFlags
+      })
+
+      uploadResponse = await server.inject({
+        method: 'POST',
+        url: buildPostUrl(summaryLogId),
+        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+    })
+
+    it('returns ACCEPTED', () => {
+      expect(uploadResponse.statusCode).toBe(202)
+    })
+
+    describe('retrieving summary log with fatal ROW_ID error', () => {
+      let response
+
+      beforeEach(async () => {
+        await pollForValidation(server, summaryLogId)
+
+        response = await server.inject({
+          method: 'GET',
+          url: buildGetUrl(summaryLogId),
+          headers: {
+            Authorization: `Bearer ${validToken}`
           }
         })
+      })
+
+      it('returns OK', () => {
+        expect(response.statusCode).toBe(200)
+      })
+
+      it('returns invalid status due to fatal ROW_ID error', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+        expect(payload.validation.failures).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE' })
+          ])
+        )
+      })
+
+      it('persists both fatal and error severity issues', async () => {
+        const { summaryLog } =
+          await testSummaryLogsRepository.findById(summaryLogId)
+
+        expect(summaryLog.validation).toBeDefined()
+        expect(summaryLog.validation.issues.length).toBeGreaterThan(1)
+
+        // Should have fatal error for ROW_ID
+        const fatalErrors = summaryLog.validation.issues.filter(
+          (i) => i.severity === 'fatal'
+        )
+        expect(fatalErrors).toHaveLength(1)
+        expect(fatalErrors[0].message).toContain('ROW_ID')
+
+        // Should also have error-level issues for other invalid fields
+        const errors = summaryLog.validation.issues.filter(
+          (i) => i.severity === 'error'
+        )
+        expect(errors).toHaveLength(2)
+        const errorHeaders = errors.map((e) => e.context.location?.header)
+        expect(errorHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+        expect(errorHeaders).toContain('EWC_CODE')
+      })
+
+      it('returns fatal failures in HTTP response', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.validation.failures).toHaveLength(1)
+        expect(payload.validation.failures[0].location.header).toBe('ROW_ID')
+      })
+
+      it('returns empty concerns in HTTP response', () => {
+        const payload = JSON.parse(response.payload)
+        expect(payload.validation.concerns).toEqual({})
       })
     })
   })
@@ -809,13 +993,16 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns invalid status with failure reason due to fatal errors', () => {
+      it('returns invalid status with validation failures due to fatal errors', () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toMatchObject({
           status: SUMMARY_LOG_STATUS.INVALID
         })
-        expect(payload.failureReason).toBeDefined()
-        expect(payload.failureReason).toContain('Missing required header')
+        expect(payload.validation.failures).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: 'HEADER_REQUIRED' })
+          ])
+        )
       })
 
       it('persists fatal validation errors in database', async () => {
@@ -1181,9 +1368,13 @@ describe('Summary logs integration', () => {
       it('returns invalid status due to fatal meta syntax error', () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toMatchObject({
-          status: SUMMARY_LOG_STATUS.INVALID,
-          failureReason: expect.stringContaining('TEMPLATE_VERSION')
+          status: SUMMARY_LOG_STATUS.INVALID
         })
+        expect(payload.validation.failures).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ code: 'TEMPLATE_VERSION_REQUIRED' })
+          ])
+        )
       })
 
       it('returns only meta syntax error (no meta business or data errors)', () => {
@@ -1323,7 +1514,7 @@ describe('Summary logs integration', () => {
               ]
             },
             UNKNOWN_FUTURE_TABLE: {
-              // No schema defined - should be gracefully skipped
+              // No schema defined - should be rejected with FATAL error
               location: { sheet: 'Unknown', row: 1, column: 'A' },
               headers: ['ANYTHING', 'GOES', 'HERE'],
               rows: [
@@ -1370,7 +1561,7 @@ describe('Summary logs integration', () => {
       expect(uploadResponse.statusCode).toBe(202)
     })
 
-    describe('retrieving summary log with unknown tables', () => {
+    describe('retrieving summary log with unrecognised tables', () => {
       let response
 
       beforeEach(async () => {
@@ -1389,25 +1580,25 @@ describe('Summary logs integration', () => {
         expect(response.statusCode).toBe(200)
       })
 
-      it('returns validated status with no errors', () => {
+      it('returns invalid status with validation failure', () => {
         const payload = JSON.parse(response.payload)
-        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
         expect(payload.validation).toBeDefined()
-        expect(payload.validation.failures).toEqual([])
-        expect(payload.validation.concerns).toEqual({})
+        expect(payload.validation.failures).toHaveLength(1)
+        expect(payload.validation.failures[0].code).toBe('TABLE_UNRECOGNISED')
       })
 
-      it('gracefully ignores tables without schemas', async () => {
+      it('rejects tables without schemas with FATAL error', async () => {
         const { summaryLog } =
           await testSummaryLogsRepository.findById(summaryLogId)
 
-        // Should have no validation issues
-        expect(summaryLog.validation.issues).toEqual([])
-
-        // This documents defensive programming: tables without schemas
-        // are skipped rather than causing validation failures.
-        // This future-proofs against new table types being added to
-        // spreadsheets before validation schemas are implemented.
+        // Should have one FATAL validation issue for unrecognised table
+        expect(summaryLog.validation.issues).toHaveLength(1)
+        expect(summaryLog.validation.issues[0].severity).toBe('fatal')
+        expect(summaryLog.validation.issues[0].code).toBe('TABLE_UNRECOGNISED')
+        expect(summaryLog.validation.issues[0].message).toContain(
+          'UNKNOWN_FUTURE_TABLE'
+        )
       })
     })
   })
@@ -1479,8 +1670,12 @@ describe('Summary logs integration', () => {
     const summaryLogId = 'summary-submit-test'
     const fileId = 'file-submit-123'
     const filename = 'waste-data.xlsx'
+    const secondSummaryLogId = 'summary-submit-test-2'
+    const secondFileId = 'file-submit-456'
+    const secondFilename = 'waste-data-2.xlsx'
     let wasteRecordsRepository
     let submitResponse
+    let server
 
     beforeEach(async () => {
       // Set up test server with waste records repository
@@ -1518,78 +1713,149 @@ describe('Summary logs integration', () => {
         testOrg
       ])()
 
-      // Extractor for validation - uses REPROCESSOR (validation format)
-      const validationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-12345',
-              location: { sheet: 'Data', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Data', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
-            },
-            ACCREDITATION_NUMBER: {
-              value: 'ACC-2025-001',
-              location: { sheet: 'Data', row: 5, column: 'B' }
-            }
-          },
-          data: {}
+      // Shared metadata for both uploads
+      const sharedMeta = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-12345',
+          location: { sheet: 'Data', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT',
+          location: { sheet: 'Data', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Data', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 1,
+          location: { sheet: 'Data', row: 4, column: 'B' }
+        },
+        ACCREDITATION_NUMBER: {
+          value: 'ACC-2025-001',
+          location: { sheet: 'Data', row: 5, column: 'B' }
         }
+      }
+
+      const sharedHeaders = [
+        'ROW_ID',
+        'DATE_RECEIVED_FOR_REPROCESSING',
+        'EWC_CODE',
+        'GROSS_WEIGHT',
+        'TARE_WEIGHT',
+        'PALLET_WEIGHT',
+        'NET_WEIGHT',
+        'BAILING_WIRE_PROTOCOL',
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+        'WEIGHT_OF_NON_TARGET_MATERIALS',
+        'RECYCLABLE_PROPORTION_PERCENTAGE',
+        'TONNAGE_RECEIVED_FOR_RECYCLING'
+      ]
+
+      // Row format: [ROW_ID, DATE, EWC_CODE, GROSS, TARE, PALLET, NET, BAILING, HOW_CALC, NON_TARGET, RECYCLABLE_PCT, TONNAGE]
+      const firstUploadData = {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Received', row: 7, column: 'A' },
+          headers: sharedHeaders,
+          rows: [
+            [
+              10001,
+              '2025-01-15T00:00:00.000Z',
+              '03 03 08',
+              1000,
+              100,
+              50,
+              850,
+              'YES',
+              'WEIGHT',
+              50,
+              0.85,
+              850
+            ],
+            [
+              10002,
+              '2025-01-16T00:00:00.000Z',
+              '03 03 08',
+              2000,
+              200,
+              100,
+              1700,
+              'YES',
+              'WEIGHT',
+              100,
+              0.85,
+              1700
+            ]
+          ]
+        }
+      }
+
+      // Second upload:
+      // - 10001: unchanged (same data)
+      // - 10002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
+      // - 10003: added (new row)
+      const secondUploadData = {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Received', row: 7, column: 'A' },
+          headers: sharedHeaders,
+          rows: [
+            [
+              10001,
+              '2025-01-15T00:00:00.000Z',
+              '03 03 08',
+              1000,
+              100,
+              50,
+              850,
+              'YES',
+              'WEIGHT',
+              50,
+              0.85,
+              850
+            ],
+            [
+              10002,
+              '2025-01-16T00:00:00.000Z',
+              '03 03 08',
+              2500,
+              250,
+              125,
+              2125,
+              'YES',
+              'WEIGHT',
+              125,
+              0.85,
+              2125
+            ],
+            [
+              10003,
+              '2025-01-17T00:00:00.000Z',
+              '03 03 08',
+              3000,
+              300,
+              150,
+              2550,
+              'YES',
+              'WEIGHT',
+              150,
+              0.85,
+              2550
+            ]
+          ]
+        }
+      }
+
+      // Validation extractor: first file has no data (skip data validation),
+      // second file has data (run data validation for classification)
+      const validationExtractor = createInMemorySummaryLogExtractor({
+        [fileId]: { meta: sharedMeta, data: {} },
+        [secondFileId]: { meta: sharedMeta, data: secondUploadData }
       })
 
-      // Extractor for transformation - uses REPROCESSOR_INPUT (transformation format)
+      // Transformation extractor: both files have full data for submission
       const transformationExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-12345',
-              location: { sheet: 'Data', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Data', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Data', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Data', row: 4, column: 'B' }
-            },
-            ACCREDITATION_NUMBER: {
-              value: 'ACC-2025-001',
-              location: { sheet: 'Data', row: 5, column: 'B' }
-            }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'A' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'NET_WEIGHT'
-              ],
-              rows: [
-                ['10001', '2025-01-15', '15 01 01', 1000, 100, 900],
-                ['10002', '2025-01-16', '15 01 02', 2000, 200, 1800]
-              ]
-            }
-          }
-        }
+        [fileId]: { meta: sharedMeta, data: firstUploadData },
+        [secondFileId]: { meta: sharedMeta, data: secondUploadData }
       })
 
       const wasteRecordsRepositoryFactory =
@@ -1695,8 +1961,8 @@ describe('Summary logs integration', () => {
       )
 
       expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe('10001')
-      expect(wasteRecords[1].rowId).toBe('10002')
+      expect(wasteRecords[0].rowId).toBe(10001)
+      expect(wasteRecords[1].rowId).toBe(10002)
     })
 
     it('updates summary log status to SUBMITTED', async () => {
@@ -1725,6 +1991,42 @@ describe('Summary logs integration', () => {
       expect(response.statusCode).toBe(200)
       const payload = JSON.parse(response.payload)
       expect(payload.accreditationNumber).toBe('ACC-2025-001')
+    })
+
+    it('classifies loads as added, adjusted, and unchanged on second upload', async () => {
+      // Upload and validate a second summary log with modified data
+      await server.inject({
+        method: 'POST',
+        url: buildPostUrl(secondSummaryLogId),
+        payload: createUploadPayload(
+          UPLOAD_STATUS.COMPLETE,
+          secondFileId,
+          secondFilename
+        ),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+      await pollForValidation(server, secondSummaryLogId)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: buildGetUrl(secondSummaryLogId),
+        headers: { Authorization: `Bearer ${validToken}` }
+      })
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+
+      // 10001: unchanged (same data as first upload)
+      // 10002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
+      // 10003: added (new row)
+      expect(payload.loads.added.valid.count).toBe(1)
+      expect(payload.loads.added.valid.rowIds).toContain(10003)
+
+      expect(payload.loads.adjusted.valid.count).toBe(1)
+      expect(payload.loads.adjusted.valid.rowIds).toContain(10002)
+
+      expect(payload.loads.unchanged.valid.count).toBe(1)
+      expect(payload.loads.unchanged.valid.rowIds).toContain(10001)
     })
   })
 
@@ -1981,8 +2283,8 @@ describe('Summary logs integration', () => {
         // No fatal failures
         expect(payload.validation.failures).toEqual([])
 
-        // Row 8 has validation concerns for dropdown fields that were "Choose option"
-        // (normalized to null by the parser)
+        // Row 8 has dropdown fields that were "Choose option" (normalized to null by parser)
+        // EWC_CODE is required for Waste Balance, so this row is EXCLUDED with concerns
         const concerns = payload.validation.concerns
         expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
         expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows).toHaveLength(1)
@@ -1990,13 +2292,9 @@ describe('Summary logs integration', () => {
         const row8Issues = concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(row8Issues.row).toBe(8)
 
-        // These are the dropdown fields that had "Choose option" (now null)
+        // EWC_CODE had "Choose option" (now null) and is required for Waste Balance
         const issueHeaders = row8Issues.issues.map((i) => i.header)
         expect(issueHeaders).toContain('EWC_CODE')
-        expect(issueHeaders).toContain('BAILING_WIRE_PROTOCOL')
-        expect(issueHeaders).toContain(
-          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-        )
       })
 
       it('terminates data section at row with all placeholder values', async () => {

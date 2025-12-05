@@ -4,7 +4,6 @@ import {
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
-import { collateUsers } from '#formsubmission/collate-users.js'
 import {
   linkItemsToOrganisations,
   linkRegistrationToAccreditations
@@ -12,11 +11,12 @@ import {
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-utils.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migration-config.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {BaseOrganisation, OrganisationWithAccreditations, OrganisationWithRegistrations} from './types.js'
+ * @import {BaseOrganisation, Organisation, OrganisationWithRegistrations} from './types.js'
  */
 
 /**
@@ -195,35 +195,33 @@ export async function migrateFormsData(
     submissionType: 'accreditation'
   })
 
-  /** @type {OrganisationWithAccreditations[]} */
+  /** @type {Organisation[]} */
   const organisationsWithAccreditations = linkAccreditations(
     organisationsWithRegistrations,
     transformedAccreditations
   )
 
-  const orgRegistrationsLinkedToAcc = linkRegistrationToAccreditations(
+  const organisations = linkRegistrationToAccreditations(
     organisationsWithAccreditations
-  )
-
-  const organisations = orgRegistrationsLinkedToAcc.map(
-    /** @param {OrganisationWithAccreditations} org */
-    (org) => ({
-      ...org,
-      users: collateUsers(org)
-    })
   )
 
   await upsertOrganisations(organisations, organisationsRepository)
 }
 
 function linkRegistrations(organisations, registrations) {
-  return linkItemsToOrganisations(organisations, registrations, 'registrations')
-}
-
-function linkAccreditations(organisations, registrations) {
   return linkItemsToOrganisations(
     organisations,
     registrations,
-    'accreditations'
+    'registrations',
+    systemReferencesRequiringOrgIdMatch()
+  )
+}
+
+function linkAccreditations(organisations, accreditations) {
+  return linkItemsToOrganisations(
+    organisations,
+    accreditations,
+    'accreditations',
+    systemReferencesRequiringOrgIdMatch()
   )
 }

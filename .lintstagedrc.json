@@ -1,4 +1,4 @@
 {
-  "*.{js,json,md}": "npm run format",
+  "*.{js,json,md}": "prettier --write",
   "src/**/*.js": ["npm run lint:fix"]
 }

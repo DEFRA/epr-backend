@@ -434,4 +434,33 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       ]
     })
   })
+
+  it('should apply systemReference override when accreditation id matches override config', () => {
+    // Use real fixture but with ID and systemReference that match override config
+    // Note: Uses test MongoDB ObjectIds from setup-files.js, not production IDs
+    const accreditationWithTypo = {
+      ...exporter,
+      _id: { $oid: '65a2f4e8b4c5d9f8e7a6b1c2' },
+      rawSubmissionData: {
+        ...exporter.rawSubmissionData,
+        data: {
+          ...exporter.rawSubmissionData.data,
+          main: {
+            ...exporter.rawSubmissionData.data.main,
+            MyWHms: '65a000000000000000000000' // Incorrect systemReference with typo
+          }
+        }
+      }
+    }
+
+    const result = parseAccreditationSubmission(
+      accreditationWithTypo._id.$oid,
+      accreditationWithTypo.rawSubmissionData
+    )
+
+    expect(() => validateAccreditation(result)).not.toThrow()
+
+    // Verify the systemReference was corrected by the override
+    expect(result.systemReference).toBe('65a2f5a1b4c5d9f8e7a6b1c3')
+  })
 })

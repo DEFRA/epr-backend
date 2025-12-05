@@ -1,5 +1,9 @@
-import { validateStatusHistory } from './schema/index.js'
+import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import equal from 'fast-deep-equal'
+import { validateStatusHistory } from './schema/index.js'
+
+/** @import {CollatedUser, Organisation, User} from '#domain/organisations/model.js' */
+/** @import {Accreditation, Registration} from './port.js' */
 
 export const SCHEMA_VERSION = 1
 
@@ -56,7 +60,10 @@ export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
     statusHistory: createInitialStatusHistory()
   }))
 
-  return [...processedExisting, ...newItems]
+  return [...processedExisting, ...newItems].map((item) => {
+    const { status: _, ...remainingFields } = item
+    return remainingFields
+  })
 }
 
 export const mergeSubcollection = (existingItems, updateItems) =>
@@ -86,7 +93,7 @@ const normalizeItem = (item) => {
   if (!item) {
     return item
   }
-  const { status, statusHistory, ...rest } = item
+  const { status: _, statusHistory: _s, ...rest } = item
   return rest
 }
 
@@ -95,7 +102,14 @@ export const normalizeForComparison = (org) => {
     return org
   }
 
-  const { version, schemaVersion, status, statusHistory, ...rest } = org
+  const {
+    schemaVersion: _sv,
+    status: _s,
+    statusHistory: _sh,
+    users: _u,
+    version: _v,
+    ...rest
+  } = org
 
   const normalized = {
     ...rest,
@@ -111,4 +125,133 @@ export const hasChanges = (existing, incoming) => {
   const normalizedIncoming = normalizeForComparison(incoming)
 
   return !equal(normalizedExisting, normalizedIncoming)
+}
+
+/** @typedef {Pick<User, 'fullName'|'email'>} SlimUser */
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @param {'accreditations'|'registrations'} collectionKey
+ * @param {(item: Accreditation|Registration) => SlimUser[]} extractAdditionalUsers
+ * @returns {SlimUser[]}
+ */
+const collateApprovedItems = (
+  existing,
+  updated,
+  collectionKey,
+  extractAdditionalUsers
+) => {
+  /** @type {SlimUser[]} */
+  const users = []
+
+  for (const item of updated[collectionKey] || []) {
+    const itemStatus = getCurrentStatus(item)
+    const existingItem = existing[collectionKey]?.find((i) => i.id === item.id)
+    const existingItemStatus = existingItem
+      ? getCurrentStatus(existingItem)
+      : null
+
+    if (
+      itemStatus === STATUS.APPROVED &&
+      existingItemStatus !== STATUS.APPROVED
+    ) {
+      users.push(
+        {
+          fullName: item.submitterContactDetails.fullName,
+          email: item.submitterContactDetails.email
+        },
+        ...extractAdditionalUsers(item)
+      )
+    }
+  }
+
+  return users
+}
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {SlimUser[]}
+ */
+const collateApprovedRegistrations = (existing, updated) =>
+  collateApprovedItems(
+    existing,
+    updated,
+    'registrations',
+    (/** @type {Registration} */ registration) =>
+      registration.approvedPersons.map(({ email, fullName }) => ({
+        fullName,
+        email
+      }))
+  )
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {SlimUser[]}
+ */
+const collateApprovedAccreditations = (existing, updated) =>
+  collateApprovedItems(
+    existing,
+    updated,
+    'accreditations',
+    (/** @type {Accreditation} */ accreditation) =>
+      accreditation.prnIssuance.signatories.map(({ email, fullName }) => ({
+        fullName,
+        email
+      }))
+  )
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {CollatedUser[]}
+ */
+export const collateUsersOnApproval = (existing, updated) => {
+  /** @type {SlimUser[]} */
+  const root = []
+
+  if (updated.submitterContactDetails) {
+    root.push({
+      fullName: updated.submitterContactDetails.fullName,
+      email: updated.submitterContactDetails.email
+    })
+  }
+
+  const users = [
+    ...root,
+    ...collateApprovedRegistrations(existing, updated),
+    ...collateApprovedAccreditations(existing, updated)
+  ]
+  if (users.length > 0) {
+    return deduplicateUsers(users)
+  }
+
+  return existing.users
+}
+
+/**
+ * Deduplicates users by email address (case-insensitive)
+ *
+ * @param {SlimUser[]} users
+ * @returns {CollatedUser[]}
+ */
+const deduplicateUsers = (users) => {
+  const userMap = new Map()
+
+  for (const user of users) {
+    const key = user.email.toLowerCase()
+
+    if (!userMap.has(key)) {
+      userMap.set(key, {
+        fullName: user.fullName,
+        email: user.email,
+        isInitialUser: true,
+        roles: [USER_ROLES.STANDARD]
+      })
+    }
+  }
+
+  return Array.from(userMap.values())
 }

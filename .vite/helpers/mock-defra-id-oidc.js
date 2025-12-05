@@ -6,12 +6,13 @@ const defraIdBaseUrl =
 
 export const defraIdMockWellKnownUrl = `${defraIdBaseUrl}/v2.0/.well-known/openid-configuration`
 export const defraIdMockJwksUrl = `${defraIdBaseUrl}/discovery/v2.0/keys`
+export const validDefraIdIssuer = `${defraIdBaseUrl}/v2.0`
 
 export const defraIdMockOidcWellKnownResponse = {
   authorization_endpoint: `${defraIdBaseUrl}/oauth2/v2.0/authorize`,
   token_endpoint: `${defraIdBaseUrl}/oauth2/v2.0/token`,
   end_session_endpoint: `${defraIdBaseUrl}/oauth2/v2.0/logout`,
-  issuer: `${defraIdBaseUrl}/v2.0`,
+  issuer: validDefraIdIssuer,
   jwks_uri: `${defraIdBaseUrl}/discovery/v2.0/keys`
 }
 

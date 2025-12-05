@@ -15,6 +15,7 @@ import {
 } from '#formsubmission/parsing-common/form-data-mapper.js'
 import { ACCREDITATION } from './form-field-constants.js'
 import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
+import { applyAccreditationOverrides } from '#formsubmission/overrides/override.js'
 
 function getSubmitterDetails(answersByShortDescription) {
   return {
@@ -43,7 +44,7 @@ function getSiteDetails(answersByShortDescription) {
   }
 }
 
-export function parseAccreditationSubmission(id, rawSubmissionData) {
+function buildParsedAccreditation(id, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
   const wasteProcessingType = extractWasteProcessingType(rawSubmissionData)
@@ -93,4 +94,9 @@ export function parseAccreditationSubmission(id, rawSubmissionData) {
         )
       : undefined
   }
+}
+
+export function parseAccreditationSubmission(id, rawSubmissionData) {
+  const parsed = buildParsedAccreditation(id, rawSubmissionData)
+  return applyAccreditationOverrides(parsed)
 }

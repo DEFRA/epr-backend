@@ -5,10 +5,10 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createTestServer } from '#test/create-test-server.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { createTestServer } from '#test/create-test-server.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 
@@ -113,7 +113,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: (logger) => summaryLogsRepository
+        summaryLogsRepository: (_logger) => summaryLogsRepository
       },
       workers: {
         summaryLogsWorker
@@ -211,7 +211,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
   })
 
-  it('should add expected summary log to repository with failure reason when uploaded file was rejected', async () => {
+  it('should add expected summary log to repository with validation when uploaded file was rejected', async () => {
     payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.REJECTED
     delete payload.form.summaryLogUpload.s3Bucket
     delete payload.form.summaryLogUpload.s3Key
@@ -235,8 +235,9 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         name: filename,
         status: UPLOAD_STATUS.REJECTED
       },
-      failureReason:
-        'Something went wrong with your file upload. Please try again.'
+      validation: {
+        failures: [{ code: 'FILE_REJECTED' }]
+      }
     })
   })
 
@@ -473,9 +474,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
 
     it('should log as expected when uploaded file was rejected with a specific error message', async () => {
-      const customErrorMessage = 'File contains viruses'
       payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.REJECTED
-      payload.form.summaryLogUpload.errorMessage = customErrorMessage
+      payload.form.summaryLogUpload.errorMessage = 'The selected file is empty'
       delete payload.form.summaryLogUpload.s3Bucket
       delete payload.form.summaryLogUpload.s3Key
       payload.numberOfRejectedFiles = 1
@@ -498,7 +498,9 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
           name: filename,
           status: UPLOAD_STATUS.REJECTED
         },
-        failureReason: customErrorMessage
+        validation: {
+          failures: [{ code: 'FILE_EMPTY' }]
+        }
       })
     })
 

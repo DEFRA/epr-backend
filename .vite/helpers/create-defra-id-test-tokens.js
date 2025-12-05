@@ -2,8 +2,9 @@ import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'crypto'
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
-
 const USER_EMAIL = 'someone@test-company.com'
+export const VALID_TOKEN_CURRENT_RELATIONSHIP = 'rel-1'
+export const VALID_TOKEN_RELATIONSHIPS = ['rel-1', 'rel-2']
 
 // Generate key pair once at module load time
 // @ts-ignore - @types/node is missing generateKeyPairSync overloads for jwk format (incomplete fix in PR #63492)
@@ -31,12 +32,14 @@ export const publicKey = {
   alg: 'RS256'
 }
 
-const baseValidObject = {
+export const baseDefraIdTokenPayload = {
   name: 'John Doe',
   contactId: 'test-contact-id',
   email: USER_EMAIL,
   aud: VALID_DEFRA_AUDIENCE,
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
+  currentRelationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP,
+  relationships: VALID_TOKEN_RELATIONSHIPS,
   nbf: new Date().getTime() / 1000,
   exp: new Date().getTime() / 1000 + 3600,
   maxAgeSec: 3600, // 60 minutes
@@ -49,7 +52,7 @@ const validGenerateTokenOptions = { header: { kid: publicKey.kid } }
 
 const generateValidDefraIdToken = () => {
   const mockDefraIdToken = Jwt.token.generate(
-    baseValidObject,
+    baseDefraIdTokenPayload,
     validJwtSecretObject,
     validGenerateTokenOptions
   )
@@ -73,7 +76,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
   })
 
   const mockDefraIdToken = Jwt.token.generate(
-    baseValidObject,
+    baseDefraIdTokenPayload,
     { key: wrongKeyPair.privateKey, algorithm: 'RS256' },
     validGenerateTokenOptions
   )
@@ -84,7 +87,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
 const generateDefraIdTokenWithWrongAudience = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseValidObject,
+      ...baseDefraIdTokenPayload,
       aud: 'random-wrong-audience'
     },
     validJwtSecretObject,
@@ -97,7 +100,7 @@ const generateDefraIdTokenWithWrongAudience = () => {
 const generateDefraIdTokenWithWrongIssuer = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseValidObject,
+      ...baseDefraIdTokenPayload,
       iss: `https://wrong-issuer.com/v2.0`
     },
     validJwtSecretObject,
@@ -110,8 +113,9 @@ const generateDefraIdTokenWithWrongIssuer = () => {
 const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseValidObject,
-      email: USER_EMAIL
+      ...baseDefraIdTokenPayload,
+      id: 'unknownId',
+      email: 'unknown.email@example.com'
     },
     validJwtSecretObject,
     validGenerateTokenOptions
@@ -125,5 +129,5 @@ export const defraIdMockAuthTokens = {
   wrongSignatureToken: generateDefraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),
-  unauthorisedUserToken: generateDefraIdTokenForUnauthorisedUser()
+  unknownUserToken: generateDefraIdTokenForUnauthorisedUser()
 }

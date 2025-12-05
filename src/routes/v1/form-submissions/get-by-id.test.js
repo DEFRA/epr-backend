@@ -2,18 +2,19 @@ import { StatusCodes } from 'http-status-codes'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { testAuthScenarios } from '#vite/helpers/test-auth-scenarios.js'
+import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = entraIdMockAuthTokens
 
 const ORG_A = { id: 'org-a' }
 const ORG_B = { id: 'org-b' }
 const REG_A = { id: 'reg-a', referenceNumber: ORG_B.id }
-const REG_B = { id: 'reg-b', referenceNumber: ORG_B.id }
+const REG_B = { id: 'reg-b', referenceNumber: ORG_B.id.toUpperCase() }
 const REG_C = { id: 'reg-c', referenceNumber: 'tuw' }
 const ACC_A = { id: 'acc-a', referenceNumber: ORG_B.id }
-const ACC_B = { id: 'acc-b', referenceNumber: ORG_B.id }
+const ACC_B = { id: 'acc-b', referenceNumber: ORG_B.id.toUpperCase() }
 const ACC_C = { id: 'acc-c', referenceNumber: 'xyz' }
 
 describe('GET /v1/form-submissions/{documentId}', () => {
@@ -179,18 +180,28 @@ describe('GET /v1/form-submissions/{documentId}', () => {
     })
   })
 
-  testAuthScenarios({
+  testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
       return {
         method: 'GET',
-        url: '/v1/form-submissions/999999'
+        url: `/v1/form-submissions/${ORG_A.id}`
       }
     },
     additionalExpectations: (response) => {
       expect(response.headers['cache-control']).toBe(
         'no-cache, no-store, must-revalidate'
       )
+    }
+  })
+
+  testOnlyServiceMaintainerCanAccess({
+    server: () => server,
+    makeRequest: async () => {
+      return {
+        method: 'GET',
+        url: `/v1/form-submissions/${ORG_A.id}`
+      }
     }
   })
 })

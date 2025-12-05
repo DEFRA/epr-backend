@@ -5,44 +5,98 @@ import {
 } from '#common/enums/validation.js'
 import { offsetColumn } from '#common/helpers/spreadsheet/columns.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
-import { getTableSchema } from './table-schemas.js'
-import { getRowIdField } from '#domain/summary-logs/table-metadata.js'
+import {
+  classifyRow,
+  ROW_OUTCOME
+} from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { createTableSchemaGetter } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
  * @typedef {import('#common/validation/validation-issues.js').ValidationIssue} ValidationIssue
+ * @typedef {import('#domain/summary-logs/table-schemas/validation-pipeline.js').RowOutcome} RowOutcome
  */
 
 /**
- * A validated row with issues attached
+ * A validated row from the data syntax validation pipeline
+ *
+ * All fields are required - this is the output of validation, not the input.
  *
  * @export
  * @typedef {Object} ValidatedRow
- * @property {Array<*>} values - Original row values array
+ * @property {Record<string, any>} data - Row data as object keyed by header name
  * @property {string} rowId - Extracted row ID
- * @property {ValidationIssue[]} issues - Validation issues for this row
+ * @property {RowOutcome} outcome - Classification outcome from validation pipeline
+ * @property {ValidationIssue[]} issues - Validation issues for this row (empty array if none)
  */
+
+/**
+ * Adapts domain table schema to the structure expected by validateTable
+ *
+ * Domain schemas use: unfilledValues, validationSchema, fieldsRequiredForWasteBalance
+ * This adapter extracts what validateTable needs during the migration.
+ *
+ * @param {Object} domainSchema - Schema from domain layer
+ * @returns {Object} Schema structure for validateTable
+ */
+const adaptDomainSchema = (domainSchema) => ({
+  requiredHeaders: domainSchema.requiredHeaders,
+  rowIdField: domainSchema.rowIdField,
+  domainSchema
+})
+
+/**
+ * Joi error type to application error code mapping
+ *
+ * When adding new Joi validators to table schemas, ensure the error types
+ * they produce are mapped here. Unmapped types will throw an error.
+ */
+const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
+  'any.required': VALIDATION_CODE.FIELD_REQUIRED,
+  'number.base': VALIDATION_CODE.INVALID_TYPE,
+  'number.min': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.greater': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'string.base': VALIDATION_CODE.INVALID_TYPE,
+  'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
+  'date.base': VALIDATION_CODE.INVALID_DATE
+})
 
 /**
  * Maps Joi validation error types to application error codes
  *
  * @param {string} joiType - The Joi error type (e.g., 'number.min', 'string.pattern.base')
  * @returns {string} The application error code
+ * @throws {Error} If the Joi error type is not mapped
  */
 const mapJoiTypeToErrorCode = (joiType) => {
-  const typeMapping = {
-    'any.required': VALIDATION_CODE.FIELD_REQUIRED,
-    'number.base': VALIDATION_CODE.INVALID_TYPE,
-    'number.min': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'number.greater': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
-    'string.base': VALIDATION_CODE.INVALID_TYPE,
-    'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
-    'date.base': VALIDATION_CODE.INVALID_DATE
+  const code = JOI_TYPE_TO_ERROR_CODE[joiType]
+  if (!code) {
+    throw new Error(
+      `Unmapped Joi error type '${joiType}'. Add it to JOI_TYPE_TO_ERROR_CODE in data-syntax.js`
+    )
+  }
+  return code
+}
+
+/**
+ * Builds a map from header names to their column indices
+ *
+ * Filters out null headers and EPR markers, returning only valid data headers.
+ *
+ * @param {Array<string|null>} headers - Array of header names from the table
+ * @returns {Map<string, number>} Map of header name to column index
+ */
+const buildHeaderToIndexMap = (headers) => {
+  const headerToIndexMap = new Map()
+
+  for (const [index, header] of headers.entries()) {
+    if (header !== null && !isEprMarker(header)) {
+      headerToIndexMap.set(header, index)
+    }
   }
 
-  /* istanbul ignore next - Defensive fallback for unmapped Joi error types */
-  return typeMapping[joiType] || VALIDATION_CODE.VALIDATION_FALLBACK_ERROR
+  return headerToIndexMap
 }
 
 /**
@@ -74,7 +128,7 @@ const validateHeaders = ({
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
         `Missing required header '${requiredHeader}' in table '${tableName}'`,
-        VALIDATION_CODE.MISSING_REQUIRED_HEADER,
+        VALIDATION_CODE.HEADER_REQUIRED,
         {
           location,
           expected: requiredHeader,
@@ -86,124 +140,134 @@ const validateHeaders = ({
 }
 
 /**
- * Creates validation issues for a single row's errors
+ * Builds cell location for error reporting
  *
  * @param {Object} params
- * @param {string} params.tableName - Name of the table being validated
+ * @param {string} params.tableName - Name of the table
  * @param {number} params.rowIndex - Zero-based row index
- * @param {import('joi').ValidationError} params.error - Joi validation error object
- * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
+ * @param {string} params.fieldName - Name of the field with the error
+ * @param {number|undefined} params.colIndex - Column index for the field
  * @param {Object} params.location - Table location in spreadsheet
- * @returns {ValidationIssue[]} Array of validation issues for this row
+ * @returns {Object} Cell location object
  */
-const createRowIssues = ({
+const buildCellLocation = ({
   tableName,
   rowIndex,
-  error,
-  headerToIndexMap,
+  fieldName,
+  colIndex,
   location
 }) =>
-  error.details.map((detail) => {
-    const fieldName = String(detail.path[0])
-    const colIndex = headerToIndexMap.get(fieldName)
-
-    const cellLocation =
-      location?.column && colIndex !== undefined
-        ? {
-            sheet: location.sheet,
-            table: tableName,
-            row: location.row + rowIndex + 1,
-            column: offsetColumn(location.column, colIndex),
-            header: fieldName
-          }
-        : { table: tableName, header: fieldName }
-
-    return {
-      severity: 'error',
-      category: VALIDATION_CATEGORY.TECHNICAL,
-      message: `Invalid value in column '${fieldName}': ${detail.message}`,
-      code: mapJoiTypeToErrorCode(detail.type),
-      context: {
-        location: cellLocation,
-        actual: detail.context.value
+  location?.column && colIndex !== undefined
+    ? {
+        sheet: location.sheet,
+        table: tableName,
+        row: location.row + rowIndex + 1,
+        column: offsetColumn(location.column, colIndex),
+        header: fieldName
       }
-    }
-  })
+    : { table: tableName, header: fieldName }
 
 /**
- * Extracts the row ID from a row object based on the table's ID field
+ * Validates all rows using the classifyRow pipeline
  *
- * Only called for tables with schemas, so idField is guaranteed to exist.
- * The row ID value is required by schema validation, so it's guaranteed to be present.
- *
- * @param {Object} rowObject - Row data as object with header keys
- * @param {string} tableName - Name of the table
- * @returns {string} The row ID
- */
-const extractRowId = (rowObject, tableName) => {
-  const idField = getRowIdField(tableName)
-  return String(rowObject[idField])
-}
-
-/**
- * Validates data rows and returns validated row structures with issues attached
- *
- * This validates each row as a complete object, which is more efficient than
- * cell-by-cell validation and enables cross-field validation rules.
+ * Each row is classified as:
+ * - REJECTED: Fails VAL010 (in-sheet validation) - produces FATAL errors
+ * - EXCLUDED: Fails VAL011 (missing required fields) - produces ERROR severity
+ * - INCLUDED: Passes all validation
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
- * @param {Array<string|null>} params.headers - Array of header names (may include nulls)
+ * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
  * @param {Array<Array<*>>} params.rows - Array of raw data rows
- * @param {import('joi').ObjectSchema} params.rowSchema - Pre-compiled Joi object schema for rows
+ * @param {Object} params.domainSchema - Domain table schema with unfilledValues, validationSchema, fieldsRequiredForWasteBalance
  * @param {Object} params.location - Table location in spreadsheet
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector
- * @returns {ValidatedRow[]} Array of validated rows with issues attached
+ * @returns {ValidatedRow[]} Array of validated rows with outcome and issues attached
  */
 const validateRows = ({
   tableName,
-  headers,
+  headerToIndexMap,
   rows,
-  rowSchema,
+  domainSchema,
   location,
   issues
 }) => {
-  const headerToIndexMap = new Map()
-
-  for (const [index, header] of headers.entries()) {
-    if (header !== null && !isEprMarker(header)) {
-      headerToIndexMap.set(header, index)
-    }
-  }
-
   return rows.map((originalRow, rowIndex) => {
+    // Build row object from array
     const rowObject = {}
-
     for (const [headerName, colIndex] of headerToIndexMap) {
       rowObject[headerName] = originalRow[colIndex]
     }
 
-    const { error } = rowSchema.validate(rowObject)
+    // Classify row using domain pipeline
+    const classification = classifyRow(rowObject, domainSchema)
 
-    const rowIssues = error
-      ? createRowIssues({
-          tableName,
-          rowIndex,
-          error,
-          headerToIndexMap,
-          location
-        })
-      : []
+    // Convert classification issues to application issues with locations
+    const rowIssues = classification.issues.map((issue) => {
+      const fieldName = String(issue.field)
+      const colIndex = headerToIndexMap.get(fieldName)
+      const message = issue.message
+        ? `Invalid value in column '${fieldName}': ${issue.message}`
+        : `Missing required field: ${fieldName}`
 
-    // Add issues to shared collector for isFatal checks
-    for (const issue of rowIssues) {
-      issues.addError(issue.category, issue.message, issue.code, issue.context)
+      // Map issue code to application error code
+      // Domain layer only produces VALIDATION_ERROR or MISSING_REQUIRED_FIELD
+      const code =
+        issue.code === 'VALIDATION_ERROR'
+          ? mapJoiTypeToErrorCode(issue.type)
+          : VALIDATION_CODE.FIELD_REQUIRED
+
+      // Determine severity based on whether this is a ROW_ID error
+      const isRowIdError =
+        classification.outcome === ROW_OUTCOME.REJECTED &&
+        fieldName === domainSchema.rowIdField
+      const severity = isRowIdError ? 'fatal' : 'error'
+
+      return {
+        category: VALIDATION_CATEGORY.TECHNICAL,
+        severity,
+        message,
+        code,
+        context: {
+          location: buildCellLocation({
+            tableName,
+            rowIndex,
+            fieldName,
+            colIndex,
+            location
+          }),
+          actual: rowObject[fieldName]
+        }
+      }
+    })
+
+    // Record issues at appropriate severity
+    // Only ROW_ID validation errors are FATAL (block entire submission)
+    // Other validation errors are ERROR (mark row as invalid but don't block submission)
+    for (const rowIssue of rowIssues) {
+      if (rowIssue.severity === 'fatal') {
+        issues.addFatal(
+          rowIssue.category,
+          rowIssue.message,
+          rowIssue.code,
+          rowIssue.context
+        )
+      } else {
+        issues.addError(
+          rowIssue.category,
+          rowIssue.message,
+          rowIssue.code,
+          rowIssue.context
+        )
+      }
     }
 
-    const rowId = extractRowId(rowObject, tableName)
+    const rowId = String(rowObject[domainSchema.rowIdField])
+
     return {
-      values: originalRow,
+      data: rowObject,
       rowId,
+      outcome: classification.outcome,
       issues: rowIssues
     }
   })
@@ -215,13 +279,13 @@ const validateRows = ({
  * @param {Object} params
  * @param {string} params.tableName - Name of the table
  * @param {Object} params.tableData - The table data with headers, rows, and location
- * @param {Object} params.schema - The validation schema for this table
+ * @param {Object} params.schema - The adapted validation schema for this table
  * @param {Object} params.issues - Validation issues collector
  * @returns {Object} Validated table data with rows converted to ValidatedRow[]
  */
 const validateTable = ({ tableName, tableData, schema, issues }) => {
   const { headers, rows, location } = tableData
-  const { requiredHeaders, rowSchema } = schema
+  const { requiredHeaders, domainSchema } = schema
 
   validateHeaders({
     tableName,
@@ -235,14 +299,20 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
     return { ...tableData, rows: [] }
   }
 
+  const headerToIndexMap = buildHeaderToIndexMap(headers)
+
   const validatedRows = validateRows({
     tableName,
-    headers,
+    headerToIndexMap,
     rows,
-    rowSchema,
+    domainSchema,
     location,
     issues
   })
+
+  if (issues.isFatal()) {
+    return { ...tableData, rows: [] }
+  }
 
   return {
     ...tableData,
@@ -257,39 +327,54 @@ const validateTable = ({ tableName, tableData, schema, issues }) => {
  */
 
 /**
- * Validates the syntax of data tables in a summary log
+ * Creates a data syntax validator bound to a specific schema registry
  *
- * Validates each table in parsed.data that has a defined schema:
+ * Validates each table in parsed.data that has a defined schema for the processing type:
  * - Checks that required headers are present (FATAL errors - blocks entire table)
  * - Validates each row as a complete object using pre-compiled Joi schemas (ERROR severity)
  * - Reports precise error locations for all validation failures
  *
  * Row-level validation is more efficient than cell-by-cell validation and enables
- * cross-field validation rules (e.g., ensuring related fields have consistent values).
+ * cross-field validation rules (e.g. ensuring related fields have consistent values).
  *
  * Severity levels:
  * - FATAL: Missing required headers prevent processing the entire table
  * - ERROR: Invalid row values mark specific rows as invalid but don't block
  *          submission of the entire spreadsheet - other valid rows can still be processed
  *
- * @param {Object} params
- * @param {Object} params.parsed - The parsed summary log structure
- * @returns {DataSyntaxValidationResult} Validation issues and validated data
+ * @param {Object} schemaRegistry - Schema registry mapping processing types to table schemas
+ * @returns {function(Object): DataSyntaxValidationResult} Validator function that takes parsed summary log
  */
-export const validateDataSyntax = ({ parsed }) => {
+export const createDataSyntaxValidator = (schemaRegistry) => (parsed) => {
   const issues = createValidationIssues()
 
   const data = parsed?.data || {}
+  const processingType = parsed?.meta?.PROCESSING_TYPE?.value
+  const getTableSchema = createTableSchemaGetter(processingType, schemaRegistry)
   const validatedTables = {}
 
   for (const [tableName, tableData] of Object.entries(data)) {
-    const schema = getTableSchema(tableName)
+    const domainSchema = getTableSchema(tableName)
 
-    if (!schema) {
-      // Keep unvalidated tables as-is
+    if (!domainSchema) {
+      const location = tableData.location
+        ? { sheet: tableData.location.sheet, table: tableName }
+        : { table: tableName }
+
+      issues.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        `Unrecognised table '${tableName}' has no schema for this processing type`,
+        VALIDATION_CODE.TABLE_UNRECOGNISED,
+        { location }
+      )
+
+      // Keep unvalidated tables as-is for downstream processing
       validatedTables[tableName] = tableData
       continue
     }
+
+    // Adapt domain schema for validateTable
+    const schema = adaptDomainSchema(domainSchema)
 
     validatedTables[tableName] = validateTable({
       tableName,

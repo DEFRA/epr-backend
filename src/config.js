@@ -314,7 +314,31 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DEFRA_ID_AUTH'
+    },
+    devEndpoints: {
+      doc: 'Feature Flag: Enable development endpoints',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_DEV_ENDPOINTS'
     }
+  },
+  formSubmissionOverrides: {
+    doc: 'JSON configuration for form submission field overrides (registrations and accreditations) on migration to epr-organisations',
+    format: String,
+    default: '{"registrations":[],"accreditations":[],"organisations":[]}',
+    env: 'FORM_SUBMISSION_OVERRIDES'
+  },
+  systemReferencesRequiringOrgIdMatch: {
+    doc: 'JSON array of systemReference IDs that require orgId validation during linking to prevent misuse',
+    format: String,
+    default: '[]',
+    env: 'SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH'
+  },
+  seedDataCleanUpDryRun: {
+    doc: 'Seed data cleanup only runs when this is false',
+    format: Boolean,
+    default: true,
+    env: 'SEED_DATA_CLEAN_UP_DRY_RUN'
   }
 }
 

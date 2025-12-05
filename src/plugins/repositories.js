@@ -21,7 +21,7 @@ import { config } from '#root/config.js'
  * Registers the uploads repository with optional test override.
  * @param {import('#common/hapi-types.js').HapiServer} server
  * @param {RepositoriesPluginOptions} [options]
- * @param {boolean} skipMongoDb
+ * @param {boolean} [skipMongoDb]
  */
 const registerUploadsRepository = (server, options, skipMongoDb) => {
   if (options?.uploadsRepository) {

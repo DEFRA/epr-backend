@@ -114,10 +114,21 @@ const groupAndTransformRowIssues = (issues) => {
  * - `concerns`: Object with table-keyed row-level errors and warnings
  *
  * @param {Object} validation - The validation object from database
- * @param {Array} validation.issues - Array of validation issues
+ * @param {Array} [validation.issues] - Array of validation issues (from validation pipeline)
+ * @param {Array} [validation.failures] - Array of failure codes (from upload rejection)
  * @returns {Object} Transformed validation for HTTP response
  */
 export const transformValidationResponse = (validation) => {
+  // Handle direct failures (e.g., from upload rejection)
+  if (validation?.failures?.length > 0) {
+    return {
+      validation: {
+        failures: validation.failures,
+        concerns: {}
+      }
+    }
+  }
+
   if (!validation?.issues || validation.issues.length === 0) {
     return {
       validation: {

@@ -1,17 +1,18 @@
+import Boom from '@hapi/boom'
+import {
+  SCHEMA_VERSION,
+  collateUsersOnApproval,
+  createInitialStatusHistory,
+  getCurrentStatus,
+  hasChanges,
+  mergeSubcollection,
+  statusHistoryWithChanges
+} from './helpers.js'
 import {
   validateId,
   validateOrganisationInsert,
   validateOrganisationUpdate
 } from './schema/index.js'
-import {
-  SCHEMA_VERSION,
-  createInitialStatusHistory,
-  getCurrentStatus,
-  statusHistoryWithChanges,
-  mergeSubcollection,
-  hasChanges
-} from './helpers.js'
-import Boom from '@hapi/boom'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
@@ -73,6 +74,7 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     version: 1,
     schemaVersion: SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
+    users: [],
     ...orgFields,
     formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
@@ -102,10 +104,7 @@ const performUpdate =
       )
     }
 
-    const merged = {
-      ...existing,
-      ...validatedUpdates
-    }
+    const { status: _, ...merged } = { ...existing, ...validatedUpdates }
 
     const registrations = mergeSubcollection(
       existing.registrations,
@@ -116,13 +115,28 @@ const performUpdate =
       validatedUpdates.accreditations
     )
 
-    storage[existingIndex] = {
+    const updatedStatusHistory = statusHistoryWithChanges(
+      validatedUpdates,
+      existing
+    )
+
+    const users = collateUsersOnApproval(existing, {
       ...merged,
-      statusHistory: statusHistoryWithChanges(validatedUpdates, existing),
+      statusHistory: updatedStatusHistory,
+      registrations,
+      accreditations
+    })
+
+    const updatePayload = {
+      ...merged,
+      statusHistory: updatedStatusHistory,
       registrations,
       accreditations,
+      users,
       version: existing.version + 1
     }
+
+    storage[existingIndex] = updatePayload
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
@@ -132,7 +146,7 @@ const performUpsert =
   (storage, staleCache, pendingSyncRef, insertFn, updateFn) =>
   async (organisation) => {
     const validated = validateOrganisationInsert(organisation)
-    const { id, version, schemaVersion, ...updateData } = validated
+    const { id, version: _v, schemaVersion: _s, ...updateData } = validated
 
     const existing = storage.find((o) => o.id === id)
 
@@ -263,7 +277,9 @@ export const createInMemoryOrganisationsRepository = (
         ),
       findAll: performFindAll(staleCache),
       findById,
-      findRegistrationById: performFindRegistrationById(findById)
+      findRegistrationById: performFindRegistrationById(findById),
+      // Test-only method to access internal storage (not part of the port interface)
+      _getStorageForTesting: () => storage
     }
   }
 }

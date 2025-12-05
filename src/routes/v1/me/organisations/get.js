@@ -10,7 +10,7 @@ export const organisationsLinkedGetAll = {
   path: organisationsLinkedGetAllPath,
   options: {
     auth: {
-      scope: [ROLES.standardUser]
+      scope: [ROLES.inquirer]
     }
   },
   /**

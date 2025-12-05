@@ -22,6 +22,7 @@ import {
   getApprovedPersons
 } from '#formsubmission/registration/extract-contacts.js'
 import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
+import { applyRegistrationOverrides } from '#formsubmission/overrides/override.js'
 
 function getNoticeAddress(answersByShortDescription) {
   const noticeAddress =
@@ -39,13 +40,14 @@ function getExportPorts(answersByShortDescription) {
     .filter((port) => port.length > 0)
 }
 
-export function parseRegistrationSubmission(id, rawSubmissionData) {
+function buildParsedRegistration(id, rawSubmissionData) {
   const answersByPages = extractAnswers(rawSubmissionData)
   const answersByShortDescription = flattenAnswersByShortDesc(answersByPages)
   const wasteProcessingType = extractWasteProcessingType(rawSubmissionData)
   const isReprocessor =
     wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
   const isExporter = !isReprocessor
+
   return {
     id,
     formSubmissionTime: extractTimestamp(rawSubmissionData),
@@ -108,4 +110,9 @@ export function parseRegistrationSubmission(id, rawSubmissionData) {
       answersByPages
     )
   }
+}
+
+export function parseRegistrationSubmission(id, rawSubmissionData) {
+  const parsed = buildParsedRegistration(id, rawSubmissionData)
+  return applyRegistrationOverrides(parsed)
 }
