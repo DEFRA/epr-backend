@@ -1,0 +1,107 @@
+{
+  "_id": "674a1234567890abcdef0003",
+  "organisationId": "674a1234567890abcdef1003",
+  "accreditationId": "674a1234567890abcdef2003",
+  "schemaVersion": 1,
+  "version": 4,
+  "amount": 83.25,
+  "availableAmount": 58.25,
+  "transactions": [
+    {
+      "_id": "674a1234567890abcdef3006",
+      "type": "credit",
+      "createdAt": "2025-11-01T08:00:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4004",
+        "name": "Diana Evans"
+      },
+      "amount": 75.0,
+      "openingAmount": 0,
+      "closingAmount": 75.0,
+      "openingAvailableAmount": 0,
+      "closingAvailableAmount": 75.0,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef5007",
+          "currentVersionId": "674a1234567890abcdef6007",
+          "previousVersionIds": [],
+          "type": "waste_record:received"
+        }
+      ]
+    },
+    {
+      "_id": "674a1234567890abcdef3007",
+      "type": "pending_debit",
+      "createdAt": "2025-11-05T13:20:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4004",
+        "name": "Diana Evans"
+      },
+      "amount": 25.0,
+      "openingAmount": 75.0,
+      "closingAmount": 75.0,
+      "openingAvailableAmount": 75.0,
+      "closingAvailableAmount": 50.0,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef7002",
+          "currentVersionId": "674a1234567890abcdef8003",
+          "previousVersionIds": [],
+          "type": "prn:created"
+        }
+      ]
+    },
+    {
+      "_id": "674a1234567890abcdef3008",
+      "type": "credit",
+      "createdAt": "2025-11-08T10:30:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4004",
+        "name": "Diana Evans"
+      },
+      "amount": 15.0,
+      "openingAmount": 75.0,
+      "closingAmount": 90.0,
+      "openingAvailableAmount": 50.0,
+      "closingAvailableAmount": 65.0,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef5007",
+          "currentVersionId": "674a1234567890abcdef6008",
+          "previousVersionIds": [
+            "674a1234567890abcdef6007"
+          ],
+          "type": "waste_record:received"
+        }
+      ]
+    },
+    {
+      "_id": "674a1234567890abcdef3009",
+      "type": "debit",
+      "createdAt": "2025-11-10T09:15:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4005",
+        "name": "Eve Foster"
+      },
+      "amount": 6.75,
+      "openingAmount": 90.0,
+      "closingAmount": 83.25,
+      "openingAvailableAmount": 65.0,
+      "closingAvailableAmount": 58.25,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef5008",
+          "currentVersionId": "674a1234567890abcdef6009",
+          "previousVersionIds": [],
+          "type": "waste_record:exported"
+        },
+        {
+          "id": "674a1234567890abcdef5009",
+          "currentVersionId": "674a1234567890abcdef6010",
+          "previousVersionIds": [],
+          "type": "waste_record:sent_on"
+        }
+      ]
+    }
+  ]
+}

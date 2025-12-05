@@ -1,0 +1,45 @@
+{
+  "_id": "674a1234567890abcdef0001",
+  "organisationId": "674a1234567890abcdef1001",
+  "accreditationId": "674a1234567890abcdef2001",
+  "schemaVersion": 1,
+  "version": 1,
+  "amount": 125.5,
+  "availableAmount": 125.5,
+  "transactions": [
+    {
+      "_id": "674a1234567890abcdef3001",
+      "type": "credit",
+      "createdAt": "2025-11-15T09:30:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4001",
+        "name": "Alice Johnson"
+      },
+      "amount": 125.5,
+      "openingAmount": 0,
+      "closingAmount": 125.5,
+      "openingAvailableAmount": 0,
+      "closingAvailableAmount": 125.5,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef5001",
+          "currentVersionId": "674a1234567890abcdef6001",
+          "previousVersionIds": [],
+          "type": "waste_record:received"
+        },
+        {
+          "id": "674a1234567890abcdef5002",
+          "currentVersionId": "674a1234567890abcdef6002",
+          "previousVersionIds": [],
+          "type": "waste_record:received"
+        },
+        {
+          "id": "674a1234567890abcdef5003",
+          "currentVersionId": "674a1234567890abcdef6003",
+          "previousVersionIds": [],
+          "type": "waste_record:received"
+        }
+      ]
+    }
+  ]
+}

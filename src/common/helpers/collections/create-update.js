@@ -1,6 +1,7 @@
 import { createOrUpdateAccreditationCollection } from './create-update-accreditation.js'
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
+import { createOrUpdateWasteBalancesCollection } from './create-update-waste-balances.js'
 
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 import {
@@ -23,6 +24,10 @@ import eprOrganisation2 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-organisation-3.json' with { type: 'json' }
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
 
+import wasteBalanceScenarioA from '#data/fixtures/common/waste-balances/scenario-a-simple-submission.json' with { type: 'json' }
+import wasteBalanceScenarioB from '#data/fixtures/common/waste-balances/scenario-b-prn-created-and-issued.json' with { type: 'json' }
+import wasteBalanceScenarioC from '#data/fixtures/common/waste-balances/scenario-c-prn-then-modified-submission.json' with { type: 'json' }
+
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
@@ -34,6 +39,7 @@ const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
+const COLLECTION_WASTE_BALANCES = 'waste-balances'
 
 /**
  * @import {Db} from 'mongodb'
@@ -54,6 +60,7 @@ export async function createOrUpdateCollections(db) {
   await createOrUpdateAccreditationCollection(db, collections)
 
   await createOrUpdateEPROrganisationCollection(db, collections)
+  await createOrUpdateWasteBalancesCollection(db, collections)
 }
 
 /**
@@ -165,6 +172,57 @@ export async function createSeedData(
         organisationsRepository.insert(eprOrganisation2),
         organisationsRepository.insert(eprOrganisation3),
         organisationsRepository.insert(eprOrganisation4)
+      ])
+    }
+
+    const wasteBalanceFixturesIds = [
+      wasteBalanceScenarioA,
+      wasteBalanceScenarioB,
+      wasteBalanceScenarioC
+    ]
+      .map((record) => record._id)
+      .map(ObjectId.createFromHexString)
+
+    const wasteBalanceFixturesDocs = await db
+      .collection(COLLECTION_WASTE_BALANCES)
+      .find({ _id: { $in: wasteBalanceFixturesIds } })
+      .toArray()
+
+    if (wasteBalanceFixturesDocs.length === 0) {
+      logger.info({
+        message: 'Create seed data: inserting waste-balance fixtures'
+      })
+
+      // Convert string _id to ObjectId for MongoDB insertion
+      const prepareWasteBalance = (data) => ({
+        ...data,
+        _id: ObjectId.createFromHexString(data._id),
+        organisationId: ObjectId.createFromHexString(data.organisationId),
+        accreditationId: ObjectId.createFromHexString(data.accreditationId),
+        transactions: data.transactions.map((tx) => ({
+          ...tx,
+          _id: ObjectId.createFromHexString(tx._id),
+          createdBy: {
+            ...tx.createdBy,
+            _id: ObjectId.createFromHexString(tx.createdBy._id)
+          },
+          entities: tx.entities.map((entity) => ({
+            ...entity,
+            id: ObjectId.createFromHexString(entity.id),
+            currentVersionId: ObjectId.createFromHexString(
+              entity.currentVersionId
+            ),
+            previousVersionIds: entity.previousVersionIds.map((id) =>
+              ObjectId.createFromHexString(id)
+            )
+          }))
+        }))
+      })
+
+      await db.collection(COLLECTION_WASTE_BALANCES).insertMany([
+        prepareWasteBalance(wasteBalanceScenarioA),
+        prepareWasteBalance(wasteBalanceScenarioB),
+        prepareWasteBalance(wasteBalanceScenarioC)
       ])
     }
   }

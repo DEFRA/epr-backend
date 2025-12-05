@@ -1,0 +1,107 @@
+{
+  "_id": "674a1234567890abcdef0002",
+  "organisationId": "674a1234567890abcdef1002",
+  "accreditationId": "674a1234567890abcdef2002",
+  "schemaVersion": 1,
+  "version": 3,
+  "amount": 35.75,
+  "availableAmount": 35.75,
+  "transactions": [
+    {
+      "_id": "674a1234567890abcdef3002",
+      "type": "credit",
+      "createdAt": "2025-11-10T10:00:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4002",
+        "name": "Bob Smith"
+      },
+      "amount": 100.0,
+      "openingAmount": 0,
+      "closingAmount": 100.0,
+      "openingAvailableAmount": 0,
+      "closingAvailableAmount": 100.0,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef5004",
+          "currentVersionId": "674a1234567890abcdef6004",
+          "previousVersionIds": [],
+          "type": "waste_record:received"
+        },
+        {
+          "id": "674a1234567890abcdef5005",
+          "currentVersionId": "674a1234567890abcdef6005",
+          "previousVersionIds": [],
+          "type": "waste_record:received"
+        }
+      ]
+    },
+    {
+      "_id": "674a1234567890abcdef3003",
+      "type": "pending_debit",
+      "createdAt": "2025-11-12T14:30:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4002",
+        "name": "Bob Smith"
+      },
+      "amount": 50.0,
+      "openingAmount": 100.0,
+      "closingAmount": 100.0,
+      "openingAvailableAmount": 100.0,
+      "closingAvailableAmount": 50.0,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef7001",
+          "currentVersionId": "674a1234567890abcdef8001",
+          "previousVersionIds": [],
+          "type": "prn:created"
+        }
+      ]
+    },
+    {
+      "_id": "674a1234567890abcdef3004",
+      "type": "debit",
+      "createdAt": "2025-11-18T11:15:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4003",
+        "name": "Charlie Davis"
+      },
+      "amount": 50.0,
+      "openingAmount": 100.0,
+      "closingAmount": 50.0,
+      "openingAvailableAmount": 50.0,
+      "closingAvailableAmount": 50.0,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef7001",
+          "currentVersionId": "674a1234567890abcdef8002",
+          "previousVersionIds": [
+            "674a1234567890abcdef8001"
+          ],
+          "type": "prn:issued"
+        }
+      ]
+    },
+    {
+      "_id": "674a1234567890abcdef3005",
+      "type": "debit",
+      "createdAt": "2025-11-20T16:45:00.000Z",
+      "createdBy": {
+        "_id": "674a1234567890abcdef4002",
+        "name": "Bob Smith"
+      },
+      "amount": 14.25,
+      "openingAmount": 50.0,
+      "closingAmount": 35.75,
+      "openingAvailableAmount": 50.0,
+      "closingAvailableAmount": 35.75,
+      "entities": [
+        {
+          "id": "674a1234567890abcdef5006",
+          "currentVersionId": "674a1234567890abcdef6006",
+          "previousVersionIds": [],
+          "type": "waste_record:sent_on"
+        }
+      ]
+    }
+  ]
+}
