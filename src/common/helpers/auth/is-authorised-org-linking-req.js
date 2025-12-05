@@ -1,6 +1,7 @@
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import Boom from '@hapi/boom'
 import { isInitialUser } from './roles/helpers.js'
+import { createPathRegex, PATH_PATTERNS } from '#common/helpers/path-pattern.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -12,8 +13,12 @@ import { isInitialUser } from './roles/helpers.js'
  * @returns {Promise<boolean>} True if the request is authorized, false otherwise
  */
 export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
+  const pathRegex = createPathRegex(organisationsLinkPath, {
+    organisationId: PATH_PATTERNS.MONGO_OBJECT_ID
+  })
+
   const isOrganisationLinkingRequest =
-    request.path === organisationsLinkPath && request.method === 'post'
+    pathRegex.test(request.path) && request.method === 'post'
 
   if (!isOrganisationLinkingRequest) {
     return false
@@ -34,11 +39,11 @@ export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
     throw Boom.notFound('Organisation not found')
   }
 
-  const isInitial = isInitialUser(organisationById, email)
+  // const isInitial = isInitialUser(organisationById, email)
 
-  if (!isInitial) {
-    throw Boom.forbidden('user is not authorised to link organisation')
-  }
+  // if (!isInitial) {
+  //   throw Boom.forbidden('user is not authorised to link organisation')
+  // }
 
   return true
 }
