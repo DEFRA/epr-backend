@@ -38,6 +38,7 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * Transaction record in the waste balance history
  * NOTE: Transactions are immutable once created - they cannot be modified or deleted
  * @typedef {Object} WasteBalanceTransaction
+ * @property {string} id
  * @property {WasteBalanceTransactionType} type - Transaction type
  * @property {string} createdAt - ISO8601 timestamp
  * @property {UserSummary} createdBy - User who created the transaction
