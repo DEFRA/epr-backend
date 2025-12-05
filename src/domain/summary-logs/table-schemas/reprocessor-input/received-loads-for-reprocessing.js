@@ -1,5 +1,10 @@
 import Joi from 'joi'
-import { MESSAGES, PATTERNS, CONSTANTS } from '../shared/index.js'
+import {
+  MESSAGES,
+  PATTERNS,
+  CONSTANTS,
+  ROW_ID_MINIMUMS
+} from '../shared/index.js'
 import { createRowIdSchema } from '../shared/row-id.schema.js'
 
 /**
@@ -41,13 +46,24 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   },
 
   /**
+   * Fields that produce FATAL errors when validation fails
+   *
+   * ROW_ID is always fatal as it indicates tampering or corruption.
+   * Additional fields can be added here if their validation failures
+   * should block the entire submission.
+   */
+  fatalFields: ['ROW_ID'],
+
+  /**
    * VAL010: Validation schema for filled fields
    *
    * All fields are OPTIONAL - validation only applies to fields that have values.
    * Any failure here results in REJECTED (blocks entire submission).
    */
   validationSchema: Joi.object({
-    ROW_ID: createRowIdSchema().optional(),
+    ROW_ID: createRowIdSchema(
+      ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_REPROCESSING
+    ).optional(),
     DATE_RECEIVED_FOR_REPROCESSING: Joi.date().optional().messages({
       'date.base': MESSAGES.MUST_BE_A_VALID_DATE
     }),

@@ -56,7 +56,7 @@ const createLargeDataset = (rowCount) => {
 console.log('Preparing benchmark datasets...')
 
 const realFileBuffer = await readFile(
-  path.join(dirname, '../src/data/fixtures/uploads/reprocessor.xlsx')
+  path.join(dirname, '../src/data/fixtures/uploads/reprocessor_input.xlsx')
 )
 
 const smallDatasetBuffer = await createWorkbook({
@@ -107,7 +107,7 @@ const bench = new Bench({
 })
 
 bench
-  .add('parse real fixture file (reprocessor.xlsx)', async () => {
+  .add('parse real fixture file (reprocessor_input.xlsx)', async () => {
     await parse(realFileBuffer)
   })
   .add('parse small dataset (10 rows)', async () => {

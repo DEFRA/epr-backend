@@ -36,13 +36,16 @@ describe('ExcelJSSummaryLogsParser', () => {
     return parse(buffer)
   }
 
-  describe('reprocessor.xlsx fixture', () => {
+  describe('reprocessor_input.xlsx fixture', () => {
     it(
       'should parse metadata and data sections',
       { timeout: 30000 },
       async () => {
         const excelBuffer = await readFile(
-          path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
+          path.join(
+            dirname,
+            '../../../data/fixtures/uploads/reprocessor_input.xlsx'
+          )
         )
         const result = await parse(excelBuffer)
 

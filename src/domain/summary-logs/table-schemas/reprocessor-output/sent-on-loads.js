@@ -1,2 +1,16 @@
-// Re-export from reprocessor-input - schemas currently identical
-export { SENT_ON_LOADS } from '../reprocessor-input/sent-on-loads.js'
+import Joi from 'joi'
+
+/**
+ * Table schema for SENT_ON_LOADS (REPROCESSOR_OUTPUT)
+ *
+ * Tracks waste sent on to other facilities.
+ * Validation rules not yet defined - placeholder schema.
+ */
+export const SENT_ON_LOADS = {
+  rowIdField: 'ROW_ID',
+  requiredHeaders: [],
+  unfilledValues: {},
+  fatalFields: ['ROW_ID'],
+  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
+  fieldsRequiredForWasteBalance: []
+}

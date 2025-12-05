@@ -203,6 +203,7 @@ const validateRows = ({
     const classification = classifyRow(rowObject, domainSchema)
 
     // Convert classification issues to application issues with locations
+    const fatalFields = domainSchema.fatalFields || []
     const rowIssues = classification.issues.map((issue) => {
       const fieldName = String(issue.field)
       const colIndex = headerToIndexMap.get(fieldName)
@@ -217,11 +218,11 @@ const validateRows = ({
           ? mapJoiTypeToErrorCode(issue.type)
           : VALIDATION_CODE.FIELD_REQUIRED
 
-      // Determine severity based on whether this is a ROW_ID error
-      const isRowIdError =
+      // Determine severity based on whether this is a fatal field
+      const isFatalField =
         classification.outcome === ROW_OUTCOME.REJECTED &&
-        fieldName === domainSchema.rowIdField
-      const severity = isRowIdError ? 'fatal' : 'error'
+        fatalFields.includes(fieldName)
+      const severity = isFatalField ? 'fatal' : 'error'
 
       return {
         category: VALIDATION_CATEGORY.TECHNICAL,
@@ -242,7 +243,7 @@ const validateRows = ({
     })
 
     // Record issues at appropriate severity
-    // Only ROW_ID validation errors are FATAL (block entire submission)
+    // fatalFields validation errors are FATAL (block entire submission)
     // Other validation errors are ERROR (mark row as invalid but don't block submission)
     for (const rowIssue of rowIssues) {
       if (rowIssue.severity === 'fatal') {
