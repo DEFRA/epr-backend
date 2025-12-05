@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 import { STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { baseDefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 
 describe('#getRolesForOrganisationAccess', () => {
   const mockOrganisationId = new ObjectId().toString()
@@ -17,7 +18,8 @@ describe('#getRolesForOrganisationAccess', () => {
     vi.clearAllMocks()
 
     mockOrganisationsRepository = {
-      findById: vi.fn()
+      findById: vi.fn(),
+      update: vi.fn()
     }
 
     mockRequest = {
@@ -33,43 +35,33 @@ describe('#getRolesForOrganisationAccess', () => {
   })
 
   describe('happy path', () => {
-    test('returns standard_user role when organisation is ACTIVE', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: STATUS.ACTIVE
+    test.each([
+      ['ACTIVE', STATUS.ACTIVE],
+      ['SUSPENDED', STATUS.SUSPENDED]
+    ])(
+      'returns standard_user role when organisation is %s',
+      async (statusName, status) => {
+        const mockOrganisation = {
+          id: mockOrganisationId,
+          status,
+          users: [],
+          version: 1
+        }
+
+        mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+
+        const result = await getRolesForOrganisationAccess(
+          mockRequest,
+          mockLinkedEprOrg,
+          baseDefraIdTokenPayload
+        )
+
+        expect(result).toEqual([ROLES.standardUser])
+        expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
+          mockOrganisationId
+        )
       }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      const result = await getRolesForOrganisationAccess(
-        mockRequest,
-        mockLinkedEprOrg
-      )
-
-      expect(result).toEqual([ROLES.standardUser])
-      expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
-        mockOrganisationId
-      )
-    })
-
-    test('returns standard_user role when organisation is SUSPENDED', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: STATUS.SUSPENDED
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      const result = await getRolesForOrganisationAccess(
-        mockRequest,
-        mockLinkedEprOrg
-      )
-
-      expect(result).toEqual([ROLES.standardUser])
-      expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
-        mockOrganisationId
-      )
-    })
+    )
 
     test('calls repository with correct organisation ID from params', async () => {
       const customOrgId = new ObjectId().toString()
@@ -77,12 +69,18 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const mockOrganisation = {
         id: customOrgId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
-      await getRolesForOrganisationAccess(mockRequest, customOrgId)
+      await getRolesForOrganisationAccess(
+        mockRequest,
+        customOrgId,
+        baseDefraIdTokenPayload
+      )
 
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         customOrgId
@@ -91,47 +89,35 @@ describe('#getRolesForOrganisationAccess', () => {
   })
 
   describe('no organisation ID in params', () => {
-    test('returns empty array when organisationId is undefined', async () => {
-      mockRequest.params.organisationId = undefined
+    test.each([
+      ['undefined', undefined],
+      ['null', null],
+      ['empty string', '']
+    ])(
+      'returns empty array when organisationId is %s',
+      async (description, orgIdValue) => {
+        mockRequest.params.organisationId = orgIdValue
 
-      const result = await getRolesForOrganisationAccess(
-        mockRequest,
-        mockLinkedEprOrg
-      )
+        const result = await getRolesForOrganisationAccess(
+          mockRequest,
+          mockLinkedEprOrg,
+          baseDefraIdTokenPayload
+        )
 
-      expect(result).toEqual([])
-      expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-    })
-
-    test('returns empty array when organisationId is null', async () => {
-      mockRequest.params.organisationId = null
-
-      const result = await getRolesForOrganisationAccess(
-        mockRequest,
-        mockLinkedEprOrg
-      )
-
-      expect(result).toEqual([])
-      expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-    })
-
-    test('returns empty array when organisationId is empty string', async () => {
-      mockRequest.params.organisationId = ''
-
-      const result = await getRolesForOrganisationAccess(
-        mockRequest,
-        mockLinkedEprOrg
-      )
-
-      expect(result).toEqual([])
-      expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-    })
+        expect(result).toEqual([])
+        expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
+      }
+    )
 
     test('returns empty array when params object is missing', async () => {
       mockRequest.params = undefined
 
       await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
+        getRolesForOrganisationAccess(
+          mockRequest,
+          mockLinkedEprOrg,
+          baseDefraIdTokenPayload
+        )
       ).rejects.toThrow()
     })
   })
@@ -141,7 +127,11 @@ describe('#getRolesForOrganisationAccess', () => {
       const differentOrgId = new ObjectId().toString()
 
       await expect(
-        getRolesForOrganisationAccess(mockRequest, differentOrgId)
+        getRolesForOrganisationAccess(
+          mockRequest,
+          differentOrgId,
+          baseDefraIdTokenPayload
+        )
       ).rejects.toThrow(Boom.forbidden('Access denied: organisation mismatch'))
 
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
@@ -151,7 +141,11 @@ describe('#getRolesForOrganisationAccess', () => {
       const differentOrgId = new ObjectId().toString()
 
       try {
-        await getRolesForOrganisationAccess(mockRequest, differentOrgId)
+        await getRolesForOrganisationAccess(
+          mockRequest,
+          differentOrgId,
+          baseDefraIdTokenPayload
+        )
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error.isBoom).toBe(true)
@@ -168,7 +162,11 @@ describe('#getRolesForOrganisationAccess', () => {
       })
 
       await expect(
-        getRolesForOrganisationAccess(mockRequest, differentOrgId)
+        getRolesForOrganisationAccess(
+          mockRequest,
+          differentOrgId,
+          baseDefraIdTokenPayload
+        )
       ).rejects.toThrow(Boom.forbidden('Access denied: organisation mismatch'))
 
       // Repository should not be called if IDs don't match
@@ -177,106 +175,53 @@ describe('#getRolesForOrganisationAccess', () => {
   })
 
   describe('organisation status not accessible', () => {
-    test('throws forbidden error when organisation status is CREATED', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: STATUS.CREATED
+    test.each([
+      ['CREATED', STATUS.CREATED],
+      ['APPROVED', STATUS.APPROVED],
+      ['REJECTED', STATUS.REJECTED],
+      ['ARCHIVED', STATUS.ARCHIVED],
+      ['undefined', undefined],
+      ['null', null]
+    ])(
+      'throws forbidden error when organisation status is %s',
+      async (statusName, status) => {
+        const mockOrganisation = {
+          id: mockOrganisationId,
+          status,
+          users: [],
+          version: 1
+        }
+
+        mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+
+        await expect(
+          getRolesForOrganisationAccess(
+            mockRequest,
+            mockLinkedEprOrg,
+            baseDefraIdTokenPayload
+          )
+        ).rejects.toThrow(
+          Boom.forbidden('Access denied: organisation status not accessible')
+        )
       }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(
-        Boom.forbidden('Access denied: organisation status not accessible')
-      )
-    })
-
-    test('throws forbidden error when organisation status is APPROVED', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: STATUS.APPROVED
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(
-        Boom.forbidden('Access denied: organisation status not accessible')
-      )
-    })
-
-    test('throws forbidden error when organisation status is REJECTED', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: STATUS.REJECTED
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(
-        Boom.forbidden('Access denied: organisation status not accessible')
-      )
-    })
-
-    test('throws forbidden error when organisation status is ARCHIVED', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: STATUS.ARCHIVED
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(
-        Boom.forbidden('Access denied: organisation status not accessible')
-      )
-    })
-
-    test('throws forbidden error when organisation status is undefined', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId
-        // status is missing
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(
-        Boom.forbidden('Access denied: organisation status not accessible')
-      )
-    })
-
-    test('throws forbidden error when organisation status is null', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        status: null
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(
-        Boom.forbidden('Access denied: organisation status not accessible')
-      )
-    })
+    )
 
     test('throws forbidden error with exact message format for non-accessible status', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.REJECTED
+        status: STATUS.REJECTED,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       try {
-        await getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
+        await getRolesForOrganisationAccess(
+          mockRequest,
+          mockLinkedEprOrg,
+          baseDefraIdTokenPayload
+        )
         expect.fail('Should have thrown an error')
       } catch (error) {
         expect(error.isBoom).toBe(true)
@@ -289,30 +234,44 @@ describe('#getRolesForOrganisationAccess', () => {
   })
 
   describe('repository errors', () => {
-    test('propagates repository error when findById fails', async () => {
-      const repositoryError = new Error('Database connection failed')
-      mockOrganisationsRepository.findById.mockRejectedValue(repositoryError)
+    test.each([
+      [
+        'propagates repository error when findById fails',
+        () => {
+          const error = new Error('Database connection failed')
+          mockOrganisationsRepository.findById.mockRejectedValue(error)
+          return error
+        }
+      ],
+      [
+        'propagates error when findById returns null',
+        () => {
+          mockOrganisationsRepository.findById.mockResolvedValue(null)
+          return undefined
+        }
+      ],
+      [
+        'handles timeout error from repository',
+        () => {
+          const error = new Error('Query timeout')
+          mockOrganisationsRepository.findById.mockRejectedValue(error)
+          return error
+        }
+      ]
+    ])('%s', async (description, setupMock) => {
+      const expectedError = setupMock()
 
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(repositoryError)
-    })
+      const promise = getRolesForOrganisationAccess(
+        mockRequest,
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
+      )
 
-    test('propagates error when findById returns null', async () => {
-      mockOrganisationsRepository.findById.mockResolvedValue(null)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow()
-    })
-
-    test('handles timeout error from repository', async () => {
-      const timeoutError = new Error('Query timeout')
-      mockOrganisationsRepository.findById.mockRejectedValue(timeoutError)
-
-      await expect(
-        getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
-      ).rejects.toThrow(timeoutError)
+      if (expectedError) {
+        await expect(promise).rejects.toThrow(expectedError)
+      } else {
+        await expect(promise).rejects.toThrow()
+      }
     })
   })
 
@@ -323,6 +282,7 @@ describe('#getRolesForOrganisationAccess', () => {
         status: STATUS.ACTIVE,
         name: 'Test Organisation',
         users: [{ email: 'test@example.com' }],
+        version: 1,
         createdAt: new Date(),
         metadata: { foo: 'bar' }
       }
@@ -331,7 +291,9 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+
+        baseDefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -343,14 +305,17 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const mockOrganisation = {
         id: objectIdFormat,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        objectIdFormat
+        objectIdFormat,
+        baseDefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -360,14 +325,17 @@ describe('#getRolesForOrganisationAccess', () => {
       const activeStatus = STATUS.ACTIVE
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: activeStatus
+        status: activeStatus,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -376,14 +344,17 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns array with single role, not just the role string', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
 
       expect(Array.isArray(result)).toBe(true)
@@ -398,7 +369,8 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
 
       expect(result).toEqual([])
@@ -409,7 +381,11 @@ describe('#getRolesForOrganisationAccess', () => {
       const differentOrgId = new ObjectId().toString()
 
       await expect(
-        getRolesForOrganisationAccess(mockRequest, differentOrgId)
+        getRolesForOrganisationAccess(
+          mockRequest,
+          differentOrgId,
+          baseDefraIdTokenPayload
+        )
       ).rejects.toThrow()
 
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
@@ -418,12 +394,18 @@ describe('#getRolesForOrganisationAccess', () => {
     test('fetches organisation only after validation passes', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
-      await getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
+      await getRolesForOrganisationAccess(
+        mockRequest,
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
+      )
 
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledOnce()
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
@@ -439,14 +421,17 @@ describe('#getRolesForOrganisationAccess', () => {
           callOrder.push(`findById:${id}`)
           return {
             id: mockOrganisationId,
-            status: STATUS.ACTIVE
+            status: STATUS.ACTIVE,
+            users: [],
+            version: 1
           }
         }
       )
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
 
       expect(callOrder).toEqual([`findById:${mockOrganisationId}`])
@@ -468,14 +453,17 @@ describe('#getRolesForOrganisationAccess', () => {
       for (const status of accessibleStatuses) {
         const mockOrganisation = {
           id: mockOrganisationId,
-          status
+          status,
+          users: [],
+          version: 1
         }
 
         mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
         const result = await getRolesForOrganisationAccess(
           mockRequest,
-          mockLinkedEprOrg
+          mockLinkedEprOrg,
+          baseDefraIdTokenPayload
         )
 
         expect(result).toEqual([ROLES.standardUser])
@@ -485,13 +473,19 @@ describe('#getRolesForOrganisationAccess', () => {
       for (const status of nonAccessibleStatuses) {
         const mockOrganisation = {
           id: mockOrganisationId,
-          status
+          status,
+          users: [],
+          version: 1
         }
 
         mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
         await expect(
-          getRolesForOrganisationAccess(mockRequest, mockLinkedEprOrg)
+          getRolesForOrganisationAccess(
+            mockRequest,
+            mockLinkedEprOrg,
+            baseDefraIdTokenPayload
+          )
         ).rejects.toThrow(
           Boom.forbidden('Access denied: organisation status not accessible')
         )
@@ -501,14 +495,17 @@ describe('#getRolesForOrganisationAccess', () => {
     test('status comparison is exact match', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: 'active' // Same value as STATUS.ACTIVE
+        status: 'active', // Same value as STATUS.ACTIVE
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -521,7 +518,8 @@ describe('#getRolesForOrganisationAccess', () => {
       mockRequest.params.organisationId = undefined
       let result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
       expect(Array.isArray(result)).toBe(true)
 
@@ -529,13 +527,16 @@ describe('#getRolesForOrganisationAccess', () => {
       mockRequest.params.organisationId = mockOrganisationId
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
       expect(Array.isArray(result)).toBe(true)
     })
@@ -543,14 +544,17 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns array containing only standard_user role constant', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: STATUS.ACTIVE,
+        users: [],
+        version: 1
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
       const result = await getRolesForOrganisationAccess(
         mockRequest,
-        mockLinkedEprOrg
+        mockLinkedEprOrg,
+        baseDefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
