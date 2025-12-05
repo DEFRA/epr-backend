@@ -201,11 +201,13 @@ export async function createSeedData(
         accreditationId: ObjectId.createFromHexString(data.accreditationId)
       })
 
-      await db.collection(COLLECTION_WASTE_BALANCES).insertMany([
-        prepareWasteBalance(wasteBalanceScenarioA),
-        prepareWasteBalance(wasteBalanceScenarioB),
-        prepareWasteBalance(wasteBalanceScenarioC)
-      ])
+      await db
+        .collection(COLLECTION_WASTE_BALANCES)
+        .insertMany([
+          prepareWasteBalance(wasteBalanceScenarioA),
+          prepareWasteBalance(wasteBalanceScenarioB),
+          prepareWasteBalance(wasteBalanceScenarioC)
+        ])
     }
   }
 }

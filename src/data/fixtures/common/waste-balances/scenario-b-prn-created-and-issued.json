@@ -74,9 +74,7 @@
         {
           "id": "prn-b-001",
           "currentVersionId": "prn-version-b-002",
-          "previousVersionIds": [
-            "prn-version-b-001"
-          ],
+          "previousVersionIds": ["prn-version-b-001"],
           "type": "prn:issued"
         }
       ]

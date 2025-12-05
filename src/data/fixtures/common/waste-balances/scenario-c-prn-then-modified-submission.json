@@ -68,9 +68,7 @@
         {
           "id": "waste-record-c-001",
           "currentVersionId": "version-c-002",
-          "previousVersionIds": [
-            "version-c-001"
-          ],
+          "previousVersionIds": ["version-c-001"],
           "type": "waste_record:received"
         }
       ]

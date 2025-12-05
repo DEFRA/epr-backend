@@ -174,8 +174,7 @@ describe('Waste Balance Seed Data', () => {
         })
 
         it('should have final transaction closing amounts match document amounts', () => {
-          const lastTx =
-            scenario.transactions[scenario.transactions.length - 1]
+          const lastTx = scenario.transactions[scenario.transactions.length - 1]
           expect(lastTx.closingAmount).toBe(scenario.amount)
           expect(lastTx.closingAvailableAmount).toBe(scenario.availableAmount)
         })
