@@ -25,6 +25,7 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
 /**
  * @typedef {Object} UserSummary
  * @property {string} id - User ID
+ * @property {string} name - Name
  */
 
 /**
@@ -37,7 +38,6 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * Transaction record in the waste balance history
  * NOTE: Transactions are immutable once created - they cannot be modified or deleted
  * @typedef {Object} WasteBalanceTransaction
- * @property {string} _id - Transaction ID
  * @property {WasteBalanceTransactionType} type - Transaction type
  * @property {string} createdAt - ISO8601 timestamp
  * @property {UserSummary} createdBy - User who created the transaction
@@ -54,7 +54,7 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * NOTE: The document is mutable (uses optimistic locking via version field)
  * However, the transactions array is append-only - existing transactions are immutable
  * @typedef {Object} WasteBalance
- * @property {string} _id - Balance ID
+ * @property {string} id - Balance ID
  * @property {string} organisationId - Organisation ID
  * @property {string} accreditationId - Accreditation ID (unique)
  * @property {number} schemaVersion - Schema version
