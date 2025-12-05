@@ -1,4 +1,5 @@
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /**
  * @typedef {import('./validate.js').ValidatedWasteRecord} ValidatedWasteRecord
@@ -13,8 +14,10 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 
 /**
  * @typedef {Object} LoadValidity
- * @property {LoadCategory} valid - Valid loads
- * @property {LoadCategory} invalid - Invalid loads
+ * @property {LoadCategory} valid - Valid loads (no issues)
+ * @property {LoadCategory} invalid - Invalid loads (has issues)
+ * @property {LoadCategory} included - Loads included in Waste Balance calculation
+ * @property {LoadCategory} excluded - Loads excluded from Waste Balance calculation
  */
 
 /**
@@ -27,23 +30,33 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 const MAX_ROW_IDS = 100
 
 /**
+ * Creates a fresh empty load category
+ *
+ * @returns {LoadCategory}
+ */
+export const createEmptyLoadCategory = () => ({ count: 0, rowIds: [] })
+
+/**
+ * Creates a fresh empty load validity structure
+ *
+ * @returns {LoadValidity}
+ */
+export const createEmptyLoadValidity = () => ({
+  valid: createEmptyLoadCategory(),
+  invalid: createEmptyLoadCategory(),
+  included: createEmptyLoadCategory(),
+  excluded: createEmptyLoadCategory()
+})
+
+/**
  * Creates an empty loads structure
  *
  * @returns {Loads}
  */
-const createEmptyLoads = () => ({
-  added: {
-    valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] }
-  },
-  unchanged: {
-    valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] }
-  },
-  adjusted: {
-    valid: { count: 0, rowIds: [] },
-    invalid: { count: 0, rowIds: [] }
-  }
+export const createEmptyLoads = () => ({
+  added: createEmptyLoadValidity(),
+  unchanged: createEmptyLoadValidity(),
+  adjusted: createEmptyLoadValidity()
 })
 
 /**
@@ -82,25 +95,38 @@ const classifyRecord = (record, summaryLogId) => {
  * - valid: Load passes all validation rules (issues.length === 0)
  * - invalid: Load has validation errors (issues.length > 0)
  *
+ * Inclusion:
+ * - included: Load has outcome 'INCLUDED' from validation pipeline
+ * - excluded: Load has outcome 'EXCLUDED' or 'REJECTED' from validation pipeline
+ *
  * Row ID arrays are truncated to 100 entries; totals always reflect the full count.
  *
  * @param {Object} params
- * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues
+ * @param {ValidatedWasteRecord[]} params.wasteRecords - Array of waste records with validation issues and outcome
  * @param {string} params.summaryLogId - The current summary log ID
  * @returns {Loads} Row IDs grouped by classification and validity
  */
 export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   const loads = createEmptyLoads()
 
-  for (const { record, issues } of wasteRecords) {
+  for (const { record, issues, outcome } of wasteRecords) {
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
-    const category = loads[classification][validityKey]
+    const validityCategory = loads[classification][validityKey]
 
-    category.count++
+    validityCategory.count++
+    if (validityCategory.rowIds.length < MAX_ROW_IDS) {
+      validityCategory.rowIds.push(record.rowId)
+    }
 
-    if (category.rowIds.length < MAX_ROW_IDS) {
-      category.rowIds.push(record.rowId)
+    // Included/excluded classification based on outcome from validation pipeline
+    const inclusionKey =
+      outcome === ROW_OUTCOME.INCLUDED ? 'included' : 'excluded'
+    const inclusionCategory = loads[classification][inclusionKey]
+
+    inclusionCategory.count++
+    if (inclusionCategory.rowIds.length < MAX_ROW_IDS) {
+      inclusionCategory.rowIds.push(record.rowId)
     }
   }
 
