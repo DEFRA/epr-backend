@@ -47,11 +47,6 @@ export function getOrgDataFromDefraIdToken(tokenPayload) {
  * @param {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>} relationships - Array of relationship objects
  * @returns {{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean} | undefined} The current relationship or undefined if none found
  */
-/**
- * Finds and returns the current relationship from an array of relationships
- * @param {Array<{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean}>} relationships - Array of relationship objects
- * @returns {{defraIdRelationshipId: string, defraIdOrgId: string, defraIdOrgName: string, isCurrent: boolean} | undefined} The current relationship or undefined if none found
- */
 export function getCurrentRelationship(relationships) {
   return relationships.find(({ isCurrent }) => isCurrent)
 }
@@ -77,12 +72,7 @@ export function isOrganisationsDiscoveryReq(request) {
   )
 }
 
-/**
- * @param {string} email
- * @param {string} defraIdOrgId
- * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns {Promise<{all: Array, unlinked: Array, linked: Array}>}
- */
+
 /**
  * Helper function to deduplicate organisations by ID
  * Exported for testing purposes
@@ -103,6 +93,12 @@ export function deduplicateOrganisations(
   )
 }
 
+/**
+ * @param {string} _email
+ * @param {string} _defraIdOrgId
+ * @param {OrganisationsRepository} _organisationsRepository - The organisations repository
+ * @returns {Promise<{all: Array, unlinked: Array, linked: Array}>}
+ */
 export async function findOrganisationMatches(
   _email,
   _defraIdOrgId,

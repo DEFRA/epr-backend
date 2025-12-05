@@ -20,13 +20,15 @@ export const organisationsLinkedGetAll = {
   handler: async (request, h) => {
     const { organisationsRepository, auth } = request
 
-    const userEmail = auth.credentials.email
+    const { contactId, email } = auth.credentials
 
     const allOrganisations = await organisationsRepository.findAll()
 
-    // Filter to only organisations where user's email exists in users array
+    // Filter to only organisations where user's email/contact-id exists in users array
     const userOrganisations = allOrganisations.filter((org) =>
-      org.users?.some((user) => user.email === userEmail)
+      org.users?.some(
+        (user) => user.contactId === contactId || user.email === email
+      )
     )
 
     // Split based on linkedDefraOrganisation field
@@ -36,6 +38,10 @@ export const organisationsLinkedGetAll = {
     const unlinked = userOrganisations.filter(
       (org) => !org.linkedDefraOrganisation
     )
+
+    console.log('userOrganisations :>> ', userOrganisations)
+    console.log('linked :>> ', linked)
+    console.log('unlinked :>> ', unlinked)
 
     return h
       .response({ organisations: { linked, unlinked } })
