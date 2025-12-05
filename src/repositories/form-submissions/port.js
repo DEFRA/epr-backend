@@ -22,6 +22,13 @@
  */
 
 /**
+ * @typedef {Object} FormSubmissionIds
+ * @property {Set<string>} organisations - Set of organisation IDs
+ * @property {Set<string>} registrations - Set of registration IDs
+ * @property {Set<string>} accreditations - Set of accreditation IDs
+ */
+
+/**
  * @typedef {Object} FormSubmissionsRepository
  * @property {() => Promise<AccreditationFormSubmission[]>} findAllAccreditations
  * @property {(id: string) => Promise<AccreditationFormSubmission | null>} findAccreditationById
@@ -31,6 +38,7 @@
  * @property {(id: string) => Promise<RegistrationFormSubmission[]>} findRegistrationsBySystemReference
  * @property {() => Promise<OrganisationFormSubmission[]>} findAllOrganisations - Find all organisations
  * @property {(id: string) => Promise<OrganisationFormSubmission | null>} findOrganisationById
+ * @property {() => Promise<FormSubmissionIds>} findAllFormSubmissionIds - Find all form submission IDs
  */
 
 /**

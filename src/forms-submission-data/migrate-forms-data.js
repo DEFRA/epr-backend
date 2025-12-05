@@ -38,37 +38,9 @@ import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migrat
  */
 
 /**
- * @typedef {Object} MigrationStatistics
- * @property {number} totalSubmissions
- * @property {number} transformedCount
- * @property {number} insertedCount
- * @property {number} updatedCount
- * @property {number} unchangedCount
- * @property {number} failedCount
- */
-
-/**
  * @typedef {Object} FormDataMigrator
  * @property {() => Promise<void>} migrate - Execute the migration
  */
-
-/**
- * Type predicate to narrow MigrationResult to SuccessResult
- * @param {MigrationResult} result
- * @returns {result is SuccessResult}
- */
-const isSuccessResult = (result) => {
-  return result.success === true
-}
-
-/**
- * Type predicate to narrow MigrationResult to FailureResult
- * @param {MigrationResult} result
- * @returns {result is FailureResult}
- */
-const isFailureResult = (result) => {
-  return result.success === false
-}
 
 /**
  * Creates a form data migrator with configured repositories
@@ -85,40 +57,91 @@ export function createFormDataMigrator(
   formsSubmissionRepository,
   organisationsRepository
 ) {
-  async function fetchAndTransformSubmissions({
-    fetchMethod,
-    parseFunction,
-    submissionType,
-    extractParams = (submission) => [
-      submission.id,
-      submission.rawSubmissionData
-    ]
-  }) {
-    const submissions = await formsSubmissionRepository[fetchMethod]()
+  /**
+   * Type predicate to narrow MigrationResult to SuccessResult
+   * @param {MigrationResult} result
+   * @returns {result is SuccessResult}
+   */
+  const isSuccessResult = (result) => {
+    return result.success === true
+  }
+
+  /**
+   * Partitions Promise.allSettled results into successful and failed arrays
+   * @param {PromiseSettledResult<MigrationResult>[]} results
+   * @returns {{successful: SuccessResult[], failed: FailureResult[]}}
+   */
+  const partitionResults = (results) => {
+    return results
+      .filter((r) => r.status === 'fulfilled')
+      .map((r) => r.value)
+      .reduce(
+        (acc, result) => {
+          const target = isSuccessResult(result) ? acc.successful : acc.failed
+          target.push(result)
+          return acc
+        },
+        { successful: [], failed: [] }
+      )
+  }
+
+  async function getUnmigratedSubmissionIds() {
+    const migratedIds = await organisationsRepository.findAllIds()
+    const submissionIds =
+      await formsSubmissionRepository.findAllFormSubmissionIds()
+    return {
+      organisations: submissionIds.organisations.difference(
+        migratedIds.organisations
+      ),
+      registrations: submissionIds.registrations.difference(
+        migratedIds.registrations
+      ),
+      accreditations: submissionIds.accreditations.difference(
+        migratedIds.accreditations
+      )
+    }
+  }
+
+  const fetchTransformConfigs = {
+    organisation: {
+      fetch: (id) => formsSubmissionRepository.findOrganisationById(id),
+      parse: (s) => parseOrgSubmission(s.id, s.orgId, s.rawSubmissionData)
+    },
+    registration: {
+      fetch: (id) => formsSubmissionRepository.findRegistrationById(id),
+      parse: (s) => parseRegistrationSubmission(s.id, s.rawSubmissionData)
+    },
+    accreditation: {
+      fetch: (id) => formsSubmissionRepository.findAccreditationById(id),
+      parse: (s) => parseAccreditationSubmission(s.id, s.rawSubmissionData)
+    }
+  }
+
+  async function fetchAndTransform(submissionIds, type) {
+    const { fetch, parse } = fetchTransformConfigs[type]
+    const results = []
     let failureCount = 0
 
-    const results = submissions.flatMap((submission) => {
-      const { id } = submission
+    for (const id of submissionIds) {
       try {
-        const params = extractParams(submission)
-        return [parseFunction(...params)]
+        const submission = await fetch(id)
+        results.push(parse(submission))
       } catch (error) {
         failureCount++
         logger.error({
           error,
-          message: `Error transforming ${submissionType} submission`,
+          message: `Error transforming ${type} submission`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.DB,
             action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
             reference: id
           }
         })
-        return []
       }
-    })
+    }
 
     logger.info({
-      message: `Transformed ${results.length}/${submissions.length} ${submissionType} form submissions (${failureCount} failed)`
+      message: `Transformed ${results.length}/${submissionIds.size} ${type} form submissions (${failureCount} failed)`
     })
 
     return results
@@ -152,15 +175,7 @@ export function createFormDataMigrator(
     })
 
     const results = await Promise.allSettled(migrationPromises)
-
-    const successful = results
-      .filter((r) => r.status === 'fulfilled')
-      .map((r) => r.value)
-      .filter(isSuccessResult)
-    const failed = results
-      .filter((r) => r.status === 'fulfilled')
-      .map((r) => r.value)
-      .filter(isFailureResult)
+    const { successful, failed } = partitionResults(results)
 
     const insertedCount = successful.filter(
       (r) => r.action === 'inserted'
@@ -195,23 +210,18 @@ export function createFormDataMigrator(
 
   return {
     async migrate() {
-      /** @type {BaseOrganisation[]} */
-      const baseOrganisations = await fetchAndTransformSubmissions({
-        fetchMethod: 'findAllOrganisations',
-        parseFunction: parseOrgSubmission,
-        submissionType: 'organisation',
-        extractParams: (submission) => [
-          submission.id,
-          submission.orgId,
-          submission.rawSubmissionData
-        ]
-      })
+      const unmigratedSubmissionIds = await getUnmigratedSubmissionIds()
 
-      const transformedRegistrations = await fetchAndTransformSubmissions({
-        fetchMethod: 'findAllRegistrations',
-        parseFunction: parseRegistrationSubmission,
-        submissionType: 'registration'
-      })
+      /** @type {BaseOrganisation[]} */
+      const baseOrganisations = await fetchAndTransform(
+        unmigratedSubmissionIds.organisations,
+        'organisation'
+      )
+
+      const transformedRegistrations = await fetchAndTransform(
+        unmigratedSubmissionIds.registrations,
+        'registration'
+      )
 
       /** @type {OrganisationWithRegistrations[]} */
       const organisationsWithRegistrations = linkRegistrations(
@@ -219,11 +229,10 @@ export function createFormDataMigrator(
         transformedRegistrations
       )
 
-      const transformedAccreditations = await fetchAndTransformSubmissions({
-        fetchMethod: 'findAllAccreditations',
-        parseFunction: parseAccreditationSubmission,
-        submissionType: 'accreditation'
-      })
+      const transformedAccreditations = await fetchAndTransform(
+        unmigratedSubmissionIds.accreditations,
+        'accreditation'
+      )
 
       /** @type {Organisation[]} */
       const organisationsWithAccreditations = linkAccreditations(
