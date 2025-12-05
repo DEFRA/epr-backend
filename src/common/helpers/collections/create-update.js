@@ -198,25 +198,7 @@ export async function createSeedData(
         ...data,
         _id: ObjectId.createFromHexString(data._id),
         organisationId: ObjectId.createFromHexString(data.organisationId),
-        accreditationId: ObjectId.createFromHexString(data.accreditationId),
-        transactions: data.transactions.map((tx) => ({
-          ...tx,
-          _id: ObjectId.createFromHexString(tx._id),
-          createdBy: {
-            ...tx.createdBy,
-            _id: ObjectId.createFromHexString(tx.createdBy._id)
-          },
-          entities: tx.entities.map((entity) => ({
-            ...entity,
-            id: ObjectId.createFromHexString(entity.id),
-            currentVersionId: ObjectId.createFromHexString(
-              entity.currentVersionId
-            ),
-            previousVersionIds: entity.previousVersionIds.map((id) =>
-              ObjectId.createFromHexString(id)
-            )
-          }))
-        }))
+        accreditationId: ObjectId.createFromHexString(data.accreditationId)
       })
 
       await db.collection(COLLECTION_WASTE_BALANCES).insertMany([

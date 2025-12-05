@@ -8,11 +8,11 @@
   "availableAmount": 58.25,
   "transactions": [
     {
-      "_id": "674a1234567890abcdef3006",
+      "id": "tx-c-001",
       "type": "credit",
       "createdAt": "2025-11-01T08:00:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4004",
+        "_id": "user-diana-001",
         "name": "Diana Evans"
       },
       "amount": 75.0,
@@ -22,19 +22,19 @@
       "closingAvailableAmount": 75.0,
       "entities": [
         {
-          "id": "674a1234567890abcdef5007",
-          "currentVersionId": "674a1234567890abcdef6007",
+          "id": "waste-record-c-001",
+          "currentVersionId": "version-c-001",
           "previousVersionIds": [],
           "type": "waste_record:received"
         }
       ]
     },
     {
-      "_id": "674a1234567890abcdef3007",
+      "id": "tx-c-002",
       "type": "pending_debit",
       "createdAt": "2025-11-05T13:20:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4004",
+        "_id": "user-diana-001",
         "name": "Diana Evans"
       },
       "amount": 25.0,
@@ -44,19 +44,19 @@
       "closingAvailableAmount": 50.0,
       "entities": [
         {
-          "id": "674a1234567890abcdef7002",
-          "currentVersionId": "674a1234567890abcdef8003",
+          "id": "prn-c-001",
+          "currentVersionId": "prn-version-c-001",
           "previousVersionIds": [],
           "type": "prn:created"
         }
       ]
     },
     {
-      "_id": "674a1234567890abcdef3008",
+      "id": "tx-c-003",
       "type": "credit",
       "createdAt": "2025-11-08T10:30:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4004",
+        "_id": "user-diana-001",
         "name": "Diana Evans"
       },
       "amount": 15.0,
@@ -66,21 +66,21 @@
       "closingAvailableAmount": 65.0,
       "entities": [
         {
-          "id": "674a1234567890abcdef5007",
-          "currentVersionId": "674a1234567890abcdef6008",
+          "id": "waste-record-c-001",
+          "currentVersionId": "version-c-002",
           "previousVersionIds": [
-            "674a1234567890abcdef6007"
+            "version-c-001"
           ],
           "type": "waste_record:received"
         }
       ]
     },
     {
-      "_id": "674a1234567890abcdef3009",
+      "id": "tx-c-004",
       "type": "debit",
       "createdAt": "2025-11-10T09:15:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4005",
+        "_id": "user-eve-001",
         "name": "Eve Foster"
       },
       "amount": 6.75,
@@ -90,14 +90,14 @@
       "closingAvailableAmount": 58.25,
       "entities": [
         {
-          "id": "674a1234567890abcdef5008",
-          "currentVersionId": "674a1234567890abcdef6009",
+          "id": "waste-record-c-002",
+          "currentVersionId": "version-c-003",
           "previousVersionIds": [],
           "type": "waste_record:exported"
         },
         {
-          "id": "674a1234567890abcdef5009",
-          "currentVersionId": "674a1234567890abcdef6010",
+          "id": "waste-record-c-003",
+          "currentVersionId": "version-c-004",
           "previousVersionIds": [],
           "type": "waste_record:sent_on"
         }

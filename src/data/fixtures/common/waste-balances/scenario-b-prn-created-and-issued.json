@@ -8,11 +8,11 @@
   "availableAmount": 35.75,
   "transactions": [
     {
-      "_id": "674a1234567890abcdef3002",
+      "id": "tx-b-001",
       "type": "credit",
       "createdAt": "2025-11-10T10:00:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4002",
+        "_id": "user-bob-001",
         "name": "Bob Smith"
       },
       "amount": 100.0,
@@ -22,25 +22,25 @@
       "closingAvailableAmount": 100.0,
       "entities": [
         {
-          "id": "674a1234567890abcdef5004",
-          "currentVersionId": "674a1234567890abcdef6004",
+          "id": "waste-record-b-001",
+          "currentVersionId": "version-b-001",
           "previousVersionIds": [],
           "type": "waste_record:received"
         },
         {
-          "id": "674a1234567890abcdef5005",
-          "currentVersionId": "674a1234567890abcdef6005",
+          "id": "waste-record-b-002",
+          "currentVersionId": "version-b-002",
           "previousVersionIds": [],
           "type": "waste_record:received"
         }
       ]
     },
     {
-      "_id": "674a1234567890abcdef3003",
+      "id": "tx-b-002",
       "type": "pending_debit",
       "createdAt": "2025-11-12T14:30:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4002",
+        "_id": "user-bob-001",
         "name": "Bob Smith"
       },
       "amount": 50.0,
@@ -50,19 +50,19 @@
       "closingAvailableAmount": 50.0,
       "entities": [
         {
-          "id": "674a1234567890abcdef7001",
-          "currentVersionId": "674a1234567890abcdef8001",
+          "id": "prn-b-001",
+          "currentVersionId": "prn-version-b-001",
           "previousVersionIds": [],
           "type": "prn:created"
         }
       ]
     },
     {
-      "_id": "674a1234567890abcdef3004",
+      "id": "tx-b-003",
       "type": "debit",
       "createdAt": "2025-11-18T11:15:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4003",
+        "_id": "user-charlie-001",
         "name": "Charlie Davis"
       },
       "amount": 50.0,
@@ -72,21 +72,21 @@
       "closingAvailableAmount": 50.0,
       "entities": [
         {
-          "id": "674a1234567890abcdef7001",
-          "currentVersionId": "674a1234567890abcdef8002",
+          "id": "prn-b-001",
+          "currentVersionId": "prn-version-b-002",
           "previousVersionIds": [
-            "674a1234567890abcdef8001"
+            "prn-version-b-001"
           ],
           "type": "prn:issued"
         }
       ]
     },
     {
-      "_id": "674a1234567890abcdef3005",
+      "id": "tx-b-004",
       "type": "debit",
       "createdAt": "2025-11-20T16:45:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4002",
+        "_id": "user-bob-001",
         "name": "Bob Smith"
       },
       "amount": 14.25,
@@ -96,8 +96,8 @@
       "closingAvailableAmount": 35.75,
       "entities": [
         {
-          "id": "674a1234567890abcdef5006",
-          "currentVersionId": "674a1234567890abcdef6006",
+          "id": "waste-record-b-003",
+          "currentVersionId": "version-b-003",
           "previousVersionIds": [],
           "type": "waste_record:sent_on"
         }

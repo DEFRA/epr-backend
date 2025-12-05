@@ -8,11 +8,11 @@
   "availableAmount": 125.5,
   "transactions": [
     {
-      "_id": "674a1234567890abcdef3001",
+      "id": "tx-a-001",
       "type": "credit",
       "createdAt": "2025-11-15T09:30:00.000Z",
       "createdBy": {
-        "_id": "674a1234567890abcdef4001",
+        "_id": "user-alice-001",
         "name": "Alice Johnson"
       },
       "amount": 125.5,
@@ -22,20 +22,20 @@
       "closingAvailableAmount": 125.5,
       "entities": [
         {
-          "id": "674a1234567890abcdef5001",
-          "currentVersionId": "674a1234567890abcdef6001",
+          "id": "waste-record-a-001",
+          "currentVersionId": "version-a-001",
           "previousVersionIds": [],
           "type": "waste_record:received"
         },
         {
-          "id": "674a1234567890abcdef5002",
-          "currentVersionId": "674a1234567890abcdef6002",
+          "id": "waste-record-a-002",
+          "currentVersionId": "version-a-002",
           "previousVersionIds": [],
           "type": "waste_record:received"
         },
         {
-          "id": "674a1234567890abcdef5003",
-          "currentVersionId": "674a1234567890abcdef6003",
+          "id": "waste-record-a-003",
+          "currentVersionId": "version-a-003",
           "previousVersionIds": [],
           "type": "waste_record:received"
         }
