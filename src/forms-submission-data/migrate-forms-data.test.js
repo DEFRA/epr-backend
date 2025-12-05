@@ -11,7 +11,7 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { readdirSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { migrateFormsData } from './migrate-forms-data.js'
+import { createFormDataMigrator } from './migrate-forms-data.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -141,10 +141,11 @@ describe('migrateFormsData', () => {
           .mockResolvedValueOnce({ action: 'inserted' })
           .mockResolvedValueOnce({ action: 'updated' })
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
           organisationsRepository
         )
+        await formsDataMigration.migrate()
 
         expect(parseOrgSubmission).toHaveBeenCalledTimes(2)
         expect(parseOrgSubmission).toHaveBeenCalledWith(
@@ -217,10 +218,11 @@ describe('migrateFormsData', () => {
           new Error('Upsert failed')
         )
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
           organisationsRepository
         )
+        await formsDataMigration.migrate()
 
         expect(parseOrgSubmission).toHaveBeenCalledWith(
           validSubmission1.id,
@@ -265,10 +267,11 @@ describe('migrateFormsData', () => {
           action: 'unchanged'
         })
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
           organisationsRepository
         )
+        await formsDataMigration.migrate()
 
         expect(parseOrgSubmission).toHaveBeenCalledWith(
           validSubmission1.id,
@@ -304,10 +307,11 @@ describe('migrateFormsData', () => {
           })
         organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
           organisationsRepository
         )
+        await formsDataMigration.migrate()
 
         expect(parseOrgSubmission).toHaveBeenCalledTimes(2)
         expect(organisationsRepository.upsert).toHaveBeenCalledTimes(1)
@@ -353,10 +357,11 @@ describe('migrateFormsData', () => {
           })
         organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
           organisationsRepository
         )
+        await formsDataMigration.migrate()
 
         expect(parseRegistrationSubmission).toHaveBeenCalledTimes(2)
         expect(logger.error).toHaveBeenCalledWith(
@@ -402,10 +407,11 @@ describe('migrateFormsData', () => {
           })
         organisationsRepository.upsert.mockResolvedValue({ action: 'inserted' })
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formsSubmissionRepository,
           organisationsRepository
         )
+        await formsDataMigration.migrate()
 
         expect(parseAccreditationSubmission).toHaveBeenCalledTimes(2)
         expect(logger.error).toHaveBeenCalledWith(
@@ -478,7 +484,11 @@ describe('migrateFormsData', () => {
 
     it('migrates org form submissions from EA fixtures using in-memory repositories', async () => {
       // Run migration
-      await migrateFormsData(formsInMemoryRepo, organisationsInMemoryRepo)
+      const formsDataMigration = createFormDataMigrator(
+        formsInMemoryRepo,
+        organisationsInMemoryRepo
+      )
+      await formsDataMigration.migrate()
 
       // Verify organisations were created
       const allOrgs = await organisationsInMemoryRepo.findAll()

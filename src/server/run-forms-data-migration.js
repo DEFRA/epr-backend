@@ -1,5 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { migrateFormsData } from '#formsubmission/migrate-forms-data.js'
+import { createFormDataMigrator } from '#formsubmission/migrate-forms-data.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
@@ -26,10 +26,12 @@ export const runFormsDataMigration = async (server, options = {}) => {
           server.db
         )()
 
-        await migrateFormsData(
+        const formsDataMigration = createFormDataMigrator(
           formSubmissionsRepository,
           organisationsRepository
         )
+
+        await formsDataMigration.migrate()
 
         logger.info({ message: `Form data migration completed successfully` })
       } finally {
