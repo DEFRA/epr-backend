@@ -2043,6 +2043,7 @@ describe('Summary logs integration', () => {
      */
     const createExcelWithPlaceholders = async () => {
       const workbook = new ExcelJS.Workbook()
+      workbook.addWorksheet('Cover')
       const worksheet = workbook.addWorksheet('Data')
 
       // Row 1-4: Metadata

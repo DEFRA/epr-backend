@@ -37,7 +37,7 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.addIssue(
         VALIDATION_SEVERITY.FATAL,
-        VALIDATION_CATEGORY.PARSING,
+        VALIDATION_CATEGORY.TECHNICAL,
         'Could not parse file',
         'ERR_PARSE_FAILED'
       )
@@ -95,7 +95,7 @@ describe('Validation Issues', () => {
     it('adds a fatal issue', () => {
       const result = createValidationIssues()
       result.addFatal(
-        VALIDATION_CATEGORY.PARSING,
+        VALIDATION_CATEGORY.TECHNICAL,
         'Could not locate marker',
         'TEST_CODE',
         {
@@ -106,7 +106,7 @@ describe('Validation Issues', () => {
       expect(result.getAllIssues()).toHaveLength(1)
       expect(result.getAllIssues()[0].severity).toBe(VALIDATION_SEVERITY.FATAL)
       expect(result.getAllIssues()[0].category).toBe(
-        VALIDATION_CATEGORY.PARSING
+        VALIDATION_CATEGORY.TECHNICAL
       )
       expect(result.getAllIssues()[0].message).toBe('Could not locate marker')
       expect(result.getAllIssues()[0].context).toEqual({
@@ -117,7 +117,7 @@ describe('Validation Issues', () => {
     it('returns this for chaining', () => {
       const result = createValidationIssues()
       const returned = result.addFatal(
-        VALIDATION_CATEGORY.PARSING,
+        VALIDATION_CATEGORY.TECHNICAL,
         'Test',
         'TEST_CODE'
       )
@@ -128,7 +128,7 @@ describe('Validation Issues', () => {
     it('adds a fatal issue with a code', () => {
       const result = createValidationIssues()
       result.addFatal(
-        VALIDATION_CATEGORY.PARSING,
+        VALIDATION_CATEGORY.TECHNICAL,
         'Could not parse file',
         'ERR_PARSE_FAILED',
         { sheet: 'Received' }
@@ -137,7 +137,7 @@ describe('Validation Issues', () => {
       expect(result.getAllIssues()).toHaveLength(1)
       expect(result.getAllIssues()[0]).toEqual({
         severity: VALIDATION_SEVERITY.FATAL,
-        category: VALIDATION_CATEGORY.PARSING,
+        category: VALIDATION_CATEGORY.TECHNICAL,
         message: 'Could not parse file',
         context: { sheet: 'Received' },
         code: 'ERR_PARSE_FAILED'
@@ -252,7 +252,7 @@ describe('Validation Issues', () => {
   describe('chaining', () => {
     it('allows method chaining', () => {
       const result = createValidationIssues()
-        .addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
+        .addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal error', 'TEST_CODE')
         .addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
         .addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
         .addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
@@ -264,15 +264,23 @@ describe('Validation Issues', () => {
   describe('isFatal', () => {
     it('returns true when there is a fatal issue', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal error', 'TEST_CODE')
 
       expect(result.isFatal()).toBe(true)
     })
 
     it('returns true when there are multiple fatal issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error 1', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error 2', 'TEST_CODE')
+      result.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Fatal error 1',
+        'TEST_CODE'
+      )
+      result.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Fatal error 2',
+        'TEST_CODE'
+      )
 
       expect(result.isFatal()).toBe(true)
     })
@@ -280,7 +288,7 @@ describe('Validation Issues', () => {
     it('returns true when there are fatal and non-fatal issues', () => {
       const result = createValidationIssues()
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal error', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
 
       expect(result.isFatal()).toBe(true)
@@ -318,7 +326,7 @@ describe('Validation Issues', () => {
 
     it('returns false when there is a fatal issue', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal error', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal error', 'TEST_CODE')
 
       expect(result.isValid()).toBe(false)
     })
@@ -340,7 +348,7 @@ describe('Validation Issues', () => {
 
     it('returns false when there are fatal, error, and warning issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
@@ -364,7 +372,7 @@ describe('Validation Issues', () => {
 
     it('returns true for any type of issue', () => {
       const resultFatal = createValidationIssues().addFatal(
-        VALIDATION_CATEGORY.PARSING,
+        VALIDATION_CATEGORY.TECHNICAL,
         'Fatal',
         'TEST_CODE'
       )
@@ -388,9 +396,9 @@ describe('Validation Issues', () => {
   describe('getIssuesBySeverity', () => {
     it('returns only fatal issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 2', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
 
       const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
@@ -402,7 +410,7 @@ describe('Validation Issues', () => {
 
     it('returns only error issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
@@ -416,7 +424,7 @@ describe('Validation Issues', () => {
 
     it('returns only warning issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2', 'TEST_CODE')
@@ -439,23 +447,10 @@ describe('Validation Issues', () => {
   })
 
   describe('getIssuesByCategory', () => {
-    it('returns only parsing issues', () => {
-      const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 1', 'TEST_CODE')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 2', 'TEST_CODE')
-
-      const parsing = result.getIssuesByCategory(VALIDATION_CATEGORY.PARSING)
-
-      expect(parsing).toHaveLength(2)
-      expect(parsing[0].message).toBe('Parsing 1')
-      expect(parsing[1].message).toBe('Parsing 2')
-    })
-
     it('returns only technical issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Parsing 1', 'TEST_CODE')
-      result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
+      result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Business 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 2', 'TEST_CODE')
 
       const technical = result.getIssuesByCategory(
@@ -484,9 +479,9 @@ describe('Validation Issues', () => {
       const result = createValidationIssues()
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Technical 1', 'TEST_CODE')
 
-      const parsing = result.getIssuesByCategory(VALIDATION_CATEGORY.PARSING)
+      const business = result.getIssuesByCategory(VALIDATION_CATEGORY.BUSINESS)
 
-      expect(parsing).toHaveLength(0)
+      expect(business).toHaveLength(0)
     })
   })
 
@@ -530,7 +525,11 @@ describe('Validation Issues', () => {
 
     it('ignores issues without row context', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Global error', 'TEST_CODE')
+      result.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Global error',
+        'TEST_CODE'
+      )
       result.addError(
         VALIDATION_CATEGORY.TECHNICAL,
         'Error on row 5',
@@ -549,7 +548,11 @@ describe('Validation Issues', () => {
 
     it('returns empty map when no issues have row context', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Global error', 'TEST_CODE')
+      result.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Global error',
+        'TEST_CODE'
+      )
 
       const byRow = result.getIssuesByRow()
 
@@ -568,8 +571,8 @@ describe('Validation Issues', () => {
   describe('groupBySeverity', () => {
     it('groups all issues by severity', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 2', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 2', 'TEST_CODE')
@@ -596,7 +599,7 @@ describe('Validation Issues', () => {
   describe('getAllIssues', () => {
     it('returns all issues', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
@@ -629,8 +632,8 @@ describe('Validation Issues', () => {
   describe('getCounts', () => {
     it('returns counts for all severity levels', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 2', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 3', 'TEST_CODE')
@@ -669,8 +672,8 @@ describe('Validation Issues', () => {
 
     it('returns summary with fatal count', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 1', 'TEST_CODE')
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal 2', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 1', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal 2', 'TEST_CODE')
 
       expect(result.getSummary()).toBe('Validation completed with 2 fatal')
     })
@@ -707,7 +710,7 @@ describe('Validation Issues', () => {
 
     it('returns summary with all severity types', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 1', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error 2', 'TEST_CODE')
       result.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning 1', 'TEST_CODE')
@@ -719,7 +722,7 @@ describe('Validation Issues', () => {
 
     it('returns summary with only fatal and errors', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal', 'TEST_CODE')
       result.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
 
       expect(result.getSummary()).toBe(
@@ -825,7 +828,7 @@ describe('Validation Issues', () => {
         }
       )
       result.addFatal(
-        VALIDATION_CATEGORY.PARSING,
+        VALIDATION_CATEGORY.TECHNICAL,
         'Could not parse file',
         'TEST_CODE'
       )
@@ -835,7 +838,7 @@ describe('Validation Issues', () => {
       expect(response.issues).toHaveLength(3)
       expect(response.issues[0].type).toBe('TECHNICAL_ERROR')
       expect(response.issues[1].type).toBe('BUSINESS_WARNING')
-      expect(response.issues[2].type).toBe('PARSING_FATAL')
+      expect(response.issues[2].type).toBe('TECHNICAL_FATAL')
     })
 
     it('includes meta when context provided', () => {
@@ -890,7 +893,11 @@ describe('Validation Issues', () => {
 
     it('generates correct types for all severity/category combinations', () => {
       const result = createValidationIssues()
-      result.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal parsing', 'TEST_CODE')
+      result.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        'Fatal technical',
+        'TEST_CODE'
+      )
       result.addError(
         VALIDATION_CATEGORY.TECHNICAL,
         'Technical error',
@@ -904,7 +911,7 @@ describe('Validation Issues', () => {
 
       const response = result.toErrorResponse()
 
-      expect(response.issues[0].type).toBe('PARSING_FATAL')
+      expect(response.issues[0].type).toBe('TECHNICAL_FATAL')
       expect(response.issues[1].type).toBe('TECHNICAL_ERROR')
       expect(response.issues[2].type).toBe('BUSINESS_WARNING')
     })
@@ -981,11 +988,11 @@ describe('Validation Issues', () => {
       expect(
         issueToErrorObject({
           severity: 'FATAL',
-          category: 'PARSING',
+          category: 'TECHNICAL',
           message: 'Cannot parse'
         })
       ).toEqual({
-        type: 'PARSING_FATAL'
+        type: 'TECHNICAL_FATAL'
       })
 
       expect(
@@ -1118,7 +1125,7 @@ describe('Validation Issues', () => {
       const result1 = createValidationIssues()
       const result2 = createValidationIssues()
 
-      result2.addFatal(VALIDATION_CATEGORY.PARSING, 'Fatal', 'TEST_CODE')
+      result2.addFatal(VALIDATION_CATEGORY.TECHNICAL, 'Fatal', 'TEST_CODE')
       result2.addError(VALIDATION_CATEGORY.TECHNICAL, 'Error', 'TEST_CODE')
       result2.addWarning(VALIDATION_CATEGORY.BUSINESS, 'Warning', 'TEST_CODE')
 
