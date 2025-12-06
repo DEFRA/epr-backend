@@ -27,10 +27,17 @@ describe('joi-messages', () => {
       expect(PATTERNS.EWC_CODE.test('15 01 02')).toBe(true)
     })
 
+    it('EWC_CODE matches valid format with optional star', () => {
+      expect(PATTERNS.EWC_CODE.test('03 03 08*')).toBe(true)
+      expect(PATTERNS.EWC_CODE.test('15 01 02*')).toBe(true)
+    })
+
     it('EWC_CODE rejects invalid format', () => {
       expect(PATTERNS.EWC_CODE.test('030308')).toBe(false)
       expect(PATTERNS.EWC_CODE.test('03-03-08')).toBe(false)
       expect(PATTERNS.EWC_CODE.test('3 3 8')).toBe(false)
+      expect(PATTERNS.EWC_CODE.test('03 03 08**')).toBe(false)
+      expect(PATTERNS.EWC_CODE.test('*03 03 08')).toBe(false)
     })
 
     it('is frozen', () => {

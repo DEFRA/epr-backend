@@ -2,12 +2,14 @@ import ExcelJS from 'exceljs'
 import { produce } from 'immer'
 import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
 import {
-  META_PREFIX,
   DATA_PREFIX,
-  SKIP_COLUMN,
-  SKIP_ROW_TEXT,
+  MATERIAL_PLACEHOLDER_TEXT,
+  META_PREFIX,
   PLACEHOLDER_TEXT,
-  MATERIAL_PLACEHOLDER_TEXT
+  ROW_ID_HEADER,
+  SKIP_COLUMN,
+  SKIP_EXAMPLE_ROW_TEXT,
+  SKIP_HEADER_ROW_TEXT
 } from '#domain/summary-logs/markers.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 
@@ -146,12 +148,23 @@ const updateCollectionWithCell = (
 }
 
 const shouldSkipRow = (draftCollection) => {
+  // Skip "example" rows
   for (const skipIndex of draftCollection.skipColumnIndices) {
     const cellValue = draftCollection.currentRow[skipIndex]
-    if (cellValue === SKIP_ROW_TEXT) {
+    if (cellValue === SKIP_EXAMPLE_ROW_TEXT) {
       return true
     }
   }
+
+  // Skip textual (user-facing) header rows
+  const rowIdIndex = draftCollection.headers.indexOf(ROW_ID_HEADER)
+  if (rowIdIndex !== -1) {
+    const cellValue = draftCollection.currentRow[rowIdIndex]
+    if (cellValue === SKIP_HEADER_ROW_TEXT) {
+      return true
+    }
+  }
+
   return false
 }
 

@@ -53,7 +53,8 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     }),
     EWC_CODE: Joi.string().pattern(PATTERNS.EWC_CODE).optional().messages({
       'string.base': MESSAGES.MUST_BE_A_STRING,
-      'string.pattern.base': 'must be in format "XX XX XX" (e.g. "03 03 08")'
+      'string.pattern.base':
+        'must be in format "XX XX XX" with optional * suffix (e.g. "03 03 08" or "03 03 08*")'
     }),
     GROSS_WEIGHT: Joi.number().greater(CONSTANTS.ZERO).optional().messages({
       'number.base': MESSAGES.MUST_BE_A_NUMBER,

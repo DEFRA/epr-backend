@@ -18,7 +18,7 @@ export const MESSAGES = Object.freeze({
  * Common regex patterns for field validation
  */
 export const PATTERNS = Object.freeze({
-  EWC_CODE: /^\d{2} \d{2} \d{2}$/
+  EWC_CODE: /^\d{2} \d{2} \d{2}\*?$/
 })
 
 /**
