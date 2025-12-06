@@ -2,9 +2,16 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { createSummaryLogExtractor } from './extractor.js'
 import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
-vi.mock('#adapters/parsers/summary-logs/exceljs-parser.js', () => ({
-  parse: vi.fn()
-}))
+vi.mock(
+  '#adapters/parsers/summary-logs/exceljs-parser.js',
+  async (importOriginal) => {
+    const actual = await importOriginal()
+    return {
+      ...actual,
+      parse: vi.fn()
+    }
+  }
+)
 
 describe('SummaryLogExtractor', () => {
   let uploadsRepository
@@ -65,13 +72,18 @@ describe('SummaryLogExtractor', () => {
     )
   })
 
-  it('should parse the file buffer', async () => {
+  it('should parse the file buffer with summary log options', async () => {
     const buffer = Buffer.from('test content')
     uploadsRepository.findByLocation.mockResolvedValue(buffer)
 
     await summaryLogExtractor.extract(summaryLog)
 
-    expect(parse).toHaveBeenCalledWith(buffer)
+    expect(parse).toHaveBeenCalledWith(buffer, {
+      requiredWorksheet: 'Cover',
+      maxWorksheets: 20,
+      maxRowsPerSheet: 50_000,
+      maxColumnsPerSheet: 1_000
+    })
   })
 
   it('should return parsed data', async () => {

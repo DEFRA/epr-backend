@@ -350,6 +350,34 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
+  it('should return SPREADSHEET_STRUCTURE_INVALID code when spreadsheet validation fails', async () => {
+    const { SpreadsheetValidationError } =
+      await import('#adapters/parsers/summary-logs/exceljs-parser.js')
+    summaryLogExtractor.extract.mockRejectedValue(
+      new SpreadsheetValidationError("Missing required 'Cover' worksheet")
+    )
+
+    await validateSummaryLog(summaryLogId)
+
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: "Missing required 'Cover' worksheet",
+              code: 'SPREADSHEET_INVALID_ERROR'
+            }
+          ]
+        })
+      })
+    )
+  })
+
   it('should log as expected when validation fails', async () => {
     summaryLogExtractor.extract.mockRejectedValue(new Error('S3 access denied'))
 
