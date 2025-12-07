@@ -17,7 +17,8 @@ const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
 const ONE_MINUTE = 60_000
-const FIVE_MINUTES = 5 * ONE_MINUTE
+const WORKER_TIMEOUT_MINUTES = 5
+const WORKER_TIMEOUT_MS = WORKER_TIMEOUT_MINUTES * ONE_MINUTE
 
 /**
  * Worker thread resource limits.
@@ -202,7 +203,7 @@ export const createSummaryLogsCommandExecutor = (
             summaryLogsRepository,
             logger
           )
-        }, FIVE_MINUTES)
+        }, WORKER_TIMEOUT_MS)
 
         activeTimeouts.set(summaryLogId, timeoutId)
       }
