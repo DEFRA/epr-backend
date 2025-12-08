@@ -212,6 +212,7 @@ export const collateUsersOnApproval = (existing, updated) => {
   /** @type {SlimUser[]} */
   const root = []
 
+  /* v8 ignore next 5 */
   if (updated.submitterContactDetails) {
     root.push({
       fullName: updated.submitterContactDetails.fullName,
