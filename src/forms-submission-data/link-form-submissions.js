@@ -1,5 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import { STATUS, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { compareSite, siteInfoToLog } from './parsing-common/site.js'
 
 /**
@@ -123,7 +123,7 @@ export function linkItemsToOrganisations(
         ? partitionItemsByOrgIdMatch(itemsPerOrg, org)
         : { matched: itemsPerOrg, unmatched: [] }
 
-      org[propertyName] = matched
+      org[propertyName] = (org[propertyName] ?? []).concat(matched)
       unlinked.push(...unmatched.map(toUnlinkedItem))
     } else {
       unlinked.push(...itemsPerOrg.map(toUnlinkedItem))
@@ -156,19 +156,66 @@ export function isAccreditationForRegistration(accreditation, registration) {
     : true
 }
 
+/**
+ * Finds accreditations eligible for linking to a registration
+ * Filters out approved accreditations to prevent linking to locked records
+ */
+function findEligibleAccreditations(registration, accreditations) {
+  return accreditations
+    .filter((acc) => acc.status !== STATUS.APPROVED)
+    .filter((acc) => isAccreditationForRegistration(acc, registration))
+}
+
+/**
+ * Selects the latest accreditation from a list by formSubmissionTime
+ */
+function selectLatestAccreditation(accreditations) {
+  return accreditations.sort(
+    (a, b) => b.formSubmissionTime - a.formSubmissionTime
+  )[0]
+}
+
+/**
+ * Checks if a registration is linked to an approved accreditation
+ */
+function isLinkedToApprovedAccreditation(registration, accreditations) {
+  const linkedAccreditation = accreditations.find(
+    (acc) => acc.id === registration.accreditationId
+  )
+  return linkedAccreditation?.status === STATUS.APPROVED
+}
+
+/**
+ * Finds registrations that are eligible for linking to accreditations
+ * Excludes approved registrations that are already linked to approved accreditations
+ * This preserves existing links and prevents re-linking approved registrations
+ */
+function findRegistrationsToLink(registrations, accreditations) {
+  return registrations.filter(
+    (registration) =>
+      !isLinkedToApprovedAccreditation(registration, accreditations)
+  )
+}
+
 function linkAccreditationsForOrg(organisation) {
   const accreditations = organisation.accreditations ?? []
   const registrations = organisation.registrations ?? []
 
-  for (const registration of registrations) {
-    const matchedAccreditations = accreditations.filter((acc) =>
-      isAccreditationForRegistration(acc, registration)
+  const registrationsToLink = findRegistrationsToLink(
+    registrations,
+    accreditations
+  )
+
+  for (const registration of registrationsToLink) {
+    const matchedAccreditations = findEligibleAccreditations(
+      registration,
+      accreditations
     )
 
     if (matchedAccreditations.length > 0) {
-      const latestMatchedAccreditation = matchedAccreditations.sort(
-        (a, b) => b.formSubmissionTime - a.formSubmissionTime
-      )[0]
+      const latestMatchedAccreditation = selectLatestAccreditation(
+        matchedAccreditations
+      )
       registration.accreditationId = latestMatchedAccreditation.id
 
       if (matchedAccreditations.length > 1) {

@@ -239,16 +239,36 @@ describe('migrateFormsData', () => {
       })
 
       it('Incremental data migration - org2 already migrated with new reg and accr, org1 is new', async () => {
-        // Setup: org2 already migrated, org1 is new, reg2 and accr2 are new for org2
+        // Setup: org2 already migrated with reg1 and accr1, org1 is new, reg2 and accr2 are new for org2
+        const existingReg1Id = new ObjectId()
+        const existingAccr1Id = new ObjectId()
+
+        const existingReg1ForOrg2 = {
+          id: existingReg1Id.toString(),
+          systemReference: validSubmission2.id,
+          material: 'plastic'
+        }
+        const existingAccr1ForOrg2 = {
+          id: existingAccr1Id.toString(),
+          systemReference: validSubmission2.id,
+          material: 'plastic'
+        }
+
         organisationsRepository.findAllIds.mockResolvedValue({
           organisations: new Set([validSubmission2.id]),
-          registrations: new Set(),
-          accreditations: new Set()
+          registrations: new Set([existingReg1Id.toString()]),
+          accreditations: new Set([existingAccr1Id.toString()])
         })
         formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
           organisations: new Set([validSubmission1.id, validSubmission2.id]),
-          registrations: new Set([validRegSubmission2ForOrg2.id]),
-          accreditations: new Set([validAccrSubmission2ForOrg2.id])
+          registrations: new Set([
+            existingReg1Id.toString(),
+            validRegSubmission2ForOrg2.id
+          ]),
+          accreditations: new Set([
+            existingAccr1Id.toString(),
+            validAccrSubmission2ForOrg2.id
+          ])
         })
 
         // Mock fetch methods - org1 from forms repo (raw), org2 from orgs repo (already migrated)
@@ -258,8 +278,8 @@ describe('migrateFormsData', () => {
         organisationsRepository.findById.mockResolvedValueOnce({
           ...transformedOrg2,
           version: 1,
-          registrations: [],
-          accreditations: []
+          registrations: [existingReg1ForOrg2],
+          accreditations: [existingAccr1ForOrg2]
         })
         formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce(
           validRegSubmission2ForOrg2
@@ -289,7 +309,7 @@ describe('migrateFormsData', () => {
         )
         await formsDataMigration.migrate()
 
-        // Verify org1 inserted without reg/accr, org2 updated with new reg/accr
+        // Verify org1 inserted without reg/accr, org2 updated with new reg/accr appended to existing
         expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
         expect(organisationsRepository.insert).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -303,8 +323,8 @@ describe('migrateFormsData', () => {
           transformedOrg2.id,
           transformedOrg2.version,
           expect.objectContaining({
-            registrations: [transformedReg2ForOrg2],
-            accreditations: [transformedAccr2ForOrg2]
+            registrations: [existingReg1ForOrg2, transformedReg2ForOrg2],
+            accreditations: [existingAccr1ForOrg2, transformedAccr2ForOrg2]
           })
         )
 
