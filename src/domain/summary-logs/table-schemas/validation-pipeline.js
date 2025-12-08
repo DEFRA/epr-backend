@@ -92,7 +92,10 @@ export const classifyRow = (row, tableSchema) => {
       outcome: ROW_OUTCOME.REJECTED,
       issues: error.details.map((detail) => ({
         code: 'VALIDATION_ERROR',
-        field: detail.path[0],
+        // For field-level validators, path[0] contains the field name
+        // For object-level custom validators (e.g., calculation checks),
+        // path is empty but field is passed via context.field
+        field: detail.path[0] ?? detail.context?.field,
         message: detail.message,
         type: detail.type // Include Joi error type for application-layer mapping
       }))

@@ -12,7 +12,11 @@ export const MESSAGES = Object.freeze({
   MUST_BE_GREATER_THAN_ZERO: 'must be greater than 0',
   MUST_BE_AT_LEAST_ZERO: 'must be at least 0',
   MUST_BE_LESS_THAN_ONE: 'must be less than 1',
-  MUST_BE_AT_MOST_1000: 'must be at most 1000'
+  MUST_BE_AT_MOST_ONE: 'must be at most 1',
+  MUST_BE_AT_MOST_1000: 'must be at most 1000',
+  MUST_BE_YES_OR_NO: 'must be Yes or No',
+  MUST_MATCH_CALCULATION:
+    'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
 })
 
 /**
@@ -27,7 +31,16 @@ export const PATTERNS = Object.freeze({
  */
 export const CONSTANTS = Object.freeze({
   ZERO: 0,
+  ONE: 1,
   MAX_PRODUCT_TONNAGE: 1000
+})
+
+/**
+ * Valid string values for Yes/No fields
+ */
+export const YES_NO_VALUES = Object.freeze({
+  YES: 'Yes',
+  NO: 'No'
 })
 
 /**
