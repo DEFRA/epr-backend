@@ -31,10 +31,9 @@ import { ObjectId } from 'mongodb'
 
 const { validToken } = entraIdMockAuthTokens
 
-const organisationId = new ObjectId().toString()
-const registrationId = new ObjectId().toString()
-
 const createUploadPayload = (
+  organisationId,
+  registrationId,
   fileStatus,
   fileId,
   filename,
@@ -65,20 +64,25 @@ const createUploadPayload = (
   numberOfRejectedFiles: fileStatus === UPLOAD_STATUS.REJECTED ? 1 : 0
 })
 
-const buildGetUrl = (summaryLogId) =>
+const buildGetUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
 
-const buildPostUrl = (summaryLogId) =>
+const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
-const buildSubmitUrl = (summaryLogId) =>
+const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
 
 /**
  * Polls for validation to complete by checking status endpoint
  * Retries up to 10 times with 50ms delay between attempts (max 500ms total)
  */
-const pollForValidation = async (server, summaryLogId) => {
+const pollForValidation = async (
+  server,
+  organisationId,
+  registrationId,
+  summaryLogId
+) => {
   let attempts = 0
   const maxAttempts = 10
   let status = SUMMARY_LOG_STATUS.VALIDATING
@@ -88,7 +92,7 @@ const pollForValidation = async (server, summaryLogId) => {
 
     const checkResponse = await server.inject({
       method: 'GET',
-      url: buildGetUrl(summaryLogId),
+      url: buildGetUrl(organisationId, registrationId, summaryLogId),
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -127,10 +131,16 @@ const createStandardMeta = (processingType) => ({
  * Creates test infrastructure for summary log integration tests.
  * Reduces boilerplate by setting up common repositories, validators, and server.
  *
+ * @param {string} organisationId - The organisation ID to use for test data
+ * @param {string} registrationId - The registration ID to use for test data
  * @param {Object} extractorData - Data to be returned by the mock extractor, keyed by fileId
  * @returns {Promise<{server: Object, summaryLogsRepository: Object}>}
  */
-const createTestInfrastructure = async (extractorData) => {
+const createTestInfrastructure = async (
+  organisationId,
+  registrationId,
+  extractorData
+) => {
   const mockLogger = {
     info: vi.fn(),
     error: vi.fn(),
@@ -188,16 +198,25 @@ const createTestInfrastructure = async (extractorData) => {
 describe('Summary logs integration', () => {
   let server
   let summaryLogsRepository
+  let organisationId
+  let registrationId
 
   setupAuthContext()
 
   beforeEach(async () => {
-    const result = await createTestInfrastructure({
-      'file-123': {
-        meta: createStandardMeta('REPROCESSOR_INPUT'),
-        data: {}
+    organisationId = new ObjectId().toString()
+    registrationId = new ObjectId().toString()
+
+    const result = await createTestInfrastructure(
+      organisationId,
+      registrationId,
+      {
+        'file-123': {
+          meta: createStandardMeta('REPROCESSOR_INPUT'),
+          data: {}
+        }
       }
-    })
+    )
     server = result.server
     summaryLogsRepository = result.summaryLogsRepository
   })
@@ -210,7 +229,7 @@ describe('Summary logs integration', () => {
 
       response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(summaryLogId),
+        url: buildGetUrl(organisationId, registrationId, summaryLogId),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -237,8 +256,14 @@ describe('Summary logs integration', () => {
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        ),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -266,11 +291,16 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -313,8 +343,10 @@ describe('Summary logs integration', () => {
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
         payload: createUploadPayload(
+          organisationId,
+          registrationId,
           UPLOAD_STATUS.REJECTED,
           fileId,
           filename,
@@ -349,7 +381,7 @@ describe('Summary logs integration', () => {
       beforeEach(async () => {
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -383,8 +415,10 @@ describe('Summary logs integration', () => {
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
         payload: createUploadPayload(
+          organisationId,
+          registrationId,
           UPLOAD_STATUS.PENDING,
           fileId,
           filename,
@@ -426,53 +460,59 @@ describe('Summary logs integration', () => {
         let uploadResponse
 
         beforeEach(async () => {
-          const result = await createTestInfrastructure({
-            [fileId]: {
-              meta: createStandardMeta('REPROCESSOR_INPUT'),
-              data: {
-                RECEIVED_LOADS_FOR_REPROCESSING: {
-                  location: { sheet: 'Received', row: 7, column: 'B' },
-                  headers: [
-                    'ROW_ID',
-                    'DATE_RECEIVED_FOR_REPROCESSING',
-                    'EWC_CODE',
-                    'GROSS_WEIGHT',
-                    'TARE_WEIGHT',
-                    'PALLET_WEIGHT',
-                    'NET_WEIGHT',
-                    'BAILING_WIRE_PROTOCOL',
-                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                    'WEIGHT_OF_NON_TARGET_MATERIALS',
-                    'RECYCLABLE_PROPORTION_PERCENTAGE',
-                    'TONNAGE_RECEIVED_FOR_RECYCLING'
-                  ],
-                  rows: [
-                    [
-                      999, // Invalid ROW_ID (below minimum 1000)
-                      'invalid-date', // Also invalid
-                      'bad-ewc-code', // Also invalid
-                      1000,
-                      100,
-                      50,
-                      850,
-                      'YES',
-                      'WEIGHT',
-                      50,
-                      0.85,
-                      850
+          const result = await createTestInfrastructure(
+            organisationId,
+            registrationId,
+            {
+              [fileId]: {
+                meta: createStandardMeta('REPROCESSOR_INPUT'),
+                data: {
+                  RECEIVED_LOADS_FOR_REPROCESSING: {
+                    location: { sheet: 'Received', row: 7, column: 'B' },
+                    headers: [
+                      'ROW_ID',
+                      'DATE_RECEIVED_FOR_REPROCESSING',
+                      'EWC_CODE',
+                      'GROSS_WEIGHT',
+                      'TARE_WEIGHT',
+                      'PALLET_WEIGHT',
+                      'NET_WEIGHT',
+                      'BAILING_WIRE_PROTOCOL',
+                      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                      'WEIGHT_OF_NON_TARGET_MATERIALS',
+                      'RECYCLABLE_PROPORTION_PERCENTAGE',
+                      'TONNAGE_RECEIVED_FOR_RECYCLING'
+                    ],
+                    rows: [
+                      [
+                        999, // Invalid ROW_ID (below minimum 1000)
+                        'invalid-date', // Also invalid
+                        'bad-ewc-code', // Also invalid
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'YES',
+                        'WEIGHT',
+                        50,
+                        0.85,
+                        850
+                      ]
                     ]
-                  ]
+                  }
                 }
               }
             }
-          })
+          )
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository
 
           uploadResponse = await server.inject({
             method: 'POST',
-            url: buildPostUrl(summaryLogId),
+            url: buildPostUrl(organisationId, registrationId, summaryLogId),
             payload: createUploadPayload(
+              organisationId,
+              registrationId,
               UPLOAD_STATUS.COMPLETE,
               fileId,
               filename
@@ -491,11 +531,16 @@ describe('Summary logs integration', () => {
           let response
 
           beforeEach(async () => {
-            await pollForValidation(server, summaryLogId)
+            await pollForValidation(
+              server,
+              organisationId,
+              registrationId,
+              summaryLogId
+            )
 
             response = await server.inject({
               method: 'GET',
-              url: buildGetUrl(summaryLogId),
+              url: buildGetUrl(organisationId, registrationId, summaryLogId),
               headers: {
                 Authorization: `Bearer ${validToken}`
               }
@@ -565,67 +610,73 @@ describe('Summary logs integration', () => {
         let uploadResponse
 
         beforeEach(async () => {
-          const result = await createTestInfrastructure({
-            [fileId]: {
-              meta: createStandardMeta('REPROCESSOR_INPUT'),
-              data: {
-                RECEIVED_LOADS_FOR_REPROCESSING: {
-                  location: { sheet: 'Received', row: 7, column: 'B' },
-                  headers: [
-                    'ROW_ID',
-                    'DATE_RECEIVED_FOR_REPROCESSING',
-                    'EWC_CODE',
-                    'GROSS_WEIGHT',
-                    'TARE_WEIGHT',
-                    'PALLET_WEIGHT',
-                    'NET_WEIGHT',
-                    'BAILING_WIRE_PROTOCOL',
-                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                    'WEIGHT_OF_NON_TARGET_MATERIALS',
-                    'RECYCLABLE_PROPORTION_PERCENTAGE',
-                    'TONNAGE_RECEIVED_FOR_RECYCLING'
-                  ],
-                  rows: [
-                    [
-                      1000,
-                      '2025-05-28T00:00:00.000Z',
-                      '03 03 08',
-                      1000,
-                      100,
-                      50,
-                      850,
-                      'YES',
-                      'WEIGHT',
-                      50,
-                      0.85,
-                      850
-                    ], // Valid row
-                    [
-                      1001,
-                      'invalid-date',
-                      'bad-code',
-                      1000,
-                      100,
-                      50,
-                      850,
-                      'YES',
-                      'WEIGHT',
-                      50,
-                      0.85,
-                      850
-                    ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
-                  ]
+          const result = await createTestInfrastructure(
+            organisationId,
+            registrationId,
+            {
+              [fileId]: {
+                meta: createStandardMeta('REPROCESSOR_INPUT'),
+                data: {
+                  RECEIVED_LOADS_FOR_REPROCESSING: {
+                    location: { sheet: 'Received', row: 7, column: 'B' },
+                    headers: [
+                      'ROW_ID',
+                      'DATE_RECEIVED_FOR_REPROCESSING',
+                      'EWC_CODE',
+                      'GROSS_WEIGHT',
+                      'TARE_WEIGHT',
+                      'PALLET_WEIGHT',
+                      'NET_WEIGHT',
+                      'BAILING_WIRE_PROTOCOL',
+                      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                      'WEIGHT_OF_NON_TARGET_MATERIALS',
+                      'RECYCLABLE_PROPORTION_PERCENTAGE',
+                      'TONNAGE_RECEIVED_FOR_RECYCLING'
+                    ],
+                    rows: [
+                      [
+                        1000,
+                        '2025-05-28T00:00:00.000Z',
+                        '03 03 08',
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'YES',
+                        'WEIGHT',
+                        50,
+                        0.85,
+                        850
+                      ], // Valid row
+                      [
+                        1001,
+                        'invalid-date',
+                        'bad-code',
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'YES',
+                        'WEIGHT',
+                        50,
+                        0.85,
+                        850
+                      ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
+                    ]
+                  }
                 }
               }
             }
-          })
+          )
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository
 
           uploadResponse = await server.inject({
             method: 'POST',
-            url: buildPostUrl(summaryLogId),
+            url: buildPostUrl(organisationId, registrationId, summaryLogId),
             payload: createUploadPayload(
+              organisationId,
+              registrationId,
               UPLOAD_STATUS.COMPLETE,
               fileId,
               filename
@@ -644,11 +695,16 @@ describe('Summary logs integration', () => {
           let response
 
           beforeEach(async () => {
-            await pollForValidation(server, summaryLogId)
+            await pollForValidation(
+              server,
+              organisationId,
+              registrationId,
+              summaryLogId
+            )
 
             response = await server.inject({
               method: 'GET',
-              url: buildGetUrl(summaryLogId),
+              url: buildGetUrl(organisationId, registrationId, summaryLogId),
               headers: {
                 Authorization: `Bearer ${validToken}`
               }
@@ -790,41 +846,47 @@ describe('Summary logs integration', () => {
         let uploadResponse
 
         beforeEach(async () => {
-          const result = await createTestInfrastructure({
-            [fileId]: {
-              meta: createStandardMeta('REPROCESSOR_OUTPUT'),
-              data: {
-                REPROCESSED_LOADS: {
-                  location: { sheet: 'Reprocessed', row: 7, column: 'B' },
-                  headers: [
-                    'ROW_ID',
-                    'DATE_LOAD_LEFT_SITE',
-                    'PRODUCT_TONNAGE',
-                    'UK_PACKAGING_WEIGHT_PERCENTAGE',
-                    'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-                    'ADD_PRODUCT_WEIGHT'
-                  ],
-                  rows: [
-                    [
-                      3000, // Valid ROW_ID (minimum for REPROCESSED_LOADS)
-                      '2025-05-28T00:00:00.000Z', // Valid date
-                      1001, // Invalid PRODUCT_TONNAGE (above maximum 1000)
-                      0.5,
-                      100,
-                      50
+          const result = await createTestInfrastructure(
+            organisationId,
+            registrationId,
+            {
+              [fileId]: {
+                meta: createStandardMeta('REPROCESSOR_OUTPUT'),
+                data: {
+                  REPROCESSED_LOADS: {
+                    location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+                    headers: [
+                      'ROW_ID',
+                      'DATE_LOAD_LEFT_SITE',
+                      'PRODUCT_TONNAGE',
+                      'UK_PACKAGING_WEIGHT_PERCENTAGE',
+                      'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
+                      'ADD_PRODUCT_WEIGHT'
+                    ],
+                    rows: [
+                      [
+                        3000, // Valid ROW_ID (minimum for REPROCESSED_LOADS)
+                        '2025-05-28T00:00:00.000Z', // Valid date
+                        1001, // Invalid PRODUCT_TONNAGE (above maximum 1000)
+                        0.5,
+                        100,
+                        50
+                      ]
                     ]
-                  ]
+                  }
                 }
               }
             }
-          })
+          )
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository
 
           uploadResponse = await server.inject({
             method: 'POST',
-            url: buildPostUrl(summaryLogId),
+            url: buildPostUrl(organisationId, registrationId, summaryLogId),
             payload: createUploadPayload(
+              organisationId,
+              registrationId,
               UPLOAD_STATUS.COMPLETE,
               fileId,
               filename
@@ -843,11 +905,16 @@ describe('Summary logs integration', () => {
           let response
 
           beforeEach(async () => {
-            await pollForValidation(server, summaryLogId)
+            await pollForValidation(
+              server,
+              organisationId,
+              registrationId,
+              summaryLogId
+            )
 
             response = await server.inject({
               method: 'GET',
-              url: buildGetUrl(summaryLogId),
+              url: buildGetUrl(organisationId, registrationId, summaryLogId),
               headers: {
                 Authorization: `Bearer ${validToken}`
               }
@@ -910,29 +977,39 @@ describe('Summary logs integration', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      const result = await createTestInfrastructure({
-        [fileId]: {
-          meta: createStandardMeta('REPROCESSOR_INPUT'),
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING'
-                // Missing EWC_CODE and other required headers
-              ],
-              rows: [[1000, '2025-05-28T00:00:00.000Z']]
+      const result = await createTestInfrastructure(
+        organisationId,
+        registrationId,
+        {
+          [fileId]: {
+            meta: createStandardMeta('REPROCESSOR_INPUT'),
+            data: {
+              RECEIVED_LOADS_FOR_REPROCESSING: {
+                location: { sheet: 'Received', row: 7, column: 'B' },
+                headers: [
+                  'ROW_ID',
+                  'DATE_RECEIVED_FOR_REPROCESSING'
+                  // Missing EWC_CODE and other required headers
+                ],
+                rows: [[1000, '2025-05-28T00:00:00.000Z']]
+              }
             }
           }
         }
-      })
+      )
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        ),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -947,11 +1024,16 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -1125,8 +1207,14 @@ describe('Summary logs integration', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        ),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1141,11 +1229,16 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -1303,8 +1396,14 @@ describe('Summary logs integration', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        ),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1319,11 +1418,16 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -1400,29 +1504,39 @@ describe('Summary logs integration', () => {
     let uploadResponse
 
     beforeEach(async () => {
-      const result = await createTestInfrastructure({
-        [fileId]: {
-          meta: createStandardMeta('REPROCESSOR_INPUT'),
-          data: {
-            UNKNOWN_FUTURE_TABLE: {
-              // No schema defined - should be rejected with FATAL error
-              location: { sheet: 'Unknown', row: 1, column: 'A' },
-              headers: ['ANYTHING', 'GOES', 'HERE'],
-              rows: [
-                ['foo', 'bar', 'baz'],
-                ['invalid', 123, true]
-              ]
+      const result = await createTestInfrastructure(
+        organisationId,
+        registrationId,
+        {
+          [fileId]: {
+            meta: createStandardMeta('REPROCESSOR_INPUT'),
+            data: {
+              UNKNOWN_FUTURE_TABLE: {
+                // No schema defined - should be rejected with FATAL error
+                location: { sheet: 'Unknown', row: 1, column: 'A' },
+                headers: ['ANYTHING', 'GOES', 'HERE'],
+                rows: [
+                  ['foo', 'bar', 'baz'],
+                  ['invalid', 123, true]
+                ]
+              }
             }
           }
         }
-      })
+      )
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        ),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1437,11 +1551,16 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -1523,7 +1642,7 @@ describe('Summary logs integration', () => {
     it('returns OK with empty issues array when validation.issues is undefined', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(summaryLogId),
+        url: buildGetUrl(organisationId, registrationId, summaryLogId),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1782,17 +1901,28 @@ describe('Summary logs integration', () => {
       // Upload and validate the summary log
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename)
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: createUploadPayload(
+          organisationId,
+          registrationId,
+          UPLOAD_STATUS.COMPLETE,
+          fileId,
+          filename
+        )
       })
 
       // Wait for validation to complete
-      await pollForValidation(server, summaryLogId)
+      await pollForValidation(
+        server,
+        organisationId,
+        registrationId,
+        summaryLogId
+      )
 
       // Submit the validated summary log
       submitResponse = await server.inject({
         method: 'POST',
-        url: buildSubmitUrl(summaryLogId),
+        url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1811,7 +1941,7 @@ describe('Summary logs integration', () => {
 
         const checkResponse = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -1840,7 +1970,7 @@ describe('Summary logs integration', () => {
     it('updates summary log status to SUBMITTED', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(summaryLogId),
+        url: buildGetUrl(organisationId, registrationId, summaryLogId),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1854,7 +1984,7 @@ describe('Summary logs integration', () => {
     it('includes accreditation number in response after submission', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(summaryLogId),
+        url: buildGetUrl(organisationId, registrationId, summaryLogId),
         headers: {
           Authorization: `Bearer ${validToken}`
         }
@@ -1869,19 +1999,26 @@ describe('Summary logs integration', () => {
       // Upload and validate a second summary log with modified data
       await server.inject({
         method: 'POST',
-        url: buildPostUrl(secondSummaryLogId),
+        url: buildPostUrl(organisationId, registrationId, secondSummaryLogId),
         payload: createUploadPayload(
+          organisationId,
+          registrationId,
           UPLOAD_STATUS.COMPLETE,
           secondFileId,
           secondFilename
         ),
         headers: { Authorization: `Bearer ${validToken}` }
       })
-      await pollForValidation(server, secondSummaryLogId)
+      await pollForValidation(
+        server,
+        organisationId,
+        registrationId,
+        secondSummaryLogId
+      )
 
       const response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(secondSummaryLogId),
+        url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
         headers: { Authorization: `Bearer ${validToken}` }
       })
 
@@ -2088,7 +2225,7 @@ describe('Summary logs integration', () => {
 
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(summaryLogId),
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
         payload: {
           uploadStatus: 'ready',
           metadata: {
@@ -2126,11 +2263,16 @@ describe('Summary logs integration', () => {
       let response
 
       beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+        await pollForValidation(
+          server,
+          organisationId,
+          registrationId,
+          summaryLogId
+        )
 
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(summaryLogId),
+          url: buildGetUrl(organisationId, registrationId, summaryLogId),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
