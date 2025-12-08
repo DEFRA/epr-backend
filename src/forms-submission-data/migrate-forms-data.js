@@ -16,30 +16,7 @@ import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migrat
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {BaseOrganisation, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from './types.js'
- */
-
-/**
- * @typedef {Object} SuccessResult
- * @property {true} success
- * @property {string} id
- * @property {'inserted' | 'updated' | 'unchanged'} action
- */
-
-/**
- * @typedef {Object} FailureResult
- * @property {false} success
- * @property {string} id
- * @property {string} phase
- */
-
-/**
- * @typedef {SuccessResult | FailureResult} MigrationResult
- */
-
-/**
- * @typedef {Object} FormDataMigrator
- * @property {() => Promise<void>} migrate - Execute the migration
+ * @import {BaseOrganisation, FailureResult, FormDataMigrator, MigrationResult, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations, SuccessResult} from './types.js'
  */
 
 class MigratorProcessor {
@@ -380,13 +357,12 @@ class MigratorProcessor {
     )
     const migrationItems = organisations.map((org) => {
       /** @type {OrganisationMigrationItem} */
-      const item = {
+      return {
         value: org,
         operation: submissionsToMigrate.organisations.has(org.id)
           ? 'insert'
           : 'update'
       }
-      return item
     })
     await this.upsertOrganisations(migrationItems)
   }

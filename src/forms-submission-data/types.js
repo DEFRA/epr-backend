@@ -123,4 +123,38 @@
  * @typedef {[string, Organisation]} OrganisationMapEntry
  */
 
+/**
+ * Successful migration result
+ *
+ * @typedef {{
+ *   success: true
+ *   id: string
+ *   action: 'inserted' | 'updated' | 'unchanged'
+ * }} SuccessResult
+ */
+
+/**
+ * Failed migration result
+ *
+ * @typedef {{
+ *   success: false
+ *   id: string
+ *   phase: string
+ * }} FailureResult
+ */
+
+/**
+ * Migration result (success or failure)
+ *
+ * @typedef {SuccessResult | FailureResult} MigrationResult
+ */
+
+/**
+ * Form data migrator interface
+ *
+ * @typedef {{
+ *   migrate: () => Promise<void>
+ * }} FormDataMigrator
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
