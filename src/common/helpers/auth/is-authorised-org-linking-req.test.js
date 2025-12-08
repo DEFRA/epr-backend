@@ -1,17 +1,9 @@
-import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
+import { USER_ROLES } from '#domain/organisations/model.js'
+import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
-
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
-import { organisationsLinkPath } from '#domain/organisations/paths.js'
-
-// Mock the roles/helpers module
-const mockIsInitialUser = vi.fn()
-
-vi.mock('./roles/helpers', () => ({
-  isInitialUser: /** @param {any[]} args */ (...args) =>
-    mockIsInitialUser(...args)
-}))
 
 describe('#isAuthorisedOrgLinkingReq', () => {
   const mockOrganisationId = new ObjectId().toString()
@@ -53,13 +45,12 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         users: [
           {
             email: mockEmail,
-            roles: ['initial_user']
+            roles: [USER_ROLES.INITIAL]
           }
         ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
@@ -70,10 +61,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         mockOrganisationId
       )
-      expect(mockIsInitialUser).toHaveBeenCalledWith(
-        mockOrganisation,
-        mockEmail
-      )
     })
 
     test('calls repository with correct organisation ID from params', async () => {
@@ -82,14 +69,17 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: customOrgId,
-        users: [{ email: mockEmail, roles: ['initial_user'] }]
+        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
-      await isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
+      const result = await isAuthorisedOrgLinkingReq(
+        mockRequest,
+        mockTokenPayload
+      )
 
+      expect(result).toBe(true)
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         customOrgId
       )
@@ -101,18 +91,17 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: customEmail, isInitialUser: true }]
+        users: [{ email: customEmail, roles: [USER_ROLES.INITIAL] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
-      await isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
-
-      expect(mockIsInitialUser).toHaveBeenCalledWith(
-        mockOrganisation,
-        customEmail
+      const result = await isAuthorisedOrgLinkingReq(
+        mockRequest,
+        mockTokenPayload
       )
+
+      expect(result).toBe(true)
     })
   })
 
@@ -127,7 +116,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       expect(result).toBe(false)
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('returns false when method is not POST', async () => {
@@ -140,7 +128,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       expect(result).toBe(false)
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('returns false when method is PUT', async () => {
@@ -189,7 +176,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       )
 
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('throws unauthorized error when email is null', async () => {
@@ -222,7 +208,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         mockOrganisationId
       )
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('throws notFound error when organisation is undefined', async () => {
@@ -239,13 +224,12 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         users: [
           {
             email: mockEmail,
-            roles: ['standard_user']
+            roles: [USER_ROLES.STANDARD]
           }
         ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(false)
 
       await expect(
         isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
@@ -256,20 +240,15 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
         mockOrganisationId
       )
-      expect(mockIsInitialUser).toHaveBeenCalledWith(
-        mockOrganisation,
-        mockEmail
-      )
     })
 
-    test('throws forbidden error when isInitialUser returns falsy value', async () => {
+    test('throws forbidden error when user is not found in organisation', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
         users: []
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(null)
 
       await expect(
         isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
@@ -284,14 +263,13 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       const mockOrganisation = {
         id: mockOrganisationId,
         users: [
-          { email: 'other@example.com', roles: ['standard_user'] },
-          { email: mockEmail, roles: ['initial_user'] },
-          { email: 'another@example.com', roles: ['standard_user'] }
+          { email: 'other@example.com', roles: [USER_ROLES.STANDARD] },
+          { email: mockEmail, roles: [USER_ROLES.INITIAL] },
+          { email: 'another@example.com', roles: [USER_ROLES.STANDARD] }
         ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
@@ -308,8 +286,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       await expect(
         isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
       ).rejects.toThrow(repositoryError)
-
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('handles token payload with additional fields', async () => {
@@ -323,11 +299,10 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: ['initial_user'] }]
+        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
@@ -335,10 +310,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       )
 
       expect(result).toBe(true)
-      expect(mockIsInitialUser).toHaveBeenCalledWith(
-        mockOrganisation,
-        mockEmail
-      )
     })
 
     test('handles organisation with no users array', async () => {
@@ -349,31 +320,24 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(false)
 
       await expect(
         isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
       ).rejects.toThrow(
         Boom.forbidden('user is not authorised to link organisation')
       )
-
-      expect(mockIsInitialUser).toHaveBeenCalledWith(
-        mockOrganisation,
-        mockEmail
-      )
     })
 
-    test('handles case-sensitive email matching through isInitialUser', async () => {
+    test('handles case-sensitive email matching for initial user check', async () => {
       const mixedCaseEmail = 'User@Example.COM'
       mockTokenPayload.email = mixedCaseEmail
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mixedCaseEmail, isInitialUser: true }]
+        users: [{ email: mixedCaseEmail, roles: [USER_ROLES.INITIAL] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
@@ -381,10 +345,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       )
 
       expect(result).toBe(true)
-      expect(mockIsInitialUser).toHaveBeenCalledWith(
-        mockOrganisation,
-        mixedCaseEmail
-      )
     })
   })
 
@@ -399,7 +359,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       expect(result).toBe(false)
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('validates email before fetching organisation', async () => {
@@ -419,36 +378,31 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       expect(mockOrganisationsRepository.findById).not.toHaveBeenCalled()
     })
 
-    test('checks isInitialUser only after organisation is found', async () => {
+    test('throws error when organisation is not found', async () => {
       mockOrganisationsRepository.findById.mockResolvedValue(null)
 
       await expect(
         isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
       ).rejects.toThrow(Boom.notFound('Organisation not found'))
-
-      // isInitialUser should not be called if organisation is not found
-      expect(mockIsInitialUser).not.toHaveBeenCalled()
     })
 
     test('executes all checks in correct order for valid request', async () => {
-      const callOrder = []
+      const mockOrganisation = {
+        id: mockOrganisationId,
+        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
+      }
 
-      mockOrganisationsRepository.findById.mockImplementation(async () => {
-        callOrder.push('findById')
-        return {
-          id: mockOrganisationId,
-          users: [{ email: mockEmail, roles: ['initial_user'] }]
-        }
-      })
+      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
 
-      mockIsInitialUser.mockImplementation(() => {
-        callOrder.push('isInitialUser')
-        return true
-      })
+      const result = await isAuthorisedOrgLinkingReq(
+        mockRequest,
+        mockTokenPayload
+      )
 
-      await isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
-
-      expect(callOrder).toEqual(['findById', 'isInitialUser'])
+      expect(result).toBe(true)
+      expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
+        mockOrganisationId
+      )
     })
   })
 
@@ -459,11 +413,10 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: ['initial_user'] }]
+        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
@@ -494,11 +447,10 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: ['initial_user'] }]
+        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,

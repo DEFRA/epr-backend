@@ -1,3 +1,4 @@
+import { USER_ROLES } from '#domain/organisations/model.js'
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -33,10 +34,14 @@ export function findUserInOrg(organisation, email, contactId) {
  * @returns {boolean} True if the user is the initial user
  */
 export function isInitialUser(organisation, email) {
+  if (!organisation.users) {
+    return false
+  }
+
   return organisation.users.some(
     (user) =>
       user.email.toLowerCase() === email.toLowerCase() &&
-      user.roles?.includes('initial_user')
+      user.roles.includes(USER_ROLES.INITIAL)
   )
 }
 
