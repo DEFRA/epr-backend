@@ -110,11 +110,13 @@ const findAllFormSubmissionIds = (db) => async () => {
     return new Set(docs.map((doc) => doc._id.toString()))
   }
 
-  return {
-    organisations: await getAllSubmissionIds(ORGANISATION_COLLECTION),
-    registrations: await getAllSubmissionIds(REGISTRATIONS_COLLECTION),
-    accreditations: await getAllSubmissionIds(ACCREDITATIONS_COLLECTION)
-  }
+  const [organisations, registrations, accreditations] = await Promise.all([
+    getAllSubmissionIds(ORGANISATION_COLLECTION),
+    getAllSubmissionIds(REGISTRATIONS_COLLECTION),
+    getAllSubmissionIds(ACCREDITATIONS_COLLECTION)
+  ])
+
+  return { organisations, registrations, accreditations }
 }
 
 /**

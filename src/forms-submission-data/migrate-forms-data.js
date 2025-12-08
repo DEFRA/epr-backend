@@ -92,6 +92,13 @@ class MigratorProcessor {
       )
   }
 
+  /**
+   * Determines which form submissions need to be migrated by comparing
+   * all submission IDs against already migrated ones
+   *
+   * @param {import('#repositories/organisations/port.js').OrganisationIds} migratedSubmissionIds - IDs of submissions already migrated
+   * @returns {Promise<import('#repositories/form-submissions/port.js').FormSubmissionIds>} Submissions that need migration
+   */
   async getSubmissionsToMigrate(migratedSubmissionIds) {
     const submissionIds =
       await this.formsSubmissionRepository.findAllFormSubmissionIds()
@@ -108,34 +115,51 @@ class MigratorProcessor {
     }
   }
 
+  /**
+   * Fetches and transforms form submissions in parallel, handling errors gracefully
+
+   * @param {Set<string>} submissionIds - Set of submission IDs to fetch and transform
+   * @param {'organisation'|'registration'|'accreditation'} type - Type of submission
+   * @returns {Promise<Array>} Successfully transformed submissions
+   */
   async fetchAndTransform(submissionIds, type) {
     const { fetch, parse } = this.fetchTransformConfigs[type]
-    const results = []
-    let failureCount = 0
 
-    for (const id of submissionIds) {
-      try {
-        const submission = await fetch(id)
-        results.push(parse(submission))
-      } catch (error) {
-        failureCount++
-        logger.error({
-          error,
-          message: `Error transforming ${type} submission`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.DB,
-            action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
-            reference: id
-          }
-        })
-      }
-    }
+    const promises = [...submissionIds].map((id) =>
+      fetch(id)
+        .then(parse)
+        .then((value) => ({ success: true, value }))
+        .catch((error) => ({ success: false, error, id }))
+    )
+
+    const results = await Promise.all(promises)
+
+    const { successful, failed } = results.reduce(
+      (acc, result) => {
+        if (result.success) {
+          acc.successful.push(result.value)
+        } else {
+          acc.failed.push(result)
+          logger.error({
+            error: result.error,
+            message: `Error transforming ${type} submission`,
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.DB,
+              action: LOGGING_EVENT_ACTIONS.DATA_MIGRATION_FAILURE,
+              reference: result.id
+            }
+          })
+        }
+        return acc
+      },
+      { successful: [], failed: [] }
+    )
 
     logger.info({
-      message: `Transformed ${results.length}/${submissionIds.size} ${type} form submissions (${failureCount} failed)`
+      message: `Transformed ${successful.length}/${submissionIds.size} ${type} form submissions (${failed.length} failed)`
     })
 
-    return results
+    return successful
   }
 
   insertOrganisation = (item) => {
@@ -191,6 +215,15 @@ class MigratorProcessor {
       })
   }
 
+  /**
+   * Upserts organisations to the database in parallel
+   *
+   * Partitions organisations into inserts and updates, then processes both
+   * sets concurrently using Promise.allSettled for optimal performance
+   *
+   * @param {Array<{value: Object, operation: 'insert'|'update'}>} organisations - Organisations to upsert with their operation type
+   * @returns {Promise<void>}
+   */
   async upsertOrganisations(organisations) {
     const toInsert = organisations.filter((item) => item.operation === 'insert')
     const toUpdate = organisations.filter((item) => item.operation === 'update')
@@ -232,6 +265,18 @@ class MigratorProcessor {
     )
   }
 
+  /**
+   * Fetches existing organisations that have new registrations or accreditations to migrate
+   *
+   * Identifies organisations that already exist in the database but have new form
+   * submissions (registrations/accreditations) that need to be linked to them.
+   * Fetches all matching organisations in parallel using Promise.all for performance.
+   *
+   * @param {import('#repositories/organisations/port.js').OrganisationIds} migratedSubmissionIds - IDs of already migrated submissions
+   * @param {Array} registrationsToMigrate - New registration submissions to migrate
+   * @param {Array} accreditationsToMigrate - New accreditation submissions to migrate
+   * @returns {Promise<Map<string, Object>>} Map of organisation ID to organisation object
+   */
   async fetchExistingOrganisationsWithSubmissionsToMigrate(
     migratedSubmissionIds,
     registrationsToMigrate,
@@ -247,15 +292,14 @@ class MigratorProcessor {
         organisationsWithNewSubmissions
       )
 
-    return [...existingOrganisationsWithNewSubmissions].reduce(
-      async (accPromise, orgId) => {
-        const acc = await accPromise
-        const org = await this.organisationsRepository.findById(orgId)
-        acc.set(orgId, org)
-        return acc
-      },
-      Promise.resolve(new Map())
+    const organisationEntries = await Promise.all(
+      [...existingOrganisationsWithNewSubmissions].map(async (orgId) => [
+        orgId,
+        await this.organisationsRepository.findById(orgId)
+      ])
     )
+
+    return new Map(organisationEntries)
   }
 
   async transformAndLinkAllNewSubmissions(
