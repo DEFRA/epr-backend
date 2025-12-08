@@ -5,6 +5,10 @@ import {
 import Boom from '@hapi/boom'
 
 import { createSummaryLogsValidator } from './validate.js'
+import {
+  createEmptyLoadCategory,
+  createEmptyLoadValidity
+} from './classify-loads.js'
 
 // ============================================================================
 // Test Builders
@@ -583,16 +587,12 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads).toEqual({
         added: {
           valid: { count: 1, rowIds: [10000] },
-          invalid: { count: 1, rowIds: [10001] }
+          invalid: { count: 1, rowIds: [10001] },
+          included: { count: 1, rowIds: [10000] },
+          excluded: { count: 1, rowIds: [10001] }
         },
-        unchanged: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        },
-        adjusted: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        }
+        unchanged: createEmptyLoadValidity(),
+        adjusted: createEmptyLoadValidity()
       })
     })
 
@@ -635,18 +635,14 @@ describe('SummaryLogsValidator', () => {
 
       // Note: ROW_ID for unchanged comes from existing record (string)
       expect(updateCall.loads).toEqual({
-        added: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        },
+        added: createEmptyLoadValidity(),
         unchanged: {
           valid: { count: 1, rowIds: ['10000'] },
-          invalid: { count: 0, rowIds: [] }
+          invalid: createEmptyLoadCategory(),
+          included: { count: 1, rowIds: ['10000'] },
+          excluded: createEmptyLoadCategory()
         },
-        adjusted: {
-          valid: { count: 0, rowIds: [] },
-          invalid: { count: 0, rowIds: [] }
-        }
+        adjusted: createEmptyLoadValidity()
       })
 
       // Reset the mock for other tests

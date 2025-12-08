@@ -24,5 +24,17 @@ export default [
     rules: {
       'n/no-unpublished-import': 'off'
     }
+  },
+  {
+    rules: {
+      'no-unused-vars': [
+        'error',
+        {
+          argsIgnorePattern: '^_',
+          caughtErrorsIgnorePattern: '^_',
+          varsIgnorePattern: '^_'
+        }
+      ]
+    }
   }
 ]

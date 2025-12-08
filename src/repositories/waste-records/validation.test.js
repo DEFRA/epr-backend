@@ -80,28 +80,28 @@ describe('validation', () => {
     })
 
     it('rejects record missing organisationId', () => {
-      const { organisationId, ...invalid } = validRecord
+      const { organisationId: _, ...invalid } = validRecord
       expect(() => validateWasteRecord(invalid)).toThrow(
         /organisationId is required/
       )
     })
 
     it('rejects record missing registrationId', () => {
-      const { registrationId, ...invalid } = validRecord
+      const { registrationId: _, ...invalid } = validRecord
       expect(() => validateWasteRecord(invalid)).toThrow(
         /registrationId is required/
       )
     })
 
     it('rejects record missing rowId', () => {
-      const { rowId, ...invalid } = validRecord
+      const { rowId: _, ...invalid } = validRecord
       expect(() => validateWasteRecord(invalid)).toThrow(
         /Invalid waste record:.*rowId.*is required/
       )
     })
 
     it('rejects record missing type', () => {
-      const { type, ...invalid } = validRecord
+      const { type: _, ...invalid } = validRecord
       expect(() => validateWasteRecord(invalid)).toThrow(
         /Invalid waste record:.*type.*is required/
       )
@@ -115,14 +115,14 @@ describe('validation', () => {
     })
 
     it('rejects record missing data', () => {
-      const { data, ...invalid } = validRecord
+      const { data: _, ...invalid } = validRecord
       expect(() => validateWasteRecord(invalid)).toThrow(
         /Invalid waste record:.*data.*is required/
       )
     })
 
     it('rejects record missing versions', () => {
-      const { versions, ...invalid } = validRecord
+      const { versions: _, ...invalid } = validRecord
       expect(() => validateWasteRecord(invalid)).toThrow(
         /Invalid waste record:.*versions.*is required/
       )

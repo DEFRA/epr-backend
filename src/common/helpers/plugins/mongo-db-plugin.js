@@ -41,6 +41,7 @@ export const mongoDbPlugin = {
 
       await createOrUpdateCollections(db)
       await createIndexes(db)
+
       await createSeedData(
         db,
         isProduction,

@@ -14,7 +14,7 @@ describe('createS3Client', () => {
   beforeEach(() => {
     s3Client = { config: { region } }
 
-    vi.mocked(S3Client).mockImplementation(function (config) {
+    vi.mocked(S3Client).mockImplementation(function () {
       return s3Client
     })
   })

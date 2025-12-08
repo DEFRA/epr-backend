@@ -387,6 +387,22 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
   })
 })
 
+describe('parseOrgSubmission - Override Application', () => {
+  it('should apply orgId override when organisation id matches configuration', async () => {
+    const result = await parseOrgSubmission(
+      '60a1f2b3c4d5e6f7a8b9c0d1', // Matches override config
+      nonRegisteredUkSoleTrader.orgId,
+      nonRegisteredUkSoleTrader.rawSubmissionData
+    )
+
+    // Verify that the orgId was overridden
+    expect(result.orgId).toBe(999999)
+    expect(result.id).toBe('60a1f2b3c4d5e6f7a8b9c0d1')
+
+    expect(() => validateOrganisationInsert(result)).not.toThrow()
+  })
+})
+
 describe('parseOrgSubmission - Error Cases', () => {
   it('should throw error when waste processing type field is missing', async () => {
     const invalidSubmission = {
