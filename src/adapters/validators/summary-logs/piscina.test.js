@@ -1,17 +1,19 @@
 import { closeWorkerPool, createSummaryLogsCommandExecutor } from './piscina.js'
 
-const { mockRun, mockDestroy } = vi.hoisted(() => ({
-  mockRun: vi.fn(),
-  mockDestroy: vi.fn()
-}))
-
-vi.mock('piscina', () => ({
-  Piscina: vi.fn(function () {
+const { mockRun, mockDestroy, MockPiscina } = vi.hoisted(() => {
+  const mockRun = vi.fn()
+  const mockDestroy = vi.fn()
+  const MockPiscina = vi.fn(function () {
     return {
       run: mockRun,
       destroy: mockDestroy
     }
   })
+  return { mockRun, mockDestroy, MockPiscina }
+})
+
+vi.mock('piscina', () => ({
+  Piscina: MockPiscina
 }))
 
 describe('createSummaryLogsCommandExecutor', () => {
@@ -166,5 +168,35 @@ describe('closeWorkerPool', () => {
 
   it('resolves successfully when pool is destroyed', async () => {
     await expect(closeWorkerPool()).resolves.toBeUndefined()
+  })
+})
+
+describe('Piscina configuration', () => {
+  // Piscina is instantiated at module load time, before afterEach resets mocks.
+  // We capture the constructor args before any tests run.
+  const constructorArgs = MockPiscina.mock.calls[0]?.[0]
+
+  it('is created with resource limits to prevent memory exhaustion', () => {
+    expect(constructorArgs).toBeDefined()
+    expect(constructorArgs.resourceLimits).toBeDefined()
+    expect(
+      constructorArgs.resourceLimits.maxOldGenerationSizeMb
+    ).toBeGreaterThan(0)
+    expect(
+      constructorArgs.resourceLimits.maxYoungGenerationSizeMb
+    ).toBeGreaterThan(0)
+    expect(constructorArgs.resourceLimits.codeRangeSizeMb).toBeGreaterThan(0)
+  })
+
+  it('sets max heap to 512MB to fit within AWS container limits', () => {
+    expect(constructorArgs.resourceLimits.maxOldGenerationSizeMb).toBe(512)
+  })
+
+  it('is configured with single thread to match vCPU allocation', () => {
+    expect(constructorArgs.maxThreads).toBe(1)
+  })
+
+  it('has idle timeout set to one minute', () => {
+    expect(constructorArgs.idleTimeout).toBe(60_000)
   })
 })
