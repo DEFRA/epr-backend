@@ -3,11 +3,12 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { ObjectId } from 'mongodb'
-import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
+import {
+  defraIdMockAuthTokens,
+  VALID_TOKEN_EMAIL_ADDRESS
+} from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
-import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
 const { validToken } = defraIdMockAuthTokens
 
@@ -46,7 +47,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   })
 
   describe('the request contains a valid Defra Id token', () => {
-    it('when the organisation does not exist, returns 404', async () => {
+    it('when the organisation in the request does not exist, returns 401', async () => {
       const existingOrg = buildOrganisation()
       const nonExistingOrg = buildOrganisation()
       await organisationsRepository.insert(existingOrg)
@@ -58,6 +59,82 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         }
       })
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+
+    describe('the request is valid', () => {
+      const baseUserObject = {
+        email: 'random@email.com',
+        fullName: 'Mickey Mouse',
+        id: 'random_id',
+        roles: ['standard_user'],
+        isInitialUser: false
+      }
+
+      const databaseStateScenarios = [
+        {
+          description: 'the organisation exists but has empty users list',
+          orgOverride: { users: [] },
+          expectedStatus: StatusCodes.UNAUTHORIZED
+        },
+        {
+          description: 'Org exists BUT user is not in the users list',
+          orgOverride: {
+            users: [
+              {
+                ...baseUserObject
+              }
+            ]
+          },
+          expectedStatus: StatusCodes.UNAUTHORIZED
+        },
+        {
+          description:
+            'the organisation exists and the user can be found by email but they are not an initial user',
+          orgOverride: {
+            users: [
+              {
+                ...baseUserObject,
+                email: VALID_TOKEN_EMAIL_ADDRESS
+              }
+            ]
+          },
+          expectedStatus: StatusCodes.UNAUTHORIZED
+        },
+        {
+          description:
+            'the organisation exists and the user is valid but the organisation is not APPROVED',
+          orgOverride: {
+            users: [
+              {
+                ...baseUserObject,
+                email: VALID_TOKEN_EMAIL_ADDRESS,
+                isInitialUser: true
+              }
+            ],
+            status: 'PENDING'
+          },
+          expectedStatus: StatusCodes.CONFLICT
+        }
+      ]
+
+      it.each(databaseStateScenarios)(
+        'returns $expectedStatus when $description',
+        async ({ orgOverride = {}, expectedStatus }) => {
+          const org = buildOrganisation({
+            ...orgOverride
+          })
+          await organisationsRepository.insert(org)
+          const response = await server.inject({
+            method: 'POST',
+            url: `/v1/organisations/${org.id}/link`,
+            headers: {
+              Authorization: `Bearer ${validToken}`
+            }
+          })
+
+          expect(response.statusCode).toBe(expectedStatus)
+        }
+      )
     })
   })
 })

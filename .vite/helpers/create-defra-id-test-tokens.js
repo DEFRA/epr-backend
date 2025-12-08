@@ -2,9 +2,12 @@ import Jwt from '@hapi/jwt'
 import { generateKeyPairSync } from 'crypto'
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
-const USER_EMAIL = 'someone@test-company.com'
+export const VALID_TOKEN_EMAIL_ADDRESS = 'someone@test-company.com'
 export const VALID_TOKEN_CURRENT_RELATIONSHIP = 'rel-1'
-export const VALID_TOKEN_RELATIONSHIPS = ['rel-1', 'rel-2']
+export const VALID_TOKEN_RELATIONSHIPS = [
+  'rel-1:Company1:Something',
+  'rel-2:Compnay2:SomethingElse'
+]
 
 // Generate key pair once at module load time
 // @ts-ignore
@@ -36,7 +39,7 @@ export const publicKey = {
 /** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
 export const baseDefraIdTokenPayload = {
   contactId: 'test-contact-id',
-  email: USER_EMAIL,
+  email: VALID_TOKEN_EMAIL_ADDRESS,
   firstName: 'John',
   lastName: 'Doe',
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
