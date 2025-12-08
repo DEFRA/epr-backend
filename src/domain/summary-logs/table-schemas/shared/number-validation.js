@@ -28,10 +28,14 @@ export const areNumbersEqual = (
   tolerance = DEFAULT_TOLERANCE
 ) => {
   // Handle exact equality (including +/-Infinity)
-  if (actual === expected) return true
+  if (actual === expected) {
+    return true
+  }
 
   // NaN is never equal to anything, including itself
-  if (!Number.isFinite(actual) || !Number.isFinite(expected)) return false
+  if (!Number.isFinite(actual) || !Number.isFinite(expected)) {
+    return false
+  }
 
   return Math.abs(actual - expected) <= tolerance
 }
