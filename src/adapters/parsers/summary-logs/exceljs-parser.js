@@ -40,12 +40,12 @@ const MAX_CONSECUTIVE_EMPTY_COLUMNS = 100
  * These can be overridden via parse options.
  *
  * @property {number} maxWorksheets - Maximum number of worksheets allowed (default: 20)
- * @property {number} maxRowsPerSheet - Maximum rows per worksheet (default: 50,000)
+ * @property {number} maxRowsPerSheet - Maximum rows per worksheet (default: 55,000)
  * @property {number} maxColumnsPerSheet - Maximum columns per worksheet (default: 1,000)
  */
 export const PARSE_DEFAULTS = Object.freeze({
   maxWorksheets: 20,
-  maxRowsPerSheet: 50_000,
+  maxRowsPerSheet: 55_000,
   maxColumnsPerSheet: 1_000
 })
 

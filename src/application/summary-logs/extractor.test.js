@@ -81,7 +81,7 @@ describe('SummaryLogExtractor', () => {
     expect(parse).toHaveBeenCalledWith(buffer, {
       requiredWorksheet: 'Cover',
       maxWorksheets: 20,
-      maxRowsPerSheet: 50_000,
+      maxRowsPerSheet: 55_000,
       maxColumnsPerSheet: 1_000
     })
   })
