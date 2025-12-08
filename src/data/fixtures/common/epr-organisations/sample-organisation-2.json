@@ -157,7 +157,7 @@
   "companyDetails": {
     "name": "Plastic Exporters",
     "tradingName": "Plastic Exporters",
-    "registrationNumber": "PE789012",
+    "companiesHouseNumber": "PE789012",
     "registeredAddress": {
       "line1": "23 Export Lane",
       "town": "Cardiff",

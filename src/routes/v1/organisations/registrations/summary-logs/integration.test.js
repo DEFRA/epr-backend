@@ -2,8 +2,8 @@ import ExcelJS from 'exceljs'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
-  createEmptyLoadValidity,
-  createEmptyLoads
+  createEmptyLoads,
+  createEmptyLoadValidity
 } from '#application/summary-logs/classify-loads.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import {
@@ -99,84 +99,107 @@ const pollForValidation = async (server, summaryLogId) => {
   }
 }
 
+/**
+ * Creates standard meta fields for a summary log extractor mock.
+ * @param {string} processingType - The processing type (e.g., 'REPROCESSOR_INPUT', 'REPROCESSOR_OUTPUT')
+ * @returns {Object} Meta fields object with standard structure
+ */
+const createStandardMeta = (processingType) => ({
+  REGISTRATION_NUMBER: {
+    value: 'REG-123',
+    location: { sheet: 'Cover', row: 1, column: 'B' }
+  },
+  PROCESSING_TYPE: {
+    value: processingType,
+    location: { sheet: 'Cover', row: 2, column: 'B' }
+  },
+  MATERIAL: {
+    value: 'Paper_and_board',
+    location: { sheet: 'Cover', row: 3, column: 'B' }
+  },
+  TEMPLATE_VERSION: {
+    value: 1,
+    location: { sheet: 'Cover', row: 4, column: 'B' }
+  }
+})
+
+/**
+ * Creates test infrastructure for summary log integration tests.
+ * Reduces boilerplate by setting up common repositories, validators, and server.
+ *
+ * @param {Object} extractorData - Data to be returned by the mock extractor, keyed by fileId
+ * @returns {Promise<{server: Object, summaryLogsRepository: Object}>}
+ */
+const createTestInfrastructure = async (extractorData) => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }
+
+  const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+  const uploadsRepository = createInMemoryUploadsRepository()
+  const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+  const testOrg = buildOrganisation({
+    registrations: [
+      {
+        id: registrationId,
+        registrationNumber: 'REG-123',
+        material: 'paper',
+        wasteProcessingType: 'reprocessor',
+        formSubmissionTime: new Date(),
+        submittedToRegulator: 'ea'
+      }
+    ]
+  })
+  testOrg.id = organisationId
+
+  const organisationsRepository = createInMemoryOrganisationsRepository([
+    testOrg
+  ])()
+  const summaryLogExtractor = createInMemorySummaryLogExtractor(extractorData)
+  const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+
+  const validateSummaryLog = createSummaryLogsValidator({
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    summaryLogExtractor
+  })
+
+  const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+
+  const server = await createTestServer({
+    repositories: {
+      summaryLogsRepository: summaryLogsRepositoryFactory,
+      uploadsRepository
+    },
+    workers: {
+      summaryLogsWorker: { validate: validateSummaryLog }
+    },
+    featureFlags
+  })
+
+  return { server, summaryLogsRepository }
+}
+
 describe('Summary logs integration', () => {
   let server
-  setupAuthContext()
   let summaryLogsRepository
 
+  setupAuthContext()
+
   beforeEach(async () => {
-    const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-    const mockLogger = {
-      info: vi.fn(),
-      error: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn()
-    }
-    const uploadsRepository = createInMemoryUploadsRepository()
-    summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-    const testOrg = buildOrganisation({
-      registrations: [
-        {
-          id: registrationId,
-          registrationNumber: 'REG-123',
-          material: 'paper',
-          wasteProcessingType: 'reprocessor',
-          formSubmissionTime: new Date(),
-          submittedToRegulator: 'ea'
-        }
-      ]
-    })
-    testOrg.id = organisationId
-
-    const organisationsRepository = createInMemoryOrganisationsRepository([
-      testOrg
-    ])()
-
-    const summaryLogExtractor = createInMemorySummaryLogExtractor({
+    const result = await createTestInfrastructure({
       'file-123': {
-        meta: {
-          REGISTRATION_NUMBER: {
-            value: 'REG-123',
-            location: { sheet: 'Cover', row: 1, column: 'B' }
-          },
-          PROCESSING_TYPE: {
-            value: 'REPROCESSOR_INPUT',
-            location: { sheet: 'Cover', row: 2, column: 'B' }
-          },
-          MATERIAL: {
-            value: 'Paper_and_board',
-            location: { sheet: 'Cover', row: 3, column: 'B' }
-          },
-          TEMPLATE_VERSION: {
-            value: 1,
-            location: { sheet: 'Cover', row: 4, column: 'B' }
-          }
-        },
+        meta: createStandardMeta('REPROCESSOR_INPUT'),
         data: {}
       }
     })
-
-    const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-    const validateSummaryLog = createSummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      summaryLogExtractor
-    })
-    const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-    server = await createTestServer({
-      repositories: {
-        summaryLogsRepository: summaryLogsRepositoryFactory,
-        uploadsRepository
-      },
-      workers: {
-        summaryLogsWorker: { validate: validateSummaryLog }
-      },
-      featureFlags
-    })
+    server = result.server
+    summaryLogsRepository = result.summaryLogsRepository
   })
 
   describe('retrieving summary log that has not been uploaded', () => {
@@ -391,478 +414,488 @@ describe('Summary logs integration', () => {
     })
   })
 
-  describe('data syntax validation with invalid cell values', () => {
-    const summaryLogId = 'summary-data-syntax'
-    const fileId = 'file-data-invalid'
-    const filename = 'invalid-data.xlsx'
-    let uploadResponse
-    let testSummaryLogsRepository
+  describe('REPROCESSOR_INPUT data syntax validation', () => {
+    describe('RECEIVED_LOADS_FOR_REPROCESSING table', () => {
+      describe('with invalid fields (fatal error)', () => {
+        const summaryLogId = 'summary-invalid-row-id'
+        const fileId = 'file-invalid-row-id'
+        const filename = 'invalid-row-id.xlsx'
 
-    beforeEach(async () => {
-      // Create a new server with extractor that returns invalid data
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+        let server
+        let summaryLogsRepository
+        let uploadResponse
 
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      // Mock extractor with invalid data values
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-123',
-              location: { sheet: 'Cover', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
+        beforeEach(async () => {
+          const result = await createTestInfrastructure({
+            [fileId]: {
+              meta: createStandardMeta('REPROCESSOR_INPUT'),
+              data: {
+                RECEIVED_LOADS_FOR_REPROCESSING: {
+                  location: { sheet: 'Received', row: 7, column: 'B' },
+                  headers: [
+                    'ROW_ID',
+                    'DATE_RECEIVED_FOR_REPROCESSING',
+                    'EWC_CODE',
+                    'GROSS_WEIGHT',
+                    'TARE_WEIGHT',
+                    'PALLET_WEIGHT',
+                    'NET_WEIGHT',
+                    'BAILING_WIRE_PROTOCOL',
+                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                    'WEIGHT_OF_NON_TARGET_MATERIALS',
+                    'RECYCLABLE_PROPORTION_PERCENTAGE',
+                    'TONNAGE_RECEIVED_FOR_RECYCLING'
+                  ],
+                  rows: [
+                    [
+                      999, // Invalid ROW_ID (below minimum 1000)
+                      'invalid-date', // Also invalid
+                      'bad-ewc-code', // Also invalid
+                      1000,
+                      100,
+                      50,
+                      850,
+                      'YES',
+                      'WEIGHT',
+                      50,
+                      0.85,
+                      850
+                    ]
+                  ]
+                }
+              }
             }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ], // Valid row
-                [
-                  10001,
-                  'invalid-date',
-                  'bad-code',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
-              ]
+          })
+          server = result.server
+          summaryLogsRepository = result.summaryLogsRepository
+
+          uploadResponse = await server.inject({
+            method: 'POST',
+            url: buildPostUrl(summaryLogId),
+            payload: createUploadPayload(
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              filename
+            ),
+            headers: {
+              Authorization: `Bearer ${validToken}`
             }
-          }
-        }
-      })
+          })
+        })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
+        it('returns ACCEPTED', () => {
+          expect(uploadResponse.statusCode).toBe(202)
+        })
 
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
+        describe('retrieving summary log with fatal errors', () => {
+          let response
 
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+          beforeEach(async () => {
+            await pollForValidation(server, summaryLogId)
 
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-    })
+            response = await server.inject({
+              method: 'GET',
+              url: buildGetUrl(summaryLogId),
+              headers: {
+                Authorization: `Bearer ${validToken}`
+              }
+            })
+          })
 
-    it('returns ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
-    })
+          it('returns OK', () => {
+            expect(response.statusCode).toBe(200)
+          })
 
-    describe('retrieving summary log with data errors', () => {
-      let response
+          it('returns invalid status due to fatal errors', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+            expect(payload.validation.failures).toEqual(
+              expect.arrayContaining([
+                expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE' })
+              ])
+            )
+          })
 
-      beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
+          it('persists both fatal and error severity issues', async () => {
+            const { summaryLog } =
+              await summaryLogsRepository.findById(summaryLogId)
 
-        response = await server.inject({
-          method: 'GET',
-          url: buildGetUrl(summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+            expect(summaryLog.validation).toBeDefined()
+            expect(summaryLog.validation.issues.length).toBeGreaterThan(1)
+
+            // Should have fatal error for ROW_ID
+            const fatalErrors = summaryLog.validation.issues.filter(
+              (i) => i.severity === 'fatal'
+            )
+            expect(fatalErrors).toHaveLength(1)
+            expect(fatalErrors[0].message).toContain('ROW_ID')
+
+            // Should also have error-level issues for other invalid fields
+            const errors = summaryLog.validation.issues.filter(
+              (i) => i.severity === 'error'
+            )
+            expect(errors).toHaveLength(2)
+            const errorHeaders = errors.map((e) => e.context.location?.header)
+            expect(errorHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+            expect(errorHeaders).toContain('EWC_CODE')
+          })
+
+          it('returns fatal failures in HTTP response', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload.validation.failures).toHaveLength(1)
+            expect(payload.validation.failures[0].location.header).toBe(
+              'ROW_ID'
+            )
+          })
+
+          it('returns empty concerns in HTTP response', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload.validation.concerns).toEqual({})
+          })
         })
       })
 
-      it('returns OK', () => {
-        expect(response.statusCode).toBe(200)
-      })
+      describe('with invalid cell values (non-fatal errors)', () => {
+        const summaryLogId = 'summary-data-syntax'
+        const fileId = 'file-data-invalid'
+        const filename = 'invalid-data.xlsx'
 
-      it('returns validated status (not invalid) because data errors are not fatal', () => {
-        const payload = JSON.parse(response.payload)
-        expect(payload).toMatchObject({
-          status: SUMMARY_LOG_STATUS.VALIDATED
+        let server
+        let summaryLogsRepository
+        let uploadResponse
+
+        beforeEach(async () => {
+          const result = await createTestInfrastructure({
+            [fileId]: {
+              meta: createStandardMeta('REPROCESSOR_INPUT'),
+              data: {
+                RECEIVED_LOADS_FOR_REPROCESSING: {
+                  location: { sheet: 'Received', row: 7, column: 'B' },
+                  headers: [
+                    'ROW_ID',
+                    'DATE_RECEIVED_FOR_REPROCESSING',
+                    'EWC_CODE',
+                    'GROSS_WEIGHT',
+                    'TARE_WEIGHT',
+                    'PALLET_WEIGHT',
+                    'NET_WEIGHT',
+                    'BAILING_WIRE_PROTOCOL',
+                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+                    'WEIGHT_OF_NON_TARGET_MATERIALS',
+                    'RECYCLABLE_PROPORTION_PERCENTAGE',
+                    'TONNAGE_RECEIVED_FOR_RECYCLING'
+                  ],
+                  rows: [
+                    [
+                      1000,
+                      '2025-05-28T00:00:00.000Z',
+                      '03 03 08',
+                      1000,
+                      100,
+                      50,
+                      850,
+                      'YES',
+                      'WEIGHT',
+                      50,
+                      0.85,
+                      850
+                    ], // Valid row
+                    [
+                      1001,
+                      'invalid-date',
+                      'bad-code',
+                      1000,
+                      100,
+                      50,
+                      850,
+                      'YES',
+                      'WEIGHT',
+                      50,
+                      0.85,
+                      850
+                    ] // Invalid row - DATE and EWC_CODE invalid (ROW_ID is valid)
+                  ]
+                }
+              }
+            }
+          })
+          server = result.server
+          summaryLogsRepository = result.summaryLogsRepository
+
+          uploadResponse = await server.inject({
+            method: 'POST',
+            url: buildPostUrl(summaryLogId),
+            payload: createUploadPayload(
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              filename
+            ),
+            headers: {
+              Authorization: `Bearer ${validToken}`
+            }
+          })
         })
-        expect(payload.validation).toBeDefined()
-        expect(payload.validation.concerns).toBeDefined()
-        expect(
-          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
-        ).toBeDefined()
-        expect(
-          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
-            .length
-        ).toBeGreaterThan(0)
-      })
 
-      it('persists data validation errors with row context', async () => {
-        const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
-
-        expect(summaryLog.validation).toBeDefined()
-        expect(summaryLog.validation.issues).toHaveLength(2)
-
-        // All 2 errors should be from row 9 (headers at row 7 + second data row)
-        expect(
-          summaryLog.validation.issues.every(
-            (i) => i.context.location?.row === 9
-          )
-        ).toBe(true)
-
-        // Should have errors for 2 invalid cells (DATE and EWC_CODE)
-        const errorFields = summaryLog.validation.issues.map(
-          (i) => i.context.location?.header
-        )
-        expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-        expect(errorFields).toContain('EWC_CODE')
-
-        // All should be error severity (not fatal)
-        expect(
-          summaryLog.validation.issues.every((i) => i.severity === 'error')
-        ).toBe(true)
-      })
-
-      it('returns issues in HTTP response format matching ADR 0020', () => {
-        const payload = JSON.parse(response.payload)
-
-        // Should have table-keyed concerns structure
-        expect(
-          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
-        ).toBeDefined()
-        expect(
-          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.sheet
-        ).toBe('Received')
-        expect(
-          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
-        ).toHaveLength(1)
-
-        const rowWithIssues =
-          payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
-        expect(rowWithIssues.row).toBe(9)
-        expect(rowWithIssues.issues).toHaveLength(2)
-
-        // Spot check one issue has the complete structure per ADR 0020
-        const dateIssue = rowWithIssues.issues.find(
-          (issue) => issue.header === 'DATE_RECEIVED_FOR_REPROCESSING'
-        )
-        expect(dateIssue).toMatchObject({
-          type: 'error',
-          code: expect.any(String),
-          header: 'DATE_RECEIVED_FOR_REPROCESSING',
-          column: 'C',
-          actual: 'invalid-date'
+        it('returns ACCEPTED', () => {
+          expect(uploadResponse.statusCode).toBe(202)
         })
 
-        // All issues should have consistent structure
-        rowWithIssues.issues.forEach((issue) => {
-          expect(issue).toHaveProperty('type')
-          expect(issue).toHaveProperty('code')
-          expect(issue).toHaveProperty('header')
-          expect(issue).toHaveProperty('column')
-        })
-      })
+        describe('retrieving summary log with data errors', () => {
+          let response
 
-      it('returns rowsWithIssues calculated on-the-fly in HTTP response', () => {
-        const payload = JSON.parse(response.payload)
+          beforeEach(async () => {
+            await pollForValidation(server, summaryLogId)
 
-        // In new format, rowsWithIssues is calculated from concerns structure
-        const rowsWithIssues = Object.values(
-          payload.validation.concerns
-        ).reduce((total, table) => total + table.rows.length, 0)
+            response = await server.inject({
+              method: 'GET',
+              url: buildGetUrl(summaryLogId),
+              headers: {
+                Authorization: `Bearer ${validToken}`
+              }
+            })
+          })
 
-        // Both errors are from row 9, so rowsWithIssues should be 1
-        expect(rowsWithIssues).toBe(1)
-      })
+          it('returns OK', () => {
+            expect(response.statusCode).toBe(200)
+          })
 
-      it('returns loads with rowIds classifying loads as added/valid/invalid', () => {
-        const payload = JSON.parse(response.payload)
+          it('returns validated status (not invalid) because data errors are not fatal', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload).toMatchObject({
+              status: SUMMARY_LOG_STATUS.VALIDATED
+            })
+            expect(payload.validation).toBeDefined()
+            expect(payload.validation.concerns).toBeDefined()
+            expect(
+              payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
+            ).toBeDefined()
+            expect(
+              payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
+                .length
+            ).toBeGreaterThan(0)
+          })
 
-        // Both rows are added (first submission, no prior records)
-        // Row 1 (ROW_ID 10000) is valid
-        // Row 2 (ROW_ID 10001) is invalid (has validation errors)
-        // Note: ROW_ID values come from mock data as numbers
-        expect(payload.loads).toEqual({
-          added: {
-            valid: { count: 1, rowIds: [10000] },
-            invalid: { count: 1, rowIds: [10001] },
-            included: { count: 1, rowIds: [10000] },
-            excluded: { count: 1, rowIds: [10001] }
-          },
-          unchanged: createEmptyLoadValidity(),
-          adjusted: createEmptyLoadValidity()
+          it('persists data validation errors with row context', async () => {
+            const { summaryLog } =
+              await summaryLogsRepository.findById(summaryLogId)
+
+            expect(summaryLog.validation).toBeDefined()
+            expect(summaryLog.validation.issues).toHaveLength(2)
+
+            // All 2 errors should be from row 9 (headers at row 7 + second data row)
+            expect(
+              summaryLog.validation.issues.every(
+                (i) => i.context.location?.row === 9
+              )
+            ).toBe(true)
+
+            // Should have errors for 2 invalid cells (DATE and EWC_CODE)
+            const errorFields = summaryLog.validation.issues.map(
+              (i) => i.context.location?.header
+            )
+            expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+            expect(errorFields).toContain('EWC_CODE')
+
+            // All should be error severity (not fatal)
+            expect(
+              summaryLog.validation.issues.every((i) => i.severity === 'error')
+            ).toBe(true)
+          })
+
+          it('returns issues in HTTP response format matching ADR 0020', () => {
+            const payload = JSON.parse(response.payload)
+
+            // Should have table-keyed concerns structure
+            expect(
+              payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
+            ).toBeDefined()
+            expect(
+              payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.sheet
+            ).toBe('Received')
+            expect(
+              payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
+            ).toHaveLength(1)
+
+            const rowWithIssues =
+              payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
+                .rows[0]
+            expect(rowWithIssues.row).toBe(9)
+            expect(rowWithIssues.issues).toHaveLength(2)
+
+            // Spot check one issue has the complete structure per ADR 0020
+            const dateIssue = rowWithIssues.issues.find(
+              (issue) => issue.header === 'DATE_RECEIVED_FOR_REPROCESSING'
+            )
+            expect(dateIssue).toMatchObject({
+              type: 'error',
+              code: expect.any(String),
+              header: 'DATE_RECEIVED_FOR_REPROCESSING',
+              column: 'C',
+              actual: 'invalid-date'
+            })
+
+            // All issues should have consistent structure
+            rowWithIssues.issues.forEach((issue) => {
+              expect(issue).toHaveProperty('type')
+              expect(issue).toHaveProperty('code')
+              expect(issue).toHaveProperty('header')
+              expect(issue).toHaveProperty('column')
+            })
+          })
+
+          it('returns rowsWithIssues calculated on-the-fly in HTTP response', () => {
+            const payload = JSON.parse(response.payload)
+
+            // In new format, rowsWithIssues is calculated from concerns structure
+            const rowsWithIssues = Object.values(
+              payload.validation.concerns
+            ).reduce((total, table) => total + table.rows.length, 0)
+
+            // Both errors are from row 9, so rowsWithIssues should be 1
+            expect(rowsWithIssues).toBe(1)
+          })
+
+          it('returns loads with rowIds classifying loads as added/valid/invalid', () => {
+            const payload = JSON.parse(response.payload)
+
+            // Both rows are added (first submission, no prior records)
+            // Row 1 (ROW_ID 1000) is valid
+            // Row 2 (ROW_ID 1001) is invalid (has validation errors)
+            // Note: ROW_ID values come from mock data as numbers
+            expect(payload.loads).toEqual({
+              added: {
+                valid: { count: 1, rowIds: [1000] },
+                invalid: { count: 1, rowIds: [1001] },
+                included: { count: 1, rowIds: [1000] },
+                excluded: { count: 1, rowIds: [1001] }
+              },
+              unchanged: createEmptyLoadValidity(),
+              adjusted: createEmptyLoadValidity()
+            })
+          })
         })
       })
     })
   })
 
-  describe('data syntax validation with invalid ROW_ID (fatal row error)', () => {
-    const summaryLogId = 'summary-invalid-row-id'
-    const fileId = 'file-invalid-row-id'
-    const filename = 'invalid-row-id.xlsx'
-    let uploadResponse
-    let testSummaryLogsRepository
+  describe('REPROCESSOR_OUTPUT data syntax validation', () => {
+    describe('REPROCESSED_LOADS table', () => {
+      describe('with invalid fields (fatal error)', () => {
+        const summaryLogId = 'summary-reprocessor-output-fatal'
+        const fileId = 'file-reprocessor-output-fatal'
+        const filename = 'reprocessor-output-fatal.xlsx'
 
-    beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+        let server
+        let summaryLogsRepository
+        let uploadResponse
 
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      // Mock extractor with invalid ROW_ID AND other invalid fields
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-123',
-              location: { sheet: 'Cover', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
+        beforeEach(async () => {
+          const result = await createTestInfrastructure({
+            [fileId]: {
+              meta: createStandardMeta('REPROCESSOR_OUTPUT'),
+              data: {
+                REPROCESSED_LOADS: {
+                  location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+                  headers: [
+                    'ROW_ID',
+                    'DATE_LOAD_LEFT_SITE',
+                    'PRODUCT_TONNAGE',
+                    'UK_PACKAGING_WEIGHT_PERCENTAGE',
+                    'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
+                    'ADD_PRODUCT_WEIGHT'
+                  ],
+                  rows: [
+                    [
+                      3000, // Valid ROW_ID (minimum for REPROCESSED_LOADS)
+                      '2025-05-28T00:00:00.000Z', // Valid date
+                      1001, // Invalid PRODUCT_TONNAGE (above maximum 1000)
+                      0.5,
+                      100,
+                      50
+                    ]
+                  ]
+                }
+              }
             }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  9999, // Invalid ROW_ID (below minimum 10000)
-                  'invalid-date', // Also invalid
-                  'bad-ewc-code', // Also invalid
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
+          })
+          server = result.server
+          summaryLogsRepository = result.summaryLogsRepository
+
+          uploadResponse = await server.inject({
+            method: 'POST',
+            url: buildPostUrl(summaryLogId),
+            payload: createUploadPayload(
+              UPLOAD_STATUS.COMPLETE,
+              fileId,
+              filename
+            ),
+            headers: {
+              Authorization: `Bearer ${validToken}`
             }
-          }
-        }
-      })
-
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
-
-      uploadResponse = await server.inject({
-        method: 'POST',
-        url: buildPostUrl(summaryLogId),
-        payload: createUploadPayload(UPLOAD_STATUS.COMPLETE, fileId, filename),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-    })
-
-    it('returns ACCEPTED', () => {
-      expect(uploadResponse.statusCode).toBe(202)
-    })
-
-    describe('retrieving summary log with fatal ROW_ID error', () => {
-      let response
-
-      beforeEach(async () => {
-        await pollForValidation(server, summaryLogId)
-
-        response = await server.inject({
-          method: 'GET',
-          url: buildGetUrl(summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          })
         })
-      })
 
-      it('returns OK', () => {
-        expect(response.statusCode).toBe(200)
-      })
+        it('returns ACCEPTED', () => {
+          expect(uploadResponse.statusCode).toBe(202)
+        })
 
-      it('returns invalid status due to fatal ROW_ID error', () => {
-        const payload = JSON.parse(response.payload)
-        expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
-        expect(payload.validation.failures).toEqual(
-          expect.arrayContaining([
-            expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE' })
-          ])
-        )
-      })
+        describe('retrieving summary log with fatal errors', () => {
+          let response
 
-      it('persists both fatal and error severity issues', async () => {
-        const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
+          beforeEach(async () => {
+            await pollForValidation(server, summaryLogId)
 
-        expect(summaryLog.validation).toBeDefined()
-        expect(summaryLog.validation.issues.length).toBeGreaterThan(1)
+            response = await server.inject({
+              method: 'GET',
+              url: buildGetUrl(summaryLogId),
+              headers: {
+                Authorization: `Bearer ${validToken}`
+              }
+            })
+          })
 
-        // Should have fatal error for ROW_ID
-        const fatalErrors = summaryLog.validation.issues.filter(
-          (i) => i.severity === 'fatal'
-        )
-        expect(fatalErrors).toHaveLength(1)
-        expect(fatalErrors[0].message).toContain('ROW_ID')
+          it('returns OK', () => {
+            expect(response.statusCode).toBe(200)
+          })
 
-        // Should also have error-level issues for other invalid fields
-        const errors = summaryLog.validation.issues.filter(
-          (i) => i.severity === 'error'
-        )
-        expect(errors).toHaveLength(2)
-        const errorHeaders = errors.map((e) => e.context.location?.header)
-        expect(errorHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-        expect(errorHeaders).toContain('EWC_CODE')
-      })
+          it('returns invalid status due to fatal errors', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+            expect(payload.validation.failures).toEqual(
+              expect.arrayContaining([
+                expect.objectContaining({ code: 'VALUE_OUT_OF_RANGE' })
+              ])
+            )
+          })
 
-      it('returns fatal failures in HTTP response', () => {
-        const payload = JSON.parse(response.payload)
-        expect(payload.validation.failures).toHaveLength(1)
-        expect(payload.validation.failures[0].location.header).toBe('ROW_ID')
-      })
+          it('persists fatal error for invalid field', async () => {
+            const { summaryLog } =
+              await summaryLogsRepository.findById(summaryLogId)
 
-      it('returns empty concerns in HTTP response', () => {
-        const payload = JSON.parse(response.payload)
-        expect(payload.validation.concerns).toEqual({})
+            expect(summaryLog.validation).toBeDefined()
+            expect(summaryLog.validation.issues.length).toBeGreaterThan(0)
+
+            // Should have fatal error for PRODUCT_TONNAGE
+            const fatalErrors = summaryLog.validation.issues.filter(
+              (i) => i.severity === 'fatal'
+            )
+            expect(fatalErrors).toHaveLength(1)
+            expect(fatalErrors[0].message).toContain('PRODUCT_TONNAGE')
+          })
+
+          it('returns fatal failures in HTTP response', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload.validation.failures).toHaveLength(1)
+            expect(payload.validation.failures[0].location.header).toBe(
+              'PRODUCT_TONNAGE'
+            )
+          })
+
+          it('returns empty concerns in HTTP response', () => {
+            const payload = JSON.parse(response.payload)
+            expect(payload.validation.concerns).toEqual({})
+          })
+        })
       })
     })
   })
@@ -871,60 +904,15 @@ describe('Summary logs integration', () => {
     const summaryLogId = 'summary-missing-headers'
     const fileId = 'file-missing-headers'
     const filename = 'missing-headers.xlsx'
+
+    let server
+    let summaryLogsRepository
     let uploadResponse
-    let testSummaryLogsRepository
 
     beforeEach(async () => {
-      // Create a new server with extractor that returns data with missing headers
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      // Mock extractor with missing required headers (fatal error)
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+      const result = await createTestInfrastructure({
         [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-123',
-              location: { sheet: 'Cover', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
-            }
-          },
+          meta: createStandardMeta('REPROCESSOR_INPUT'),
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: {
               location: { sheet: 'Received', row: 7, column: 'B' },
@@ -933,32 +921,13 @@ describe('Summary logs integration', () => {
                 'DATE_RECEIVED_FOR_REPROCESSING'
                 // Missing EWC_CODE and other required headers
               ],
-              rows: [[10000, '2025-05-28T00:00:00.000Z']]
+              rows: [[1000, '2025-05-28T00:00:00.000Z']]
             }
           }
         }
       })
-
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = result.server
+      summaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
@@ -1007,7 +976,7 @@ describe('Summary logs integration', () => {
 
       it('persists fatal validation errors in database', async () => {
         const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
+          await summaryLogsRepository.findById(summaryLogId)
 
         expect(summaryLog.validation).toBeDefined()
         expect(summaryLog.validation.issues.length).toBeGreaterThan(0)
@@ -1114,7 +1083,7 @@ describe('Summary logs integration', () => {
               ],
               rows: [
                 [
-                  9999, // Invalid ROW_ID
+                  999, // Invalid ROW_ID (below minimum 1000)
                   'invalid-date', // Invalid DATE_RECEIVED
                   '03 03 08',
                   1000,
@@ -1295,7 +1264,7 @@ describe('Summary logs integration', () => {
               headers: ['INVALID_HEADER'], // Missing required headers
               rows: [
                 [
-                  9999, // Below minimum ROW_ID
+                  999, // Below minimum ROW_ID (1000)
                   'invalid-date',
                   'bad-code',
                   'not-a-number',
@@ -1425,94 +1394,16 @@ describe('Summary logs integration', () => {
     const summaryLogId = 'summary-no-schema'
     const fileId = 'file-no-schema'
     const filename = 'no-schema.xlsx'
+
+    let server
+    let summaryLogsRepository
     let uploadResponse
-    let testSummaryLogsRepository
 
     beforeEach(async () => {
-      // Create a new server with extractor that returns unknown table
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
-
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      // Mock extractor with valid known table AND unknown table without schema
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
+      const result = await createTestInfrastructure({
         [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG-123',
-              location: { sheet: 'Cover', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
-            }
-          },
+          meta: createStandardMeta('REPROCESSOR_INPUT'),
           data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                [
-                  10000,
-                  '2025-05-28T00:00:00.000Z',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
-              ]
-            },
             UNKNOWN_FUTURE_TABLE: {
               // No schema defined - should be rejected with FATAL error
               location: { sheet: 'Unknown', row: 1, column: 'A' },
@@ -1525,27 +1416,8 @@ describe('Summary logs integration', () => {
           }
         }
       })
-
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = result.server
+      summaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
@@ -1590,7 +1462,7 @@ describe('Summary logs integration', () => {
 
       it('rejects tables without schemas with FATAL error', async () => {
         const { summaryLog } =
-          await testSummaryLogsRepository.findById(summaryLogId)
+          await summaryLogsRepository.findById(summaryLogId)
 
         // Should have one FATAL validation issue for unrecognised table
         expect(summaryLog.validation.issues).toHaveLength(1)
@@ -1759,7 +1631,7 @@ describe('Summary logs integration', () => {
           headers: sharedHeaders,
           rows: [
             [
-              10001,
+              1001,
               '2025-01-15T00:00:00.000Z',
               '03 03 08',
               1000,
@@ -1773,7 +1645,7 @@ describe('Summary logs integration', () => {
               850
             ],
             [
-              10002,
+              1002,
               '2025-01-16T00:00:00.000Z',
               '03 03 08',
               2000,
@@ -1791,16 +1663,16 @@ describe('Summary logs integration', () => {
       }
 
       // Second upload:
-      // - 10001: unchanged (same data)
-      // - 10002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
-      // - 10003: added (new row)
+      // - 1001: unchanged (same data)
+      // - 1002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
+      // - 1003: added (new row)
       const secondUploadData = {
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Received', row: 7, column: 'A' },
           headers: sharedHeaders,
           rows: [
             [
-              10001,
+              1001,
               '2025-01-15T00:00:00.000Z',
               '03 03 08',
               1000,
@@ -1814,7 +1686,7 @@ describe('Summary logs integration', () => {
               850
             ],
             [
-              10002,
+              1002,
               '2025-01-16T00:00:00.000Z',
               '03 03 08',
               2500,
@@ -1828,7 +1700,7 @@ describe('Summary logs integration', () => {
               2125
             ],
             [
-              10003,
+              1003,
               '2025-01-17T00:00:00.000Z',
               '03 03 08',
               3000,
@@ -1961,8 +1833,8 @@ describe('Summary logs integration', () => {
       )
 
       expect(wasteRecords).toHaveLength(2)
-      expect(wasteRecords[0].rowId).toBe(10001)
-      expect(wasteRecords[1].rowId).toBe(10002)
+      expect(wasteRecords[0].rowId).toBe(1001)
+      expect(wasteRecords[1].rowId).toBe(1002)
     })
 
     it('updates summary log status to SUBMITTED', async () => {
@@ -2016,17 +1888,17 @@ describe('Summary logs integration', () => {
       const payload = JSON.parse(response.payload)
       expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
 
-      // 10001: unchanged (same data as first upload)
-      // 10002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
-      // 10003: added (new row)
+      // 1001: unchanged (same data as first upload)
+      // 1002: adjusted (GROSS_WEIGHT changed from 2000 to 2500)
+      // 1003: added (new row)
       expect(payload.loads.added.valid.count).toBe(1)
-      expect(payload.loads.added.valid.rowIds).toContain(10003)
+      expect(payload.loads.added.valid.rowIds).toContain(1003)
 
       expect(payload.loads.adjusted.valid.count).toBe(1)
-      expect(payload.loads.adjusted.valid.rowIds).toContain(10002)
+      expect(payload.loads.adjusted.valid.rowIds).toContain(1002)
 
       expect(payload.loads.unchanged.valid.count).toBe(1)
-      expect(payload.loads.unchanged.valid.rowIds).toContain(10001)
+      expect(payload.loads.unchanged.valid.rowIds).toContain(1001)
     })
   })
 

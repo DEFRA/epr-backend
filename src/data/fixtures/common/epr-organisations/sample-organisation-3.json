@@ -253,7 +253,7 @@
   "companyDetails": {
     "name": "Green Future Trust",
     "tradingName": "Green Future",
-    "registrationNumber": "GF345678",
+    "companiesHouseNumber": "GF345678",
     "registeredAddress": {
       "line1": "101 Trust Road",
       "town": "Belfast",

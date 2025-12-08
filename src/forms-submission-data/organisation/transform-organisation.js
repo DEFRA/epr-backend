@@ -84,7 +84,7 @@ function getCompanyDetails(answersByShortDescription) {
       answersByShortDescription[
         ORGANISATION.COMPANY_DETAILS.fields.TRADING_NAME
       ],
-    registrationNumber:
+    companiesHouseNumber:
       answersByShortDescription[
         ORGANISATION.COMPANY_DETAILS.fields.REGISTRATION_NUMBER
       ],

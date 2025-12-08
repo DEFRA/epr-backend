@@ -13,13 +13,34 @@ const dirname = path.dirname(filename)
 
 const ONE_MINUTE = 60_000
 
+/**
+ * Worker thread resource limits.
+ *
+ * These limits prevent a single summary log validation from consuming
+ * excessive memory and crashing the container. When a worker reaches
+ * these limits, it will be terminated with ERR_WORKER_OUT_OF_MEMORY,
+ * which is caught and logged rather than crashing the entire service.
+ *
+ * Values chosen based on:
+ * - AWS instance has 2GB memory (after temporary increase from 8GB)
+ * - Main thread and Node.js overhead need ~256MB
+ * - Leave headroom for concurrent operations
+ * - 512MB should be sufficient for most valid summary logs
+ */
+const RESOURCE_LIMITS = {
+  maxOldGenerationSizeMb: 512, // Main heap limit (V8 old generation)
+  maxYoungGenerationSizeMb: 64, // Young generation for short-lived objects
+  codeRangeSizeMb: 64 // JIT compiled code
+}
+
 const pool = new Piscina({
   filename: path.join(
     dirname,
     '../../../workers/summary-logs/worker/worker-thread.js'
   ),
   maxThreads: 1, // Match vCPU count on AWS instance
-  idleTimeout: ONE_MINUTE
+  idleTimeout: ONE_MINUTE,
+  resourceLimits: RESOURCE_LIMITS
 })
 
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */

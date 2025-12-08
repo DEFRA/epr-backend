@@ -334,7 +334,7 @@
   "companyDetails": {
     "name": "Eco Recycle Ltd",
     "tradingName": "Eco Recycle",
-    "registrationNumber": "ER123456",
+    "companiesHouseNumber": "ER123456",
     "registeredAddress": {
       "line1": "2 Green Park",
       "town": "Edinburgh",
