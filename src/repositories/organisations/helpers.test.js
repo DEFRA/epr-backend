@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import {
-  statusHistoryWithChanges,
-  hasChanges,
-  collateUsersOnApproval,
-  createStatusHistoryEntry
-} from './helpers.js'
-import { buildOrganisation } from './contract/test-data.js'
 import { STATUS } from '#domain/organisations/model.js'
+import { describe, expect, it } from 'vitest'
+import { buildOrganisation } from './contract/test-data.js'
+import {
+  collateUsersOnApproval,
+  createStatusHistoryEntry,
+  hasChanges,
+  statusHistoryWithChanges
+} from './helpers.js'
 
 describe('statusHistoryWithChanges', () => {
   it('returns initial status history when existingItem is null', () => {
@@ -146,7 +146,7 @@ describe('collateUsersOnApproval', () => {
 
     const result = collateUsersOnApproval(existing, updated)
 
-    expect(result).toBe(existing.users)
+    expect(result).toStrictEqual(existing.users)
   })
 
   it('should include submitter when no registration status change to approved', () => {

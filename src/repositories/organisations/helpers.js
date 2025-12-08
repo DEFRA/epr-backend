@@ -220,16 +220,13 @@ export const collateUsersOnApproval = (existing, updated) => {
   }
 
   const users = [
+    ...existing.users,
     ...root,
     ...collateApprovedRegistrations(existing, updated),
     ...collateApprovedAccreditations(existing, updated)
   ]
 
-  if (users.length > 0) {
-    return deduplicateUsers(users)
-  }
-
-  return existing.users
+  return deduplicateUsers(users)
 }
 
 /**
