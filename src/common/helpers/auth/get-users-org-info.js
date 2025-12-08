@@ -9,10 +9,13 @@ import {
  */
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /**
- * @param {object} tokenPayload - The OIDC token payload containing user and organization data
+ * Retrieves organization information for a user based on their Defra ID token
+ * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user and organization data
  * @param {OrganisationsRepository} organisationsRepository - The organisations repository
+ * @returns {Promise<{linkedEprOrg: string, userOrgs: Array}>} Object containing linked EPR org and all user orgs
  */
 export async function getUsersOrganisationInfo(
   tokenPayload,

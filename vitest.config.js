@@ -21,6 +21,7 @@ export default defineConfig({
         '**/*.port.js',
         '**/*.sh',
         '**/*.xlsx',
+        '**/.DS_Store',
         '**/index.js',
         '**/types.js',
         'coverage',
