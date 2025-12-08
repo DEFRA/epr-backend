@@ -9,6 +9,14 @@ export const WASTE_RECORD_TYPE = Object.freeze({
  * @typedef {typeof WASTE_RECORD_TYPE[keyof typeof WASTE_RECORD_TYPE]} WasteRecordType
  */
 
+export const WASTE_RECORD_TEMPLATE = Object.freeze({
+  EXPORTER: 'exporter'
+})
+
+/**
+ * @typedef {typeof WASTE_RECORD_TEMPLATE[keyof typeof WASTE_RECORD_TEMPLATE]} WasteRecordTemplate
+ */
+
 export const VERSION_STATUS = Object.freeze({
   CREATED: 'created',
   UPDATED: 'updated',
@@ -40,6 +48,7 @@ export const VERSION_STATUS = Object.freeze({
  * @property {string} [accreditationId]
  * @property {string} rowId - The waste record row identifier
  * @property {WasteRecordType} type
+ * @property {WasteRecordTemplate} template
  * @property {Object} data - Reporting fields only
  * @property {WasteRecordVersion[]} versions - Version history. createdAt/updatedAt derived from first/last version
  */

@@ -143,4 +143,15 @@ describe('buildWasteBalance', () => {
 
     expect(balance.availableAmount).toBe(0)
   })
+
+  it('generates _id if provided as null', () => {
+    const balance = buildWasteBalance({ _id: null })
+    expect(balance._id).toBeDefined()
+    expect(balance._id).not.toBeNull()
+  })
+
+  it('handles undefined overrides', () => {
+    const balance = buildWasteBalance(undefined)
+    expect(balance._id).toBeDefined()
+  })
 })

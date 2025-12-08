@@ -23,10 +23,7 @@ import eprOrganisation1 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation2 from '#data/fixtures/common/epr-organisations/sample-organisation-2.json' with { type: 'json' }
 import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-organisation-3.json' with { type: 'json' }
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
-
-import wasteBalanceScenarioA from '#data/fixtures/common/waste-balances/scenario-a-simple-submission.json' with { type: 'json' }
-import wasteBalanceScenarioB from '#data/fixtures/common/waste-balances/scenario-b-prn-created-and-issued.json' with { type: 'json' }
-import wasteBalanceScenarioC from '#data/fixtures/common/waste-balances/scenario-c-prn-then-modified-submission.json' with { type: 'json' }
+import exporterRecords from '#data/fixtures/common/waste-records/exporter-records.json' with { type: 'json' }
 
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
 
@@ -39,7 +36,7 @@ const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
-const COLLECTION_WASTE_BALANCES = 'waste-balances'
+const COLLECTION_WASTE_RECORDS = 'waste-records'
 
 /**
  * @import {Db} from 'mongodb'
@@ -175,39 +172,15 @@ export async function createSeedData(
       ])
     }
 
-    const wasteBalanceFixturesIds = [
-      wasteBalanceScenarioA,
-      wasteBalanceScenarioB,
-      wasteBalanceScenarioC
-    ]
-      .map((record) => record._id)
-      .map(ObjectId.createFromHexString)
+    const wasteRecordCount = await db
+      .collection(COLLECTION_WASTE_RECORDS)
+      .countDocuments()
 
-    const wasteBalanceFixturesDocs = await db
-      .collection(COLLECTION_WASTE_BALANCES)
-      .find({ _id: { $in: wasteBalanceFixturesIds } })
-      .toArray()
-
-    if (wasteBalanceFixturesDocs.length === 0) {
+    if (wasteRecordCount === 0) {
       logger.info({
-        message: 'Create seed data: inserting waste-balance fixtures'
+        message: 'Create seed data: inserting waste-records fixtures'
       })
-
-      // Convert string _id to ObjectId for MongoDB insertion
-      const prepareWasteBalance = (data) => ({
-        ...data,
-        _id: ObjectId.createFromHexString(data._id),
-        organisationId: ObjectId.createFromHexString(data.organisationId),
-        accreditationId: ObjectId.createFromHexString(data.accreditationId)
-      })
-
-      await db
-        .collection(COLLECTION_WASTE_BALANCES)
-        .insertMany([
-          prepareWasteBalance(wasteBalanceScenarioA),
-          prepareWasteBalance(wasteBalanceScenarioB),
-          prepareWasteBalance(wasteBalanceScenarioC)
-        ])
+      await db.collection(COLLECTION_WASTE_RECORDS).insertMany(exporterRecords)
     }
   }
 }

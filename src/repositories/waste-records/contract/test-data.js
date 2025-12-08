@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import {
   WASTE_RECORD_TYPE,
+  WASTE_RECORD_TEMPLATE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 
@@ -79,6 +80,7 @@ export const buildWasteRecord = (overrides = {}) => {
   const organisationId = overrides.organisationId || 'org-1'
   const registrationId = overrides.registrationId || 'reg-1'
   const type = overrides.type || WASTE_RECORD_TYPE.RECEIVED
+  const template = overrides.template || WASTE_RECORD_TEMPLATE.EXPORTER
   const data = overrides.data || {
     DATE_RECEIVED_FOR_REPROCESSING: '2025-01-15',
     GROSS_WEIGHT: 100.5
@@ -99,6 +101,7 @@ export const buildWasteRecord = (overrides = {}) => {
     registrationId,
     rowId,
     type,
+    template,
     data,
     versions: [version],
     ...overrides
