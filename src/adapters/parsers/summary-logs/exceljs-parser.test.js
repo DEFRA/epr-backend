@@ -36,13 +36,16 @@ describe('ExcelJSSummaryLogsParser', () => {
     return parse(buffer)
   }
 
-  describe('reprocessor.xlsx fixture', () => {
+  describe('reprocessor_input.xlsx fixture', () => {
     it(
       'should parse metadata and data sections',
       { timeout: 30000 },
       async () => {
         const excelBuffer = await readFile(
-          path.join(dirname, '../../../data/fixtures/uploads/reprocessor.xlsx')
+          path.join(
+            dirname,
+            '../../../data/fixtures/uploads/reprocessor_input.xlsx'
+          )
         )
         const result = await parse(excelBuffer)
 
@@ -745,123 +748,205 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   describe('skip row functionality', () => {
-    it('should skip rows where skip column contains "Example" text', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          [
-            '__EPR_DATA_SENT_ON',
-            'ROW_ID',
-            '__EPR_SKIP_COLUMN',
-            'DATE_LOAD_LEFT_SITE',
-            'WEIGHT'
-          ],
-          [null, 'row-1', 'Example', '2024-01-15', 100],
-          [null, 'row-2', '', '2024-01-16', 200],
-          [null, 'row-3', null, '2024-01-17', 300]
-        ]
+    describe('skip example rows', () => {
+      it('should skip rows where skip column contains "Example" text', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            [
+              '__EPR_DATA_TEST_TABLE',
+              'ROW_ID',
+              '__EPR_SKIP_COLUMN',
+              'DATE_LOAD_LEFT_SITE',
+              'WEIGHT'
+            ],
+            [null, 'row-1', 'Example', '2024-01-15', 100],
+            [null, 'row-2', '', '2024-01-16', 200],
+            [null, 'row-3', null, '2024-01-17', 300]
+          ]
+        })
+
+        expect(result.data.TEST_TABLE).toEqual({
+          location: { sheet: 'Test', row: 1, column: 'B' },
+          headers: ['ROW_ID', null, 'DATE_LOAD_LEFT_SITE', 'WEIGHT'],
+          rows: [
+            ['row-2', null, '2024-01-16', 200],
+            ['row-3', null, '2024-01-17', 300]
+          ]
+        })
       })
 
-      expect(result.data.SENT_ON).toEqual({
-        location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['ROW_ID', null, 'DATE_LOAD_LEFT_SITE', 'WEIGHT'],
-        rows: [
-          ['row-2', null, '2024-01-16', 200],
-          ['row-3', null, '2024-01-17', 300]
-        ]
+      it('should skip multiple example rows', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+            [null, 'ex-1', 'Example', 100],
+            [null, 'ex-2', 'Example', 200],
+            [null, 'real-1', '', 300],
+            [null, 'real-2', null, 400]
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          ['real-1', null, 300],
+          ['real-2', null, 400]
+        ])
+      })
+
+      it('should not skip rows where skip column contains other text', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+            [null, 'row-1', 'Example', 100],
+            [null, 'row-2', 'Not Example', 200],
+            [null, 'row-3', 'example', 300],
+            [null, 'row-4', 'EXAMPLE', 400]
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          ['row-2', 'Not Example', 200],
+          ['row-3', 'example', 300],
+          ['row-4', 'EXAMPLE', 400]
+        ])
+      })
+
+      it('should skip row if any skip column contains "Example"', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            [
+              '__EPR_DATA_TEST_TABLE',
+              'ID',
+              '__EPR_SKIP_COLUMN',
+              'VALUE',
+              '__EPR_SKIP_COLUMN'
+            ],
+            [null, 'row-1', 'Example', 100, ''],
+            [null, 'row-2', '', 200, 'Example'],
+            [null, 'row-3', '', 300, '']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          ['row-3', null, 300, null]
+        ])
+      })
+
+      it('should work with skip column as first header', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', '__EPR_SKIP_COLUMN', 'ID', 'VALUE'],
+            [null, 'Example', 'row-1', 100],
+            [null, '', 'row-2', 200]
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([[null, 'row-2', 200]])
+      })
+
+      it('should still terminate section on empty row even after skipping example rows', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+            [null, 'row-1', 'Example', 100],
+            [null, 'row-2', '', 200],
+            [null, null, null, null]
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([['row-2', null, 200]])
+      })
+
+      it('should handle section with only example rows (results in empty rows array)', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
+            [null, 'ex-1', 'Example', 100],
+            [null, 'ex-2', 'Example', 200],
+            [null, null, null, null]
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([])
+      })
+
+      it('should not skip rows when no skip column is defined', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
+            [null, 12345678910, '2025-05-25'],
+            [null, 'Example', '2025-05-26']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [12345678910, '2025-05-25'],
+          ['Example', '2025-05-26']
+        ])
       })
     })
 
-    it('should skip multiple example rows', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
-          [null, 'ex-1', 'Example', 100],
-          [null, 'ex-2', 'Example', 200],
-          [null, 'real-1', '', 300],
-          [null, 'real-2', null, 400]
-        ]
+    describe('skip header rows', () => {
+      it('should skip header row', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            [
+              '__EPR_DATA_TEST_TABLE',
+              'ROW_ID',
+              'DATE_RECEIVED',
+              'SUPPLIER_REF'
+            ],
+            [null, 'Row ID', 'Date received', 'Supplier reference'],
+            [null, 12345678910, '2025-05-25', 'ABC123'],
+            [null, 98765432100, '2025-05-26', 'DEF456']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [12345678910, '2025-05-25', 'ABC123'],
+          [98765432100, '2025-05-26', 'DEF456']
+        ])
       })
 
-      expect(result.data.LOADS.rows).toEqual([
-        ['real-1', null, 300],
-        ['real-2', null, 400]
-      ])
-    })
+      it('should skip header row and example row', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            [
+              '__EPR_DATA_TEST_TABLE',
+              'ROW_ID',
+              'DATE_RECEIVED',
+              '__EPR_SKIP_COLUMN',
+              'SUPPLIER_REF'
+            ],
+            [null, 'Row ID', 'Date received', null, 'Supplier reference'],
+            [null, 12345678910, '2025-05-25', 'Example', 'ABC123'],
+            [null, 98765432100, '2025-05-26', null, 'DEF456'],
+            [null, 11122233344, '2025-05-27', null, 'GHI789']
+          ]
+        })
 
-    it('should not skip rows where skip column contains other text', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
-          [null, 'row-1', 'Example', 100],
-          [null, 'row-2', 'Not Example', 200],
-          [null, 'row-3', 'example', 300],
-          [null, 'row-4', 'EXAMPLE', 400]
-        ]
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [98765432100, '2025-05-26', null, 'DEF456'],
+          [11122233344, '2025-05-27', null, 'GHI789']
+        ])
       })
 
-      expect(result.data.LOADS.rows).toEqual([
-        ['row-2', 'Not Example', 200],
-        ['row-3', 'example', 300],
-        ['row-4', 'EXAMPLE', 400]
-      ])
-    })
+      it('should be case-sensitive for "Row ID" skip text', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
+            [null, 'Row ID', '2025-05-25'],
+            [null, 'row id', '2025-05-26'],
+            [null, 'ROW_ID', '2025-05-27'],
+            [null, 'ROW ID', '2025-05-28']
+          ]
+        })
 
-    it('should skip row if any skip column contains "Example"', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          [
-            '__EPR_DATA_MULTI_SKIP',
-            'ID',
-            '__EPR_SKIP_COLUMN',
-            'VALUE',
-            '__EPR_SKIP_COLUMN'
-          ],
-          [null, 'row-1', 'Example', 100, ''],
-          [null, 'row-2', '', 200, 'Example'],
-          [null, 'row-3', '', 300, '']
-        ]
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          ['row id', '2025-05-26'],
+          ['ROW_ID', '2025-05-27'],
+          ['ROW ID', '2025-05-28']
+        ])
       })
-
-      expect(result.data.MULTI_SKIP.rows).toEqual([['row-3', null, 300, null]])
-    })
-
-    it('should work with skip column as first header', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          ['__EPR_DATA_LOADS', '__EPR_SKIP_COLUMN', 'ID', 'VALUE'],
-          [null, 'Example', 'row-1', 100],
-          [null, '', 'row-2', 200]
-        ]
-      })
-
-      expect(result.data.LOADS.rows).toEqual([[null, 'row-2', 200]])
-    })
-
-    it('should still terminate section on empty row even after skipping example rows', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          ['__EPR_DATA_LOADS', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
-          [null, 'row-1', 'Example', 100],
-          [null, 'row-2', '', 200],
-          [null, null, null, null]
-        ]
-      })
-
-      // The example row is skipped, and row-2 is included
-      expect(result.data.LOADS.rows).toEqual([['row-2', null, 200]])
-    })
-
-    it('should handle section with only example rows (results in empty rows array)', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          ['__EPR_DATA_EMPTY_SECTION', 'ID', '__EPR_SKIP_COLUMN', 'VALUE'],
-          [null, 'ex-1', 'Example', 100],
-          [null, 'ex-2', 'Example', 200],
-          [null, null, null, null]
-        ]
-      })
-
-      expect(result.data.EMPTY_SECTION.rows).toEqual([])
     })
   })
 
@@ -1139,112 +1224,6 @@ describe('ExcelJSSummaryLogsParser', () => {
         value: 'REPROCESSOR_INPUT',
         location: { sheet: 'Test', row: 1, column: 'F' }
       })
-    })
-  })
-
-  describe('skip row functionality', () => {
-    it('should skip rows with "Example" text in skip column', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          [
-            '__EPR_DATA_WASTE_RECEIVED',
-            'ROW_ID',
-            'DATE_RECEIVED',
-            '__EPR_SKIP_COLUMN',
-            'SUPPLIER_REF'
-          ],
-          [null, 12345678910, '2025-05-25', 'Example', 'ABC123'],
-          [null, 98765432100, '2025-05-26', null, 'DEF456'],
-          [null, 11122233344, '2025-05-27', null, 'GHI789']
-        ]
-      })
-
-      expect(result.data.WASTE_RECEIVED).toEqual({
-        location: { sheet: 'Test', row: 1, column: 'B' },
-        headers: ['ROW_ID', 'DATE_RECEIVED', null, 'SUPPLIER_REF'],
-        rows: [
-          [98765432100, '2025-05-26', null, 'DEF456'],
-          [11122233344, '2025-05-27', null, 'GHI789']
-        ]
-      })
-    })
-
-    it('should skip multiple example rows', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          [
-            '__EPR_DATA_WASTE_RECEIVED',
-            'ROW_ID',
-            '__EPR_SKIP_COLUMN',
-            'DATE_RECEIVED'
-          ],
-          [null, 12345678910, 'Example', '2025-05-25'],
-          [null, 98765432100, 'Example', '2025-05-26'],
-          [null, 11122233344, null, '2025-05-27']
-        ]
-      })
-
-      expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [11122233344, null, '2025-05-27']
-      ])
-    })
-
-    it('should not skip rows when skip column has value other than "Example"', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          [
-            '__EPR_DATA_WASTE_RECEIVED',
-            'ROW_ID',
-            '__EPR_SKIP_COLUMN',
-            'DATE_RECEIVED'
-          ],
-          [null, 12345678910, 'NotExample', '2025-05-25'],
-          [null, 98765432100, 'EXAMPLE', '2025-05-26'],
-          [null, 11122233344, 'example', '2025-05-27']
-        ]
-      })
-
-      expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [12345678910, 'NotExample', '2025-05-25'],
-        [98765432100, 'EXAMPLE', '2025-05-26'],
-        [11122233344, 'example', '2025-05-27']
-      ])
-    })
-
-    it('should handle skip row with multiple skip columns', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          [
-            '__EPR_DATA_WASTE_RECEIVED',
-            'ROW_ID',
-            '__EPR_SKIP_COLUMN',
-            'DATE_RECEIVED',
-            '__EPR_SKIP_COLUMN'
-          ],
-          [null, 12345678910, null, '2025-05-25', 'Example'],
-          [null, 98765432100, 'Example', '2025-05-26', 'keep'],
-          [null, 11122233344, null, '2025-05-27', 'keep']
-        ]
-      })
-
-      expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [11122233344, null, '2025-05-27', 'keep']
-      ])
-    })
-
-    it('should not skip rows when no skip column is defined', async () => {
-      const result = await parseWorkbook({
-        Test: [
-          ['__EPR_DATA_WASTE_RECEIVED', 'ROW_ID', 'DATE_RECEIVED'],
-          [null, 12345678910, '2025-05-25'],
-          [null, 'Example', '2025-05-26']
-        ]
-      })
-
-      expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [12345678910, '2025-05-25'],
-        ['Example', '2025-05-26']
-      ])
     })
   })
 

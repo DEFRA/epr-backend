@@ -81,11 +81,11 @@ export const statusHistoryItemSchema = Joi.object({
 export const companyDetailsSchema = Joi.object({
   name: Joi.string().required(),
   tradingName: Joi.string().optional(),
-  registrationNumber: Joi.string()
+  companiesHouseNumber: Joi.string()
     .regex(/^[a-zA-Z0-9]{2}\d{6}$/)
     .messages({
       'string.pattern.base':
-        'Registration number must be 8 characters (e.g., 01234567 or AC012345)'
+        'companiesHouseNumber must be 8 characters (e.g., 01234567 or AC012345)'
     })
     .optional(),
   registeredAddress: addressSchema.optional(),

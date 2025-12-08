@@ -11,6 +11,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: 'ROW_ID',
   requiredHeaders: [],
   unfilledValues: {},
+  fatalFields: ['ROW_ID'],
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
   fieldsRequiredForWasteBalance: []
 }

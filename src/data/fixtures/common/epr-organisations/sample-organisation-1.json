@@ -434,7 +434,7 @@
   "companyDetails": {
     "name": "ACME ltd",
     "tradingName": "ACME ltd",
-    "registrationNumber": "AC012345",
+    "companiesHouseNumber": "AC012345",
     "registeredAddress": {
       "line1": "Palace of Westminster",
       "town": "London",
