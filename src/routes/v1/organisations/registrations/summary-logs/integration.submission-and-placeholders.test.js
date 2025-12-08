@@ -1,43 +1,51 @@
 import ExcelJS from 'exceljs'
+import { http, HttpResponse } from 'msw'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
+import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-import { createTestServer } from '#test/create-test-server.js'
-import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
+import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
 
 import {
-  validToken,
-  createUploadPayload,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
-  pollForValidation
+  createUploadPayload,
+  pollForValidation,
+  validToken
 } from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests', () => {
   let organisationId
   let registrationId
 
-  setupAuthContext()
+  const { getServer } = setupAuthContext()
 
   beforeEach(() => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
+
+    getServer().use(
+      http.post(
+        'http://localhost:3001/v1/organisations/:orgId/registrations/:regId/summary-logs/:summaryLogId/upload-completed',
+        () => HttpResponse.json({ success: true }, { status: 200 })
+      )
+    )
   })
 
   describe('submitting a validated summary log', () => {
