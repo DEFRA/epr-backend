@@ -1,12 +1,12 @@
-import { describe, it, expect } from 'vitest'
-import {
-  statusHistoryWithChanges,
-  hasChanges,
-  collateUsersOnApproval,
-  createStatusHistoryEntry
-} from './helpers.js'
-import { buildOrganisation } from './contract/test-data.js'
 import { STATUS } from '#domain/organisations/model.js'
+import { describe, expect, it } from 'vitest'
+import { buildOrganisation } from './contract/test-data.js'
+import {
+  collateUsers,
+  createStatusHistoryEntry,
+  hasChanges,
+  statusHistoryWithChanges
+} from './helpers.js'
 
 describe('statusHistoryWithChanges', () => {
   it('returns initial status history when existingItem is null', () => {
@@ -143,7 +143,7 @@ describe('collateUsersOnApproval', () => {
       ...existing
     }
 
-    const result = collateUsersOnApproval(existing, updated)
+    const result = collateUsers(existing, updated)
 
     expect(result).toBe(existing.users)
   })
@@ -156,7 +156,7 @@ describe('collateUsersOnApproval', () => {
       ...existing
     }
 
-    const result = collateUsersOnApproval(existing, updated)
+    const result = collateUsers(existing, updated)
 
     expect(result).toHaveLength(1)
     expect(result[0].email).toBe(existing.submitterContactDetails.email)
@@ -172,7 +172,7 @@ describe('collateUsersOnApproval', () => {
     })
     updated.statusHistory.push(createStatusHistoryEntry(STATUS.APPROVED))
 
-    const result = collateUsersOnApproval(existing, updated)
+    const result = collateUsers(existing, updated)
 
     expect(result.length).toBeGreaterThan(0)
     expect(result[0].email).toBe(updated.submitterContactDetails.email)
@@ -194,7 +194,7 @@ describe('collateUsersOnApproval', () => {
       }))
     }
 
-    const result = collateUsersOnApproval(existing, updated)
+    const result = collateUsers(existing, updated)
 
     expect(result.length).toBeGreaterThan(0)
   })
@@ -215,7 +215,7 @@ describe('collateUsersOnApproval', () => {
       }))
     }
 
-    const result = collateUsersOnApproval(existing, updated)
+    const result = collateUsers(existing, updated)
 
     expect(result.length).toBeGreaterThan(0)
   })

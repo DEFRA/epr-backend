@@ -421,23 +421,25 @@ export const testUpdateBehaviour = (it) => {
     })
 
     describe('users', () => {
-      it('populates users field with submitter on any update', async () => {
-        const organisation = buildOrganisation()
-        await repository.insert(organisation)
+      describe('root users', () => {
+        it('populates users field with submitter on any update', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
 
-        await repository.update(organisation.id, 1, {
-          status: STATUS.APPROVED
-        })
+          await repository.update(organisation.id, 1, {
+            status: STATUS.APPROVED
+          })
 
-        const result = await repository.findById(organisation.id, 2)
+          const result = await repository.findById(organisation.id, 2)
 
-        expect(result.status).toBe(STATUS.APPROVED)
-        expect(result.users).toBeDefined()
-        expect(result.users).toHaveLength(1)
-        expect(result.users[0]).toStrictEqual({
-          fullName: organisation.submitterContactDetails.fullName,
-          email: organisation.submitterContactDetails.email,
-          roles: ['initial_user', 'standard_user']
+          expect(result.status).toBe(STATUS.APPROVED)
+          expect(result.users).toBeDefined()
+          expect(result.users).toHaveLength(1)
+          expect(result.users[0]).toStrictEqual({
+            fullName: organisation.submitterContactDetails.fullName,
+            email: organisation.submitterContactDetails.email,
+            roles: ['initial_user', 'standard_user']
+          })
         })
       })
 
