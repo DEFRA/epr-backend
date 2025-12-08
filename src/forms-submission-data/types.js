@@ -108,4 +108,19 @@
  * @typedef {OrganisationWithRegistrations & {accreditations?: Accreditation[]}} Organisation
  */
 
+/**
+ * Organisation migration item with operation type
+ *
+ * @typedef {{
+ *   value: Organisation
+ *   operation: 'insert' | 'update'
+ * }} OrganisationMigrationItem
+ */
+
+/**
+ * Organisation map entry tuple [orgId, organisation]
+ *
+ * @typedef {[string, Organisation]} OrganisationMapEntry
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

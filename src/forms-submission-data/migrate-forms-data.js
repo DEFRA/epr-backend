@@ -16,7 +16,7 @@ import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migrat
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {BaseOrganisation, Organisation, OrganisationWithRegistrations} from './types.js'
+ * @import {BaseOrganisation, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from './types.js'
  */
 
 /**
@@ -221,7 +221,7 @@ class MigratorProcessor {
    * Partitions organisations into inserts and updates, then processes both
    * sets concurrently using Promise.allSettled for optimal performance
    *
-   * @param {Array<{value: Object, operation: 'insert'|'update'}>} organisations - Organisations to upsert with their operation type
+   * @param {OrganisationMigrationItem[]} organisations - Organisations to upsert with their operation type
    * @returns {Promise<void>}
    */
   async upsertOrganisations(organisations) {
@@ -293,10 +293,13 @@ class MigratorProcessor {
       )
 
     const organisationEntries = await Promise.all(
-      [...existingOrganisationsWithNewSubmissions].map(async (orgId) => [
-        orgId,
-        await this.organisationsRepository.findById(orgId)
-      ])
+      [...existingOrganisationsWithNewSubmissions].map(
+        async (orgId) =>
+          /** @type {OrganisationMapEntry} */ ([
+            orgId,
+            await this.organisationsRepository.findById(orgId)
+          ])
+      )
     )
 
     return new Map(organisationEntries)
@@ -376,12 +379,14 @@ class MigratorProcessor {
       submissionsToMigrate
     )
     const migrationItems = organisations.map((org) => {
-      return {
+      /** @type {OrganisationMigrationItem} */
+      const item = {
         value: org,
         operation: submissionsToMigrate.organisations.has(org.id)
           ? 'insert'
           : 'update'
       }
+      return item
     })
     await this.upsertOrganisations(migrationItems)
   }
