@@ -111,22 +111,22 @@ describe('findUserInOrg', () => {
 })
 
 describe('isInitialUser', () => {
-  it('should return true when user is found and is initial user', () => {
+  it('should return true when user is found and has initial_user role', () => {
     const organisation = {
       users: [
-        { email: 'user@example.com', isInitialUser: true },
-        { email: 'other@example.com', isInitialUser: false }
+        { email: 'user@example.com', roles: ['initial_user', 'standard_user'] },
+        { email: 'other@example.com', roles: ['standard_user'] }
       ]
     }
 
     expect(isInitialUser(organisation, 'user@example.com')).toBe(true)
   })
 
-  it('should return false when user is found but is not initial user', () => {
+  it('should return false when user is found but does not have initial_user role', () => {
     const organisation = {
       users: [
-        { email: 'user@example.com', isInitialUser: false },
-        { email: 'other@example.com', isInitialUser: true }
+        { email: 'user@example.com', roles: ['standard_user'] },
+        { email: 'other@example.com', roles: ['initial_user'] }
       ]
     }
 
@@ -135,7 +135,7 @@ describe('isInitialUser', () => {
 
   it('should return false when user is not found', () => {
     const organisation = {
-      users: [{ email: 'other@example.com', isInitialUser: true }]
+      users: [{ email: 'other@example.com', roles: ['initial_user'] }]
     }
 
     expect(isInitialUser(organisation, 'user@example.com')).toBe(false)
@@ -143,14 +143,14 @@ describe('isInitialUser', () => {
 
   it('should perform case-insensitive email matching', () => {
     const organisation = {
-      users: [{ email: 'User@Example.Com', isInitialUser: true }]
+      users: [{ email: 'User@Example.Com', roles: ['initial_user'] }]
     }
 
     expect(isInitialUser(organisation, 'user@example.com')).toBe(true)
     expect(isInitialUser(organisation, 'USER@EXAMPLE.COM')).toBe(true)
   })
 
-  it('should return false when isInitialUser is undefined', () => {
+  it('should return false when roles is undefined', () => {
     const organisation = {
       users: [{ email: 'user@example.com' }]
     }

@@ -53,7 +53,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         users: [
           {
             email: mockEmail,
-            isInitialUser: true
+            roles: ['initial_user']
           }
         ]
       }
@@ -82,7 +82,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: customOrgId,
-        users: [{ email: mockEmail, isInitialUser: true }]
+        users: [{ email: mockEmail, roles: ['initial_user'] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -239,7 +239,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         users: [
           {
             email: mockEmail,
-            isInitialUser: false
+            roles: ['standard_user']
           }
         ]
       }
@@ -284,9 +284,9 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       const mockOrganisation = {
         id: mockOrganisationId,
         users: [
-          { email: 'other@example.com', isInitialUser: false },
-          { email: mockEmail, isInitialUser: true },
-          { email: 'another@example.com', isInitialUser: false }
+          { email: 'other@example.com', roles: ['standard_user'] },
+          { email: mockEmail, roles: ['initial_user'] },
+          { email: 'another@example.com', roles: ['standard_user'] }
         ]
       }
 
@@ -323,7 +323,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, isInitialUser: true }]
+        users: [{ email: mockEmail, roles: ['initial_user'] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -437,7 +437,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         callOrder.push('findById')
         return {
           id: mockOrganisationId,
-          users: [{ email: mockEmail, isInitialUser: true }]
+          users: [{ email: mockEmail, roles: ['initial_user'] }]
         }
       })
 
@@ -459,7 +459,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, isInitialUser: true }]
+        users: [{ email: mockEmail, roles: ['initial_user'] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -494,7 +494,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, isInitialUser: true }]
+        users: [{ email: mockEmail, roles: ['initial_user'] }]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)

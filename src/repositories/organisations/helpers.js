@@ -2,7 +2,7 @@ import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import equal from 'fast-deep-equal'
 import { validateStatusHistory } from './schema/index.js'
 
-/** @import {CollatedUser, Organisation, User} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, Organisation, Status, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Accreditation, Registration} from './port.js' */
 
 export const SCHEMA_VERSION = 1
@@ -127,7 +127,20 @@ export const hasChanges = (existing, incoming) => {
   return !equal(normalizedExisting, normalizedIncoming)
 }
 
-/** @typedef {Pick<User, 'fullName'|'email'>} SlimUser */
+/** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
+
+/**
+ * get user roles for the provided status
+ *
+ * @param {Status} status
+ * @returns {UserRoles[]}
+ */
+const getUserRolesForStatus = (status) => {
+  if (status === STATUS.CREATED || status === STATUS.APPROVED) {
+    return [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+  }
+  return [USER_ROLES.STANDARD]
+}
 
 /**
  * @param {Organisation} existing
@@ -159,7 +172,8 @@ const collateApprovedItems = (
       users.push(
         {
           fullName: item.submitterContactDetails.fullName,
-          email: item.submitterContactDetails.email
+          email: item.submitterContactDetails.email,
+          roles: getUserRolesForStatus(itemStatus)
         },
         ...extractAdditionalUsers(item)
       )
@@ -182,7 +196,8 @@ const collateApprovedRegistrations = (existing, updated) =>
     (/** @type {Registration} */ registration) =>
       registration.approvedPersons.map(({ email, fullName }) => ({
         fullName,
-        email
+        email,
+        roles: getUserRolesForStatus(getCurrentStatus(registration))
       }))
   )
 
@@ -199,7 +214,8 @@ const collateApprovedAccreditations = (existing, updated) =>
     (/** @type {Accreditation} */ accreditation) =>
       accreditation.prnIssuance.signatories.map(({ email, fullName }) => ({
         fullName,
-        email
+        email,
+        roles: getUserRolesForStatus(getCurrentStatus(accreditation))
       }))
   )
 
@@ -215,7 +231,8 @@ export const collateUsersOnApproval = (existing, updated) => {
   if (updated.submitterContactDetails) {
     root.push({
       fullName: updated.submitterContactDetails.fullName,
-      email: updated.submitterContactDetails.email
+      email: updated.submitterContactDetails.email,
+      roles: getUserRolesForStatus(getCurrentStatus(updated))
     })
   }
 
@@ -245,10 +262,7 @@ const deduplicateUsers = (users) => {
 
     if (!userMap.has(key)) {
       userMap.set(key, {
-        fullName: user.fullName,
-        email: user.email,
-        isInitialUser: true,
-        roles: [USER_ROLES.STANDARD]
+        ...user
       })
     }
   }

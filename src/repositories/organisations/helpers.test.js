@@ -135,7 +135,6 @@ describe('collateUsersOnApproval', () => {
         {
           fullName: 'Existing User',
           email: 'existing@example.com',
-          isInitialUser: true,
           roles: ['standard_user']
         }
       ]

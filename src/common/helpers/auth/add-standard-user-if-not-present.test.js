@@ -56,7 +56,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -89,7 +88,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -109,19 +107,6 @@ describe('addStandardUserIfNotPresent', () => {
 
       expect(newUser.roles).toEqual([ROLES.standardUser])
       expect(newUser.roles[0]).toBe('standard_user')
-    })
-
-    test('should set isInitialUser to false for new users', async () => {
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
-      const newUser = updateCall[2].users[0]
-
-      expect(newUser.isInitialUser).toBe(false)
     })
 
     test('should construct fullName from firstName and lastName', async () => {
@@ -244,7 +229,6 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'newuser@example.com',
           fullName: 'Existing User',
           contactId: 'contact-123',
-          isInitialUser: true,
           roles: [ROLES.standardUser]
         }
       ]
@@ -282,7 +266,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -312,7 +295,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -377,7 +359,6 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'user1@example.com',
           contactId: 'contact-1',
           fullName: 'User One',
-          isInitialUser: true,
           roles: [ROLES.standardUser]
         },
         {

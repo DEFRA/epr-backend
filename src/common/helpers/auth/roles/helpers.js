@@ -35,7 +35,8 @@ export function findUserInOrg(organisation, email, contactId) {
 export function isInitialUser(organisation, email) {
   return organisation.users.some(
     (user) =>
-      user.email.toLowerCase() === email.toLowerCase() && !!user.isInitialUser
+      user.email.toLowerCase() === email.toLowerCase() &&
+      user.roles?.includes('initial_user')
   )
 }
 
