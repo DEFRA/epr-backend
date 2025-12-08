@@ -74,10 +74,29 @@ services:
 
   mongodb:
     image: mongo:6.0.13
+    hostname: mongodb
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    healthcheck:
+      test: |
+        mongosh --eval "
+        try {
+          rs.status();
+          console.log('Replica set already initialized');
+        } catch(e) {
+          console.log('Initializing replica set...');
+          rs.initiate({
+            _id: 'rs0',
+            members: [{ _id: 0, host: 'localhost:27017' }]
+          });
+        }
+        "
+      interval: 5s
+      start_period: 10s
+      retries: 5
     networks:
       - cdp-tenant
     ports:
-      - '27017:27017'
+      - '27018:27017'
     restart: always
     volumes:
       - mongodb-data:/data

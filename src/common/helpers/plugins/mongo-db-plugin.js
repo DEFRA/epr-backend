@@ -11,6 +11,7 @@ import {
   createOrUpdateCollections,
   createSeedData
 } from '../collections/create-update.js'
+import { changeStreamsHandler } from '../db-change-streams-handler.js'
 
 export const mongoDbPlugin = {
   plugin: {
@@ -47,6 +48,8 @@ export const mongoDbPlugin = {
         isProduction,
         createOrganisationsRepository(db)()
       )
+
+      changeStreamsHandler(db)
 
       server.logger.info({
         message: `MongoDb connected to ${options.databaseName}`,

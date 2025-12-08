@@ -129,7 +129,7 @@ const baseConfig = {
     mongoUrl: {
       doc: 'URI for mongodb',
       format: String,
-      default: 'mongodb://127.0.0.1:27017',
+      default: 'mongodb://127.0.0.1:27018/?directConnection=true',
       env: 'MONGO_URI'
     },
     databaseName: {
