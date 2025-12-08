@@ -35,7 +35,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'Green Recycling Solutions Ltd',
         tradingName: 'Green',
-        registrationNumber: '01234567',
+        companiesHouseNumber: '01234567',
         registeredAddress: {
           line1: 'Unit 15',
           postcode: 'M1 5JG',
@@ -89,7 +89,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'Green Recycling Solutions Ltd',
         tradingName: 'Green',
-        registrationNumber: 'AC012345',
+        companiesHouseNumber: 'AC012345',
         registeredAddress: {
           line1: 'Unit 15',
           postcode: 'M1 5JG',
@@ -140,7 +140,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'Green Recycling Solutions Ltd',
         tradingName: undefined,
-        registrationNumber: '11223344',
+        companiesHouseNumber: '11223344',
         registeredAddress: {
           line1: 'Unit 15',
           postcode: 'M1 5JG',
@@ -180,7 +180,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'British Beverage Distributors Ltd',
         tradingName: 'British Beverage Distributors Ltd',
-        registrationNumber: undefined,
+        companiesHouseNumber: undefined,
         registeredAddress: undefined,
         address: {
           line1: '45 High Street',
@@ -227,7 +227,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'EuroPack GmbH',
         tradingName: 'EuroPack GmbH',
-        registrationNumber: undefined,
+        companiesHouseNumber: undefined,
         registeredAddress: undefined,
         address: {
           line1: '125 Avenue des Champs-Élysées',
@@ -268,7 +268,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'What is the name of your business?',
         tradingName: 'British Beverage Distributors Ltd',
-        registrationNumber: undefined,
+        companiesHouseNumber: undefined,
         registeredAddress: undefined,
         address: {
           line1: '45 High Street',
@@ -312,7 +312,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: 'British Beverage Distributors Ltd',
         tradingName: 'British Beverage Distributors Ltd',
-        registrationNumber: undefined,
+        companiesHouseNumber: undefined,
         registeredAddress: undefined,
         address: {
           line1: '45 High Street',
@@ -357,7 +357,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       companyDetails: {
         name: '01234567',
         tradingName: undefined,
-        registrationNumber: undefined,
+        companiesHouseNumber: undefined,
         registeredAddress: undefined,
         address: {
           line1: 'Address line 1',
