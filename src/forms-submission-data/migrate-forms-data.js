@@ -42,27 +42,32 @@ import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migrat
  * @property {() => Promise<void>} migrate - Execute the migration
  */
 
-/**
- * Creates a form data migrator with configured repositories
- *
- * @param {FormSubmissionsRepository} formsSubmissionRepository - Repository for form submissions
- * @param {OrganisationsRepository} organisationsRepository - Repository for organisations
- * @returns {FormDataMigrator} Migrator instance with migrate method
- *
- * @example
- * const formsDataMigration = createFormDataMigrator(formsRepo, orgsRepo)
- * await formsDataMigration.migrate()
- */
-export function createFormDataMigrator(
-  formsSubmissionRepository,
-  organisationsRepository
-) {
+class MigratorProcessor {
+  constructor(formsSubmissionRepository, organisationsRepository) {
+    this.formsSubmissionRepository = formsSubmissionRepository
+    this.organisationsRepository = organisationsRepository
+    this.fetchTransformConfigs = {
+      organisation: {
+        fetch: (id) => this.formsSubmissionRepository.findOrganisationById(id),
+        parse: (s) => parseOrgSubmission(s.id, s.orgId, s.rawSubmissionData)
+      },
+      registration: {
+        fetch: (id) => this.formsSubmissionRepository.findRegistrationById(id),
+        parse: (s) => parseRegistrationSubmission(s.id, s.rawSubmissionData)
+      },
+      accreditation: {
+        fetch: (id) => this.formsSubmissionRepository.findAccreditationById(id),
+        parse: (s) => parseAccreditationSubmission(s.id, s.rawSubmissionData)
+      }
+    }
+  }
+
   /**
    * Type predicate to narrow MigrationResult to SuccessResult
    * @param {MigrationResult} result
    * @returns {result is SuccessResult}
    */
-  const isSuccessResult = (result) => {
+  isSuccessResult(result) {
     return result.success === true
   }
 
@@ -71,13 +76,15 @@ export function createFormDataMigrator(
    * @param {PromiseSettledResult<MigrationResult>[]} results
    * @returns {{successful: SuccessResult[], failed: FailureResult[]}}
    */
-  const partitionResults = (results) => {
+  partitionResults(results) {
     return results
       .filter((r) => r.status === 'fulfilled')
       .map((r) => r.value)
       .reduce(
         (acc, result) => {
-          const target = isSuccessResult(result) ? acc.successful : acc.failed
+          const target = this.isSuccessResult(result)
+            ? acc.successful
+            : acc.failed
           target.push(result)
           return acc
         },
@@ -85,9 +92,9 @@ export function createFormDataMigrator(
       )
   }
 
-  async function getSubmissionsToMigrate(migratedSubmissionIds) {
+  async getSubmissionsToMigrate(migratedSubmissionIds) {
     const submissionIds =
-      await formsSubmissionRepository.findAllFormSubmissionIds()
+      await this.formsSubmissionRepository.findAllFormSubmissionIds()
     return {
       organisations: submissionIds.organisations.difference(
         migratedSubmissionIds.organisations
@@ -101,23 +108,8 @@ export function createFormDataMigrator(
     }
   }
 
-  const fetchTransformConfigs = {
-    organisation: {
-      fetch: (id) => formsSubmissionRepository.findOrganisationById(id),
-      parse: (s) => parseOrgSubmission(s.id, s.orgId, s.rawSubmissionData)
-    },
-    registration: {
-      fetch: (id) => formsSubmissionRepository.findRegistrationById(id),
-      parse: (s) => parseRegistrationSubmission(s.id, s.rawSubmissionData)
-    },
-    accreditation: {
-      fetch: (id) => formsSubmissionRepository.findAccreditationById(id),
-      parse: (s) => parseAccreditationSubmission(s.id, s.rawSubmissionData)
-    }
-  }
-
-  async function fetchAndTransform(submissionIds, type) {
-    const { fetch, parse } = fetchTransformConfigs[type]
+  async fetchAndTransform(submissionIds, type) {
+    const { fetch, parse } = this.fetchTransformConfigs[type]
     const results = []
     let failureCount = 0
 
@@ -146,8 +138,8 @@ export function createFormDataMigrator(
     return results
   }
 
-  const insertOrganisation = (item) => {
-    return organisationsRepository
+  insertOrganisation = (item) => {
+    return this.organisationsRepository
       .insert(removeUndefinedValues(item.value))
       .then(() => ({
         success: true,
@@ -172,9 +164,9 @@ export function createFormDataMigrator(
       })
   }
 
-  const updateOrganisation = (item) => {
+  updateOrganisation = (item) => {
     const { id, version, ...orgWithoutIdAndVersion } = item.value
-    return organisationsRepository
+    return this.organisationsRepository
       .update(id, version, removeUndefinedValues(orgWithoutIdAndVersion))
       .then(() => ({
         success: true,
@@ -199,18 +191,18 @@ export function createFormDataMigrator(
       })
   }
 
-  async function upsertOrganisations(organisations) {
+  async upsertOrganisations(organisations) {
     const toInsert = organisations.filter((item) => item.operation === 'insert')
     const toUpdate = organisations.filter((item) => item.operation === 'update')
 
-    const insertPromises = toInsert.map(insertOrganisation)
-    const updatePromises = toUpdate.map(updateOrganisation)
+    const insertPromises = toInsert.map(this.insertOrganisation)
+    const updatePromises = toUpdate.map(this.updateOrganisation)
 
     const results = await Promise.allSettled([
       ...insertPromises,
       ...updatePromises
     ])
-    const { successful, failed } = partitionResults(results)
+    const { successful, failed } = this.partitionResults(results)
 
     const insertedCount = successful.filter(
       (r) => r.action === 'inserted'
@@ -222,7 +214,7 @@ export function createFormDataMigrator(
     })
   }
 
-  const linkRegistrations = (organisations, registrations) => {
+  linkRegistrations(organisations, registrations) {
     return linkItemsToOrganisations(
       organisations,
       registrations,
@@ -231,7 +223,7 @@ export function createFormDataMigrator(
     )
   }
 
-  const linkAccreditations = (organisations, accreditations) => {
+  linkAccreditations(organisations, accreditations) {
     return linkItemsToOrganisations(
       organisations,
       accreditations,
@@ -240,7 +232,7 @@ export function createFormDataMigrator(
     )
   }
 
-  async function fetchExistingOrganisationsWithSubmissionsToMigrate(
+  async fetchExistingOrganisationsWithSubmissionsToMigrate(
     migratedSubmissionIds,
     registrationsToMigrate,
     accreditationsToMigrate
@@ -258,7 +250,7 @@ export function createFormDataMigrator(
     return [...existingOrganisationsWithNewSubmissions].reduce(
       async (accPromise, orgId) => {
         const acc = await accPromise
-        const org = await organisationsRepository.findById(orgId)
+        const org = await this.organisationsRepository.findById(orgId)
         acc.set(orgId, org)
         return acc
       },
@@ -266,28 +258,28 @@ export function createFormDataMigrator(
     )
   }
 
-  async function transformAndLinkAllNewSubmissions(
+  async transformAndLinkAllNewSubmissions(
     migratedSubmissionIds,
     submissionsToMigrate
   ) {
     /** @type {BaseOrganisation[]} */
-    const baseOrganisations = await fetchAndTransform(
+    const baseOrganisations = await this.fetchAndTransform(
       submissionsToMigrate.organisations,
       'organisation'
     )
 
-    const registrationsToMigrate = await fetchAndTransform(
+    const registrationsToMigrate = await this.fetchAndTransform(
       submissionsToMigrate.registrations,
       'registration'
     )
 
-    const accreditationsToMigrate = await fetchAndTransform(
+    const accreditationsToMigrate = await this.fetchAndTransform(
       submissionsToMigrate.accreditations,
       'accreditation'
     )
 
     const exitingOrgsWithSubmissionsToMigrate =
-      await fetchExistingOrganisationsWithSubmissionsToMigrate(
+      await this.fetchExistingOrganisationsWithSubmissionsToMigrate(
         migratedSubmissionIds,
         registrationsToMigrate,
         accreditationsToMigrate
@@ -298,13 +290,13 @@ export function createFormDataMigrator(
     )
 
     /** @type {OrganisationWithRegistrations[]} */
-    const organisationsWithRegistrations = linkRegistrations(
+    const organisationsWithRegistrations = this.linkRegistrations(
       allOrganisationsToMigrate,
       registrationsToMigrate
     )
 
     /** @type {Organisation[]} */
-    const organisationsWithAccreditations = linkAccreditations(
+    const organisationsWithAccreditations = this.linkAccreditations(
       organisationsWithRegistrations,
       accreditationsToMigrate
     )
@@ -312,7 +304,7 @@ export function createFormDataMigrator(
     return linkRegistrationToAccreditations(organisationsWithAccreditations)
   }
 
-  const hasNoSubmissionsToMigrate = (submissionsToMigrate) => {
+  hasNoSubmissionsToMigrate(submissionsToMigrate) {
     const countOfSubmissionsToMigrate =
       submissionsToMigrate.organisations.size +
       submissionsToMigrate.registrations.size +
@@ -320,34 +312,59 @@ export function createFormDataMigrator(
     return countOfSubmissionsToMigrate === 0
   }
 
-  return {
-    async migrate() {
-      const migratedSubmissionIds = await organisationsRepository.findAllIds()
-      const submissionsToMigrate = await getSubmissionsToMigrate(
-        migratedSubmissionIds
-      )
+  async migrate() {
+    const migratedSubmissionIds =
+      await this.organisationsRepository.findAllIds()
+    const submissionsToMigrate = await this.getSubmissionsToMigrate(
+      migratedSubmissionIds
+    )
 
-      if (hasNoSubmissionsToMigrate(submissionsToMigrate)) {
-        logger.info({ message: 'No new form submissions to migrate' })
-        return
-      }
-
-      logger.info({
-        message: `Found ${submissionsToMigrate.organisations.size} organisations, ${submissionsToMigrate.registrations.size} registrations, ${submissionsToMigrate.accreditations.size} accreditations to migrate`
-      })
-      const organisations = await transformAndLinkAllNewSubmissions(
-        migratedSubmissionIds,
-        submissionsToMigrate
-      )
-      const migrationItems = organisations.map((org) => {
-        return {
-          value: org,
-          operation: submissionsToMigrate.organisations.has(org.id)
-            ? 'insert'
-            : 'update'
-        }
-      })
-      await upsertOrganisations(migrationItems)
+    if (this.hasNoSubmissionsToMigrate(submissionsToMigrate)) {
+      logger.info({ message: 'No new form submissions to migrate' })
+      return
     }
+
+    logger.info({
+      message: `Found ${submissionsToMigrate.organisations.size} organisations, ${submissionsToMigrate.registrations.size} registrations, ${submissionsToMigrate.accreditations.size} accreditations to migrate`
+    })
+    const organisations = await this.transformAndLinkAllNewSubmissions(
+      migratedSubmissionIds,
+      submissionsToMigrate
+    )
+    const migrationItems = organisations.map((org) => {
+      return {
+        value: org,
+        operation: submissionsToMigrate.organisations.has(org.id)
+          ? 'insert'
+          : 'update'
+      }
+    })
+    await this.upsertOrganisations(migrationItems)
+  }
+}
+
+/**
+ * Creates a form data migrator with configured repositories
+ *
+ * @param {FormSubmissionsRepository} formsSubmissionRepository - Repository for form submissions
+ * @param {OrganisationsRepository} organisationsRepository - Repository for organisations
+ * @returns {FormDataMigrator} Migrator instance with migrate method
+ *
+ * @example
+ * const formsDataMigration = createFormDataMigrator(formsRepo, orgsRepo)
+ * await formsDataMigration.migrate()
+ */
+export function createFormDataMigrator(
+  formsSubmissionRepository,
+  organisationsRepository
+) {
+  const processor = new MigratorProcessor(
+    formsSubmissionRepository,
+    organisationsRepository
+  )
+
+  /** @type {FormDataMigrator} */
+  return {
+    migrate: processor.migrate.bind(processor)
   }
 }
