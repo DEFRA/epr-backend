@@ -30,14 +30,21 @@ export const organisationsLink = {
 
     const { organisationId } = request.params
     if (!organisationId) {
+      throw Boom.badRequest('Organisation id is missing in request')
+    }
+
+    const { organisationsRepository } = request
+    const organisation = await organisationsRepository.findById(organisationId)
+
+    if (!organisation) {
       throw Boom.notFound('Organisation not found')
     }
 
-    try {
-      const { organisationsRepository } = request
-      const organisation =
-        await organisationsRepository.findById(organisationId)
+    if (organisation.status !== STATUS.APPROVED) {
+      throw
+    }
 
+    try {
       const linkedDefraOrg = {
         orgId: orgInToken.defraIdOrgId,
         orgName: orgInToken.defraIdOrgName,
@@ -53,7 +60,6 @@ export const organisationsLink = {
         organisation.version,
         {
           status: STATUS.ACTIVE,
-          statusHistory: organisation.statusHistory,
           linkedDefraOrganisation: linkedDefraOrg,
           registrations: organisation.registrations.reduce(
             (prev, registration) =>
