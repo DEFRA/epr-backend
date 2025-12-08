@@ -20,13 +20,15 @@ export const organisationsLink = {
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const defraIdOrgId = request.auth.credentials?.currentRelationShipId
-    const { organisationId } = request.params
+    const { orgInToken } = request.server.app
 
-    if (!defraIdOrgId) {
-      throw Boom.badImplementation('defraIgOrgId is missing')
+    if (!orgInToken?.defraIdOrgId) {
+      throw Boom.badImplementation(
+        'currentRelationShipId is missing from credentials'
+      )
     }
 
+    const { organisationId } = request.params
     if (!organisationId) {
       throw Boom.notFound('Organisation not found')
     }
@@ -36,13 +38,23 @@ export const organisationsLink = {
       const organisation =
         await organisationsRepository.findById(organisationId)
 
+      const linkedDefraOrg = {
+        orgId: orgInToken.defraIdOrgId,
+        orgName: orgInToken.defraIdOrgName,
+        linkedBy: {
+          email: request.auth.credentials.email,
+          id: request.auth.credentials.id
+        },
+        linkedAt: new Date().toISOString()
+      }
+
       await organisationsRepository.update(
         organisation.id,
         organisation.version,
         {
           status: STATUS.ACTIVE,
           statusHistory: organisation.statusHistory,
-          defraIdOrgId: `${defraIdOrgId}`,
+          linkedDefraOrganisation: linkedDefraOrg,
           registrations: organisation.registrations.reduce(
             (prev, registration) =>
               registration.status === STATUS.APPROVED
