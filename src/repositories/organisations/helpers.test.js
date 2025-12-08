@@ -145,7 +145,7 @@ describe('collateUsersOnApproval', () => {
 
     const result = collateUsers(existing, updated)
 
-    expect(result).toBe(existing.users)
+    expect(result).toStrictEqual(existing.users)
   })
 
   it('should include submitter when no registration status change to approved', () => {
@@ -218,5 +218,80 @@ describe('collateUsersOnApproval', () => {
     const result = collateUsers(existing, updated)
 
     expect(result.length).toBeGreaterThan(0)
+  })
+
+  it('should preserve existing users when adding new users from registration approval', () => {
+    const existingUser = {
+      fullName: 'Existing User',
+      email: 'existing@example.com',
+      roles: ['standard_user']
+    }
+
+    const existing = buildOrganisation({
+      users: [existingUser]
+    })
+
+    const updated = {
+      ...existing,
+      registrations: existing.registrations.map((reg) => ({
+        ...reg,
+        statusHistory: [
+          ...reg.statusHistory,
+          createStatusHistoryEntry(STATUS.APPROVED)
+        ]
+      }))
+    }
+
+    const result = collateUsers(existing, updated)
+
+    expect(result.length).toBeGreaterThan(1)
+    const existingUserStillPresent = result.find(
+      (user) => user.email === existingUser.email
+    )
+    expect(existingUserStillPresent).toBeDefined()
+    expect(existingUserStillPresent.fullName).toBe(existingUser.fullName)
+  })
+
+  it('should preserve multiple existing users when submitter is added', () => {
+    const existingUsers = [
+      {
+        fullName: 'Existing User 1',
+        email: 'existing1@example.com',
+        roles: ['initial_user']
+      },
+      {
+        fullName: 'Existing User 2',
+        email: 'existing2@example.com',
+        roles: ['standard_user']
+      }
+    ]
+
+    const existing = buildOrganisation({
+      users: existingUsers,
+      submitterContactDetails: null
+    })
+
+    const updated = {
+      ...existing,
+      submitterContactDetails: {
+        fullName: 'New Submitter',
+        email: 'newsubmitter@example.com',
+        phone: '1234567890',
+        title: 'Director'
+      }
+    }
+
+    const result = collateUsers(existing, updated)
+
+    expect(result.length).toBe(3)
+    expect(
+      result.find((u) => u.email === 'existing1@example.com')
+    ).toBeDefined()
+    expect(
+      result.find((u) => u.email === 'existing2@example.com')
+    ).toBeDefined()
+    expect(
+      result.find((u) => u.email === 'newsubmitter@example.com')
+    ).toBeDefined()
   })
 })

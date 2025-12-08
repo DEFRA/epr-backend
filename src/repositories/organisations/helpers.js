@@ -259,13 +259,11 @@ export const collateUsers = (existing, updated) => {
   }
 
   const users = [
+    ...existing.users,
     ...root,
     ...collateRegistrationUsers(existing, updated),
     ...collateAccreditationUsers(existing, updated)
   ]
-  if (users.length > 0) {
-    return deduplicateUsers(users)
-  }
 
-  return existing.users
+  return deduplicateUsers(users)
 }
