@@ -10,6 +10,7 @@ export const SENT_ON_LOADS = {
   rowIdField: 'ROW_ID',
   requiredHeaders: [],
   unfilledValues: {},
+  fatalFields: ['ROW_ID'],
   validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
   fieldsRequiredForWasteBalance: []
 }

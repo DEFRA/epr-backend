@@ -43,19 +43,24 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('ROW_ID validation', () => {
-      it('accepts valid ROW_ID', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 10000 })
+      it('accepts valid ROW_ID at minimum (1000)', () => {
+        const { error } = validationSchema.validate({ ROW_ID: 1000 })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts valid ROW_ID above minimum', () => {
+        const { error } = validationSchema.validate({ ROW_ID: 1500 })
         expect(error).toBeUndefined()
       })
 
       it('rejects ROW_ID below minimum', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 9999 })
+        const { error } = validationSchema.validate({ ROW_ID: 999 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 10000')
+        expect(error.details[0].message).toBe('must be at least 1000')
       })
 
       it('rejects non-integer ROW_ID', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 10000.5 })
+        const { error } = validationSchema.validate({ ROW_ID: 1000.5 })
         expect(error).toBeDefined()
       })
     })
@@ -142,7 +147,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     describe('multiple field validation', () => {
       it('reports all errors when multiple fields invalid', () => {
         const { error } = validationSchema.validate({
-          ROW_ID: 9999,
+          ROW_ID: 999,
           GROSS_WEIGHT: 0
         })
         expect(error).toBeDefined()
