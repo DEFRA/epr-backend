@@ -17,8 +17,14 @@ export const DATA_PREFIX = `${EPR_PREFIX}_DATA_`
 /** Special marker to skip a column in data collection */
 export const SKIP_COLUMN = `${EPR_PREFIX}_SKIP_COLUMN`
 
-/** Text value in a skip column that triggers row skipping */
-export const SKIP_ROW_TEXT = 'Example'
+/** Header name for the row identifier column */
+export const ROW_ID_HEADER = 'ROW_ID'
+
+/** Text value that indicates an example row to skip */
+export const SKIP_EXAMPLE_ROW_TEXT = 'Example'
+
+/** Text value that indicates a header description row to skip */
+export const SKIP_HEADER_ROW_TEXT = 'Row ID'
 
 /** Default dropdown placeholder text that should be treated as empty/null */
 export const PLACEHOLDER_TEXT = 'Choose option'
