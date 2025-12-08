@@ -73,6 +73,7 @@
     "immer": "11.0.1",
     "joi": "17.13.3",
     "joi-to-json": "5.0.0",
+    "lodash.keyby": "4.6.0",
     "lodash.mergewith": "4.6.2",
     "mongo-locks": "3.1.2",
     "mongodb": "7.0.0",

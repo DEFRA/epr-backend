@@ -1,5 +1,9 @@
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildAccreditation,
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -338,6 +342,368 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
           glassRecyclingProcess: null
         })
       )
+    })
+  })
+
+  describe('status lifecycle and user collation', () => {
+    describe('when approving a single registration', () => {
+      it('should update statusHistory and collate users', async () => {
+        const org = buildOrganisation()
+        await organisationsRepository.insert(org)
+
+        const registrationId = org.registrations[0].id
+
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: registrationId,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  registrationNumber: 'R25TEST001'
+                }
+              ]
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+
+        const updatedReg = body.organisation.registrations.find(
+          (r) => r.id === registrationId
+        )
+
+        expect(updatedReg.statusHistory).toHaveLength(2)
+        expect(updatedReg.statusHistory[0].status).toBe('created')
+        expect(updatedReg.statusHistory[1].status).toBe('approved')
+        expect(updatedReg.status).toBe('approved')
+
+        expect(body.organisation.users.length).toBeGreaterThan(0)
+        const submitterEmail =
+          org.registrations[0].submitterContactDetails.email
+        expect(
+          body.organisation.users.some((u) => u.email === submitterEmail)
+        ).toBe(true)
+      })
+
+      it('should include all users from approved registration', async () => {
+        const org = buildOrganisation()
+        await organisationsRepository.insert(org)
+
+        const registrationId = org.registrations[0].id
+        const approvedPersons = org.registrations[0].approvedPersons
+
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: registrationId,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  registrationNumber: 'R25TEST001'
+                }
+              ]
+            }
+          }
+        })
+
+        const body = JSON.parse(response.payload)
+        const userEmails = body.organisation.users.map((u) => u.email)
+
+        const submitterEmail =
+          org.registrations[0].submitterContactDetails.email
+        expect(userEmails).toContain(submitterEmail)
+
+        for (const approvedPerson of approvedPersons) {
+          expect(userEmails).toContain(approvedPerson.email)
+        }
+      })
+    })
+
+    describe('when approving an accreditation', () => {
+      it('should update statusHistory and collate signatories', async () => {
+        const org = buildOrganisation()
+        await organisationsRepository.insert(org)
+
+        const accreditationId = org.accreditations[0].id
+        const linkedRegistrationId = org.registrations[0].id
+
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: linkedRegistrationId,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  registrationNumber: 'R25TEST001'
+                }
+              ],
+              accreditations: [
+                {
+                  id: accreditationId,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  accreditationNumber: 'ACC25TEST001'
+                }
+              ]
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+
+        const updatedAcc = body.organisation.accreditations.find(
+          (a) => a.id === accreditationId
+        )
+
+        expect(updatedAcc.statusHistory).toHaveLength(2)
+        expect(updatedAcc.statusHistory[0].status).toBe('created')
+        expect(updatedAcc.statusHistory[1].status).toBe('approved')
+        expect(updatedAcc.status).toBe('approved')
+
+        const signatories = org.accreditations[0].prnIssuance.signatories
+        const userEmails = body.organisation.users.map((u) => u.email)
+
+        for (const signatory of signatories) {
+          expect(userEmails).toContain(signatory.email)
+        }
+      })
+    })
+
+    describe('when approving multiple items', () => {
+      it('should update all statusHistory entries and collate all users', async () => {
+        const reprocessorReg = buildRegistration({
+          wasteProcessingType: 'reprocessor'
+        })
+        const exporterReg = buildRegistration({
+          wasteProcessingType: 'exporter'
+        })
+        const accreditation = buildAccreditation({
+          wasteProcessingType: 'reprocessor'
+        })
+
+        reprocessorReg.accreditationId = accreditation.id
+
+        const org = buildOrganisation({
+          registrations: [reprocessorReg, exporterReg],
+          accreditations: [accreditation]
+        })
+        await organisationsRepository.insert(org)
+
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: org.registrations[0].id,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  registrationNumber: 'R25TEST001'
+                },
+                {
+                  id: org.registrations[1].id,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  registrationNumber: 'R25TEST002'
+                }
+              ],
+              accreditations: [
+                {
+                  id: org.accreditations[0].id,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  accreditationNumber: 'ACC25TEST001'
+                }
+              ]
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+
+        for (const reg of body.organisation.registrations) {
+          expect(reg.statusHistory).toHaveLength(2)
+          expect(reg.statusHistory[1].status).toBe('approved')
+          expect(reg.status).toBe('approved')
+        }
+
+        for (const acc of body.organisation.accreditations) {
+          expect(acc.statusHistory).toHaveLength(2)
+          expect(acc.statusHistory[1].status).toBe('approved')
+          expect(acc.status).toBe('approved')
+        }
+
+        const userEmails = body.organisation.users.map((u) => u.email)
+        expect(userEmails.length).toBeGreaterThan(0)
+
+        for (const reg of org.registrations) {
+          expect(userEmails).toContain(reg.submitterContactDetails.email)
+        }
+
+        for (const acc of org.accreditations) {
+          expect(userEmails).toContain(acc.submitterContactDetails.email)
+        }
+      })
+    })
+
+    describe('when status does not change', () => {
+      it('should not add duplicate statusHistory entries', async () => {
+        const org = buildOrganisation()
+        await organisationsRepository.insert(org)
+
+        const registrationId = org.registrations[0].id
+
+        const firstUpdate = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: registrationId,
+                  status: 'approved',
+                  validFrom: '2025-01-01T00:00:00.000Z',
+                  validTo: '2026-01-01T00:00:00.000Z',
+                  registrationNumber: 'R25TEST001'
+                }
+              ]
+            }
+          }
+        })
+
+        expect(firstUpdate.statusCode).toBe(StatusCodes.OK)
+        const firstBody = JSON.parse(firstUpdate.payload)
+        const firstReg = firstBody.organisation.registrations.find(
+          (r) => r.id === registrationId
+        )
+        expect(firstReg.statusHistory).toHaveLength(2)
+
+        const secondUpdate = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: registrationId,
+                  status: 'approved',
+                  cbduNumber: 'CBDU99999'
+                }
+              ]
+            }
+          }
+        })
+
+        expect(secondUpdate.statusCode).toBe(StatusCodes.OK)
+        const secondBody = JSON.parse(secondUpdate.payload)
+        const secondReg = secondBody.organisation.registrations.find(
+          (r) => r.id === registrationId
+        )
+
+        expect(secondReg.statusHistory).toHaveLength(2)
+        expect(secondReg.cbduNumber).toBe('CBDU99999')
+      })
+    })
+
+    describe('when rejecting an item', () => {
+      it('should update statusHistory to rejected', async () => {
+        const org = buildOrganisation()
+        await organisationsRepository.insert(org)
+
+        const registrationId = org.registrations[0].id
+
+        const response = await server.inject({
+          method: 'PATCH',
+          url: `/v1/dev/organisations/${org.id}`,
+          payload: {
+            organisation: {
+              registrations: [
+                {
+                  id: registrationId,
+                  status: 'rejected'
+                }
+              ]
+            }
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const body = JSON.parse(response.payload)
+
+        const updatedReg = body.organisation.registrations.find(
+          (r) => r.id === registrationId
+        )
+
+        expect(updatedReg.statusHistory).toHaveLength(2)
+        expect(updatedReg.statusHistory[1].status).toBe('rejected')
+        expect(updatedReg.status).toBe('rejected')
+      })
+    })
+  })
+
+  describe('when updating without registrations/accreditations in payload', () => {
+    it('should preserve existing registrations and accreditations', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            businessType: 'individual'
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const { organisation } = JSON.parse(response.payload)
+      expect(organisation.businessType).toBe('individual')
+      expect(organisation.registrations).toHaveLength(org.registrations.length)
+      expect(organisation.accreditations).toHaveLength(
+        org.accreditations.length
+      )
+    })
+
+    it('should preserve existing registrations when null is passed', async () => {
+      const org = buildOrganisation()
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            businessType: 'individual',
+            registrations: null
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const { organisation } = JSON.parse(response.payload)
+      expect(organisation.registrations).toHaveLength(org.registrations.length)
     })
   })
 })

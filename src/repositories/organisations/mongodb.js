@@ -89,6 +89,7 @@ const performUpdate = (db) => async (id, version, updates) => {
     existing.registrations,
     validatedUpdates.registrations
   )
+
   const accreditations = mergeSubcollection(
     existing.accreditations,
     validatedUpdates.accreditations
