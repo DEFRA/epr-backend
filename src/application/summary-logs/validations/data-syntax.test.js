@@ -2,81 +2,78 @@ import Joi from 'joi'
 import { createDataSyntaxValidator } from './data-syntax.js'
 import {
   VALIDATION_CATEGORY,
+  VALIDATION_CODE,
   VALIDATION_SEVERITY
 } from '#common/enums/validation.js'
 
 describe('createDataSyntaxValidator', () => {
-  // Minimal test schemas - decoupled from production schemas
+  // Minimal test schemas using domain schema structure
   const TEST_SCHEMAS = {
     TEST: {
       TEST_TABLE: {
         requiredHeaders: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
         rowIdField: 'ROW_ID',
-        rowSchemas: {
-          failure: Joi.object({
-            ROW_ID: Joi.number().required().min(10000).messages({
-              'number.base': 'must be a number',
-              'number.min': 'must be at least 10000',
-              'any.required': 'is required'
-            })
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional().messages({
+            'number.base': 'must be a number',
+            'number.min': 'must be at least 10000'
+          }),
+          TEXT_FIELD: Joi.string().optional().messages({
+            'string.base': 'must be a string'
+          }),
+          NUMBER_FIELD: Joi.number().greater(0).optional().messages({
+            'number.base': 'must be a number',
+            'number.greater': 'must be greater than 0'
           })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          concern: Joi.object({
-            TEXT_FIELD: Joi.string().required().messages({
-              'string.base': 'must be a string',
-              'any.required': 'is required'
-            }),
-            NUMBER_FIELD: Joi.number().required().greater(0).messages({
-              'number.base': 'must be a number',
-              'number.greater': 'must be greater than 0',
-              'any.required': 'is required'
-            })
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false })
-        }
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD']
       },
       DATE_TABLE: {
         requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
         rowIdField: 'ROW_ID',
-        rowSchemas: {
-          failure: Joi.object({
-            ROW_ID: Joi.number().required().min(10000)
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          DATE_FIELD: Joi.date().optional().messages({
+            'date.base': 'must be a valid date'
           })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          concern: Joi.object({
-            DATE_FIELD: Joi.date().required().messages({
-              'date.base': 'must be a valid date',
-              'any.required': 'is required'
-            })
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false })
-        }
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'DATE_FIELD']
       },
       PATTERN_TABLE: {
         requiredHeaders: ['ROW_ID', 'CODE_FIELD'],
         rowIdField: 'ROW_ID',
-        rowSchemas: {
-          failure: Joi.object({
-            ROW_ID: Joi.number().required().min(10000)
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false }),
-          concern: Joi.object({
-            CODE_FIELD: Joi.string()
-              .required()
-              .pattern(/^\d{2} \d{2} \d{2}$/)
-              .messages({
-                'string.pattern.base': 'must be in format "XX XX XX"',
-                'any.required': 'is required'
-              })
-          })
-            .unknown(true)
-            .prefs({ abortEarly: false })
-        }
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          CODE_FIELD: Joi.string()
+            .pattern(/^\d{2} \d{2} \d{2}$/)
+            .optional()
+            .messages({
+              'string.pattern.base': 'must be in format "XX XX XX"'
+            })
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'CODE_FIELD']
+      },
+      // Schema with unmapped Joi error type to test error handling
+      UNMAPPED_TABLE: {
+        requiredHeaders: ['ROW_ID', 'EMAIL_FIELD'],
+        rowIdField: 'ROW_ID',
+        unfilledValues: {},
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(10000).optional(),
+          EMAIL_FIELD: Joi.string().email().optional() // 'string.email' is not mapped
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'EMAIL_FIELD']
       }
     }
   }
@@ -527,8 +524,10 @@ describe('createDataSyntaxValidator', () => {
 
       expect(result.issues.isValid()).toBe(true)
     })
+  })
 
-    it('ignores tables without schemas', () => {
+  describe('unrecognised tables', () => {
+    it('returns FATAL when table has no schema for processing type', () => {
       const parsed = {
         meta: { PROCESSING_TYPE: { value: 'TEST' } },
         data: {
@@ -538,14 +537,138 @@ describe('createDataSyntaxValidator', () => {
           },
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
-            rows: [['goes']]
+            rows: [['goes']],
+            location: { sheet: 'Sheet1', row: 5, column: 'A' }
           }
         }
       }
 
       const result = validateDataSyntax(parsed)
 
-      expect(result.issues.isValid()).toBe(true)
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.TECHNICAL)
+      expect(fatals[0].code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
+      expect(fatals[0].message).toContain('UNKNOWN_TABLE')
+      expect(fatals[0].context.location.table).toBe('UNKNOWN_TABLE')
+    })
+
+    it('reports all unrecognised tables when multiple are present', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          UNKNOWN_TABLE_1: {
+            headers: ['FOO'],
+            rows: [['bar']],
+            location: { sheet: 'Sheet1', row: 5, column: 'A' }
+          },
+          UNKNOWN_TABLE_2: {
+            headers: ['BAZ'],
+            rows: [['qux']],
+            location: { sheet: 'Sheet2', row: 10, column: 'B' }
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(2)
+      expect(fatals.map((e) => e.context.location.table)).toContain(
+        'UNKNOWN_TABLE_1'
+      )
+      expect(fatals.map((e) => e.context.location.table)).toContain(
+        'UNKNOWN_TABLE_2'
+      )
+    })
+
+    it('still validates recognised tables when unrecognised tables are present', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          TEST_TABLE: {
+            headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
+            rows: [[10000, 123, 42]], // TEXT_FIELD should be string, not number
+            location: { sheet: 'Sheet1', row: 2, column: 'A' }
+          },
+          UNKNOWN_TABLE: {
+            headers: ['ANYTHING'],
+            rows: [['goes']],
+            location: { sheet: 'Sheet2', row: 5, column: 'A' }
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      // Should have FATAL for unrecognised table
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].code).toBe(VALIDATION_CODE.TABLE_UNRECOGNISED)
+
+      // Should also have ERROR for invalid TEXT_FIELD in recognised table
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+    })
+
+    it('includes sheet location in error context when available', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          UNKNOWN_TABLE: {
+            headers: ['ANYTHING'],
+            rows: [['goes']],
+            location: { sheet: 'DataSheet', row: 15, column: 'C' }
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].context.location).toEqual({
+        sheet: 'DataSheet',
+        table: 'UNKNOWN_TABLE'
+      })
+    })
+
+    it('handles missing location gracefully', () => {
+      const parsed = {
+        meta: { PROCESSING_TYPE: { value: 'TEST' } },
+        data: {
+          UNKNOWN_TABLE: {
+            headers: ['ANYTHING'],
+            rows: [['goes']]
+            // No location
+          }
+        }
+      }
+
+      const result = validateDataSyntax(parsed)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals[0].context.location).toEqual({
+        table: 'UNKNOWN_TABLE'
+      })
     })
   })
 
@@ -560,6 +683,14 @@ describe('createDataSyntaxValidator', () => {
       const result = validateDataSyntax({ data: {} })
 
       expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('throws error for unmapped Joi error types', () => {
+      expect(() =>
+        validate({
+          UNMAPPED_TABLE: { ROW_ID: 10000, EMAIL_FIELD: 'not-an-email' }
+        })
+      ).toThrow("Unmapped Joi error type 'string.email'")
     })
   })
 
