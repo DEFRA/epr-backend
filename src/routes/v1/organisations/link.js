@@ -41,7 +41,7 @@ export const organisationsLink = {
     }
 
     if (organisation.status !== STATUS.APPROVED) {
-      throw
+      throw Boom.conflict('Organisation is not in an approvable state')
     }
 
     try {
