@@ -22,16 +22,22 @@ const CollectionState = {
 }
 
 const extractCellValue = (cellValue) => {
-  if (
-    cellValue &&
-    typeof cellValue === 'object' &&
-    'formula' in cellValue &&
-    'result' in cellValue
-  ) {
-    return cellValue.result
-  }
-  if (cellValue && typeof cellValue === 'object' && 'formula' in cellValue) {
-    return null
+  if (cellValue && typeof cellValue === 'object') {
+    // Handle formula cells (both regular and shared formulas)
+    if (
+      'result' in cellValue &&
+      ('formula' in cellValue || 'sharedFormula' in cellValue)
+    ) {
+      return cellValue.result
+    }
+    // Handle formula cells without a result
+    if ('formula' in cellValue || 'sharedFormula' in cellValue) {
+      return null
+    }
+    // Handle richText cells - concatenate all text segments
+    if ('richText' in cellValue && Array.isArray(cellValue.richText)) {
+      return cellValue.richText.map((segment) => segment.text).join('')
+    }
   }
   return cellValue
 }
@@ -156,11 +162,20 @@ const shouldSkipRow = (draftCollection) => {
     }
   }
 
-  // Skip textual (user-facing) header rows
   const rowIdIndex = draftCollection.headers.indexOf(ROW_ID_HEADER)
   if (rowIdIndex !== -1) {
     const cellValue = draftCollection.currentRow[rowIdIndex]
-    if (cellValue === SKIP_HEADER_ROW_TEXT) {
+
+    // Skip textual (user-facing) header rows
+    if (
+      typeof cellValue === 'string' &&
+      cellValue.startsWith(SKIP_HEADER_ROW_TEXT)
+    ) {
+      return true
+    }
+
+    // Skip rows where ROW_ID is empty (null/undefined)
+    if (cellValue === null || cellValue === undefined) {
       return true
     }
   }
@@ -279,6 +294,9 @@ const processWorksheet = (draftState, worksheet) => {
   emitCollectionsToResult(draftState.result.data, draftState.activeCollections)
   draftState.activeCollections = []
 }
+
+// Exported for testing - allows direct unit testing of cell value extraction
+export { extractCellValue }
 
 /** @type {SummaryLogParser} */
 export const parse = async (summaryLogBuffer) => {
