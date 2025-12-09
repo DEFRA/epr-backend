@@ -5,11 +5,10 @@ import { getConfig } from '#root/config.js'
 
 /**
  * Determines the roles for an Entra ID user based on their token
- * @param {EntraIdTokenPayload} tokenPayload - The Entra ID token payload
+ * @param {string} userEmail - The user's email address (taken from Entra ID access token)
  * @returns {Promise<string[]>} Array of role strings
  */
-export async function getEntraUserRoles(tokenPayload) {
-  const userEmail = tokenPayload.email || tokenPayload.preferred_username
+export async function getEntraUserRoles(userEmail) {
 
   const stringifiedServiceMaintainersList = getConfig().get(
     'roles.serviceMaintainers'
