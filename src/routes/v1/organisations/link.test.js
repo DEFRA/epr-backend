@@ -162,21 +162,14 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
         const org = buildOrganisation({
           users: [user],
-          statusHistory: [
-            {
-              status: STATUS.CREATED,
-              updatedAt: '2025-11-01T12:00:00.000Z'
-            },
-            {
-              status: STATUS.APPROVED,
-              updatedAt: '2025-11-02T12:00:00.000Z'
-            }
-          ]
+          status: STATUS.APPROVED
         })
 
-        console.log('Should be approved')
-        console.log('org.statusHistory', org.statusHistory)
         await organisationsRepository.insert(org)
+        await organisationsRepository.update(org.id, org.version + 1, {
+          organisation: { status: 'approved' }
+        })
+
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${org.id}/link`,
