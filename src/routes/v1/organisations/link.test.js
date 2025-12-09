@@ -65,7 +65,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
     })
 
-    describe('the request is valid', () => {
+    describe('the request is valid, the org exists', () => {
       const baseUserObject = {
         email: 'random@email.com',
         fullName: 'Mickey Mouse',
@@ -82,20 +82,19 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
       const databaseStateScenarios = [
         {
-          description: 'the organisation exists but has empty users list',
+          description: 'org has no users',
           orgOverride: { users: [] },
-          expectedStatus: StatusCodes.UNAUTHORIZED
+          expectedStatus: StatusCodes.CONFLICT
         },
         {
-          description: 'Org exists BUT user is not in the users list',
+          description: 'user is not in the users list',
           orgOverride: {
             users: [baseUserObject]
           },
-          expectedStatus: StatusCodes.UNAUTHORIZED
+          expectedStatus: StatusCodes.CONFLICT
         },
         {
-          description:
-            'the organisation exists and the user can be found by email but they are not an initial user',
+          description: 'user is NOT an initial user',
           orgOverride: {
             users: [
               {
@@ -104,20 +103,18 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               }
             ]
           },
-          expectedStatus: StatusCodes.UNAUTHORIZED
+          expectedStatus: StatusCodes.CONFLICT
         },
         {
-          description:
-            'the organisation exists and the user is valid but the organisation is the PENDING state',
+          description: 'user is valid but is org in the CREATED state',
           orgOverride: {
             users: [fullyValidUser],
-            status: 'PENDING'
+            status: STATUS.CREATED
           },
           expectedStatus: StatusCodes.CONFLICT
         },
         {
-          description:
-            'the organisation exists and the user is valid but the organisation is in the ACTIVE state',
+          description: 'user is valid but org is in the ACTIVE state',
           orgOverride: {
             users: [fullyValidUser],
             status: STATUS.ACTIVE
@@ -125,8 +122,23 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expectedStatus: StatusCodes.CONFLICT
         },
         {
-          description:
-            'the organisation exists and the user is valid AND the organisation is in the APPROVED state',
+          description: 'user is valid but is org in the ARCHIVED state',
+          orgOverride: {
+            users: [fullyValidUser],
+            status: STATUS.ARCHIVED
+          },
+          expectedStatus: StatusCodes.CONFLICT
+        },
+        {
+          description: 'user is valid but is org in the REJECTED state',
+          orgOverride: {
+            users: [fullyValidUser],
+            status: STATUS.REJECTED
+          },
+          expectedStatus: StatusCodes.CONFLICT
+        },
+        {
+          description: 'user is valid and org is in the APPROVED state',
           orgOverride: {
             users: [fullyValidUser],
             status: STATUS.APPROVED
@@ -137,11 +149,19 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
       it.each(databaseStateScenarios)(
         'returns $expectedStatus when $description',
-        async ({ orgOverride = {}, expectedStatus }) => {
+        async ({ orgOverride, expectedStatus }) => {
+          const { status, ...restOrgOverrides } = orgOverride
+
           const org = buildOrganisation({
-            ...orgOverride
+            ...restOrgOverrides
           })
           await organisationsRepository.insert(org)
+
+          if (status) {
+            await organisationsRepository.update(org.id, 1, {
+              status
+            })
+          }
           const response = await server.inject({
             method: 'POST',
             url: `/v1/organisations/${org.id}/link`,
@@ -154,7 +174,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         }
       )
 
-      it.only('when the request succeeds', async () => {
+      it('when the request succeeds', async () => {
         const user = {
           email: VALID_TOKEN_EMAIL_ADDRESS,
           fullName: 'Brandom Yuser',
@@ -191,20 +211,14 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         )
 
         expect(lastOrg.status).toBe(STATUS.ACTIVE)
-        console.log(
-          'lastOrg.linkedDefraOrganisation:',
-          lastOrg.linkedDefraOrganisation
-        )
         expect(lastOrg.linkedDefraOrganisation).toEqual({
-          linkedDefraOrganisation: {
-            orgId: COMPANY_1_ID,
-            orgName: COMPANY_1_NAME,
-            linkedBy: {
-              email: 'someone@test-company.com',
-              id: VALID_TOKEN_CONTACT_ID
-            },
-            linkedAt: expect.any(String)
-          }
+          orgId: COMPANY_1_ID,
+          orgName: COMPANY_1_NAME,
+          linkedBy: {
+            email: 'someone@test-company.com',
+            id: VALID_TOKEN_CONTACT_ID
+          },
+          linkedAt: expect.any(Date)
         })
       })
     })
