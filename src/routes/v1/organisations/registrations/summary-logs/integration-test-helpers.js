@@ -1,17 +1,17 @@
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
+import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 export const { validToken } = entraIdMockAuthTokens
@@ -58,6 +58,8 @@ export const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
 export const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
 
+const VALIDATION_TIMEOUT_IN_MS = 50
+
 export const pollForValidation = async (
   server,
   organisationId,
@@ -69,7 +71,9 @@ export const pollForValidation = async (
   let status = SUMMARY_LOG_STATUS.VALIDATING
 
   while (status === SUMMARY_LOG_STATUS.VALIDATING && attempts < maxAttempts) {
-    await new Promise((resolve) => setTimeout(resolve, 50))
+    await new Promise((resolve) =>
+      setTimeout(resolve, VALIDATION_TIMEOUT_IN_MS)
+    )
 
     const checkResponse = await server.inject({
       method: 'GET',
