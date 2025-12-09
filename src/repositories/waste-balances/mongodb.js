@@ -52,14 +52,7 @@ const performUpdateWasteBalanceTransactions =
       .collection(WASTE_BALANCE_COLLECTION_NAME)
       .findOne({ accreditationId })
 
-    if (!existing) {
-      await db.collection(WASTE_BALANCE_COLLECTION_NAME).insertOne({
-        ...wasteBalance,
-        amount: newAmount,
-        availableAmount: newAvailableAmount,
-        transactions: newTransactions
-      })
-    } else {
+    if (existing) {
       await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
         { accreditationId },
         {
@@ -72,6 +65,13 @@ const performUpdateWasteBalanceTransactions =
           }
         }
       )
+    } else {
+      await db.collection(WASTE_BALANCE_COLLECTION_NAME).insertOne({
+        ...wasteBalance,
+        amount: newAmount,
+        availableAmount: newAvailableAmount,
+        transactions: newTransactions
+      })
     }
   }
 

@@ -13,7 +13,7 @@ const collectionName = 'waste-balances'
  * @type {CreateOrUpdateCollection}
  */
 export async function createOrUpdateWasteBalancesCollection(db, collections) {
-  if (!collections.find(({ name }) => name === collectionName)) {
+  if (!collections.some(({ name }) => name === collectionName)) {
     await db.createCollection(collectionName)
   }
 }

@@ -17,12 +17,18 @@ const buildWasteRecord = (overrides = {}) => {
     'Date Received': '2025-01-20'
   }
 
+  const testUser = {
+    id: 'user-1',
+    name: 'Test User'
+  }
+
   return {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     accreditationId: 'acc-1',
     rowId: 'row-1',
     type: WASTE_RECORD_TYPE.RECEIVED,
+    updatedBy: testUser,
     versions: [
       {
         createdAt: '2025-01-20T10:00:00.000Z',
@@ -43,6 +49,11 @@ describe('Waste Balance Calculator', () => {
   const accreditation = {
     validFrom: '2023-01-01',
     validTo: '2023-12-31'
+  }
+
+  const testUser = {
+    id: 'user-1',
+    name: 'Test User'
   }
 
   const emptyBalance = {
@@ -69,7 +80,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -91,7 +103,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -112,7 +125,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -131,7 +145,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -157,7 +172,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record1, record2],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(2)
@@ -186,7 +202,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -206,7 +223,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -225,7 +243,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -245,7 +264,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -264,7 +284,8 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation
+      accreditation,
+      user: testUser
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -311,23 +332,6 @@ describe('Waste Balance Calculator', () => {
       expect(result.closingAvailableAmount).toBe(400)
     })
 
-    it('should handle PENDING_DEBIT transactions correctly', () => {
-      const result = buildTransaction(
-        mockRecord,
-        100,
-        500,
-        500,
-        WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT
-      )
-
-      expect(result.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT)
-      expect(result.amount).toBe(100)
-      expect(result.openingAmount).toBe(500)
-      expect(result.openingAvailableAmount).toBe(500)
-      expect(result.closingAmount).toBe(500) // Balance should not change
-      expect(result.closingAvailableAmount).toBe(400) // Available should decrease
-    })
-
     describe('Transaction Scenarios', () => {
       it('Scenario 1: Credit followed by Debit', () => {
         // Initial state: 0
@@ -355,29 +359,7 @@ describe('Waste Balance Calculator', () => {
         expect(debitTx.closingAvailableAmount).toBe(70)
       })
 
-      it('Scenario 2: Credit followed by Pending Debit', () => {
-        const creditTx = buildTransaction(
-          mockRecord,
-          100,
-          0,
-          0,
-          WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
-        )
-
-        const pendingTx = buildTransaction(
-          mockRecord,
-          40,
-          creditTx.closingAmount,
-          creditTx.closingAvailableAmount,
-          WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT
-        )
-
-        expect(pendingTx.openingAmount).toBe(100)
-        expect(pendingTx.closingAmount).toBe(100) // Balance unchanged
-        expect(pendingTx.closingAvailableAmount).toBe(60) // Available reduced
-      })
-
-      it('Scenario 3: Credit followed by Debit resulting in negative balance', () => {
+      it('Scenario 2: Credit followed by Debit resulting in negative balance', () => {
         const creditTx = buildTransaction(
           mockRecord,
           50,
@@ -397,41 +379,6 @@ describe('Waste Balance Calculator', () => {
         expect(debitTx.openingAmount).toBe(50)
         expect(debitTx.closingAmount).toBe(-50)
         expect(debitTx.closingAvailableAmount).toBe(-50)
-      })
-
-      it('Scenario 4: Complex sequence (Credit -> Pending Debit -> Debit)', () => {
-        // 1. Credit 100
-        const tx1 = buildTransaction(
-          mockRecord,
-          100,
-          0,
-          0,
-          WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
-        )
-        expect(tx1.closingAmount).toBe(100)
-        expect(tx1.closingAvailableAmount).toBe(100)
-
-        // 2. Pending Debit 20 (Reserves 20)
-        const tx2 = buildTransaction(
-          mockRecord,
-          20,
-          tx1.closingAmount,
-          tx1.closingAvailableAmount,
-          WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT
-        )
-        expect(tx2.closingAmount).toBe(100)
-        expect(tx2.closingAvailableAmount).toBe(80)
-
-        // 3. Debit 50 (Reduces both)
-        const tx3 = buildTransaction(
-          mockRecord,
-          50,
-          tx2.closingAmount,
-          tx2.closingAvailableAmount,
-          WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
-        )
-        expect(tx3.closingAmount).toBe(50)
-        expect(tx3.closingAvailableAmount).toBe(30)
       })
     })
   })

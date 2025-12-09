@@ -61,16 +61,14 @@ export const buildTransaction = (
   let closingAvailableAmount = currentAvailableAmount
 
   switch (type) {
-    case WASTE_BALANCE_TRANSACTION_TYPE.CREDIT:
-      closingAmount += amount
-      closingAvailableAmount += amount
-      break
     case WASTE_BALANCE_TRANSACTION_TYPE.DEBIT:
       closingAmount -= amount
       closingAvailableAmount -= amount
       break
-    case WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT:
-      closingAvailableAmount -= amount
+    case WASTE_BALANCE_TRANSACTION_TYPE.CREDIT:
+    default:
+      closingAmount += amount
+      closingAvailableAmount += amount
       break
   }
 
@@ -78,6 +76,7 @@ export const buildTransaction = (
     id: randomUUID(),
     type,
     createdAt: new Date().toISOString(),
+    createdBy: record.updatedBy,
     amount,
     openingAmount,
     closingAmount,

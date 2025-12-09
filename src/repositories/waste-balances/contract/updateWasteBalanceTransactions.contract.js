@@ -13,6 +13,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
+      const user = { id: 'user-1', name: 'Test User' }
 
       organisationsRepository.getAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
@@ -20,6 +21,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       })
 
       const record = buildWasteRecord({
+        updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
@@ -37,6 +39,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       expect(balance).toBeDefined()
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)
+      expect(balance.transactions[0].createdBy).toEqual(user)
       expect(balance.amount).toBe(10.5)
     })
   })

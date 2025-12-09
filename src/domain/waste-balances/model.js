@@ -1,7 +1,6 @@
 export const WASTE_BALANCE_TRANSACTION_TYPE = Object.freeze({
   CREDIT: 'credit',
-  DEBIT: 'debit',
-  PENDING_DEBIT: 'pending_debit'
+  DEBIT: 'debit'
 })
 
 /**
