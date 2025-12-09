@@ -1,9 +1,11 @@
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync, randomUUID } from 'crypto'
+import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
 export const VALID_TOKEN_CONTACT_ID = randomUUID()
-export const VALID_TOKEN_EMAIL_ADDRESS = 'someone@test-company.com'
+export const USER_PRESENT_IN_ORG1_EMAIL = org1.submitterContactDetails.email
+export const USER_ABSENT_IN_ORG1_EMAIL = 'random@email.com'
 export const VALID_TOKEN_CURRENT_RELATIONSHIP = randomUUID()
 export const COMPANY_1_ID = randomUUID()
 export const COMPANY_1_NAME = 'Lost Ark Adventures Ltd'
@@ -42,9 +44,9 @@ export const publicKey = {
 }
 
 /** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
-export const baseDefraIdTokenPayload = {
+export const userPresentInOrg1DefraIdTokenPayload = {
   contactId: VALID_TOKEN_CONTACT_ID,
-  email: VALID_TOKEN_EMAIL_ADDRESS,
+  email: USER_PRESENT_IN_ORG1_EMAIL,
   firstName: 'John',
   lastName: 'Doe',
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
@@ -60,9 +62,9 @@ export const baseDefraIdTokenPayload = {
 const validJwtSecretObject = { key: privateKey, algorithm: 'RS256' }
 const validGenerateTokenOptions = { header: { kid: publicKey.kid } }
 
-const generateValidDefraIdToken = () => {
+const generateValidDefraIdToken = (tokenPayload) => {
   const mockDefraIdToken = Jwt.token.generate(
-    baseDefraIdTokenPayload,
+    tokenPayload,
     validJwtSecretObject,
     validGenerateTokenOptions
   )
@@ -86,7 +88,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
   })
 
   const mockDefraIdToken = Jwt.token.generate(
-    baseDefraIdTokenPayload,
+    userPresentInOrg1DefraIdTokenPayload,
     { key: wrongKeyPair.privateKey, algorithm: 'RS256' },
     validGenerateTokenOptions
   )
@@ -97,7 +99,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
 const generateDefraIdTokenWithWrongAudience = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseDefraIdTokenPayload,
+      ...userPresentInOrg1DefraIdTokenPayload,
       aud: 'random-wrong-audience'
     },
     validJwtSecretObject,
@@ -110,7 +112,7 @@ const generateDefraIdTokenWithWrongAudience = () => {
 const generateDefraIdTokenWithWrongIssuer = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseDefraIdTokenPayload,
+      ...userPresentInOrg1DefraIdTokenPayload,
       iss: `https://wrong-issuer.com/v2.0`
     },
     validJwtSecretObject,
@@ -123,7 +125,7 @@ const generateDefraIdTokenWithWrongIssuer = () => {
 const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseDefraIdTokenPayload,
+      ...userPresentInOrg1DefraIdTokenPayload,
       id: 'unknownId',
       email: 'unknown.email@example.com'
     },
@@ -135,7 +137,7 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
 }
 
 export const defraIdMockAuthTokens = {
-  validToken: generateValidDefraIdToken(),
+  validToken: generateValidDefraIdToken(userPresentInOrg1DefraIdTokenPayload),
   wrongSignatureToken: generateDefraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),
