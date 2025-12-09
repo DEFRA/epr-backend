@@ -269,4 +269,63 @@ describe('Waste Balance Calculator', () => {
 
     expect(result.newTransactions).toHaveLength(0)
   })
+
+  describe('buildTransaction', async () => {
+    const { buildTransaction } = await import('./calculator.js')
+    const { WASTE_BALANCE_TRANSACTION_TYPE } =
+      await import('#domain/waste-balances/model.js')
+
+    const mockRecord = buildWasteRecord()
+
+    it('should handle CREDIT transactions correctly', () => {
+      const result = buildTransaction(
+        mockRecord,
+        100,
+        500,
+        500,
+        WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+      )
+
+      expect(result.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.CREDIT)
+      expect(result.amount).toBe(100)
+      expect(result.openingAmount).toBe(500)
+      expect(result.openingAvailableAmount).toBe(500)
+      expect(result.closingAmount).toBe(600)
+      expect(result.closingAvailableAmount).toBe(600)
+    })
+
+    it('should handle DEBIT transactions correctly', () => {
+      const result = buildTransaction(
+        mockRecord,
+        100,
+        500,
+        500,
+        WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+      )
+
+      expect(result.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.DEBIT)
+      expect(result.amount).toBe(100)
+      expect(result.openingAmount).toBe(500)
+      expect(result.openingAvailableAmount).toBe(500)
+      expect(result.closingAmount).toBe(400)
+      expect(result.closingAvailableAmount).toBe(400)
+    })
+
+    it('should handle PENDING_DEBIT transactions correctly', () => {
+      const result = buildTransaction(
+        mockRecord,
+        100,
+        500,
+        500,
+        WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT
+      )
+
+      expect(result.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT)
+      expect(result.amount).toBe(100)
+      expect(result.openingAmount).toBe(500)
+      expect(result.openingAvailableAmount).toBe(500)
+      expect(result.closingAmount).toBe(500) // Balance should not change
+      expect(result.closingAvailableAmount).toBe(400) // Available should decrease
+    })
+  })
 })

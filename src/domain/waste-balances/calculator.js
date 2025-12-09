@@ -40,21 +40,41 @@ export const getTransactionAmount = (record) => {
 
 /**
  * Create Transaction Object
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {number} amount
+ * @param {number} currentAmount
+ * @param {number} currentAvailableAmount
+ * @param {import('#domain/waste-balances/model.js').WasteBalanceTransactionType} [type]
  */
 export const buildTransaction = (
   record,
   amount,
   currentAmount,
-  currentAvailableAmount
+  currentAvailableAmount,
+  type = WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
 ) => {
   const openingAmount = currentAmount
   const openingAvailableAmount = currentAvailableAmount
-  const closingAmount = currentAmount + amount
-  const closingAvailableAmount = currentAvailableAmount + amount
+  let closingAmount = currentAmount
+  let closingAvailableAmount = currentAvailableAmount
+
+  switch (type) {
+    case WASTE_BALANCE_TRANSACTION_TYPE.CREDIT:
+      closingAmount += amount
+      closingAvailableAmount += amount
+      break
+    case WASTE_BALANCE_TRANSACTION_TYPE.DEBIT:
+      closingAmount -= amount
+      closingAvailableAmount -= amount
+      break
+    case WASTE_BALANCE_TRANSACTION_TYPE.PENDING_DEBIT:
+      closingAvailableAmount -= amount
+      break
+  }
 
   return {
     id: randomUUID(),
-    type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+    type,
     createdAt: new Date().toISOString(),
     amount,
     openingAmount,
