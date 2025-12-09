@@ -39,11 +39,13 @@ export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
     throw Boom.notFound('Organisation not found')
   }
 
-  // const isInitial = isInitialUser(organisationById, email)
+  console.log('email', email)
+  console.log('organisationById', organisationById)
+  const isInitial = isInitialUser(organisationById, email)
 
-  // if (!isInitial) {
-  //   throw Boom.forbidden('user is not authorised to link organisation')
-  // }
+  if (!isInitial) {
+    throw Boom.forbidden('user is not authorised to link organisation')
+  }
 
   return true
 }

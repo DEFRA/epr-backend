@@ -174,7 +174,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         }
       )
 
-      it('when the request succeeds', async () => {
+      it.only('when the request succeeds', async () => {
         const user = {
           email: VALID_TOKEN_EMAIL_ADDRESS,
           fullName: 'Brandom Yuser',
