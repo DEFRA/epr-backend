@@ -118,7 +118,16 @@ describe('MongoDB waste balances repository', () => {
         })
         const instance = repository()
 
-        await instance.updateWasteBalanceTransactions([], 'acc-1')
+        // Pass record with PRN issued so no transactions are generated
+        const record = {
+          data: {
+            processingType: PROCESSING_TYPES.EXPORTER,
+            [EXPORTER_FIELD.PRN_ISSUED]: 'Yes',
+            [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01'
+          }
+        }
+
+        await instance.updateWasteBalanceTransactions([record], 'acc-1')
 
         const count = await database
           .collection(WASTE_BALANCE_COLLECTION_NAME)

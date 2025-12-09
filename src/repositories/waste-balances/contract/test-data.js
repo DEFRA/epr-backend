@@ -59,6 +59,16 @@ export const buildWasteBalance = (overrides = {}) => {
  * @returns {import('#domain/waste-records/model.js').WasteRecord}
  */
 export const buildWasteRecord = (overrides = {}) => {
+  const { data, versions, ...restOverrides } = overrides
+  const defaultData = {
+    processingType: PROCESSING_TYPES.EXPORTER,
+    [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+    [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+    [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
+    [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
+    'Date Received': '2025-01-20'
+  }
+
   return {
     organisationId: 'org-1',
     registrationId: 'reg-1',
@@ -66,15 +76,10 @@ export const buildWasteRecord = (overrides = {}) => {
     rowId: randomUUID(),
     type: 'received',
     data: {
-      processingType: PROCESSING_TYPES.EXPORTER,
-      // Default valid record: No PRN, No Interim, Exported Tonnage = 10
-      [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-      [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-      [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
-      [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
-      'Date Received': '2025-01-20'
+      ...defaultData,
+      ...(data || {})
     },
-    versions: [
+    versions: versions || [
       {
         createdAt: '2025-01-20T10:00:00.000Z',
         status: 'created',
@@ -82,6 +87,6 @@ export const buildWasteRecord = (overrides = {}) => {
         data: {}
       }
     ],
-    ...overrides
+    ...restOverrides
   }
 }
