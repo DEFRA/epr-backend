@@ -14,10 +14,11 @@ describe('createDataSyntaxValidator', () => {
         requiredHeaders: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
         rowIdField: 'ROW_ID',
         unfilledValues: {},
+        fatalFields: ['ROW_ID'],
         validationSchema: Joi.object({
-          ROW_ID: Joi.number().min(10000).optional().messages({
+          ROW_ID: Joi.number().min(1000).optional().messages({
             'number.base': 'must be a number',
-            'number.min': 'must be at least 10000'
+            'number.min': 'must be at least 1000'
           }),
           TEXT_FIELD: Joi.string().optional().messages({
             'string.base': 'must be a string'
@@ -35,8 +36,9 @@ describe('createDataSyntaxValidator', () => {
         requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
         rowIdField: 'ROW_ID',
         unfilledValues: {},
+        fatalFields: ['ROW_ID'],
         validationSchema: Joi.object({
-          ROW_ID: Joi.number().min(10000).optional(),
+          ROW_ID: Joi.number().min(1000).optional(),
           DATE_FIELD: Joi.date().optional().messages({
             'date.base': 'must be a valid date'
           })
@@ -49,8 +51,9 @@ describe('createDataSyntaxValidator', () => {
         requiredHeaders: ['ROW_ID', 'CODE_FIELD'],
         rowIdField: 'ROW_ID',
         unfilledValues: {},
+        fatalFields: ['ROW_ID'],
         validationSchema: Joi.object({
-          ROW_ID: Joi.number().min(10000).optional(),
+          ROW_ID: Joi.number().min(1000).optional(),
           CODE_FIELD: Joi.string()
             .pattern(/^\d{2} \d{2} \d{2}$/)
             .optional()
@@ -67,13 +70,33 @@ describe('createDataSyntaxValidator', () => {
         requiredHeaders: ['ROW_ID', 'EMAIL_FIELD'],
         rowIdField: 'ROW_ID',
         unfilledValues: {},
+        fatalFields: ['ROW_ID'],
         validationSchema: Joi.object({
-          ROW_ID: Joi.number().min(10000).optional(),
+          ROW_ID: Joi.number().min(1000).optional(),
           EMAIL_FIELD: Joi.string().email().optional() // 'string.email' is not mapped
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
         fieldsRequiredForWasteBalance: ['ROW_ID', 'EMAIL_FIELD']
+      },
+      // Schema without fatalFields to test fallback to empty array
+      NO_FATAL_FIELDS_TABLE: {
+        requiredHeaders: ['ROW_ID', 'VALUE_FIELD'],
+        rowIdField: 'ROW_ID',
+        unfilledValues: {},
+        // fatalFields intentionally omitted to test || [] fallback
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(1000).optional().messages({
+            'number.base': 'must be a number',
+            'number.min': 'must be at least 1000'
+          }),
+          VALUE_FIELD: Joi.number().optional().messages({
+            'number.base': 'must be a number'
+          })
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'VALUE_FIELD']
       }
     }
   }
@@ -115,7 +138,7 @@ describe('createDataSyntaxValidator', () => {
   describe('valid data', () => {
     it('returns valid result when all data is correct', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
       expect(result.issues.isValid()).toBe(true)
@@ -126,7 +149,7 @@ describe('createDataSyntaxValidator', () => {
     it('validates multiple rows', () => {
       const result = validate({
         TEST_TABLE: [
-          { ROW_ID: 10000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
+          { ROW_ID: 1000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
           { ROW_ID: 10001, TEXT_FIELD: 'second', NUMBER_FIELD: 2 },
           { ROW_ID: 10002, TEXT_FIELD: 'third', NUMBER_FIELD: 3 }
         ]
@@ -141,7 +164,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['NUMBER_FIELD', 'ROW_ID', 'TEXT_FIELD'],
-            rows: [[42, 10000, 'hello']]
+            rows: [[42, 1000, 'hello']]
           }
         }
       }
@@ -157,7 +180,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD', 'EXTRA_FIELD'],
-            rows: [[10000, 'hello', 42, 'extra']]
+            rows: [[1000, 'hello', 42, 'extra']]
           }
         }
       }
@@ -173,7 +196,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', null, 'TEXT_FIELD', 'NUMBER_FIELD', null],
-            rows: [[10000, 'ignored', 'hello', 42, 'also ignored']]
+            rows: [[1000, 'ignored', 'hello', 42, 'also ignored']]
           }
         }
       }
@@ -194,7 +217,7 @@ describe('createDataSyntaxValidator', () => {
               'NUMBER_FIELD',
               '__EPR_DATA_MARKER'
             ],
-            rows: [[10000, 'hello', 42, 'marker']]
+            rows: [[1000, 'hello', 42, 'marker']]
           }
         }
       }
@@ -212,7 +235,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD'],
-            rows: [[10000, 'hello']]
+            rows: [[1000, 'hello']]
           }
         }
       }
@@ -237,7 +260,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID'],
-            rows: [[10000]]
+            rows: [[1000]]
           }
         }
       }
@@ -277,9 +300,9 @@ describe('createDataSyntaxValidator', () => {
       expect(fatals[0].context.actual).toBe('not-a-number')
     })
 
-    it('returns FATAL error when ROW_ID is below minimum (10000)', () => {
+    it('returns FATAL error when ROW_ID is below minimum (1000)', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 9999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+        TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
       expect(result.issues.isFatal()).toBe(true)
@@ -289,15 +312,15 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(fatals).toHaveLength(1)
       expect(fatals[0].message).toContain('ROW_ID')
-      expect(fatals[0].context.actual).toBe(9999)
+      expect(fatals[0].context.actual).toBe(999)
     })
 
     it('returns FATAL error for each row with invalid ROW_ID', () => {
       const result = validate({
         TEST_TABLE: [
-          { ROW_ID: 10000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
+          { ROW_ID: 1000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
           { ROW_ID: 'invalid', TEXT_FIELD: 'bad', NUMBER_FIELD: 2 },
-          { ROW_ID: 5000, TEXT_FIELD: 'also bad', NUMBER_FIELD: 3 }
+          { ROW_ID: 500, TEXT_FIELD: 'also bad', NUMBER_FIELD: 3 } // Below minimum 1000
         ]
       })
 
@@ -313,7 +336,7 @@ describe('createDataSyntaxValidator', () => {
   describe('cell validation errors', () => {
     it('returns error when string field is not a string', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
       expect(result.issues.isValid()).toBe(false)
@@ -330,7 +353,7 @@ describe('createDataSyntaxValidator', () => {
     it('returns error when number field is not a number', () => {
       const result = validate({
         TEST_TABLE: {
-          ROW_ID: 10000,
+          ROW_ID: 1000,
           TEXT_FIELD: 'hello',
           NUMBER_FIELD: 'not-a-number'
         }
@@ -348,7 +371,7 @@ describe('createDataSyntaxValidator', () => {
 
     it('returns error when number field is zero or negative', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 0 }
       })
 
       expect(result.issues.isValid()).toBe(false)
@@ -363,7 +386,7 @@ describe('createDataSyntaxValidator', () => {
 
     it('returns error when date field is invalid', () => {
       const result = validate({
-        DATE_TABLE: { ROW_ID: 10000, DATE_FIELD: 'not-a-date' }
+        DATE_TABLE: { ROW_ID: 1000, DATE_FIELD: 'not-a-date' }
       })
 
       expect(result.issues.isValid()).toBe(false)
@@ -378,7 +401,7 @@ describe('createDataSyntaxValidator', () => {
 
     it('returns error when pattern field does not match pattern', () => {
       const result = validate({
-        PATTERN_TABLE: { ROW_ID: 10000, CODE_FIELD: 'invalid' }
+        PATTERN_TABLE: { ROW_ID: 1000, CODE_FIELD: 'invalid' }
       })
 
       expect(result.issues.isValid()).toBe(false)
@@ -394,7 +417,7 @@ describe('createDataSyntaxValidator', () => {
     it('reports errors for multiple rows', () => {
       const result = validate({
         TEST_TABLE: [
-          { ROW_ID: 10000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
+          { ROW_ID: 1000, TEXT_FIELD: 'valid', NUMBER_FIELD: 1 },
           { ROW_ID: 10001, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' },
           { ROW_ID: 10002, TEXT_FIELD: 'valid', NUMBER_FIELD: 3 }
         ]
@@ -414,7 +437,7 @@ describe('createDataSyntaxValidator', () => {
     it('includes spreadsheet location in error context', () => {
       const result = validate(
         {
-          TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
         },
         { location: { sheet: 'Sheet1', row: 10, column: 'B' } }
       )
@@ -434,7 +457,7 @@ describe('createDataSyntaxValidator', () => {
     it('calculates correct column letters for multiple errors', () => {
       const result = validate(
         {
-          TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' }
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 'bad' }
         },
         { location: { sheet: 'Sheet1', row: 10, column: 'B' } }
       )
@@ -458,7 +481,7 @@ describe('createDataSyntaxValidator', () => {
     it('handles multi-letter column offsets correctly', () => {
       const result = validate(
         {
-          TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+          TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
         },
         { location: { sheet: 'Sheet1', row: 5, column: 'Z' } }
       )
@@ -471,7 +494,7 @@ describe('createDataSyntaxValidator', () => {
 
     it('handles missing location gracefully', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
       const errors = result.issues.getIssuesBySeverity(
@@ -485,7 +508,7 @@ describe('createDataSyntaxValidator', () => {
     it('includes location in FATAL ROW_ID errors', () => {
       const result = validate(
         {
-          TEST_TABLE: { ROW_ID: 9999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+          TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
         },
         { location: { sheet: 'Sheet1', row: 7, column: 'B' } }
       )
@@ -504,7 +527,7 @@ describe('createDataSyntaxValidator', () => {
 
     it('handles missing location gracefully for FATAL errors', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 9999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
+        TEST_TABLE: { ROW_ID: 999, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 }
       })
 
       const fatals = result.issues.getIssuesBySeverity(
@@ -518,7 +541,7 @@ describe('createDataSyntaxValidator', () => {
   describe('multiple tables', () => {
     it('validates multiple tables independently', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 },
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 'hello', NUMBER_FIELD: 42 },
         DATE_TABLE: { ROW_ID: 10001, DATE_FIELD: '2025-01-01' }
       })
 
@@ -533,7 +556,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
-            rows: [[10000, 'hello', 42]]
+            rows: [[1000, 'hello', 42]]
           },
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
@@ -598,7 +621,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
-            rows: [[10000, 123, 42]], // TEXT_FIELD should be string, not number
+            rows: [[1000, 123, 42]], // TEXT_FIELD should be string, not number
             location: { sheet: 'Sheet1', row: 2, column: 'A' }
           },
           UNKNOWN_TABLE: {
@@ -688,9 +711,28 @@ describe('createDataSyntaxValidator', () => {
     it('throws error for unmapped Joi error types', () => {
       expect(() =>
         validate({
-          UNMAPPED_TABLE: { ROW_ID: 10000, EMAIL_FIELD: 'not-an-email' }
+          UNMAPPED_TABLE: { ROW_ID: 1000, EMAIL_FIELD: 'not-an-email' }
         })
       ).toThrow("Unmapped Joi error type 'string.email'")
+    })
+
+    it('handles schema without fatalFields property', () => {
+      const result = validate({
+        NO_FATAL_FIELDS_TABLE: {
+          ROW_ID: 1000,
+          VALUE_FIELD: 'not-a-number'
+        }
+      })
+
+      // Should produce ERROR (not FATAL) since fatalFields is undefined
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(false)
+
+      const errors = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.ERROR
+      )
+      expect(errors).toHaveLength(1)
+      expect(errors[0].message).toContain('VALUE_FIELD')
     })
   })
 
@@ -698,21 +740,21 @@ describe('createDataSyntaxValidator', () => {
     it('returns validated rows with row IDs extracted', () => {
       const result = validate({
         TEST_TABLE: [
-          { ROW_ID: 10000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
+          { ROW_ID: 1000, TEXT_FIELD: 'first', NUMBER_FIELD: 1 },
           { ROW_ID: 10001, TEXT_FIELD: 'second', NUMBER_FIELD: 2 }
         ]
       })
 
       const rows = result.validatedData.data.TEST_TABLE.rows
       expect(rows).toHaveLength(2)
-      expect(rows[0].rowId).toBe('10000')
+      expect(rows[0].rowId).toBe('1000')
       expect(rows[1].rowId).toBe('10001')
       expect(rows[0].issues).toEqual([])
     })
 
     it('attaches issues to validated rows', () => {
       const result = validate({
-        TEST_TABLE: { ROW_ID: 10000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
+        TEST_TABLE: { ROW_ID: 1000, TEXT_FIELD: 123, NUMBER_FIELD: 42 }
       })
 
       const rows = result.validatedData.data.TEST_TABLE.rows
@@ -726,7 +768,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID'],
-            rows: [[10000]]
+            rows: [[1000]]
           }
         }
       }

@@ -50,8 +50,8 @@
   "author": "Defra DDTS",
   "license": "OGL-UK-3.0",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.940.0",
-    "@aws-sdk/credential-providers": "3.940.0",
+    "@aws-sdk/client-s3": "3.943.0",
+    "@aws-sdk/credential-providers": "3.943.0",
     "@defra/cdp-auditing": "0.6.0",
     "@defra/hapi-secure-context": "0.4.0",
     "@defra/hapi-tracing": "1.30.0",
@@ -73,6 +73,7 @@
     "immer": "11.0.1",
     "joi": "17.13.3",
     "joi-to-json": "5.0.0",
+    "lodash.keyby": "4.6.0",
     "lodash.mergewith": "4.6.2",
     "mongo-locks": "3.1.2",
     "mongodb": "7.0.0",

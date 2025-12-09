@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest'
 import {
+  findUserInOrg,
   isInitialUser,
   getOrgDataFromDefraIdToken,
   getCurrentRelationship,
@@ -9,6 +10,105 @@ import {
   deduplicateOrganisations
 } from './helpers.js'
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
+
+describe('findUserInOrg', () => {
+  it('should find user by email match', () => {
+    const organisation = {
+      users: [
+        { email: 'user@example.com', contactId: 'contact-1' },
+        { email: 'other@example.com', contactId: 'contact-2' }
+      ]
+    }
+
+    const result = findUserInOrg(organisation, 'user@example.com', 'contact-3')
+
+    expect(result).toEqual({
+      email: 'user@example.com',
+      contactId: 'contact-1'
+    })
+  })
+
+  it('should find user by contactId match', () => {
+    const organisation = {
+      users: [
+        { email: 'user@example.com', contactId: 'contact-1' },
+        { email: 'other@example.com', contactId: 'contact-2' }
+      ]
+    }
+
+    const result = findUserInOrg(
+      organisation,
+      'different@example.com',
+      'contact-2'
+    )
+
+    expect(result).toEqual({
+      email: 'other@example.com',
+      contactId: 'contact-2'
+    })
+  })
+
+  it('should perform case-insensitive email matching', () => {
+    const organisation = {
+      users: [{ email: 'User@Example.Com', contactId: 'contact-1' }]
+    }
+
+    expect(
+      findUserInOrg(organisation, 'user@example.com', 'different')
+    ).toEqual({
+      email: 'User@Example.Com',
+      contactId: 'contact-1'
+    })
+    expect(
+      findUserInOrg(organisation, 'USER@EXAMPLE.COM', 'different')
+    ).toEqual({
+      email: 'User@Example.Com',
+      contactId: 'contact-1'
+    })
+  })
+
+  it('should return null when users array is missing', () => {
+    const organisation = {}
+
+    const result = findUserInOrg(organisation, 'user@example.com', 'contact-1')
+
+    expect(result).toBeNull()
+  })
+
+  it('should return undefined when user is not found', () => {
+    const organisation = {
+      users: [{ email: 'other@example.com', contactId: 'contact-1' }]
+    }
+
+    const result = findUserInOrg(organisation, 'user@example.com', 'contact-2')
+
+    expect(result).toBeUndefined()
+  })
+
+  it('should return undefined for empty users array', () => {
+    const organisation = {
+      users: []
+    }
+
+    const result = findUserInOrg(organisation, 'user@example.com', 'contact-1')
+
+    expect(result).toBeUndefined()
+  })
+
+  it('should prioritize email match over contactId when both could match different users', () => {
+    const organisation = {
+      users: [
+        { email: 'user@example.com', contactId: 'contact-1' },
+        { email: 'other@example.com', contactId: 'contact-2' }
+      ]
+    }
+
+    const result = findUserInOrg(organisation, 'user@example.com', 'contact-2')
+
+    // Should return the first match found (email match comes first in the OR condition)
+    expect(result.email).toBe('user@example.com')
+  })
+})
 
 describe('isInitialUser', () => {
   it('should return true when user is found and is initial user', () => {

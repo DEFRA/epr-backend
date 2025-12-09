@@ -6,7 +6,11 @@ import {
   isAccreditationForRegistration
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { MATERIAL, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
@@ -54,6 +58,41 @@ describe('linkItemsToOrganisations', () => {
     const org2 = result.find((org) => org.id === org2Id)
     expect(org2.registrations).toHaveLength(1)
     expect(org2.registrations[0].id).toBe(reg2Id)
+
+    expect(logger.error).not.toHaveBeenCalled()
+  })
+
+  it('when organisation already has registrations append new registration to it', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const reg2Id = new ObjectId().toString()
+    const reg3Id = new ObjectId().toString()
+
+    const existingRegistrations = [
+      { id: reg1Id, systemReference: org1Id, orgId: 100 },
+      { id: reg2Id, systemReference: org1Id, orgId: 200 }
+    ]
+
+    const organisations = [
+      { id: org1Id, name: 'Org 1', registrations: existingRegistrations }
+    ]
+
+    const registrations = [{ id: reg3Id, systemReference: org1Id, orgId: 100 }]
+
+    const result = linkItemsToOrganisations(
+      organisations,
+      registrations,
+      'registrations',
+      new Set()
+    )
+
+    expect(result).toHaveLength(1)
+
+    const org1 = result.find((org) => org.id === org1Id)
+    expect(org1.registrations).toHaveLength(3)
+    expect(org1.registrations[0].id).toBe(reg1Id)
+    expect(org1.registrations[1].id).toBe(reg2Id)
+    expect(org1.registrations[2].id).toBe(reg3Id)
 
     expect(logger.error).not.toHaveBeenCalled()
   })
@@ -632,6 +671,178 @@ describe('linkRegistrationToAccreditations', () => {
 
     const result = linkRegistrationToAccreditations(organisations)
     expect(result[0].registrations[0].accreditationId).toBeUndefined()
+  })
+
+  it('preserve existing link when approved registration is already linked to approved accreditation', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const accId2 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            status: STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo,
+            accreditationId: accId1
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            status: STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
+          },
+          {
+            id: accId2,
+            status: STATUS.CREATED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: new Date()
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+    expect(logger.warn).toHaveBeenCalledWith({
+      message: `Organisation has accreditations that cant be linked to registrations: orgId=100,orgDbId=${org1Id},unlinked accreditations count=1,unlinked accreditations=[id=${accId2},type=exporter,material=wood],unlinked registrations=[]`
+    })
+  })
+
+  it('populate link for a approved registration currently not linked to any accreditation', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            status: STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            status: STATUS.CREATED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: new Date()
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toEqual(accId1)
+  })
+
+  it('update link when approved registration is linked to non-approved accreditation', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const accId2 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            status: STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo,
+            accreditationId: accId1
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            status: STATUS.CREATED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
+          },
+          {
+            id: accId2,
+            status: STATUS.CREATED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: new Date()
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toEqual(accId2)
+  })
+
+  it('skip linking when only approved accreditations are available', () => {
+    const org1Id = new ObjectId().toString()
+    const reg1Id = new ObjectId().toString()
+    const reg2Id = new ObjectId().toString()
+    const accId1 = new ObjectId().toString()
+    const organisations = [
+      {
+        id: org1Id,
+        name: 'Org 1',
+        orgId: 100,
+        registrations: [
+          {
+            id: reg1Id,
+            status: STATUS.CREATED,
+            accreditationId: accId1,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
+          },
+          {
+            id: reg2Id,
+            status: STATUS.CREATED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
+          }
+        ],
+        accreditations: [
+          {
+            id: accId1,
+            status: STATUS.APPROVED,
+            wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+            material: MATERIAL.WOOD,
+            formSubmissionTime: oneDayAgo
+          }
+        ]
+      }
+    ]
+
+    const result = linkRegistrationToAccreditations(organisations)
+    expect(result).toHaveLength(1)
+    expect(result[0].registrations[0].accreditationId).toBe(accId1)
+    expect(result[0].registrations[1].accreditationId).toBeUndefined()
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 })
 

@@ -89,6 +89,7 @@ const performUpdate = (db) => async (id, version, updates) => {
     existing.registrations,
     validatedUpdates.registrations
   )
+
   const accreditations = mergeSubcollection(
     existing.accreditations,
     validatedUpdates.accreditations
@@ -214,6 +215,39 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const findAllIds = (db) => async () => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .aggregate([
+      {
+        $project: {
+          _id: 1,
+          registrations: '$registrations.id',
+          accreditations: '$accreditations.id'
+        }
+      }
+    ])
+    .toArray()
+
+  return docs.reduce(
+    (acc, doc) => {
+      acc.organisations.add(doc._id.toString())
+      for (const id of doc.registrations) {
+        acc.registrations.add(id)
+      }
+      for (const id of doc.accreditations) {
+        acc.accreditations.add(id)
+      }
+      return acc
+    },
+    {
+      organisations: new Set(),
+      registrations: new Set(),
+      accreditations: new Set()
+    }
+  )
+}
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
@@ -238,6 +272,7 @@ export const createOrganisationsRepository =
         ),
       findById,
       findAll: performFindAll(db),
+      findAllIds: findAllIds(db),
 
       async findRegistrationById(
         organisationId,
