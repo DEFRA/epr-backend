@@ -33,7 +33,7 @@ describe('#getEntraUserRoles', () => {
       'MAINTAINER1@EXAMPLE.COM', // uppercase
       'MaInTaInEr1@ExAmPlE.cOm' // mixed case
     ])('returns service maintainer role when (case-insensitive) email matches - %s', async (email) => {
-      const result = await getEntraUserRoles('MAINTAINER1@EXAMPLE.COM')
+      const result = await getEntraUserRoles(email)
 
       expect(result).toEqual([ROLES.serviceMaintainer])
       expect(mockConfigGet).toHaveBeenCalledWith('roles.serviceMaintainers')
