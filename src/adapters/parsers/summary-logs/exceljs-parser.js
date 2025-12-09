@@ -295,6 +295,9 @@ const processWorksheet = (draftState, worksheet) => {
   draftState.activeCollections = []
 }
 
+// Exported for testing - allows direct unit testing of cell value extraction
+export { extractCellValue }
+
 /** @type {SummaryLogParser} */
 export const parse = async (summaryLogBuffer) => {
   const workbook = new ExcelJS.Workbook()

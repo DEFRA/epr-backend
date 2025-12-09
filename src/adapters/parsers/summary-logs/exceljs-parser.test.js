@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import ExcelJS from 'exceljs'
 
 import { MATERIAL_PLACEHOLDER_TEXT } from '#domain/summary-logs/markers.js'
-import { parse } from './exceljs-parser.js'
+import { extractCellValue, parse } from './exceljs-parser.js'
 
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
@@ -1399,5 +1399,43 @@ describe('ExcelJSSummaryLogsParser', () => {
         [null, 'CHOOSE OPTION', 'choose Option']
       ])
     })
+  })
+})
+
+describe('extractCellValue', () => {
+  it('returns primitive values unchanged', () => {
+    expect(extractCellValue('hello')).toBe('hello')
+    expect(extractCellValue(123)).toBe(123)
+    expect(extractCellValue(null)).toBe(null)
+    expect(extractCellValue(undefined)).toBe(undefined)
+  })
+
+  it('extracts result from formula cell', () => {
+    expect(extractCellValue({ formula: '=A1+B1', result: 42 })).toBe(42)
+  })
+
+  it('extracts result from sharedFormula cell', () => {
+    expect(extractCellValue({ sharedFormula: 'B8', result: 1001 })).toBe(1001)
+  })
+
+  it('returns null for formula without result', () => {
+    expect(extractCellValue({ formula: '=SUM(1,2,3)' })).toBe(null)
+  })
+
+  it('returns null for sharedFormula without result', () => {
+    expect(extractCellValue({ sharedFormula: 'B8' })).toBe(null)
+  })
+
+  it('extracts text from richText cell', () => {
+    expect(
+      extractCellValue({
+        richText: [{ text: 'Hello' }, { text: ' World' }]
+      })
+    ).toBe('Hello World')
+  })
+
+  it('returns object unchanged if not a known cell type', () => {
+    const unknownObject = { someProperty: 'value' }
+    expect(extractCellValue(unknownObject)).toBe(unknownObject)
   })
 })
