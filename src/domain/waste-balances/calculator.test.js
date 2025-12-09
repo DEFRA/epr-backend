@@ -3,25 +3,26 @@ import { calculateWasteBalanceUpdates } from './calculator.js'
 import { EXPORTER_FIELD } from './constants.js'
 import {
   WASTE_RECORD_TYPE,
-  VERSION_STATUS,
-  WASTE_RECORD_TEMPLATE
+  VERSION_STATUS
 } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const buildWasteRecord = (overrides = {}) => {
+  const defaultData = {
+    processingType: PROCESSING_TYPES.EXPORTER,
+    [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+    [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+    [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
+    [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
+    'Date Received': '2025-01-20'
+  }
+
   return {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     accreditationId: 'acc-1',
     rowId: 'row-1',
     type: WASTE_RECORD_TYPE.RECEIVED,
-    template: WASTE_RECORD_TEMPLATE.EXPORTER,
-    data: {
-      [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-      [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-      [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
-      [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
-      'Date Received': '2025-01-20'
-    },
     versions: [
       {
         createdAt: '2025-01-20T10:00:00.000Z',
@@ -30,7 +31,11 @@ const buildWasteRecord = (overrides = {}) => {
         data: {}
       }
     ],
-    ...overrides
+    ...overrides,
+    data: {
+      ...defaultData,
+      ...(overrides.data || {})
+    }
   }
 }
 
@@ -250,9 +255,9 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01'
-        // EXPORT_TONNAGE missing
-        // INTERIM_SITE missing (defaults to No)
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: undefined
       }
     })
 

@@ -6,9 +6,9 @@ import {
 } from './validation.js'
 import {
   WASTE_RECORD_TYPE,
-  WASTE_RECORD_TEMPLATE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 describe('validation', () => {
   describe('validateOrganisationId', () => {
@@ -55,8 +55,11 @@ describe('validation', () => {
       registrationId: 'reg-1',
       rowId: 'row-1',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      template: WASTE_RECORD_TEMPLATE.EXPORTER,
-      data: { ROW_ID: 'row-1', VALUE: 'test' },
+      data: {
+        processingType: PROCESSING_TYPES.EXPORTER,
+        ROW_ID: 'row-1',
+        VALUE: 'test'
+      },
       versions: [
         {
           createdAt: '2025-01-15T10:00:00.000Z',

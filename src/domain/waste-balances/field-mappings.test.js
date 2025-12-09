@@ -1,28 +1,40 @@
 import { describe, it, expect } from 'vitest'
 import { getFieldValue, COMMON_FIELD } from './field-mappings.js'
-import { WASTE_RECORD_TEMPLATE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 describe('Field Mappings', () => {
   describe('getFieldValue', () => {
-    it('throws error when template mapping is not found', () => {
+    it('throws error when processingType is missing', () => {
       const record = {
-        template: 'INVALID_TEMPLATE',
         data: {}
       }
 
       expect(() => getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)).toThrow(
-        'No field mapping found for template: INVALID_TEMPLATE'
+        'Waste record missing processingType'
+      )
+    })
+
+    it('throws error when processingType mapping is not found', () => {
+      const record = {
+        data: {
+          processingType: 'INVALID_TYPE'
+        }
+      }
+
+      expect(() => getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)).toThrow(
+        'No field mapping found for processingType: INVALID_TYPE'
       )
     })
 
     it('throws error when field mapping is not found', () => {
       const record = {
-        template: WASTE_RECORD_TEMPLATE.EXPORTER,
-        data: {}
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER
+        }
       }
 
       expect(() => getFieldValue(record, 'INVALID_FIELD')).toThrow(
-        `No mapping found for field: INVALID_FIELD in template: ${WASTE_RECORD_TEMPLATE.EXPORTER}`
+        `No mapping found for field: INVALID_FIELD in processingType: ${PROCESSING_TYPES.EXPORTER}`
       )
     })
   })

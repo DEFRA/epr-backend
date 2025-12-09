@@ -1,4 +1,4 @@
-import { WASTE_RECORD_TEMPLATE } from '#domain/waste-records/model.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { EXPORTER_FIELD } from './constants.js'
 
 export const COMMON_FIELD = Object.freeze({
@@ -18,18 +18,25 @@ const EXPORTER_MAPPING = {
 }
 
 const TEMPLATE_MAPPINGS = {
-  [WASTE_RECORD_TEMPLATE.EXPORTER]: EXPORTER_MAPPING
+  [PROCESSING_TYPES.EXPORTER]: EXPORTER_MAPPING
 }
 
 export const getFieldValue = (record, commonField) => {
-  const mapping = TEMPLATE_MAPPINGS[record.template]
+  const processingType = record.data?.processingType
+  if (!processingType) {
+    throw new Error('Waste record missing processingType')
+  }
+
+  const mapping = TEMPLATE_MAPPINGS[processingType]
   if (!mapping) {
-    throw new Error(`No field mapping found for template: ${record.template}`)
+    throw new Error(
+      `No field mapping found for processingType: ${processingType}`
+    )
   }
   const sourceField = mapping[commonField]
   if (!sourceField) {
     throw new Error(
-      `No mapping found for field: ${commonField} in template: ${record.template}`
+      `No mapping found for field: ${commonField} in processingType: ${processingType}`
     )
   }
   return record.data[sourceField]

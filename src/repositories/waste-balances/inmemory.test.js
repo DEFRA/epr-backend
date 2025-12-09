@@ -1,8 +1,8 @@
 import { describe, it as base, expect, it, vi } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
-import { WASTE_RECORD_TEMPLATE } from '#domain/waste-records/model.js'
 import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -10,6 +10,7 @@ const extendedIt = base.extend({
     const storage = []
     await use(storage)
   },
+  // eslint-disable-next-line no-empty-pattern
   organisationsRepository: async ({}, use) => {
     const mock = {
       getAccreditationById: vi.fn()
@@ -101,8 +102,8 @@ describe('waste-balances repository - in-memory implementation', () => {
 
       const record = {
         organisationId: 'org-1',
-        template: WASTE_RECORD_TEMPLATE.EXPORTER,
         data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
@@ -136,8 +137,8 @@ describe('waste-balances repository - in-memory implementation', () => {
 
       const record = {
         organisationId: 'org-1',
-        template: WASTE_RECORD_TEMPLATE.EXPORTER,
         data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
           [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0',

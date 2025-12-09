@@ -4,6 +4,7 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
 import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
  * Build a minimal waste balance for testing
@@ -64,8 +65,8 @@ export const buildWasteRecord = (overrides = {}) => {
     accreditationId: 'acc-1',
     rowId: randomUUID(),
     type: 'received',
-    template: 'exporter',
     data: {
+      processingType: PROCESSING_TYPES.EXPORTER,
       // Default valid record: No PRN, No Interim, Exported Tonnage = 10
       [EXPORTER_FIELD.PRN_ISSUED]: 'No',
       [EXPORTER_FIELD.INTERIM_SITE]: 'No',

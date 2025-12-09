@@ -1,7 +1,6 @@
 import Joi from 'joi'
 import {
   WASTE_RECORD_TYPE,
-  WASTE_RECORD_TEMPLATE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 
@@ -53,9 +52,6 @@ export const wasteRecordSchema = Joi.object({
   rowId: Joi.string().required(),
   type: Joi.string()
     .valid(...Object.values(WASTE_RECORD_TYPE))
-    .required(),
-  template: Joi.string()
-    .valid(...Object.values(WASTE_RECORD_TEMPLATE))
     .required(),
   data: Joi.object().required(),
   versions: Joi.array().items(versionSchema).min(1).required()

@@ -4,6 +4,7 @@ import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
 import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -15,6 +16,7 @@ const it = mongoIt.extend({
     await client.close()
   },
 
+  // eslint-disable-next-line no-empty-pattern
   organisationsRepository: async ({}, use) => {
     const mock = {
       getAccreditationById: vi.fn()
@@ -106,12 +108,10 @@ describe('MongoDB waste balances repository', () => {
       }) => {
         const database = mongoClient.db(DATABASE_NAME)
         const organisationsRepository = {
-          getAccreditationById: vi
-            .fn()
-            .mockResolvedValue({
-              validFrom: '2023-01-01',
-              validTo: '2023-12-31'
-            })
+          getAccreditationById: vi.fn().mockResolvedValue({
+            validFrom: '2023-01-01',
+            validTo: '2023-12-31'
+          })
         }
         const repository = createWasteBalancesRepository(database, {
           organisationsRepository
@@ -132,12 +132,10 @@ describe('MongoDB waste balances repository', () => {
       }) => {
         const database = mongoClient.db(DATABASE_NAME)
         const organisationsRepository = {
-          getAccreditationById: vi
-            .fn()
-            .mockResolvedValue({
-              validFrom: '2023-01-01',
-              validTo: '2023-12-31'
-            })
+          getAccreditationById: vi.fn().mockResolvedValue({
+            validFrom: '2023-01-01',
+            validTo: '2023-12-31'
+          })
         }
         const repository = createWasteBalancesRepository(database, {
           organisationsRepository
@@ -153,8 +151,8 @@ describe('MongoDB waste balances repository', () => {
         })
 
         const record = {
-          template: 'exporter',
           data: {
+            processingType: PROCESSING_TYPES.EXPORTER,
             [EXPORTER_FIELD.PRN_ISSUED]: 'No',
             [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
             [EXPORTER_FIELD.INTERIM_SITE]: 'No',
