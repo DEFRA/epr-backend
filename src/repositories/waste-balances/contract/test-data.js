@@ -77,7 +77,7 @@ export const buildWasteRecord = (overrides = {}) => {
     type: 'received',
     data: {
       ...defaultData,
-      ...(data || {})
+      ...data
     },
     versions: versions || [
       {
