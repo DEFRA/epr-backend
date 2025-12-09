@@ -52,6 +52,13 @@ export const createFormSubmissionsRepository = (
         return null
       }
       return structuredClone(registrations).find((org) => org.id === id) || null
+    },
+    async findAllFormSubmissionIds() {
+      return {
+        organisations: new Set(organisations.map((org) => org.id)),
+        registrations: new Set(registrations.map((reg) => reg.id)),
+        accreditations: new Set(accreditations.map((acc) => acc.id))
+      }
     }
   })
 }
