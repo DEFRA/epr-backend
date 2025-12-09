@@ -382,4 +382,54 @@ describe('Waste Balance Calculator', () => {
       })
     })
   })
+
+  describe('Version Handling', () => {
+    it('Should populate previousVersionIds when multiple versions exist', () => {
+      const record = buildWasteRecord({
+        versions: [
+          { id: 'v1', status: 'created' },
+          { id: 'v2', status: 'created' },
+          { id: 'v3', status: 'created' }
+        ],
+        data: {
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation
+      })
+
+      expect(result.newTransactions).toHaveLength(1)
+      const entity = result.newTransactions[0].entities[0]
+      expect(entity.currentVersionId).toBe('v3')
+      expect(entity.previousVersionIds).toEqual(['v1', 'v2'])
+    })
+
+    it('Should handle missing versions array', () => {
+      const record = buildWasteRecord({
+        data: {
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        }
+      })
+      delete record.versions
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation
+      })
+
+      expect(result.newTransactions).toHaveLength(1)
+      const entity = result.newTransactions[0].entities[0]
+      expect(entity.currentVersionId).toBeUndefined()
+      expect(entity.previousVersionIds).toEqual([])
+    })
+  })
 })
