@@ -51,7 +51,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullName: 'Sarah Mitchell',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '1234567890',
-        title: 'Packaging Compliance Officer'
+        jobTitle: 'Packaging Compliance Officer'
       },
       site: undefined,
       noticeAddress: {
@@ -65,7 +65,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           email: 'reexserviceteam@defra.gov.uk',
           fullName: 'Sarah Mitchell',
           phone: '1234567890',
-          title: 'Packaging Compliance Officer'
+          jobTitle: 'Packaging Compliance Officer'
         }
       ],
       samplingInspectionPlanPart1FileUploads: [
@@ -169,7 +169,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       site: {
         address: {
@@ -222,7 +222,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
           email: 'reexserviceteam@defra.gov.uk',
           fullName: 'James Patterson',
           phone: '020 7946 0123',
-          title: 'Director'
+          jobTitle: 'Director'
         }
       ],
       noticeAddress: {

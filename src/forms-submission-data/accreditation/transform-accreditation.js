@@ -27,7 +27,7 @@ function getSubmitterDetails(answersByShortDescription) {
       answersByShortDescription[
         ACCREDITATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
       ],
-    title:
+    jobTitle:
       answersByShortDescription[
         ACCREDITATION.SUBMITTER_DETAILS.fields.JOB_TITLE
       ]
