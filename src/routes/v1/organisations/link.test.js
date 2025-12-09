@@ -70,6 +70,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         isInitialUser: false
       }
 
+      const fullyValidUser = {
+        ...baseUserObject,
+        email: VALID_TOKEN_EMAIL_ADDRESS,
+        isInitialUser: true
+      }
+
       const databaseStateScenarios = [
         {
           description: 'the organisation exists but has empty users list',
@@ -79,11 +85,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         {
           description: 'Org exists BUT user is not in the users list',
           orgOverride: {
-            users: [
-              {
-                ...baseUserObject
-              }
-            ]
+            users: [baseUserObject]
           },
           expectedStatus: StatusCodes.UNAUTHORIZED
         },
@@ -102,18 +104,30 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         },
         {
           description:
-            'the organisation exists and the user is valid but the organisation is not APPROVED',
+            'the organisation exists and the user is valid but the organisation is the PENDING state',
           orgOverride: {
-            users: [
-              {
-                ...baseUserObject,
-                email: VALID_TOKEN_EMAIL_ADDRESS,
-                isInitialUser: true
-              }
-            ],
+            users: [fullyValidUser],
             status: 'PENDING'
           },
           expectedStatus: StatusCodes.CONFLICT
+        },
+        {
+          description:
+            'the organisation exists and the user is valid but the organisation is in the ACTIVE state',
+          orgOverride: {
+            users: [fullyValidUser],
+            status: 'ACTIVE'
+          },
+          expectedStatus: StatusCodes.CONFLICT
+        },
+        {
+          description:
+            'the organisation exists and the user is valid AND the organisation is in the APPROVED state',
+          orgOverride: {
+            users: [fullyValidUser],
+            status: 'APPROVED'
+          },
+          expectedStatus: StatusCodes.OK
         }
       ]
 
