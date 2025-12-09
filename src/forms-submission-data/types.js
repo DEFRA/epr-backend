@@ -129,7 +129,7 @@
  * @typedef {{
  *   success: true
  *   id: string
- *   action: 'inserted' | 'updated' | 'unchanged'
+ *   action: 'inserted' | 'updated'
  * }} SuccessResult
  */
 
@@ -147,6 +147,33 @@
  * Migration result (success or failure)
  *
  * @typedef {SuccessResult | FailureResult} MigrationResult
+ */
+
+/**
+ * Transformed submissions result
+ *
+ * @typedef {{
+ *   organisations: BaseOrganisation[]
+ *   registrations: Registration[]
+ *   accreditations: Accreditation[]
+ * }} TransformedSubmissions
+ */
+
+/**
+ * Submission IDs with total count
+ *
+ * @typedef {import('#repositories/form-submissions/port.js').FormSubmissionIds & {
+ *   totalCount: number
+ * }} SubmissionIdsWithCount
+ */
+
+/**
+ * Migration delta result containing migrated and pending submissions
+ *
+ * @typedef {{
+ *   migrated: SubmissionIdsWithCount
+ *   pendingMigration: SubmissionIdsWithCount
+ * }} MigrationDelta
  */
 
 /**

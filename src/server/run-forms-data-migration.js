@@ -1,5 +1,5 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { createFormDataMigrator } from '#formsubmission/migrate-forms-data.js'
+import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 

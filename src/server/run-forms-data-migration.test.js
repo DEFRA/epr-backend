@@ -1,14 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { runFormsDataMigration } from './run-forms-data-migration.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { createFormDataMigrator } from '#formsubmission/migrate-forms-data.js'
+import { createFormDataMigrator } from '#formsubmission/migration/migration-orchestrator.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
-vi.mock('#common/helpers/logging/logger.js')
-vi.mock('#formsubmission/migrate-forms-data.js')
-vi.mock('#repositories/form-submissions/mongodb.js')
-vi.mock('#repositories/organisations/mongodb.js')
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: vi.fn(),
+    error: vi.fn()
+  }
+}))
+vi.mock('#formsubmission/migration/migration-orchestrator.js', () => ({
+  createFormDataMigrator: vi.fn()
+}))
+vi.mock('#repositories/form-submissions/mongodb.js', () => ({
+  createFormSubmissionsRepository: vi.fn()
+}))
+vi.mock('#repositories/organisations/mongodb.js', () => ({
+  createOrganisationsRepository: vi.fn()
+}))
 
 describe('runFormsDataMigration', () => {
   let mockServer
