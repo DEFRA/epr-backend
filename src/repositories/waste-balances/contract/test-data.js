@@ -81,6 +81,7 @@ export const buildWasteRecord = (overrides = {}) => {
     },
     versions: versions || [
       {
+        id: randomUUID(),
         createdAt: '2025-01-20T10:00:00.000Z',
         status: 'created',
         summaryLog: { id: 'log-1', uri: 's3://...' },

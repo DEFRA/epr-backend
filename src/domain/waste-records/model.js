@@ -27,6 +27,7 @@ export const VERSION_STATUS = Object.freeze({
 
 /**
  * @typedef {Object} WasteRecordVersion
+ * @property {string} [id] - Version ID
  * @property {string} createdAt - ISO8601 timestamp
  * @property {VersionStatus} status
  * @property {SummaryLogReference} summaryLog - Reference to summary log that created this version

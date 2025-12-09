@@ -85,6 +85,9 @@ export const buildTransaction = (
     entities: [
       {
         id: record.rowId,
+        currentVersionId: record.versions?.[record.versions.length - 1]?.id,
+        previousVersionIds:
+          record.versions?.slice(0, -1).map((v) => v.id) || [],
         type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED
       }
     ]
