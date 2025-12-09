@@ -13,6 +13,7 @@ import {
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 
 import { config } from '#root/config.js'
 
@@ -38,7 +39,9 @@ const handleValidateCommand = async ({
 const handleSubmitCommand = async ({
   summaryLogId,
   summaryLogsRepository,
+  organisationsRepository,
   wasteRecordsRepository,
+  wasteBalancesRepository,
   summaryLogExtractor
 }) => {
   // Load the summary log
@@ -60,7 +63,9 @@ const handleSubmitCommand = async ({
   // Sync waste records from summary log
   const sync = syncFromSummaryLog({
     extractor: summaryLogExtractor,
-    wasteRecordRepository: wasteRecordsRepository
+    wasteRecordRepository: wasteRecordsRepository,
+    wasteBalancesRepository,
+    organisationsRepository
   })
 
   await sync(summaryLog)
@@ -107,6 +112,7 @@ export default async function summaryLogsWorkerThread(command) {
       })
       const organisationsRepository = createOrganisationsRepository(db)()
       const wasteRecordsRepository = createWasteRecordsRepository(db)()
+      const wasteBalancesRepository = createWasteBalancesRepository(db)()
 
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,
@@ -129,7 +135,9 @@ export default async function summaryLogsWorkerThread(command) {
           await handleSubmitCommand({
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
+            organisationsRepository,
             wasteRecordsRepository,
+            wasteBalancesRepository,
             summaryLogExtractor
           })
           break
