@@ -695,6 +695,45 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('richText cells', () => {
+    it('should extract text from richText metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_TITLE'
+      worksheet.getCell('B1').value = {
+        richText: [{ text: 'Hello' }, { font: { bold: true }, text: ' World' }]
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.TITLE).toEqual({
+        value: 'Hello World',
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract text from richText in data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_TEST_TABLE'
+      worksheet.getCell('B1').value = 'ID'
+      worksheet.getCell('C1').value = 'DESCRIPTION'
+
+      worksheet.getCell('B2').value = 1
+      worksheet.getCell('C2').value = {
+        richText: [{ text: 'First ' }, { text: 'item' }]
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.data.TEST_TABLE.rows).toEqual([[1, 'First item']])
+    })
+  })
+
   describe('skip column marker as first header', () => {
     it('should handle skip column marker immediately after data marker', async () => {
       const result = await parseWorkbook({
@@ -945,6 +984,74 @@ describe('ExcelJSSummaryLogsParser', () => {
           ['row id', '2025-05-26'],
           ['ROW_ID', '2025-05-27'],
           ['ROW ID', '2025-05-28']
+        ])
+      })
+
+      it('should skip header row when ROW_ID starts with "Row ID" but contains additional text', async () => {
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Test')
+
+        worksheet.getCell('A1').value = '__EPR_DATA_TEST_TABLE'
+        worksheet.getCell('B1').value = 'ROW_ID'
+        worksheet.getCell('C1').value = 'DATE_RECEIVED'
+
+        // Header row with richText containing "Row ID" plus additional description
+        worksheet.getCell('B2').value = {
+          richText: [
+            { font: { bold: true }, text: 'Row ID' },
+            { text: '\n(Automatically generated)' }
+          ]
+        }
+        worksheet.getCell('C2').value = 'Date received'
+
+        // Data rows
+        worksheet.getCell('B3').value = 1001
+        worksheet.getCell('C3').value = '2025-05-25'
+
+        worksheet.getCell('B4').value = 1002
+        worksheet.getCell('C4').value = '2025-05-26'
+
+        const buffer = await workbook.xlsx.writeBuffer()
+        const result = await parse(buffer)
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [1001, '2025-05-25'],
+          [1002, '2025-05-26']
+        ])
+      })
+
+      it('should skip header row when ROW_ID is plain text starting with "Row ID"', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
+            [null, 'Row ID (auto)', 'Date received'],
+            [null, 1001, '2025-05-25'],
+            [null, 1002, '2025-05-26']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [1001, '2025-05-25'],
+          [1002, '2025-05-26']
+        ])
+      })
+
+      it('should skip rows where ROW_ID is null (template rows with default dropdown values)', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED', 'HAS_VALUE'],
+            [null, 1001, '2025-05-25', 'Yes'],
+            [null, 1002, '2025-05-26', 'No'],
+            [null, null, null, 'No'], // Empty row with default dropdown value
+            [null, null, null, 'No'], // Another empty row
+            [null, 1003, '2025-05-27', 'Yes']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [1001, '2025-05-25', 'Yes'],
+          [1002, '2025-05-26', 'No'],
+          [1003, '2025-05-27', 'Yes']
         ])
       })
     })
