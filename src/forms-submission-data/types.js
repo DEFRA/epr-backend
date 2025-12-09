@@ -108,4 +108,80 @@
  * @typedef {OrganisationWithRegistrations & {accreditations?: Accreditation[]}} Organisation
  */
 
+/**
+ * Organisation migration item with operation type
+ *
+ * @typedef {{
+ *   value: Organisation
+ *   operation: 'insert' | 'update'
+ * }} OrganisationMigrationItem
+ */
+
+/**
+ * Organisation map entry tuple [orgId, organisation]
+ *
+ * @typedef {[string, Organisation]} OrganisationMapEntry
+ */
+
+/**
+ * Successful migration result
+ *
+ * @typedef {{
+ *   success: true
+ *   id: string
+ *   action: 'inserted' | 'updated'
+ * }} SuccessResult
+ */
+
+/**
+ * Failed migration result
+ *
+ * @typedef {{
+ *   success: false
+ *   id: string
+ *   phase: string
+ * }} FailureResult
+ */
+
+/**
+ * Migration result (success or failure)
+ *
+ * @typedef {SuccessResult | FailureResult} MigrationResult
+ */
+
+/**
+ * Transformed submissions result
+ *
+ * @typedef {{
+ *   organisations: BaseOrganisation[]
+ *   registrations: Registration[]
+ *   accreditations: Accreditation[]
+ * }} TransformedSubmissions
+ */
+
+/**
+ * Submission IDs with total count
+ *
+ * @typedef {import('#repositories/form-submissions/port.js').FormSubmissionIds & {
+ *   totalCount: number
+ * }} SubmissionIdsWithCount
+ */
+
+/**
+ * Migration delta result containing migrated and pending submissions
+ *
+ * @typedef {{
+ *   migrated: SubmissionIdsWithCount
+ *   pendingMigration: SubmissionIdsWithCount
+ * }} MigrationDelta
+ */
+
+/**
+ * Form data migrator interface
+ *
+ * @typedef {{
+ *   migrate: () => Promise<void>
+ * }} FormDataMigrator
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
