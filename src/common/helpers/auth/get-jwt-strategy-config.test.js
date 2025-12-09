@@ -172,7 +172,7 @@ describe('#getJwtStrategyConfig', () => {
       [undefined, null, null],
       [null, 'b@email.com', 'b@email.com'],
       [null, undefined, undefined],
-      [null, null, null],
+      [null, null, null]
     ])(
       'When token.email is %s and token.preferred_username is %s, parsed email is %s',
       async (email, preferredUsername, expected) => {
@@ -260,7 +260,6 @@ describe('#getJwtStrategyConfig', () => {
 
       expect(result.credentials.scope).toEqual([])
     })
-
 
     test('handles token payload with missing id field', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)

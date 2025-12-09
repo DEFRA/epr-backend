@@ -32,13 +32,16 @@ describe('#getEntraUserRoles', () => {
       'maintainer1@example.com', // lowercase
       'MAINTAINER1@EXAMPLE.COM', // uppercase
       'MaInTaInEr1@ExAmPlE.cOm' // mixed case
-    ])('returns service maintainer role when (case-insensitive) email matches - %s', async (email) => {
-      const result = await getEntraUserRoles(email)
+    ])(
+      'returns service maintainer role when (case-insensitive) email matches - %s',
+      async (email) => {
+        const result = await getEntraUserRoles(email)
 
-      expect(result).toEqual([ROLES.serviceMaintainer])
-      expect(mockConfigGet).toHaveBeenCalledWith('roles.serviceMaintainers')
-      expect(mockConfigGet).toHaveBeenCalledTimes(1)
-    })
+        expect(result).toEqual([ROLES.serviceMaintainer])
+        expect(mockConfigGet).toHaveBeenCalledWith('roles.serviceMaintainers')
+        expect(mockConfigGet).toHaveBeenCalledTimes(1)
+      }
+    )
 
     test('returns service maintainer role for last email in list', async () => {
       const result = await getEntraUserRoles('admin@defra.gov.uk')
@@ -64,7 +67,6 @@ describe('#getEntraUserRoles', () => {
   })
 
   describe('edge cases', () => {
-
     test('handles undefined email', async () => {
       const result = await getEntraUserRoles(undefined)
 
@@ -128,7 +130,9 @@ describe('#getEntraUserRoles', () => {
       ]
       mockConfigGet.mockReturnValue(JSON.stringify(complexEmails))
 
-      const result = await getEntraUserRoles('first.last+tag@subdomain.example.com')
+      const result = await getEntraUserRoles(
+        'first.last+tag@subdomain.example.com'
+      )
 
       expect(result).toEqual([ROLES.serviceMaintainer])
     })

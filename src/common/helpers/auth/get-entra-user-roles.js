@@ -9,7 +9,6 @@ import { getConfig } from '#root/config.js'
  * @returns {Promise<string[]>} Array of role strings
  */
 export async function getEntraUserRoles(userEmail) {
-
   const stringifiedServiceMaintainersList = getConfig().get(
     'roles.serviceMaintainers'
   )
