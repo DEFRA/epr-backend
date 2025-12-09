@@ -20,6 +20,9 @@ import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
 
+  console.log(
+    '\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- 0'
+  )
   if (!email) {
     return []
   }
@@ -47,6 +50,11 @@ export async function getDefraUserRoles(tokenPayload, request) {
     tokenPayload,
     organisationsRepository
   )
+
+  console.log(
+    '\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- 1'
+  )
+  console.log('linkedEprOrg', linkedEprOrg)
 
   if (!linkedEprOrg) {
     throw Boom.unauthorized('User token is not linked to an organisation')

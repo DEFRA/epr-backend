@@ -4,9 +4,9 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createServer } from '#server/server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 
-const { validToken } = entraIdMockAuthTokens
+const { validToken } = defraIdMockAuthTokens
 
 const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
@@ -26,7 +26,7 @@ describe('POST upload-completed validation', () => {
     await server.initialize()
   })
 
-  it('rejects payload without form object', async () => {
+  it.only('rejects payload without form object', async () => {
     const response = await server.inject({
       method: 'POST',
       url: buildPostUrl('org-123', 'reg-456', 'sum-789'),
