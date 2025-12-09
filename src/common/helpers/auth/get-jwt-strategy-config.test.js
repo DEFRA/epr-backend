@@ -122,7 +122,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: 'contact-123',
+            oid: 'contact-123',
             email: 'user@example.com'
           }
         }
@@ -141,13 +141,13 @@ describe('#getJwtStrategyConfig', () => {
       })
     })
 
-    test('calls getEntraUserRoles with token payload', async () => {
+    test('calls getEntraUserRoles with email address from token payload', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
       const tokenPayload = {
         iss: entraIdMockOidcWellKnownResponse.issuer,
         aud: mockEntraClientId,
-        id: 'contact-123',
+        oid: 'contact-123',
         email: 'user@example.com'
       }
 
@@ -159,9 +159,45 @@ describe('#getJwtStrategyConfig', () => {
 
       await config.validate(artifacts)
 
-      expect(mockGetEntraUserRoles).toHaveBeenCalledWith(tokenPayload)
+      expect(mockGetEntraUserRoles).toHaveBeenCalledWith('user@example.com')
       expect(mockGetEntraUserRoles).toHaveBeenCalledTimes(1)
     })
+
+    test.each([
+      ['a@email.com', 'b@email.com', 'a@email.com'],
+      ['a@email.com', undefined, 'a@email.com'],
+      ['a@email.com', null, 'a@email.com'],
+      [undefined, 'b@email.com', 'b@email.com'],
+      [undefined, undefined, undefined],
+      [undefined, null, null],
+      [null, 'b@email.com', 'b@email.com'],
+      [null, undefined, undefined],
+      [null, null, null]
+    ])(
+      'When token.email is %s and token.preferred_username is %s, parsed email is %s',
+      async (email, preferredUsername, expected) => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: entraIdMockOidcWellKnownResponse.issuer,
+              aud: mockEntraClientId,
+              oid: 'contact-123',
+              email: email,
+              preferred_username: preferredUsername
+            }
+          }
+        }
+
+        const result = await config.validate(artifacts)
+
+        expect(result.credentials.email).toEqual(expected)
+        expect(result.isValid).toBe(true)
+        expect(mockGetEntraUserRoles).toHaveBeenCalledWith(expected)
+        expect(mockGetEntraUserRoles).toHaveBeenCalledTimes(1)
+      }
+    )
 
     test('throws forbidden error for Entra ID token with invalid audience', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)
@@ -171,7 +207,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: 'wrong-client-id',
-            id: 'contact-123',
+            oid: 'contact-123',
             email: 'user@example.com'
           }
         }
@@ -193,7 +229,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: 'contact-123',
+            oid: 'contact-123',
             email: 'user@example.com'
           }
         }
@@ -214,7 +250,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: 'contact-456',
+            oid: 'contact-456',
             email: 'regular-user@example.com'
           }
         }
@@ -225,26 +261,6 @@ describe('#getJwtStrategyConfig', () => {
       expect(result.credentials.scope).toEqual([])
     })
 
-    test('handles token payload with missing email field', async () => {
-      const config = getJwtStrategyConfig(mockOidcConfigs)
-
-      const artifacts = {
-        decoded: {
-          payload: {
-            iss: entraIdMockOidcWellKnownResponse.issuer,
-            aud: mockEntraClientId,
-            id: 'contact-123'
-            // email is missing
-          }
-        }
-      }
-
-      const result = await config.validate(artifacts)
-
-      expect(result.credentials.email).toBeUndefined()
-      expect(result.isValid).toBe(true)
-    })
-
     test('handles token payload with missing id field', async () => {
       const config = getJwtStrategyConfig(mockOidcConfigs)
 
@@ -253,7 +269,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            // id is missing
+            // oid is missing
             email: 'user@example.com'
           }
         }
@@ -273,8 +289,9 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: null,
-            email: null
+            oid: null,
+            email: null,
+            preferred_username: null
           }
         }
       }
@@ -294,7 +311,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: 'contact-123',
+            oid: 'contact-123',
             email: 'user@example.com'
           }
         }
@@ -313,7 +330,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: 'contact-1',
+            oid: 'contact-1',
             email: 'user1@example.com'
           }
         }
@@ -324,7 +341,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: entraIdMockOidcWellKnownResponse.issuer,
             aud: mockEntraClientId,
-            id: 'contact-2',
+            oid: 'contact-2',
             email: 'user2@example.com'
           }
         }
@@ -401,7 +418,7 @@ describe('#getJwtStrategyConfig', () => {
           payload: {
             iss: customIssuer,
             aud: mockEntraClientId,
-            id: 'contact-123',
+            oid: 'contact-123',
             email: 'user@example.com'
           }
         }
