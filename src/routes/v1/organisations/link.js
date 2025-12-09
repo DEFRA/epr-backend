@@ -78,9 +78,8 @@ export const organisationsLink = {
         }
       )
 
-      return h.response(organisation).code(StatusCodes.OK)
+      return h.response({}).code(StatusCodes.OK)
     } catch (error) {
-      console.log('\n\n\n\n\n\nerror', error)
       throw Boom.boomify(error)
     }
   }

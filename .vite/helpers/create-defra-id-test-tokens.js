@@ -1,12 +1,16 @@
 import Jwt from '@hapi/jwt'
-import { generateKeyPairSync } from 'crypto'
+import { generateKeyPairSync, randomUUID } from 'crypto'
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
+export const VALID_TOKEN_CONTACT_ID = randomUUID()
 export const VALID_TOKEN_EMAIL_ADDRESS = 'someone@test-company.com'
-export const VALID_TOKEN_CURRENT_RELATIONSHIP = 'rel-1'
+export const VALID_TOKEN_CURRENT_RELATIONSHIP = randomUUID()
+const COMPANY_1_ID = randomUUID()
+const COMPANY_2_ID = randomUUID()
+export const DEFRA_TOKEN_SECOND_RELATIONSHIP_ID = randomUUID()
 export const VALID_TOKEN_RELATIONSHIPS = [
-  'rel-1:Company1:Something',
-  'rel-2:Compnay2:SomethingElse'
+  `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:Company 1 Name`,
+  `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
 ]
 
 // Generate key pair once at module load time
@@ -38,7 +42,7 @@ export const publicKey = {
 
 /** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
 export const baseDefraIdTokenPayload = {
-  contactId: 'test-contact-id',
+  contactId: VALID_TOKEN_CONTACT_ID,
   email: VALID_TOKEN_EMAIL_ADDRESS,
   firstName: 'John',
   lastName: 'Doe',

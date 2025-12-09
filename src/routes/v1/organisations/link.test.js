@@ -5,6 +5,7 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createTestServer } from '#test/create-test-server.js'
 import {
   defraIdMockAuthTokens,
+  VALID_TOKEN_CONTACT_ID,
   VALID_TOKEN_EMAIL_ADDRESS
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -155,7 +156,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         const user = {
           email: VALID_TOKEN_EMAIL_ADDRESS,
           fullName: 'Brandom Yuser',
-          id: 'random_id',
+          id: VALID_TOKEN_CONTACT_ID,
           roles: ['standard_user'],
           isInitialUser: true
         }
@@ -177,6 +178,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           }
         })
         expect(response.statusCode).toBe(StatusCodes.OK)
+        const result = JSON.parse(response.payload)
+        expect(result).toEqual({})
       })
     })
   })
