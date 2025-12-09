@@ -1,7 +1,7 @@
-import { mergeSubcollection } from '#repositories/organisations/helpers.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
+import keyBy from 'lodash.keyby'
 import mergeWith from 'lodash.mergewith'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
@@ -29,15 +29,22 @@ const payload = Joi.object({
   'object.base': '{#label} must be an object'
 })
 
-const deepMerge = (current, updates) => {
-  return mergeWith({}, current, updates, (objValue, srcValue, key) => {
-    if (Array.isArray(srcValue)) {
-      if (key === 'registrations' || key === 'accreditations') {
-        return mergeSubcollection(objValue || [], srcValue)
-      }
-      return srcValue
-    }
-  })
+const mergeCollectionById = (existingArray, updatesArray) => {
+  const existingById = keyBy(existingArray, 'id')
+  return updatesArray.map((update) => ({
+    ...existingById[update.id],
+    ...update
+  }))
+}
+
+const customMerger = (objValue, srcValue, key) => {
+  if (key === 'registrations' || key === 'accreditations') {
+    return srcValue ? mergeCollectionById(objValue || [], srcValue) : objValue
+  }
+
+  if (Array.isArray(srcValue)) {
+    return srcValue
+  }
 }
 
 export const devOrganisationsPatchById = {
@@ -67,8 +74,7 @@ export const devOrganisationsPatchById = {
 
     const { organisation } = request.payload
 
-    /** @type {Organisation} */
-    const merged = deepMerge(current, organisation)
+    const merged = mergeWith({}, current, organisation, customMerger)
 
     const { id: _, schemaVersion: _s, version: _v, ...updates } = merged
 
