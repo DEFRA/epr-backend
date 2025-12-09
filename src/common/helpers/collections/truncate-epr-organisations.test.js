@@ -4,7 +4,9 @@ import { MongoClient } from 'mongodb'
 import { logger } from '#common/helpers/logging/logger.js'
 import { truncateEprOrganisations } from './truncate-epr-organisations.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import eprOrganisation1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
+import eprOrganisation2 from '#data/fixtures/common/epr-organisations/sample-organisation-2.json' with { type: 'json' }
+import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-organisation-3.json' with { type: 'json' }
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -87,14 +89,10 @@ describe('truncateEprOrganisations - MongoDB integration', () => {
       const collection = db.collection(COLLECTION_NAME)
       const repository = createOrganisationsRepository(db)()
 
-      // Seed data using repository
-      const org1 = buildOrganisation()
-      const org2 = buildOrganisation()
-      const org3 = buildOrganisation()
-
-      await repository.insert(org1)
-      await repository.insert(org2)
-      await repository.insert(org3)
+      // Seed data using epr-organisation fixtures
+      await repository.insert(eprOrganisation1)
+      await repository.insert(eprOrganisation2)
+      await repository.insert(eprOrganisation3)
 
       // Verify documents exist
       const countBefore = await collection.countDocuments()
