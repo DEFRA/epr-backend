@@ -9,6 +9,7 @@ import {
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
+import { STATUS } from '#domain/organisations/model.js'
 
 const { validToken } = defraIdMockAuthTokens
 
@@ -116,7 +117,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
             'the organisation exists and the user is valid but the organisation is in the ACTIVE state',
           orgOverride: {
             users: [fullyValidUser],
-            status: 'ACTIVE'
+            status: STATUS.ACTIVE
           },
           expectedStatus: StatusCodes.CONFLICT
         },
@@ -125,7 +126,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
             'the organisation exists and the user is valid AND the organisation is in the APPROVED state',
           orgOverride: {
             users: [fullyValidUser],
-            status: 'APPROVED'
+            status: STATUS.APPROVED
           },
           expectedStatus: StatusCodes.OK
         }
@@ -149,6 +150,42 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(response.statusCode).toBe(expectedStatus)
         }
       )
+
+      it.only('when the request succeeds', async () => {
+        const user = {
+          email: VALID_TOKEN_EMAIL_ADDRESS,
+          fullName: 'Mickey Mouse',
+          id: 'random_id',
+          roles: ['standard_user'],
+          isInitialUser: true
+        }
+
+        const org = buildOrganisation({
+          users: [user],
+          statusHistory: [
+            {
+              status: STATUS.CREATED,
+              updatedAt: '2025-11-01T12:00:00.000Z'
+            },
+            {
+              status: STATUS.APPROVED,
+              updatedAt: '2025-11-02T12:00:00.000Z'
+            }
+          ]
+        })
+
+        console.log('Should be approved')
+        console.log('org.statusHistory', org.statusHistory)
+        await organisationsRepository.insert(org)
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${org.id}/link`,
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+        expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      })
     })
   })
 })
