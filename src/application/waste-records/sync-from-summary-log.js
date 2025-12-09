@@ -76,6 +76,8 @@ const prepareRowsForTransformation = (parsedData) => {
  * @param {Object} dependencies - The service dependencies
  * @param {Object} dependencies.extractor - The summary log extractor
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
+ * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
+ * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
