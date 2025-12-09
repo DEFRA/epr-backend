@@ -441,6 +441,75 @@ export const testUpdateBehaviour = (it) => {
             roles: ['initial_user', 'standard_user']
           })
         })
+
+        it('does not overwrite existing users when new users have matching emails', async () => {
+          const organisation = buildOrganisation({
+            submitterContactDetails: {
+              fullName: 'Original Submitter',
+              email: 'submitter@example.com',
+              phone: '1234567890',
+              title: 'Director'
+            }
+          })
+          await repository.insert(organisation)
+
+          await repository.update(organisation.id, 1, {
+            status: STATUS.APPROVED
+          })
+
+          let result = await repository.findById(organisation.id, 2)
+          expect(result.users).toHaveLength(1)
+          expect(result.users[0]).toEqual({
+            fullName: 'Original Submitter',
+            email: 'submitter@example.com',
+            roles: ['initial_user', 'standard_user']
+          })
+
+          const registration = {
+            ...organisation.registrations[0],
+            submitterContactDetails: {
+              fullName: 'Different Submitter Name',
+              email: 'SUBMITTER@EXAMPLE.COM',
+              phone: '9999999999',
+              title: 'Manager'
+            },
+            approvedPersons: [
+              {
+                fullName: 'New Person',
+                email: 'newperson@example.com',
+                phone: '8888888888',
+                title: 'Executive'
+              }
+            ]
+          }
+
+          await repository.update(organisation.id, 2, {
+            registrations: [
+              {
+                ...registration,
+                status: STATUS.APPROVED,
+                cbduNumber: 'CBDU12345',
+                registrationNumber: 'REG12345',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              }
+            ]
+          })
+
+          result = await repository.findById(organisation.id, 3)
+          expect(result.users).toEqual([
+            {
+              fullName: 'Original Submitter',
+              email: 'submitter@example.com',
+              roles: ['initial_user', 'standard_user']
+            },
+            {
+              fullName: 'New Person',
+              email: 'newperson@example.com',
+              roles: ['initial_user', 'standard_user']
+            }
+          ])
+        })
       })
 
       describe('registrations', () => {

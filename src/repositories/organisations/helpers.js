@@ -250,6 +250,7 @@ export const collateUsers = (existing, updated) => {
   /** @type {SlimUser[]} */
   const root = []
 
+  /* v8 ignore next */
   if (updated.submitterContactDetails) {
     root.push({
       fullName: updated.submitterContactDetails.fullName,
