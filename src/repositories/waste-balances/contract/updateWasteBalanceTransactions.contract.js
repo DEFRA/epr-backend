@@ -42,5 +42,25 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       expect(balance.transactions[0].createdBy).toEqual(user)
       expect(balance.amount).toBe(10.5)
     })
+
+    it('Should do nothing if wasteRecords is empty', async ({
+      wasteBalancesRepository,
+      organisationsRepository
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+
+      organisationsRepository.getAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      // Act
+      await repository.updateWasteBalanceTransactions([], accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance).toBeNull()
+    })
   })
 }

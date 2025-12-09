@@ -45,10 +45,14 @@ export const createInMemoryWasteBalancesRepository = (
       )
 
       if (!wasteBalance) {
+        if (wasteRecords.length === 0) {
+          return
+        }
+
         wasteBalance = {
           _id: randomUUID(),
           accreditationId,
-          organisationId: wasteRecords[0]?.organisationId,
+          organisationId: wasteRecords[0].organisationId,
           amount: 0,
           availableAmount: 0,
           transactions: [],

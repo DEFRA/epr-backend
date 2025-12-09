@@ -23,10 +23,14 @@ const performUpdateWasteBalanceTransactions =
       .findOne({ accreditationId })
 
     if (!wasteBalance) {
+      if (wasteRecords.length === 0) {
+        return
+      }
+
       // Initialize new balance if not exists
       wasteBalance = {
         accreditationId,
-        organisationId: wasteRecords[0]?.organisationId, // Assume all records belong to same org
+        organisationId: wasteRecords[0].organisationId, // Assume all records belong to same org
         amount: 0,
         availableAmount: 0,
         transactions: [],
@@ -48,31 +52,34 @@ const performUpdateWasteBalanceTransactions =
     }
 
     // 4. Persist Updates
-    const existing = await db
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
-      .findOne({ accreditationId })
-
-    if (existing) {
-      await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
-        { accreditationId },
+    await db.collection(WASTE_BALANCE_COLLECTION_NAME).findOneAndUpdate(
+      { accreditationId },
+      [
         {
           $set: {
+            accreditationId,
+            organisationId: {
+              $ifNull: ['$organisationId', wasteRecords[0]?.organisationId]
+            },
             amount: newAmount,
-            availableAmount: newAvailableAmount
-          },
-          $push: {
-            transactions: { $each: newTransactions }
+            availableAmount: newAvailableAmount,
+            schemaVersion: { $ifNull: ['$schemaVersion', 1] },
+            version: { $ifNull: ['$version', 0] }
+          }
+        },
+        {
+          $set: {
+            transactions: {
+              $concatArrays: [
+                { $ifNull: ['$transactions', []] },
+                newTransactions
+              ]
+            }
           }
         }
-      )
-    } else {
-      await db.collection(WASTE_BALANCE_COLLECTION_NAME).insertOne({
-        ...wasteBalance,
-        amount: newAmount,
-        availableAmount: newAvailableAmount,
-        transactions: newTransactions
-      })
-    }
+      ],
+      { upsert: true }
+    )
   }
 
 const performFindByAccreditationId = (db) => async (accreditationId) => {
