@@ -10,7 +10,9 @@ import {
  */
 export const isWithinAccreditationDateRange = (record, accreditation) => {
   const recordDateStr = getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)
-  if (!recordDateStr) return false
+  if (!recordDateStr) {
+    return false
+  }
 
   const recordDate = new Date(recordDateStr)
   const validFrom = new Date(accreditation.validFrom)
@@ -115,34 +117,28 @@ export const calculateWasteBalanceUpdates = ({
   let currentAvailableAmount = currentBalance.availableAmount || 0
 
   for (const record of wasteRecords) {
-    // Date Range Check
-    if (!isWithinAccreditationDateRange(record, accreditation)) {
-      continue
+    if (
+      isWithinAccreditationDateRange(record, accreditation) &&
+      !hasPrnBeenIssued(record)
+    ) {
+      // Calculate Amount
+      const amount = getTransactionAmount(record)
+
+      if (amount > 0) {
+        // Create Transaction
+        const transaction = buildTransaction(
+          record,
+          amount,
+          currentAmount,
+          currentAvailableAmount
+        )
+
+        // Update State
+        currentAmount = transaction.closingAmount
+        currentAvailableAmount = transaction.closingAvailableAmount
+        newTransactions.push(transaction)
+      }
     }
-
-    // PRN Status Check
-    if (hasPrnBeenIssued(record)) {
-      continue
-    }
-
-    // Calculate Amount
-    const amount = getTransactionAmount(record)
-    if (amount <= 0) {
-      continue
-    }
-
-    // Create Transaction
-    const transaction = buildTransaction(
-      record,
-      amount,
-      currentAmount,
-      currentAvailableAmount
-    )
-
-    // Update State
-    currentAmount = transaction.closingAmount
-    currentAvailableAmount = transaction.closingAvailableAmount
-    newTransactions.push(transaction)
   }
 
   return {
