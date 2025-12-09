@@ -5,11 +5,12 @@ const VALID_DEFRA_AUDIENCE = 'test-defra'
 export const VALID_TOKEN_CONTACT_ID = randomUUID()
 export const VALID_TOKEN_EMAIL_ADDRESS = 'someone@test-company.com'
 export const VALID_TOKEN_CURRENT_RELATIONSHIP = randomUUID()
-const COMPANY_1_ID = randomUUID()
+export const COMPANY_1_ID = randomUUID()
+export const COMPANY_1_NAME = 'Lost Ark Adventures Ltd'
 const COMPANY_2_ID = randomUUID()
 export const DEFRA_TOKEN_SECOND_RELATIONSHIP_ID = randomUUID()
 export const VALID_TOKEN_RELATIONSHIPS = [
-  `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:Company 1 Name`,
+  `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
   `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
 ]
 

@@ -44,6 +44,8 @@ export const organisationsLink = {
       throw Boom.conflict('Organisation is not in an approvable state')
     }
 
+    const currentVersion = organisation.version
+
     try {
       const linkedDefraOrg = {
         orgId: orgInToken.defraIdOrgId,
@@ -55,30 +57,35 @@ export const organisationsLink = {
         linkedAt: new Date().toISOString()
       }
 
-      await organisationsRepository.update(
+      await organisationsRepository.update(organisation.id, currentVersion, {
+        status: STATUS.ACTIVE,
+        linkedDefraOrganisation: linkedDefraOrg,
+        registrations: organisation.registrations.reduce(
+          (prev, registration) =>
+            registration.status === STATUS.APPROVED
+              ? [...prev, { ...registration, status: STATUS.ACTIVE }]
+              : prev,
+          []
+        ),
+        accreditations: organisation.accreditations.reduce(
+          (prev, accreditation) =>
+            accreditation.status === STATUS.APPROVED
+              ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
+              : prev,
+          []
+        )
+      })
+
+      const updatedOrganisation = await organisationsRepository.findById(
         organisation.id,
-        organisation.version,
-        {
-          status: STATUS.ACTIVE,
-          linkedDefraOrganisation: linkedDefraOrg,
-          registrations: organisation.registrations.reduce(
-            (prev, registration) =>
-              registration.status === STATUS.APPROVED
-                ? [...prev, { ...registration, status: STATUS.ACTIVE }]
-                : prev,
-            []
-          ),
-          accreditations: organisation.accreditations.reduce(
-            (prev, accreditation) =>
-              accreditation.status === STATUS.APPROVED
-                ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
-                : prev,
-            []
-          )
-        }
+        currentVersion + 1
       )
 
-      return h.response({}).code(StatusCodes.OK)
+      return h
+        .response({
+          status: updatedOrganisation.status
+        })
+        .code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)
     }

@@ -6,7 +6,9 @@ import { createTestServer } from '#test/create-test-server.js'
 import {
   defraIdMockAuthTokens,
   VALID_TOKEN_CONTACT_ID,
-  VALID_TOKEN_EMAIL_ADDRESS
+  VALID_TOKEN_EMAIL_ADDRESS,
+  COMPANY_1_ID,
+  COMPANY_1_NAME
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
@@ -161,12 +163,14 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           isInitialUser: true
         }
 
+        const INITIAL_VERSION = 1
+
         const org = buildOrganisation({
           users: [user]
         })
 
         await organisationsRepository.insert(org)
-        await organisationsRepository.update(org.id, 1, {
+        await organisationsRepository.update(org.id, INITIAL_VERSION, {
           status: STATUS.APPROVED
         })
 
@@ -179,7 +183,29 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         })
         expect(response.statusCode).toBe(StatusCodes.OK)
         const result = JSON.parse(response.payload)
-        expect(result).toEqual({})
+        expect(result).toEqual({ status: 'active' })
+
+        const lastOrg = await organisationsRepository.findById(
+          org.id,
+          INITIAL_VERSION + 1
+        )
+
+        expect(lastOrg.status).toBe(STATUS.ACTIVE)
+        console.log(
+          'lastOrg.linkedDefraOrganisation:',
+          lastOrg.linkedDefraOrganisation
+        )
+        expect(lastOrg.linkedDefraOrganisation).toEqual({
+          linkedDefraOrganisation: {
+            orgId: COMPANY_1_ID,
+            orgName: COMPANY_1_NAME,
+            linkedBy: {
+              email: 'someone@test-company.com',
+              id: VALID_TOKEN_CONTACT_ID
+            },
+            linkedAt: expect.any(String)
+          }
+        })
       })
     })
   })
