@@ -222,6 +222,7 @@ export const collateUsersOnApproval = (existing, updated) => {
 
   const users = [
     ...existing.users,
+    ...updated.users,
     ...root,
     ...collateApprovedRegistrations(existing, updated),
     ...collateApprovedAccreditations(existing, updated)
