@@ -126,21 +126,16 @@ const formatS3Info = (upload) =>
 
 /**
  * Check for submission blocks and supersede pending logs if upload completed successfully.
- * @param {SummaryLogsRepository} summaryLogsRepository
- * @param {string} organisationId
- * @param {string} registrationId
- * @param {string} summaryLogId
- * @param {string} newStatus
- * @param {TypedLogger} logger
+ * @param {{summaryLogsRepository: SummaryLogsRepository, logger: TypedLogger, organisationId: string, registrationId: string, summaryLogId: string, newStatus: string}} params
  */
-const handlePendingLogsOnValidation = async (
+const handlePendingLogsOnValidation = async ({
   summaryLogsRepository,
+  logger,
   organisationId,
   registrationId,
   summaryLogId,
-  newStatus,
-  logger
-) => {
+  newStatus
+}) => {
   if (newStatus !== SUMMARY_LOG_STATUS.VALIDATING) {
     return
   }
@@ -206,14 +201,14 @@ export const summaryLogsUploadCompleted = {
     try {
       const newStatus = determineStatusFromUpload(summaryLogUpload.fileStatus)
 
-      await handlePendingLogsOnValidation(
+      await handlePendingLogsOnValidation({
         summaryLogsRepository,
+        logger,
         organisationId,
         registrationId,
         summaryLogId,
-        newStatus,
-        logger
-      )
+        newStatus
+      })
 
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
