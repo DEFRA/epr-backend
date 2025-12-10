@@ -421,6 +421,7 @@ describe('Submission and placeholder tests', () => {
 
     const createExcelWithPlaceholders = async () => {
       const workbook = new ExcelJS.Workbook()
+      workbook.addWorksheet('Cover')
       const worksheet = workbook.addWorksheet('Data')
 
       worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
