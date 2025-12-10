@@ -208,17 +208,13 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           })
         })
 
-        // it('changes all approved accreditation in the organisation to "approved"', async () => {
-        //   const lastOrg = await organisationsRepository.findById(
-        //     orginalOrgId,
-        //     INITIAL_VERSION + 1
-        //   )
-        //   const previouslyActiveAccreditations = org.accreditations.filter(
-        //     (acc) => acc.status === STATUS.APPROVED
-        //   )
-        //   expect(previouslyActiveAccreditations.length).toBeGreaterThan(0)
-        //   // expect(lastOrg.registrations[0].status).toEqual(STATUS.APPROVED)
-        // })
+        it.skip('changes all approved accreditation in the organisation to "approved"', async () => {
+          const previouslyApprovedAccreditations = org.accreditations.filter(
+            (acc) => acc.status === STATUS.APPROVED
+          )
+          const preciouslyApprovedAccreditationIds =
+            previouslyApprovedAccreditations.map((acc) => acc.id)
+        })
       })
     })
   })

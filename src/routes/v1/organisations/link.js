@@ -20,68 +20,61 @@ export const organisationsLink = {
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
+    // TODO: `orgInToken`, `organisationId` and `organisation` are guaranteed to exist here
+    // by the logic in `isAuthorisedOrgLinkingReq` which frontloads those checks.
+    // It may make sense to move those checks into this handler
+
     const { orgInToken } = request.server.app
 
     const { organisationId } = request.params
-    if (!organisationId) {
-      throw Boom.badRequest('Organisation id is missing in request')
-    }
 
     const { organisationsRepository } = request
     const organisation = await organisationsRepository.findById(organisationId)
 
-    if (!organisation) {
-      throw Boom.notFound('Organisation not found')
-    }
-
-    if (organisation.status !== STATUS.APPROVED) {
+    if (organisation?.status !== STATUS.APPROVED) {
       throw Boom.conflict('Organisation is not in an approvable state')
     }
 
     const currentVersion = organisation.version
 
-    try {
-      const linkedDefraOrg = {
-        orgId: orgInToken.defraIdOrgId,
-        orgName: orgInToken.defraIdOrgName,
-        linkedBy: {
-          email: request.auth.credentials.email,
-          id: request.auth.credentials.id
-        },
-        linkedAt: new Date().toISOString()
-      }
-
-      await organisationsRepository.update(organisation.id, currentVersion, {
-        status: STATUS.ACTIVE,
-        linkedDefraOrganisation: linkedDefraOrg,
-        registrations: organisation.registrations.reduce(
-          (prev, registration) =>
-            registration.status === STATUS.APPROVED
-              ? [...prev, { ...registration, status: STATUS.ACTIVE }]
-              : prev,
-          []
-        ),
-        accreditations: organisation.accreditations.reduce(
-          (prev, accreditation) =>
-            accreditation.status === STATUS.APPROVED
-              ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
-              : prev,
-          []
-        )
-      })
-
-      const updatedOrganisation = await organisationsRepository.findById(
-        organisation.id,
-        currentVersion + 1
-      )
-
-      return h
-        .response({
-          status: updatedOrganisation.status
-        })
-        .code(StatusCodes.OK)
-    } catch (error) {
-      throw Boom.boomify(error)
+    const linkedDefraOrg = {
+      orgId: orgInToken.defraIdOrgId,
+      orgName: orgInToken.defraIdOrgName,
+      linkedBy: {
+        email: request.auth.credentials.email,
+        id: request.auth.credentials.id
+      },
+      linkedAt: new Date().toISOString()
     }
+
+    await organisationsRepository.update(organisation.id, currentVersion, {
+      status: STATUS.ACTIVE,
+      linkedDefraOrganisation: linkedDefraOrg,
+      registrations: organisation.registrations.reduce(
+        (prev, registration) =>
+          registration.status === STATUS.APPROVED
+            ? [...prev, { ...registration, status: STATUS.ACTIVE }]
+            : prev,
+        []
+      ),
+      accreditations: organisation.accreditations.reduce(
+        (prev, accreditation) =>
+          accreditation.status === STATUS.APPROVED
+            ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
+            : prev,
+        []
+      )
+    })
+
+    const updatedOrganisation = await organisationsRepository.findById(
+      organisation.id,
+      currentVersion + 1
+    )
+
+    return h
+      .response({
+        status: updatedOrganisation.status
+      })
+      .code(StatusCodes.OK)
   }
 }
