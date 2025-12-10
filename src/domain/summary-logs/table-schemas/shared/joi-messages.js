@@ -11,8 +11,10 @@ export const MESSAGES = Object.freeze({
   MUST_BE_A_VALID_DATE: 'must be a valid date',
   MUST_BE_GREATER_THAN_ZERO: 'must be greater than 0',
   MUST_BE_AT_LEAST_ZERO: 'must be at least 0',
+  MUST_BE_AT_MOST_1: 'must be at most 1',
   MUST_BE_LESS_THAN_ONE: 'must be less than 1',
-  MUST_BE_AT_MOST_1000: 'must be at most 1000'
+  MUST_BE_AT_MOST_1000: 'must be at most 1000',
+  MUST_BE_YES_OR_NO: 'must be Yes or No'
 })
 
 /**
@@ -23,11 +25,11 @@ export const PATTERNS = Object.freeze({
 })
 
 /**
- * Common numeric constants for validation
+ * Valid string values for Yes/No fields
  */
-export const CONSTANTS = Object.freeze({
-  ZERO: 0,
-  MAX_PRODUCT_TONNAGE: 1000
+export const YES_NO_VALUES = Object.freeze({
+  YES: 'Yes',
+  NO: 'No'
 })
 
 /**
@@ -38,5 +40,6 @@ export const CONSTANTS = Object.freeze({
  */
 export const ROW_ID_MINIMUMS = Object.freeze({
   RECEIVED_LOADS_FOR_REPROCESSING: 1000,
-  REPROCESSED_LOADS: 3000
+  REPROCESSED_LOADS: 3000,
+  SENT_ON_LOADS: 4999
 })

@@ -7,6 +7,7 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
+import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
@@ -224,11 +225,19 @@ const performValidationChecks = async ({
       }
     })
 
-    issues.addFatal(
-      VALIDATION_CATEGORY.TECHNICAL,
-      error.message,
-      VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
-    )
+    if (error instanceof SpreadsheetValidationError) {
+      issues.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        error.message,
+        VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
+      )
+    } else {
+      issues.addFatal(
+        VALIDATION_CATEGORY.TECHNICAL,
+        error.message,
+        VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
+      )
+    }
   }
 
   return { issues, wasteRecords }

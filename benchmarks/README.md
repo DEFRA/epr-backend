@@ -1,47 +1,38 @@
 # Benchmarks
 
-Performance benchmarks for the Excel parser.
+Diagnostic tools for Excel parser performance.
 
-## Available Benchmarks
+## Parse File Diagnostic
 
-### General Benchmark Suite
-
-Tests parser performance across various dataset sizes:
+Measure parse time for a specific Excel file:
 
 ```bash
-npm run benchmark:parser
-```
-
-Tests:
-
-- Real fixture files
-- Small datasets (10 rows)
-- Medium datasets (100 rows)
-- Large datasets (1000 rows)
-- Multi-sheet scenarios
-
-### File-Specific Benchmark
-
-Benchmark a specific Excel file:
-
-```bash
-npm run benchmark:parser:file <path-to-xlsx-file>
+npm run benchmark:file <path-to-xlsx-file>
 ```
 
 Example:
 
 ```bash
-npm run benchmark:parser:file ./test-data/large-file.xlsx
+npm run benchmark:file ./src/data/fixtures/spreadsheet/templates/V4/Summary_Log_Exporter.xlsx
 ```
 
-Shows:
+Output includes:
 
 - File size
-- Operations per second
-- Average, min, max latency
-- P99 latency
-- Sample count
+- Parse time
+- Metadata field count
+- Data table count
+- Total row count
 
-## Tools
+Useful for debugging performance issues with user-submitted files.
 
-Built with [tinybench](https://github.com/tinylibs/tinybench) - a simple, tiny benchmarking library.
+## Performance Tests
+
+For automated performance regression testing, see:
+
+```
+src/adapters/parsers/summary-logs/exceljs-parser.performance.test.js
+```
+
+These tests run as part of the normal test suite and verify that spreadsheet templates parse within acceptable time
+limits.

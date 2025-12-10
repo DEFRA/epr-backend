@@ -79,7 +79,8 @@ export function getJwtStrategyConfig(oidcConfigs) {
             id: tokenPayload.contactId,
             email,
             issuer,
-            scope
+            scope,
+            currentRelationshipId: tokenPayload?.currentRelationshipId
           }
         }
       }

@@ -16,9 +16,92 @@ import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogParser} SummaryLogParser */
 
+/**
+ * Error thrown when spreadsheet structure validation fails.
+ * This allows callers to distinguish structural issues from other errors.
+ */
+export class SpreadsheetValidationError extends Error {
+  constructor(message) {
+    super(message)
+    this.name = 'SpreadsheetValidationError'
+  }
+}
+
+/**
+ * Threshold for consecutive empty rows/columns before assuming phantom data.
+ * These are not configurable - they're tuned for detecting phantom data
+ * in Excel files while allowing legitimate gaps in data.
+ */
+const MAX_CONSECUTIVE_EMPTY_ROWS = 100
+const MAX_CONSECUTIVE_EMPTY_COLUMNS = 100
+
+/**
+ * Default sanity limits for workbook structure validation.
+ * These can be overridden via parse options.
+ *
+ * @property {number} maxWorksheets - Maximum number of worksheets allowed (default: 20)
+ * @property {number} maxRowsPerSheet - Maximum rows per worksheet (default: 55,000)
+ * @property {number} maxColumnsPerSheet - Maximum columns per worksheet (default: 1,000)
+ */
+export const PARSE_DEFAULTS = Object.freeze({
+  maxWorksheets: 20,
+  maxRowsPerSheet: 55_000,
+  maxColumnsPerSheet: 1_000
+})
+
 const CollectionState = {
   HEADERS: 'HEADERS',
   ROWS: 'ROWS'
+}
+
+/**
+ * Validates workbook structure before parsing begins.
+ * Throws SpreadsheetValidationError if the workbook fails any validation check.
+ *
+ * @param {Object} workbook - ExcelJS workbook instance
+ * @param {Object} options - Validation options
+ * @param {string|null} options.requiredWorksheet - Name of required worksheet, or null to skip check
+ * @param {number} options.maxWorksheets - Maximum allowed worksheets
+ * @param {number} options.maxRowsPerSheet - Maximum allowed rows per worksheet
+ * @param {number} options.maxColumnsPerSheet - Maximum allowed columns per worksheet
+ */
+const validateWorkbookStructure = (workbook, options) => {
+  const {
+    requiredWorksheet,
+    maxWorksheets,
+    maxRowsPerSheet,
+    maxColumnsPerSheet
+  } = options
+
+  if (requiredWorksheet) {
+    const worksheetNames = workbook.worksheets.map((ws) => ws.name)
+
+    if (!worksheetNames.includes(requiredWorksheet)) {
+      throw new SpreadsheetValidationError(
+        `Missing required '${requiredWorksheet}' worksheet`
+      )
+    }
+  }
+
+  if (workbook.worksheets.length > maxWorksheets) {
+    throw new SpreadsheetValidationError(
+      `Too many worksheets (${workbook.worksheets.length}, maximum ${maxWorksheets})`
+    )
+  }
+
+  for (const worksheet of workbook.worksheets) {
+    if (worksheet.rowCount > maxRowsPerSheet) {
+      throw new SpreadsheetValidationError(
+        `Worksheet '${worksheet.name}' has too many rows (${worksheet.rowCount}, maximum ${maxRowsPerSheet})`
+      )
+    }
+
+    if (worksheet.columnCount > maxColumnsPerSheet) {
+      throw new SpreadsheetValidationError(
+        `Worksheet '${worksheet.name}' has too many columns (${worksheet.columnCount}, maximum ${maxColumnsPerSheet})`
+      )
+    }
+  }
 }
 
 const extractCellValue = (cellValue) => {
@@ -226,11 +309,50 @@ const collectRowsFromWorksheet = (worksheet) => {
   return rows
 }
 
+/**
+ * Checks if a cell value is considered empty.
+ * Used for phantom column detection.
+ */
+const isCellEmpty = (cellValue) => {
+  const value = extractCellValue(cellValue)
+  return value === null || value === undefined || value === ''
+}
+
+/**
+ * Collects cells from a row, stopping after MAX_CONSECUTIVE_EMPTY_COLUMNS
+ * consecutive empty cells to avoid iterating through phantom columns.
+ *
+ * Some Excel files have formatting applied to columns far beyond the actual
+ * data (e.g., column XEN = 16,000+). This function stops collecting cells
+ * early when it detects we've moved beyond meaningful data.
+ *
+ * Note: ExcelJS's eachCell callback cannot be broken out of early, so we use
+ * a flag to track when we've hit phantom columns and skip all subsequent cells.
+ */
 const collectCellsFromRow = (row) => {
   const cells = []
+  let consecutiveEmptyCells = 0
+  let hitPhantomColumns = false
+
   row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    if (hitPhantomColumns) {
+      return // Once we've hit phantom columns, skip all remaining cells
+    }
+
+    if (isCellEmpty(cell.value)) {
+      consecutiveEmptyCells++
+
+      if (consecutiveEmptyCells >= MAX_CONSECUTIVE_EMPTY_COLUMNS) {
+        hitPhantomColumns = true
+        return
+      }
+    } else {
+      consecutiveEmptyCells = 0
+    }
+
     cells.push({ cell, colNumber })
   })
+
   return cells
 }
 
@@ -284,24 +406,93 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
   draftState.activeCollections = activeCollections
 }
 
+/**
+ * Checks if a row contains any non-empty content.
+ */
+const rowHasContent = (row) => {
+  const cells = collectCellsFromRow(row)
+  return cells.some(({ cell }) => {
+    const value = extractCellValue(cell.value)
+    return value !== null && value !== undefined && value !== ''
+  })
+}
+
+/**
+ * Determines whether a row should be skipped during phantom row detection.
+ *
+ * A row should be processed (not skipped) if:
+ * - There are active data collections that need this row for termination detection
+ * - It contains any non-empty content (markers or otherwise)
+ */
+const shouldSkipForPhantomDetection = (row, hasActiveCollections) => {
+  if (hasActiveCollections) {
+    return false
+  }
+
+  return !rowHasContent(row)
+}
+
 const processWorksheet = (draftState, worksheet) => {
+  let consecutiveEmptyRows = 0
+
   const rows = collectRowsFromWorksheet(worksheet)
 
   for (const { row, rowNumber } of rows) {
-    processRow(draftState, row, rowNumber, worksheet)
+    const hasActiveCollections = draftState.activeCollections.length > 0
+
+    if (shouldSkipForPhantomDetection(row, hasActiveCollections)) {
+      consecutiveEmptyRows++
+
+      if (consecutiveEmptyRows >= MAX_CONSECUTIVE_EMPTY_ROWS) {
+        break
+      }
+    } else {
+      consecutiveEmptyRows = 0
+      processRow(draftState, row, rowNumber, worksheet)
+    }
   }
 
   emitCollectionsToResult(draftState.result.data, draftState.activeCollections)
+
   draftState.activeCollections = []
 }
 
 // Exported for testing - allows direct unit testing of cell value extraction
 export { extractCellValue }
 
-/** @type {SummaryLogParser} */
-export const parse = async (summaryLogBuffer) => {
+/**
+ * @typedef {Object} ParseOptions
+ * @property {string|null} [requiredWorksheet] - Name of required worksheet, or null to skip check
+ * @property {number} [maxWorksheets] - Maximum allowed worksheets
+ * @property {number} [maxRowsPerSheet] - Maximum allowed rows per worksheet
+ * @property {number} [maxColumnsPerSheet] - Maximum allowed columns per worksheet
+ */
+
+/**
+ * Parses an Excel buffer and extracts metadata and data sections.
+ *
+ * @param {Buffer} buffer - Excel file buffer
+ * @param {ParseOptions} [options] - Validation options
+ * @returns {Promise<ParsedSummaryLog>} Parsed summary log data
+ * @throws {SpreadsheetValidationError} If the spreadsheet fails structural validation
+ */
+export const parse = async (buffer, options = {}) => {
+  const {
+    requiredWorksheet = null,
+    maxWorksheets = PARSE_DEFAULTS.maxWorksheets,
+    maxRowsPerSheet = PARSE_DEFAULTS.maxRowsPerSheet,
+    maxColumnsPerSheet = PARSE_DEFAULTS.maxColumnsPerSheet
+  } = options
+
   const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.load(summaryLogBuffer)
+  await workbook.xlsx.load(buffer)
+
+  validateWorkbookStructure(workbook, {
+    requiredWorksheet,
+    maxWorksheets,
+    maxRowsPerSheet,
+    maxColumnsPerSheet
+  })
 
   const initialState = {
     result: { meta: {}, data: {} },

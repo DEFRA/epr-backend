@@ -52,6 +52,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'ROW_ID',
                     'DATE_RECEIVED_FOR_REPROCESSING',
                     'EWC_CODE',
+                    'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
                     'GROSS_WEIGHT',
                     'TARE_WEIGHT',
                     'PALLET_WEIGHT',
@@ -67,11 +68,12 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                       999,
                       'invalid-date',
                       'bad-ewc-code',
+                      'No',
                       1000,
                       100,
                       50,
                       850,
-                      'YES',
+                      'Yes',
                       'WEIGHT',
                       50,
                       0.85,
@@ -150,22 +152,28 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           const fatalErrors = summaryLog.validation.issues.filter(
             (i) => i.severity === 'fatal'
           )
-          expect(fatalErrors).toHaveLength(1)
-          expect(fatalErrors[0].message).toContain('ROW_ID')
+          expect(fatalErrors).toHaveLength(2)
+          const fatalHeaders = fatalErrors.map(
+            (e) => e.context.location?.header
+          )
+          expect(fatalHeaders).toContain('ROW_ID')
+          expect(fatalHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
 
           const errors = summaryLog.validation.issues.filter(
             (i) => i.severity === 'error'
           )
-          expect(errors).toHaveLength(2)
-          const errorHeaders = errors.map((e) => e.context.location?.header)
-          expect(errorHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-          expect(errorHeaders).toContain('EWC_CODE')
+          expect(errors).toHaveLength(1)
+          expect(errors[0].context.location?.header).toBe('EWC_CODE')
         })
 
         it('should return fatal failures in HTTP response', () => {
           const payload = JSON.parse(response.payload)
-          expect(payload.validation.failures).toHaveLength(1)
-          expect(payload.validation.failures[0].location.header).toBe('ROW_ID')
+          expect(payload.validation.failures).toHaveLength(2)
+          const failureHeaders = payload.validation.failures.map(
+            (f) => f.location.header
+          )
+          expect(failureHeaders).toContain('ROW_ID')
+          expect(failureHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
         })
 
         it('should return empty concerns in HTTP response', () => {
@@ -198,6 +206,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'ROW_ID',
                     'DATE_RECEIVED_FOR_REPROCESSING',
                     'EWC_CODE',
+                    'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
                     'GROSS_WEIGHT',
                     'TARE_WEIGHT',
                     'PALLET_WEIGHT',
@@ -213,11 +222,12 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                       1000,
                       '2025-05-28T00:00:00.000Z',
                       '03 03 08',
+                      'No',
                       1000,
                       100,
                       50,
                       850,
-                      'YES',
+                      'Yes',
                       'WEIGHT',
                       50,
                       0.85,
@@ -225,13 +235,14 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     ],
                     [
                       1001,
-                      'invalid-date',
+                      '2025-05-29T00:00:00.000Z',
                       'bad-code',
+                      'No',
                       1000,
                       100,
                       50,
                       850,
-                      'YES',
+                      'Yes',
                       'WEIGHT',
                       50,
                       0.85,
@@ -311,7 +322,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             await summaryLogsRepository.findById(summaryLogId)
 
           expect(summaryLog.validation).toBeDefined()
-          expect(summaryLog.validation.issues).toHaveLength(2)
+          expect(summaryLog.validation.issues).toHaveLength(1)
 
           expect(
             summaryLog.validation.issues.every(
@@ -322,7 +333,6 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           const errorFields = summaryLog.validation.issues.map(
             (i) => i.context.location?.header
           )
-          expect(errorFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
           expect(errorFields).toContain('EWC_CODE')
 
           expect(
@@ -346,17 +356,17 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           const rowWithIssues =
             payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
           expect(rowWithIssues.row).toBe(9)
-          expect(rowWithIssues.issues).toHaveLength(2)
+          expect(rowWithIssues.issues).toHaveLength(1)
 
-          const dateIssue = rowWithIssues.issues.find(
-            (issue) => issue.header === 'DATE_RECEIVED_FOR_REPROCESSING'
+          const ewcIssue = rowWithIssues.issues.find(
+            (issue) => issue.header === 'EWC_CODE'
           )
-          expect(dateIssue).toMatchObject({
+          expect(ewcIssue).toMatchObject({
             type: 'error',
             code: expect.any(String),
-            header: 'DATE_RECEIVED_FOR_REPROCESSING',
-            column: 'C',
-            actual: 'invalid-date'
+            header: 'EWC_CODE',
+            column: 'D',
+            actual: 'bad-code'
           })
 
           rowWithIssues.issues.forEach((issue) => {

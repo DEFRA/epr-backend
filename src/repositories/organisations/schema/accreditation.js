@@ -55,6 +55,7 @@ export const accreditationSchema = Joi.object({
     .valid(
       STATUS.CREATED,
       STATUS.APPROVED,
+      STATUS.ACTIVE,
       STATUS.REJECTED,
       STATUS.SUSPENDED,
       STATUS.ARCHIVED
