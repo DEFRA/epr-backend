@@ -304,6 +304,25 @@ export const createOrganisationsRepository =
         }
 
         return registration
+      },
+
+      async findAccreditationById(
+        organisationId,
+        accreditationId,
+        minimumOrgVersion
+      ) {
+        const org = await findById(organisationId, minimumOrgVersion)
+        const accreditation = org.accreditations?.find(
+          (a) => a.id === accreditationId
+        )
+
+        if (!accreditation) {
+          throw Boom.notFound(
+            `Accreditation with id ${accreditationId} not found`
+          )
+        }
+
+        return accreditation
       }
     }
   }
