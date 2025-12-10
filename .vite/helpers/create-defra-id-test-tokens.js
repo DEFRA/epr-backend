@@ -3,8 +3,13 @@ import { generateKeyPairSync } from 'crypto'
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
 const USER_EMAIL = 'someone@test-company.com'
-export const VALID_TOKEN_CURRENT_RELATIONSHIP = 'rel-1'
-export const VALID_TOKEN_RELATIONSHIPS = ['rel-1', 'rel-2']
+export const VALID_TOKEN_CURRENT_RELATIONSHIP_ID =
+  '660e8400-e29b-41d4-a716-446655440000'
+export const VALID_TOKEN_CURRENT_ORG_ID = '550e8400-e29b-41d4-a716-446655440000'
+export const VALID_TOKEN_RELATIONSHIPS = [
+  '660e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440000:Test Company Ltd',
+  '660e8400-e29b-41d4-a716-446655440001:550e8400-e29b-41d4-a716-446655440001:Another Company Ltd'
+]
 
 // Generate key pair once at module load time
 // @ts-ignore
@@ -41,7 +46,7 @@ export const baseDefraIdTokenPayload = {
   lastName: 'Doe',
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
   aud: VALID_DEFRA_AUDIENCE,
-  currentRelationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP,
+  currentRelationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
   relationships: VALID_TOKEN_RELATIONSHIPS,
   exp: new Date().getTime() / 1000 + 3600,
   iat: new Date().getTime() / 1000,
