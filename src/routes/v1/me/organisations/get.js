@@ -108,8 +108,8 @@ export const organisationsLinkedGetAll = {
         orgId: org.orgId
       }))
 
-    return h
-      .response({ organisations: { current, linked, unlinked } })
-      .code(StatusCodes.OK)
+    /** @type {{ organisations: UserOrganisationsResponse }} */
+    const payload = { organisations: { current, linked, unlinked } }
+    return h.response(payload).code(StatusCodes.OK)
   }
 }
