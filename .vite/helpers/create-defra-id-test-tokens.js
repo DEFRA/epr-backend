@@ -146,8 +146,11 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
 }
 
 const generateDefraIdTokenWithoutRelationship = () => {
-  const { currentRelationshipId, relationships, ...restPayload } =
-    userPresentInOrg1DefraIdTokenPayload
+  const {
+    currentRelationshipId: _c,
+    relationships: _r,
+    ...restPayload
+  } = userPresentInOrg1DefraIdTokenPayload
   const mockDefraIdToken = Jwt.token.generate(
     {
       ...restPayload,

@@ -430,7 +430,8 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('Happy path', () => {
       test('uses issuer from defraIdOidcConfig for validation', async () => {
-        const testOrgId = userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
+        const testOrgId =
+          userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
 
         mockGetUsersOrganisationInfo.mockResolvedValue({
           linkedEprOrg: testOrgId,
@@ -459,7 +460,9 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts, request)
 
-        expect(result.credentials.issuer).toBe(userPresentInOrg1DefraIdTokenPayload.iss)
+        expect(result.credentials.issuer).toBe(
+          userPresentInOrg1DefraIdTokenPayload.iss
+        )
       })
     })
 
@@ -479,7 +482,8 @@ describe('#getJwtStrategyConfig', () => {
           organisationsRepository: {},
           path: '/any',
           params: {
-            organisationId: userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
+            organisationId:
+              userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
           }
         }
 
