@@ -4,15 +4,20 @@ import {
   idSchema,
   organisationInsertSchema,
   organisationUpdateSchema,
-  statusHistoryItemSchema,
-  registrationSchema
+  registrationSchema,
+  statusHistoryItemSchema
 } from './organisation.js'
 import { accreditationSchema } from './accreditation.js'
-import { STATUS } from '#domain/organisations/model.js'
-import { isAccreditationForRegistration } from '#formsubmission/link-form-submissions.js'
 
 const formatValidationErrorDetails = (error) => {
-  return error.details.map((d) => `${d.path.join('.')}: ${d.type}`).join('; ')
+  return error.details
+    .map((d) => {
+      // For custom errors, use the message directly
+      return d.type.startsWith('organisation.')
+        ? d.message
+        : `${d.path.join('.')}: ${d.type}`
+    })
+    .join('; ')
 }
 
 export const validateId = (id) => {
@@ -39,36 +44,6 @@ export const validateOrganisationInsert = (data) => {
   return value
 }
 
-function isAccreditationMissingApprovedRegistration(
-  organisation,
-  accreditation
-) {
-  const hasApprovedRegistration = (organisation.registrations ?? []).some(
-    (reg) =>
-      reg.accreditationId === accreditation.id &&
-      reg.status === STATUS.APPROVED &&
-      isAccreditationForRegistration(accreditation, reg)
-  )
-  return !hasApprovedRegistration
-}
-
-function validateApprovedAccreditations(organisation) {
-  const approvedAccreditationsWithoutRegistration = (
-    organisation.accreditations ?? []
-  )
-    .filter((acc) => acc.status === STATUS.APPROVED)
-    .filter((acc) =>
-      isAccreditationMissingApprovedRegistration(organisation, acc)
-    )
-    .map((acc) => acc.id)
-
-  if (approvedAccreditationsWithoutRegistration.length > 0) {
-    throw Boom.badData(
-      `Accreditations with id ${approvedAccreditationsWithoutRegistration.join(',')} are approved but not linked to an approved registration`
-    )
-  }
-}
-
 export const validateOrganisationUpdate = (data) => {
   const { error, value } = organisationUpdateSchema.validate(data, {
     abortEarly: false,
@@ -80,7 +55,6 @@ export const validateOrganisationUpdate = (data) => {
     throw Boom.badData(`Invalid organisation data: ${details}`)
   }
 
-  validateApprovedAccreditations(data)
   return value
 }
 
