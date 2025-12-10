@@ -1,4 +1,3 @@
-
 /**
  * @typedef {Object} AuditingPayload
  * @property {Object} event - Event summary

@@ -33,9 +33,7 @@ describe('Mongo DB and CDP auditing audit events repository', () => {
     testAuditEventsRepositoryContract(it)
   })
 
-  it('captures a CDP audit on insert', async ({
-    auditEventsRepository
-  }) => {
+  it('captures a CDP audit on insert', async ({ auditEventsRepository }) => {
     const repository = auditEventsRepository()
 
     const organisationId = new ObjectId()

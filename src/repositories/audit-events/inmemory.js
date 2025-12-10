@@ -10,8 +10,9 @@ export function createAuditEventsRepository() {
       },
 
       async findByOrganisationId(organisationId) {
-        return storage
-          .filter(payload => payload.context?.organisationId === organisationId)
+        return storage.filter(
+          (payload) => payload.context?.organisationId === organisationId
+        )
       }
     }
   }

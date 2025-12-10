@@ -8,7 +8,12 @@ export const testAuditEventsRepositoryContract = (it) => {
 
     const payload1 = { event: {}, context: { organisationId: 'id001' } }
     const payload2 = { event: {}, context: { organisationId: 'id002' } }
-    const payload3 = { event: {}, context: { /* no organisationId */ } }
+    const payload3 = {
+      event: {},
+      context: {
+        /* no organisationId */
+      }
+    }
     const payload4 = { event: {}, context: { organisationId: 'id001' } }
 
     await repository.insert(payload1)

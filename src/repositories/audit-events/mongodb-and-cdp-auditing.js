@@ -22,7 +22,6 @@ export const createAuditEventsRepository = (db) => (_logger) => ({
       .find({ 'context.organisationId': organisationId })
       .toArray()
 
-    return docs
-      .map(doc => ({ event: doc.event, context: doc.context }))
+    return docs.map((doc) => ({ event: doc.event, context: doc.context }))
   }
 })
