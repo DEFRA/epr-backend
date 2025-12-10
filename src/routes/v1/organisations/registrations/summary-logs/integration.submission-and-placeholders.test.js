@@ -121,6 +121,7 @@ describe('Submission and placeholder tests', () => {
         'ROW_ID',
         'DATE_RECEIVED_FOR_REPROCESSING',
         'EWC_CODE',
+        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
         'GROSS_WEIGHT',
         'TARE_WEIGHT',
         'PALLET_WEIGHT',
@@ -141,11 +142,12 @@ describe('Submission and placeholder tests', () => {
               1001,
               '2025-01-15T00:00:00.000Z',
               '03 03 08',
+              'No',
               1000,
               100,
               50,
               850,
-              'YES',
+              'Yes',
               'WEIGHT',
               50,
               0.85,
@@ -155,15 +157,16 @@ describe('Submission and placeholder tests', () => {
               1002,
               '2025-01-16T00:00:00.000Z',
               '03 03 08',
-              2000,
-              200,
-              100,
-              1700,
-              'YES',
+              'No',
+              900,
+              90,
+              45,
+              765,
+              'Yes',
               'WEIGHT',
-              100,
+              45,
               0.85,
-              1700
+              765
             ]
           ]
         }
@@ -178,11 +181,12 @@ describe('Submission and placeholder tests', () => {
               1001,
               '2025-01-15T00:00:00.000Z',
               '03 03 08',
+              'No',
               1000,
               100,
               50,
               850,
-              'YES',
+              'Yes',
               'WEIGHT',
               50,
               0.85,
@@ -192,29 +196,31 @@ describe('Submission and placeholder tests', () => {
               1002,
               '2025-01-16T00:00:00.000Z',
               '03 03 08',
-              2500,
-              250,
-              125,
-              2125,
-              'YES',
+              'No',
+              950,
+              95,
+              48,
+              807,
+              'Yes',
               'WEIGHT',
-              125,
+              48,
               0.85,
-              2125
+              807
             ],
             [
               1003,
               '2025-01-17T00:00:00.000Z',
               '03 03 08',
-              3000,
-              300,
-              150,
-              2550,
-              'YES',
+              'No',
+              800,
+              80,
+              40,
+              680,
+              'Yes',
               'WEIGHT',
-              150,
+              40,
               0.85,
-              2550
+              680
             ]
           ]
         }
@@ -441,68 +447,73 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('B6').value = 'ROW_ID'
       worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
       worksheet.getCell('D6').value = 'EWC_CODE'
-      worksheet.getCell('E6').value = 'GROSS_WEIGHT'
-      worksheet.getCell('F6').value = 'TARE_WEIGHT'
-      worksheet.getCell('G6').value = 'PALLET_WEIGHT'
-      worksheet.getCell('H6').value = 'NET_WEIGHT'
-      worksheet.getCell('I6').value = 'BAILING_WIRE_PROTOCOL'
-      worksheet.getCell('J6').value =
+      worksheet.getCell('E6').value = 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+      worksheet.getCell('F6').value = 'GROSS_WEIGHT'
+      worksheet.getCell('G6').value = 'TARE_WEIGHT'
+      worksheet.getCell('H6').value = 'PALLET_WEIGHT'
+      worksheet.getCell('I6').value = 'NET_WEIGHT'
+      worksheet.getCell('J6').value = 'BAILING_WIRE_PROTOCOL'
+      worksheet.getCell('K6').value =
         'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      worksheet.getCell('K6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
-      worksheet.getCell('L6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
-      worksheet.getCell('M6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
+      worksheet.getCell('L6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
+      worksheet.getCell('M6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
+      worksheet.getCell('N6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
 
       worksheet.getCell('B7').value = 10000000001
       worksheet.getCell('C7').value = new Date('2025-05-28')
       worksheet.getCell('D7').value = '03 03 08'
-      worksheet.getCell('E7').value = 1000
-      worksheet.getCell('F7').value = 100
-      worksheet.getCell('G7').value = 50
-      worksheet.getCell('H7').value = 850
-      worksheet.getCell('I7').value = 'YES'
-      worksheet.getCell('J7').value = 'WEIGHT'
-      worksheet.getCell('K7').value = 50
-      worksheet.getCell('L7').value = 0.85
-      worksheet.getCell('M7').value = 850
+      worksheet.getCell('E7').value = 'No'
+      worksheet.getCell('F7').value = 1000
+      worksheet.getCell('G7').value = 100
+      worksheet.getCell('H7').value = 50
+      worksheet.getCell('I7').value = 850
+      worksheet.getCell('J7').value = 'Yes'
+      worksheet.getCell('K7').value = 'WEIGHT'
+      worksheet.getCell('L7').value = 50
+      worksheet.getCell('M7').value = 0.85
+      worksheet.getCell('N7').value = 850
 
       worksheet.getCell('B8').value = 10000000002
       worksheet.getCell('C8').value = new Date('2025-05-29')
       worksheet.getCell('D8').value = 'Choose option'
-      worksheet.getCell('E8').value = 2000
-      worksheet.getCell('F8').value = 200
-      worksheet.getCell('G8').value = 100
-      worksheet.getCell('H8').value = 1700
-      worksheet.getCell('I8').value = 'Choose option'
+      worksheet.getCell('E8').value = 'Choose option'
+      worksheet.getCell('F8').value = 800
+      worksheet.getCell('G8').value = 80
+      worksheet.getCell('H8').value = 40
+      worksheet.getCell('I8').value = 680
       worksheet.getCell('J8').value = 'Choose option'
-      worksheet.getCell('K8').value = 100
-      worksheet.getCell('L8').value = 0.9
-      worksheet.getCell('M8').value = 1700
+      worksheet.getCell('K8').value = 'Choose option'
+      worksheet.getCell('L8').value = 40
+      worksheet.getCell('M8').value = 0.9
+      worksheet.getCell('N8').value = 680
 
       worksheet.getCell('B9').value = null
       worksheet.getCell('C9').value = null
       worksheet.getCell('D9').value = 'Choose option'
-      worksheet.getCell('E9').value = null
+      worksheet.getCell('E9').value = 'Choose option'
       worksheet.getCell('F9').value = null
       worksheet.getCell('G9').value = null
       worksheet.getCell('H9').value = null
-      worksheet.getCell('I9').value = 'Choose option'
+      worksheet.getCell('I9').value = null
       worksheet.getCell('J9').value = 'Choose option'
-      worksheet.getCell('K9').value = null
+      worksheet.getCell('K9').value = 'Choose option'
       worksheet.getCell('L9').value = null
       worksheet.getCell('M9').value = null
+      worksheet.getCell('N9').value = null
 
       worksheet.getCell('B10').value = 99999999999
       worksheet.getCell('C10').value = new Date('2025-12-31')
       worksheet.getCell('D10').value = '03 03 08'
-      worksheet.getCell('E10').value = 9999
+      worksheet.getCell('E10').value = 'No'
       worksheet.getCell('F10').value = 999
       worksheet.getCell('G10').value = 99
-      worksheet.getCell('H10').value = 8901
-      worksheet.getCell('I10').value = 'NO'
-      worksheet.getCell('J10').value = 'WEIGHT'
-      worksheet.getCell('K10').value = 500
-      worksheet.getCell('L10').value = 0.5
-      worksheet.getCell('M10').value = 4450
+      worksheet.getCell('H10').value = 9
+      worksheet.getCell('I10').value = 891
+      worksheet.getCell('J10').value = 'No'
+      worksheet.getCell('K10').value = 'WEIGHT'
+      worksheet.getCell('L10').value = 50
+      worksheet.getCell('M10').value = 0.5
+      worksheet.getCell('N10').value = 445
 
       return workbook.xlsx.writeBuffer()
     }
@@ -650,6 +661,9 @@ describe('Submission and placeholder tests', () => {
 
         expect(payload.validation.failures).toEqual([])
 
+        // 'Choose option' placeholder text is normalized to null for all fields.
+        // Fields in fieldsRequiredForWasteBalance that become null will get
+        // FIELD_REQUIRED concerns (non-fatal errors).
         const concerns = payload.validation.concerns
         expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
         expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows).toHaveLength(1)
@@ -657,8 +671,18 @@ describe('Submission and placeholder tests', () => {
         const row8Issues = concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
         expect(row8Issues.row).toBe(8)
 
+        // Only fields in fieldsRequiredForWasteBalance get FIELD_REQUIRED issues
+        // EWC_CODE is not in fieldsRequiredForWasteBalance, so no issue raised
         const issueHeaders = row8Issues.issues.map((i) => i.header)
-        expect(issueHeaders).toContain('EWC_CODE')
+        expect(issueHeaders).toContain('WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE')
+        expect(issueHeaders).toContain('BAILING_WIRE_PROTOCOL')
+        expect(issueHeaders).not.toContain('EWC_CODE')
+
+        row8Issues.issues.forEach((issue) => {
+          expect(issue.code).toBe('FIELD_REQUIRED')
+          expect(issue.type).toBe('error')
+          expect(issue.actual).toBeNull()
+        })
       })
 
       it('should terminate data section at row with all placeholder values', async () => {

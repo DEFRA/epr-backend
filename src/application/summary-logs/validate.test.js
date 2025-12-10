@@ -18,6 +18,7 @@ const RECEIVED_LOADS_HEADERS = [
   'ROW_ID',
   'DATE_RECEIVED_FOR_REPROCESSING',
   'EWC_CODE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
   'GROSS_WEIGHT',
   'TARE_WEIGHT',
   'PALLET_WEIGHT',
@@ -41,11 +42,12 @@ const buildReceivedLoadRow = (overrides = {}) => ({
   ROW_ID: 10000,
   DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
   EWC_CODE: '03 03 08',
+  WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
   GROSS_WEIGHT: 1000,
   TARE_WEIGHT: 100,
   PALLET_WEIGHT: 50,
   NET_WEIGHT: 850,
-  BAILING_WIRE_PROTOCOL: 'YES',
+  BAILING_WIRE_PROTOCOL: 'Yes',
   HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'WEIGHT',
   WEIGHT_OF_NON_TARGET_MATERIALS: 50,
   RECYCLABLE_PROPORTION_PERCENTAGE: 0.85,
@@ -533,7 +535,7 @@ describe('SummaryLogsValidator', () => {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
                 buildReceivedLoadRow({
-                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date' // Non-fatal row error
+                  EWC_CODE: 'bad-code' // Non-fatal row error (EWC_CODE is not in fatalFields)
                 })
               ]
             })
@@ -598,8 +600,7 @@ describe('SummaryLogsValidator', () => {
                 buildReceivedLoadRow(), // Valid row (ROW_ID: 10000)
                 buildReceivedLoadRow({
                   ROW_ID: 10001, // Valid ROW_ID
-                  DATE_RECEIVED_FOR_REPROCESSING: 'invalid-date', // Row-level error
-                  EWC_CODE: 'bad-code' // Row-level error
+                  EWC_CODE: 'bad-code' // Non-fatal row-level error
                 })
               ]
             })
