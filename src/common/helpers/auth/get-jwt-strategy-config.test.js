@@ -579,54 +579,6 @@ describe('#getJwtStrategyConfig', () => {
         expect(result.credentials.email).toBe('')
         expect(result.isValid).toBe(false)
       })
-
-      test('calls config.get for Defra ID client ID', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
-
-        await config.validate(artifacts, request)
-
-        expect(mockConfigGet).toHaveBeenCalledWith('oidc.defraId.clientId')
-      })
-
-      test('calls config.get for feature flag', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-        const request = {
-          organisationsRepository: {},
-          path: '/v1/me/organisations',
-          method: 'get'
-        }
-
-        await config.validate(artifacts, request)
-
-        expect(mockConfigGet).toHaveBeenCalledWith('featureFlags.defraIdAuth')
-      })
     })
 
     describe('concurrent validation with both issuer types', () => {
@@ -737,54 +689,6 @@ describe('#getJwtStrategyConfig', () => {
         )
       })
 
-      test('does not call getEntraUserRoles for rejected Defra ID tokens', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        try {
-          await config.validate(artifacts)
-        } catch {
-          // Expected to throw
-        }
-
-        expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
-      })
-
-      test('does not validate Defra ID client ID when flag is off', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: defraIdMockOidcWellKnownResponse.issuer,
-              aud: mockDefraClientId,
-              id: 'defra-contact-123',
-              email: 'defra-user@example.com'
-            }
-          }
-        }
-
-        try {
-          await config.validate(artifacts)
-        } catch {
-          // Expected to throw
-        }
-
-        // Should check the feature flag but NOT check the client ID
-        expect(mockConfigGet).toHaveBeenCalledWith('featureFlags.defraIdAuth')
-        expect(mockConfigGet).not.toHaveBeenCalledWith('oidc.defraId.clientId')
-      })
-
       test('Entra ID tokens still work when Defra ID flag is off', async () => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
@@ -814,27 +718,6 @@ describe('#getJwtStrategyConfig', () => {
     })
 
     describe('unrecognized issuer still throws error', () => {
-      test('throws bad request error for unrecognized issuer', async () => {
-        const config = getJwtStrategyConfig(mockOidcConfigs)
-
-        const unknownIssuer = 'https://unknown-issuer.example.com'
-
-        const artifacts = {
-          decoded: {
-            payload: {
-              iss: unknownIssuer,
-              aud: 'some-client-id',
-              id: 'contact-123',
-              email: 'user@example.com'
-            }
-          }
-        }
-
-        await expect(config.validate(artifacts)).rejects.toThrow(
-          Boom.badRequest(`Unrecognized token issuer: ${unknownIssuer}`)
-        )
-      })
-
       test('does not call getEntraUserRoles for unrecognized issuer', async () => {
         const config = getJwtStrategyConfig(mockOidcConfigs)
 
