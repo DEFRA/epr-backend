@@ -1,13 +1,20 @@
 /**
- * @typedef {Object} AuditingPayload
- * @property {Object} event - Event summary
- * @property {Object} context - Contextual data for event
+ * @typedef {{
+ *   event: {
+ *     category: string
+ *     action: string
+ *   }
+ *   context: {
+ *     organisationId?: string
+ *   }
+ * }} AuditingPayload
  */
 
 /**
- * @typedef {Object} AuditEventsRepository
- * @property {(auditingPayload: AuditingPayload) => Promise<void>} insert
- * @property {(id: string) => Promise<AuditingPayload[]>} findByOrganisationId
+ * @typedef {{
+ *   insert: (auditingPayload: AuditingPayload) => Promise<void>
+ *   findByOrganisationId: (id: string) => Promise<AuditingPayload[]>
+ * }} AuditEventsRepository
  */
 
 /**

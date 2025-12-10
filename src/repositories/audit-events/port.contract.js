@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest'
+import { expect } from 'vitest'
 
 export const testAuditEventsRepositoryContract = (it) => {
   it('auditing events can be inserted then retrieved by organisation id', async ({
