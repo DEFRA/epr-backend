@@ -1,15 +1,14 @@
-import { describe, expect, it, beforeEach } from 'vitest'
+import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
+import { beforeEach, describe, expect, it } from 'vitest'
 import {
+  deduplicateOrganisations,
+  findOrganisationMatches,
   findUserInOrg,
-  isInitialUser,
-  getOrgDataFromDefraIdToken,
   getCurrentRelationship,
   getDefraTokenSummary,
-  isOrganisationsDiscoveryReq,
-  findOrganisationMatches,
-  deduplicateOrganisations
+  getOrgDataFromDefraIdToken,
+  isOrganisationsDiscoveryReq
 } from './helpers.js'
-import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 describe('findUserInOrg', () => {
   it('should find user by email match', () => {
@@ -107,63 +106,6 @@ describe('findUserInOrg', () => {
 
     // Should return the first match found (email match comes first in the OR condition)
     expect(result.email).toBe('user@example.com')
-  })
-})
-
-describe('isInitialUser', () => {
-  it('should return true when user is found and is initial user', () => {
-    const organisation = {
-      users: [
-        { email: 'user@example.com', isInitialUser: true },
-        { email: 'other@example.com', isInitialUser: false }
-      ]
-    }
-
-    expect(isInitialUser(organisation, 'user@example.com')).toBe(true)
-  })
-
-  it('should return false when user is found but is not initial user', () => {
-    const organisation = {
-      users: [
-        { email: 'user@example.com', isInitialUser: false },
-        { email: 'other@example.com', isInitialUser: true }
-      ]
-    }
-
-    expect(isInitialUser(organisation, 'user@example.com')).toBe(false)
-  })
-
-  it('should return false when user is not found', () => {
-    const organisation = {
-      users: [{ email: 'other@example.com', isInitialUser: true }]
-    }
-
-    expect(isInitialUser(organisation, 'user@example.com')).toBe(false)
-  })
-
-  it('should perform case-insensitive email matching', () => {
-    const organisation = {
-      users: [{ email: 'User@Example.Com', isInitialUser: true }]
-    }
-
-    expect(isInitialUser(organisation, 'user@example.com')).toBe(true)
-    expect(isInitialUser(organisation, 'USER@EXAMPLE.COM')).toBe(true)
-  })
-
-  it('should return false when isInitialUser is undefined', () => {
-    const organisation = {
-      users: [{ email: 'user@example.com' }]
-    }
-
-    expect(isInitialUser(organisation, 'user@example.com')).toBe(false)
-  })
-
-  it('should handle empty users array', () => {
-    const organisation = {
-      users: []
-    }
-
-    expect(isInitialUser(organisation, 'user@example.com')).toBe(false)
   })
 })
 

@@ -169,7 +169,7 @@ describe('#getDefraUserRoles', () => {
     const mockLinkedEprOrg = {
       id: 'org-123',
       name: 'Test Organisation',
-      users: [{ email: 'user@example.com', isInitialUser: true }]
+      users: [{ email: 'user@example.com', roles: ['initial_user'] }]
     }
 
     beforeEach(() => {
