@@ -43,6 +43,13 @@ import { StatusCodes } from 'http-status-codes'
 
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
+const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
+
+const isUserOrg = (contactId, email) => (org) =>
+  org.users?.some(
+    (user) => user.contactId === contactId || user.email === email
+  )
+
 export const organisationsLinkedGetAll = {
   method: 'GET',
   path: organisationsLinkedGetAllPath,
@@ -92,12 +99,8 @@ export const organisationsLinkedGetAll = {
 
     // Unlinked are all other organisations (excluding the current linked one)
     const unlinked = allOrganisations
-      .filter((org) => org.id !== linkedOrg?.id)
-      .filter((org) =>
-        org.users?.some(
-          (user) => user.contactId === contactId || user.email === email
-        )
-      )
+      .filter(isNotLinkedOrg(linkedOrg))
+      .filter(isUserOrg(contactId, email))
       .map((org) => ({
         id: org.id,
         name: org.companyDetails.name,
