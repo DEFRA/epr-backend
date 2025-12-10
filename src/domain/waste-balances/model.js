@@ -1,7 +1,6 @@
 export const WASTE_BALANCE_TRANSACTION_TYPE = Object.freeze({
   CREDIT: 'credit',
-  DEBIT: 'debit',
-  PENDING_DEBIT: 'pending_debit'
+  DEBIT: 'debit'
 })
 
 /**
@@ -31,6 +30,8 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
 /**
  * @typedef {Object} WasteBalanceTransactionEntity
  * @property {string} id - Reference to WASTE-RECORD or PRN
+ * @property {string} currentVersionId - Current version ID that contributed to this transaction
+ * @property {string[]} previousVersionIds - All previous version IDs (for audit trail)
  * @property {WasteBalanceTransactionEntityType} type - Entity type
  */
 
