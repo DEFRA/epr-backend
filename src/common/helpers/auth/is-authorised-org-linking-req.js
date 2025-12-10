@@ -1,7 +1,7 @@
+import { createPathRegex, PATH_PATTERNS } from '#common/helpers/path-pattern.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import Boom from '@hapi/boom'
 import { isInitialUser } from './roles/helpers.js'
-import { createPathRegex, PATH_PATTERNS } from '#common/helpers/path-pattern.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */

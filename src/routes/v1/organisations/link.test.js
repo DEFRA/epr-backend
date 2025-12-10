@@ -1,4 +1,4 @@
-import { STATUS } from '#domain/organisations/model.js'
+import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -72,7 +72,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       const fullyValidUser = {
         ...baseUserObject,
         email: USER_PRESENT_IN_ORG1_EMAIL,
-        isInitialUser: true
+        roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
       }
 
       const databaseStateScenarios = [
@@ -117,24 +117,22 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       it.each(databaseStateScenarios)(
         'returns $expectedStatusCode when $description and org status is $status',
         async ({ user, status, expectedStatusCode }) => {
-          const orgOverride = {
+          const org = buildOrganisation()
+
+          await organisationsRepository.insert(org)
+
+          await organisationsRepository.update(org.id, 1, {
             submitterContactDetails: {
               fullName: user.fullName,
               email: user.email,
               phone: '1234567890',
               jobTitle: 'Director'
             }
-          }
+          })
 
-          const org = buildOrganisation(orgOverride)
-
-          await organisationsRepository.insert(org)
-
-          if (status) {
-            await organisationsRepository.update(org.id, 1, {
-              status
-            })
-          }
+          await organisationsRepository.update(org.id, 2, {
+            status
+          })
 
           await organisationsRepository.findById(org.id, 2)
 
@@ -153,14 +151,13 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       describe('when the request succeeds', async () => {
         let response
         let org
-        let orginalOrgId
+        let originalOrgId
         const INITIAL_VERSION = 1
         let finalOrgVersion
 
         beforeAll(async () => {
           org = buildOrganisation()
-          orginalOrgId = org.id
-          console.log('org.id', org.id)
+          originalOrgId = org.id
 
           await organisationsRepository.insert(org)
 
@@ -210,7 +207,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
             }
           })
           finalOrgVersion = await organisationsRepository.findById(
-            orginalOrgId,
+            originalOrgId,
             2
           )
         })
