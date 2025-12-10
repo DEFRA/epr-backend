@@ -53,7 +53,10 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await expect(
         repository.findAccreditationById(nonExistentOrgId, accreditation.id)
-      ).rejects.toThrow(/Organisation with id .* not found/)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
     it('throws NotFound when accreditation ID does not exist in the organisation', async () => {
@@ -68,7 +71,10 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await expect(
         repository.findAccreditationById(org.id, nonExistentAccreditationId)
-      ).rejects.toThrow(/Accreditation with id .* not found/)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
     it('throws NotFound when organisation has no accreditations', async () => {
@@ -82,7 +88,66 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await expect(
         repository.findAccreditationById(org.id, nonExistentAccreditationId)
-      ).rejects.toThrow(/Accreditation with id .* not found/)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+
+    it('throws 404 for invalid organisation ID format', async () => {
+      await expect(
+        repository.findAccreditationById('invalid-id', 'acc-123')
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
+    })
+
+    it('throws timeout error when minimumOrgVersion never arrives', async () => {
+      const accreditation = buildAccreditation()
+
+      const org = buildOrganisation({
+        accreditations: [accreditation]
+      })
+
+      await repository.insert(org)
+
+      // Request a version that will never exist
+      await expect(
+        repository.findAccreditationById(org.id, accreditation.id, 999)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 500 },
+        message: 'Consistency timeout waiting for minimum version'
+      })
+    })
+
+    it('waits for minimumOrgVersion and returns accreditation when version arrives', async () => {
+      const accreditation = buildAccreditation()
+
+      const org = buildOrganisation({
+        accreditations: [accreditation]
+      })
+
+      await repository.insert(org)
+
+      // Update to create version 2
+      await repository.update(org.id, 1, {
+        wasteProcessingTypes: ['exporter']
+      })
+
+      // Request with minimumOrgVersion=2 - should retry until version 2 appears
+      const result = await repository.findAccreditationById(
+        org.id,
+        accreditation.id,
+        2
+      )
+
+      expect(result).toMatchObject({
+        id: accreditation.id,
+        accreditationNumber: accreditation.accreditationNumber,
+        material: accreditation.material
+      })
     })
   })
 }
