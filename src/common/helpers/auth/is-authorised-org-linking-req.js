@@ -1,3 +1,4 @@
+import { createPathRegex, PATH_PATTERNS } from '#common/helpers/path-pattern.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import Boom from '@hapi/boom'
 import { isInitialUser } from './roles/helpers.js'
@@ -12,8 +13,12 @@ import { isInitialUser } from './roles/helpers.js'
  * @returns {Promise<boolean>} True if the request is authorized, false otherwise
  */
 export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
+  const pathRegex = createPathRegex(organisationsLinkPath, {
+    organisationId: PATH_PATTERNS.MONGO_OBJECT_ID
+  })
+
   const isOrganisationLinkingRequest =
-    request.path === organisationsLinkPath && request.method === 'post'
+    pathRegex.test(request.path) && request.method === 'post'
 
   if (!isOrganisationLinkingRequest) {
     return false

@@ -7,6 +7,7 @@ const mockIsAuthorisedOrgLinkingReq = vi.fn()
 const mockIsOrganisationsDiscoveryReq = vi.fn()
 const mockGetUsersOrganisationInfo = vi.fn()
 const mockGetRolesForOrganisationAccess = vi.fn()
+const mockGetDefraTokenSummary = vi.fn()
 
 vi.mock('./is-authorised-org-linking-req.js', () => ({
   isAuthorisedOrgLinkingReq: (...args) => mockIsAuthorisedOrgLinkingReq(...args)
@@ -14,7 +15,8 @@ vi.mock('./is-authorised-org-linking-req.js', () => ({
 
 vi.mock('./roles/helpers.js', () => ({
   isOrganisationsDiscoveryReq: (...args) =>
-    mockIsOrganisationsDiscoveryReq(...args)
+    mockIsOrganisationsDiscoveryReq(...args),
+  getDefraTokenSummary: (...args) => mockGetDefraTokenSummary(...args)
 }))
 
 vi.mock('./get-users-org-info.js', () => ({
@@ -32,7 +34,10 @@ describe('#getDefraUserRoles', () => {
     organisationsRepository: mockOrganisationsRepository,
     path: '/api/v1/organisations',
     method: 'get',
-    params: {}
+    params: {},
+    server: {
+      app: {}
+    }
   })
 
   beforeEach(() => {
@@ -164,7 +169,7 @@ describe('#getDefraUserRoles', () => {
     const mockLinkedEprOrg = {
       id: 'org-123',
       name: 'Test Organisation',
-      users: [{ email: 'user@example.com', isInitialUser: true }]
+      users: [{ email: 'user@example.com', roles: ['initial_user'] }]
     }
 
     beforeEach(() => {
