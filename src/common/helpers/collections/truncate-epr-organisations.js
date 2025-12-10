@@ -2,13 +2,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 
 const eprOrganisations = 'epr-organisations'
 
-export async function truncateEprOrganisations(db, shouldTruncateEprOrg) {
-  if (!shouldTruncateEprOrg()) {
-    logger.info({
-      message: `Truncating ${eprOrganisations} collection is disabled`
-    })
-    return
-  }
+export async function truncateEprOrganisations(db) {
   try {
     logger.info({ message: `Truncating ${eprOrganisations} collection` })
     const result = await db.collection(eprOrganisations).deleteMany({})
