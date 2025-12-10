@@ -351,6 +351,115 @@ describe('status', () => {
       )
     })
 
+    // VALIDATION_FAILED status transitions
+    it('returns updated summary log for preprocessing -> validation_failed transition', () => {
+      const summaryLog = {
+        id: 'log-validation-failed-1',
+        status: SUMMARY_LOG_STATUS.PREPROCESSING,
+        file: { id: 'file-11' }
+      }
+      const result = transitionStatus(
+        summaryLog,
+        SUMMARY_LOG_STATUS.VALIDATION_FAILED
+      )
+
+      expect(result).toEqual({
+        id: 'log-validation-failed-1',
+        status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+        file: { id: 'file-11' }
+      })
+    })
+
+    it('returns updated summary log for validating -> validation_failed transition', () => {
+      const summaryLog = {
+        id: 'log-validation-failed-2',
+        status: SUMMARY_LOG_STATUS.VALIDATING,
+        file: { id: 'file-12' }
+      }
+      const result = transitionStatus(
+        summaryLog,
+        SUMMARY_LOG_STATUS.VALIDATION_FAILED
+      )
+
+      expect(result).toEqual({
+        id: 'log-validation-failed-2',
+        status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+        file: { id: 'file-12' }
+      })
+    })
+
+    it('throws error for validation_failed -> any transition (terminal state)', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATION_FAILED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
+      ).toThrow(
+        'Cannot transition summary log from validation_failed to preprocessing'
+      )
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+      ).toThrow(
+        'Cannot transition summary log from validation_failed to validating'
+      )
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
+      ).toThrow(
+        'Cannot transition summary log from validation_failed to validated'
+      )
+    })
+
+    it('throws error for validated -> validation_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from validated to validation_failed'
+      )
+    })
+
+    it('throws error for submitted -> validation_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from submitted to validation_failed'
+      )
+    })
+
+    it('throws error for invalid -> validation_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.INVALID }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from invalid to validation_failed'
+      )
+    })
+
+    it('throws error for rejected -> validation_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.REJECTED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from rejected to validation_failed'
+      )
+    })
+
+    it('throws error for submitting -> validation_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTING }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from submitting to validation_failed'
+      )
+    })
+
     it('throws error for validating -> submitting transition', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATING }
 

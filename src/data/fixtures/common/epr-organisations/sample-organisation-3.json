@@ -17,7 +17,7 @@
   "submitterContactDetails": {
     "fullName": "Eve Black",
     "email": "eve.black@charity.org",
-    "title": "Director",
+    "jobTitle": "Director",
     "phone": "3334445555"
   },
   "registrations": [
@@ -69,7 +69,7 @@
         {
           "fullName": "Eve Black",
           "email": "eve.black@charity.org",
-          "title": "Director",
+          "jobTitle": "Director",
           "phone": "3334445555"
         }
       ],
@@ -107,7 +107,7 @@
       "submitterContactDetails": {
         "fullName": "Eve Black",
         "email": "eve.black@charity.org",
-        "title": "Director",
+        "jobTitle": "Director",
         "phone": "3334445555"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -136,7 +136,7 @@
         {
           "fullName": "John Doe",
           "email": "john.doe@charity.org",
-          "title": "Export Manager",
+          "jobTitle": "Export Manager",
           "phone": "4445556666"
         }
       ],
@@ -145,7 +145,7 @@
       "submitterContactDetails": {
         "fullName": "John Doe",
         "email": "john.doe@charity.org",
-        "title": "Export Manager",
+        "jobTitle": "Export Manager",
         "phone": "4445556666"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -194,7 +194,7 @@
           {
             "fullName": "Sam Green",
             "email": "sam.green@charity.org",
-            "title": "PRN signatory",
+            "jobTitle": "PRN signatory",
             "phone": "7778889999"
           }
         ],
@@ -239,7 +239,7 @@
       "submitterContactDetails": {
         "fullName": "Sam Green",
         "email": "sam.green@charity.org",
-        "title": "PRN signatory",
+        "jobTitle": "PRN signatory",
         "phone": "7778889999"
       },
       "samplingInspectionPlanPart2FileUploads": [

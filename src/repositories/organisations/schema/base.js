@@ -38,13 +38,10 @@ const baseUserSchema = Joi.object({
   email: Joi.string().email().required()
 })
 
-export const userSchema = baseUserSchema
-  .keys({
-    phone: Joi.string().required(),
-    role: Joi.string().optional(),
-    title: Joi.string().optional()
-  })
-  .or('role', 'title')
+export const userSchema = baseUserSchema.keys({
+  phone: Joi.string().required(),
+  jobTitle: Joi.string().required()
+})
 
 export const collatedUserSchema = baseUserSchema.keys({
   isInitialUser: Joi.boolean().required(),
