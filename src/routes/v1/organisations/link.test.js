@@ -1,18 +1,18 @@
-import { StatusCodes } from 'http-status-codes'
+import { STATUS } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
-  defraIdMockAuthTokens,
-  VALID_TOKEN_CONTACT_ID,
-  USER_PRESENT_IN_ORG1_EMAIL,
   COMPANY_1_ID,
-  COMPANY_1_NAME
+  COMPANY_1_NAME,
+  defraIdMockAuthTokens,
+  USER_PRESENT_IN_ORG1_EMAIL,
+  VALID_TOKEN_CONTACT_ID
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { StatusCodes } from 'http-status-codes'
 
 const { validToken } = defraIdMockAuthTokens
 

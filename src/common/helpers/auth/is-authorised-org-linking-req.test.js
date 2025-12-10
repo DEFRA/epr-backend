@@ -45,7 +45,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         users: [
           {
             email: mockEmail,
-            roles: [USER_ROLES.INITIAL]
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
           }
         ]
       }
@@ -69,7 +69,9 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: customOrgId,
-        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          { email: mockEmail, roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD] }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -91,7 +93,12 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: customEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          {
+            email: customEmail,
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -264,7 +271,10 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         id: mockOrganisationId,
         users: [
           { email: 'other@example.com', roles: [USER_ROLES.STANDARD] },
-          { email: mockEmail, roles: [USER_ROLES.INITIAL] },
+          {
+            email: mockEmail,
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          },
           { email: 'another@example.com', roles: [USER_ROLES.STANDARD] }
         ]
       }
@@ -299,7 +309,9 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          { email: mockEmail, roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD] }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -334,7 +346,12 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mixedCaseEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          {
+            email: mixedCaseEmail,
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -389,7 +406,9 @@ describe('#isAuthorisedOrgLinkingReq', () => {
     test('executes all checks in correct order for valid request', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          { email: mockEmail, roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD] }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -414,7 +433,9 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          { email: mockEmail, roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD] }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
@@ -438,11 +459,12 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, isInitialUser: true }]
+        users: [
+          { email: mockEmail, roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD] }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-      mockIsInitialUser.mockReturnValue(true)
 
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
@@ -460,7 +482,9 @@ describe('#isAuthorisedOrgLinkingReq', () => {
 
       const mockOrganisation = {
         id: mockOrganisationId,
-        users: [{ email: mockEmail, roles: [USER_ROLES.INITIAL] }]
+        users: [
+          { email: mockEmail, roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD] }
+        ]
       }
 
       mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
