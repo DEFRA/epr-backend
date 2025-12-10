@@ -17,7 +17,7 @@
   "submitterContactDetails": {
     "fullName": "Alice Smith",
     "email": "alice.smith@ecorecycle.com",
-    "title": "Manager",
+    "jobTitle": "Manager",
     "phone": "1112223333"
   },
   "registrations": [
@@ -69,7 +69,7 @@
         {
           "fullName": "Alice Smith",
           "email": "alice.smith@ecorecycle.com",
-          "title": "Manager",
+          "jobTitle": "Manager",
           "phone": "1112223333"
         }
       ],
@@ -107,7 +107,7 @@
       "submitterContactDetails": {
         "fullName": "Alice Smith",
         "email": "alice.smith@ecorecycle.com",
-        "title": "Manager",
+        "jobTitle": "Manager",
         "phone": "1112223333"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -136,7 +136,7 @@
         {
           "fullName": "Bob Brown",
           "email": "bob.brown@ecorecycle.com",
-          "title": "Export Manager",
+          "jobTitle": "Export Manager",
           "phone": "2223334444"
         }
       ],
@@ -145,7 +145,7 @@
       "submitterContactDetails": {
         "fullName": "Bob Brown",
         "email": "bob.brown@ecorecycle.com",
-        "title": "Export Manager",
+        "jobTitle": "Export Manager",
         "phone": "2223334444"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -194,7 +194,7 @@
           {
             "fullName": "Carol White",
             "email": "carol.white@ecorecycle.com",
-            "title": "PRN signatory",
+            "jobTitle": "PRN signatory",
             "phone": "3334445555"
           }
         ],
@@ -239,7 +239,7 @@
       "submitterContactDetails": {
         "fullName": "Carol White",
         "email": "carol.white@ecorecycle.com",
-        "title": "PRN signatory",
+        "jobTitle": "PRN signatory",
         "phone": "3334445555"
       },
       "samplingInspectionPlanPart2FileUploads": [
@@ -269,7 +269,7 @@
           {
             "fullName": "Dan Black",
             "email": "dan.black@ecorecycle.com",
-            "title": "PERN signatory",
+            "jobTitle": "PERN signatory",
             "phone": "4445556666"
           }
         ],
@@ -314,7 +314,7 @@
       "submitterContactDetails": {
         "fullName": "Dan Black",
         "email": "dan.black@ecorecycle.com",
-        "title": "PERN signatory",
+        "jobTitle": "PERN signatory",
         "phone": "4445556666"
       },
       "samplingInspectionPlanPart2FileUploads": [

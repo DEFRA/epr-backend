@@ -1,0 +1,80 @@
+import Boom from '@hapi/boom'
+import { StatusCodes } from 'http-status-codes'
+import { ROLES } from '#common/helpers/auth/constants.js'
+
+import { STATUS } from '#domain/organisations/model.js'
+import { organisationsLinkPath } from '#domain/organisations/paths.js'
+
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+
+export const organisationsLink = {
+  method: 'POST',
+  path: organisationsLinkPath,
+  options: {
+    auth: {
+      scope: [ROLES.linker]
+    }
+  },
+  /**
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
+   * @param {Object} h - Hapi response toolkit
+   */
+  handler: async (request, h) => {
+    // TODO: `orgInToken`, `organisationId` and `organisation` are guaranteed to exist here
+    // by the logic in `isAuthorisedOrgLinkingReq` which frontloads those checks.
+    // It may make sense to move those checks into this handler
+
+    const { orgInToken } = request.server.app
+
+    const { organisationId } = request.params
+
+    const { organisationsRepository } = request
+    const organisation = await organisationsRepository.findById(organisationId)
+
+    if (organisation?.status !== STATUS.APPROVED) {
+      throw Boom.conflict('Organisation is not in an approvable state')
+    }
+
+    const currentVersion = organisation.version
+
+    const linkedDefraOrg = {
+      orgId: orgInToken.defraIdOrgId,
+      orgName: orgInToken.defraIdOrgName,
+      linkedBy: {
+        email: request.auth.credentials.email,
+        id: request.auth.credentials.id
+      },
+      linkedAt: new Date().toISOString()
+    }
+
+    await organisationsRepository.update(organisation.id, currentVersion, {
+      status: STATUS.ACTIVE,
+      linkedDefraOrganisation: linkedDefraOrg,
+      registrations: organisation.registrations.reduce(
+        (prev, registration) =>
+          registration.status === STATUS.APPROVED
+            ? [...prev, { ...registration, status: STATUS.ACTIVE }]
+            : prev,
+        []
+      ),
+      accreditations: organisation.accreditations.reduce(
+        (prev, accreditation) =>
+          accreditation.status === STATUS.APPROVED
+            ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
+            : prev,
+        []
+      )
+    })
+
+    const updatedOrganisation = await organisationsRepository.findById(
+      organisation.id,
+      currentVersion + 1
+    )
+
+    return h
+      .response({
+        status: updatedOrganisation.status
+      })
+      .code(StatusCodes.OK)
+  }
+}

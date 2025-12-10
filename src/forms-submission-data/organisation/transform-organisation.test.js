@@ -48,7 +48,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:14:15.390Z'),
@@ -103,7 +103,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '0121 496 8574',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:13:16.313Z'),
@@ -154,7 +154,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:19:54.601Z'),
@@ -193,13 +193,13 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       managementContactDetails: {
         fullName: 'Joe Hamiliton',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '0123456789',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       formSubmissionTime: new Date('2025-10-08T16:25:35.824Z'),
       submittedToRegulator: 'ea',
@@ -242,7 +242,7 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'Sarah Mitchell',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       managementContactDetails: undefined,
       formSubmissionTime: new Date('2025-10-08T16:28:18.572Z'),
@@ -281,13 +281,13 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       managementContactDetails: {
         fullName: 'Luke Skywalker',
         email: 'luke.skywalker@starwars.com',
         phone: '0123456789',
-        title: 'Sustainability master'
+        jobTitle: 'Sustainability master'
       },
       formSubmissionTime: new Date('2025-10-23T13:35:37.874Z'),
       submittedToRegulator: 'ea',
@@ -325,13 +325,13 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       managementContactDetails: {
         fullName: 'Joe Hamiliton',
         email: 'joe.hamilton@gmail.com',
         phone: '0123456789',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       formSubmissionTime: new Date('2025-10-23T13:39:07.408Z'),
       submittedToRegulator: 'ea',
@@ -372,13 +372,13 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         fullName: 'James Patterson',
         email: 'reexserviceteam@defra.gov.uk',
         phone: '020 7946 0123',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       managementContactDetails: {
         fullName: 'Luke',
         email: 'test@gmail.com',
         phone: '0123456789',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       formSubmissionTime: new Date('2025-10-23T13:42:35.918Z'),
       submittedToRegulator: 'ea',

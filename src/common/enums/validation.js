@@ -11,7 +11,6 @@ export const VALIDATION_SEVERITY = Object.freeze({
  * Categories of validation issues
  */
 export const VALIDATION_CATEGORY = Object.freeze({
-  PARSING: 'parsing',
   TECHNICAL: 'technical',
   BUSINESS: 'business'
 })
@@ -49,6 +48,7 @@ export const VALIDATION_CODE = Object.freeze({
   VALUE_OUT_OF_RANGE: 'VALUE_OUT_OF_RANGE',
   INVALID_FORMAT: 'INVALID_FORMAT',
   INVALID_DATE: 'INVALID_DATE',
+  CALCULATED_VALUE_MISMATCH: 'CALCULATED_VALUE_MISMATCH',
   SEQUENTIAL_ROW_REMOVED: 'SEQUENTIAL_ROW_REMOVED',
 
   // File upload validation codes (from CDP Uploader rejection)
@@ -59,6 +59,9 @@ export const VALIDATION_CODE = Object.freeze({
   FILE_UPLOAD_FAILED: 'FILE_UPLOAD_FAILED',
   FILE_DOWNLOAD_FAILED: 'FILE_DOWNLOAD_FAILED',
   FILE_REJECTED: 'FILE_REJECTED', // Fallback for unknown upload errors
+
+  // Spreadsheet validation codes
+  SPREADSHEET_INVALID_ERROR: 'SPREADSHEET_INVALID_ERROR', // Spreadsheet fails structural validation
 
   // Generic/fallback codes
   VALIDATION_FALLBACK_ERROR: 'VALIDATION_FALLBACK_ERROR', // Unmapped Joi validation types

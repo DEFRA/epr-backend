@@ -13,7 +13,7 @@ import {
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
-describe('parseRegistrationSubmission - Integration Tests with Fixture Data', () => {
+describe('parseAccreditationSubmission - Integration Tests with Fixture Data', () => {
   it('should parse exporter accreditation from fixture', () => {
     const result = parseAccreditationSubmission(
       exporter._id.$oid,
@@ -40,13 +40,13 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
             fullName: 'Emma Roberts',
             email: 'test@gmail.com',
             phone: '1234567890',
-            title: 'Director'
+            jobTitle: 'Director'
           },
           {
             fullName: 'Sarah Mitchell',
             email: 's.mitchell@greenpacksolutions.co.uk',
             phone: '1234567890',
-            title: 'Director'
+            jobTitle: 'Director'
           }
         ],
         incomeBusinessPlan: [
@@ -103,7 +103,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullName: 'Emma Roberts',
         email: 'test@gmai.com',
         phone: '1234567890',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       samplingInspectionPlanPart2FileUploads: [
         {
@@ -153,7 +153,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
             fullName: 'James Patterson',
             email: 'test@gmail.com',
             phone: '1234567890',
-            title: 'Sustainability Director'
+            jobTitle: 'Sustainability Director'
           }
         ],
         incomeBusinessPlan: [
@@ -210,7 +210,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullName: 'James Patterson',
         email: 'tst@gmail.com',
         phone: '020 7946 0123',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       samplingInspectionPlanPart2FileUploads: [
         {
@@ -254,13 +254,13 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
             fullName: 'James Patterson',
             email: 'james.patterson@ecoretail.co.uk',
             phone: '020 7946 0123',
-            title: 'Sustainability Director'
+            jobTitle: 'Sustainability Director'
           },
           {
             fullName: 'Emma Roberts',
             email: 'test@gmail.com',
             phone: '020 7946 0123',
-            title: 'Sustainability Director'
+            jobTitle: 'Sustainability Director'
           }
         ],
         incomeBusinessPlan: [
@@ -317,7 +317,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullName: 'James Patterson',
         email: 'james.patterson@ecoretail.co.uk',
         phone: '020 7946 0123',
-        title: 'Sustainability Director'
+        jobTitle: 'Sustainability Director'
       },
       samplingInspectionPlanPart2FileUploads: [
         {
@@ -359,7 +359,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
             fullName: 'Emma Roberts',
             email: 'test@gmail.com',
             phone: '12345678',
-            title: 'Director'
+            jobTitle: 'Director'
           }
         ],
         incomeBusinessPlan: [
@@ -416,7 +416,7 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         fullName: 'Emma Roberts',
         email: 'e.roberts@britishbeverage.co.uk',
         phone: '1234567890',
-        title: 'Director'
+        jobTitle: 'Director'
       },
       samplingInspectionPlanPart2FileUploads: [
         {

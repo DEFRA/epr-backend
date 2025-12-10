@@ -1,4 +1,7 @@
+import Joi from 'joi'
 import { StatusCodes } from 'http-status-codes'
+
+import { reconcileWithCdpUploader } from '#adapters/cdp-uploader/reconcile.js'
 import {
   getDefaultStatus,
   SUMMARY_LOG_STATUS
@@ -8,6 +11,7 @@ import { summaryLogResponseSchema } from './response.schema.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#adapters/cdp-uploader/status.js').CdpUploader} CdpUploader */
 
 export const summaryLogsGetPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}'
@@ -17,19 +21,29 @@ export const summaryLogsGet = {
   path: summaryLogsGetPath,
   options: {
     auth: false,
+    validate: {
+      query: Joi.object({
+        uploadId: Joi.string().optional()
+      })
+    },
     response: {
       schema: summaryLogResponseSchema
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository, organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository, organisationsRepository: OrganisationsRepository, cdpUploader: CdpUploader}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (
-    { summaryLogsRepository, organisationsRepository, params },
-    h
-  ) => {
+  handler: async (request, h) => {
+    const {
+      summaryLogsRepository,
+      organisationsRepository,
+      cdpUploader,
+      params,
+      query
+    } = request
     const { summaryLogId, organisationId, registrationId } = params
+    const { uploadId } = query
 
     const result = await summaryLogsRepository.findById(summaryLogId)
 
@@ -37,7 +51,22 @@ export const summaryLogsGet = {
       return h.response({ status: getDefaultStatus() }).code(StatusCodes.OK)
     }
 
-    const { summaryLog } = result
+    // Check CDP Uploader status if stuck in preprocessing and uploadId provided
+    const needsReconciliation =
+      result.summaryLog.status === SUMMARY_LOG_STATUS.PREPROCESSING && uploadId
+
+    const reconciledSummaryLog = needsReconciliation
+      ? await reconcileWithCdpUploader({
+          summaryLogId,
+          uploadId,
+          summaryLogsRepository,
+          cdpUploader
+        })
+      : null
+
+    const summaryLog = reconciledSummaryLog
+      ? { ...result.summaryLog, ...reconciledSummaryLog }
+      : result.summaryLog
 
     const response = {
       status: summaryLog.status,
