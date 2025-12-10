@@ -79,7 +79,7 @@ export const REPROCESSED_LOADS = {
       .messages({
         'number.base': MESSAGES.MUST_BE_A_NUMBER,
         'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_ONE
+        'number.max': MESSAGES.MUST_BE_AT_MOST_1
       }),
     [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: Joi.number()
       .optional()

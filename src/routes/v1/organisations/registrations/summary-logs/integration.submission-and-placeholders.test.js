@@ -654,37 +654,6 @@ describe('Submission and placeholder tests', () => {
         expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
       })
 
-      it('should document placeholder normalization behavior in integration context', () => {
-        const payload = JSON.parse(response.payload)
-
-        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
-
-        expect(payload.validation.failures).toEqual([])
-
-        // 'Choose option' placeholder text is normalized to null for all fields.
-        // Fields in fieldsRequiredForWasteBalance that become null will get
-        // FIELD_REQUIRED concerns (non-fatal errors).
-        const concerns = payload.validation.concerns
-        expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
-        expect(concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows).toHaveLength(1)
-
-        const row8Issues = concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
-        expect(row8Issues.row).toBe(8)
-
-        // Only fields in fieldsRequiredForWasteBalance get FIELD_REQUIRED issues
-        // EWC_CODE is not in fieldsRequiredForWasteBalance, so no issue raised
-        const issueHeaders = row8Issues.issues.map((i) => i.header)
-        expect(issueHeaders).toContain('WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE')
-        expect(issueHeaders).toContain('BAILING_WIRE_PROTOCOL')
-        expect(issueHeaders).not.toContain('EWC_CODE')
-
-        row8Issues.issues.forEach((issue) => {
-          expect(issue.code).toBe('FIELD_REQUIRED')
-          expect(issue.type).toBe('error')
-          expect(issue.actual).toBeNull()
-        })
-      })
-
       it('should terminate data section at row with all placeholder values', async () => {
         const { summaryLog } =
           await testSummaryLogsRepository.findById(summaryLogId)

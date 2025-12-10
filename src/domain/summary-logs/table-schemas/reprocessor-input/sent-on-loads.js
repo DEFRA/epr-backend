@@ -1,6 +1,14 @@
 import Joi from 'joi'
-import { MESSAGES, CONSTANTS, ROW_ID_MINIMUMS } from '../shared/index.js'
+import { MESSAGES, ROW_ID_MINIMUMS } from '../shared/index.js'
 import { createRowIdSchema } from '../shared/row-id.schema.js'
+import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
+
+/**
+ * Maximum value for tonnage field (in tonnes)
+ *
+ * Defined locally as this limit is specific to this table.
+ */
+const MAX_TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON = 1000
 
 /**
  * Table schema for SENT_ON_LOADS
@@ -8,12 +16,12 @@ import { createRowIdSchema } from '../shared/row-id.schema.js'
  * Tracks waste sent on to other facilities.
  */
 export const SENT_ON_LOADS = {
-  rowIdField: 'ROW_ID',
+  rowIdField: FIELDS.ROW_ID,
 
   requiredHeaders: [
-    'ROW_ID',
-    'DATE_LOAD_LEFT_SITE',
-    'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+    FIELDS.ROW_ID,
+    FIELDS.DATE_LOAD_LEFT_SITE,
+    FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
   ],
 
   /**
@@ -25,22 +33,24 @@ export const SENT_ON_LOADS = {
    * Fields that produce FATAL errors when validation fails
    */
   fatalFields: [
-    'ROW_ID',
-    'DATE_LOAD_LEFT_SITE',
-    'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+    FIELDS.ROW_ID,
+    FIELDS.DATE_LOAD_LEFT_SITE,
+    FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
   ],
 
   /**
    * VAL010: Validation schema for filled fields
    */
   validationSchema: Joi.object({
-    ROW_ID: createRowIdSchema(ROW_ID_MINIMUMS.SENT_ON_LOADS).optional(),
-    DATE_LOAD_LEFT_SITE: Joi.date().optional().messages({
+    [FIELDS.ROW_ID]: createRowIdSchema(
+      ROW_ID_MINIMUMS.SENT_ON_LOADS
+    ).optional(),
+    [FIELDS.DATE_LOAD_LEFT_SITE]: Joi.date().optional().messages({
       'date.base': MESSAGES.MUST_BE_A_VALID_DATE
     }),
-    TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: Joi.number()
-      .min(CONSTANTS.ZERO)
-      .max(CONSTANTS.MAX_PRODUCT_TONNAGE)
+    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: Joi.number()
+      .min(0)
+      .max(MAX_TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
       .optional()
       .messages({
         'number.base': MESSAGES.MUST_BE_A_NUMBER,

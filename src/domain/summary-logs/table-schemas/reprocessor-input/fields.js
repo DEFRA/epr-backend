@@ -1,15 +1,15 @@
 /**
  * Field name constants for reprocessor-input tables
  *
- * Single source of truth for field names, preventing typos and enabling
- * refactoring. These are used by both schema definitions and validators.
+ * Single source of truth for field names used throughout schemas in this folder.
  */
 
 export const RECEIVED_LOADS_FIELDS = Object.freeze({
   ROW_ID: 'ROW_ID',
   DATE_RECEIVED_FOR_REPROCESSING: 'DATE_RECEIVED_FOR_REPROCESSING',
   EWC_CODE: 'EWC_CODE',
-  WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE:
+    'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
   GROSS_WEIGHT: 'GROSS_WEIGHT',
   TARE_WEIGHT: 'TARE_WEIGHT',
   PALLET_WEIGHT: 'PALLET_WEIGHT',

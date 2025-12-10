@@ -1,14 +1,17 @@
 import Joi from 'joi'
 import { MESSAGES, PATTERNS, ROW_ID_MINIMUMS } from '../shared/index.js'
 import { createRowIdSchema } from '../shared/row-id.schema.js'
+import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
 } from './validators/net-weight-validator.js'
-import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
  * Maximum values for weight fields (in tonnes)
+ *
+ * Defined locally as these limits are specific to this table and may
+ * differ from similar fields in other tables.
  */
 const MAX_GROSS_WEIGHT = 1000
 const MAX_TARE_WEIGHT = 1000
