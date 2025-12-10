@@ -163,8 +163,40 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           console.log('org.id', org.id)
 
           await organisationsRepository.insert(org)
+
+          const now = new Date()
+          const oneYearFromNow = new Date(
+            now.getFullYear() + 1,
+            now.getMonth(),
+            now.getDate()
+          )
+
+          // Only approve the first accreditation (which is already linked to the first registration)
+          const approvedAccreditations = [
+            {
+              ...org.accreditations[0],
+              status: STATUS.APPROVED,
+              accreditationNumber:
+                org.accreditations[0].accreditationNumber || 'ACC1',
+              validFrom: now,
+              validTo: oneYearFromNow
+            }
+          ]
+
+          const approvedRegistrations = [
+            Object.assign({}, org.registrations[0], {
+              status: STATUS.APPROVED,
+              cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
+              registrationNumber: 'REG1',
+              validFrom: now,
+              validTo: oneYearFromNow
+            })
+          ]
+
           await organisationsRepository.update(org.id, INITIAL_VERSION, {
-            status: STATUS.APPROVED
+            status: STATUS.APPROVED,
+            accreditations: approvedAccreditations,
+            registrations: approvedRegistrations
           })
 
           // TODO: For some reason, without this request tests fail
@@ -208,12 +240,44 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           })
         })
 
-        it.skip('changes all approved accreditation in the organisation to "approved"', async () => {
+        it('changes all approved accreditation in the organisation to "active"', async () => {
           const previouslyApprovedAccreditations = org.accreditations.filter(
             (acc) => acc.status === STATUS.APPROVED
           )
-          const preciouslyApprovedAccreditationIds =
+          const previouslyApprovedAccreditationIds =
             previouslyApprovedAccreditations.map((acc) => acc.id)
+
+          const finalAccreditations = finalOrgVersion.accreditations.filter(
+            (acc) => previouslyApprovedAccreditationIds.includes(acc.id)
+          )
+
+          expect(finalAccreditations).toHaveLength(
+            previouslyApprovedAccreditations.length
+          )
+
+          for (const accreditation of finalAccreditations) {
+            expect(accreditation.status).toBe(STATUS.ACTIVE)
+          }
+        })
+
+        it('changes all approved registrations in the organisation to "active"', async () => {
+          const previouslyApprovedRegistrations = org.registrations.filter(
+            (reg) => reg.status === STATUS.APPROVED
+          )
+          const previouslyApprovedRegistrationIds =
+            previouslyApprovedRegistrations.map((reg) => reg.id)
+
+          const finalRegistrations = finalOrgVersion.registrations.filter(
+            (reg) => previouslyApprovedRegistrationIds.includes(reg.id)
+          )
+
+          expect(finalRegistrations).toHaveLength(
+            previouslyApprovedRegistrations.length
+          )
+
+          for (const registration of finalRegistrations) {
+            expect(registration.status).toBe(STATUS.ACTIVE)
+          }
         })
       })
     })
