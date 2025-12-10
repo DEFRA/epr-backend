@@ -1,13 +1,6 @@
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
 import { EXPORTER_FIELD } from './constants.js'
-
-export const COMMON_FIELD = Object.freeze({
-  DISPATCH_DATE: 'dispatchDate',
-  PRN_ISSUED: 'prnIssued',
-  INTERIM_SITE: 'interimSite',
-  INTERIM_TONNAGE: 'interimTonnage',
-  EXPORT_TONNAGE: 'exportTonnage'
-})
 
 const EXPORTER_MAPPING = {
   [COMMON_FIELD.DISPATCH_DATE]: EXPORTER_FIELD.DATE_OF_DISPATCH,

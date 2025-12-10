@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getFieldValue, COMMON_FIELD } from './field-mappings.js'
+import { getFieldValue } from './field-mappings.js'
+import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 describe('Field Mappings', () => {
