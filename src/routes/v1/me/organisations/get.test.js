@@ -276,4 +276,62 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toEqual([])
   })
+
+  it('should exclude organisations where user is not an initial user', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const userEmail = 'someone@test-company.com'
+
+    // Organisation where user is initial user (should be included)
+    const initialUserOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          isInitialUser: true,
+          roles: ['standard_user']
+        }
+      ]
+    })
+
+    // Organisation where user is NOT initial user (should be excluded)
+    const nonInitialUserOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          isInitialUser: false,
+          roles: ['standard_user']
+        }
+      ]
+    })
+
+    await organisationsRepository.insert(initialUserOrg)
+    await organisationsRepository.insert(nonInitialUserOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.linked).toBeNull()
+    expect(result.organisations.unlinked).toHaveLength(1)
+    expect(result.organisations.unlinked[0].id).toBe(initialUserOrg.id)
+  })
 })

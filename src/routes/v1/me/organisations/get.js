@@ -44,9 +44,11 @@ export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
 
-const isUserOrg = (contactId, email) => (org) =>
+const isInitialUserInOrg = (contactId, email) => (org) =>
   org.users?.some(
-    (user) => user.contactId === contactId || user.email === email
+    (user) =>
+      (user.contactId === contactId || user.email === email) &&
+      user.isInitialUser
   )
 
 export const organisationsLinkedGetAll = {
@@ -99,7 +101,7 @@ export const organisationsLinkedGetAll = {
     // Unlinked are all other organisations (excluding the current linked one)
     const unlinked = allOrganisations
       .filter(isNotLinkedOrg(linkedOrg))
-      .filter(isUserOrg(contactId, email))
+      .filter(isInitialUserInOrg(contactId, email))
       .map((org) => ({
         id: org.id,
         name: org.companyDetails.name,
