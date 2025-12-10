@@ -189,8 +189,7 @@ describe('CDP status check for stale preprocessing status', () => {
       // Wait for eventual consistency (in-memory repository uses setImmediate)
       await new Promise((resolve) => setImmediate(resolve))
 
-      const { summaryLog } =
-        await summaryLogsRepository.findById(summaryLogId)
+      const { summaryLog } = await summaryLogsRepository.findById(summaryLogId)
       expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.REJECTED)
       expect(summaryLog.validation.failures).toContainEqual(
         expect.objectContaining({ code: 'FILE_VIRUS_DETECTED' })
@@ -268,8 +267,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await new Promise((resolve) => setImmediate(resolve))
 
       // Database should still show validating, not validation_failed
-      const { summaryLog } =
-        await summaryLogsRepository.findById(summaryLogId)
+      const { summaryLog } = await summaryLogsRepository.findById(summaryLogId)
       expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
     })
   })
