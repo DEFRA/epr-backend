@@ -216,5 +216,47 @@ describe('validation-pipeline', () => {
         expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
       })
     })
+
+    describe('custom validators', () => {
+      it('extracts field from context.field for object-level custom validators', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: Joi.object({
+            VALUE_A: Joi.number().optional(),
+            VALUE_B: Joi.number().optional(),
+            RESULT: Joi.number().optional()
+          })
+            .custom((value, helpers) => {
+              const { VALUE_A, VALUE_B, RESULT } = value
+              if (
+                VALUE_A !== undefined &&
+                VALUE_B !== undefined &&
+                RESULT !== undefined &&
+                RESULT !== VALUE_A * VALUE_B
+              ) {
+                return helpers.error('custom.calculationMismatch', {
+                  field: 'RESULT'
+                })
+              }
+              return value
+            })
+            .messages({
+              'custom.calculationMismatch': 'must equal VALUE_A × VALUE_B'
+            })
+            .prefs({ abortEarly: false }),
+          fieldsRequiredForWasteBalance: ['VALUE_A', 'VALUE_B', 'RESULT']
+        }
+
+        const row = { VALUE_A: 10, VALUE_B: 5, RESULT: 100 } // Should be 50
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
+        expect(result.issues).toHaveLength(1)
+        expect(result.issues[0].field).toBe('RESULT')
+        expect(result.issues[0].message).toBe('must equal VALUE_A × VALUE_B')
+        expect(result.issues[0].type).toBe('custom.calculationMismatch')
+      })
+    })
   })
 })

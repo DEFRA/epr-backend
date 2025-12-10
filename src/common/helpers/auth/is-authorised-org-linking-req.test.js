@@ -29,7 +29,7 @@ describe('#isAuthorisedOrgLinkingReq', () => {
     }
 
     mockRequest = {
-      path: organisationsLinkPath,
+      path: `/v1/organisations/${mockOrganisationId}/link`,
       method: 'post',
       params: {
         organisationId: mockOrganisationId
@@ -455,7 +455,8 @@ describe('#isAuthorisedOrgLinkingReq', () => {
   describe('integration with organisationsLinkPath', () => {
     test('uses the correct path constant from domain', async () => {
       // This test verifies the path constant is used correctly
-      mockRequest.path = '/v1/organisations/{organisationId}/link'
+      // Real requests will have actual ObjectIds, not the placeholder
+      mockRequest.path = `/v1/organisations/${mockOrganisationId}/link`
 
       const mockOrganisation = {
         id: mockOrganisationId,
@@ -470,21 +471,33 @@ describe('#isAuthorisedOrgLinkingReq', () => {
         mockTokenPayload
       )
 
-      // Should process the request since path matches
+      // Should process the request since path matches the pattern
       expect(result).toBe(true)
+      // Verify it matches the organisationsLinkPath pattern
+      expect(organisationsLinkPath).toBe(
+        '/v1/organisations/{organisationId}/link'
+      )
     })
 
     test('handles path with actual organisation ID instead of placeholder', async () => {
       // In real requests, the path will have the actual ID
       mockRequest.path = `/v1/organisations/${mockOrganisationId}/link`
 
+      const mockOrganisation = {
+        id: mockOrganisationId,
+        users: [{ email: mockEmail, isInitialUser: true }]
+      }
+
+      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
+      mockIsInitialUser.mockReturnValue(true)
+
       const result = await isAuthorisedOrgLinkingReq(
         mockRequest,
         mockTokenPayload
       )
 
-      // Should return false as path doesn't exactly match the constant
-      expect(result).toBe(false)
+      // Should return true as the regex now matches paths with actual IDs
+      expect(result).toBe(true)
     })
   })
 

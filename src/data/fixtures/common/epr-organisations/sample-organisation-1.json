@@ -30,7 +30,7 @@
   "submitterContactDetails": {
     "fullName": "Luke Skywalker",
     "email": "anakin.skywalker@starwars.com",
-    "title": "Partner",
+    "jobTitle": "Partner",
     "phone": "823456789"
   },
   "registrations": [
@@ -82,7 +82,7 @@
         {
           "fullName": "Luke Skywalker",
           "email": "luke.skywalker@starwars.com",
-          "title": "Director",
+          "jobTitle": "Director",
           "phone": "1234567890"
         }
       ],
@@ -120,7 +120,7 @@
       "submitterContactDetails": {
         "fullName": "Luke Skywalker",
         "email": "luke.skywalker@starwars.com",
-        "title": "Director",
+        "jobTitle": "Director",
         "phone": "1234567890"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -154,7 +154,7 @@
         {
           "fullName": "Luke Skywalker",
           "email": "anakin.skywalker@starwars.com",
-          "title": "Partner",
+          "jobTitle": "Partner",
           "phone": "823456789"
         }
       ],
@@ -163,7 +163,7 @@
       "submitterContactDetails": {
         "fullName": "Luke Skywalker",
         "email": "anakin.skywalker@starwars.com",
-        "title": "Partner",
+        "jobTitle": "Partner",
         "phone": "823456789"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -213,7 +213,7 @@
           {
             "fullName": "Yoda",
             "email": "yoda@starwars.com",
-            "title": "PRN signatory",
+            "jobTitle": "PRN signatory",
             "phone": "1234567890"
           }
         ],
@@ -258,7 +258,7 @@
       "submitterContactDetails": {
         "fullName": "Yoda",
         "email": "yoda@starwars.com",
-        "title": "PRN signatory",
+        "jobTitle": "PRN signatory",
         "phone": "1234567890"
       },
       "samplingInspectionPlanPart2FileUploads": [
@@ -294,7 +294,7 @@
           {
             "fullName": "Yoda",
             "email": "yoda@starwars.com",
-            "title": "PRN signatory",
+            "jobTitle": "PRN signatory",
             "phone": "1234567890"
           }
         ],
@@ -339,7 +339,7 @@
       "submitterContactDetails": {
         "fullName": "Yoda",
         "email": "yoda@starwars.com",
-        "title": "PRN signatory",
+        "jobTitle": "PRN signatory",
         "phone": "1234567890"
       },
       "samplingInspectionPlanPart2FileUploads": [
@@ -369,7 +369,7 @@
           {
             "fullName": "Princess Leia",
             "email": "princess.leia@starwars.com",
-            "title": "PRN signatory",
+            "jobTitle": "PRN signatory",
             "phone": "7234567890"
           }
         ],
@@ -414,7 +414,7 @@
       "submitterContactDetails": {
         "fullName": "Princess Leia",
         "email": "princess.leia@starwars.com",
-        "title": "PRN signatory",
+        "jobTitle": "PRN signatory",
         "phone": "7234567890"
       },
       "samplingInspectionPlanPart2FileUploads": [

@@ -3,6 +3,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createCdpUploader } from '#adapters/cdp-uploader/status.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 
@@ -13,9 +14,50 @@ import { config } from '#root/config.js'
  * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepositoryFactory} [wasteRecordsRepository] - Optional test override for waste records repository factory
  * @property {import('#domain/uploads/repository/port.js').UploadsRepository} [uploadsRepository] - Optional test override for uploads repository
+ * @property {import('#adapters/cdp-uploader/status.js').CdpUploader} [cdpUploader] - Optional test override for CDP Uploader
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
+
+/**
+ * Registers the CDP Uploader with optional test override.
+ * @param {import('#common/hapi-types.js').HapiServer} server
+ * @param {RepositoriesPluginOptions} [options]
+ */
+const registerCdpUploader = (server, options) => {
+  if (options?.cdpUploader) {
+    // Test override provided
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'cdpUploader', {
+        get() {
+          return options.cdpUploader
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  } else {
+    // Production: create CDP Uploader with per-request logger
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'cdpUploader', {
+        // istanbul ignore next -- production wiring, equivalent getter tested via options path
+        get() {
+          if (!this.app.cdpUploader) {
+            this.app.cdpUploader = createCdpUploader({
+              cdpUploaderUrl: config.get('cdpUploader.url'),
+              logger: this.logger
+            })
+          }
+          return this.app.cdpUploader
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  }
+}
 
 /**
  * Registers the uploads repository with optional test override.
@@ -141,6 +183,7 @@ export const repositories = {
       }
 
       registerUploadsRepository(server, options, skipMongoDb)
+      registerCdpUploader(server, options)
     }
   }
 }
