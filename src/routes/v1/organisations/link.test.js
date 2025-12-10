@@ -122,7 +122,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               fullName: user.fullName,
               email: user.email,
               phone: '1234567890',
-              title: 'Director'
+              jobTitle: 'Director'
             }
           }
 
