@@ -7,6 +7,7 @@ import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
 import {
+  SUMMARY_LOG_COMMAND,
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
@@ -115,7 +116,7 @@ export default async function summaryLogsWorkerThread(command) {
 
       // Dispatch to appropriate handler based on command type
       switch (command.command) {
-        case 'validate':
+        case SUMMARY_LOG_COMMAND.VALIDATE:
           await handleValidateCommand({
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
@@ -125,7 +126,7 @@ export default async function summaryLogsWorkerThread(command) {
           })
           break
 
-        case 'submit':
+        case SUMMARY_LOG_COMMAND.SUBMIT:
           await handleSubmitCommand({
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
