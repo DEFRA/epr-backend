@@ -64,22 +64,25 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'TONNAGE_RECEIVED_FOR_RECYCLING'
                   ],
                   rows: [
-                    [
-                      999,
-                      'invalid-date',
-                      'bad-ewc-code',
-                      'Glass - pre-sorted',
-                      'No',
-                      1000,
-                      100,
-                      50,
-                      850,
-                      'Yes',
-                      'INVALID_METHOD', // Invalid HOW_DID_YOU value - causes fatal error
-                      50,
-                      0.85,
-                      678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
-                    ]
+                    {
+                      rowNumber: 8,
+                      values: [
+                        999,
+                        'invalid-date',
+                        'bad-ewc-code',
+                        'Glass - pre-sorted',
+                        'No',
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'Yes',
+                        'INVALID_METHOD', // Invalid HOW_DID_YOU value - causes fatal error
+                        50,
+                        0.85,
+                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
+                      ]
+                    }
                   ]
                 }
               }
@@ -229,38 +232,44 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'TONNAGE_RECEIVED_FOR_RECYCLING'
                   ],
                   rows: [
-                    [
-                      1000,
-                      '2025-05-28T00:00:00.000Z',
-                      '03 03 08',
-                      'Glass - pre-sorted',
-                      'No',
-                      1000,
-                      100,
-                      50,
-                      850,
-                      'Yes',
-                      'Actual weight (100%)',
-                      50,
-                      0.85,
-                      678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
-                    ],
-                    [
-                      1001,
-                      '2025-05-29T00:00:00.000Z',
-                      'bad-code', // Invalid EWC code - now causes fatal error
-                      'Glass - pre-sorted',
-                      'No',
-                      1000,
-                      100,
-                      50,
-                      850,
-                      'Yes',
-                      'Actual weight (100%)',
-                      50,
-                      0.85,
-                      678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
-                    ]
+                    {
+                      rowNumber: 8,
+                      values: [
+                        1000,
+                        '2025-05-28T00:00:00.000Z',
+                        '03 03 08',
+                        'Glass - pre-sorted',
+                        'No',
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'Yes',
+                        'Actual weight (100%)',
+                        50,
+                        0.85,
+                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
+                      ]
+                    },
+                    {
+                      rowNumber: 9,
+                      values: [
+                        1001,
+                        '2025-05-29T00:00:00.000Z',
+                        'bad-code', // Invalid EWC code - now causes fatal error
+                        'Glass - pre-sorted',
+                        'No',
+                        1000,
+                        100,
+                        50,
+                        850,
+                        'Yes',
+                        'Actual weight (100%)',
+                        50,
+                        0.85,
+                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
+                      ]
+                    }
                   ]
                 }
               }
