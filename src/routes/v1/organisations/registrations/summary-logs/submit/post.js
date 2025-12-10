@@ -6,6 +6,7 @@ import {
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
+import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
@@ -19,7 +20,9 @@ export const summaryLogsSubmit = {
   path: summaryLogsSubmitPath,
   options: {
     // Authentication will be implemented in follow-up story
-    auth: false,
+    auth: {
+      scope: [ROLES.standardUser]
+    },
     response: {
       schema: summaryLogResponseSchema
     }
