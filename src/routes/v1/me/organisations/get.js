@@ -54,7 +54,7 @@ export const organisationsLinkedGetAll = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
-   * @returns {Promise<import('#common/hapi-types.js').HapiResponse<{organisations: UserOrganisationsResponse}>>}
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository, auth } = request
@@ -62,8 +62,6 @@ export const organisationsLinkedGetAll = {
     const { id: contactId, email } = auth.credentials
 
     const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
-
-    const allOrganisations = await organisationsRepository.findAll()
 
     // Get the user's current organisation from the token
     const currentOrgFromToken = orgInfo.find((org) => org.isCurrent)
@@ -73,6 +71,8 @@ export const organisationsLinkedGetAll = {
       name: currentOrgFromToken.defraIdOrgName,
       relationshipId: currentOrgFromToken.defraIdRelationshipId
     }
+
+    const allOrganisations = await organisationsRepository.findAll()
 
     // Get linked organisation details if a link exists
     const linkedOrg = allOrganisations.find(

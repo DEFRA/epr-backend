@@ -638,7 +638,7 @@ describe('#getJwtStrategyConfig', () => {
             payload: {
               iss: entraIdMockOidcWellKnownResponse.issuer,
               aud: mockEntraClientId,
-              id: 'entra-contact',
+              oid: 'entra-contact',
               email: 'entra@example.com'
             }
           }
@@ -793,7 +793,7 @@ describe('#getJwtStrategyConfig', () => {
             payload: {
               iss: entraIdMockOidcWellKnownResponse.issuer,
               aud: mockEntraClientId,
-              id: 'contact-123',
+              oid: 'contact-123',
               email: 'user@example.com'
             }
           }
