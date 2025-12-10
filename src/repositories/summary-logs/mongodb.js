@@ -12,88 +12,78 @@ import {
 const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
-/**
- * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {import('./port.js').SummaryLogsRepositoryFactory}
- */
-export const createSummaryLogsRepository = (db) => (logger) => ({
-  async insert(id, summaryLog) {
-    const validatedId = validateId(id)
-    const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
+const insert = (db) => async (id, summaryLog) => {
+  const validatedId = validateId(id)
+  const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
 
-    try {
-      await db
-        .collection(COLLECTION_NAME)
-        .insertOne({ _id: validatedId, version: 1, ...validatedSummaryLog })
-    } catch (error) {
-      if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-        throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
-      }
-      throw error
-    }
-  },
-
-  async update(id, version, updates) {
-    const validatedId = validateId(id)
-    const validatedUpdates = validateSummaryLogUpdate(updates)
-
-    /** @type {any} */
-    const filter = { _id: validatedId, version }
-    const result = await db
+  try {
+    await db
       .collection(COLLECTION_NAME)
-      .updateOne(filter, { $set: validatedUpdates, $inc: { version: 1 } })
+      .insertOne({ _id: validatedId, version: 1, ...validatedSummaryLog })
+  } catch (error) {
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
+    }
+    throw error
+  }
+}
 
-    if (result.matchedCount === 0) {
-      /** @type {any} */
-      const findFilter = { _id: validatedId }
-      const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+const update = (db, logger) => async (id, version, updates) => {
+  const validatedId = validateId(id)
+  const validatedUpdates = validateSummaryLogUpdate(updates)
 
-      if (!existing) {
-        throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+  /** @type {any} */
+  const filter = { _id: validatedId, version }
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .updateOne(filter, { $set: validatedUpdates, $inc: { version: 1 } })
+
+  if (result.matchedCount === 0) {
+    /** @type {any} */
+    const findFilter = { _id: validatedId }
+    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    const conflictError = new Error(
+      `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+    )
+    logger.error({
+      error: conflictError,
+      message: `Version conflict detected for summary log ${validatedId}`,
+      event: {
+        category: LOGGING_EVENT_CATEGORIES.DB,
+        action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+        reference: validatedId
       }
+    })
+    throw Boom.conflict(conflictError.message)
+  }
+}
 
-      const conflictError = new Error(
-        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-      )
+const findById = (db) => async (id) => {
+  const validatedId = validateId(id)
+  /** @type {any} */
+  const findByIdFilter = { _id: validatedId }
+  const doc = await db.collection(COLLECTION_NAME).findOne(findByIdFilter)
+  if (!doc) {
+    return null
+  }
+  const { _id, version, ...summaryLog } = doc
+  return { version, summaryLog }
+}
 
-      logger.error({
-        error: conflictError,
-        message: `Version conflict detected for summary log ${validatedId}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: validatedId
-        }
-      })
+const hasSubmittingLog = (db) => async (organisationId, registrationId) => {
+  /** @type {any} */
+  const filter = { organisationId, registrationId, status: 'submitting' }
+  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+  return doc !== null
+}
 
-      throw Boom.conflict(conflictError.message)
-    }
-  },
-
-  async findById(id) {
-    const validatedId = validateId(id)
-    /** @type {any} */
-    const findByIdFilter = { _id: validatedId }
-    const doc = await db.collection(COLLECTION_NAME).findOne(findByIdFilter)
-    if (!doc) {
-      return null
-    }
-    const { _id, version, ...summaryLog } = doc
-    return { version, summaryLog }
-  },
-
-  async hasSubmittingLog(organisationId, registrationId) {
-    /** @type {any} */
-    const filter = {
-      organisationId,
-      registrationId,
-      status: 'submitting'
-    }
-    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
-    return doc !== null
-  },
-
-  async supersedePendingLogs(organisationId, registrationId, excludeId) {
+const supersedePendingLogs =
+  (db) => async (organisationId, registrationId, excludeId) => {
     /** @type {any} */
     const filter = {
       _id: { $ne: excludeId },
@@ -106,9 +96,10 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
       $inc: { version: 1 }
     })
     return result.modifiedCount
-  },
+  }
 
-  async hasNewerValidatedLog(organisationId, registrationId, excludeId) {
+const hasNewerValidatedLog =
+  (db) => async (organisationId, registrationId, excludeId) => {
     /** @type {any} */
     const filter = {
       _id: { $ne: excludeId },
@@ -119,4 +110,16 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
     const doc = await db.collection(COLLECTION_NAME).findOne(filter)
     return doc !== null
   }
+
+/**
+ * @param {import('mongodb').Db} db - MongoDB database instance
+ * @returns {import('./port.js').SummaryLogsRepositoryFactory}
+ */
+export const createSummaryLogsRepository = (db) => (logger) => ({
+  insert: insert(db),
+  update: update(db, logger),
+  findById: findById(db),
+  hasSubmittingLog: hasSubmittingLog(db),
+  supersedePendingLogs: supersedePendingLogs(db),
+  hasNewerValidatedLog: hasNewerValidatedLog(db)
 })

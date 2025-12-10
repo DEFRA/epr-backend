@@ -19,6 +19,127 @@ const scheduleStaleCacheSync = (storage, staleCache) => {
   })
 }
 
+const insert = (storage, staleCache) => async (id, summaryLog) => {
+  const validatedId = validateId(id)
+  const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
+
+  if (storage.has(validatedId)) {
+    throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
+  }
+
+  const newDoc = {
+    version: 1,
+    summaryLog: structuredClone(validatedSummaryLog)
+  }
+  storage.set(validatedId, newDoc)
+  // Insert is immediately visible (no lag simulation for inserts)
+  staleCache.set(validatedId, structuredClone(newDoc))
+}
+
+const update =
+  (storage, staleCache, logger) => async (id, version, updates) => {
+    const validatedId = validateId(id)
+    const validatedUpdates = validateSummaryLogUpdate(updates)
+    const existing = storage.get(validatedId)
+
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    if (existing.version !== version) {
+      const conflictError = new Error(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
+      logger.error({
+        error: conflictError,
+        message: `Version conflict detected for summary log ${validatedId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: validatedId
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    storage.set(validatedId, {
+      version: existing.version + 1,
+      summaryLog: structuredClone({
+        ...existing.summaryLog,
+        ...validatedUpdates
+      })
+    })
+    scheduleStaleCacheSync(storage, staleCache)
+  }
+
+const findById = (staleCache) => async (id) => {
+  const validatedId = validateId(id)
+  // Read from staleCache to simulate reading from replica
+  const doc = staleCache.get(validatedId)
+  if (!doc) {
+    return null
+  }
+  return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
+}
+
+const hasSubmittingLog =
+  (storage) => async (organisationId, registrationId) => {
+    for (const doc of storage.values()) {
+      if (
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        doc.summaryLog.status === 'submitting'
+      ) {
+        return true
+      }
+    }
+    return false
+  }
+
+const PENDING_STATUSES = new Set(['preprocessing', 'validating', 'validated'])
+
+const supersedePendingLogs =
+  (storage, staleCache) =>
+  async (organisationId, registrationId, excludeId) => {
+    let count = 0
+    for (const [id, doc] of storage) {
+      if (
+        id !== excludeId &&
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        PENDING_STATUSES.has(doc.summaryLog.status)
+      ) {
+        const newDoc = {
+          version: doc.version + 1,
+          summaryLog: structuredClone({
+            ...doc.summaryLog,
+            status: 'superseded'
+          })
+        }
+        storage.set(id, newDoc)
+        // Supersede is immediately visible (like insert) for test consistency
+        staleCache.set(id, structuredClone(newDoc))
+        count++
+      }
+    }
+    return count
+  }
+
+const hasNewerValidatedLog =
+  (storage) => async (organisationId, registrationId, excludeId) => {
+    for (const [id, doc] of storage) {
+      if (
+        id !== excludeId &&
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        doc.summaryLog.status === 'validated'
+      ) {
+        return true
+      }
+    }
+    return false
+  }
+
 /**
  * Create an in-memory summary logs repository.
  * Simulates eventual consistency by maintaining separate storage and staleCache.
@@ -31,134 +152,11 @@ export const createInMemorySummaryLogsRepository = () => {
   const staleCache = new Map()
 
   return (logger) => ({
-    async insert(id, summaryLog) {
-      const validatedId = validateId(id)
-      const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
-
-      if (storage.has(validatedId)) {
-        throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
-      }
-
-      const newDoc = {
-        version: 1,
-        summaryLog: structuredClone(validatedSummaryLog)
-      }
-
-      storage.set(validatedId, newDoc)
-      // Insert is immediately visible (no lag simulation for inserts)
-      staleCache.set(validatedId, structuredClone(newDoc))
-    },
-
-    async update(id, version, updates) {
-      const validatedId = validateId(id)
-      const validatedUpdates = validateSummaryLogUpdate(updates)
-
-      const existing = storage.get(validatedId)
-
-      if (!existing) {
-        throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-      }
-
-      if (existing.version !== version) {
-        const conflictError = new Error(
-          `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-        )
-
-        logger.error({
-          error: conflictError,
-          message: `Version conflict detected for summary log ${validatedId}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.DB,
-            action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-            reference: validatedId
-          }
-        })
-
-        throw Boom.conflict(conflictError.message)
-      }
-
-      storage.set(validatedId, {
-        version: existing.version + 1,
-        summaryLog: structuredClone({
-          ...existing.summaryLog,
-          ...validatedUpdates
-        })
-      })
-
-      // Schedule async staleCache update to simulate replication lag
-      scheduleStaleCacheSync(storage, staleCache)
-    },
-
-    async findById(id) {
-      const validatedId = validateId(id)
-      // Read from staleCache to simulate reading from replica
-      const doc = staleCache.get(validatedId)
-      if (!doc) {
-        return null
-      }
-      return {
-        version: doc.version,
-        summaryLog: structuredClone(doc.summaryLog)
-      }
-    },
-
-    async hasSubmittingLog(organisationId, registrationId) {
-      for (const doc of storage.values()) {
-        if (
-          doc.summaryLog.organisationId === organisationId &&
-          doc.summaryLog.registrationId === registrationId &&
-          doc.summaryLog.status === 'submitting'
-        ) {
-          return true
-        }
-      }
-      return false
-    },
-
-    async supersedePendingLogs(organisationId, registrationId, excludeId) {
-      const pendingStatuses = new Set([
-        'preprocessing',
-        'validating',
-        'validated'
-      ])
-      let count = 0
-
-      for (const [id, doc] of storage) {
-        if (
-          id !== excludeId &&
-          doc.summaryLog.organisationId === organisationId &&
-          doc.summaryLog.registrationId === registrationId &&
-          pendingStatuses.has(doc.summaryLog.status)
-        ) {
-          const newDoc = {
-            version: doc.version + 1,
-            summaryLog: structuredClone({
-              ...doc.summaryLog,
-              status: 'superseded'
-            })
-          }
-          storage.set(id, newDoc)
-          // Supersede is immediately visible (like insert) for test consistency
-          staleCache.set(id, structuredClone(newDoc))
-          count++
-        }
-      }
-
-      return count
-    },
-
-    async hasNewerValidatedLog(organisationId, registrationId, excludeId) {
-      for (const [id, doc] of storage) {
-        if (
-          id !== excludeId &&
-          doc.summaryLog.organisationId === organisationId &&
-          doc.summaryLog.registrationId === registrationId &&
-          doc.summaryLog.status === 'validated'
-        ) {
-          return true
-        }
-      }
-      return false
-    }
+    insert: insert(storage, staleCache),
+    update: update(storage, staleCache, logger),
+    findById: findById(staleCache),
+    hasSubmittingLog: hasSubmittingLog(storage),
+    supersedePendingLogs: supersedePendingLogs(storage, staleCache),
+    hasNewerValidatedLog: hasNewerValidatedLog(storage)
   })
 }
