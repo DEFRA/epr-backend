@@ -1,4 +1,7 @@
-import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
+import {
+  parse,
+  PARSE_DEFAULTS
+} from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
 /** @typedef {import('#domain/summary-logs/extractor/port.js').SummaryLogExtractor} SummaryLogExtractor */
 /** @typedef {import('#domain/summary-logs/extractor/port.js').ParsedSummaryLog} ParsedSummaryLog */
@@ -6,6 +9,15 @@ import { parse } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 /** @typedef {import('#domain/summary-logs/model.js').StoredSummaryLog} StoredSummaryLog */
 
 const FILE_PROCESSING_CATEGORY = 'file-processing'
+
+/**
+ * Summary log spreadsheet validation options.
+ * Uses parser defaults with summary-log-specific worksheet requirement.
+ */
+const SUMMARY_LOG_PARSE_OPTIONS = {
+  requiredWorksheet: 'Cover',
+  ...PARSE_DEFAULTS
+}
 
 const logParsingSummary = (logger, parsedData) => {
   const metadataEntries = Object.entries(parsedData.meta).map(
@@ -99,7 +111,10 @@ export const createSummaryLogExtractor = ({ uploadsRepository, logger }) => {
         )
       }
 
-      const parsedData = await parse(summaryLogBuffer)
+      const parsedData = await parse(
+        summaryLogBuffer,
+        SUMMARY_LOG_PARSE_OPTIONS
+      )
 
       logParsingSummary(logger, parsedData)
 
