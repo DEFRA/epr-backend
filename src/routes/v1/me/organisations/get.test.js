@@ -4,8 +4,10 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import {
+  COMPANY_1_ID,
+  COMPANY_1_NAME,
   defraIdMockAuthTokens,
-  VALID_TOKEN_CURRENT_ORG_ID,
+  USER_PRESENT_IN_ORG1_EMAIL,
   VALID_TOKEN_CURRENT_RELATIONSHIP_ID
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -38,7 +40,7 @@ describe('GET /v1/me/organisations', () => {
       featureFlags
     })
 
-    const userEmail = 'someone@test-company.com'
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
     const linkedAt = new Date().toISOString()
 
     // Linked organisation (has linkedDefraOrganisation matching current relationship from token)
@@ -53,7 +55,7 @@ describe('GET /v1/me/organisations', () => {
       ],
       linkedDefraOrganisation: {
         orgId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
-        orgName: 'Test Company Ltd',
+        orgName: COMPANY_1_NAME,
         linkedBy: {
           email: userEmail,
           id: '550e8400-e29b-41d4-a716-446655440001'
@@ -104,13 +106,13 @@ describe('GET /v1/me/organisations', () => {
     expect(result).toEqual({
       organisations: {
         current: {
-          id: VALID_TOKEN_CURRENT_ORG_ID,
-          name: 'Test Company Ltd',
+          id: COMPANY_1_ID,
+          name: COMPANY_1_NAME,
           relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
         },
         linked: {
           id: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
-          name: 'Test Company Ltd',
+          name: COMPANY_1_NAME,
           linkedBy: {
             email: userEmail,
             id: '550e8400-e29b-41d4-a716-446655440001'
@@ -141,7 +143,7 @@ describe('GET /v1/me/organisations', () => {
       featureFlags
     })
 
-    const userEmail = 'someone@test-company.com'
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
 
     // Only unlinked organisations (no linkedDefraOrganisation)
     const unlinkedOrg1 = buildOrganisation({
@@ -181,8 +183,8 @@ describe('GET /v1/me/organisations', () => {
     const result = JSON.parse(response.payload)
 
     expect(result.organisations.current).toEqual({
-      id: VALID_TOKEN_CURRENT_ORG_ID,
-      name: 'Test Company Ltd',
+      id: COMPANY_1_ID,
+      name: COMPANY_1_NAME,
       relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
     })
     expect(result.organisations.linked).toBeNull()
@@ -269,8 +271,8 @@ describe('GET /v1/me/organisations', () => {
     const result = JSON.parse(response.payload)
 
     expect(result.organisations.current).toEqual({
-      id: VALID_TOKEN_CURRENT_ORG_ID,
-      name: 'Test Company Ltd',
+      id: COMPANY_1_ID,
+      name: COMPANY_1_NAME,
       relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
     })
     expect(result.organisations.linked).toBeNull()
@@ -290,7 +292,7 @@ describe('GET /v1/me/organisations', () => {
       featureFlags
     })
 
-    const userEmail = 'someone@test-company.com'
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
 
     // Organisation where user is initial user (should be included)
     const initialUserOrg = buildOrganisation({

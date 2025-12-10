@@ -1,10 +1,14 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { ObjectId } from 'mongodb'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { createSeedData } from './create-update'
 
 const PRODUCTION = () => true
 const NON_PRODUCTION = () => false
+
+const mockWasteRecordsRepository = {
+  appendVersions: vi.fn()
+}
 
 describe('createSeedData', () => {
   it('does not create seed data in production', async () => {
@@ -14,7 +18,8 @@ describe('createSeedData', () => {
     await createSeedData(
       mockDb,
       PRODUCTION,
-      createInMemoryOrganisationsRepository()()
+      createInMemoryOrganisationsRepository()(),
+      mockWasteRecordsRepository
     )
     expect(insertions).toHaveLength(0)
   })
@@ -29,7 +34,8 @@ describe('createSeedData', () => {
       await createSeedData(
         mockDb,
         NON_PRODUCTION,
-        createInMemoryOrganisationsRepository()()
+        createInMemoryOrganisationsRepository()(),
+        mockWasteRecordsRepository
       )
 
       expect(insertions.map((insertion) => insertion.collectionName)).toContain(
@@ -46,7 +52,12 @@ describe('createSeedData', () => {
     const repository = createInMemoryOrganisationsRepository()()
     const spy = vi.spyOn(repository, 'insert')
 
-    await createSeedData(mockDb, NON_PRODUCTION, repository)
+    await createSeedData(
+      mockDb,
+      NON_PRODUCTION,
+      repository,
+      mockWasteRecordsRepository
+    )
 
     expect(spy).toHaveBeenCalled()
   })
@@ -61,7 +72,8 @@ describe('createSeedData', () => {
       await createSeedData(
         mockDb,
         NON_PRODUCTION,
-        createInMemoryOrganisationsRepository()()
+        createInMemoryOrganisationsRepository()(),
+        mockWasteRecordsRepository
       )
 
       expect(
@@ -83,9 +95,29 @@ describe('createSeedData', () => {
     const repository = createInMemoryOrganisationsRepository()()
     const spy = vi.spyOn(repository, 'insert')
 
-    await createSeedData(mockDb, NON_PRODUCTION, repository)
+    await createSeedData(
+      mockDb,
+      NON_PRODUCTION,
+      repository,
+      mockWasteRecordsRepository
+    )
 
     expect(spy).not.toHaveBeenCalled()
+  })
+
+  it('creates waste records seed data using repository', async () => {
+    const { mockDb } = createMockDb({
+      countDocuments: async () => 0
+    })
+
+    await createSeedData(
+      mockDb,
+      NON_PRODUCTION,
+      createInMemoryOrganisationsRepository()(),
+      mockWasteRecordsRepository
+    )
+
+    expect(mockWasteRecordsRepository.appendVersions).toHaveBeenCalled()
   })
 })
 

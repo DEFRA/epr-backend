@@ -1,14 +1,19 @@
+import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import Jwt from '@hapi/jwt'
-import { generateKeyPairSync } from 'crypto'
+import { generateKeyPairSync, randomUUID } from 'crypto'
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
-const USER_EMAIL = 'someone@test-company.com'
-export const VALID_TOKEN_CURRENT_RELATIONSHIP_ID =
-  '660e8400-e29b-41d4-a716-446655440000'
-export const VALID_TOKEN_CURRENT_ORG_ID = '550e8400-e29b-41d4-a716-446655440000'
+export const VALID_TOKEN_CONTACT_ID = randomUUID()
+export const USER_PRESENT_IN_ORG1_EMAIL = org1.submitterContactDetails.email
+export const USER_ABSENT_IN_ORG1_EMAIL = 'random@email.com'
+export const VALID_TOKEN_CURRENT_RELATIONSHIP_ID = randomUUID()
+export const COMPANY_1_ID = randomUUID()
+export const COMPANY_1_NAME = 'Lost Ark Adventures Ltd'
+const COMPANY_2_ID = randomUUID()
+export const DEFRA_TOKEN_SECOND_RELATIONSHIP_ID = randomUUID()
 export const VALID_TOKEN_RELATIONSHIPS = [
-  '660e8400-e29b-41d4-a716-446655440000:550e8400-e29b-41d4-a716-446655440000:Test Company Ltd',
-  '660e8400-e29b-41d4-a716-446655440001:550e8400-e29b-41d4-a716-446655440001:Another Company Ltd'
+  `${VALID_TOKEN_CURRENT_RELATIONSHIP_ID}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
+  `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
 ]
 
 // Generate key pair once at module load time
@@ -39,9 +44,9 @@ export const publicKey = {
 }
 
 /** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
-export const baseDefraIdTokenPayload = {
-  contactId: 'test-contact-id',
-  email: USER_EMAIL,
+export const userPresentInOrg1DefraIdTokenPayload = {
+  contactId: VALID_TOKEN_CONTACT_ID,
+  email: USER_PRESENT_IN_ORG1_EMAIL,
   firstName: 'John',
   lastName: 'Doe',
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
@@ -53,13 +58,22 @@ export const baseDefraIdTokenPayload = {
   nbf: new Date().getTime() / 1000
 }
 
+/** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
+export const userAbsentInOrg1DefraIdTokenPayload = {
+  ...userPresentInOrg1DefraIdTokenPayload,
+  email: USER_ABSENT_IN_ORG1_EMAIL,
+  contactId: randomUUID(),
+  firstName: 'Absent',
+  lastName: 'User'
+}
+
 /** @type {{key: string, algorithm: 'RS256'}} */
 const validJwtSecretObject = { key: privateKey, algorithm: 'RS256' }
 const validGenerateTokenOptions = { header: { kid: publicKey.kid } }
 
-const generateValidDefraIdToken = () => {
+const generateValidDefraIdToken = (tokenPayload) => {
   const mockDefraIdToken = Jwt.token.generate(
-    baseDefraIdTokenPayload,
+    tokenPayload,
     validJwtSecretObject,
     validGenerateTokenOptions
   )
@@ -83,7 +97,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
   })
 
   const mockDefraIdToken = Jwt.token.generate(
-    baseDefraIdTokenPayload,
+    userPresentInOrg1DefraIdTokenPayload,
     { key: wrongKeyPair.privateKey, algorithm: 'RS256' },
     validGenerateTokenOptions
   )
@@ -94,7 +108,7 @@ const generateDefraIdTokenWithWrongSignature = () => {
 const generateDefraIdTokenWithWrongAudience = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseDefraIdTokenPayload,
+      ...userPresentInOrg1DefraIdTokenPayload,
       aud: 'random-wrong-audience'
     },
     validJwtSecretObject,
@@ -107,7 +121,7 @@ const generateDefraIdTokenWithWrongAudience = () => {
 const generateDefraIdTokenWithWrongIssuer = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseDefraIdTokenPayload,
+      ...userPresentInOrg1DefraIdTokenPayload,
       iss: `https://wrong-issuer.com/v2.0`
     },
     validJwtSecretObject,
@@ -120,7 +134,7 @@ const generateDefraIdTokenWithWrongIssuer = () => {
 const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
-      ...baseDefraIdTokenPayload,
+      ...userPresentInOrg1DefraIdTokenPayload,
       id: 'unknownId',
       email: 'unknown.email@example.com'
     },
@@ -131,10 +145,32 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
   return mockDefraIdToken
 }
 
+const generateDefraIdTokenWithoutRelationship = () => {
+  const {
+    currentRelationshipId: _c,
+    relationships: _r,
+    ...restPayload
+  } = userPresentInOrg1DefraIdTokenPayload
+  const mockDefraIdToken = Jwt.token.generate(
+    {
+      ...restPayload,
+      iss: `https://wrong-issuer.com/v2.0`
+    },
+    validJwtSecretObject,
+    validGenerateTokenOptions
+  )
+
+  return mockDefraIdToken
+}
+
 export const defraIdMockAuthTokens = {
-  validToken: generateValidDefraIdToken(),
+  validToken: generateValidDefraIdToken(userPresentInOrg1DefraIdTokenPayload),
+  absentUserToken: generateValidDefraIdToken(
+    userAbsentInOrg1DefraIdTokenPayload
+  ),
   wrongSignatureToken: generateDefraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),
+  missingRelationshipToken: generateDefraIdTokenWithoutRelationship(),
   unknownUserToken: generateDefraIdTokenForUnauthorisedUser()
 }

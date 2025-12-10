@@ -1,6 +1,4 @@
-import Boom from '@hapi/boom'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-
+import { userPresentInOrg1DefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 import {
   defraIdMockJwksUrl,
   defraIdMockOidcWellKnownResponse
@@ -9,9 +7,10 @@ import {
   entraIdMockJwksUrl,
   entraIdMockOidcWellKnownResponse
 } from '#vite/helpers/mock-entra-oidc.js'
+import Boom from '@hapi/boom'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
-import { baseDefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -447,7 +446,8 @@ describe('#getJwtStrategyConfig', () => {
 
     describe('Happy path', () => {
       test('uses issuer from defraIdOidcConfig for validation', async () => {
-        const testOrgId = baseDefraIdTokenPayload.currentRelationshipId
+        const testOrgId =
+          userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
 
         mockGetUsersOrganisationInfo.mockResolvedValue({
           linkedEprOrg: testOrgId,
@@ -456,7 +456,7 @@ describe('#getJwtStrategyConfig', () => {
 
         const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
-          decoded: { payload: { ...baseDefraIdTokenPayload } }
+          decoded: { payload: { ...userPresentInOrg1DefraIdTokenPayload } }
         }
         const request = {
           organisationsRepository: {
@@ -476,7 +476,9 @@ describe('#getJwtStrategyConfig', () => {
 
         const result = await config.validate(artifacts, request)
 
-        expect(result.credentials.issuer).toBe(baseDefraIdTokenPayload.iss)
+        expect(result.credentials.issuer).toBe(
+          userPresentInOrg1DefraIdTokenPayload.iss
+        )
       })
 
       test('returns standard user scope for valid Defra ID tokens', async () => {
@@ -525,7 +527,9 @@ describe('#getJwtStrategyConfig', () => {
         const result = await config.validate(artifacts, request)
 
         expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
-        expect(result.credentials.issuer).toBe(baseDefraIdTokenPayload.iss)
+        expect(result.credentials.issuer).toBe(
+          userPresentInOrg1DefraIdTokenPayload.iss
+        )
       })
     })
 
@@ -536,7 +540,7 @@ describe('#getJwtStrategyConfig', () => {
         const artifacts = {
           decoded: {
             payload: {
-              ...baseDefraIdTokenPayload,
+              ...userPresentInOrg1DefraIdTokenPayload,
               aud: 'wrong-defra-client-id'
             }
           }
@@ -545,7 +549,8 @@ describe('#getJwtStrategyConfig', () => {
           organisationsRepository: {},
           path: '/any',
           params: {
-            organisationId: baseDefraIdTokenPayload.currentRelationshipId
+            organisationId:
+              userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
           }
         }
 

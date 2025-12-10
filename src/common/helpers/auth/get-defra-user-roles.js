@@ -1,7 +1,10 @@
 import Boom from '@hapi/boom'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
-import { isOrganisationsDiscoveryReq } from './roles/helpers.js'
+import {
+  isOrganisationsDiscoveryReq,
+  getDefraTokenSummary
+} from './roles/helpers.js'
 import { getUsersOrganisationInfo } from './get-users-org-info.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
@@ -30,6 +33,8 @@ export async function getDefraUserRoles(tokenPayload, request) {
   )
 
   if (isValidLinkingReq) {
+    request.server.app.orgInToken = getDefraTokenSummary(tokenPayload)
+
     return [ROLES.linker]
   }
 
