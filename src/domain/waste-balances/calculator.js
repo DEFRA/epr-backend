@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import { getFieldValue, COMMON_FIELD } from './field-mappings.js'
+import { getFieldValue } from './field-mappings.js'
+import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
