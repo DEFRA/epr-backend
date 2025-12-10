@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import {
   SCHEMA_VERSION,
-  collateUsersOnApproval,
+  collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
   hasChanges,
@@ -120,7 +120,7 @@ const performUpdate =
       existing
     )
 
-    const users = collateUsersOnApproval(existing, {
+    const users = collateUsers(existing, {
       ...merged,
       statusHistory: updatedStatusHistory,
       registrations,

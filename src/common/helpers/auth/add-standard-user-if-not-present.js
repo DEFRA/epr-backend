@@ -30,7 +30,6 @@ export const addStandardUserIfNotPresent = async (
           {
             email,
             fullName: `${firstName} ${lastName}`,
-            isInitialUser: false,
             roles: [ROLES.standardUser]
           }
         ]

@@ -27,7 +27,6 @@
  * @typedef {{
  *   email: string
  *   fullName: string
- *   isInitialUser: boolean
  *   roles: UserRoles[]
  * }} OrganisationUser
  */
