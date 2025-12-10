@@ -1,0 +1,111 @@
+[
+  {
+    "organisationId": "org-1",
+    "registrationId": "reg-1",
+    "accreditationId": "acc-1",
+    "rowId": "1000",
+    "type": "received",
+    "data": {
+      "processingType": "EXPORTER",
+      "DATE_OF_DISPATCH": "2025-06-01T00:00:00.000Z",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+      "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "No",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 10.5
+    },
+    "versions": [
+      {
+        "id": "v-1000-1",
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "createdBy": {
+          "id": "user-1",
+          "organisationId": "org-1",
+          "name": "System User"
+        },
+        "status": "created",
+        "summaryLog": {
+          "id": "sl-1",
+          "uri": "s3://bucket/import.csv"
+        },
+        "data": {
+          "processingType": "EXPORTER",
+          "DATE_OF_DISPATCH": "2025-06-01T00:00:00.000Z",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+          "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "No",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 10.5
+        }
+      }
+    ]
+  },
+  {
+    "organisationId": "org-1",
+    "registrationId": "reg-1",
+    "accreditationId": "acc-1",
+    "rowId": "1001",
+    "type": "received",
+    "data": {
+      "processingType": "EXPORTER",
+      "DATE_OF_DISPATCH": "2025-06-02T00:00:00.000Z",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+      "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "Yes",
+      "TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR": 20.0
+    },
+    "versions": [
+      {
+        "id": "v-1001-1",
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "createdBy": {
+          "id": "user-1",
+          "organisationId": "org-1",
+          "name": "System User"
+        },
+        "status": "created",
+        "summaryLog": {
+          "id": "sl-1",
+          "uri": "s3://bucket/import.csv"
+        },
+        "data": {
+          "processingType": "EXPORTER",
+          "DATE_OF_DISPATCH": "2025-06-02T00:00:00.000Z",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
+          "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "Yes",
+          "TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR": 20.0
+        }
+      }
+    ]
+  },
+  {
+    "organisationId": "org-1",
+    "registrationId": "reg-1",
+    "accreditationId": "acc-1",
+    "rowId": "1002",
+    "type": "received",
+    "data": {
+      "processingType": "EXPORTER",
+      "DATE_OF_DISPATCH": "2025-06-03T00:00:00.000Z",
+      "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "Yes",
+      "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 100.0
+    },
+    "versions": [
+      {
+        "id": "v-1002-1",
+        "createdAt": "2025-01-01T00:00:00.000Z",
+        "createdBy": {
+          "id": "user-1",
+          "organisationId": "org-1",
+          "name": "System User"
+        },
+        "status": "created",
+        "summaryLog": {
+          "id": "sl-1",
+          "uri": "s3://bucket/import.csv"
+        },
+        "data": {
+          "processingType": "EXPORTER",
+          "DATE_OF_DISPATCH": "2025-06-03T00:00:00.000Z",
+          "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "Yes",
+          "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 100.0
+        }
+      }
+    ]
+  }
+]
