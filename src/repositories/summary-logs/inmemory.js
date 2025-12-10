@@ -109,18 +109,18 @@ const supersedePendingLogs =
         doc.summaryLog.registrationId === registrationId &&
         PENDING_STATUSES.has(doc.summaryLog.status)
       ) {
-        const newDoc = {
+        storage.set(id, {
           version: doc.version + 1,
           summaryLog: structuredClone({
             ...doc.summaryLog,
             status: 'superseded'
           })
-        }
-        storage.set(id, newDoc)
-        // Supersede is immediately visible (like insert) for test consistency
-        staleCache.set(id, structuredClone(newDoc))
+        })
         count++
       }
+    }
+    if (count > 0) {
+      scheduleStaleCacheSync(storage, staleCache)
     }
     return count
   }

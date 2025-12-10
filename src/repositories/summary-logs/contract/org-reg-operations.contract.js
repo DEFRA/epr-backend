@@ -1,6 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { buildSummaryLog } from './test-data.js'
+import { waitForVersion } from './test-helpers.js'
 
 const generateOrgReg = () => ({
   organisationId: `org-${randomUUID()}`,
@@ -115,7 +116,7 @@ export const testOrgRegOperations = (it) => {
         )
 
         expect(result).toBe(1)
-        const superseded = await repository.findById(idToSupersede)
+        const superseded = await waitForVersion(repository, idToSupersede, 2)
         expect(superseded.summaryLog.status).toBe('superseded')
       })
 
@@ -140,7 +141,7 @@ export const testOrgRegOperations = (it) => {
         )
 
         expect(result).toBe(1)
-        const superseded = await repository.findById(idToSupersede)
+        const superseded = await waitForVersion(repository, idToSupersede, 2)
         expect(superseded.summaryLog.status).toBe('superseded')
       })
 
@@ -165,7 +166,7 @@ export const testOrgRegOperations = (it) => {
         )
 
         expect(result).toBe(1)
-        const superseded = await repository.findById(idToSupersede)
+        const superseded = await waitForVersion(repository, idToSupersede, 2)
         expect(superseded.summaryLog.status).toBe('superseded')
       })
 
@@ -336,7 +337,7 @@ export const testOrgRegOperations = (it) => {
           idToKeep
         )
 
-        const afterSupersede = await repository.findById(id)
+        const afterSupersede = await waitForVersion(repository, id, 2)
         expect(afterSupersede.version).toBe(2)
       })
     })
