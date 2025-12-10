@@ -16,7 +16,6 @@ import { StatusCodes } from 'http-status-codes'
  * @typedef {{
  *   id: string
  *   name: string
- *   tradingName?: string
  *   orgId: string
  * }} EprOrganisationSummary
  */
@@ -104,8 +103,7 @@ export const organisationsLinkedGetAll = {
       .map((org) => ({
         id: org.id,
         name: org.companyDetails.name,
-        orgId: org.orgId,
-        tradingName: org.companyDetails.tradingName
+        orgId: org.orgId
       }))
 
     return h
