@@ -53,7 +53,10 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await expect(
         repository.findAccreditationById(nonExistentOrgId, accreditation.id)
-      ).rejects.toThrow(/Organisation with id .* not found/)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
     it('throws NotFound when accreditation ID does not exist in the organisation', async () => {
@@ -68,7 +71,10 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await expect(
         repository.findAccreditationById(org.id, nonExistentAccreditationId)
-      ).rejects.toThrow(/Accreditation with id .* not found/)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
 
     it('throws NotFound when organisation has no accreditations', async () => {
@@ -82,7 +88,10 @@ export const testFindAccreditationByIdBehaviour = (it) => {
 
       await expect(
         repository.findAccreditationById(org.id, nonExistentAccreditationId)
-      ).rejects.toThrow(/Accreditation with id .* not found/)
+      ).rejects.toMatchObject({
+        isBoom: true,
+        output: { statusCode: 404 }
+      })
     })
   })
 }
