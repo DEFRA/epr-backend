@@ -101,12 +101,10 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
       registrationId,
       status: { $in: ['preprocessing', 'validating', 'validated'] }
     }
-    const result = await db
-      .collection(COLLECTION_NAME)
-      .updateMany(filter, {
-        $set: { status: 'superseded' },
-        $inc: { version: 1 }
-      })
+    const result = await db.collection(COLLECTION_NAME).updateMany(filter, {
+      $set: { status: 'superseded' },
+      $inc: { version: 1 }
+    })
     return result.modifiedCount
   },
 
