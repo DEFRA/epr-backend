@@ -58,6 +58,15 @@ export const userPresentInOrg1DefraIdTokenPayload = {
   nbf: new Date().getTime() / 1000
 }
 
+/** @type {import('../../src/common/helpers/auth/types.js').DefraIdTokenPayload} */
+export const userAbsentInOrg1DefraIdTokenPayload = {
+  ...userPresentInOrg1DefraIdTokenPayload,
+  email: USER_ABSENT_IN_ORG1_EMAIL,
+  contactId: randomUUID(),
+  firstName: 'Absent',
+  lastName: 'User'
+}
+
 /** @type {{key: string, algorithm: 'RS256'}} */
 const validJwtSecretObject = { key: privateKey, algorithm: 'RS256' }
 const validGenerateTokenOptions = { header: { kid: publicKey.kid } }
@@ -138,6 +147,9 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
 
 export const defraIdMockAuthTokens = {
   validToken: generateValidDefraIdToken(userPresentInOrg1DefraIdTokenPayload),
+  absentUserToken: generateValidDefraIdToken(
+    userAbsentInOrg1DefraIdTokenPayload
+  ),
   wrongSignatureToken: generateDefraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),

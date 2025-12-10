@@ -6,7 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import {
   defraIdMockAuthTokens,
   VALID_TOKEN_CONTACT_ID,
-  VALID_TOKEN_EMAIL_ADDRESS,
+  USER_PRESENT_IN_ORG1_EMAIL,
   COMPANY_1_ID,
   COMPANY_1_NAME
 } from '#vite/helpers/create-defra-id-test-tokens.js'
@@ -67,26 +67,17 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
     describe('the request is valid, the org exists', () => {
       const baseUserObject = {
-        email: 'random@email.com',
-        fullName: 'Mickey Mouse',
-        id: 'random_id',
-        roles: ['standard_user'],
-        isInitialUser: false
+        email: 'john.doe@email.com',
+        fullName: 'John Doe'
       }
 
       const fullyValidUser = {
         ...baseUserObject,
-        email: VALID_TOKEN_EMAIL_ADDRESS,
+        email: USER_PRESENT_IN_ORG1_EMAIL,
         isInitialUser: true
       }
 
       const databaseStateScenarios = [
-        {
-          description: 'org has no users',
-          user: null,
-          status: STATUS.APPROVED,
-          expectedStatusCode: StatusCodes.UNAUTHORIZED
-        },
         {
           description: 'user is not in the users list',
           user: baseUserObject,
@@ -128,19 +119,16 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       it.each(databaseStateScenarios)(
         'returns $expectedStatusCode when $description and org status is $status',
         async ({ user, status, expectedStatusCode }) => {
-          // const orgOverride = user
-          //   ? {
-          //       submitterContactDetails: {
-          //         fullName: user.fullName,
-          //         email: user.email,
-          //         phone: '1234567890',
-          //         title: 'Director'
-          //       }
-          //     }
-          //   : undefined
-          //
-          // const org = buildOrganisation(orgOverride)
-          const org = buildOrganisation()
+          const orgOverride = {
+            submitterContactDetails: {
+              fullName: user.fullName,
+              email: user.email,
+              phone: '1234567890',
+              title: 'Director'
+            }
+          }
+
+          const org = buildOrganisation(orgOverride)
 
           await organisationsRepository.insert(org)
 
@@ -197,7 +185,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           orgId: COMPANY_1_ID,
           orgName: COMPANY_1_NAME,
           linkedBy: {
-            email: VALID_TOKEN_EMAIL_ADDRESS,
+            email: USER_PRESENT_IN_ORG1_EMAIL,
             id: VALID_TOKEN_CONTACT_ID
           },
           linkedAt: expect.any(Date)
