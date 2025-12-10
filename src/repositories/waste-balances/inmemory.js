@@ -29,19 +29,22 @@ export const createInMemoryWasteBalancesRepository = (
     },
 
     async updateWasteBalanceTransactions(wasteRecords, accreditationId) {
+      const validatedAccreditationId = validateAccreditationId(accreditationId)
+
       const { organisationsRepository } = dependencies
       if (!organisationsRepository) {
         throw new Error('organisationsRepository dependency is required')
       }
 
-      const accreditation =
-        await organisationsRepository.getAccreditationById(accreditationId)
+      const accreditation = await organisationsRepository.getAccreditationById(
+        validatedAccreditationId
+      )
       if (!accreditation) {
-        throw new Error(`Accreditation not found: ${accreditationId}`)
+        throw new Error(`Accreditation not found: ${validatedAccreditationId}`)
       }
 
       let wasteBalance = wasteBalanceStorage.find(
-        (b) => b.accreditationId === accreditationId
+        (b) => b.accreditationId === validatedAccreditationId
       )
 
       if (!wasteBalance) {
@@ -51,7 +54,7 @@ export const createInMemoryWasteBalancesRepository = (
 
         wasteBalance = {
           _id: randomUUID(),
-          accreditationId,
+          accreditationId: validatedAccreditationId,
           organisationId: wasteRecords[0].organisationId,
           amount: 0,
           availableAmount: 0,

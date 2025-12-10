@@ -84,6 +84,7 @@ describe('waste-balances repository - in-memory implementation', () => {
 
       // Pass record with PRN issued so no transactions are generated
       const record = {
+        organisationId: 'org-1',
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'Yes',

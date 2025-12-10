@@ -120,6 +120,7 @@ describe('MongoDB waste balances repository', () => {
 
         // Pass record with PRN issued so no transactions are generated
         const record = {
+          organisationId: 'org-1',
           data: {
             processingType: PROCESSING_TYPES.EXPORTER,
             [EXPORTER_FIELD.PRN_ISSUED]: 'Yes',
@@ -160,6 +161,7 @@ describe('MongoDB waste balances repository', () => {
         })
 
         const record = {
+          organisationId: 'org-1',
           data: {
             processingType: PROCESSING_TYPES.EXPORTER,
             [EXPORTER_FIELD.PRN_ISSUED]: 'No',

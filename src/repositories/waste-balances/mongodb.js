@@ -5,22 +5,25 @@ const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
 const performUpdateWasteBalanceTransactions =
   (db, dependencies) => async (wasteRecords, accreditationId) => {
+    const validatedAccreditationId = validateAccreditationId(accreditationId)
+
     const { organisationsRepository } = dependencies
     if (!organisationsRepository) {
       throw new Error('organisationsRepository dependency is required')
     }
 
     // 1. Fetch Context
-    const accreditation =
-      await organisationsRepository.getAccreditationById(accreditationId)
+    const accreditation = await organisationsRepository.getAccreditationById(
+      validatedAccreditationId
+    )
     if (!accreditation) {
-      throw new Error(`Accreditation not found: ${accreditationId}`)
+      throw new Error(`Accreditation not found: ${validatedAccreditationId}`)
     }
 
     // 2. Fetch or Initialize Waste Balance
     let wasteBalance = await db
       .collection(WASTE_BALANCE_COLLECTION_NAME)
-      .findOne({ accreditationId })
+      .findOne({ accreditationId: validatedAccreditationId })
 
     if (!wasteBalance) {
       if (wasteRecords.length === 0) {
@@ -29,7 +32,7 @@ const performUpdateWasteBalanceTransactions =
 
       // Initialize new balance if not exists
       wasteBalance = {
-        accreditationId,
+        accreditationId: validatedAccreditationId,
         organisationId: wasteRecords[0].organisationId, // Assume all records belong to same org
         amount: 0,
         availableAmount: 0,
@@ -53,13 +56,13 @@ const performUpdateWasteBalanceTransactions =
 
     // 4. Persist Updates
     await db.collection(WASTE_BALANCE_COLLECTION_NAME).findOneAndUpdate(
-      { accreditationId },
+      { accreditationId: validatedAccreditationId },
       [
         {
           $set: {
-            accreditationId,
+            accreditationId: validatedAccreditationId,
             organisationId: {
-              $ifNull: ['$organisationId', wasteRecords[0]?.organisationId]
+              $ifNull: ['$organisationId', wasteRecords[0].organisationId]
             },
             amount: newAmount,
             availableAmount: newAvailableAmount,
