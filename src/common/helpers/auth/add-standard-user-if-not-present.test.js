@@ -1,8 +1,8 @@
-import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
-import { ObjectId } from 'mongodb'
-
-import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { USER_ROLES } from '#domain/organisations/model.js'
+import { ObjectId } from 'mongodb'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.js'
 
 describe('addStandardUserIfNotPresent', () => {
   let mockRequest
@@ -56,7 +56,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -68,8 +67,7 @@ describe('addStandardUserIfNotPresent', () => {
       const existingUser = {
         email: 'existing@example.com',
         fullName: 'Existing User',
-        isInitialUser: true,
-        roles: [ROLES.standardUser]
+        roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
       }
 
       mockOrganisation.users = [existingUser]
@@ -89,7 +87,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -109,19 +106,6 @@ describe('addStandardUserIfNotPresent', () => {
 
       expect(newUser.roles).toEqual([ROLES.standardUser])
       expect(newUser.roles[0]).toBe('standard_user')
-    })
-
-    test('should set isInitialUser to false for new users', async () => {
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
-      const newUser = updateCall[2].users[0]
-
-      expect(newUser.isInitialUser).toBe(false)
     })
 
     test('should construct fullName from firstName and lastName', async () => {
@@ -184,7 +168,6 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'newuser@example.com',
           fullName: 'Existing User',
           contactId: 'different-contact',
-          isInitialUser: false,
           roles: [ROLES.standardUser]
         }
       ]
@@ -204,7 +187,6 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'different@example.com',
           fullName: 'Existing User',
           contactId: 'contact-123',
-          isInitialUser: false,
           roles: [ROLES.standardUser]
         }
       ]
@@ -224,7 +206,6 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'NEWUSER@EXAMPLE.COM',
           fullName: 'Existing User',
           contactId: 'different-contact',
-          isInitialUser: false,
           roles: [ROLES.standardUser]
         }
       ]
@@ -244,7 +225,6 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'newuser@example.com',
           fullName: 'Existing User',
           contactId: 'contact-123',
-          isInitialUser: true,
           roles: [ROLES.standardUser]
         }
       ]
@@ -282,7 +262,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -312,7 +291,6 @@ describe('addStandardUserIfNotPresent', () => {
             {
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              isInitialUser: false,
               roles: [ROLES.standardUser]
             }
           ]
@@ -377,14 +355,12 @@ describe('addStandardUserIfNotPresent', () => {
           email: 'user1@example.com',
           contactId: 'contact-1',
           fullName: 'User One',
-          isInitialUser: true,
           roles: [ROLES.standardUser]
         },
         {
           email: 'user2@example.com',
           contactId: 'contact-2',
           fullName: 'User Two',
-          isInitialUser: false,
           roles: [ROLES.standardUser]
         }
       ]

@@ -438,8 +438,7 @@ export const testUpdateBehaviour = (it) => {
           expect(result.users[0]).toStrictEqual({
             fullName: organisation.submitterContactDetails.fullName,
             email: organisation.submitterContactDetails.email,
-            isInitialUser: true,
-            roles: ['standard_user']
+            roles: ['initial_user', 'standard_user']
           })
         })
 
@@ -463,8 +462,7 @@ export const testUpdateBehaviour = (it) => {
           expect(result.users[0]).toEqual({
             fullName: 'Original Submitter',
             email: 'submitter@example.com',
-            isInitialUser: true,
-            roles: ['standard_user']
+            roles: ['initial_user', 'standard_user']
           })
 
           const registration = {
@@ -503,14 +501,12 @@ export const testUpdateBehaviour = (it) => {
             {
               fullName: 'Original Submitter',
               email: 'submitter@example.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'New Person',
               email: 'newperson@example.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             }
           ])
         })
@@ -575,14 +571,12 @@ export const testUpdateBehaviour = (it) => {
             {
               fullName: 'John Doe',
               email: 'john@example.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'Jane Smith',
               email: 'jane@example.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             }
           ])
         })
@@ -636,14 +630,12 @@ export const testUpdateBehaviour = (it) => {
             {
               fullName: 'Luke Skywalker',
               email: 'anakin.skywalker@starwars.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'Luke Skywalker',
               email: 'luke.skywalker@starwars.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             }
           ])
         })
@@ -721,20 +713,17 @@ export const testUpdateBehaviour = (it) => {
             {
               fullName: 'Alice Cooper',
               email: 'alice@example.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'Luke Skywalker',
               email: 'luke.skywalker@starwars.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'Bob Builder',
               email: 'bob@example.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             }
           ])
         })
@@ -800,20 +789,17 @@ export const testUpdateBehaviour = (it) => {
             {
               fullName: 'Luke Skywalker',
               email: 'anakin.skywalker@starwars.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'Luke Skywalker',
               email: 'luke.skywalker@starwars.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             },
             {
               fullName: 'Yoda',
               email: 'yoda@starwars.com',
-              isInitialUser: true,
-              roles: ['standard_user']
+              roles: ['initial_user', 'standard_user']
             }
           ])
         })

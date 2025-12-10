@@ -2,7 +2,7 @@ import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
   SCHEMA_VERSION,
-  collateUsersOnApproval,
+  collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
   hasChanges,
@@ -100,7 +100,7 @@ const performUpdate = (db) => async (id, version, updates) => {
     existing
   )
 
-  const users = collateUsersOnApproval(existing, {
+  const users = collateUsers(existing, {
     ...merged,
     statusHistory: updatedStatusHistory,
     registrations,
