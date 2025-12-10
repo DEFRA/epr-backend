@@ -122,8 +122,7 @@ describe('GET /v1/me/organisations', () => {
             id: unlinkedOrg.id,
             name: unlinkedOrg.companyDetails.name,
             tradingName: unlinkedOrg.companyDetails.tradingName,
-            companiesHouseNumber:
-              unlinkedOrg.companyDetails.companiesHouseNumber
+            orgId: unlinkedOrg.orgId
           }
         ]
       }

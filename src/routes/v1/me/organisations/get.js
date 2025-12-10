@@ -17,7 +17,7 @@ import { StatusCodes } from 'http-status-codes'
  *   id: string
  *   name: string
  *   tradingName?: string
- *   companiesHouseNumber?: string
+ *   orgId: string
  * }} EprOrganisationSummary
  */
 
@@ -104,8 +104,8 @@ export const organisationsLinkedGetAll = {
       .map((org) => ({
         id: org.id,
         name: org.companyDetails.name,
-        tradingName: org.companyDetails.tradingName,
-        companiesHouseNumber: org.companyDetails.companiesHouseNumber
+        orgId: org.orgId,
+        tradingName: org.companyDetails.tradingName
       }))
 
     return h
