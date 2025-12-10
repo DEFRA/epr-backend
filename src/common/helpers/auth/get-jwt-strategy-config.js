@@ -37,7 +37,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
     },
     validate: async (artifacts, request) => {
       const tokenPayload = artifacts.decoded.payload
-      const { iss: issuer, aud: audience, email } = tokenPayload
+      const { iss: issuer, aud: audience } = tokenPayload
 
       if (issuer === entraIdOidcConfig.issuer) {
         // For Entra Id tokens, we only accept them if they were signed for Admin UI
@@ -46,12 +46,14 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Entra ID token')
         }
 
-        const scope = await getEntraUserRoles(tokenPayload)
+        const email = tokenPayload.email || tokenPayload.preferred_username
+
+        const scope = await getEntraUserRoles(email)
 
         return {
           isValid: true,
           credentials: {
-            id: tokenPayload.id,
+            id: tokenPayload.oid,
             email,
             issuer,
             scope
@@ -68,6 +70,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
           throw Boom.forbidden('Invalid audience for Defra Id token')
         }
 
+        const email = tokenPayload.email
         const scope = await getDefraUserRoles(tokenPayload, request)
 
         return {

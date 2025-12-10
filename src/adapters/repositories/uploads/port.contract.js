@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const TEST_FILE_PATH = path.resolve(
   __dirname,
-  '../../../data/fixtures/uploads/reprocessor_input.xlsx'
+  '../../../data/fixtures/spreadsheet/templates/V4/Summary_Log_Reprocessor_Input.xlsx'
 )
 
 /**
