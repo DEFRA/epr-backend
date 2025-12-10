@@ -80,5 +80,45 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
     }
     const { _id, version, ...summaryLog } = doc
     return { version, summaryLog }
+  },
+
+  async hasSubmittingLog(organisationId, registrationId) {
+    /** @type {any} */
+    const filter = {
+      organisationId,
+      registrationId,
+      status: 'submitting'
+    }
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+    return doc !== null
+  },
+
+  async supersedePendingLogs(organisationId, registrationId, excludeId) {
+    /** @type {any} */
+    const filter = {
+      _id: { $ne: excludeId },
+      organisationId,
+      registrationId,
+      status: { $in: ['preprocessing', 'validating', 'validated'] }
+    }
+    const result = await db
+      .collection(COLLECTION_NAME)
+      .updateMany(filter, {
+        $set: { status: 'superseded' },
+        $inc: { version: 1 }
+      })
+    return result.modifiedCount
+  },
+
+  async hasNewerValidatedLog(organisationId, registrationId, excludeId) {
+    /** @type {any} */
+    const filter = {
+      _id: { $ne: excludeId },
+      organisationId,
+      registrationId,
+      status: 'validated'
+    }
+    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
+    return doc !== null
   }
 })

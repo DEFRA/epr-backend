@@ -156,6 +156,38 @@ export const summaryLogsUploadCompleted = {
     const { summaryLogUpload } = payload.form
 
     try {
+      const newStatus = determineStatusFromUpload(summaryLogUpload.fileStatus)
+
+      // Only check for submission blocks and supersede when upload completed successfully
+      if (newStatus === SUMMARY_LOG_STATUS.VALIDATING) {
+        // Block if a submission is in progress
+        const hasSubmitting = await summaryLogsRepository.hasSubmittingLog(
+          organisationId,
+          registrationId
+        )
+        if (hasSubmitting) {
+          throw Boom.conflict('A submission is in progress. Please wait.')
+        }
+
+        // Supersede any pending logs for this org/reg
+        const supersededCount =
+          await summaryLogsRepository.supersedePendingLogs(
+            organisationId,
+            registrationId,
+            summaryLogId
+          )
+        if (supersededCount > 0) {
+          logger.info({
+            message: `Superseded ${supersededCount} pending summary logs for organisationId=${organisationId}, registrationId=${registrationId}`,
+            event: {
+              category: LOGGING_EVENT_CATEGORIES.SERVER,
+              action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_SUPERSEDED,
+              reference: summaryLogId
+            }
+          })
+        }
+      }
+
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,

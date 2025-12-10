@@ -27,7 +27,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
   beforeAll(async () => {
     summaryLogsRepository = {
       findById: vi.fn(),
-      update: vi.fn().mockResolvedValue(undefined)
+      update: vi.fn().mockResolvedValue(undefined),
+      hasNewerValidatedLog: vi.fn().mockResolvedValue(false)
     }
 
     summaryLogsWorker = {
@@ -258,6 +259,38 @@ describe(`${summaryLogsSubmitPath} route`, () => {
           }
         }
       })
+    })
+
+    it('returns 409 when a newer validated log exists', async () => {
+      summaryLogsRepository.hasNewerValidatedLog.mockResolvedValue(true)
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toContain('newer summary log has been uploaded')
+    })
+
+    it('checks for newer validated log with correct parameters', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(summaryLogsRepository.hasNewerValidatedLog).toHaveBeenCalledWith(
+        organisationId,
+        registrationId,
+        summaryLogId
+      )
     })
   })
 })

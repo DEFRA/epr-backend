@@ -50,6 +50,16 @@ export const summaryLogsSubmit = {
         )
       }
 
+      // Verify no newer validated log exists for this org/reg
+      const hasNewer = await summaryLogsRepository.hasNewerValidatedLog(
+        organisationId,
+        registrationId,
+        summaryLogId
+      )
+      if (hasNewer) {
+        throw Boom.conflict('A newer summary log has been uploaded')
+      }
+
       // Update status to SUBMITTING using optimistic concurrency
       await summaryLogsRepository.update(summaryLogId, version, {
         ...summaryLog,

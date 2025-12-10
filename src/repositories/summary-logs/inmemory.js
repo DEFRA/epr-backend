@@ -100,6 +100,61 @@ export const createInMemorySummaryLogsRepository = () => {
         version: doc.version,
         summaryLog: structuredClone(doc.summaryLog)
       }
+    },
+
+    async hasSubmittingLog(organisationId, registrationId) {
+      for (const doc of storage.values()) {
+        if (
+          doc.summaryLog.organisationId === organisationId &&
+          doc.summaryLog.registrationId === registrationId &&
+          doc.summaryLog.status === 'submitting'
+        ) {
+          return true
+        }
+      }
+      return false
+    },
+
+    async supersedePendingLogs(organisationId, registrationId, excludeId) {
+      const pendingStatuses = ['preprocessing', 'validating', 'validated']
+      let count = 0
+
+      for (const [id, doc] of storage) {
+        if (
+          id !== excludeId &&
+          doc.summaryLog.organisationId === organisationId &&
+          doc.summaryLog.registrationId === registrationId &&
+          pendingStatuses.includes(doc.summaryLog.status)
+        ) {
+          const newDoc = {
+            version: doc.version + 1,
+            summaryLog: structuredClone({
+              ...doc.summaryLog,
+              status: 'superseded'
+            })
+          }
+          storage.set(id, newDoc)
+          // Supersede is immediately visible (like insert) for test consistency
+          staleCache.set(id, structuredClone(newDoc))
+          count++
+        }
+      }
+
+      return count
+    },
+
+    async hasNewerValidatedLog(organisationId, registrationId, excludeId) {
+      for (const [id, doc] of storage) {
+        if (
+          id !== excludeId &&
+          doc.summaryLog.organisationId === organisationId &&
+          doc.summaryLog.registrationId === registrationId &&
+          doc.summaryLog.status === 'validated'
+        ) {
+          return true
+        }
+      }
+      return false
     }
   })
 }
