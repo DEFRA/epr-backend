@@ -22,12 +22,6 @@ export const organisationsLink = {
   handler: async (request, h) => {
     const { orgInToken } = request.server.app
 
-    if (!orgInToken?.defraIdOrgId) {
-      throw Boom.badImplementation(
-        'currentRelationShipId is missing from credentials'
-      )
-    }
-
     const { organisationId } = request.params
     if (!organisationId) {
       throw Boom.badRequest('Organisation id is missing in request')

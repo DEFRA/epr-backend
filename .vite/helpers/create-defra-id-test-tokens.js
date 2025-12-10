@@ -145,6 +145,21 @@ const generateDefraIdTokenForUnauthorisedUser = () => {
   return mockDefraIdToken
 }
 
+const generateDefraIdTokenWithoutRelationship = () => {
+  const { currentRelationshipId, relationships, ...restPayload } =
+    userPresentInOrg1DefraIdTokenPayload
+  const mockDefraIdToken = Jwt.token.generate(
+    {
+      ...restPayload,
+      iss: `https://wrong-issuer.com/v2.0`
+    },
+    validJwtSecretObject,
+    validGenerateTokenOptions
+  )
+
+  return mockDefraIdToken
+}
+
 export const defraIdMockAuthTokens = {
   validToken: generateValidDefraIdToken(userPresentInOrg1DefraIdTokenPayload),
   absentUserToken: generateValidDefraIdToken(
@@ -153,5 +168,6 @@ export const defraIdMockAuthTokens = {
   wrongSignatureToken: generateDefraIdTokenWithWrongSignature(),
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),
+  missingRelationshipToken: generateDefraIdTokenWithoutRelationship(),
   unknownUserToken: generateDefraIdTokenForUnauthorisedUser()
 }

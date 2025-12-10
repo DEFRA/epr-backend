@@ -39,11 +39,6 @@ export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
     throw Boom.notFound('Organisation not found')
   }
 
-  console.log('\n--------------------------------------------------- ')
-  console.log('email', email)
-  // console.log('organisationById', organisationById)
-  console.log('organisationById.users', organisationById.users)
-
   const isInitial = isInitialUser(organisationById, email)
 
   if (!isInitial) {

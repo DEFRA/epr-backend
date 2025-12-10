@@ -52,9 +52,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
   describe('the request contains a valid Defra Id token', () => {
     it('when the organisation in the request does not exist, returns 401', async () => {
-      const existingOrg = buildOrganisation()
       const nonExistingOrg = buildOrganisation()
-      await organisationsRepository.insert(existingOrg)
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${nonExistingOrg.id}/link`,
@@ -152,44 +150,75 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         }
       )
 
-      it('when the request succeeds', async () => {
+      describe('when the request succeeds', async () => {
+        let response
+        let org
+        let orginalOrgId
         const INITIAL_VERSION = 1
+        let finalOrgVersion
 
-        const org = buildOrganisation()
+        beforeAll(async () => {
+          org = buildOrganisation()
+          orginalOrgId = org.id
+          console.log('org.id', org.id)
 
-        await organisationsRepository.insert(org)
-        await organisationsRepository.update(org.id, INITIAL_VERSION, {
-          status: STATUS.APPROVED
+          await organisationsRepository.insert(org)
+          await organisationsRepository.update(org.id, INITIAL_VERSION, {
+            status: STATUS.APPROVED
+          })
+
+          // TODO: For some reason, without this request tests fail
+          await organisationsRepository.findById(org.id, INITIAL_VERSION + 1)
+
+          response = await server.inject({
+            method: 'POST',
+            url: `/v1/organisations/${org.id}/link`,
+            headers: {
+              Authorization: `Bearer ${validToken}`
+            }
+          })
+          finalOrgVersion = await organisationsRepository.findById(
+            orginalOrgId,
+            2
+          )
         })
 
-        await organisationsRepository.findById(org.id, INITIAL_VERSION + 1)
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${org.id}/link`,
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+        it('returns 200 status code', async () => {
+          expect(response.statusCode).toBe(StatusCodes.OK)
         })
-        expect(response.statusCode).toBe(StatusCodes.OK)
-        const result = JSON.parse(response.payload)
-        expect(result).toEqual({ status: 'active' })
 
-        const lastOrg = await organisationsRepository.findById(
-          org.id,
-          INITIAL_VERSION + 1
-        )
-
-        expect(lastOrg.status).toBe(STATUS.ACTIVE)
-        expect(lastOrg.linkedDefraOrganisation).toEqual({
-          orgId: COMPANY_1_ID,
-          orgName: COMPANY_1_NAME,
-          linkedBy: {
-            email: USER_PRESENT_IN_ORG1_EMAIL,
-            id: VALID_TOKEN_CONTACT_ID
-          },
-          linkedAt: expect.any(Date)
+        it('returns a payload with `{status: active}`', async () => {
+          const result = JSON.parse(response.payload)
+          expect(result).toEqual({ status: 'active' })
         })
+
+        it('leaves the organisation in the database with status: "active"', async () => {
+          expect(finalOrgVersion.status).toBe(STATUS.ACTIVE)
+        })
+
+        it('populates the organisation with a complete "linkedDefraOrganisation" object', async () => {
+          expect(finalOrgVersion.linkedDefraOrganisation).toEqual({
+            orgId: COMPANY_1_ID,
+            orgName: COMPANY_1_NAME,
+            linkedBy: {
+              email: USER_PRESENT_IN_ORG1_EMAIL,
+              id: VALID_TOKEN_CONTACT_ID
+            },
+            linkedAt: expect.any(Date)
+          })
+        })
+
+        // it('changes all approved accreditation in the organisation to "approved"', async () => {
+        //   const lastOrg = await organisationsRepository.findById(
+        //     orginalOrgId,
+        //     INITIAL_VERSION + 1
+        //   )
+        //   const previouslyActiveAccreditations = org.accreditations.filter(
+        //     (acc) => acc.status === STATUS.APPROVED
+        //   )
+        //   expect(previouslyActiveAccreditations.length).toBeGreaterThan(0)
+        //   // expect(lastOrg.registrations[0].status).toEqual(STATUS.APPROVED)
+        // })
       })
     })
   })
