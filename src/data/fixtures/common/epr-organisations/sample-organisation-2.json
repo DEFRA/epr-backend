@@ -17,7 +17,7 @@
   "submitterContactDetails": {
     "fullName": "Carol White",
     "email": "carol.white@export.com",
-    "title": "Owner",
+    "jobTitle": "Owner",
     "phone": "2223334444"
   },
   "registrations": [
@@ -40,7 +40,7 @@
         {
           "fullName": "Carol White",
           "email": "carol.white@export.com",
-          "title": "Owner",
+          "jobTitle": "Owner",
           "phone": "2223334444"
         }
       ],
@@ -49,7 +49,7 @@
       "submitterContactDetails": {
         "fullName": "Carol White",
         "email": "carol.white@export.com",
-        "title": "Owner",
+        "jobTitle": "Owner",
         "phone": "2223334444"
       },
       "samplingInspectionPlanPart1FileUploads": [
@@ -92,7 +92,7 @@
           {
             "fullName": "Dave Green",
             "email": "dave.green@export.com",
-            "title": "PERN signatory",
+            "jobTitle": "PERN signatory",
             "phone": "5556667777"
           }
         ],
@@ -137,7 +137,7 @@
       "submitterContactDetails": {
         "fullName": "Dave Green",
         "email": "dave.green@export.com",
-        "title": "PERN signatory",
+        "jobTitle": "PERN signatory",
         "phone": "5556667777"
       },
       "samplingInspectionPlanPart2FileUploads": [

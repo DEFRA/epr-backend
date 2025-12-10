@@ -107,7 +107,7 @@ function getSubmitterDetails(answersByShortDescription) {
       answersByShortDescription[
         ORGANISATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
       ],
-    title:
+    jobTitle:
       answersByShortDescription[ORGANISATION.SUBMITTER_DETAILS.fields.JOB_TITLE]
   }
 }
@@ -143,7 +143,7 @@ function getManagementContactDetails(answersByShortDescription) {
           fields.UNINCORP_PHONE,
           fields.SOLE_TRADER_PHONE
         ]),
-        title: findFirstValue(answersByShortDescription, [
+        jobTitle: findFirstValue(answersByShortDescription, [
           fields.NON_UK_JOB_TITLE,
           fields.UNINCORP_JOB_TITLE,
           fields.SOLE_TRADER_JOB_TITLE

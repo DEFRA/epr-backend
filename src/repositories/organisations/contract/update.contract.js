@@ -448,7 +448,7 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'Original Submitter',
               email: 'submitter@example.com',
               phone: '1234567890',
-              title: 'Director'
+              jobTitle: 'Director'
             }
           })
           await repository.insert(organisation)
@@ -471,14 +471,14 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'Different Submitter Name',
               email: 'SUBMITTER@EXAMPLE.COM',
               phone: '9999999999',
-              title: 'Manager'
+              jobTitle: 'Manager'
             },
             approvedPersons: [
               {
                 fullName: 'New Person',
                 email: 'newperson@example.com',
                 phone: '8888888888',
-                title: 'Executive'
+                jobTitle: 'Executive'
               }
             ]
           }
@@ -519,7 +519,7 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'John Doe',
               email: 'john@example.com',
               phone: '1234567890',
-              title: 'Director'
+              jobTitle: 'Director'
             }
           })
           await repository.insert(organisation)
@@ -530,20 +530,20 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'John Doe Different Name',
               email: 'JOHN@EXAMPLE.COM',
               phone: '9876543210',
-              title: 'Manager'
+              jobTitle: 'Manager'
             },
             approvedPersons: [
               {
                 fullName: 'Jane Smith',
                 email: 'jane@example.com',
                 phone: '1111111111',
-                title: 'Executive'
+                jobTitle: 'Executive'
               },
               {
                 fullName: 'John Doe Yet Another Name',
                 email: 'john@example.com',
                 phone: '2222222222',
-                title: 'Supervisor'
+                jobTitle: 'Supervisor'
               }
             ]
           }
@@ -592,14 +592,14 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'Han Solo',
               email: 'han.solo@starwars.com',
               phone: '9999999999',
-              title: 'Smuggler'
+              jobTitle: 'Smuggler'
             },
             approvedPersons: [
               {
                 fullName: 'Chewbacca',
                 email: 'chewie@starwars.com',
                 phone: '8888888888',
-                title: 'Co-pilot'
+                jobTitle: 'Co-pilot'
               }
             ]
           })
@@ -648,7 +648,7 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'Alice Cooper',
               email: 'alice@example.com',
               phone: '1234567890',
-              title: 'CEO'
+              jobTitle: 'CEO'
             }
           })
           await repository.insert(organisation)
@@ -661,7 +661,7 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'Alice Cooper Alt',
               email: 'ALICE@EXAMPLE.COM',
               phone: '9876543210',
-              title: 'Director'
+              jobTitle: 'Director'
             },
             prnIssuance: {
               ...organisation.accreditations[0].prnIssuance,
@@ -670,13 +670,13 @@ export const testUpdateBehaviour = (it) => {
                   fullName: 'Bob Builder',
                   email: 'bob@example.com',
                   phone: '1111111111',
-                  title: 'Manager'
+                  jobTitle: 'Manager'
                 },
                 {
                   fullName: 'Alice Cooper Different',
                   email: 'alice@example.com',
                   phone: '2222222222',
-                  title: 'Officer'
+                  jobTitle: 'Officer'
                 }
               ]
             }
@@ -1448,7 +1448,7 @@ export const testUpdateBehaviour = (it) => {
               fullName: 'Jane Smith',
               email: 'jane.smith', // Invalid email format
               phone: '1234567890',
-              title: 'Director'
+              jobTitle: 'Director'
             }
           })
         ).rejects.toThrow(

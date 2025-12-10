@@ -123,13 +123,13 @@ function getSignatories(rawSubmissionData) {
       [ACCREDITATION.PRN_SIGNATORY.fields.NAME]: 'fullName',
       [ACCREDITATION.PRN_SIGNATORY.fields.EMAIL]: 'email',
       [ACCREDITATION.PRN_SIGNATORY.fields.PHONE]: 'phone',
-      [ACCREDITATION.PRN_SIGNATORY.fields.JOB_TITLE]: 'title'
+      [ACCREDITATION.PRN_SIGNATORY.fields.JOB_TITLE]: 'jobTitle'
     }),
     ...extractRepeaters(rawSubmissionData, ACCREDITATION.PERN_SIGNATORY.title, {
       [ACCREDITATION.PERN_SIGNATORY.fields.NAME]: 'fullName',
       [ACCREDITATION.PERN_SIGNATORY.fields.EMAIL]: 'email',
       [ACCREDITATION.PERN_SIGNATORY.fields.PHONE]: 'phone',
-      [ACCREDITATION.PERN_SIGNATORY.fields.JOB_TITLE]: 'title'
+      [ACCREDITATION.PERN_SIGNATORY.fields.JOB_TITLE]: 'jobTitle'
     })
   ]
 }

@@ -268,6 +268,20 @@ const performFindRegistrationById =
     return structuredClone(registration)
   }
 
+const performFindAccreditationById =
+  (findById) => async (organisationId, accreditationId, minimumOrgVersion) => {
+    const org = await findById(organisationId, minimumOrgVersion)
+    const accreditation = org.accreditations?.find(
+      (a) => a.id === accreditationId
+    )
+
+    if (!accreditation) {
+      throw Boom.notFound(`Accreditation with id ${accreditationId} not found`)
+    }
+
+    return structuredClone(accreditation)
+  }
+
 /**
  * Create an in-memory organisations repository.
  * Ensures data isolation by deep-cloning on store and on read.
@@ -301,6 +315,7 @@ export const createInMemoryOrganisationsRepository = (
       findAllIds: performFindAllIds(staleCache),
       findById,
       findRegistrationById: performFindRegistrationById(findById),
+      findAccreditationById: performFindAccreditationById(findById),
       // Test-only method to access internal storage (not part of the port interface)
       _getStorageForTesting: () => storage
     }

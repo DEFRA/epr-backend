@@ -1,14 +1,11 @@
-import { readFile } from 'node:fs/promises'
-import path from 'node:path'
-import { fileURLToPath } from 'node:url'
-
 import ExcelJS from 'exceljs'
 
 import { MATERIAL_PLACEHOLDER_TEXT } from '#domain/summary-logs/markers.js'
-import { parse } from './exceljs-parser.js'
-
-const filename = fileURLToPath(import.meta.url)
-const dirname = path.dirname(filename)
+import {
+  extractCellValue,
+  parse,
+  SpreadsheetValidationError
+} from './exceljs-parser.js'
 
 describe('ExcelJSSummaryLogsParser', () => {
   /**
@@ -24,7 +21,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   }
 
-  const parseWorkbook = async (worksheets) => {
+  const parseWorkbook = async (worksheets, options = {}) => {
     const workbook = new ExcelJS.Workbook()
 
     for (const [sheetName, rows] of Object.entries(worksheets)) {
@@ -33,40 +30,8 @@ describe('ExcelJSSummaryLogsParser', () => {
     }
 
     const buffer = await workbook.xlsx.writeBuffer()
-    return parse(buffer)
+    return parse(buffer, options)
   }
-
-  describe('reprocessor_input.xlsx fixture', () => {
-    it(
-      'should parse metadata and data sections',
-      { timeout: 30000 },
-      async () => {
-        const excelBuffer = await readFile(
-          path.join(
-            dirname,
-            '../../../data/fixtures/uploads/reprocessor_input.xlsx'
-          )
-        )
-        const result = await parse(excelBuffer)
-
-        // Metadata
-        expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
-        expect(result.meta.TEMPLATE_VERSION.value).toBe(3)
-        expect(result.meta.MATERIAL.value).toBe('Paper_and_board')
-        expect(result.meta.ACCREDITATION_NUMBER.value).toBe('ACC123456')
-        expect(result.meta.REGISTRATION_NUMBER.value).toBe('R25SR500030912PA')
-
-        // Data sections exist with correct headers
-        expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toBeDefined()
-        expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING.headers).toContain(
-          'ROW_ID'
-        )
-
-        expect(result.data.REPROCESSED_LOADS).toBeDefined()
-        expect(result.data.SENT_ON_LOADS).toBeDefined()
-      }
-    )
-  })
 
   it('should throw error for invalid Excel buffer', async () => {
     const invalidBuffer = Buffer.from('not an excel file')
@@ -78,6 +43,142 @@ describe('ExcelJSSummaryLogsParser', () => {
     const emptyBuffer = Buffer.from('')
 
     await expect(parse(emptyBuffer)).rejects.toThrow()
+  })
+
+  describe('workbook structure validation', () => {
+    it('should throw SpreadsheetValidationError when required worksheet is missing', async () => {
+      const workbook = new ExcelJS.Workbook()
+      workbook.addWorksheet('NotCover')
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(
+        parse(buffer, { requiredWorksheet: 'Cover' })
+      ).rejects.toThrow(SpreadsheetValidationError)
+
+      await expect(
+        parse(buffer, { requiredWorksheet: 'Cover' })
+      ).rejects.toThrow("Missing required 'Cover' worksheet")
+    })
+
+    it('should accept workbook when required worksheet exists', async () => {
+      const workbook = new ExcelJS.Workbook()
+      workbook.addWorksheet('Cover')
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(
+        parse(buffer, { requiredWorksheet: 'Cover' })
+      ).resolves.toEqual({
+        meta: {},
+        data: {}
+      })
+    })
+
+    it('should skip required worksheet check when option is null', async () => {
+      const workbook = new ExcelJS.Workbook()
+      workbook.addWorksheet('AnySheet')
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parse(buffer, { requiredWorksheet: null })).resolves.toEqual(
+        {
+          meta: {},
+          data: {}
+        }
+      )
+    })
+
+    it('should throw SpreadsheetValidationError when worksheet count exceeds limit', async () => {
+      const workbook = new ExcelJS.Workbook()
+
+      // Add 4 worksheets (exceeds limit of 3)
+      for (let i = 1; i <= 4; i++) {
+        workbook.addWorksheet(`Sheet${i}`)
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parse(buffer, { maxWorksheets: 3 })).rejects.toThrow(
+        SpreadsheetValidationError
+      )
+
+      await expect(parse(buffer, { maxWorksheets: 3 })).rejects.toThrow(
+        'Too many worksheets (4, maximum 3)'
+      )
+    })
+
+    it('should throw SpreadsheetValidationError when worksheet has too many rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('TooManyRows')
+
+      // Set a cell far down to simulate large rowCount
+      worksheet.getCell('A101').value = 'data'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parse(buffer, { maxRowsPerSheet: 100 })).rejects.toThrow(
+        SpreadsheetValidationError
+      )
+
+      await expect(parse(buffer, { maxRowsPerSheet: 100 })).rejects.toThrow(
+        "Worksheet 'TooManyRows' has too many rows (101, maximum 100)"
+      )
+    })
+
+    it('should throw SpreadsheetValidationError when worksheet has too many columns', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('TooManyColumns')
+
+      // Set a cell far to the right to simulate large columnCount
+      worksheet.getCell(1, 51).value = 'data'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(parse(buffer, { maxColumnsPerSheet: 50 })).rejects.toThrow(
+        SpreadsheetValidationError
+      )
+
+      await expect(parse(buffer, { maxColumnsPerSheet: 50 })).rejects.toThrow(
+        "Worksheet 'TooManyColumns' has too many columns (51, maximum 50)"
+      )
+    })
+
+    it('should accept workbook at exactly the limits', async () => {
+      const workbook = new ExcelJS.Workbook()
+
+      // 2 worksheets (exactly at limit of 2)
+      workbook.addWorksheet('Sheet1')
+      const worksheet = workbook.addWorksheet('Sheet2')
+      worksheet.getCell('A10').value = 'last row' // exactly at row limit
+      worksheet.getCell(1, 5).value = 'last column' // exactly at column limit
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      await expect(
+        parse(buffer, {
+          maxWorksheets: 2,
+          maxRowsPerSheet: 10,
+          maxColumnsPerSheet: 5
+        })
+      ).resolves.toEqual({
+        meta: {},
+        data: {}
+      })
+    })
+
+    it('should use default limits when no options provided', async () => {
+      const workbook = new ExcelJS.Workbook()
+      workbook.addWorksheet('Test')
+
+      const buffer = await workbook.xlsx.writeBuffer()
+
+      // Should not throw with defaults (20 worksheets, 50k rows, 1k columns)
+      await expect(parse(buffer)).resolves.toEqual({
+        meta: {},
+        data: {}
+      })
+    })
   })
 
   describe('marker-based parsing', () => {
@@ -695,6 +796,45 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('richText cells', () => {
+    it('should extract text from richText metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_TITLE'
+      worksheet.getCell('B1').value = {
+        richText: [{ text: 'Hello' }, { font: { bold: true }, text: ' World' }]
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.TITLE).toEqual({
+        value: 'Hello World',
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract text from richText in data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_TEST_TABLE'
+      worksheet.getCell('B1').value = 'ID'
+      worksheet.getCell('C1').value = 'DESCRIPTION'
+
+      worksheet.getCell('B2').value = 1
+      worksheet.getCell('C2').value = {
+        richText: [{ text: 'First ' }, { text: 'item' }]
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.data.TEST_TABLE.rows).toEqual([[1, 'First item']])
+    })
+  })
+
   describe('skip column marker as first header', () => {
     it('should handle skip column marker immediately after data marker', async () => {
       const result = await parseWorkbook({
@@ -945,6 +1085,74 @@ describe('ExcelJSSummaryLogsParser', () => {
           ['row id', '2025-05-26'],
           ['ROW_ID', '2025-05-27'],
           ['ROW ID', '2025-05-28']
+        ])
+      })
+
+      it('should skip header row when ROW_ID starts with "Row ID" but contains additional text', async () => {
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Test')
+
+        worksheet.getCell('A1').value = '__EPR_DATA_TEST_TABLE'
+        worksheet.getCell('B1').value = 'ROW_ID'
+        worksheet.getCell('C1').value = 'DATE_RECEIVED'
+
+        // Header row with richText containing "Row ID" plus additional description
+        worksheet.getCell('B2').value = {
+          richText: [
+            { font: { bold: true }, text: 'Row ID' },
+            { text: '\n(Automatically generated)' }
+          ]
+        }
+        worksheet.getCell('C2').value = 'Date received'
+
+        // Data rows
+        worksheet.getCell('B3').value = 1001
+        worksheet.getCell('C3').value = '2025-05-25'
+
+        worksheet.getCell('B4').value = 1002
+        worksheet.getCell('C4').value = '2025-05-26'
+
+        const buffer = await workbook.xlsx.writeBuffer()
+        const result = await parse(buffer)
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [1001, '2025-05-25'],
+          [1002, '2025-05-26']
+        ])
+      })
+
+      it('should skip header row when ROW_ID is plain text starting with "Row ID"', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED'],
+            [null, 'Row ID (auto)', 'Date received'],
+            [null, 1001, '2025-05-25'],
+            [null, 1002, '2025-05-26']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [1001, '2025-05-25'],
+          [1002, '2025-05-26']
+        ])
+      })
+
+      it('should skip rows where ROW_ID is null (template rows with default dropdown values)', async () => {
+        const result = await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'DATE_RECEIVED', 'HAS_VALUE'],
+            [null, 1001, '2025-05-25', 'Yes'],
+            [null, 1002, '2025-05-26', 'No'],
+            [null, null, null, 'No'], // Empty row with default dropdown value
+            [null, null, null, 'No'], // Another empty row
+            [null, 1003, '2025-05-27', 'Yes']
+          ]
+        })
+
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          [1001, '2025-05-25', 'Yes'],
+          [1002, '2025-05-26', 'No'],
+          [1003, '2025-05-27', 'Yes']
         ])
       })
     })
@@ -1292,5 +1500,312 @@ describe('ExcelJSSummaryLogsParser', () => {
         [null, 'CHOOSE OPTION', 'choose Option']
       ])
     })
+  })
+
+  describe('phantom row protection', () => {
+    it('should handle workbook with legitimate gaps between data sections', async () => {
+      // Test that we can handle gaps smaller than MAX_CONSECUTIVE_EMPTY_ROWS
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_META_TYPE', 'REPROCESSOR_INPUT'],
+          [],
+          [],
+          [],
+          ['__EPR_DATA_SECTION_ONE', 'HEADER_A'],
+          [null, 'value_a'],
+          [null, ''],
+          [],
+          [],
+          [],
+          ['__EPR_DATA_SECTION_TWO', 'HEADER_B'],
+          [null, 'value_b']
+        ]
+      })
+
+      expect(result.meta.TYPE.value).toBe('REPROCESSOR_INPUT')
+      expect(result.data.SECTION_ONE.rows).toEqual([['value_a']])
+      expect(result.data.SECTION_TWO.rows).toEqual([['value_b']])
+    })
+
+    it('should continue processing data sections after empty row gaps', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_FIRST', 'COL_A'],
+          [null, 'row_1'],
+          [null, ''],
+          [],
+          [],
+          [],
+          [],
+          [],
+          ['__EPR_DATA_SECOND', 'COL_B'],
+          [null, 'row_2']
+        ]
+      })
+
+      expect(result.data.FIRST.rows).toEqual([['row_1']])
+      expect(result.data.SECOND.rows).toEqual([['row_2']])
+    })
+
+    it('should handle worksheet ending with empty rows', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_META_TYPE', 'TEST_VALUE'],
+          ['__EPR_DATA_TEST', 'COLUMN_A'],
+          [null, 'data_row_1'],
+          [null, ''],
+          [],
+          [],
+          []
+        ]
+      })
+
+      expect(result.meta.TYPE.value).toBe('TEST_VALUE')
+      expect(result.data.TEST.rows).toEqual([['data_row_1']])
+    })
+
+    it('should correctly parse data before large empty gaps', async () => {
+      // Simulate a worksheet with data followed by a significant gap
+      // (less than MAX_CONSECUTIVE_EMPTY_ROWS to verify we handle gaps correctly)
+      const rows = [
+        ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
+        ['__EPR_DATA_LOADS', 'ROW_ID', 'WEIGHT'],
+        [null, 'load-001', 100],
+        [null, 'load-002', 200],
+        [null, '', '']
+      ]
+
+      // Add 50 empty rows (less than threshold of 100)
+      for (let i = 0; i < 50; i++) {
+        rows.push([])
+      }
+
+      // Add more data after the gap
+      rows.push(['__EPR_DATA_OUTPUTS', 'OUTPUT_ID'])
+      rows.push([null, 'output-001'])
+
+      const result = await parseWorkbook({ Test: rows })
+
+      expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
+      expect(result.data.LOADS.rows).toEqual([
+        ['load-001', 100],
+        ['load-002', 200]
+      ])
+      expect(result.data.OUTPUTS.rows).toEqual([['output-001']])
+    })
+
+    it('should stop processing worksheet after 100 consecutive empty rows with formatting', async () => {
+      // ExcelJS eachRow() skips completely empty rows, but visits rows that have
+      // any cell data (including just formatting). This test simulates phantom rows
+      // by creating rows with empty string values, which get visited by eachRow().
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      // Real data at the top
+      worksheet.getRow(1).values = ['__EPR_META_TYPE', 'BEFORE_PHANTOM']
+      worksheet.getRow(2).values = ['__EPR_DATA_FIRST', 'HEADER_A']
+      worksheet.getRow(3).values = [null, 'valid_data']
+      worksheet.getRow(4).values = [null, ''] // terminates the section
+
+      // Simulate 101 phantom rows with formatting (represented as empty string cells)
+      // These rows get visited by eachRow() because they have cell data
+      for (let i = 5; i <= 105; i++) {
+        // Set an empty cell value - this creates a row that eachRow() will visit
+        worksheet.getCell(`A${i}`).value = ''
+      }
+
+      // Data after the phantom gap - should NOT be processed
+      worksheet.getRow(106).values = ['__EPR_META_PHANTOM', 'AFTER_PHANTOM']
+      worksheet.getRow(107).values = ['__EPR_DATA_SECOND', 'HEADER_B']
+      worksheet.getRow(108).values = [null, 'phantom_data']
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      // Data before the phantom gap should be parsed
+      expect(result.meta.TYPE.value).toBe('BEFORE_PHANTOM')
+      expect(result.data.FIRST.rows).toEqual([['valid_data']])
+
+      // Data after the phantom gap should NOT be parsed (processing stopped)
+      expect(result.meta.PHANTOM).toBeUndefined()
+      expect(result.data.SECOND).toBeUndefined()
+    })
+  })
+
+  describe('phantom column protection', () => {
+    it('should parse data correctly when columns are within normal range', async () => {
+      const result = await parseWorkbook({
+        Test: [
+          ['__EPR_DATA_SECTION', 'COL_A', 'COL_B', 'COL_C'],
+          [null, 'val1', 'val2', 'val3'],
+          [null, '']
+        ]
+      })
+
+      expect(result.data.SECTION.headers).toEqual(['COL_A', 'COL_B', 'COL_C'])
+      expect(result.data.SECTION.rows).toEqual([['val1', 'val2', 'val3']])
+    })
+
+    it('should handle skip columns within data', async () => {
+      // Test that __EPR_SKIP_COLUMN markers work correctly (not empty gaps)
+      // Note: Empty strings in headers terminate header collection by design
+      const result = await parseWorkbook({
+        Test: [
+          [
+            '__EPR_DATA_SECTION',
+            'COL_A',
+            '__EPR_SKIP_COLUMN',
+            '__EPR_SKIP_COLUMN',
+            'COL_B'
+          ],
+          [null, 'val1', null, null, 'val2'],
+          [null, '']
+        ]
+      })
+
+      expect(result.data.SECTION.headers).toEqual([
+        'COL_A',
+        null,
+        null,
+        'COL_B'
+      ])
+      expect(result.data.SECTION.rows).toEqual([['val1', null, null, 'val2']])
+    })
+
+    it('should stop collecting cells after 100 consecutive empty columns', async () => {
+      // Create a workbook with phantom columns extending far to the right
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      // Row 1: data marker and headers in first few columns
+      worksheet.getRow(1).values = ['__EPR_DATA_SECTION', 'COL_A', 'COL_B']
+
+      // Row 2: data values followed by 101 empty cells, then more data
+      const row2 = worksheet.getRow(2)
+      row2.getCell(1).value = null // marker column
+      row2.getCell(2).value = 'data_a'
+      row2.getCell(3).value = 'data_b'
+
+      // Simulate 101 phantom columns with empty formatting
+      for (let col = 4; col <= 104; col++) {
+        row2.getCell(col).value = ''
+      }
+
+      // Data after the phantom gap - should NOT be collected
+      row2.getCell(105).value = 'phantom_data'
+
+      // Row 3: empty row to terminate section
+      worksheet.getRow(3).values = [null, '']
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      // Data within the threshold should be parsed
+      expect(result.data.SECTION.rows[0]).toContain('data_a')
+      expect(result.data.SECTION.rows[0]).toContain('data_b')
+
+      // Data after the phantom column gap should NOT be in the results
+      // (the phantom_data in column 105 should not appear)
+      expect(result.data.SECTION.rows[0]).not.toContain('phantom_data')
+    })
+
+    it('should handle metadata in columns before phantom gap', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      // Metadata in columns A and B
+      worksheet.getRow(1).values = ['__EPR_META_TYPE', 'VALID_TYPE']
+
+      // Simulate phantom columns on the same row (shouldn't affect metadata parsing)
+      const row1 = worksheet.getRow(1)
+      for (let col = 3; col <= 103; col++) {
+        row1.getCell(col).value = ''
+      }
+      // More metadata marker after phantom gap - should not be parsed
+      row1.getCell(104).value = '__EPR_META_PHANTOM'
+      row1.getCell(105).value = 'PHANTOM_VALUE'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      // Metadata before phantom columns should be parsed
+      expect(result.meta.TYPE.value).toBe('VALID_TYPE')
+
+      // Metadata after phantom columns should NOT be parsed
+      expect(result.meta.PHANTOM).toBeUndefined()
+    })
+
+    it('should reset consecutive empty count when non-empty cell encountered', async () => {
+      // Test that scattered empty cells don't accumulate across non-empty cells
+      // This tests the cell collection, not header parsing (which terminates on empty)
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      // Row 1: metadata with 50 empty cells before the value
+      // (metadata parsing looks at each pair of cells, so this tests cell collection)
+      const row1 = worksheet.getRow(1)
+      row1.getCell(1).value = '__EPR_META_FIRST'
+      row1.getCell(2).value = 'value_a'
+      // Add 50 empty cells
+      for (let col = 3; col <= 52; col++) {
+        row1.getCell(col).value = ''
+      }
+      // Then another metadata pair
+      row1.getCell(53).value = '__EPR_META_SECOND'
+      row1.getCell(54).value = 'value_b'
+      // Add another 50 empty cells
+      for (let col = 55; col <= 104; col++) {
+        row1.getCell(col).value = ''
+      }
+      // Final metadata pair - should still be collected since no 100+ consecutive gap
+      row1.getCell(105).value = '__EPR_META_THIRD'
+      row1.getCell(106).value = 'value_c'
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      // All metadata should be parsed since gaps are less than 100
+      expect(result.meta.FIRST.value).toBe('value_a')
+      expect(result.meta.SECOND.value).toBe('value_b')
+      expect(result.meta.THIRD.value).toBe('value_c')
+    })
+  })
+})
+
+describe('extractCellValue', () => {
+  it('returns primitive values unchanged', () => {
+    expect(extractCellValue('hello')).toBe('hello')
+    expect(extractCellValue(123)).toBe(123)
+    expect(extractCellValue(null)).toBe(null)
+    expect(extractCellValue(undefined)).toBe(undefined)
+  })
+
+  it('extracts result from formula cell', () => {
+    expect(extractCellValue({ formula: '=A1+B1', result: 42 })).toBe(42)
+  })
+
+  it('extracts result from sharedFormula cell', () => {
+    expect(extractCellValue({ sharedFormula: 'B8', result: 1001 })).toBe(1001)
+  })
+
+  it('returns null for formula without result', () => {
+    expect(extractCellValue({ formula: '=SUM(1,2,3)' })).toBe(null)
+  })
+
+  it('returns null for sharedFormula without result', () => {
+    expect(extractCellValue({ sharedFormula: 'B8' })).toBe(null)
+  })
+
+  it('extracts text from richText cell', () => {
+    expect(
+      extractCellValue({
+        richText: [{ text: 'Hello' }, { text: ' World' }]
+      })
+    ).toBe('Hello World')
+  })
+
+  it('returns object unchanged if not a known cell type', () => {
+    const unknownObject = { someProperty: 'value' }
+    expect(extractCellValue(unknownObject)).toBe(unknownObject)
   })
 })

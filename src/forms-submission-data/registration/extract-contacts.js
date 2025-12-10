@@ -10,7 +10,7 @@ export function getSubmitterDetails(answersByShortDescription) {
       answersByShortDescription[
         REGISTRATION.SUBMITTER_DETAILS.fields.TELEPHONE_NUMBER
       ],
-    title:
+    jobTitle:
       answersByShortDescription[REGISTRATION.SUBMITTER_DETAILS.fields.JOB_TITLE]
   }
 }
@@ -24,7 +24,7 @@ export function getApprovedPersons(answersByShortDescription) {
       answersByShortDescription[
         REGISTRATION.APPROVED_PERSON.fields.TELEPHONE_NUMBER
       ],
-    title:
+    jobTitle:
       answersByShortDescription[REGISTRATION.APPROVED_PERSON.fields.JOB_TITLE]
   }
 

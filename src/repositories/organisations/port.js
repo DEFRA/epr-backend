@@ -155,6 +155,7 @@
  * @property {() => Promise<Object[]>} findAll
  * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration|null>} findRegistrationById
+ * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation|null>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs
  */
 

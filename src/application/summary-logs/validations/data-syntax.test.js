@@ -97,6 +97,68 @@ describe('createDataSyntaxValidator', () => {
           .unknown(true)
           .prefs({ abortEarly: false }),
         fieldsRequiredForWasteBalance: ['ROW_ID', 'VALUE_FIELD']
+      },
+      // Schema with string.valid() to test any.only mapping
+      VALID_VALUES_TABLE: {
+        requiredHeaders: ['ROW_ID', 'YES_NO_FIELD'],
+        rowIdField: 'ROW_ID',
+        unfilledValues: {},
+        fatalFields: ['ROW_ID', 'YES_NO_FIELD'],
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(1000).optional().messages({
+            'number.base': 'must be a number',
+            'number.min': 'must be at least 1000'
+          }),
+          YES_NO_FIELD: Joi.string().valid('Yes', 'No').optional().messages({
+            'any.only': 'must be Yes or No'
+          })
+        })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: ['ROW_ID', 'YES_NO_FIELD']
+      },
+      // Schema with custom calculation validator to test custom.calculationMismatch mapping
+      CALCULATED_TABLE: {
+        requiredHeaders: ['ROW_ID', 'VALUE_A', 'VALUE_B', 'CALCULATED_RESULT'],
+        rowIdField: 'ROW_ID',
+        unfilledValues: {},
+        fatalFields: ['ROW_ID', 'CALCULATED_RESULT'],
+        validationSchema: Joi.object({
+          ROW_ID: Joi.number().min(1000).optional().messages({
+            'number.base': 'must be a number',
+            'number.min': 'must be at least 1000'
+          }),
+          VALUE_A: Joi.number().optional(),
+          VALUE_B: Joi.number().optional(),
+          CALCULATED_RESULT: Joi.number().optional()
+        })
+          .custom((value, helpers) => {
+            const { VALUE_A, VALUE_B, CALCULATED_RESULT } = value
+            const allPresent =
+              VALUE_A !== undefined &&
+              VALUE_B !== undefined &&
+              CALCULATED_RESULT !== undefined
+            if (
+              allPresent &&
+              Math.abs(CALCULATED_RESULT - VALUE_A * VALUE_B) > 1e-9
+            ) {
+              return helpers.error('custom.calculationMismatch', {
+                field: 'CALCULATED_RESULT'
+              })
+            }
+            return value
+          })
+          .messages({
+            'custom.calculationMismatch': 'must equal VALUE_A × VALUE_B'
+          })
+          .unknown(true)
+          .prefs({ abortEarly: false }),
+        fieldsRequiredForWasteBalance: [
+          'ROW_ID',
+          'VALUE_A',
+          'VALUE_B',
+          'CALCULATED_RESULT'
+        ]
       }
     }
   }
@@ -733,6 +795,107 @@ describe('createDataSyntaxValidator', () => {
       )
       expect(errors).toHaveLength(1)
       expect(errors[0].message).toContain('VALUE_FIELD')
+    })
+  })
+
+  describe('string.valid() / any.only validation', () => {
+    it('accepts valid value from allowed set', () => {
+      const result = validate({
+        VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Yes' }
+      })
+
+      expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('accepts another valid value from allowed set', () => {
+      const result = validate({
+        VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'No' }
+      })
+
+      expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('returns FATAL error for value not in allowed set (fatalField)', () => {
+      const result = validate({
+        VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'Maybe' }
+      })
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('YES_NO_FIELD')
+      expect(fatals[0].message).toContain('must be Yes or No')
+      expect(fatals[0].code).toBe(VALIDATION_CODE.INVALID_TYPE)
+    })
+
+    it('returns FATAL error for case-sensitive mismatch', () => {
+      const result = validate({
+        VALID_VALUES_TABLE: { ROW_ID: 1000, YES_NO_FIELD: 'yes' }
+      })
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+    })
+  })
+
+  describe('custom.calculationMismatch validation', () => {
+    it('accepts correct calculation', () => {
+      const result = validate({
+        CALCULATED_TABLE: {
+          ROW_ID: 1000,
+          VALUE_A: 10,
+          VALUE_B: 5,
+          CALCULATED_RESULT: 50
+        }
+      })
+
+      expect(result.issues.isValid()).toBe(true)
+    })
+
+    it('skips calculation check when source fields are missing', () => {
+      // If VALUE_B is missing, CALCULATED_RESULT should also be missing
+      // (user hasn't filled in the calculation yet)
+      const result = validate({
+        CALCULATED_TABLE: {
+          ROW_ID: 1000,
+          VALUE_A: 10,
+          VALUE_B: undefined,
+          CALCULATED_RESULT: undefined
+        }
+      })
+
+      // Row will have EXCLUDED outcome (missing fields for waste balance)
+      // but no FATAL calculation mismatch error
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(0)
+    })
+
+    it('returns FATAL error for incorrect calculation (fatalField)', () => {
+      const result = validate({
+        CALCULATED_TABLE: {
+          ROW_ID: 1000,
+          VALUE_A: 10,
+          VALUE_B: 5,
+          CALCULATED_RESULT: 100 // Should be 50
+        }
+      })
+
+      expect(result.issues.isValid()).toBe(false)
+      expect(result.issues.isFatal()).toBe(true)
+
+      const fatals = result.issues.getIssuesBySeverity(
+        VALIDATION_SEVERITY.FATAL
+      )
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toContain('CALCULATED_RESULT')
+      expect(fatals[0].message).toContain('must equal VALUE_A × VALUE_B')
+      expect(fatals[0].code).toBe(VALIDATION_CODE.CALCULATED_VALUE_MISMATCH)
     })
   })
 
