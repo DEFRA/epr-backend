@@ -98,19 +98,6 @@ const supersedePendingLogs =
     return result.modifiedCount
   }
 
-const hasNewerValidatedLog =
-  (db) => async (organisationId, registrationId, excludeId) => {
-    /** @type {any} */
-    const filter = {
-      _id: { $ne: excludeId },
-      organisationId,
-      registrationId,
-      status: 'validated'
-    }
-    const doc = await db.collection(COLLECTION_NAME).findOne(filter)
-    return doc !== null
-  }
-
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
@@ -120,6 +107,5 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   update: update(db, logger),
   findById: findById(db),
   hasSubmittingLog: hasSubmittingLog(db),
-  supersedePendingLogs: supersedePendingLogs(db),
-  hasNewerValidatedLog: hasNewerValidatedLog(db)
+  supersedePendingLogs: supersedePendingLogs(db)
 })

@@ -125,21 +125,6 @@ const supersedePendingLogs =
     return count
   }
 
-const hasNewerValidatedLog =
-  (storage) => async (organisationId, registrationId, excludeId) => {
-    for (const [id, doc] of storage) {
-      if (
-        id !== excludeId &&
-        doc.summaryLog.organisationId === organisationId &&
-        doc.summaryLog.registrationId === registrationId &&
-        doc.summaryLog.status === 'validated'
-      ) {
-        return true
-      }
-    }
-    return false
-  }
-
 /**
  * Create an in-memory summary logs repository.
  * Simulates eventual consistency by maintaining separate storage and staleCache.
@@ -156,7 +141,6 @@ export const createInMemorySummaryLogsRepository = () => {
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
     hasSubmittingLog: hasSubmittingLog(storage),
-    supersedePendingLogs: supersedePendingLogs(storage, staleCache),
-    hasNewerValidatedLog: hasNewerValidatedLog(storage)
+    supersedePendingLogs: supersedePendingLogs(storage, staleCache)
   })
 }
