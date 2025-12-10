@@ -5,7 +5,7 @@ import { ObjectId } from 'mongodb'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 import { STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { baseDefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
+import { userPresentInOrg1DefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 
 describe('#getRolesForOrganisationAccess', () => {
   const mockOrganisationId = new ObjectId().toString()
@@ -53,7 +53,7 @@ describe('#getRolesForOrganisationAccess', () => {
         const result = await getRolesForOrganisationAccess(
           mockRequest,
           mockLinkedEprOrg,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
 
         expect(result).toEqual([ROLES.standardUser])
@@ -79,7 +79,7 @@ describe('#getRolesForOrganisationAccess', () => {
       await getRolesForOrganisationAccess(
         mockRequest,
         customOrgId,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledWith(
@@ -101,7 +101,7 @@ describe('#getRolesForOrganisationAccess', () => {
         const result = await getRolesForOrganisationAccess(
           mockRequest,
           mockLinkedEprOrg,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
 
         expect(result).toEqual([])
@@ -116,7 +116,7 @@ describe('#getRolesForOrganisationAccess', () => {
         getRolesForOrganisationAccess(
           mockRequest,
           mockLinkedEprOrg,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
       ).rejects.toThrow()
     })
@@ -130,7 +130,7 @@ describe('#getRolesForOrganisationAccess', () => {
         getRolesForOrganisationAccess(
           mockRequest,
           differentOrgId,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
       ).rejects.toThrow(Boom.forbidden('Access denied: organisation mismatch'))
 
@@ -144,7 +144,7 @@ describe('#getRolesForOrganisationAccess', () => {
         await getRolesForOrganisationAccess(
           mockRequest,
           differentOrgId,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
         expect.fail('Should have thrown an error')
       } catch (error) {
@@ -165,7 +165,7 @@ describe('#getRolesForOrganisationAccess', () => {
         getRolesForOrganisationAccess(
           mockRequest,
           differentOrgId,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
       ).rejects.toThrow(Boom.forbidden('Access denied: organisation mismatch'))
 
@@ -198,7 +198,7 @@ describe('#getRolesForOrganisationAccess', () => {
           getRolesForOrganisationAccess(
             mockRequest,
             mockLinkedEprOrg,
-            baseDefraIdTokenPayload
+            userPresentInOrg1DefraIdTokenPayload
           )
         ).rejects.toThrow(
           Boom.forbidden('Access denied: organisation status not accessible')
@@ -220,7 +220,7 @@ describe('#getRolesForOrganisationAccess', () => {
         await getRolesForOrganisationAccess(
           mockRequest,
           mockLinkedEprOrg,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
         expect.fail('Should have thrown an error')
       } catch (error) {
@@ -264,7 +264,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const promise = getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       if (expectedError) {
@@ -293,7 +293,7 @@ describe('#getRolesForOrganisationAccess', () => {
         mockRequest,
         mockLinkedEprOrg,
 
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -315,7 +315,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         objectIdFormat,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -335,7 +335,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -354,7 +354,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(Array.isArray(result)).toBe(true)
@@ -370,7 +370,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(result).toEqual([])
@@ -384,7 +384,7 @@ describe('#getRolesForOrganisationAccess', () => {
         getRolesForOrganisationAccess(
           mockRequest,
           differentOrgId,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
       ).rejects.toThrow()
 
@@ -404,7 +404,7 @@ describe('#getRolesForOrganisationAccess', () => {
       await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(mockOrganisationsRepository.findById).toHaveBeenCalledOnce()
@@ -431,7 +431,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(callOrder).toEqual([`findById:${mockOrganisationId}`])
@@ -463,7 +463,7 @@ describe('#getRolesForOrganisationAccess', () => {
         const result = await getRolesForOrganisationAccess(
           mockRequest,
           mockLinkedEprOrg,
-          baseDefraIdTokenPayload
+          userPresentInOrg1DefraIdTokenPayload
         )
 
         expect(result).toEqual([ROLES.standardUser])
@@ -484,7 +484,7 @@ describe('#getRolesForOrganisationAccess', () => {
           getRolesForOrganisationAccess(
             mockRequest,
             mockLinkedEprOrg,
-            baseDefraIdTokenPayload
+            userPresentInOrg1DefraIdTokenPayload
           )
         ).rejects.toThrow(
           Boom.forbidden('Access denied: organisation status not accessible')
@@ -505,7 +505,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
@@ -519,7 +519,7 @@ describe('#getRolesForOrganisationAccess', () => {
       let result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
       expect(Array.isArray(result)).toBe(true)
 
@@ -536,7 +536,7 @@ describe('#getRolesForOrganisationAccess', () => {
       result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
       expect(Array.isArray(result)).toBe(true)
     })
@@ -554,7 +554,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const result = await getRolesForOrganisationAccess(
         mockRequest,
         mockLinkedEprOrg,
-        baseDefraIdTokenPayload
+        userPresentInOrg1DefraIdTokenPayload
       )
 
       expect(result).toEqual([ROLES.standardUser])
