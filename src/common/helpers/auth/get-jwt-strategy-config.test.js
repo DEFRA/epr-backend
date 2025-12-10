@@ -184,7 +184,7 @@ describe('#getJwtStrategyConfig', () => {
               iss: entraIdMockOidcWellKnownResponse.issuer,
               aud: mockEntraClientId,
               oid: 'contact-123',
-              email: email,
+              email,
               preferred_username: preferredUsername
             }
           }
