@@ -33,12 +33,12 @@ export const testFindAccreditationByIdBehaviour = (it) => {
         accreditation1.id
       )
 
-      expect(result).toMatchObject({
-        id: accreditation1.id,
-        accreditationNumber: accreditation1.accreditationNumber,
-        material: accreditation1.material,
-        wasteProcessingType: accreditation1.wasteProcessingType
-      })
+      const {
+        formSubmissionTime: _formSubmissionTime,
+        statusHistory: _statusHistory,
+        ...expected
+      } = accreditation1
+      expect(result).toMatchObject(expected)
     })
 
     it('throws NotFound when organisation ID does not exist', async () => {
