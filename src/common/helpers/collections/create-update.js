@@ -27,9 +27,11 @@ import exporterRecords from '#data/fixtures/common/waste-records/exporter-record
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
+import { toWasteRecordVersions } from '#repositories/waste-records/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
+/** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 
 const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
@@ -91,19 +93,21 @@ export async function createIndexes(db) {
  * @param {Db} db
  * @param {() => boolean} isProduction
  * @param {OrganisationsRepository} organisationsRepository
+ * @param {WasteRecordsRepository} wasteRecordsRepository
  * @returns {Promise<void>}
  */
 export async function createSeedData(
   db,
   isProduction,
-  organisationsRepository
+  organisationsRepository,
+  wasteRecordsRepository
 ) {
   if (!isProduction()) {
     logger.info({ message: 'Create seed data: start' })
 
     await createOrgRegAccFixtures(db)
     await createEprOrganisationFixtures(db, organisationsRepository)
-    await createWasteRecordsFixtures(db)
+    await createWasteRecordsFixtures(db, wasteRecordsRepository)
   }
 }
 
@@ -180,7 +184,7 @@ async function createEprOrganisationFixtures(db, organisationsRepository) {
   }
 }
 
-async function createWasteRecordsFixtures(db) {
+async function createWasteRecordsFixtures(db, wasteRecordsRepository) {
   const wasteRecordCount = await db
     .collection(COLLECTION_WASTE_RECORDS)
     .countDocuments()
@@ -189,6 +193,41 @@ async function createWasteRecordsFixtures(db) {
     logger.info({
       message: 'Create seed data: inserting waste-records fixtures'
     })
-    await db.collection(COLLECTION_WASTE_RECORDS).insertMany(exporterRecords)
+
+    const recordsByOrgReg = new Map()
+
+    for (const record of exporterRecords) {
+      const key = `${record.organisationId}:${record.registrationId}`
+      if (!recordsByOrgReg.has(key)) {
+        recordsByOrgReg.set(key, {
+          organisationId: record.organisationId,
+          registrationId: record.registrationId,
+          versionsObj: {}
+        })
+      }
+
+      const group = recordsByOrgReg.get(key)
+
+      if (!group.versionsObj[record.type]) {
+        group.versionsObj[record.type] = {}
+      }
+
+      group.versionsObj[record.type][record.rowId] = {
+        data: record.data,
+        version: record.versions[0]
+      }
+    }
+
+    for (const {
+      organisationId,
+      registrationId,
+      versionsObj
+    } of recordsByOrgReg.values()) {
+      await wasteRecordsRepository.appendVersions(
+        organisationId,
+        registrationId,
+        toWasteRecordVersions(versionsObj)
+      )
+    }
   }
 }
