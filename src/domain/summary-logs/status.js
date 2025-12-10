@@ -8,8 +8,27 @@ export const SUMMARY_LOG_STATUS = Object.freeze({
   VALIDATED: 'validated',
   SUBMITTING: 'submitting',
   SUBMITTED: 'submitted',
-  SUPERSEDED: 'superseded'
+  SUPERSEDED: 'superseded',
+  VALIDATION_FAILED: 'validation_failed'
 })
+
+/**
+ * Commands that can be sent to the summary log worker thread.
+ */
+export const SUMMARY_LOG_COMMAND = Object.freeze({
+  VALIDATE: 'validate',
+  SUBMIT: 'submit'
+})
+
+/**
+ * Statuses that indicate a summary log is still being processed.
+ * Used by the timeout tracker to determine if a failed/timed-out task
+ * should be marked as validation_failed.
+ */
+export const PROCESSING_STATUSES = Object.freeze([
+  SUMMARY_LOG_STATUS.PREPROCESSING,
+  SUMMARY_LOG_STATUS.VALIDATING
+])
 
 /**
  * @typedef {typeof SUMMARY_LOG_STATUS[keyof typeof SUMMARY_LOG_STATUS]} SummaryLogStatus
@@ -36,12 +55,14 @@ const VALID_TRANSITIONS = {
     SUMMARY_LOG_STATUS.PREPROCESSING,
     SUMMARY_LOG_STATUS.REJECTED,
     SUMMARY_LOG_STATUS.VALIDATING,
-    SUMMARY_LOG_STATUS.SUPERSEDED
+    SUMMARY_LOG_STATUS.SUPERSEDED,
+    SUMMARY_LOG_STATUS.VALIDATION_FAILED
   ],
   [SUMMARY_LOG_STATUS.VALIDATING]: [
     SUMMARY_LOG_STATUS.VALIDATED,
     SUMMARY_LOG_STATUS.INVALID,
-    SUMMARY_LOG_STATUS.SUPERSEDED
+    SUMMARY_LOG_STATUS.SUPERSEDED,
+    SUMMARY_LOG_STATUS.VALIDATION_FAILED
   ],
   [SUMMARY_LOG_STATUS.REJECTED]: [],
   [SUMMARY_LOG_STATUS.VALIDATED]: [
@@ -51,7 +72,8 @@ const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.INVALID]: [],
   [SUMMARY_LOG_STATUS.SUBMITTING]: [SUMMARY_LOG_STATUS.SUBMITTED],
   [SUMMARY_LOG_STATUS.SUBMITTED]: [],
-  [SUMMARY_LOG_STATUS.SUPERSEDED]: []
+  [SUMMARY_LOG_STATUS.SUPERSEDED]: [],
+  [SUMMARY_LOG_STATUS.VALIDATION_FAILED]: []
 }
 
 class InvalidTransitionError extends Error {
