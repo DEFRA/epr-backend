@@ -116,7 +116,11 @@ export const createInMemorySummaryLogsRepository = () => {
     },
 
     async supersedePendingLogs(organisationId, registrationId, excludeId) {
-      const pendingStatuses = ['preprocessing', 'validating', 'validated']
+      const pendingStatuses = new Set([
+        'preprocessing',
+        'validating',
+        'validated'
+      ])
       let count = 0
 
       for (const [id, doc] of storage) {
@@ -124,7 +128,7 @@ export const createInMemorySummaryLogsRepository = () => {
           id !== excludeId &&
           doc.summaryLog.organisationId === organisationId &&
           doc.summaryLog.registrationId === registrationId &&
-          pendingStatuses.includes(doc.summaryLog.status)
+          pendingStatuses.has(doc.summaryLog.status)
         ) {
           const newDoc = {
             version: doc.version + 1,
