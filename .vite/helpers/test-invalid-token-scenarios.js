@@ -72,8 +72,8 @@ export function testInvalidTokenScenarios({
       const {
         wrongSignatureToken,
         wrongIssuerToken,
-        wrongAudienceToken
-        // unauthorisedUserToken
+        wrongAudienceToken,
+        missingRelationshipToken
       } = defraIdMockAuthTokens
 
       const invalidDefraIdTokenScenarios = [
@@ -90,6 +90,11 @@ export function testInvalidTokenScenarios({
         {
           token: wrongAudienceToken,
           description: 'token from an unknown Audience (client)',
+          expectedStatus: StatusCodes.UNAUTHORIZED
+        },
+        {
+          token: missingRelationshipToken,
+          description: 'token missing relationship information',
           expectedStatus: StatusCodes.UNAUTHORIZED
         }
       ]
