@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   MESSAGES,
   PATTERNS,
-  CONSTANTS,
   YES_NO_VALUES,
   ROW_ID_MINIMUMS
 } from './joi-messages.js'
@@ -51,24 +50,6 @@ describe('joi-messages', () => {
 
     it('is frozen', () => {
       expect(Object.isFrozen(PATTERNS)).toBe(true)
-    })
-  })
-
-  describe('CONSTANTS', () => {
-    it('exports ZERO', () => {
-      expect(CONSTANTS.ZERO).toBe(0)
-    })
-
-    it('exports ONE', () => {
-      expect(CONSTANTS.ONE).toBe(1)
-    })
-
-    it('exports MAX_PRODUCT_TONNAGE', () => {
-      expect(CONSTANTS.MAX_PRODUCT_TONNAGE).toBe(1000)
-    })
-
-    it('is frozen', () => {
-      expect(Object.isFrozen(CONSTANTS)).toBe(true)
     })
   })
 

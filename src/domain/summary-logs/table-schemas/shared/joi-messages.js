@@ -14,9 +14,7 @@ export const MESSAGES = Object.freeze({
   MUST_BE_LESS_THAN_ONE: 'must be less than 1',
   MUST_BE_AT_MOST_ONE: 'must be at most 1',
   MUST_BE_AT_MOST_1000: 'must be at most 1000',
-  MUST_BE_YES_OR_NO: 'must be Yes or No',
-  MUST_MATCH_CALCULATION:
-    'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
+  MUST_BE_YES_OR_NO: 'must be Yes or No'
 })
 
 /**
@@ -24,15 +22,6 @@ export const MESSAGES = Object.freeze({
  */
 export const PATTERNS = Object.freeze({
   EWC_CODE: /^\d{2} \d{2} \d{2}\*?$/
-})
-
-/**
- * Common numeric constants for validation
- */
-export const CONSTANTS = Object.freeze({
-  ZERO: 0,
-  ONE: 1,
-  MAX_PRODUCT_TONNAGE: 1000
 })
 
 /**

@@ -1,15 +1,18 @@
 import Joi from 'joi'
-import {
-  CONSTANTS,
-  MESSAGES,
-  ROW_ID_MINIMUMS,
-  YES_NO_VALUES
-} from '../shared/index.js'
+import { MESSAGES, ROW_ID_MINIMUMS, YES_NO_VALUES } from '../shared/index.js'
 import { createRowIdSchema } from '../shared/row-id.schema.js'
+import { REPROCESSED_LOADS_FIELDS as FIELDS } from './fields.js'
 import {
   validateUkPackagingWeightProportion,
   UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES
-} from './uk-packaging-weight-proportion-validator.js'
+} from './validators/uk-packaging-weight-proportion-validator.js'
+
+/**
+ * Maximum value for product tonnage field (in tonnes)
+ *
+ * Defined locally as this limit is specific to this table.
+ */
+const MAX_PRODUCT_TONNAGE = 1000
 
 /**
  * Table schema for REPROCESSED_LOADS (REPROCESSOR_OUTPUT)
@@ -17,15 +20,15 @@ import {
  * Tracks waste that has been processed (output from reprocessing).
  */
 export const REPROCESSED_LOADS = {
-  rowIdField: 'ROW_ID',
+  rowIdField: FIELDS.ROW_ID,
 
   requiredHeaders: [
-    'ROW_ID',
-    'DATE_LOAD_LEFT_SITE',
-    'PRODUCT_TONNAGE',
-    'UK_PACKAGING_WEIGHT_PERCENTAGE',
-    'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-    'ADD_PRODUCT_WEIGHT'
+    FIELDS.ROW_ID,
+    FIELDS.DATE_LOAD_LEFT_SITE,
+    FIELDS.PRODUCT_TONNAGE,
+    FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
+    FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
+    FIELDS.ADD_PRODUCT_WEIGHT
   ],
 
   /**
@@ -40,12 +43,12 @@ export const REPROCESSED_LOADS = {
    * All other fields are fatal per ticket requirements (in-sheet revalidation).
    */
   fatalFields: [
-    'ROW_ID',
-    'DATE_LOAD_LEFT_SITE',
-    'PRODUCT_TONNAGE',
-    'UK_PACKAGING_WEIGHT_PERCENTAGE',
-    'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-    'ADD_PRODUCT_WEIGHT'
+    FIELDS.ROW_ID,
+    FIELDS.DATE_LOAD_LEFT_SITE,
+    FIELDS.PRODUCT_TONNAGE,
+    FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
+    FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
+    FIELDS.ADD_PRODUCT_WEIGHT
   ],
 
   /**
@@ -54,32 +57,36 @@ export const REPROCESSED_LOADS = {
    * All fields are OPTIONAL - validation only applies to fields that have values.
    */
   validationSchema: Joi.object({
-    ROW_ID: createRowIdSchema(ROW_ID_MINIMUMS.REPROCESSED_LOADS).optional(),
-    DATE_LOAD_LEFT_SITE: Joi.date().optional().messages({
+    [FIELDS.ROW_ID]: createRowIdSchema(
+      ROW_ID_MINIMUMS.REPROCESSED_LOADS
+    ).optional(),
+    [FIELDS.DATE_LOAD_LEFT_SITE]: Joi.date().optional().messages({
       'date.base': MESSAGES.MUST_BE_A_VALID_DATE
     }),
-    PRODUCT_TONNAGE: Joi.number()
-      .min(CONSTANTS.ZERO)
-      .max(CONSTANTS.MAX_PRODUCT_TONNAGE)
+    [FIELDS.PRODUCT_TONNAGE]: Joi.number()
+      .min(0)
+      .max(MAX_PRODUCT_TONNAGE)
       .optional()
       .messages({
         'number.base': MESSAGES.MUST_BE_A_NUMBER,
         'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
         'number.max': MESSAGES.MUST_BE_AT_MOST_1000
       }),
-    UK_PACKAGING_WEIGHT_PERCENTAGE: Joi.number()
-      .min(CONSTANTS.ZERO)
-      .max(CONSTANTS.ONE)
+    [FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]: Joi.number()
+      .min(0)
+      .max(1)
       .optional()
       .messages({
         'number.base': MESSAGES.MUST_BE_A_NUMBER,
         'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
         'number.max': MESSAGES.MUST_BE_AT_MOST_ONE
       }),
-    PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: Joi.number().optional().messages({
-      'number.base': MESSAGES.MUST_BE_A_NUMBER
-    }),
-    ADD_PRODUCT_WEIGHT: Joi.string()
+    [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: Joi.number()
+      .optional()
+      .messages({
+        'number.base': MESSAGES.MUST_BE_A_NUMBER
+      }),
+    [FIELDS.ADD_PRODUCT_WEIGHT]: Joi.string()
       .valid(YES_NO_VALUES.YES, YES_NO_VALUES.NO)
       .optional()
       .messages({
@@ -98,10 +105,10 @@ export const REPROCESSED_LOADS = {
    * all the information in this section.
    */
   fieldsRequiredForWasteBalance: [
-    'PRODUCT_TONNAGE',
-    'DATE_LOAD_LEFT_SITE',
-    'UK_PACKAGING_WEIGHT_PERCENTAGE',
-    'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-    'ADD_PRODUCT_WEIGHT'
+    FIELDS.PRODUCT_TONNAGE,
+    FIELDS.DATE_LOAD_LEFT_SITE,
+    FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
+    FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
+    FIELDS.ADD_PRODUCT_WEIGHT
   ]
 }

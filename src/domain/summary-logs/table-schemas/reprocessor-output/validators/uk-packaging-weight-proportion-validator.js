@@ -1,14 +1,13 @@
-import { isProductCorrect, MESSAGES } from '../shared/index.js'
+import { isProductCorrect } from '../../shared/index.js'
+import { REPROCESSED_LOADS_FIELDS } from '../fields.js'
 
 /**
- * Field names for the UK packaging weight proportion calculation
+ * Error message for UK packaging weight proportion calculation mismatch
+ *
+ * Defined locally as this message is specific to this validator.
  */
-const FIELDS = Object.freeze({
-  PRODUCT_TONNAGE: 'PRODUCT_TONNAGE',
-  UK_PACKAGING_WEIGHT_PERCENTAGE: 'UK_PACKAGING_WEIGHT_PERCENTAGE',
-  PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION:
-    'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
-})
+const MUST_MATCH_CALCULATION =
+  'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
 
 /**
  * Validates that PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION equals
@@ -27,21 +26,23 @@ const FIELDS = Object.freeze({
  */
 export const validateUkPackagingWeightProportion = (value, helpers) => {
   const hasAllFields =
-    FIELDS.PRODUCT_TONNAGE in value &&
-    FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE in value &&
-    FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION in value
+    REPROCESSED_LOADS_FIELDS.PRODUCT_TONNAGE in value &&
+    REPROCESSED_LOADS_FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE in value &&
+    REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION in value
 
   if (!hasAllFields) {
     return value
   }
 
-  const tonnage = value[FIELDS.PRODUCT_TONNAGE]
-  const percentage = value[FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]
-  const proportion = value[FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]
+  const tonnage = value[REPROCESSED_LOADS_FIELDS.PRODUCT_TONNAGE]
+  const percentage =
+    value[REPROCESSED_LOADS_FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]
+  const proportion =
+    value[REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]
 
   if (!isProductCorrect(proportion, tonnage, percentage)) {
     return helpers.error('custom.calculationMismatch', {
-      field: FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION
+      field: REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION
     })
   }
 
@@ -52,5 +53,5 @@ export const validateUkPackagingWeightProportion = (value, helpers) => {
  * Joi messages for the UK packaging weight proportion validator
  */
 export const UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES = Object.freeze({
-  'custom.calculationMismatch': MESSAGES.MUST_MATCH_CALCULATION
+  'custom.calculationMismatch': MUST_MATCH_CALCULATION
 })
