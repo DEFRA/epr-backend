@@ -22,6 +22,7 @@ import eprOrganisation1 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation2 from '#data/fixtures/common/epr-organisations/sample-organisation-2.json' with { type: 'json' }
 import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-organisation-3.json' with { type: 'json' }
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
+import exporterRecords from '#data/fixtures/common/waste-records/exporter-records.json' with { type: 'json' }
 
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
 
@@ -34,6 +35,7 @@ const COLLECTION_ORGANISATION = 'organisation'
 const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
+const COLLECTION_WASTE_RECORDS = 'waste-records'
 
 /**
  * @import {Db} from 'mongodb'
@@ -99,73 +101,94 @@ export async function createSeedData(
   if (!isProduction()) {
     logger.info({ message: 'Create seed data: start' })
 
-    const organisationDocCount = await db
+    await createOrgRegAccFixtures(db)
+    await createEprOrganisationFixtures(db, organisationsRepository)
+    await createWasteRecordsFixtures(db)
+  }
+}
+
+async function createOrgRegAccFixtures(db) {
+  const organisationDocCount = await db
+    .collection(COLLECTION_ORGANISATION)
+    .countDocuments()
+
+  if (organisationDocCount === 0) {
+    logger.info({
+      message: 'Create seed data: inserting org/reg/acc fixtures'
+    })
+    const organisationAnswers = extractAnswers(organisationFixture)
+
+    const { insertedIds } = await db
       .collection(COLLECTION_ORGANISATION)
-      .countDocuments()
-
-    if (organisationDocCount === 0) {
-      logger.info({
-        message: 'Create seed data: inserting org/reg/acc fixtures'
-      })
-      const organisationAnswers = extractAnswers(organisationFixture)
-
-      const { insertedIds } = await db
-        .collection(COLLECTION_ORGANISATION)
-        .insertMany([
-          organisationFactory({
-            orgId: ORG_ID_START_NUMBER,
-            orgName: extractOrgName(organisationAnswers),
-            email: extractEmail(organisationAnswers),
-            nations: null,
-            answers: organisationAnswers,
-            rawSubmissionData: organisationFixture
-          })
-        ])
-
-      await db.collection(COLLECTION_REGISTRATION).insertMany([
-        registrationFactory({
-          referenceNumber: insertedIds[0]?.toString(),
+      .insertMany([
+        organisationFactory({
           orgId: ORG_ID_START_NUMBER,
-          answers: extractAnswers(registrationFixture),
-          rawSubmissionData: registrationFixture
+          orgName: extractOrgName(organisationAnswers),
+          email: extractEmail(organisationAnswers),
+          nations: null,
+          answers: organisationAnswers,
+          rawSubmissionData: organisationFixture
         })
       ])
 
-      await db.collection(COLLECTION_ACCREDITATION).insertMany([
-        accreditationFactory({
-          referenceNumber: insertedIds[0]?.toString(),
-          orgId: ORG_ID_START_NUMBER,
-          answers: extractAnswers(accreditationFixture),
-          rawSubmissionData: accreditationFixture
-        })
-      ])
-    }
-
-    const eprOrganisationFixturesIds = [
-      eprOrganisation1,
-      eprOrganisation2,
-      eprOrganisation3,
-      eprOrganisation4
-    ]
-      .map((record) => record.id)
-      .map(ObjectId.createFromHexString)
-
-    const eprOrganisationFixturesDocs = await db
-      .collection(COLLECTION_EPR_ORGANISATIONS)
-      .find({ _id: { $in: eprOrganisationFixturesIds } })
-      .toArray()
-
-    if (eprOrganisationFixturesDocs.length === 0) {
-      logger.info({
-        message: 'Create seed data: inserting epr-organisation fixtures'
+    await db.collection(COLLECTION_REGISTRATION).insertMany([
+      registrationFactory({
+        referenceNumber: insertedIds[0]?.toString(),
+        orgId: ORG_ID_START_NUMBER,
+        answers: extractAnswers(registrationFixture),
+        rawSubmissionData: registrationFixture
       })
+    ])
 
-      await Promise.all([
-        organisationsRepository.insert(eprOrganisation1),
-        organisationsRepository.insert(eprOrganisation2),
-        organisationsRepository.insert(eprOrganisation3),
-        organisationsRepository.insert(eprOrganisation4)
-      ])
-    }
+    await db.collection(COLLECTION_ACCREDITATION).insertMany([
+      accreditationFactory({
+        referenceNumber: insertedIds[0]?.toString(),
+        orgId: ORG_ID_START_NUMBER,
+        answers: extractAnswers(accreditationFixture),
+        rawSubmissionData: accreditationFixture
+      })
+    ])
+  }
+}
+
+async function createEprOrganisationFixtures(db, organisationsRepository) {
+  const eprOrganisationFixturesIds = [
+    eprOrganisation1,
+    eprOrganisation2,
+    eprOrganisation3,
+    eprOrganisation4
+  ]
+    .map((record) => record.id)
+    .map(ObjectId.createFromHexString)
+
+  const eprOrganisationFixturesDocs = await db
+    .collection(COLLECTION_EPR_ORGANISATIONS)
+    .find({ _id: { $in: eprOrganisationFixturesIds } })
+    .toArray()
+
+  if (eprOrganisationFixturesDocs.length === 0) {
+    logger.info({
+      message: 'Create seed data: inserting epr-organisation fixtures'
+    })
+
+    await Promise.all([
+      organisationsRepository.insert(eprOrganisation1),
+      organisationsRepository.insert(eprOrganisation2),
+      organisationsRepository.insert(eprOrganisation3),
+      organisationsRepository.insert(eprOrganisation4)
+    ])
+  }
+}
+
+async function createWasteRecordsFixtures(db) {
+  const wasteRecordCount = await db
+    .collection(COLLECTION_WASTE_RECORDS)
+    .countDocuments()
+
+  if (wasteRecordCount === 0) {
+    logger.info({
+      message: 'Create seed data: inserting waste-records fixtures'
+    })
+    await db.collection(COLLECTION_WASTE_RECORDS).insertMany(exporterRecords)
   }
 }
