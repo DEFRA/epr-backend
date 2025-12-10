@@ -1,11 +1,21 @@
 import Joi from 'joi'
-import { MESSAGES, PATTERNS, ROW_ID_MINIMUMS } from '../shared/index.js'
+import {
+  MESSAGES,
+  ROW_ID_MINIMUMS,
+  EWC_CODES,
+  RECYCLABLE_PROPORTION_METHODS,
+  WASTE_DESCRIPTIONS
+} from '../shared/index.js'
 import { createRowIdSchema } from '../shared/row-id.schema.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS } from './fields.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
 } from './validators/net-weight-validator.js'
+import {
+  TONNAGE_RECEIVED_MESSAGES,
+  validateTonnageReceived
+} from './validators/tonnage-received-validator.js'
 
 /**
  * Maximum values for weight fields (in tonnes)
@@ -34,6 +44,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     FIELDS.ROW_ID,
     FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
     FIELDS.EWC_CODE,
+    FIELDS.DESCRIPTION_OF_WASTE_RECEIVED,
     FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
     FIELDS.GROSS_WEIGHT,
     FIELDS.TARE_WEIGHT,
@@ -62,19 +73,23 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * Fields that produce FATAL errors when validation fails
    *
    * ROW_ID is always fatal as it indicates tampering or corruption.
-   * Additional fields are fatal per ticket requirements.
+   * All fields are fatal per ticket requirements.
    */
   fatalFields: [
     FIELDS.ROW_ID,
     FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
+    FIELDS.EWC_CODE,
+    FIELDS.DESCRIPTION_OF_WASTE_RECEIVED,
     FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
     FIELDS.GROSS_WEIGHT,
     FIELDS.TARE_WEIGHT,
     FIELDS.PALLET_WEIGHT,
     FIELDS.NET_WEIGHT,
     FIELDS.BAILING_WIRE_PROTOCOL,
+    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
     FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE
+    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
+    FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
   ],
 
   /**
@@ -91,12 +106,18 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
       'date.base': MESSAGES.MUST_BE_A_VALID_DATE
     }),
     [FIELDS.EWC_CODE]: Joi.string()
-      .pattern(PATTERNS.EWC_CODE)
+      .valid(...EWC_CODES)
       .optional()
       .messages({
         'string.base': MESSAGES.MUST_BE_A_STRING,
-        'string.pattern.base':
-          'must be in format "XX XX XX" with optional * suffix (e.g. "03 03 08" or "03 03 08*")'
+        'any.only': MESSAGES.MUST_BE_VALID_EWC_CODE
+      }),
+    [FIELDS.DESCRIPTION_OF_WASTE_RECEIVED]: Joi.string()
+      .valid(...WASTE_DESCRIPTIONS)
+      .optional()
+      .messages({
+        'string.base': MESSAGES.MUST_BE_A_STRING,
+        'any.only': MESSAGES.MUST_BE_VALID_WASTE_DESCRIPTION
       }),
     [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: Joi.string()
       .valid('Yes', 'No')
@@ -149,9 +170,11 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
         'any.only': MESSAGES.MUST_BE_YES_OR_NO
       }),
     [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: Joi.string()
+      .valid(...RECYCLABLE_PROPORTION_METHODS)
       .optional()
       .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING
+        'string.base': MESSAGES.MUST_BE_A_STRING,
+        'any.only': MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
       }),
     [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: Joi.number()
       .min(0)
@@ -176,8 +199,12 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     })
   })
     .custom(validateNetWeight)
+    .custom(validateTonnageReceived)
     .unknown(true)
-    .messages(NET_WEIGHT_MESSAGES)
+    .messages({
+      ...NET_WEIGHT_MESSAGES,
+      ...TONNAGE_RECEIVED_MESSAGES
+    })
     .prefs({ abortEarly: false }),
 
   /**
@@ -185,21 +212,21 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    *
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
-   *
-   * Note: EWC_CODE, HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION, and
-   * TONNAGE_RECEIVED_FOR_RECYCLING are excluded as they require lookup
-   * tables or complex formula validation not yet implemented.
    */
   fieldsRequiredForWasteBalance: [
     FIELDS.ROW_ID,
     FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
+    FIELDS.EWC_CODE,
+    FIELDS.DESCRIPTION_OF_WASTE_RECEIVED,
     FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
     FIELDS.GROSS_WEIGHT,
     FIELDS.TARE_WEIGHT,
     FIELDS.PALLET_WEIGHT,
     FIELDS.NET_WEIGHT,
     FIELDS.BAILING_WIRE_PROTOCOL,
+    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
     FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE
+    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
+    FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
   ]
 }
