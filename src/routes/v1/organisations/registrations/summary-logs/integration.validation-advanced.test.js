@@ -67,7 +67,14 @@ describe('Advanced validation scenarios', () => {
                       'ADD_PRODUCT_WEIGHT'
                     ],
                     rows: [
-                      [3000, '2025-05-28T00:00:00.000Z', 1001, 0.5, 100, 50]
+                      [
+                        3000,
+                        '2025-05-28T00:00:00.000Z',
+                        1001,
+                        0.5,
+                        500.5,
+                        'Yes'
+                      ]
                     ]
                   }
                 }

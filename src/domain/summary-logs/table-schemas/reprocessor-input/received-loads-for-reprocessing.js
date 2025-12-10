@@ -1,10 +1,5 @@
 import Joi from 'joi'
-import {
-  MESSAGES,
-  PATTERNS,
-  CONSTANTS,
-  ROW_ID_MINIMUMS
-} from '../shared/index.js'
+import { MESSAGES, PATTERNS, ROW_ID_MINIMUMS } from '../shared/index.js'
 import { createRowIdSchema } from '../shared/row-id.schema.js'
 
 /**
@@ -72,19 +67,19 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
       'string.pattern.base':
         'must be in format "XX XX XX" with optional * suffix (e.g. "03 03 08" or "03 03 08*")'
     }),
-    GROSS_WEIGHT: Joi.number().greater(CONSTANTS.ZERO).optional().messages({
+    GROSS_WEIGHT: Joi.number().greater(0).optional().messages({
       'number.base': MESSAGES.MUST_BE_A_NUMBER,
       'number.greater': MESSAGES.MUST_BE_GREATER_THAN_ZERO
     }),
-    TARE_WEIGHT: Joi.number().greater(CONSTANTS.ZERO).optional().messages({
+    TARE_WEIGHT: Joi.number().greater(0).optional().messages({
       'number.base': MESSAGES.MUST_BE_A_NUMBER,
       'number.greater': MESSAGES.MUST_BE_GREATER_THAN_ZERO
     }),
-    PALLET_WEIGHT: Joi.number().greater(CONSTANTS.ZERO).optional().messages({
+    PALLET_WEIGHT: Joi.number().greater(0).optional().messages({
       'number.base': MESSAGES.MUST_BE_A_NUMBER,
       'number.greater': MESSAGES.MUST_BE_GREATER_THAN_ZERO
     }),
-    NET_WEIGHT: Joi.number().greater(CONSTANTS.ZERO).optional().messages({
+    NET_WEIGHT: Joi.number().greater(0).optional().messages({
       'number.base': MESSAGES.MUST_BE_A_NUMBER,
       'number.greater': MESSAGES.MUST_BE_GREATER_THAN_ZERO
     }),
@@ -97,14 +92,14 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
         'string.base': MESSAGES.MUST_BE_A_STRING
       }),
     WEIGHT_OF_NON_TARGET_MATERIALS: Joi.number()
-      .greater(CONSTANTS.ZERO)
+      .greater(0)
       .optional()
       .messages({
         'number.base': MESSAGES.MUST_BE_A_NUMBER,
         'number.greater': MESSAGES.MUST_BE_GREATER_THAN_ZERO
       }),
     RECYCLABLE_PROPORTION_PERCENTAGE: Joi.number()
-      .greater(CONSTANTS.ZERO)
+      .greater(0)
       .less(1)
       .optional()
       .messages({

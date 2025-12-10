@@ -52,6 +52,7 @@ const adaptDomainSchema = (domainSchema) => ({
  */
 const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'any.required': VALIDATION_CODE.FIELD_REQUIRED,
+  'any.only': VALIDATION_CODE.INVALID_TYPE,
   'number.base': VALIDATION_CODE.INVALID_TYPE,
   'number.min': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
@@ -59,7 +60,8 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'string.base': VALIDATION_CODE.INVALID_TYPE,
   'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
-  'date.base': VALIDATION_CODE.INVALID_DATE
+  'date.base': VALIDATION_CODE.INVALID_DATE,
+  'custom.calculationMismatch': VALIDATION_CODE.CALCULATED_VALUE_MISMATCH
 })
 
 /**
