@@ -19,6 +19,7 @@ import {
   userSchema
 } from './base.js'
 import { registrationSchema, registrationUpdateSchema } from './registration.js'
+import { validateApprovals, approvalValidationMessages } from './helpers.js'
 
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
@@ -93,3 +94,5 @@ export const organisationUpdateSchema = organisationInsertSchema
     registrations: Joi.array().items(registrationUpdateSchema).optional(),
     accreditations: Joi.array().items(accreditationUpdateSchema).optional()
   })
+  .custom(validateApprovals)
+  .messages(approvalValidationMessages)

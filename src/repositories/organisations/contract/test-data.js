@@ -45,12 +45,17 @@ export const buildRegistration = (overrides = {}) => {
 export const buildAccreditation = (overrides = {}) => {
   const baseAccreditation = org1.accreditations[0]
 
-  return {
+  const accreditation = {
     ...baseAccreditation,
     id: new ObjectId().toString(),
     accreditationNumber: '87654321',
     ...overrides
   }
+
+  if (accreditation.wasteProcessingType === 'exporter') {
+    delete accreditation.site
+  }
+  return accreditation
 }
 
 export const buildOrganisation = (overrides = {}) => {
