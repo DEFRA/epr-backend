@@ -43,6 +43,7 @@ export const buildVersionData = (options = {}) => {
 
   return {
     version: {
+      id: randomUUID(),
       createdAt,
       status,
       summaryLog: {
@@ -85,6 +86,7 @@ export const buildWasteRecord = (overrides = {}) => {
   }
 
   const version = {
+    id: randomUUID(),
     createdAt: new Date('2025-01-15T10:00:00.000Z').toISOString(),
     status: VERSION_STATUS.CREATED,
     summaryLog: {
