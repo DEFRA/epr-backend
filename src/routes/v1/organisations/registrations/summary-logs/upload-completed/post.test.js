@@ -6,17 +6,20 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
+import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
+import { generateOrgId } from '#repositories/organisations/contract/test-data.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 
-const { validToken } = entraIdMockAuthTokens
+const { validToken } = defraIdMockAuthTokens
 
 const summaryLogId = 'summary-log-123'
 
-const organisationId = 'org-123'
+const organisationId = generateOrgId()
 const registrationId = 'reg-456'
 
 const fileId = 'file-123'
@@ -91,13 +94,18 @@ const createCompletePayload = (fileId = 'file-complete-123') =>
 
 describe(`${summaryLogsUploadCompletedPath} route`, () => {
   setupAuthContext()
+  let org
   let server
+  let organisationsRepositoryFactory
+  let organisationsRepository
   let payload
 
   let summaryLogsRepository
   let summaryLogsWorker
 
   beforeAll(async () => {
+    organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
+    organisationsRepository = organisationsRepositoryFactory()
     summaryLogsRepository = {
       insert: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue(undefined),
@@ -114,7 +122,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     server = await createTestServer({
       repositories: {
-        summaryLogsRepository: (_logger) => summaryLogsRepository
+        summaryLogsRepository: (_logger) => summaryLogsRepository,
+        organisationsRepository: organisationsRepositoryFactory
       },
       workers: {
         summaryLogsWorker
@@ -123,6 +132,18 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
 
     await server.initialize()
+    console.log(
+      '\n\n\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- 1'
+    )
+    org = await buildActiveOrg(organisationsRepository, {
+      orgId: organisationId
+    })
+
+    console.log(
+      '\n\n\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- '
+    )
+    console.log('organisationId', organisationId)
+    console.log('org.id', org.id)
   })
 
   beforeEach(() => {
