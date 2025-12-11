@@ -7,8 +7,8 @@ import {
   VALID_TOKEN_CONTACT_ID
 } from './create-defra-id-test-tokens.js'
 
-export async function buildActiveOrg(organisationsRepository) {
-  const org = await buildApprovedOrg(organisationsRepository)
+export async function buildActiveOrg(organisationsRepository, overrides) {
+  const org = await buildApprovedOrg(organisationsRepository, overrides)
   const INITIAL_VERSION = org.version
 
   const linkedDefraOrg = {

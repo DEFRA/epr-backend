@@ -11,7 +11,7 @@ import { upsertOrganisations } from './organisation-persistence.js'
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {BaseOrganisation, FormDataMigrator, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
+ * @import {FormDataMigrator, Organisation, OrganisationMapEntry, OrganisationMigrationItem, OrganisationWithRegistrations} from '#formsubmission/types.js'
  */
 
 export class MigrationOrchestrator {
