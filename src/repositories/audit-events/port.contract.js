@@ -7,10 +7,9 @@ import { randomUUID } from 'crypto'
 
 export const testAuditEventsRepositoryContract = (it) => {
   const event = { category: 'c', action: 'a' }
-  it('auditing events can be inserted then retrieved by organisation id', /**
+  it('auditing events can be inserted then retrieved by organisation id' /**
    * @param {{ auditEventsRepository: () => AuditEventsRepository }} params
-   */
-  async ({ auditEventsRepository }) => {
+   */, async ({ auditEventsRepository }) => {
     const repository = auditEventsRepository()
 
     const organisationId1 = randomUUID()
@@ -48,10 +47,9 @@ export const testAuditEventsRepositoryContract = (it) => {
     expect(result[1].context.id).toEqual(payload4.context.id)
   })
 
-  it('enriches recorded auditing event with created date', /**
+  it('enriches recorded auditing event with created date' /**
    * @param {{ auditEventsRepository: () => AuditEventsRepository }} params
-   */
-  async ({ auditEventsRepository }) => {
+   */, async ({ auditEventsRepository }) => {
     const repository = auditEventsRepository()
 
     const startTime = new Date()
