@@ -1,6 +1,7 @@
 import Joi from 'joi'
 import {
   MESSAGES,
+  DROPDOWN_PLACEHOLDER,
   EWC_CODES,
   RECYCLABLE_PROPORTION_METHODS,
   WASTE_DESCRIPTIONS,
@@ -64,8 +65,8 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * typically dropdown placeholder values from the Excel template.
    */
   unfilledValues: {
-    [FIELDS.BAILING_WIRE_PROTOCOL]: ['Choose option'],
-    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: ['Choose option']
+    [FIELDS.BAILING_WIRE_PROTOCOL]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: DROPDOWN_PLACEHOLDER
   },
 
   /**

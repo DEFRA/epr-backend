@@ -36,3 +36,10 @@ export const YES_NO_VALUES = Object.freeze({
   YES: 'Yes',
   NO: 'No'
 })
+
+/**
+ * Default placeholder value for dropdown fields in Excel templates
+ *
+ * Used in unfilledValues to treat this value as "not filled".
+ */
+export const DROPDOWN_PLACEHOLDER = Object.freeze(['Choose option'])
