@@ -7,7 +7,15 @@ import {
   WASTE_DESCRIPTIONS,
   BASEL_CODES,
   EXPORT_CONTROLS,
-  createRowIdSchema
+  createRowIdSchema,
+  createWeightFieldSchema,
+  createYesNoFieldSchema,
+  createDateFieldSchema,
+  createThreeDigitIdSchema,
+  createPercentageFieldSchema,
+  createAlphanumericFieldSchema,
+  createEnumFieldSchema,
+  createNumberFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
@@ -18,36 +26,6 @@ import {
   TONNAGE_EXPORT_MESSAGES,
   validateTonnageExport
 } from './validators/tonnage-export-validator.js'
-
-/**
- * Maximum values for weight fields (in tonnes)
- *
- * Defined locally as these limits are specific to this table and may
- * differ from similar fields in other tables.
- */
-const MAX_GROSS_WEIGHT = 1000
-const MAX_TARE_WEIGHT = 1000
-const MAX_PALLET_WEIGHT = 1000
-const MAX_NET_WEIGHT = 1000
-const MAX_WEIGHT_OF_NON_TARGET_MATERIALS = 1000
-const MAX_TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED = 1000
-const MAX_TONNAGE_PASSED_INTERIM_SITE = 1000
-
-/**
- * 3-digit ID constraints (100-999)
- */
-const MIN_THREE_DIGIT_ID = 100
-const MAX_THREE_DIGIT_ID = 999
-
-/**
- * Maximum length for alphanumeric string fields
- */
-const MAX_ALPHANUMERIC_LENGTH = 100
-
-/**
- * Regex pattern for alphanumeric validation
- */
-const ALPHANUMERIC_PATTERN = /^[a-zA-Z0-9]+$/
 
 /**
  * Table schema for RECEIVED_LOADS_FOR_EXPORT
@@ -146,186 +124,46 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_EXPORT
     ).optional(),
-    [FIELDS.DATE_RECEIVED_FOR_EXPORT]: Joi.date().optional().messages({
-      'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-    }),
-    [FIELDS.EWC_CODE]: Joi.string()
-      .valid(...EWC_CODES)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_EWC_CODE
-      }),
-    [FIELDS.DESCRIPTION_WASTE]: Joi.string()
-      .valid(...WASTE_DESCRIPTIONS)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_WASTE_DESCRIPTION
-      }),
-    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: Joi.string()
-      .valid('Yes', 'No')
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_YES_OR_NO
-      }),
-    [FIELDS.GROSS_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_GROSS_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.TARE_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_TARE_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.PALLET_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_PALLET_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.NET_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_NET_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.BAILING_WIRE_PROTOCOL]: Joi.string()
-      .valid('Yes', 'No')
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_YES_OR_NO
-      }),
-    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: Joi.string()
-      .valid(...RECYCLABLE_PROPORTION_METHODS)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
-      }),
-    [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: Joi.number()
-      .min(0)
-      .max(MAX_WEIGHT_OF_NON_TARGET_MATERIALS)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: Joi.number()
-      .min(0)
-      .max(1)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1
-      }),
-    [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: Joi.number().optional().messages({
-      'number.base': MESSAGES.MUST_BE_A_NUMBER
-    }),
-    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: Joi.number()
-      .min(0)
-      .max(MAX_TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.DATE_OF_EXPORT]: Joi.date().optional().messages({
-      'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-    }),
-    [FIELDS.BASEL_EXPORT_CODE]: Joi.string()
-      .valid(...BASEL_CODES)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_BASEL_CODE
-      }),
-    [FIELDS.CUSTOMS_CODES]: Joi.string()
-      .pattern(ALPHANUMERIC_PATTERN)
-      .max(MAX_ALPHANUMERIC_LENGTH)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'string.pattern.base': MESSAGES.MUST_BE_ALPHANUMERIC,
-        'string.max': MESSAGES.MUST_BE_AT_MOST_100_CHARS
-      }),
-    [FIELDS.CONTAINER_NUMBER]: Joi.string()
-      .pattern(ALPHANUMERIC_PATTERN)
-      .max(MAX_ALPHANUMERIC_LENGTH)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'string.pattern.base': MESSAGES.MUST_BE_ALPHANUMERIC,
-        'string.max': MESSAGES.MUST_BE_AT_MOST_100_CHARS
-      }),
-    [FIELDS.DATE_RECEIVED_BY_OSR]: Joi.date().optional().messages({
-      'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-    }),
-    [FIELDS.OSR_ID]: Joi.number()
-      .integer()
-      .min(MIN_THREE_DIGIT_ID)
-      .max(MAX_THREE_DIGIT_ID)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.integer': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-        'number.min': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-        'number.max': MESSAGES.MUST_BE_3_DIGIT_NUMBER
-      }),
-    [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: Joi.string()
-      .valid('Yes', 'No')
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_YES_OR_NO
-      }),
-    [FIELDS.INTERIM_SITE_ID]: Joi.number()
-      .integer()
-      .min(MIN_THREE_DIGIT_ID)
-      .max(MAX_THREE_DIGIT_ID)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.integer': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-        'number.min': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-        'number.max': MESSAGES.MUST_BE_3_DIGIT_NUMBER
-      }),
-    [FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]: Joi.number()
-      .min(0)
-      .max(MAX_TONNAGE_PASSED_INTERIM_SITE)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.EXPORT_CONTROLS]: Joi.string()
-      .valid(...EXPORT_CONTROLS)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_EXPORT_CONTROL
-      })
+    [FIELDS.DATE_RECEIVED_FOR_EXPORT]: createDateFieldSchema(),
+    [FIELDS.EWC_CODE]: createEnumFieldSchema(
+      EWC_CODES,
+      MESSAGES.MUST_BE_VALID_EWC_CODE
+    ),
+    [FIELDS.DESCRIPTION_WASTE]: createEnumFieldSchema(
+      WASTE_DESCRIPTIONS,
+      MESSAGES.MUST_BE_VALID_WASTE_DESCRIPTION
+    ),
+    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: createYesNoFieldSchema(),
+    [FIELDS.GROSS_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.TARE_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.PALLET_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.NET_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.BAILING_WIRE_PROTOCOL]: createYesNoFieldSchema(),
+    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: createEnumFieldSchema(
+      RECYCLABLE_PROPORTION_METHODS,
+      MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
+    ),
+    [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: createWeightFieldSchema(),
+    [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
+    [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: createNumberFieldSchema(),
+    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: createWeightFieldSchema(),
+    [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema(),
+    [FIELDS.BASEL_EXPORT_CODE]: createEnumFieldSchema(
+      BASEL_CODES,
+      MESSAGES.MUST_BE_VALID_BASEL_CODE
+    ),
+    [FIELDS.CUSTOMS_CODES]: createAlphanumericFieldSchema(),
+    [FIELDS.CONTAINER_NUMBER]: createAlphanumericFieldSchema(),
+    [FIELDS.DATE_RECEIVED_BY_OSR]: createDateFieldSchema(),
+    [FIELDS.OSR_ID]: createThreeDigitIdSchema(),
+    [FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: createYesNoFieldSchema(),
+    [FIELDS.INTERIM_SITE_ID]: createThreeDigitIdSchema(),
+    [FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]:
+      createWeightFieldSchema(),
+    [FIELDS.EXPORT_CONTROLS]: createEnumFieldSchema(
+      EXPORT_CONTROLS,
+      MESSAGES.MUST_BE_VALID_EXPORT_CONTROL
+    )
   })
     .custom(validateNetWeight)
     .custom(validateTonnageExport)

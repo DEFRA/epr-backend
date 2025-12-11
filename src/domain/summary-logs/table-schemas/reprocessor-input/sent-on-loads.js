@@ -1,13 +1,10 @@
 import Joi from 'joi'
-import { MESSAGES, createRowIdSchema } from '../shared/index.js'
+import {
+  createRowIdSchema,
+  createDateFieldSchema,
+  createWeightFieldSchema
+} from '../shared/index.js'
 import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
-
-/**
- * Maximum value for tonnage field (in tonnes)
- *
- * Defined locally as this limit is specific to this table.
- */
-const MAX_TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON = 1000
 
 /**
  * Table schema for SENT_ON_LOADS
@@ -44,18 +41,8 @@ export const SENT_ON_LOADS = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.SENT_ON_LOADS
     ).optional(),
-    [FIELDS.DATE_LOAD_LEFT_SITE]: Joi.date().optional().messages({
-      'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-    }),
-    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: Joi.number()
-      .min(0)
-      .max(MAX_TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      })
+    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
+    [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]: createWeightFieldSchema()
   })
     .unknown(true)
     .prefs({ abortEarly: false }),
