@@ -13,7 +13,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(schema.requiredHeaders).toContain('ROW_ID')
       expect(schema.requiredHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
       expect(schema.requiredHeaders).toContain('EWC_CODE')
-      expect(schema.requiredHeaders).toContain('DESCRIPTION_OF_WASTE_RECEIVED')
+      expect(schema.requiredHeaders).toContain('DESCRIPTION_WASTE')
       expect(schema.requiredHeaders).toContain('GROSS_WEIGHT')
       expect(schema.requiredHeaders).toContain('TARE_WEIGHT')
       expect(schema.requiredHeaders).toContain('PALLET_WEIGHT')
@@ -47,7 +47,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(schema.fatalFields).toContain('ROW_ID')
       expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
       expect(schema.fatalFields).toContain('EWC_CODE')
-      expect(schema.fatalFields).toContain('DESCRIPTION_OF_WASTE_RECEIVED')
+      expect(schema.fatalFields).toContain('DESCRIPTION_WASTE')
       expect(schema.fatalFields).toContain(
         'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
       )
@@ -72,7 +72,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       )
       expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
       expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DESCRIPTION_OF_WASTE_RECEIVED'
+        'DESCRIPTION_WASTE'
       )
       expect(schema.fieldsRequiredForWasteBalance).toContain(
         'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
@@ -205,17 +205,17 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
     })
 
-    describe('DESCRIPTION_OF_WASTE_RECEIVED validation', () => {
+    describe('DESCRIPTION_WASTE validation', () => {
       it('accepts valid waste description from allowed list', () => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_OF_WASTE_RECEIVED: 'Aluminium - other'
+          DESCRIPTION_WASTE: 'Aluminium - other'
         })
         expect(error).toBeUndefined()
       })
 
       it('accepts waste description with percentage value', () => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_OF_WASTE_RECEIVED:
+          DESCRIPTION_WASTE:
             'Aluminium - AAIG aluminium cans and associated packaging (97.5%)'
         })
         expect(error).toBeUndefined()
@@ -224,7 +224,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       it('accepts waste description with special characters', () => {
         // Note: This uses en-dash (–) not hyphen (-)
         const { error } = validationSchema.validate({
-          DESCRIPTION_OF_WASTE_RECEIVED:
+          DESCRIPTION_WASTE:
             'Steel – AAIG steel cans and associated packaging, grade 6E (97.5%)'
         })
         expect(error).toBeUndefined()
@@ -240,7 +240,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         ]
         for (const description of validDescriptions) {
           const { error } = validationSchema.validate({
-            DESCRIPTION_OF_WASTE_RECEIVED: description
+            DESCRIPTION_WASTE: description
           })
           expect(error).toBeUndefined()
         }
@@ -248,7 +248,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
       it('rejects invalid waste description', () => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_OF_WASTE_RECEIVED: 'Invalid waste type'
+          DESCRIPTION_WASTE: 'Invalid waste type'
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
@@ -258,7 +258,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
       it('rejects waste description not in allowed list', () => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_OF_WASTE_RECEIVED: 'Copper - scrap'
+          DESCRIPTION_WASTE: 'Copper - scrap'
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
@@ -268,7 +268,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
 
       it('rejects non-string waste description', () => {
         const { error } = validationSchema.validate({
-          DESCRIPTION_OF_WASTE_RECEIVED: 12345
+          DESCRIPTION_WASTE: 12345
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe(
@@ -699,9 +699,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           NET_WEIGHT: 100
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
-        )
+        expect(error.details[0].type).toBe('custom.calculationMismatch')
       })
 
       it('rejects calculation that is close but outside tolerance', () => {
@@ -712,9 +710,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           NET_WEIGHT: 90.001
         })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe(
-          'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
-        )
+        expect(error.details[0].type).toBe('custom.calculationMismatch')
       })
 
       it('skips calculation check when NET_WEIGHT is missing', () => {
