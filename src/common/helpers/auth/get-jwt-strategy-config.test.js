@@ -1,17 +1,16 @@
-import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
-import Boom from '@hapi/boom'
-
-import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
-import { ROLES } from './constants.js'
-import {
-  entraIdMockOidcWellKnownResponse,
-  entraIdMockJwksUrl
-} from '#vite/helpers/mock-entra-oidc.js'
-import {
-  defraIdMockOidcWellKnownResponse,
-  defraIdMockJwksUrl
-} from '#vite/helpers/mock-defra-id-oidc.js'
 import { userPresentInOrg1DefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
+import {
+  defraIdMockJwksUrl,
+  defraIdMockOidcWellKnownResponse
+} from '#vite/helpers/mock-defra-id-oidc.js'
+import {
+  entraIdMockJwksUrl,
+  entraIdMockOidcWellKnownResponse
+} from '#vite/helpers/mock-entra-oidc.js'
+import Boom from '@hapi/boom'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { ROLES } from './constants.js'
+import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -481,6 +480,57 @@ describe('#getJwtStrategyConfig', () => {
           userPresentInOrg1DefraIdTokenPayload.iss
         )
       })
+
+      test('returns standard user scope for valid Defra ID tokens', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: 'defra-contact-123',
+              email: 'defra-user@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const result = await config.validate(artifacts, request)
+
+        expect(result.credentials.scope).toEqual([ROLES.inquirer])
+      })
+
+      test('does not call getEntraUserRoles for Defra ID tokens', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: defraIdMockOidcWellKnownResponse.issuer,
+              aud: mockDefraClientId,
+              id: 'defra-contact-123',
+              email: 'defra-user@example.com'
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const result = await config.validate(artifacts, request)
+
+        expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
+        expect(result.credentials.issuer).toBe(
+          userPresentInOrg1DefraIdTokenPayload.iss
+        )
+      })
     })
 
     describe('Error cases', () => {
@@ -507,6 +557,193 @@ describe('#getJwtStrategyConfig', () => {
         await expect(config.validate(artifacts, request)).rejects.toThrow(
           Boom.forbidden('Invalid audience for Defra Id token')
         )
+      })
+
+      test('handles empty string values in token payload', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: '',
+              email: '',
+              iss: defraIdMockOidcWellKnownResponse.issuer
+            }
+          }
+        }
+        const request = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const result = await config.validate(artifacts, request)
+
+        expect(result.credentials.id).toBe('')
+        expect(result.credentials.email).toBe('')
+        expect(result.isValid).toBe(false)
+      })
+    })
+
+    describe('concurrent validation with both issuer types', () => {
+      test('handles concurrent validations of different issuer types', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const entraArtifacts = {
+          decoded: {
+            payload: {
+              iss: entraIdMockOidcWellKnownResponse.issuer,
+              aud: mockEntraClientId,
+              oid: 'entra-contact',
+              email: 'entra@example.com'
+            }
+          }
+        }
+
+        const defraArtifacts = {
+          decoded: {
+            payload: {
+              aud: mockDefraClientId,
+              contactId: 'defra-contact',
+              email: 'defra@example.com',
+              iss: defraIdMockOidcWellKnownResponse.issuer
+            }
+          }
+        }
+
+        const defraRequest = {
+          organisationsRepository: {},
+          path: '/v1/me/organisations',
+          method: 'get'
+        }
+
+        const [entraResult, defraResult] = await Promise.all([
+          config.validate(entraArtifacts),
+          config.validate(defraArtifacts, defraRequest)
+        ])
+
+        expect(entraResult.credentials.id).toBe('entra-contact')
+        expect(entraResult.credentials.scope).toEqual([ROLES.serviceMaintainer])
+        expect(defraResult.credentials.id).toBe('defra-contact')
+        expect(defraResult.credentials.scope).toEqual([ROLES.inquirer])
+      })
+    })
+
+    describe('unrecognized issuer handling', () => {
+      test('throws bad request error for unrecognized issuer when defraIdAuth is true', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const unknownIssuer = 'https://unknown-issuer.example.com'
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: unknownIssuer,
+              aud: 'some-client-id',
+              id: 'contact-123',
+              email: 'user@example.com'
+            }
+          }
+        }
+
+        await expect(config.validate(artifacts)).rejects.toThrow(
+          Boom.badRequest(`Unrecognized token issuer: ${unknownIssuer}`)
+        )
+      })
+    })
+  })
+
+  // ============================================================================
+  // FEATURE FLAG: defraIdAuth = false
+  // These tests verify that Defra ID tokens are rejected when flag is disabled
+  // When feature flag is removed, this entire describe block should be deleted
+  // ============================================================================
+  describe('Feature Flag: defraIdAuth = false', () => {
+    beforeEach(() => {
+      mockConfigGet.mockImplementation((key) => {
+        if (key === 'oidc.entraId.clientId') return mockEntraClientId
+        if (key === 'oidc.defraId.clientId') return mockDefraClientId
+        if (key === 'roles.serviceMaintainers') {
+          return JSON.stringify(['maintainer@example.com'])
+        }
+        if (key === 'featureFlags.defraIdAuth') return false
+        return null
+      })
+    })
+
+    describe('Defra ID tokens are rejected', () => {
+      test('throws unrecognized issuer error for Defra ID token when flag is off', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: defraIdMockOidcWellKnownResponse.issuer,
+              aud: mockDefraClientId,
+              id: 'defra-contact-123',
+              email: 'defra-user@example.com'
+            }
+          }
+        }
+
+        await expect(config.validate(artifacts)).rejects.toThrow(
+          Boom.badRequest(
+            `Unrecognized token issuer: ${defraIdMockOidcWellKnownResponse.issuer}`
+          )
+        )
+      })
+
+      test('Entra ID tokens still work when Defra ID flag is off', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: entraIdMockOidcWellKnownResponse.issuer,
+              aud: mockEntraClientId,
+              oid: 'contact-123',
+              email: 'user@example.com'
+            }
+          }
+        }
+
+        const result = await config.validate(artifacts)
+
+        expect(result).toEqual({
+          isValid: true,
+          credentials: {
+            id: 'contact-123',
+            email: 'user@example.com',
+            issuer: entraIdMockOidcWellKnownResponse.issuer,
+            scope: [ROLES.serviceMaintainer]
+          }
+        })
+      })
+    })
+
+    describe('unrecognized issuer still throws error', () => {
+      test('does not call getEntraUserRoles for unrecognized issuer', async () => {
+        const config = getJwtStrategyConfig(mockOidcConfigs)
+
+        const artifacts = {
+          decoded: {
+            payload: {
+              iss: 'https://unknown-issuer.example.com',
+              aud: 'some-client-id',
+              id: 'contact-123',
+              email: 'user@example.com'
+            }
+          }
+        }
+
+        try {
+          await config.validate(artifacts)
+        } catch {
+          // Expected to throw
+        }
+
+        expect(mockGetEntraUserRoles).not.toHaveBeenCalled()
       })
     })
   })

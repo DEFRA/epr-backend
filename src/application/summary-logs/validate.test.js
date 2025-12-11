@@ -18,6 +18,7 @@ const RECEIVED_LOADS_HEADERS = [
   'ROW_ID',
   'DATE_RECEIVED_FOR_REPROCESSING',
   'EWC_CODE',
+  'DESCRIPTION_OF_WASTE_RECEIVED',
   'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
   'GROSS_WEIGHT',
   'TARE_WEIGHT',
@@ -42,16 +43,17 @@ const buildReceivedLoadRow = (overrides = {}) => ({
   ROW_ID: 10000,
   DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
   EWC_CODE: '03 03 08',
+  DESCRIPTION_OF_WASTE_RECEIVED: 'Glass - pre-sorted',
   WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE: 'No',
   GROSS_WEIGHT: 1000,
   TARE_WEIGHT: 100,
   PALLET_WEIGHT: 50,
   NET_WEIGHT: 850,
   BAILING_WIRE_PROTOCOL: 'Yes',
-  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'WEIGHT',
+  HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)',
   WEIGHT_OF_NON_TARGET_MATERIALS: 50,
   RECYCLABLE_PROPORTION_PERCENTAGE: 0.85,
-  TONNAGE_RECEIVED_FOR_RECYCLING: 850,
+  TONNAGE_RECEIVED_FOR_RECYCLING: 678.98, // (850-50)*0.9985*0.85 with bailing wire
   ...overrides
 })
 
@@ -64,7 +66,11 @@ const buildReceivedLoadsTable = ({
 } = {}) => ({
   location: { sheet: 'Received', row: 7, column: 'B' },
   headers,
-  rows: rows.map((row) => (Array.isArray(row) ? row : rowToArray(row)))
+  // Row 7 is the header row, so data rows start at row 8
+  rows: rows.map((row, index) => ({
+    rowNumber: 8 + index,
+    values: Array.isArray(row) ? row : rowToArray(row)
+  }))
 })
 
 const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
@@ -527,15 +533,15 @@ describe('SummaryLogsValidator', () => {
       expect(hasDataSyntaxErrors).toBe(false)
     })
 
-    it('Level 1 and Level 2 pass, Level 3 (data syntax) runs and finds errors', async () => {
-      // Valid meta, but invalid data (row-level errors, not fatal)
+    it('Level 1 and Level 2 pass, Level 3 (data syntax) runs and finds fatal errors', async () => {
+      // Valid meta, but invalid data (row-level errors, fatal since EWC_CODE is in fatalFields)
       summaryLogExtractor.extract.mockResolvedValue(
         buildExtractedData({
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
                 buildReceivedLoadRow({
-                  EWC_CODE: 'bad-code' // Non-fatal row error (EWC_CODE is not in fatalFields)
+                  EWC_CODE: 'bad-code' // Fatal row error (EWC_CODE is in fatalFields)
                 })
               ]
             })
@@ -553,8 +559,8 @@ describe('SummaryLogsValidator', () => {
       // Should have data syntax errors
       expect(updateCall.validation.issues.length).toBeGreaterThan(0)
 
-      // Should be VALIDATED (data syntax errors are not fatal)
-      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      // Should be INVALID (EWC_CODE validation errors are fatal)
+      expect(updateCall.status).toBe(SUMMARY_LOG_STATUS.INVALID)
     })
 
     it('Level 3 fatal (missing required header) stops Level 4 (transform/data business) from running', async () => {
@@ -597,10 +603,10 @@ describe('SummaryLogsValidator', () => {
           data: {
             RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
               rows: [
-                buildReceivedLoadRow(), // Valid row (ROW_ID: 10000)
+                buildReceivedLoadRow(), // Valid row (ROW_ID: 10000) - included
                 buildReceivedLoadRow({
                   ROW_ID: 10001, // Valid ROW_ID
-                  EWC_CODE: 'bad-code' // Non-fatal row-level error
+                  EWC_CODE: null // Missing required field - excluded from waste balance
                 })
               ]
             })
@@ -613,6 +619,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       // Note: ROW_ID values come directly from test data as numbers
+      // Row 10001 is excluded because EWC_CODE is missing (fieldsRequiredForWasteBalance)
       expect(updateCall.loads).toEqual({
         added: {
           valid: { count: 1, rowIds: [10000] },
