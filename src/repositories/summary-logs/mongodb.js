@@ -75,13 +75,6 @@ const findById = (db) => async (id) => {
   return { version, summaryLog }
 }
 
-const hasSubmittingLog = (db) => async (organisationId, registrationId) => {
-  /** @type {any} */
-  const filter = { organisationId, registrationId, status: 'submitting' }
-  const doc = await db.collection(COLLECTION_NAME).findOne(filter)
-  return doc !== null
-}
-
 const supersedePendingLogs =
   (db) => async (organisationId, registrationId, excludeId) => {
     /** @type {any} */
@@ -91,10 +84,23 @@ const supersedePendingLogs =
       registrationId,
       status: { $in: ['preprocessing', 'validating', 'validated'] }
     }
-    const result = await db.collection(COLLECTION_NAME).updateMany(filter, {
-      $set: { status: 'superseded' },
-      $inc: { version: 1 }
-    })
+
+    // Find all matching documents with their versions
+    const docs = await db.collection(COLLECTION_NAME).find(filter).toArray()
+
+    if (docs.length === 0) {
+      return 0
+    }
+
+    // Build bulk operations with optimistic concurrency (version checking)
+    const bulkOps = docs.map((doc) => ({
+      updateOne: {
+        filter: { _id: doc._id, version: doc.version },
+        update: { $set: { status: 'superseded' }, $inc: { version: 1 } }
+      }
+    }))
+
+    const result = await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
     return result.modifiedCount
   }
 
@@ -106,6 +112,5 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   insert: insert(db),
   update: update(db, logger),
   findById: findById(db),
-  hasSubmittingLog: hasSubmittingLog(db),
   supersedePendingLogs: supersedePendingLogs(db)
 })

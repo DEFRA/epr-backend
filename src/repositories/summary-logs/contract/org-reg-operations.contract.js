@@ -16,73 +16,6 @@ export const testOrgRegOperations = (it) => {
       repository = summaryLogsRepository
     })
 
-    describe('hasSubmittingLog', () => {
-      it('returns false when no logs exist for org/reg', async () => {
-        const { organisationId, registrationId } = generateOrgReg()
-        const result = await repository.hasSubmittingLog(
-          organisationId,
-          registrationId
-        )
-        expect(result).toBe(false)
-      })
-
-      it('returns false when only non-submitting logs exist', async () => {
-        const id = `summary-${randomUUID()}`
-        const { organisationId, registrationId } = generateOrgReg()
-        await repository.insert(
-          id,
-          buildSummaryLog({
-            status: 'validated',
-            organisationId,
-            registrationId
-          })
-        )
-
-        const result = await repository.hasSubmittingLog(
-          organisationId,
-          registrationId
-        )
-        expect(result).toBe(false)
-      })
-
-      it('returns true when a submitting log exists for org/reg', async () => {
-        const id = `summary-${randomUUID()}`
-        const { organisationId, registrationId } = generateOrgReg()
-        await repository.insert(
-          id,
-          buildSummaryLog({
-            status: 'submitting',
-            organisationId,
-            registrationId
-          })
-        )
-
-        const result = await repository.hasSubmittingLog(
-          organisationId,
-          registrationId
-        )
-        expect(result).toBe(true)
-      })
-
-      it('returns false for different org/reg even if submitting exists elsewhere', async () => {
-        const id = `summary-${randomUUID()}`
-        const { organisationId, registrationId } = generateOrgReg()
-        const { organisationId: otherOrgId, registrationId: otherRegId } =
-          generateOrgReg()
-        await repository.insert(
-          id,
-          buildSummaryLog({
-            status: 'submitting',
-            organisationId,
-            registrationId
-          })
-        )
-
-        const result = await repository.hasSubmittingLog(otherOrgId, otherRegId)
-        expect(result).toBe(false)
-      })
-    })
-
     describe('supersedePendingLogs', () => {
       it('returns 0 when no logs exist for org/reg', async () => {
         const { organisationId, registrationId } = generateOrgReg()
@@ -339,6 +272,122 @@ export const testOrgRegOperations = (it) => {
 
         const afterSupersede = await waitForVersion(repository, id, 2)
         expect(afterSupersede.version).toBe(2)
+      })
+
+      describe('optimistic concurrency', () => {
+        it('uses version checking when superseding documents', async () => {
+          const id = `summary-${randomUUID()}`
+          const idToKeep = `summary-${randomUUID()}`
+          const { organisationId, registrationId } = generateOrgReg()
+
+          // Insert a pending log
+          await repository.insert(
+            id,
+            buildSummaryLog({
+              status: 'validated',
+              organisationId,
+              registrationId
+            })
+          )
+
+          // Get the initial version
+          const initial = await repository.findById(id)
+          expect(initial.version).toBe(1)
+
+          // Supersede it
+          const result = await repository.supersedePendingLogs(
+            organisationId,
+            registrationId,
+            idToKeep
+          )
+
+          expect(result).toBe(1)
+
+          // Verify it was superseded with version increment
+          const final = await waitForVersion(repository, id, 2)
+          expect(final.summaryLog.status).toBe('superseded')
+          expect(final.version).toBe(2)
+        })
+
+        it('handles concurrent supersede operations without error', async () => {
+          const id1 = `summary-${randomUUID()}`
+          const id2 = `summary-${randomUUID()}`
+          const idToKeepA = `summary-${randomUUID()}`
+          const idToKeepB = `summary-${randomUUID()}`
+          const { organisationId, registrationId } = generateOrgReg()
+
+          // Insert two pending logs
+          await repository.insert(
+            id1,
+            buildSummaryLog({
+              status: 'validated',
+              organisationId,
+              registrationId
+            })
+          )
+          await repository.insert(
+            id2,
+            buildSummaryLog({
+              status: 'validated',
+              organisationId,
+              registrationId
+            })
+          )
+
+          // Run two supersede operations concurrently
+          const results = await Promise.all([
+            repository.supersedePendingLogs(
+              organisationId,
+              registrationId,
+              idToKeepA
+            ),
+            repository.supersedePendingLogs(
+              organisationId,
+              registrationId,
+              idToKeepB
+            )
+          ])
+
+          // Total superseded should be 2 (each doc superseded exactly once)
+          expect(results[0] + results[1]).toBe(2)
+
+          // Both should end up superseded
+          const final1 = await waitForVersion(repository, id1, 2)
+          const final2 = await waitForVersion(repository, id2, 2)
+          expect(final1.summaryLog.status).toBe('superseded')
+          expect(final2.summaryLog.status).toBe('superseded')
+        })
+
+        it('returns 0 when all target documents were modified by others', async () => {
+          const id = `summary-${randomUUID()}`
+          const idToKeep = `summary-${randomUUID()}`
+          const { organisationId, registrationId } = generateOrgReg()
+
+          await repository.insert(
+            id,
+            buildSummaryLog({
+              status: 'validated',
+              organisationId,
+              registrationId
+            })
+          )
+
+          // Modify to a non-pending status
+          const doc = await repository.findById(id)
+          await repository.update(id, doc.version, {
+            ...doc.summaryLog,
+            status: 'submitting'
+          })
+
+          // Supersede should find nothing to supersede
+          const result = await repository.supersedePendingLogs(
+            organisationId,
+            registrationId,
+            idToKeep
+          )
+
+          expect(result).toBe(0)
+        })
       })
     })
   })

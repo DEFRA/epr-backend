@@ -125,7 +125,7 @@ const formatS3Info = (upload) =>
     : ''
 
 /**
- * Check for submission blocks and supersede pending logs if upload completed successfully.
+ * Supersede pending logs if upload completed successfully.
  * @param {{summaryLogsRepository: SummaryLogsRepository, logger: TypedLogger, organisationId: string, registrationId: string, summaryLogId: string, newStatus: string}} params
  */
 const handlePendingLogsOnValidation = async ({
@@ -138,15 +138,6 @@ const handlePendingLogsOnValidation = async ({
 }) => {
   if (newStatus !== SUMMARY_LOG_STATUS.VALIDATING) {
     return
-  }
-
-  // Block if a submission is in progress
-  const hasSubmitting = await summaryLogsRepository.hasSubmittingLog(
-    organisationId,
-    registrationId
-  )
-  if (hasSubmitting) {
-    throw Boom.conflict('A submission is in progress. Please wait.')
   }
 
   // Supersede any pending logs for this org/reg

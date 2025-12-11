@@ -82,43 +82,46 @@ const findById = (staleCache) => async (id) => {
   return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
 
-const hasSubmittingLog =
-  (storage) => async (organisationId, registrationId) => {
-    for (const doc of storage.values()) {
-      if (
-        doc.summaryLog.organisationId === organisationId &&
-        doc.summaryLog.registrationId === registrationId &&
-        doc.summaryLog.status === 'submitting'
-      ) {
-        return true
-      }
-    }
-    return false
-  }
-
 const PENDING_STATUSES = new Set(['preprocessing', 'validating', 'validated'])
 
 const supersedePendingLogs =
   (storage, staleCache) =>
   async (organisationId, registrationId, excludeId) => {
-    let count = 0
-    for (const [id, doc] of storage) {
+    // Find from staleCache (replica) to provide weaker consistency guarantees
+    // This mirrors MongoDB behaviour where reads may see stale data
+    const docsToSupersede = []
+    for (const [id, doc] of staleCache) {
       if (
         id !== excludeId &&
         doc.summaryLog.organisationId === organisationId &&
         doc.summaryLog.registrationId === registrationId &&
         PENDING_STATUSES.has(doc.summaryLog.status)
       ) {
+        docsToSupersede.push({ id, version: doc.version })
+      }
+    }
+
+    if (docsToSupersede.length === 0) {
+      return 0
+    }
+
+    // Update with optimistic concurrency (version checking)
+    let count = 0
+    for (const { id, version } of docsToSupersede) {
+      const current = storage.get(id)
+      // Only update if version hasn't changed (optimistic concurrency)
+      if (current && current.version === version) {
         storage.set(id, {
-          version: doc.version + 1,
+          version: current.version + 1,
           summaryLog: structuredClone({
-            ...doc.summaryLog,
+            ...current.summaryLog,
             status: 'superseded'
           })
         })
         count++
       }
     }
+
     if (count > 0) {
       scheduleStaleCacheSync(storage, staleCache)
     }
@@ -140,7 +143,6 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
-    hasSubmittingLog: hasSubmittingLog(storage),
     supersedePendingLogs: supersedePendingLogs(storage, staleCache)
   })
 }

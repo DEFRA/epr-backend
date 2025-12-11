@@ -103,7 +103,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       update: vi.fn().mockResolvedValue(undefined),
       findById: vi.fn().mockResolvedValue(null),
       updateStatus: vi.fn().mockResolvedValue(undefined),
-      hasSubmittingLog: vi.fn().mockResolvedValue(false),
       supersedePendingLogs: vi.fn().mockResolvedValue(0)
     }
 
@@ -747,51 +746,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
     })
-  })
-
-  describe('submission blocking', () => {
-    it('returns 409 when a submission is in progress for the org/reg', async () => {
-      summaryLogsRepository.hasSubmittingLog.mockResolvedValue(true)
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toContain('submission is in progress')
-    })
-
-    it.each([
-      { status: UPLOAD_STATUS.REJECTED, numberOfRejectedFiles: 1 },
-      { status: UPLOAD_STATUS.PENDING, numberOfRejectedFiles: undefined }
-    ])(
-      'does not check for submitting logs when upload is $status',
-      async ({ status, numberOfRejectedFiles }) => {
-        payload.form.summaryLogUpload.fileStatus = status
-        delete payload.form.summaryLogUpload.s3Bucket
-        delete payload.form.summaryLogUpload.s3Key
-        if (numberOfRejectedFiles) {
-          payload.numberOfRejectedFiles = numberOfRejectedFiles
-        }
-
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-          payload,
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
-        })
-
-        expect(summaryLogsRepository.hasSubmittingLog).not.toHaveBeenCalled()
-      }
-    )
   })
 
   describe('superseding pending logs', () => {
