@@ -84,43 +84,70 @@ const findById = (staleCache) => async (id) => {
 
 const PENDING_STATUSES = new Set(['preprocessing', 'validating', 'validated'])
 
+const isPendingLogForOrgReg = (
+  id,
+  doc,
+  organisationId,
+  registrationId,
+  excludeId
+) =>
+  id !== excludeId &&
+  doc.summaryLog.organisationId === organisationId &&
+  doc.summaryLog.registrationId === registrationId &&
+  PENDING_STATUSES.has(doc.summaryLog.status)
+
+const findPendingLogs = (
+  staleCache,
+  organisationId,
+  registrationId,
+  excludeId
+) => {
+  const docs = []
+  for (const [id, doc] of staleCache) {
+    if (
+      isPendingLogForOrgReg(id, doc, organisationId, registrationId, excludeId)
+    ) {
+      docs.push({ id, version: doc.version })
+    }
+  }
+  return docs
+}
+
+const applySupersede = (storage, docsToSupersede) => {
+  let count = 0
+  for (const { id, version } of docsToSupersede) {
+    const current = storage.get(id)
+    if (current && current.version === version) {
+      storage.set(id, {
+        version: current.version + 1,
+        summaryLog: structuredClone({
+          ...current.summaryLog,
+          status: 'superseded'
+        })
+      })
+      count++
+    }
+  }
+  return count
+}
+
 const supersedePendingLogs =
   (storage, staleCache) =>
   async (organisationId, registrationId, excludeId) => {
     // Find from staleCache (replica) to provide weaker consistency guarantees
-    // This mirrors MongoDB behaviour where reads may see stale data
-    const docsToSupersede = []
-    for (const [id, doc] of staleCache) {
-      if (
-        id !== excludeId &&
-        doc.summaryLog.organisationId === organisationId &&
-        doc.summaryLog.registrationId === registrationId &&
-        PENDING_STATUSES.has(doc.summaryLog.status)
-      ) {
-        docsToSupersede.push({ id, version: doc.version })
-      }
-    }
+    const docsToSupersede = findPendingLogs(
+      staleCache,
+      organisationId,
+      registrationId,
+      excludeId
+    )
 
     if (docsToSupersede.length === 0) {
       return 0
     }
 
     // Update with optimistic concurrency (version checking)
-    let count = 0
-    for (const { id, version } of docsToSupersede) {
-      const current = storage.get(id)
-      // Only update if version hasn't changed (optimistic concurrency)
-      if (current && current.version === version) {
-        storage.set(id, {
-          version: current.version + 1,
-          summaryLog: structuredClone({
-            ...current.summaryLog,
-            status: 'superseded'
-          })
-        })
-        count++
-      }
-    }
+    const count = applySupersede(storage, docsToSupersede)
 
     if (count > 0) {
       scheduleStaleCacheSync(storage, staleCache)
