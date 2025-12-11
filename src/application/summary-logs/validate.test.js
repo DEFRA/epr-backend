@@ -66,7 +66,11 @@ const buildReceivedLoadsTable = ({
 } = {}) => ({
   location: { sheet: 'Received', row: 7, column: 'B' },
   headers,
-  rows: rows.map((row) => (Array.isArray(row) ? row : rowToArray(row)))
+  // Row 7 is the header row, so data rows start at row 8
+  rows: rows.map((row, index) => ({
+    rowNumber: 8 + index,
+    values: Array.isArray(row) ? row : rowToArray(row)
+  }))
 })
 
 const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
