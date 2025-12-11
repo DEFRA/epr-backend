@@ -701,15 +701,13 @@ describe('syncFromSummaryLog', () => {
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).toHaveBeenCalledWith(
-      'org-1',
-      'acc-1',
       expect.arrayContaining([
         expect.objectContaining({
           rowId: 'row-123',
           type: WASTE_RECORD_TYPE.RECEIVED
         })
       ]),
-      organisationsRepository
+      'acc-1'
     )
   })
 })

@@ -84,12 +84,8 @@ const prepareRowsForTransformation = (parsedData) => {
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
-  const {
-    extractor,
-    wasteRecordRepository,
-    wasteBalancesRepository,
-    organisationsRepository
-  } = dependencies
+  const { extractor, wasteRecordRepository, wasteBalancesRepository } =
+    dependencies
 
   /**
    * @param {Object} summaryLog - The summary log to process
@@ -168,10 +164,8 @@ export const syncFromSummaryLog = (dependencies) => {
     // 8. Update waste balances if accreditation ID exists
     if (summaryLog.accreditationId) {
       await wasteBalancesRepository.updateWasteBalanceTransactions(
-        summaryLog.organisationId,
-        summaryLog.accreditationId,
         wasteRecords.map((r) => r.record),
-        organisationsRepository
+        summaryLog.accreditationId
       )
     }
   }

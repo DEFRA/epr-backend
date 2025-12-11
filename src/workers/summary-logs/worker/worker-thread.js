@@ -113,7 +113,9 @@ export default async function summaryLogsWorkerThread(command) {
       })
       const organisationsRepository = createOrganisationsRepository(db)()
       const wasteRecordsRepository = createWasteRecordsRepository(db)()
-      const wasteBalancesRepository = createWasteBalancesRepository(db)()
+      const wasteBalancesRepository = createWasteBalancesRepository(db, {
+        organisationsRepository
+      })()
 
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,
