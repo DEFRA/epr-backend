@@ -30,8 +30,15 @@ describe('SENT_ON_LOADS', () => {
       )
     })
 
-    it('has fieldsRequiredForWasteBalance array', () => {
+    it('has fieldsRequiredForWasteBalance array with all fields', () => {
       expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
+      expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
+      expect(schema.fieldsRequiredForWasteBalance).toContain(
+        'DATE_LOAD_LEFT_SITE'
+      )
+      expect(schema.fieldsRequiredForWasteBalance).toContain(
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
+      )
     })
   })
 

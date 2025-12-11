@@ -121,6 +121,7 @@ describe('Submission and placeholder tests', () => {
         'ROW_ID',
         'DATE_RECEIVED_FOR_REPROCESSING',
         'EWC_CODE',
+        'DESCRIPTION_OF_WASTE_RECEIVED',
         'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
         'GROSS_WEIGHT',
         'TARE_WEIGHT',
@@ -142,31 +143,33 @@ describe('Submission and placeholder tests', () => {
               1001,
               '2025-01-15T00:00:00.000Z',
               '03 03 08',
+              'Glass - pre-sorted',
               'No',
               1000,
               100,
               50,
               850,
               'Yes',
-              'WEIGHT',
+              'Actual weight (100%)',
               50,
               0.85,
-              850
+              678.98 // (850-50)*0.9985*0.85
             ],
             [
               1002,
               '2025-01-16T00:00:00.000Z',
               '03 03 08',
+              'Glass - pre-sorted',
               'No',
               900,
               90,
               45,
               765,
               'Yes',
-              'WEIGHT',
+              'Actual weight (100%)',
               45,
               0.85,
-              765
+              611.028 // (765-45)*0.9985*0.85
             ]
           ]
         }
@@ -181,46 +184,49 @@ describe('Submission and placeholder tests', () => {
               1001,
               '2025-01-15T00:00:00.000Z',
               '03 03 08',
+              'Glass - pre-sorted',
               'No',
               1000,
               100,
               50,
               850,
               'Yes',
-              'WEIGHT',
+              'Actual weight (100%)',
               50,
               0.85,
-              850
+              678.98 // (850-50)*0.9985*0.85 unchanged
             ],
             [
               1002,
               '2025-01-16T00:00:00.000Z',
               '03 03 08',
+              'Glass - pre-sorted',
               'No',
               950,
               95,
               48,
               807,
               'Yes',
-              'WEIGHT',
+              'Actual weight (100%)',
               48,
               0.85,
-              807
+              644.182275 // (807-48)*0.9985*0.85 adjusted
             ],
             [
               1003,
               '2025-01-17T00:00:00.000Z',
               '03 03 08',
+              'Glass - pre-sorted',
               'No',
               800,
               80,
               40,
               680,
               'Yes',
-              'WEIGHT',
+              'Actual weight (100%)',
               40,
               0.85,
-              680
+              543.184 // (680-40)*0.9985*0.85 new
             ]
           ]
         }
@@ -447,73 +453,82 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('B6').value = 'ROW_ID'
       worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
       worksheet.getCell('D6').value = 'EWC_CODE'
-      worksheet.getCell('E6').value = 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      worksheet.getCell('F6').value = 'GROSS_WEIGHT'
-      worksheet.getCell('G6').value = 'TARE_WEIGHT'
-      worksheet.getCell('H6').value = 'PALLET_WEIGHT'
-      worksheet.getCell('I6').value = 'NET_WEIGHT'
-      worksheet.getCell('J6').value = 'BAILING_WIRE_PROTOCOL'
-      worksheet.getCell('K6').value =
+      worksheet.getCell('E6').value = 'DESCRIPTION_OF_WASTE_RECEIVED'
+      worksheet.getCell('F6').value = 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+      worksheet.getCell('G6').value = 'GROSS_WEIGHT'
+      worksheet.getCell('H6').value = 'TARE_WEIGHT'
+      worksheet.getCell('I6').value = 'PALLET_WEIGHT'
+      worksheet.getCell('J6').value = 'NET_WEIGHT'
+      worksheet.getCell('K6').value = 'BAILING_WIRE_PROTOCOL'
+      worksheet.getCell('L6').value =
         'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      worksheet.getCell('L6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
-      worksheet.getCell('M6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
-      worksheet.getCell('N6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
+      worksheet.getCell('M6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
+      worksheet.getCell('N6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
+      worksheet.getCell('O6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
 
+      // Row 7: valid row
       worksheet.getCell('B7').value = 10000000001
       worksheet.getCell('C7').value = new Date('2025-05-28')
       worksheet.getCell('D7').value = '03 03 08'
-      worksheet.getCell('E7').value = 'No'
-      worksheet.getCell('F7').value = 1000
-      worksheet.getCell('G7').value = 100
-      worksheet.getCell('H7').value = 50
-      worksheet.getCell('I7').value = 850
-      worksheet.getCell('J7').value = 'Yes'
-      worksheet.getCell('K7').value = 'WEIGHT'
-      worksheet.getCell('L7').value = 50
-      worksheet.getCell('M7').value = 0.85
-      worksheet.getCell('N7').value = 850
+      worksheet.getCell('E7').value = 'Glass - pre-sorted'
+      worksheet.getCell('F7').value = 'No'
+      worksheet.getCell('G7').value = 1000
+      worksheet.getCell('H7').value = 100
+      worksheet.getCell('I7').value = 50
+      worksheet.getCell('J7').value = 850
+      worksheet.getCell('K7').value = 'Yes'
+      worksheet.getCell('L7').value = 'Actual weight (100%)'
+      worksheet.getCell('M7').value = 50
+      worksheet.getCell('N7').value = 0.85
+      worksheet.getCell('O7').value = 678.98 // (850-50)*0.9985*0.85
 
+      // Row 8: placeholder row (partially filled with placeholders)
       worksheet.getCell('B8').value = 10000000002
       worksheet.getCell('C8').value = new Date('2025-05-29')
       worksheet.getCell('D8').value = 'Choose option'
       worksheet.getCell('E8').value = 'Choose option'
-      worksheet.getCell('F8').value = 800
-      worksheet.getCell('G8').value = 80
-      worksheet.getCell('H8').value = 40
-      worksheet.getCell('I8').value = 680
-      worksheet.getCell('J8').value = 'Choose option'
+      worksheet.getCell('F8').value = 'Choose option'
+      worksheet.getCell('G8').value = 800
+      worksheet.getCell('H8').value = 80
+      worksheet.getCell('I8').value = 40
+      worksheet.getCell('J8').value = 680
       worksheet.getCell('K8').value = 'Choose option'
-      worksheet.getCell('L8').value = 40
-      worksheet.getCell('M8').value = 0.9
-      worksheet.getCell('N8').value = 680
+      worksheet.getCell('L8').value = 'Choose option'
+      worksheet.getCell('M8').value = 40
+      worksheet.getCell('N8').value = 0.9
+      worksheet.getCell('O8').value = 680
 
+      // Row 9: all placeholders/null (should terminate data section)
       worksheet.getCell('B9').value = null
       worksheet.getCell('C9').value = null
       worksheet.getCell('D9').value = 'Choose option'
       worksheet.getCell('E9').value = 'Choose option'
-      worksheet.getCell('F9').value = null
+      worksheet.getCell('F9').value = 'Choose option'
       worksheet.getCell('G9').value = null
       worksheet.getCell('H9').value = null
       worksheet.getCell('I9').value = null
-      worksheet.getCell('J9').value = 'Choose option'
+      worksheet.getCell('J9').value = null
       worksheet.getCell('K9').value = 'Choose option'
-      worksheet.getCell('L9').value = null
+      worksheet.getCell('L9').value = 'Choose option'
       worksheet.getCell('M9').value = null
       worksheet.getCell('N9').value = null
+      worksheet.getCell('O9').value = null
 
+      // Row 10: another valid row after terminator row (should be excluded)
       worksheet.getCell('B10').value = 99999999999
       worksheet.getCell('C10').value = new Date('2025-12-31')
       worksheet.getCell('D10').value = '03 03 08'
-      worksheet.getCell('E10').value = 'No'
-      worksheet.getCell('F10').value = 999
-      worksheet.getCell('G10').value = 99
-      worksheet.getCell('H10').value = 9
-      worksheet.getCell('I10').value = 891
-      worksheet.getCell('J10').value = 'No'
-      worksheet.getCell('K10').value = 'WEIGHT'
-      worksheet.getCell('L10').value = 50
-      worksheet.getCell('M10').value = 0.5
-      worksheet.getCell('N10').value = 445
+      worksheet.getCell('E10').value = 'Glass - pre-sorted'
+      worksheet.getCell('F10').value = 'No'
+      worksheet.getCell('G10').value = 999
+      worksheet.getCell('H10').value = 99
+      worksheet.getCell('I10').value = 9
+      worksheet.getCell('J10').value = 891
+      worksheet.getCell('K10').value = 'No'
+      worksheet.getCell('L10').value = 'Actual weight (100%)'
+      worksheet.getCell('M10').value = 50
+      worksheet.getCell('N10').value = 0.5
+      worksheet.getCell('O10').value = 420.5 // (891-50)*1*0.5 no bailing wire
 
       return workbook.xlsx.writeBuffer()
     }
