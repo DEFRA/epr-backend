@@ -29,15 +29,3 @@ export const YES_NO_VALUES = Object.freeze({
   YES: 'Yes',
   NO: 'No'
 })
-
-/**
- * Per-table ROW_ID minimum values
- *
- * Different tables have different ROW_ID starting offsets to ensure
- * ROW_ID values do not overlap across any table in any spreadsheet.
- */
-export const ROW_ID_MINIMUMS = Object.freeze({
-  RECEIVED_LOADS_FOR_REPROCESSING: 1000,
-  REPROCESSED_LOADS: 3000,
-  SENT_ON_LOADS: 4999
-})

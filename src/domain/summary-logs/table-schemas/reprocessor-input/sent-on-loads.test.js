@@ -56,8 +56,8 @@ describe('SENT_ON_LOADS', () => {
     })
 
     describe('ROW_ID validation', () => {
-      it('accepts valid ROW_ID at minimum (4999)', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 4999 })
+      it('accepts valid ROW_ID at minimum (5000)', () => {
+        const { error } = validationSchema.validate({ ROW_ID: 5000 })
         expect(error).toBeUndefined()
       })
 
@@ -67,13 +67,13 @@ describe('SENT_ON_LOADS', () => {
       })
 
       it('rejects ROW_ID below minimum', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 4998 })
+        const { error } = validationSchema.validate({ ROW_ID: 4999 })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 4999')
+        expect(error.details[0].message).toBe('must be at least 5000')
       })
 
       it('rejects non-integer ROW_ID', () => {
-        const { error } = validationSchema.validate({ ROW_ID: 4999.5 })
+        const { error } = validationSchema.validate({ ROW_ID: 5000.5 })
         expect(error).toBeDefined()
       })
     })
@@ -159,7 +159,7 @@ describe('SENT_ON_LOADS', () => {
     describe('multiple field validation', () => {
       it('reports all errors when multiple fields invalid', () => {
         const { error } = validationSchema.validate({
-          ROW_ID: 4998,
+          ROW_ID: 4999,
           DATE_LOAD_LEFT_SITE: 'not-a-date',
           TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: -1
         })

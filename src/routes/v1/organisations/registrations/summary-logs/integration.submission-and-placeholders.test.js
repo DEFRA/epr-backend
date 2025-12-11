@@ -121,7 +121,7 @@ describe('Submission and placeholder tests', () => {
         'ROW_ID',
         'DATE_RECEIVED_FOR_REPROCESSING',
         'EWC_CODE',
-        'DESCRIPTION_OF_WASTE_RECEIVED',
+        'DESCRIPTION_WASTE',
         'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
         'GROSS_WEIGHT',
         'TARE_WEIGHT',
@@ -468,7 +468,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('B6').value = 'ROW_ID'
       worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
       worksheet.getCell('D6').value = 'EWC_CODE'
-      worksheet.getCell('E6').value = 'DESCRIPTION_OF_WASTE_RECEIVED'
+      worksheet.getCell('E6').value = 'DESCRIPTION_WASTE'
       worksheet.getCell('F6').value = 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
       worksheet.getCell('G6').value = 'GROSS_WEIGHT'
       worksheet.getCell('H6').value = 'TARE_WEIGHT'
