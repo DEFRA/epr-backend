@@ -11,6 +11,7 @@ import Boom from '@hapi/boom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
+import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 // Mock config
 const mockConfigGet = vi.fn()
@@ -29,10 +30,10 @@ vi.mock('./get-entra-user-roles.js', () => ({
 }))
 
 // Mock getUsersOrganisationInfo
-const mockGetUsersOrganisationInfo = vi.fn()
+const mockGetOrgMatchingUsersToken = vi.fn()
 
 vi.mock('./get-users-org-info.js', () => ({
-  getUsersOrganisationInfo: (...args) => mockGetUsersOrganisationInfo(...args)
+  getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
 }))
 
 describe('#getJwtStrategyConfig', () => {
@@ -449,10 +450,7 @@ describe('#getJwtStrategyConfig', () => {
         const testOrgId =
           userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
 
-        mockGetUsersOrganisationInfo.mockResolvedValue({
-          linkedEprOrg: testOrgId,
-          userOrgs: []
-        })
+        mockGetOrgMatchingUsersToken.mockResolvedValue(testOrgId)
 
         const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
