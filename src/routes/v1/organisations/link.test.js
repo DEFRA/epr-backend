@@ -10,6 +10,7 @@ import {
   USER_PRESENT_IN_ORG1_EMAIL,
   VALID_TOKEN_CONTACT_ID
 } from '#vite/helpers/create-defra-id-test-tokens.js'
+import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
@@ -151,54 +152,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       describe('when the request succeeds', async () => {
         let response
         let org
-        let originalOrgId
-        const INITIAL_VERSION = 1
         let finalOrgVersion
 
         beforeAll(async () => {
-          org = buildOrganisation()
-          originalOrgId = org.id
-
-          await organisationsRepository.insert(org)
-
-          const now = new Date()
-          const oneYearFromNow = new Date(
-            now.getFullYear() + 1,
-            now.getMonth(),
-            now.getDate()
-          )
-
-          // Only approve the first accreditation (which is already linked to the first registration)
-          const approvedAccreditations = [
-            {
-              ...org.accreditations[0],
-              status: STATUS.APPROVED,
-              accreditationNumber:
-                org.accreditations[0].accreditationNumber || 'ACC1',
-              validFrom: now,
-              validTo: oneYearFromNow
-            }
-          ]
-
-          const approvedRegistrations = [
-            Object.assign({}, org.registrations[0], {
-              status: STATUS.APPROVED,
-              cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
-              registrationNumber: 'REG1',
-              validFrom: now,
-              validTo: oneYearFromNow
-            })
-          ]
-
-          await organisationsRepository.update(org.id, INITIAL_VERSION, {
-            status: STATUS.APPROVED,
-            accreditations: approvedAccreditations,
-            registrations: approvedRegistrations
-          })
-
-          // TODO: For some reason, without this request tests fail
-          await organisationsRepository.findById(org.id, INITIAL_VERSION + 1)
-
+          org = await buildApprovedOrg(organisationsRepository)
           response = await server.inject({
             method: 'POST',
             url: `/v1/organisations/${org.id}/link`,
@@ -206,10 +163,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               Authorization: `Bearer ${validToken}`
             }
           })
-          finalOrgVersion = await organisationsRepository.findById(
-            originalOrgId,
-            2
-          )
+
+          finalOrgVersion = await organisationsRepository.findById(org.id, 2)
         })
 
         it('returns 200 status code', async () => {

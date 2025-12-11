@@ -16,6 +16,8 @@ export const VALID_TOKEN_RELATIONSHIPS = [
   `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
 ]
 
+export const FIXTURE_ORG_1_ID = org1.id
+
 // Generate key pair once at module load time
 // @ts-ignore
 const keyPair = generateKeyPairSync('rsa', {

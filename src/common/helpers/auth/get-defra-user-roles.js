@@ -5,7 +5,7 @@ import {
   isOrganisationsDiscoveryReq,
   getDefraTokenSummary
 } from './roles/helpers.js'
-import { getUsersOrganisationInfo } from './get-users-org-info.js'
+import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -20,9 +20,6 @@ import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
 
-  console.log(
-    '\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- 0'
-  )
   if (!email) {
     return []
   }
@@ -46,14 +43,12 @@ export async function getDefraUserRoles(tokenPayload, request) {
     return [ROLES.inquirer]
   }
 
-  const { linkedEprOrg } = await getUsersOrganisationInfo(
+  console.log('--------------------------------------------------- ')
+  const linkedEprOrg = await getOrgMatchingUsersToken(
     tokenPayload,
     organisationsRepository
   )
 
-  console.log(
-    '\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- 1'
-  )
   console.log('linkedEprOrg', linkedEprOrg)
 
   if (!linkedEprOrg) {
@@ -67,9 +62,11 @@ export async function getDefraUserRoles(tokenPayload, request) {
   // Adds the user to the organisation if they are not already present
   const roles = await getRolesForOrganisationAccess(
     request,
-    linkedEprOrg,
+    linkedEprOrg.id,
     tokenPayload
   )
+
+  console.log('roles', roles)
 
   return roles
 }
