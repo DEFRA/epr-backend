@@ -1,4 +1,3 @@
-import { createEmptyLoadValidity } from '#application/summary-logs/classify-loads.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
@@ -52,6 +51,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'ROW_ID',
                     'DATE_RECEIVED_FOR_REPROCESSING',
                     'EWC_CODE',
+                    'DESCRIPTION_OF_WASTE_RECEIVED',
                     'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
                     'GROSS_WEIGHT',
                     'TARE_WEIGHT',
@@ -68,16 +68,17 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                       999,
                       'invalid-date',
                       'bad-ewc-code',
+                      'Glass - pre-sorted',
                       'No',
                       1000,
                       100,
                       50,
                       850,
                       'Yes',
-                      'WEIGHT',
+                      'INVALID_METHOD', // Invalid HOW_DID_YOU value - causes fatal error
                       50,
                       0.85,
-                      850
+                      678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
                     ]
                   ]
                 }
@@ -142,38 +143,47 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           )
         })
 
-        it('should persist both fatal and error severity issues', async () => {
+        it('should persist all issues as fatal severity (all fields now in fatalFields)', async () => {
           const { summaryLog } =
             await summaryLogsRepository.findById(summaryLogId)
 
           expect(summaryLog.validation).toBeDefined()
-          expect(summaryLog.validation.issues.length).toBeGreaterThan(1)
+          // Now 4 fatal errors: ROW_ID, DATE_RECEIVED, EWC_CODE, HOW_DID_YOU_CALCULATE
+          expect(summaryLog.validation.issues).toHaveLength(4)
 
           const fatalErrors = summaryLog.validation.issues.filter(
             (i) => i.severity === 'fatal'
           )
-          expect(fatalErrors).toHaveLength(2)
+          expect(fatalErrors).toHaveLength(4)
           const fatalHeaders = fatalErrors.map(
             (e) => e.context.location?.header
           )
           expect(fatalHeaders).toContain('ROW_ID')
           expect(fatalHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+          expect(fatalHeaders).toContain('EWC_CODE')
+          expect(fatalHeaders).toContain(
+            'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+          )
 
+          // No non-fatal errors since all fields are in fatalFields
           const errors = summaryLog.validation.issues.filter(
             (i) => i.severity === 'error'
           )
-          expect(errors).toHaveLength(1)
-          expect(errors[0].context.location?.header).toBe('EWC_CODE')
+          expect(errors).toHaveLength(0)
         })
 
         it('should return fatal failures in HTTP response', () => {
           const payload = JSON.parse(response.payload)
-          expect(payload.validation.failures).toHaveLength(2)
+          expect(payload.validation.failures).toHaveLength(4)
           const failureHeaders = payload.validation.failures.map(
-            (f) => f.location.header
+            (f) => f.location?.header
           )
           expect(failureHeaders).toContain('ROW_ID')
           expect(failureHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+          expect(failureHeaders).toContain('EWC_CODE')
+          expect(failureHeaders).toContain(
+            'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+          )
         })
 
         it('should return empty concerns in HTTP response', () => {
@@ -183,7 +193,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       })
     })
 
-    describe('with invalid cell values (non-fatal errors)', () => {
+    describe('with invalid cell values (fatal errors in data)', () => {
       const summaryLogId = 'summary-data-syntax'
       const fileId = 'file-data-invalid'
       const filename = 'invalid-data.xlsx'
@@ -206,6 +216,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'ROW_ID',
                     'DATE_RECEIVED_FOR_REPROCESSING',
                     'EWC_CODE',
+                    'DESCRIPTION_OF_WASTE_RECEIVED',
                     'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
                     'GROSS_WEIGHT',
                     'TARE_WEIGHT',
@@ -222,31 +233,33 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                       1000,
                       '2025-05-28T00:00:00.000Z',
                       '03 03 08',
+                      'Glass - pre-sorted',
                       'No',
                       1000,
                       100,
                       50,
                       850,
                       'Yes',
-                      'WEIGHT',
+                      'Actual weight (100%)',
                       50,
                       0.85,
-                      850
+                      678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
                     ],
                     [
                       1001,
                       '2025-05-29T00:00:00.000Z',
-                      'bad-code',
+                      'bad-code', // Invalid EWC code - now causes fatal error
+                      'Glass - pre-sorted',
                       'No',
                       1000,
                       100,
                       50,
                       850,
                       'Yes',
-                      'WEIGHT',
+                      'Actual weight (100%)',
                       50,
                       0.85,
-                      850
+                      678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
                     ]
                   ]
                 }
@@ -301,23 +314,18 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           expect(response.statusCode).toBe(200)
         })
 
-        it('should return validated status (not invalid) because data errors are not fatal', () => {
+        it('should return invalid status because EWC_CODE validation errors are now fatal', () => {
           const payload = JSON.parse(response.payload)
           expect(payload).toMatchObject({
-            status: SUMMARY_LOG_STATUS.VALIDATED
+            status: SUMMARY_LOG_STATUS.INVALID
           })
+          // Fatal errors return failures array, not concerns
           expect(payload.validation).toBeDefined()
-          expect(payload.validation.concerns).toBeDefined()
-          expect(
-            payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
-          ).toBeDefined()
-          expect(
-            payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
-              .length
-          ).toBeGreaterThan(0)
+          expect(payload.validation.failures).toBeDefined()
+          expect(payload.validation.failures.length).toBeGreaterThan(0)
         })
 
-        it('should persist data validation errors with row context', async () => {
+        it('should persist data validation errors with row context and fatal severity', async () => {
           const { summaryLog } =
             await summaryLogsRepository.findById(summaryLogId)
 
@@ -335,71 +343,44 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           )
           expect(errorFields).toContain('EWC_CODE')
 
+          // EWC_CODE is now in fatalFields so severity is 'fatal'
           expect(
-            summaryLog.validation.issues.every((i) => i.severity === 'error')
+            summaryLog.validation.issues.every((i) => i.severity === 'fatal')
           ).toBe(true)
         })
 
-        it('should return issues in HTTP response format matching ADR 0020', () => {
+        it('should return fatal failures in HTTP response format', () => {
           const payload = JSON.parse(response.payload)
 
-          expect(
-            payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING
-          ).toBeDefined()
-          expect(
-            payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.sheet
-          ).toBe('Received')
-          expect(
-            payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows
-          ).toHaveLength(1)
+          // Fatal errors appear in failures array
+          expect(payload.validation.failures).toBeDefined()
+          expect(payload.validation.failures.length).toBeGreaterThan(0)
 
-          const rowWithIssues =
-            payload.validation.concerns.RECEIVED_LOADS_FOR_REPROCESSING.rows[0]
-          expect(rowWithIssues.row).toBe(9)
-          expect(rowWithIssues.issues).toHaveLength(1)
-
-          const ewcIssue = rowWithIssues.issues.find(
-            (issue) => issue.header === 'EWC_CODE'
+          const ewcFailure = payload.validation.failures.find(
+            (failure) => failure.location?.header === 'EWC_CODE'
           )
-          expect(ewcIssue).toMatchObject({
-            type: 'error',
+          expect(ewcFailure).toMatchObject({
             code: expect.any(String),
-            header: 'EWC_CODE',
-            column: 'D',
+            location: {
+              header: 'EWC_CODE',
+              column: 'D',
+              row: 9
+            },
             actual: 'bad-code'
           })
-
-          rowWithIssues.issues.forEach((issue) => {
-            expect(issue).toHaveProperty('type')
-            expect(issue).toHaveProperty('code')
-            expect(issue).toHaveProperty('header')
-            expect(issue).toHaveProperty('column')
-          })
         })
 
-        it('should return rowsWithIssues calculated on-the-fly in HTTP response', () => {
+        it('should return empty concerns in HTTP response since all errors are fatal', () => {
           const payload = JSON.parse(response.payload)
-
-          const rowsWithIssues = Object.values(
-            payload.validation.concerns
-          ).reduce((total, table) => total + table.rows.length, 0)
-
-          expect(rowsWithIssues).toBe(1)
+          // When status is INVALID, concerns should be empty
+          expect(payload.validation.concerns).toEqual({})
         })
 
-        it('should return loads with rowIds classifying loads as added/valid/invalid', () => {
+        it('should not return loads when validation fails with fatal data error', () => {
           const payload = JSON.parse(response.payload)
 
-          expect(payload.loads).toEqual({
-            added: {
-              valid: { count: 1, rowIds: [1000] },
-              invalid: { count: 1, rowIds: [1001] },
-              included: { count: 1, rowIds: [1000] },
-              excluded: { count: 1, rowIds: [1001] }
-            },
-            unchanged: createEmptyLoadValidity(),
-            adjusted: createEmptyLoadValidity()
-          })
+          // Fatal errors prevent load classification
+          expect(payload.loads).toBeUndefined()
         })
       })
     })

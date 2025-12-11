@@ -14,14 +14,12 @@ export const MESSAGES = Object.freeze({
   MUST_BE_AT_MOST_1: 'must be at most 1',
   MUST_BE_LESS_THAN_ONE: 'must be less than 1',
   MUST_BE_AT_MOST_1000: 'must be at most 1000',
-  MUST_BE_YES_OR_NO: 'must be Yes or No'
-})
-
-/**
- * Common regex patterns for field validation
- */
-export const PATTERNS = Object.freeze({
-  EWC_CODE: /^\d{2} \d{2} \d{2}\*?$/
+  MUST_BE_YES_OR_NO: 'must be Yes or No',
+  MUST_BE_VALID_EWC_CODE: 'must be a valid EWC code from the allowed list',
+  MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD:
+    'must be a valid recyclable proportion calculation method',
+  MUST_BE_VALID_WASTE_DESCRIPTION:
+    'must be a valid waste description from the allowed list'
 })
 
 /**

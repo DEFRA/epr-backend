@@ -64,5 +64,9 @@ export const SENT_ON_LOADS = {
   /**
    * VAL011: Fields required for Waste Balance calculation
    */
-  fieldsRequiredForWasteBalance: []
+  fieldsRequiredForWasteBalance: [
+    FIELDS.ROW_ID,
+    FIELDS.DATE_LOAD_LEFT_SITE,
+    FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+  ]
 }

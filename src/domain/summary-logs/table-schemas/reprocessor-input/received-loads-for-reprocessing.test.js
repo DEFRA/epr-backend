@@ -13,6 +13,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(schema.requiredHeaders).toContain('ROW_ID')
       expect(schema.requiredHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
       expect(schema.requiredHeaders).toContain('EWC_CODE')
+      expect(schema.requiredHeaders).toContain('DESCRIPTION_OF_WASTE_RECEIVED')
       expect(schema.requiredHeaders).toContain('GROSS_WEIGHT')
       expect(schema.requiredHeaders).toContain('TARE_WEIGHT')
       expect(schema.requiredHeaders).toContain('PALLET_WEIGHT')
@@ -45,16 +46,22 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(Array.isArray(schema.fatalFields)).toBe(true)
       expect(schema.fatalFields).toContain('ROW_ID')
       expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+      expect(schema.fatalFields).toContain('EWC_CODE')
+      expect(schema.fatalFields).toContain('DESCRIPTION_OF_WASTE_RECEIVED')
+      expect(schema.fatalFields).toContain(
+        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+      )
       expect(schema.fatalFields).toContain('GROSS_WEIGHT')
       expect(schema.fatalFields).toContain('TARE_WEIGHT')
       expect(schema.fatalFields).toContain('PALLET_WEIGHT')
       expect(schema.fatalFields).toContain('NET_WEIGHT')
       expect(schema.fatalFields).toContain('BAILING_WIRE_PROTOCOL')
+      expect(schema.fatalFields).toContain(
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+      )
       expect(schema.fatalFields).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
       expect(schema.fatalFields).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-      expect(schema.fatalFields).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
+      expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
     })
 
     it('has fieldsRequiredForWasteBalance array with validated fields', () => {
@@ -62,6 +69,10 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
       expect(schema.fieldsRequiredForWasteBalance).toContain(
         'DATE_RECEIVED_FOR_REPROCESSING'
+      )
+      expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
+      expect(schema.fieldsRequiredForWasteBalance).toContain(
+        'DESCRIPTION_OF_WASTE_RECEIVED'
       )
       expect(schema.fieldsRequiredForWasteBalance).toContain(
         'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
@@ -74,10 +85,16 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         'BAILING_WIRE_PROTOCOL'
       )
       expect(schema.fieldsRequiredForWasteBalance).toContain(
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+      )
+      expect(schema.fieldsRequiredForWasteBalance).toContain(
         'WEIGHT_OF_NON_TARGET_MATERIALS'
       )
       expect(schema.fieldsRequiredForWasteBalance).toContain(
         'RECYCLABLE_PROPORTION_PERCENTAGE'
+      )
+      expect(schema.fieldsRequiredForWasteBalance).toContain(
+        'TONNAGE_RECEIVED_FOR_RECYCLING'
       )
     })
   })
@@ -143,20 +160,120 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('EWC_CODE validation', () => {
-      it('accepts valid EWC code', () => {
+      it('accepts valid EWC code from allowed list', () => {
         const { error } = validationSchema.validate({ EWC_CODE: '03 03 08' })
         expect(error).toBeUndefined()
       })
 
-      it('accepts valid EWC code with asterisk suffix', () => {
+      it('accepts valid EWC code with asterisk suffix from allowed list', () => {
         const { error } = validationSchema.validate({ EWC_CODE: '01 03 04*' })
         expect(error).toBeUndefined()
+      })
+
+      it('accepts other valid EWC codes from allowed list', () => {
+        // Test a sample of valid codes from different categories
+        const validCodes = ['15 01 01', '15 01 02', '20 01 01', '19 12 07']
+        for (const code of validCodes) {
+          const { error } = validationSchema.validate({ EWC_CODE: code })
+          expect(error).toBeUndefined()
+        }
       })
 
       it('rejects invalid EWC code format', () => {
         const { error } = validationSchema.validate({ EWC_CODE: '030308' })
         expect(error).toBeDefined()
-        expect(error.details[0].message).toContain('must be in format')
+        expect(error.details[0].message).toBe(
+          'must be a valid EWC code from the allowed list'
+        )
+      })
+
+      it('rejects EWC code not in allowed list', () => {
+        // Valid format but not in the allowed EWC codes list
+        const { error } = validationSchema.validate({ EWC_CODE: '99 99 99' })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid EWC code from the allowed list'
+        )
+      })
+
+      it('rejects non-string EWC code', () => {
+        const { error } = validationSchema.validate({ EWC_CODE: 123456 })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid EWC code from the allowed list'
+        )
+      })
+    })
+
+    describe('DESCRIPTION_OF_WASTE_RECEIVED validation', () => {
+      it('accepts valid waste description from allowed list', () => {
+        const { error } = validationSchema.validate({
+          DESCRIPTION_OF_WASTE_RECEIVED: 'Aluminium - other'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts waste description with percentage value', () => {
+        const { error } = validationSchema.validate({
+          DESCRIPTION_OF_WASTE_RECEIVED:
+            'Aluminium - AAIG aluminium cans and associated packaging (97.5%)'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts waste description with special characters', () => {
+        // Note: This uses en-dash (–) not hyphen (-)
+        const { error } = validationSchema.validate({
+          DESCRIPTION_OF_WASTE_RECEIVED:
+            'Steel – AAIG steel cans and associated packaging, grade 6E (97.5%)'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts various valid waste descriptions from allowed list', () => {
+        const validDescriptions = [
+          'Glass - pre-sorted',
+          'Paper - other',
+          'Plastic - PET bottles',
+          'Wood - grade A',
+          'Fibre-based composite - cups'
+        ]
+        for (const description of validDescriptions) {
+          const { error } = validationSchema.validate({
+            DESCRIPTION_OF_WASTE_RECEIVED: description
+          })
+          expect(error).toBeUndefined()
+        }
+      })
+
+      it('rejects invalid waste description', () => {
+        const { error } = validationSchema.validate({
+          DESCRIPTION_OF_WASTE_RECEIVED: 'Invalid waste type'
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid waste description from the allowed list'
+        )
+      })
+
+      it('rejects waste description not in allowed list', () => {
+        const { error } = validationSchema.validate({
+          DESCRIPTION_OF_WASTE_RECEIVED: 'Copper - scrap'
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid waste description from the allowed list'
+        )
+      })
+
+      it('rejects non-string waste description', () => {
+        const { error } = validationSchema.validate({
+          DESCRIPTION_OF_WASTE_RECEIVED: 12345
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid waste description from the allowed list'
+        )
       })
     })
 
@@ -423,6 +540,76 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
     })
 
+    describe('HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION validation', () => {
+      it('accepts "AAIG percentage"', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'AAIG percentage'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts "Actual weight (100%)"', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Actual weight (100%)'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts "National protocol percentage"', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
+            'National protocol percentage'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts "S&I plan agreed methodology"', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
+            'S&I plan agreed methodology'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts "S&I plan agreed site-specific protocol percentage"', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION:
+            'S&I plan agreed site-specific protocol percentage'
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('rejects invalid method', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'Some other method'
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid recyclable proportion calculation method'
+        )
+      })
+
+      it('rejects case variations', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 'aaig percentage'
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid recyclable proportion calculation method'
+        )
+      })
+
+      it('rejects non-string', () => {
+        const { error } = validationSchema.validate({
+          HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION: 123
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must be a valid recyclable proportion calculation method'
+        )
+      })
+    })
+
     describe('WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE validation', () => {
       it('accepts "Yes"', () => {
         const { error } = validationSchema.validate({
@@ -570,6 +757,99 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         const { error } = validationSchema.validate({
           ROW_ID: 1000,
           EWC_CODE: '03 03 08'
+        })
+        expect(error).toBeUndefined()
+      })
+    })
+
+    describe('TONNAGE_RECEIVED_FOR_RECYCLING calculation validation', () => {
+      it('accepts correct calculation without bailing wire ((100 - 10) * 0.8 = 72)', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          BAILING_WIRE_PROTOCOL: 'No',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts correct calculation with bailing wire deduction ((100 - 10) * 0.9985 * 0.8 = 71.892)', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          BAILING_WIRE_PROTOCOL: 'Yes',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 71.892
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('accepts 100% recyclable with bailing wire ((100 - 0) * 0.9985 * 1 = 99.85)', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+          BAILING_WIRE_PROTOCOL: 'Yes',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 1,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 99.85
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('rejects incorrect calculation', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          BAILING_WIRE_PROTOCOL: 'No',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 80 // Should be 72
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
+        )
+      })
+
+      it('rejects calculation without bailing wire deduction when protocol is Yes', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          BAILING_WIRE_PROTOCOL: 'Yes',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 72 // Wrong - should be 71.892
+        })
+        expect(error).toBeDefined()
+        expect(error.details[0].message).toBe(
+          'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
+        )
+      })
+
+      it('skips calculation check when TONNAGE_RECEIVED_FOR_RECYCLING is missing', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          BAILING_WIRE_PROTOCOL: 'No',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('skips calculation check when NET_WEIGHT is missing', () => {
+        const { error } = validationSchema.validate({
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          BAILING_WIRE_PROTOCOL: 'No',
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        })
+        expect(error).toBeUndefined()
+      })
+
+      it('skips calculation check when BAILING_WIRE_PROTOCOL is missing', () => {
+        const { error } = validationSchema.validate({
+          NET_WEIGHT: 100,
+          WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+          RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+          TONNAGE_RECEIVED_FOR_RECYCLING: 72
         })
         expect(error).toBeUndefined()
       })
