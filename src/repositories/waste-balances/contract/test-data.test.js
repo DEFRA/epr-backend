@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildWasteBalance } from './test-data.js'
+import { buildWasteBalance, buildWasteRecord } from './test-data.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -142,5 +142,59 @@ describe('buildWasteBalance', () => {
     const balance = buildWasteBalance({ availableAmount: 0 })
 
     expect(balance.availableAmount).toBe(0)
+  })
+
+  it('generates _id if provided as null', () => {
+    const balance = buildWasteBalance({ _id: null })
+    expect(balance._id).toBeDefined()
+    expect(balance._id).not.toBeNull()
+  })
+
+  it('handles undefined overrides', () => {
+    const balance = buildWasteBalance(undefined)
+    expect(balance._id).toBeDefined()
+  })
+})
+
+describe('buildWasteRecord', () => {
+  it('generates a waste record with default values', () => {
+    const record = buildWasteRecord()
+
+    expect(record.organisationId).toBe('org-1')
+    expect(record.registrationId).toBe('reg-1')
+    expect(record.accreditationId).toBe('acc-1')
+    expect(record.rowId).toBeDefined()
+    expect(record.type).toBe('received')
+    expect(record.data).toBeDefined()
+    expect(record.versions).toHaveLength(1)
+  })
+
+  it('applies custom versions when provided', () => {
+    const customVersions = [
+      {
+        createdAt: '2025-01-01',
+        status: 'created',
+        summaryLog: { id: 'log-1', uri: 's3://...' },
+        data: {}
+      }
+    ]
+    const record = buildWasteRecord({ versions: customVersions })
+
+    expect(record.versions).toEqual(customVersions)
+  })
+
+  it('merges custom data with default data', () => {
+    const customData = { 'Custom Field': 'Value' }
+    const record = buildWasteRecord({ data: customData })
+
+    expect(record.data['Custom Field']).toBe('Value')
+    expect(record.data['Date Received']).toBe('2025-01-20')
+  })
+
+  it('overrides default data fields', () => {
+    const customData = { 'Date Received': '2025-02-01' }
+    const record = buildWasteRecord({ data: customData })
+
+    expect(record.data['Date Received']).toBe('2025-02-01')
   })
 })

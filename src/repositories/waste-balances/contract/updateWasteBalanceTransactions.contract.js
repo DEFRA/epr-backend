@@ -1,0 +1,203 @@
+import { describe, expect } from 'vitest'
+import { buildWasteRecord } from './test-data.js'
+import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+
+export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
+  describe('updateWasteBalanceTransactions', () => {
+    const accreditationId = 'acc-123'
+
+    it('Should throw if accreditation is not found', async ({
+      wasteBalancesRepository,
+      organisationsRepository
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+      organisationsRepository.getAccreditationById.mockResolvedValue(null)
+
+      const record = buildWasteRecord()
+
+      // Act & Assert
+      await expect(
+        repository.updateWasteBalanceTransactions([record], accreditationId)
+      ).rejects.toThrow(`Accreditation not found: ${accreditationId}`)
+    })
+
+    it('Should persist calculated transactions', async ({
+      wasteBalancesRepository,
+      organisationsRepository
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+      const user = { id: 'user-1', name: 'Test User' }
+
+      organisationsRepository.getAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      const record = buildWasteRecord({
+        updatedBy: user,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        }
+      })
+
+      // Act
+      await repository.updateWasteBalanceTransactions([record], accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance).toBeDefined()
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.transactions[0].amount).toBe(10.5)
+      expect(balance.transactions[0].createdBy).toEqual(user)
+      expect(balance.amount).toBe(10.5)
+    })
+
+    it('Should do nothing if wasteRecords is empty', async ({
+      wasteBalancesRepository,
+      organisationsRepository
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+
+      organisationsRepository.getAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      // Act
+      await repository.updateWasteBalanceTransactions([], accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance).toBeNull()
+    })
+
+    it('Should update existing balance', async ({
+      wasteBalancesRepository,
+      organisationsRepository,
+      insertWasteBalance
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+      const user = { id: 'user-1', name: 'Test User' }
+
+      organisationsRepository.getAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      const existingBalance = {
+        accreditationId,
+        organisationId: 'org-1',
+        amount: 5,
+        availableAmount: 5,
+        transactions: [{ id: 'tx-1', amount: 5 }],
+        version: 1,
+        schemaVersion: 1
+      }
+      await insertWasteBalance(existingBalance)
+
+      const record = buildWasteRecord({
+        updatedBy: user,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        }
+      })
+
+      // Act
+      await repository.updateWasteBalanceTransactions([record], accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance.transactions).toHaveLength(2)
+      expect(balance.amount).toBe(15.5)
+    })
+
+    it('Should not update if no transactions generated', async ({
+      wasteBalancesRepository,
+      organisationsRepository
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+
+      organisationsRepository.getAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      // Record outside validity period
+      const record = buildWasteRecord({
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2022-01-01', // Outside valid range
+          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        }
+      })
+
+      // Act
+      await repository.updateWasteBalanceTransactions([record], accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance).toBeNull()
+    })
+
+    it('Should handle missing transactions array in existing balance', async ({
+      wasteBalancesRepository,
+      organisationsRepository,
+      insertWasteBalance
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+      const user = { id: 'user-1', name: 'Test User' }
+
+      organisationsRepository.getAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      const existingBalance = {
+        accreditationId,
+        organisationId: 'org-1',
+        amount: 5,
+        availableAmount: 5,
+        // transactions missing
+        version: 1,
+        schemaVersion: 1
+      }
+      await insertWasteBalance(existingBalance)
+
+      const record = buildWasteRecord({
+        updatedBy: user,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        }
+      })
+
+      // Act
+      await repository.updateWasteBalanceTransactions([record], accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBe(15.5)
+    })
+  })
+}

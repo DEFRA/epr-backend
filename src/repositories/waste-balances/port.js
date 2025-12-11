@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} WasteBalancesRepository
- * @property {(accreditationId: string) => Promise<import('#domain/waste-records/model.js').WasteBalance | null>} findByAccreditationId
+ * @property {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} findByAccreditationId
+ * @property {(wasteRecords: import('#domain/waste-records/model.js').WasteRecord[], accreditationId: string) => Promise<void>} updateWasteBalanceTransactions
  */
 
 /**

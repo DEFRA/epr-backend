@@ -3,6 +3,8 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
+import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
  * Build a minimal waste balance for testing
@@ -39,6 +41,7 @@ export const buildWasteBalance = (overrides = {}) => {
   }
 
   return {
+    ...overrides,
     _id,
     organisationId,
     accreditationId,
@@ -46,7 +49,45 @@ export const buildWasteBalance = (overrides = {}) => {
     version,
     amount,
     availableAmount,
-    transactions: overrides.transactions || [transaction],
-    ...overrides
+    transactions: overrides.transactions || [transaction]
+  }
+}
+
+/**
+ * Build a waste record for testing
+ * @param {Partial<import('#domain/waste-records/model.js').WasteRecord>} [overrides]
+ * @returns {import('#domain/waste-records/model.js').WasteRecord}
+ */
+export const buildWasteRecord = (overrides = {}) => {
+  const { data, versions, ...restOverrides } = overrides
+  const defaultData = {
+    processingType: PROCESSING_TYPES.EXPORTER,
+    [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+    [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+    [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
+    [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
+    'Date Received': '2025-01-20'
+  }
+
+  return {
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    accreditationId: 'acc-1',
+    rowId: randomUUID(),
+    type: 'received',
+    data: {
+      ...defaultData,
+      ...data
+    },
+    versions: versions || [
+      {
+        id: randomUUID(),
+        createdAt: '2025-01-20T10:00:00.000Z',
+        status: 'created',
+        summaryLog: { id: 'log-1', uri: 's3://...' },
+        data: {}
+      }
+    ],
+    ...restOverrides
   }
 }

@@ -1,4 +1,4 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
@@ -14,9 +14,22 @@ const it = mongoIt.extend({
     await client.close()
   },
 
-  wasteBalancesRepository: async ({ mongoClient }, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  organisationsRepository: async ({}, use) => {
+    const mock = {
+      getAccreditationById: vi.fn()
+    }
+    await use(mock)
+  },
+
+  wasteBalancesRepository: async (
+    { mongoClient, organisationsRepository },
+    use
+  ) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = createWasteBalancesRepository(database)
+    const factory = createWasteBalancesRepository(database, {
+      organisationsRepository
+    })
     await use(factory)
   },
 
