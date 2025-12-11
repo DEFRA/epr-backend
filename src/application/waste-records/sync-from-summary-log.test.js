@@ -675,7 +675,12 @@ describe('syncFromSummaryLog', () => {
             'DATE_RECEIVED_FOR_REPROCESSING',
             FIELD_GROSS_WEIGHT
           ],
-          rows: [['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]]
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
         }
       }
     }
