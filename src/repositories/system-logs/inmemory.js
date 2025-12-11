@@ -1,15 +1,12 @@
 /**
- * @returns {import('./port.js').AuditEventsRepositoryFactory}
+ * @returns {import('./port.js').SystemLogsRepositoryFactory}
  */
-export function createAuditEventsRepository() {
+export function createSystemLogsRepository() {
   return () => {
     const storage = []
     return {
-      async insert(auditingPayload) {
-        storage.push({
-          createdAt: new Date(),
-          ...auditingPayload
-        })
+      async insert(systemLog) {
+        storage.push(systemLog)
       },
 
       async findByOrganisationId(organisationId) {

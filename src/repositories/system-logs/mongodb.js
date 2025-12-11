@@ -1,20 +1,14 @@
-import { audit } from '@defra/cdp-auditing'
-
-export const AUDIT_EVENTS_COLLECTION_NAME = 'audit-events'
+export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {import('./port.js').AuditEventsRepositoryFactory}
+ * @returns {import('./port.js').SystemLogsRepositoryFactory}
  */
-export const createAuditEventsRepository = (db) => (logger) => ({
-  async insert(auditingPayload) {
-    audit(auditingPayload)
-
+export const createSystemLogsRepository = (db) => (logger) => ({
+  async insert(systemLog) {
     try {
-      await db.collection(AUDIT_EVENTS_COLLECTION_NAME).insertOne({
-        createdAt: new Date(),
-        ...auditingPayload
-      })
+      await db.collection(SYSTEM_LOGS_COLLECTION_NAME)
+        .insertOne({ ...systemLog }) // spread operator here to avoid mutating systemLog (Mongo DB adds a _id)
     } catch (error) {
       logger.error({
         error,
@@ -25,7 +19,7 @@ export const createAuditEventsRepository = (db) => (logger) => ({
 
   async findByOrganisationId(organisationId) {
     const docs = await db
-      .collection(AUDIT_EVENTS_COLLECTION_NAME)
+      .collection(SYSTEM_LOGS_COLLECTION_NAME)
       .find({ 'context.organisationId': organisationId })
       .toArray()
 
