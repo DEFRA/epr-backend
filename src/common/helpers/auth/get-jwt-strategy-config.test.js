@@ -29,10 +29,10 @@ vi.mock('./get-entra-user-roles.js', () => ({
 }))
 
 // Mock getUsersOrganisationInfo
-const mockGetUsersOrganisationInfo = vi.fn()
+const mockGetOrgMatchingUsersToken = vi.fn()
 
 vi.mock('./get-users-org-info.js', () => ({
-  getUsersOrganisationInfo: (...args) => mockGetUsersOrganisationInfo(...args)
+  getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
 }))
 
 describe('#getJwtStrategyConfig', () => {
@@ -449,10 +449,7 @@ describe('#getJwtStrategyConfig', () => {
         const testOrgId =
           userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
 
-        mockGetUsersOrganisationInfo.mockResolvedValue({
-          linkedEprOrg: testOrgId,
-          userOrgs: []
-        })
+        mockGetOrgMatchingUsersToken.mockResolvedValue(testOrgId)
 
         const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
