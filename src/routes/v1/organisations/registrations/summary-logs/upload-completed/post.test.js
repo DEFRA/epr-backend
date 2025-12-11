@@ -102,7 +102,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       insert: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue(undefined),
       findById: vi.fn().mockResolvedValue(null),
-      updateStatus: vi.fn().mockResolvedValue(undefined)
+      updateStatus: vi.fn().mockResolvedValue(undefined),
+      supersedePendingLogs: vi.fn().mockResolvedValue(0)
     }
 
     summaryLogsWorker = {
@@ -744,6 +745,92 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       })
+    })
+  })
+
+  describe('superseding pending logs', () => {
+    it('supersedes pending logs when upload completes successfully', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+        payload,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(summaryLogsRepository.supersedePendingLogs).toHaveBeenCalledWith(
+        organisationId,
+        registrationId,
+        summaryLogId
+      )
+    })
+
+    it.each([
+      { status: UPLOAD_STATUS.REJECTED, numberOfRejectedFiles: 1 },
+      { status: UPLOAD_STATUS.PENDING, numberOfRejectedFiles: undefined }
+    ])(
+      'does not supersede logs when upload is $status',
+      async ({ status, numberOfRejectedFiles }) => {
+        payload.form.summaryLogUpload.fileStatus = status
+        delete payload.form.summaryLogUpload.s3Bucket
+        delete payload.form.summaryLogUpload.s3Key
+        if (numberOfRejectedFiles) {
+          payload.numberOfRejectedFiles = numberOfRejectedFiles
+        }
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+          payload,
+          headers: {
+            Authorization: `Bearer ${validToken}`
+          }
+        })
+
+        expect(
+          summaryLogsRepository.supersedePendingLogs
+        ).not.toHaveBeenCalled()
+      }
+    )
+
+    it('logs superseded count when logs are superseded', async () => {
+      summaryLogsRepository.supersedePendingLogs.mockResolvedValue(2)
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+        payload,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(server.loggerMocks.info).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('Superseded 2 pending summary logs')
+        })
+      )
+    })
+
+    it('does not log superseded message when no logs were superseded', async () => {
+      summaryLogsRepository.supersedePendingLogs.mockResolvedValue(0)
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+        payload,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      const calls = server.loggerMocks.info.mock.calls
+      const supersededCall = calls.find(
+        (call) =>
+          call[0]?.message && call[0].message.includes('Superseded') === true
+      )
+      expect(supersededCall).toBeUndefined()
     })
   })
 })
