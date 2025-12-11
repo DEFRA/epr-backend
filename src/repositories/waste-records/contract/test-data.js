@@ -100,7 +100,7 @@ export const buildWasteRecord = (overrides = {}) => {
     rowId,
     type,
     data,
-    versions: overrides.versions || [version],
+    versions: [version],
     ...overrides
   }
 }

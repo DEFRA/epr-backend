@@ -54,10 +54,7 @@ describe('validation', () => {
       registrationId: 'reg-1',
       rowId: 'row-1',
       type: WASTE_RECORD_TYPE.RECEIVED,
-      data: {
-        ROW_ID: 'row-1',
-        VALUE: 'test'
-      },
+      data: { ROW_ID: 'row-1', VALUE: 'test' },
       versions: [
         {
           createdAt: '2025-01-15T10:00:00.000Z',
