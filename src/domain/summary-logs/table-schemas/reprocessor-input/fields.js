@@ -4,11 +4,23 @@
  * Single source of truth for field names used throughout schemas in this folder.
  */
 
+/**
+ * ROW_ID minimum values for REPROCESSOR_INPUT tables
+ *
+ * Different tables have different ROW_ID starting offsets to ensure
+ * ROW_ID values do not overlap across any table in the spreadsheet.
+ */
+export const ROW_ID_MINIMUMS = Object.freeze({
+  RECEIVED_LOADS_FOR_REPROCESSING: 1000,
+  REPROCESSED_LOADS: 4000,
+  SENT_ON_LOADS: 5000
+})
+
 export const RECEIVED_LOADS_FIELDS = Object.freeze({
   ROW_ID: 'ROW_ID',
   DATE_RECEIVED_FOR_REPROCESSING: 'DATE_RECEIVED_FOR_REPROCESSING',
   EWC_CODE: 'EWC_CODE',
-  DESCRIPTION_OF_WASTE_RECEIVED: 'DESCRIPTION_OF_WASTE_RECEIVED',
+  DESCRIPTION_WASTE: 'DESCRIPTION_WASTE',
   WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE:
     'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
   GROSS_WEIGHT: 'GROSS_WEIGHT',
