@@ -3,7 +3,8 @@ import { createAuditEventsRepository } from './inmemory.js'
 import { testAuditEventsRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
-  auditEventsRepository: async (_, use) => {
+  // eslint-disable-next-line no-empty-pattern
+  auditEventsRepository: async ({}, use) => {
     const factory = () => createAuditEventsRepository()(null)
     await use(factory)
   }
