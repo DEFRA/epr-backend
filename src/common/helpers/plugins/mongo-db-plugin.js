@@ -12,7 +12,6 @@ import {
   createOrUpdateCollections,
   createSeedData
 } from '../collections/create-update.js'
-import { truncateEprOrganisations } from '#common/helpers/collections/truncate-epr-organisations.js'
 
 export const mongoDbPlugin = {
   plugin: {
@@ -40,12 +39,9 @@ export const mongoDbPlugin = {
       const locker = new LockManager(db.collection('mongo-locks'))
 
       const isProduction = () => config.get('cdpEnvironment') === 'prod'
-      const shouldTruncateEprOrg = () => config.get('truncateEprOrganisations')
 
       await createOrUpdateCollections(db)
       await createIndexes(db)
-
-      await truncateEprOrganisations(db, shouldTruncateEprOrg)
 
       await createSeedData(
         db,
