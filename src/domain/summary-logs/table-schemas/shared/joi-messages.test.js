@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MESSAGES, YES_NO_VALUES, ROW_ID_MINIMUMS } from './joi-messages.js'
+import { MESSAGES, YES_NO_VALUES } from './joi-messages.js'
 
 describe('joi-messages', () => {
   describe('MESSAGES', () => {
@@ -31,17 +31,6 @@ describe('joi-messages', () => {
 
     it('is frozen', () => {
       expect(Object.isFrozen(YES_NO_VALUES)).toBe(true)
-    })
-  })
-
-  describe('ROW_ID_MINIMUMS', () => {
-    it('exports per-table ROW_ID minimums', () => {
-      expect(ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_REPROCESSING).toBe(1000)
-      expect(ROW_ID_MINIMUMS.REPROCESSED_LOADS).toBe(3000)
-    })
-
-    it('is frozen', () => {
-      expect(Object.isFrozen(ROW_ID_MINIMUMS)).toBe(true)
     })
   })
 })
