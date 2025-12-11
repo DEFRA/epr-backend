@@ -1,8 +1,7 @@
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   deduplicateOrganisations,
-  findOrganisationMatches,
   findUserInOrg,
   getCurrentRelationship,
   getDefraTokenSummary,

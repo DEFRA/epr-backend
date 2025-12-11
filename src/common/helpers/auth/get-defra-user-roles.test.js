@@ -2,7 +2,6 @@ import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
 
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { ROLES } from './constants.js'
-import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 const mockIsAuthorisedOrgLinkingReq = vi.fn()
 const mockIsOrganisationsDiscoveryReq = vi.fn()

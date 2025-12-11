@@ -11,7 +11,6 @@ import Boom from '@hapi/boom'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { ROLES } from './constants.js'
 import { getJwtStrategyConfig } from './get-jwt-strategy-config.js'
-import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 
 // Mock config
 const mockConfigGet = vi.fn()

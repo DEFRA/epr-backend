@@ -1,4 +1,3 @@
-import Boom from '@hapi/boom'
 import {
   findOrganisationMatches,
   getDefraTokenSummary
@@ -21,8 +20,6 @@ export async function getOrgMatchingUsersToken(
   tokenPayload,
   organisationsRepository
 ) {
-  const { email, contactId } = tokenPayload
-
   const { defraIdOrgId } = getDefraTokenSummary(tokenPayload)
 
   const linkedEprOrg = await findOrganisationMatches(
