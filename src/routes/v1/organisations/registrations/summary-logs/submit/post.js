@@ -50,7 +50,6 @@ export const summaryLogsSubmit = {
         )
       }
 
-      // Update status to SUBMITTING using optimistic concurrency
       await summaryLogsRepository.update(summaryLogId, version, {
         ...summaryLog,
         status: SUMMARY_LOG_STATUS.SUBMITTING
