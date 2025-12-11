@@ -1,5 +1,4 @@
 import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
-import equal from 'fast-deep-equal'
 import { validateStatusHistory } from './schema/index.js'
 
 /** @import {CollatedUser, Organisation, Status, UserRoles} from '#domain/organisations/model.js' */
@@ -70,62 +69,6 @@ export const mergeSubcollection = (existingItems, updateItems) =>
   updateItems
     ? mergeItemsWithUpdates(existingItems, updateItems)
     : existingItems
-
-const removeNullUndefined = (obj) => {
-  if (Array.isArray(obj)) {
-    return obj.map(removeNullUndefined)
-  }
-
-  if (typeof obj === 'object' && obj !== null) {
-    const cleaned = {}
-    for (const [key, value] of Object.entries(obj)) {
-      if (value !== null && value !== undefined) {
-        cleaned[key] = removeNullUndefined(value)
-      }
-    }
-    return cleaned
-  }
-
-  return obj
-}
-
-const normalizeItem = (item) => {
-  if (!item) {
-    return item
-  }
-  const { status: _, statusHistory: _s, ...rest } = item
-  return rest
-}
-
-export const normalizeForComparison = (org) => {
-  if (!org) {
-    return org
-  }
-
-  const {
-    schemaVersion: _sv,
-    status: _s,
-    statusHistory: _sh,
-    users: _u,
-    version: _v,
-    ...rest
-  } = org
-
-  const normalized = {
-    ...rest,
-    registrations: org.registrations?.map(normalizeItem) ?? [],
-    accreditations: org.accreditations?.map(normalizeItem) ?? []
-  }
-
-  return removeNullUndefined(normalized)
-}
-
-export const hasChanges = (existing, incoming) => {
-  const normalizedExisting = normalizeForComparison(existing)
-  const normalizedIncoming = normalizeForComparison(incoming)
-
-  return !equal(normalizedExisting, normalizedIncoming)
-}
 
 /** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
 
