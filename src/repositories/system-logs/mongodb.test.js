@@ -24,7 +24,6 @@ describe('Mongo DB system logs repository', () => {
     testSystemLogsRepositoryContract(it)
   })
 
-
   it('fails gracefully and logs an error when DB write fails', async () => {
     const mockLogger = {
       info: vi.fn(),

@@ -11,9 +11,7 @@ const it = base.extend({
 })
 
 describe('In memory system logs repository', () => {
-  it('should create repository instance', async ({
-    systemLogsRepository
-  }) => {
+  it('should create repository instance', async ({ systemLogsRepository }) => {
     const repository = systemLogsRepository()
     expect(repository).toBeDefined()
   })

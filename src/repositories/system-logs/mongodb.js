@@ -7,7 +7,8 @@ export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 export const createSystemLogsRepository = (db) => (logger) => ({
   async insert(systemLog) {
     try {
-      await db.collection(SYSTEM_LOGS_COLLECTION_NAME)
+      await db
+        .collection(SYSTEM_LOGS_COLLECTION_NAME)
         .insertOne({ ...systemLog }) // spread operator here to avoid mutating systemLog (Mongo DB adds a _id)
     } catch (error) {
       logger.error({
