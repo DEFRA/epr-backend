@@ -25,8 +25,6 @@ export const getRolesForOrganisationAccess = async (
     return []
   }
 
-  console.log('linkedEprOg', linkedEprOg)
-
   if (organisationId !== linkedEprOg) {
     throw Boom.forbidden('Access denied: organisation mismatch')
   }
