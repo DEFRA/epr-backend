@@ -5,13 +5,11 @@ import {
   isOrganisationsDiscoveryReq,
   getDefraTokenSummary
 } from './roles/helpers.js'
-import { getUsersOrganisationInfo } from './get-users-org-info.js'
+import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
-
-/** @import {Roles} from '#common/helpers/auth/constants.js' */
 
 /**
  * Determines the roles for a Defra ID user based on their token and request context
@@ -45,7 +43,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
     return [ROLES.inquirer]
   }
 
-  const { linkedEprOrg } = await getUsersOrganisationInfo(
+  const linkedEprOrg = await getOrgMatchingUsersToken(
     tokenPayload,
     organisationsRepository
   )
