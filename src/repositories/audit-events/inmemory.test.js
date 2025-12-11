@@ -11,6 +11,13 @@ const it = base.extend({
 })
 
 describe('In memory audit events repository', () => {
+  it('should create repository instance', async ({
+    auditEventsRepository
+  }) => {
+    const repository = auditEventsRepository()
+    expect(repository).toBeDefined()
+  })
+
   describe('audit events repository contract', () => {
     testAuditEventsRepositoryContract(it)
   })
