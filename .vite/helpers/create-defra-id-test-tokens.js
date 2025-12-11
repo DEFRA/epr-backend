@@ -1,20 +1,22 @@
-import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync, randomUUID } from 'crypto'
+import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
 export const VALID_TOKEN_CONTACT_ID = randomUUID()
 export const USER_PRESENT_IN_ORG1_EMAIL = org1.submitterContactDetails.email
 export const USER_ABSENT_IN_ORG1_EMAIL = 'random@email.com'
-export const VALID_TOKEN_CURRENT_RELATIONSHIP_ID = randomUUID()
+export const VALID_TOKEN_CURRENT_RELATIONSHIP = randomUUID()
 export const COMPANY_1_ID = randomUUID()
 export const COMPANY_1_NAME = 'Lost Ark Adventures Ltd'
 const COMPANY_2_ID = randomUUID()
 export const DEFRA_TOKEN_SECOND_RELATIONSHIP_ID = randomUUID()
 export const VALID_TOKEN_RELATIONSHIPS = [
-  `${VALID_TOKEN_CURRENT_RELATIONSHIP_ID}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
+  `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
   `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
 ]
+
+export const FIXTURE_ORG_1_ID = org1.id
 
 // Generate key pair once at module load time
 // @ts-ignore
@@ -51,7 +53,7 @@ export const userPresentInOrg1DefraIdTokenPayload = {
   lastName: 'Doe',
   iss: `https://dcidmtest.b2clogin.com/DCIDMTest.onmicrosoft.com/v2.0`,
   aud: VALID_DEFRA_AUDIENCE,
-  currentRelationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+  currentRelationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP,
   relationships: VALID_TOKEN_RELATIONSHIPS,
   exp: new Date().getTime() / 1000 + 3600,
   iat: new Date().getTime() / 1000,
