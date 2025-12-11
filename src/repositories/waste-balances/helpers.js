@@ -2,6 +2,13 @@ import { validateAccreditationId } from './validation.js'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { randomUUID } from 'node:crypto'
 
+/**
+ * Create a new waste balance object.
+ *
+ * @param {string} accreditationId
+ * @param {string} organisationId
+ * @returns {import('#domain/waste-balances/model.js').WasteBalance}
+ */
 export const createNewWasteBalance = (accreditationId, organisationId) => ({
   _id: randomUUID(),
   accreditationId,
@@ -13,7 +20,17 @@ export const createNewWasteBalance = (accreditationId, organisationId) => ({
   schemaVersion: 1
 })
 
-const findOrCreateWasteBalance = async ({
+/**
+ * Find an existing waste balance or create a new one if allowed.
+ *
+ * @param {Object} params
+ * @param {(id: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
+ * @param {string} params.accreditationId
+ * @param {string} [params.organisationId]
+ * @param {boolean} params.shouldCreate
+ * @returns {Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ */
+export const findOrCreateWasteBalance = async ({
   findBalance,
   accreditationId,
   organisationId,
@@ -50,6 +67,10 @@ export const performUpdateWasteBalanceTransactions = async ({
   findBalance,
   saveBalance
 }) => {
+  if (wasteRecords.length === 0) {
+    return
+  }
+
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
   const { organisationsRepository } = dependencies
@@ -71,6 +92,7 @@ export const performUpdateWasteBalanceTransactions = async ({
     shouldCreate: wasteRecords.length > 0
   })
 
+  /* c8 ignore next 3 */
   if (!wasteBalance) {
     return
   }
