@@ -1,7 +1,7 @@
+import { createPathRegex, PATH_PATTERNS } from '#common/helpers/path-pattern.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 import Boom from '@hapi/boom'
 import { isInitialUser } from './roles/helpers.js'
-import { createPathRegex, PATH_PATTERNS } from '#common/helpers/path-pattern.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -39,7 +39,7 @@ export async function isAuthorisedOrgLinkingReq(request, tokenPayload) {
     throw Boom.notFound('Organisation not found')
   }
 
-  const isInitial = isInitialUser(organisationById, email)
+  const isInitial = isInitialUser(email)(organisationById)
 
   if (!isInitial) {
     throw Boom.forbidden('user is not authorised to link organisation')

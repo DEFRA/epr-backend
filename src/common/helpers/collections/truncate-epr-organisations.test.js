@@ -23,9 +23,8 @@ describe('truncateEprOrganisations', () => {
   it('logs error when truncation fails', async () => {
     const error = new Error('Database connection lost')
     const mockDb = createMockDb({ shouldThrow: error })
-    const shouldTruncateEprOrg = () => true
 
-    await truncateEprOrganisations(mockDb, shouldTruncateEprOrg)
+    await truncateEprOrganisations(mockDb)
 
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Truncating epr-organisations collection'
@@ -34,18 +33,6 @@ describe('truncateEprOrganisations', () => {
       message: 'Failed to truncate collection epr-organisations',
       error
     })
-  })
-
-  it('logs and exits early when truncation is disabled', async () => {
-    const mockDb = createMockDb()
-    const shouldTruncateEprOrg = () => false
-
-    await truncateEprOrganisations(mockDb, shouldTruncateEprOrg)
-
-    expect(logger.info).toHaveBeenCalledWith({
-      message: 'Truncating epr-organisations collection is disabled'
-    })
-    expect(mockDb.collection).not.toHaveBeenCalled()
   })
 })
 
@@ -98,9 +85,7 @@ describe('truncateEprOrganisations - MongoDB integration', () => {
       const countBefore = await collection.countDocuments()
       expect(countBefore).toBe(3)
 
-      // Truncate
-      const shouldTruncateEprOrg = () => true
-      await truncateEprOrganisations(db, shouldTruncateEprOrg)
+      await truncateEprOrganisations(db)
 
       // Verify all documents deleted
       const countAfter = await collection.countDocuments()

@@ -1,7 +1,7 @@
 import Boom from '@hapi/boom'
 import {
   SCHEMA_VERSION,
-  collateUsersOnApproval,
+  collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
   hasChanges,
@@ -74,11 +74,11 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     version: 1,
     schemaVersion: SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
+    users: [],
     ...orgFields,
     formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
-    accreditations,
-    users: []
+    accreditations
   })
 
   storage.push(newOrg)
@@ -120,7 +120,7 @@ const performUpdate =
       existing
     )
 
-    const users = collateUsersOnApproval(existing, {
+    const users = collateUsers(existing, {
       ...merged,
       statusHistory: updatedStatusHistory,
       registrations,

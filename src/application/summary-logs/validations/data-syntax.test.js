@@ -177,11 +177,19 @@ describe('createDataSyntaxValidator', () => {
     for (const [tableName, rowData] of Object.entries(tables)) {
       const rows = Array.isArray(rowData) ? rowData : [rowData]
       const headers = Object.keys(rows[0])
-      const values = rows.map((row) => headers.map((h) => row[h]))
+
+      // Row numbers start after the header row
+      // If location.row is provided, data starts at location.row + 1
+      // Otherwise assume row 1 is header, data starts at row 2
+      const firstDataRow = options.location?.row ? options.location.row + 1 : 2
+      const rowsWithNumbers = rows.map((row, index) => ({
+        rowNumber: firstDataRow + index,
+        values: headers.map((h) => row[h])
+      }))
 
       data[tableName] = {
         headers,
-        rows: values,
+        rows: rowsWithNumbers,
         ...(options.location && { location: options.location })
       }
     }
@@ -226,7 +234,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['NUMBER_FIELD', 'ROW_ID', 'TEXT_FIELD'],
-            rows: [[42, 1000, 'hello']]
+            rows: [{ rowNumber: 2, values: [42, 1000, 'hello'] }]
           }
         }
       }
@@ -242,7 +250,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD', 'EXTRA_FIELD'],
-            rows: [[1000, 'hello', 42, 'extra']]
+            rows: [{ rowNumber: 2, values: [1000, 'hello', 42, 'extra'] }]
           }
         }
       }
@@ -258,7 +266,12 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', null, 'TEXT_FIELD', 'NUMBER_FIELD', null],
-            rows: [[1000, 'ignored', 'hello', 42, 'also ignored']]
+            rows: [
+              {
+                rowNumber: 2,
+                values: [1000, 'ignored', 'hello', 42, 'also ignored']
+              }
+            ]
           }
         }
       }
@@ -279,7 +292,7 @@ describe('createDataSyntaxValidator', () => {
               'NUMBER_FIELD',
               '__EPR_DATA_MARKER'
             ],
-            rows: [[1000, 'hello', 42, 'marker']]
+            rows: [{ rowNumber: 2, values: [1000, 'hello', 42, 'marker'] }]
           }
         }
       }
@@ -297,7 +310,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD'],
-            rows: [[1000, 'hello']]
+            rows: [{ rowNumber: 2, values: [1000, 'hello'] }]
           }
         }
       }
@@ -322,7 +335,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID'],
-            rows: [[1000]]
+            rows: [{ rowNumber: 2, values: [1000] }]
           }
         }
       }
@@ -618,11 +631,11 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
-            rows: [[1000, 'hello', 42]]
+            rows: [{ rowNumber: 2, values: [1000, 'hello', 42] }]
           },
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
-            rows: [['goes']],
+            rows: [{ rowNumber: 6, values: ['goes'] }],
             location: { sheet: 'Sheet1', row: 5, column: 'A' }
           }
         }
@@ -649,12 +662,12 @@ describe('createDataSyntaxValidator', () => {
         data: {
           UNKNOWN_TABLE_1: {
             headers: ['FOO'],
-            rows: [['bar']],
+            rows: [{ rowNumber: 6, values: ['bar'] }],
             location: { sheet: 'Sheet1', row: 5, column: 'A' }
           },
           UNKNOWN_TABLE_2: {
             headers: ['BAZ'],
-            rows: [['qux']],
+            rows: [{ rowNumber: 11, values: ['qux'] }],
             location: { sheet: 'Sheet2', row: 10, column: 'B' }
           }
         }
@@ -683,12 +696,12 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD'],
-            rows: [[1000, 123, 42]], // TEXT_FIELD should be string, not number
+            rows: [{ rowNumber: 3, values: [1000, 123, 42] }], // TEXT_FIELD should be string, not number
             location: { sheet: 'Sheet1', row: 2, column: 'A' }
           },
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
-            rows: [['goes']],
+            rows: [{ rowNumber: 6, values: ['goes'] }],
             location: { sheet: 'Sheet2', row: 5, column: 'A' }
           }
         }
@@ -717,7 +730,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
-            rows: [['goes']],
+            rows: [{ rowNumber: 16, values: ['goes'] }],
             location: { sheet: 'DataSheet', row: 15, column: 'C' }
           }
         }
@@ -740,7 +753,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           UNKNOWN_TABLE: {
             headers: ['ANYTHING'],
-            rows: [['goes']]
+            rows: [{ rowNumber: 2, values: ['goes'] }]
             // No location
           }
         }
@@ -931,7 +944,7 @@ describe('createDataSyntaxValidator', () => {
         data: {
           TEST_TABLE: {
             headers: ['ROW_ID'],
-            rows: [[1000]]
+            rows: [{ rowNumber: 2, values: [1000] }]
           }
         }
       }
