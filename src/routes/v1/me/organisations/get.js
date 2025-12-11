@@ -11,7 +11,6 @@ import { StatusCodes } from 'http-status-codes'
  * @typedef {{
  *   id: string
  *   name: string
- *   relationshipId: string
  * }} DefraOrgSummary
  */
 
@@ -24,9 +23,7 @@ import { StatusCodes } from 'http-status-codes'
  */
 
 /**
- * @typedef {{
- *   id: string
- *   name: string
+ * @typedef {DefraOrgSummary & {
  *   linkedBy: {
  *     email: string
  *     id: string
@@ -47,6 +44,24 @@ export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
 
+/**
+ * Get current Defra ID details from token
+ *
+ * @param {*} auth
+ * @returns {DefraOrgSummary}
+ */
+const getCurrentDetailsFromToken = (auth) => {
+  const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
+
+  // Get the user's current organisation from the token
+  const currentOrgFromToken = orgInfo.find((org) => org.isCurrent)
+
+  return {
+    id: currentOrgFromToken.defraIdOrgId,
+    name: currentOrgFromToken.defraIdOrgName
+  }
+}
+
 export const organisationsLinkedGetAll = {
   method: 'GET',
   path: organisationsLinkedGetAllPath,
@@ -65,24 +80,13 @@ export const organisationsLinkedGetAll = {
 
     const { email } = auth.credentials
 
-    const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
-
-    // Get the user's current organisation from the token
-    const currentOrgFromToken = orgInfo.find((org) => org.isCurrent)
-
-    const current = {
-      id: currentOrgFromToken.defraIdOrgId,
-      name: currentOrgFromToken.defraIdOrgName,
-      relationshipId: currentOrgFromToken.defraIdRelationshipId
-    }
+    const current = getCurrentDetailsFromToken(auth)
 
     const allOrganisations = await organisationsRepository.findAll()
 
     // Get linked organisation details if a link exists
     const linkedOrg = allOrganisations.find(
-      (org) =>
-        org.linkedDefraOrganisation?.orgId ===
-        currentOrgFromToken.defraIdRelationshipId
+      (org) => org.linkedDefraOrganisation?.orgId === current.id
     )
 
     const linked = linkedOrg

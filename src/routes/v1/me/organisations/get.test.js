@@ -7,8 +7,7 @@ import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
   defraIdMockAuthTokens,
-  USER_PRESENT_IN_ORG1_EMAIL,
-  VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+  USER_PRESENT_IN_ORG1_EMAIL
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
@@ -53,7 +52,7 @@ describe('GET /v1/me/organisations', () => {
         }
       ],
       linkedDefraOrganisation: {
-        orgId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+        orgId: COMPANY_1_ID,
         orgName: COMPANY_1_NAME,
         linkedBy: {
           email: userEmail,
@@ -104,11 +103,10 @@ describe('GET /v1/me/organisations', () => {
       organisations: {
         current: {
           id: COMPANY_1_ID,
-          name: COMPANY_1_NAME,
-          relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+          name: COMPANY_1_NAME
         },
         linked: {
-          id: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+          id: COMPANY_1_ID,
           name: COMPANY_1_NAME,
           linkedBy: {
             email: userEmail,
@@ -179,8 +177,7 @@ describe('GET /v1/me/organisations', () => {
 
     expect(result.organisations.current).toEqual({
       id: COMPANY_1_ID,
-      name: COMPANY_1_NAME,
-      relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+      name: COMPANY_1_NAME
     })
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toHaveLength(2)
@@ -212,7 +209,7 @@ describe('GET /v1/me/organisations', () => {
         }
       ],
       linkedDefraOrganisation: {
-        orgId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+        orgId: COMPANY_1_ID,
         orgName: 'Test Company Ltd',
         linkedBy: {
           email: userEmail,
@@ -266,8 +263,7 @@ describe('GET /v1/me/organisations', () => {
 
     expect(result.organisations.current).toEqual({
       id: COMPANY_1_ID,
-      name: COMPANY_1_NAME,
-      relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+      name: COMPANY_1_NAME
     })
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toEqual([])
