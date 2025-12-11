@@ -14,6 +14,19 @@ import { MESSAGES } from './joi-messages.js'
 const DEFAULT_MAX_WEIGHT = 1000
 
 /**
+ * 3-digit ID constraints
+ *
+ * IDs like OSR_ID and INTERIM_SITE_ID must be integers from 100-999.
+ */
+const THREE_DIGIT_ID_MIN = 100
+const THREE_DIGIT_ID_MAX = 999
+
+/**
+ * Default maximum length for alphanumeric string fields
+ */
+const DEFAULT_MAX_STRING_LENGTH = 100
+
+/**
  * Creates a weight field schema (number, min 0, configurable max)
  *
  * @param {number} [max=1000] - Maximum weight value
@@ -57,12 +70,17 @@ export const createDateFieldSchema = () =>
  * @returns {Joi.NumberSchema} Joi number schema
  */
 export const createThreeDigitIdSchema = () =>
-  Joi.number().integer().min(100).max(999).optional().messages({
-    'number.base': MESSAGES.MUST_BE_A_NUMBER,
-    'number.integer': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-    'number.min': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
-    'number.max': MESSAGES.MUST_BE_3_DIGIT_NUMBER
-  })
+  Joi.number()
+    .integer()
+    .min(THREE_DIGIT_ID_MIN)
+    .max(THREE_DIGIT_ID_MAX)
+    .optional()
+    .messages({
+      'number.base': MESSAGES.MUST_BE_A_NUMBER,
+      'number.integer': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
+      'number.min': MESSAGES.MUST_BE_3_DIGIT_NUMBER,
+      'number.max': MESSAGES.MUST_BE_3_DIGIT_NUMBER
+    })
 
 /**
  * Creates a percentage field schema (0-1)
@@ -82,7 +100,9 @@ export const createPercentageFieldSchema = () =>
  * @param {number} [maxLength=100] - Maximum string length
  * @returns {Joi.StringSchema} Joi string schema
  */
-export const createAlphanumericFieldSchema = (maxLength = 100) =>
+export const createAlphanumericFieldSchema = (
+  maxLength = DEFAULT_MAX_STRING_LENGTH
+) =>
   Joi.string()
     .pattern(/^[a-zA-Z0-9]+$/)
     .max(maxLength)
