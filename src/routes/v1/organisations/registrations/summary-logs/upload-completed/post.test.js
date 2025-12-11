@@ -139,9 +139,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     })
 
     await server.initialize()
-    console.log(
-      '\n\n\n\n\n\n\n\n\n\n\n\n--------------------------------------------------- 1'
-    )
     org = await buildActiveOrg(organisationsRepository)
   })
 
@@ -622,7 +619,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
       transitionServer = await createTestServer({
         repositories: {
-          summaryLogsRepository: createInMemorySummaryLogsRepository()
+          summaryLogsRepository: createInMemorySummaryLogsRepository(),
+          organisationsRepository: organisationsRepositoryFactory
         },
         workers: {
           summaryLogsWorker: transitionValidator
@@ -643,7 +641,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-456', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
@@ -654,7 +652,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-456', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
@@ -669,7 +667,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-789', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
@@ -680,7 +678,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createRejectedPayload('file-rejected-789', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
@@ -695,8 +693,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-101'),
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-101', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -706,8 +704,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createCompletePayload('file-complete-101'),
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-101', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -723,8 +721,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createCompletePayload('file-complete-202'),
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-202', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -732,8 +730,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const response = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-202'),
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-202', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -747,8 +745,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createRejectedPayload('file-rejected-505'),
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-505', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
@@ -756,8 +754,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const response = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createCompletePayload('file-complete-505'),
+          url: `/v1/organisations/${org.id}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-505', org.id),
           headers: {
             Authorization: `Bearer ${validToken}`
           }
