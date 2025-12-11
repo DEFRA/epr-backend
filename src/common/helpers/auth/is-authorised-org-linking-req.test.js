@@ -324,22 +324,6 @@ describe('#isAuthorisedOrgLinkingReq', () => {
       expect(result).toBe(true)
     })
 
-    test('handles organisation with no users array', async () => {
-      const mockOrganisation = {
-        id: mockOrganisationId,
-        name: 'Test Org'
-        // users array missing
-      }
-
-      mockOrganisationsRepository.findById.mockResolvedValue(mockOrganisation)
-
-      await expect(
-        isAuthorisedOrgLinkingReq(mockRequest, mockTokenPayload)
-      ).rejects.toThrow(
-        Boom.forbidden('user is not authorised to link organisation')
-      )
-    })
-
     test('handles case-sensitive email matching for initial user check', async () => {
       const mixedCaseEmail = 'User@Example.COM'
       mockTokenPayload.email = mixedCaseEmail

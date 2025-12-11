@@ -201,7 +201,7 @@ export const USER_ROLES = Object.freeze({
  *   statusHistory: StatusHistoryItem[];
  *   submittedToRegulator: RegulatorValue;
  *   submitterContactDetails: User;
- *   users?: CollatedUser[];
+ *   users: CollatedUser[];
  *   version: number;
  *   wasteProcessingTypes: WasteProcessingTypeValue[];
  * }} Organisation
