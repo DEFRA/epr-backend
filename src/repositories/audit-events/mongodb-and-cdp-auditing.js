@@ -6,14 +6,21 @@ export const AUDIT_EVENTS_COLLECTION_NAME = 'audit-events'
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {import('./port.js').AuditEventsRepositoryFactory}
  */
-export const createAuditEventsRepository = (db) => (_logger) => ({
+export const createAuditEventsRepository = (db) => (logger) => ({
   async insert(auditingPayload) {
     audit(auditingPayload)
 
-    // TODO try/catch, on catch, log (CDP auditing _should_ have happened, but could not create system log - capture _something in logs_)
-    await db
-      .collection(AUDIT_EVENTS_COLLECTION_NAME)
-      .insertOne({ ...auditingPayload })
+    try {
+      await db.collection(AUDIT_EVENTS_COLLECTION_NAME).insertOne({
+        createdAt: new Date(),
+        ...auditingPayload
+      })
+    } catch (error) {
+      logger.error({
+        error,
+        message: 'Failed to internally record auditing event'
+      })
+    }
   },
 
   async findByOrganisationId(organisationId) {
@@ -22,6 +29,10 @@ export const createAuditEventsRepository = (db) => (_logger) => ({
       .find({ 'context.organisationId': organisationId })
       .toArray()
 
-    return docs.map((doc) => ({ event: doc.event, context: doc.context }))
+    return docs.map((doc) => ({
+      event: doc.event,
+      context: doc.context,
+      createdAt: doc.createdAt
+    }))
   }
 })

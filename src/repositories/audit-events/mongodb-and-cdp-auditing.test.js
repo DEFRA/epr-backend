@@ -4,6 +4,10 @@ import { createAuditEventsRepository } from './mongodb-and-cdp-auditing.js'
 import { testAuditEventsRepositoryContract } from './port.contract.js'
 import { MongoClient, ObjectId } from 'mongodb'
 
+/**
+ * @import {AuditEventsRepository} from '#repositories/audit-events/port.js'
+ */
+
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
     const client = await MongoClient.connect(db)
@@ -34,14 +38,46 @@ describe('Mongo DB and CDP auditing audit events repository', () => {
   })
 
   it('captures a CDP audit on insert', async ({ auditEventsRepository }) => {
+    /** @type {AuditEventsRepository} */
     const repository = auditEventsRepository()
 
-    const organisationId = new ObjectId()
-
-    const payload = { event: {}, context: { organisationId: organisationId } }
+    const payload = {
+      event: { category: 'c', action: 'a' },
+      context: { organisationId: new ObjectId() }
+    }
 
     await repository.insert(payload)
 
+    expect(mockCdpAuditing).toHaveBeenCalledWith(payload)
+  })
+
+  it('captures a CDP audit on insert even if DB write fails', async () => {
+    const mockLogger = {
+      info: vi.fn(),
+      error: vi.fn(),
+      warn: vi.fn(),
+      debug: vi.fn(),
+      trace: vi.fn(),
+      fatal: vi.fn()
+    }
+
+    const mockDb = {
+      collection: () => {
+        throw new Error('error accessing db')
+      }
+    }
+    const collectionSpy = vi.spyOn(mockDb, 'collection')
+
+    const repository = createAuditEventsRepository(mockDb)(mockLogger)
+
+    const payload = {
+      event: { category: 'c', action: 'a' },
+      context: { organisationId: new ObjectId() }
+    }
+
+    await repository.insert(payload)
+
+    expect(collectionSpy).toHaveBeenCalled()
     expect(mockCdpAuditing).toHaveBeenCalledWith(payload)
   })
 })

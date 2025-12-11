@@ -6,7 +6,10 @@ export function createAuditEventsRepository() {
     const storage = []
     return {
       async insert(auditingPayload) {
-        storage.push(auditingPayload)
+        storage.push({
+          createdAt: new Date(),
+          ...auditingPayload
+        })
       },
 
       async findByOrganisationId(organisationId) {

@@ -4,16 +4,20 @@
  *     category: string
  *     action: string
  *   }
- *   context: {
+ *   context: Object & {
  *     organisationId?: string
  *   }
  * }} AuditingPayload
  */
 
 /**
+ * @typedef { AuditingPayload & { createdAt: Date } } AuditingPayloadWithCreatedAt
+ */
+
+/**
  * @typedef {{
  *   insert: (auditingPayload: AuditingPayload) => Promise<void>
- *   findByOrganisationId: (id: string) => Promise<AuditingPayload[]>
+ *   findByOrganisationId: (id: string) => Promise<AuditingPayloadWithCreatedAt[]>
  * }} AuditEventsRepository
  */
 
