@@ -6,6 +6,7 @@
 /**
  * @typedef {Object} HapiRequest
  * @property {TypedLogger} logger - CDP-compliant typed logger
+ * @property {HapiServer} server - Reference to the server object
  * @property {*} [db] - MongoDB database (added by mongoDb plugin)
  * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
  * @property {*} [payload] - Request payload
@@ -70,6 +71,7 @@
  * @property {*} [mongoClient] - MongoDB client (added by mongoDb plugin)
  * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
  * @property {*} events - Server events emitter
+ * @property {Record<string, *>} app - Server application state
  * @property {Function} decorate - Decorate server/request with additional properties
  * @property {Function} dependency - Declare plugin dependencies
  * @property {Function} start - Start the server

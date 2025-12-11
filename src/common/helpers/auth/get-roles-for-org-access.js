@@ -6,8 +6,6 @@ import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-
 /**
  * Determines roles for organization access based on token and organization status
  * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object

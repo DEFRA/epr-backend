@@ -9,7 +9,7 @@ describe('buildWasteBalance', () => {
   it('generates a waste balance with default values', () => {
     const balance = buildWasteBalance()
 
-    expect(balance._id).toBeDefined()
+    expect(balance.id).toBeDefined()
     expect(balance.organisationId).toBe('org-1')
     expect(balance.accreditationId).toBe('acc-1')
     expect(balance.schemaVersion).toBe(1)
@@ -23,7 +23,7 @@ describe('buildWasteBalance', () => {
     const balance = buildWasteBalance()
 
     const transaction = balance.transactions[0]
-    expect(transaction._id).toBeDefined()
+    expect(transaction.id).toBeDefined()
     expect(transaction.type).toBe(WASTE_BALANCE_TRANSACTION_TYPE.CREDIT)
     expect(transaction.createdAt).toBe('2025-01-15T10:00:00.000Z')
     expect(transaction.createdBy.id).toBe('user-1')
@@ -39,11 +39,11 @@ describe('buildWasteBalance', () => {
     )
   })
 
-  it('applies custom _id when provided', () => {
+  it('applies custom id when provided', () => {
     const customId = 'custom-id-123'
-    const balance = buildWasteBalance({ _id: customId })
+    const balance = buildWasteBalance({ id: customId })
 
-    expect(balance._id).toBe(customId)
+    expect(balance.id).toBe(customId)
   })
 
   it('applies custom organisationId when provided', () => {
@@ -102,10 +102,10 @@ describe('buildWasteBalance', () => {
     expect(balance.transactions).toEqual(customTransactions)
   })
 
-  it('uses nullish coalescing for _id allowing empty string', () => {
-    const balance = buildWasteBalance({ _id: '' })
+  it('uses nullish coalescing for id allowing empty string', () => {
+    const balance = buildWasteBalance({ id: '' })
 
-    expect(balance._id).toBe('')
+    expect(balance.id).toBe('')
   })
 
   it('uses nullish coalescing for organisationId allowing empty string', () => {
@@ -144,15 +144,15 @@ describe('buildWasteBalance', () => {
     expect(balance.availableAmount).toBe(0)
   })
 
-  it('generates _id if provided as null', () => {
-    const balance = buildWasteBalance({ _id: null })
-    expect(balance._id).toBeDefined()
-    expect(balance._id).not.toBeNull()
+  it('generates id if provided as null', () => {
+    const balance = buildWasteBalance({ id: null })
+    expect(balance.id).toBeDefined()
+    expect(balance.id).not.toBeNull()
   })
 
   it('handles undefined overrides', () => {
     const balance = buildWasteBalance(undefined)
-    expect(balance._id).toBeDefined()
+    expect(balance.id).toBeDefined()
   })
 })
 

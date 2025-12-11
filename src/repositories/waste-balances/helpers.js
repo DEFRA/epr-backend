@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto'
  * @returns {import('#domain/waste-balances/model.js').WasteBalance}
  */
 export const createNewWasteBalance = (accreditationId, organisationId) => ({
-  _id: randomUUID(),
+  id: randomUUID(),
   accreditationId,
   organisationId,
   amount: 0,
@@ -56,7 +56,7 @@ export const findOrCreateWasteBalance = async ({
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.accreditationId
  * @param {Object} params.dependencies
- * @param {Object} params.dependencies.organisationsRepository
+ * @param {Object} [params.dependencies.organisationsRepository]
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
  */

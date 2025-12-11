@@ -14,10 +14,9 @@ const performFindByAccreditationId = (db) => async (accreditationId) => {
     return null
   }
 
-  // Map MongoDB document to domain model by removing MongoDB _id from root
-  // but keeping it in nested transactions
+  // Map MongoDB document to domain model
   const { _id, ...domainFields } = doc
-  return structuredClone({ _id: _id.toString(), ...domainFields })
+  return structuredClone({ id: _id.toString(), ...domainFields })
 }
 
 /**
@@ -36,7 +35,9 @@ export const findBalance = (db) => async (id) => {
   }
 
   const { _id, ...domainFields } = doc
-  return structuredClone({ _id: _id.toString(), ...domainFields })
+  return /** @type {import('#domain/waste-balances/model.js').WasteBalance} */ (
+    structuredClone({ id: _id.toString(), ...domainFields })
+  )
 }
 
 /**
@@ -48,7 +49,7 @@ export const findBalance = (db) => async (id) => {
 export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
   await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
     { accreditationId: updatedBalance.accreditationId },
-    {
+    /** @type {*} */ ({
       $set: {
         amount: updatedBalance.amount,
         availableAmount: updatedBalance.availableAmount,
@@ -59,10 +60,10 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
         transactions: { $each: newTransactions }
       },
       $setOnInsert: {
-        _id: updatedBalance._id,
+        _id: updatedBalance.id,
         organisationId: updatedBalance.organisationId
       }
-    },
+    }),
     { upsert: true }
   )
 }

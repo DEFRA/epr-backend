@@ -73,7 +73,7 @@ export const organisationsLinkedGetAll = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
-   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject & { organisations: UserOrganisationsResponse }>}
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository, auth } = request

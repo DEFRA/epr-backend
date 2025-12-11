@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
@@ -125,6 +126,7 @@ const transformTable = (
 
       // Add new version with only changed fields
       const newVersion = {
+        id: randomUUID(),
         createdAt: timestamp,
         status: VERSION_STATUS.UPDATED,
         summaryLog,
@@ -144,6 +146,7 @@ const transformTable = (
 
     // Create new waste record
     const version = {
+      id: randomUUID(),
       createdAt: timestamp,
       status: VERSION_STATUS.CREATED,
       summaryLog,

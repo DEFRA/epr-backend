@@ -12,7 +12,7 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
  * @returns {import('#domain/waste-balances/model.js').WasteBalance}
  */
 export const buildWasteBalance = (overrides = {}) => {
-  const _id = overrides._id ?? randomUUID()
+  const id = overrides.id ?? randomUUID()
   const organisationId = overrides.organisationId ?? 'org-1'
   const accreditationId = overrides.accreditationId ?? 'acc-1'
   const schemaVersion = overrides.schemaVersion ?? 1
@@ -21,11 +21,12 @@ export const buildWasteBalance = (overrides = {}) => {
   const availableAmount = overrides.availableAmount ?? 100
 
   const transaction = {
-    _id: randomUUID(),
+    id: randomUUID(),
     type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
     createdAt: new Date('2025-01-15T10:00:00.000Z').toISOString(),
     createdBy: {
-      id: 'user-1'
+      id: 'user-1',
+      name: 'Test User'
     },
     amount: 100,
     openingAmount: 0,
@@ -35,6 +36,8 @@ export const buildWasteBalance = (overrides = {}) => {
     entities: [
       {
         id: 'waste-record-1',
+        currentVersionId: 'version-1',
+        previousVersionIds: [],
         type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED
       }
     ]
@@ -42,7 +45,7 @@ export const buildWasteBalance = (overrides = {}) => {
 
   return {
     ...overrides,
-    _id,
+    id,
     organisationId,
     accreditationId,
     schemaVersion,

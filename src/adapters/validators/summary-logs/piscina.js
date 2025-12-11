@@ -58,7 +58,7 @@ const pool = new Piscina({
 const activeTimeouts = new Map()
 
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
-/** @typedef {import('#repositories/summary-logs/index.js').SummaryLogsRepository} SummaryLogsRepository */
+/** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 
 /**
  * Marks a summary log as validation_failed if it's still in a processing state.
