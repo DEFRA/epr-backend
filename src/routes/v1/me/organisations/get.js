@@ -1,5 +1,8 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
+import {
+  getOrgDataFromDefraIdToken,
+  isInitialUser
+} from '#common/helpers/auth/roles/helpers.js'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -44,13 +47,6 @@ export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
 
-const isInitialUserInOrg = (contactId, email) => (org) =>
-  org.users?.some(
-    (user) =>
-      (user.contactId === contactId || user.email === email) &&
-      user.isInitialUser
-  )
-
 export const organisationsLinkedGetAll = {
   method: 'GET',
   path: organisationsLinkedGetAllPath,
@@ -67,7 +63,7 @@ export const organisationsLinkedGetAll = {
   handler: async (request, h) => {
     const { organisationsRepository, auth } = request
 
-    const { id: contactId, email } = auth.credentials
+    const { email } = auth.credentials
 
     const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
 
@@ -101,7 +97,7 @@ export const organisationsLinkedGetAll = {
     // Unlinked are all other organisations (excluding the current linked one)
     const unlinked = allOrganisations
       .filter(isNotLinkedOrg(linkedOrg))
-      .filter(isInitialUserInOrg(contactId, email))
+      .filter(isInitialUser(email))
       .map((org) => ({
         id: org.id,
         name: org.companyDetails.name,

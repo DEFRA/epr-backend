@@ -49,8 +49,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ],
       linkedDefraOrganisation: {
@@ -70,8 +69,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ]
     })
@@ -82,8 +80,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Other User',
           email: 'other@example.com',
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ]
     })
@@ -151,8 +148,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ]
     })
@@ -162,8 +158,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ]
     })
@@ -213,8 +208,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ],
       linkedDefraOrganisation: {
@@ -300,8 +294,7 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: true,
-          roles: ['standard_user']
+          roles: ['initial_user', 'standard_user']
         }
       ]
     })
@@ -312,7 +305,6 @@ describe('GET /v1/me/organisations', () => {
         {
           fullName: 'Test User',
           email: userEmail,
-          isInitialUser: false,
           roles: ['standard_user']
         }
       ]
