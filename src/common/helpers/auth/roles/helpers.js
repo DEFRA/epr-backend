@@ -1,10 +1,10 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
-/** @typedef {import('../types.js').DefraIdTokenPayload} DefraIdTokenPayload */
-/** @typedef {import('../types.js').DefraIdRelationship} DefraIdRelationship */
-/** @typedef {import('#formsubmission/types.js').OrganisationUser} OrganisationUser */
+/** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {OrganisationUser} from '#formsubmission/types.js' */
+/** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
 /**
  * Finds a user in the organisation by email
@@ -28,22 +28,26 @@ export function findUserInOrg(organisation, email, contactId) {
 }
 
 /**
- * Checks if a user is the initial user of an organisation
- * @param {Object} organisation - The organisation object
- * @param {string} email - The user's email address
- * @returns {boolean} True if the user is an initial user
+ * Performs a case-insensitive string comparison
+ * see: https://stackoverflow.com/a/2140723
+ *
+ * @param {string} a
+ * @param {string} b
+ * @returns {boolean}
  */
-export function isInitialUser(organisation, email) {
-  if (!organisation.users) {
-    return false
-  }
+const stringEquals = (a, b) =>
+  a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
 
-  return organisation.users.some(
+/**
+ * Checks if a user is the initial user of an organisation
+ * @param {string} email - The user's email address
+ * @returns {(organisation: Organisation) => boolean} Function that checks if the user is an initial user
+ */
+export const isInitialUser = (email) => (organisation) =>
+  organisation.users.some(
     (user) =>
-      user.email.toLowerCase() === email.toLowerCase() &&
-      user.roles.includes(USER_ROLES.INITIAL)
+      stringEquals(user.email, email) && user.roles.includes(USER_ROLES.INITIAL)
   )
-}
 
 /**
  * Extracts and parses organization data from a Defra ID token

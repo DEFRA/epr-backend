@@ -74,11 +74,11 @@ const performInsert = (storage, staleCache) => async (organisation) => {
     version: 1,
     schemaVersion: SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
+    users: [],
     ...orgFields,
     formSubmissionTime: new Date(orgFields.formSubmissionTime),
     registrations,
-    accreditations,
-    users: []
+    accreditations
   })
 
   storage.push(newOrg)

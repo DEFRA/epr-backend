@@ -11,6 +11,8 @@ import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
+/** @import {Roles} from '#common/helpers/auth/constants.js' */
+
 /**
  * Determines the roles for a Defra ID user based on their token and request context
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload

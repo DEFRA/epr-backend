@@ -3,7 +3,13 @@ import { buildOrganisation } from '#repositories/organisations/contract/test-dat
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
+import {
+  COMPANY_1_ID,
+  COMPANY_1_NAME,
+  defraIdMockAuthTokens,
+  USER_PRESENT_IN_ORG1_EMAIL,
+  VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+} from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
@@ -21,7 +27,7 @@ describe('GET /v1/me/organisations', () => {
     config.reset('featureFlags.defraIdAuth')
   })
 
-  it('returns 200 and all linked organisations for a user', async () => {
+  it('should return current, linked, and unlinked organisations for the user', async () => {
     const organisationsRepositoryFactory =
       createInMemoryOrganisationsRepository([])
     const organisationsRepository = organisationsRepositoryFactory()
@@ -34,11 +40,54 @@ describe('GET /v1/me/organisations', () => {
       featureFlags
     })
 
-    const org1 = buildOrganisation()
-    const org2 = buildOrganisation()
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
+    const linkedAt = new Date().toISOString()
 
-    await organisationsRepository.insert(org1)
-    await organisationsRepository.insert(org2)
+    // Linked organisation (has linkedDefraOrganisation matching current relationship from token)
+    const linkedOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ],
+      linkedDefraOrganisation: {
+        orgId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+        orgName: COMPANY_1_NAME,
+        linkedBy: {
+          email: userEmail,
+          id: '550e8400-e29b-41d4-a716-446655440001'
+        },
+        linkedAt
+      }
+    })
+
+    // Unlinked organisation (no linkedDefraOrganisation but has user in users array)
+    const unlinkedOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    // Organisation without the user (should not appear in response)
+    const otherOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Other User',
+          email: 'other@example.com',
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    await organisationsRepository.insert(linkedOrg)
+    await organisationsRepository.insert(unlinkedOrg)
+    await organisationsRepository.insert(otherOrg)
 
     const response = await server.inject({
       method: 'GET',
@@ -50,8 +99,233 @@ describe('GET /v1/me/organisations', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
-    expect(result).toHaveLength(2)
-    expect(result[0].id).toBe(org1.id)
-    expect(result[1].id).toBe(org2.id)
+
+    expect(result).toEqual({
+      organisations: {
+        current: {
+          id: COMPANY_1_ID,
+          name: COMPANY_1_NAME,
+          relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+        },
+        linked: {
+          id: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+          name: COMPANY_1_NAME,
+          linkedBy: {
+            email: userEmail,
+            id: '550e8400-e29b-41d4-a716-446655440001'
+          },
+          linkedAt
+        },
+        unlinked: [
+          {
+            id: unlinkedOrg.id,
+            name: unlinkedOrg.companyDetails.name,
+            orgId: unlinkedOrg.orgId
+          }
+        ]
+      }
+    })
+  })
+
+  it('should return null for linked when user has no linked organisation', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
+
+    // Only unlinked organisations (no linkedDefraOrganisation)
+    const unlinkedOrg1 = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    const unlinkedOrg2 = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    await organisationsRepository.insert(unlinkedOrg1)
+    await organisationsRepository.insert(unlinkedOrg2)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.current).toEqual({
+      id: COMPANY_1_ID,
+      name: COMPANY_1_NAME,
+      relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+    })
+    expect(result.organisations.linked).toBeNull()
+    expect(result.organisations.unlinked).toHaveLength(2)
+  })
+
+  it('should return empty unlinked array when user only has linked organisation', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const userEmail = 'someone@test-company.com'
+    const linkedAt = new Date().toISOString()
+
+    // Only linked organisation
+    const linkedOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ],
+      linkedDefraOrganisation: {
+        orgId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID,
+        orgName: 'Test Company Ltd',
+        linkedBy: {
+          email: userEmail,
+          id: '550e8400-e29b-41d4-a716-446655440001'
+        },
+        linkedAt
+      }
+    })
+
+    await organisationsRepository.insert(linkedOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.linked).not.toBeNull()
+    expect(result.organisations.unlinked).toEqual([])
+  })
+
+  it('should return empty arrays when user has no organisations', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    // No organisations inserted
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.current).toEqual({
+      id: COMPANY_1_ID,
+      name: COMPANY_1_NAME,
+      relationshipId: VALID_TOKEN_CURRENT_RELATIONSHIP_ID
+    })
+    expect(result.organisations.linked).toBeNull()
+    expect(result.organisations.unlinked).toEqual([])
+  })
+
+  it('should exclude organisations where user is not an initial user', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
+
+    // Organisation where user is initial user (should be included)
+    const initialUserOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    // Organisation where user is NOT initial user (should be excluded)
+    const nonInitialUserOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['standard_user']
+        }
+      ]
+    })
+
+    await organisationsRepository.insert(initialUserOrg)
+    await organisationsRepository.insert(nonInitialUserOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.linked).toBeNull()
+    expect(result.organisations.unlinked).toHaveLength(1)
+    expect(result.organisations.unlinked[0].id).toBe(initialUserOrg.id)
   })
 })
