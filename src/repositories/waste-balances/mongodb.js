@@ -30,7 +30,11 @@ export const findBalance = (db) => async (id) => {
   const doc = await db
     .collection(WASTE_BALANCE_COLLECTION_NAME)
     .findOne({ accreditationId: id })
-  if (!doc) return null
+
+  if (!doc) {
+    return null
+  }
+
   const { _id, ...domainFields } = doc
   return structuredClone({ _id: _id.toString(), ...domainFields })
 }
