@@ -139,38 +139,44 @@ describe('Submission and placeholder tests', () => {
           location: { sheet: 'Received', row: 7, column: 'A' },
           headers: sharedHeaders,
           rows: [
-            [
-              1001,
-              '2025-01-15T00:00:00.000Z',
-              '03 03 08',
-              'Glass - pre-sorted',
-              'No',
-              1000,
-              100,
-              50,
-              850,
-              'Yes',
-              'Actual weight (100%)',
-              50,
-              0.85,
-              678.98 // (850-50)*0.9985*0.85
-            ],
-            [
-              1002,
-              '2025-01-16T00:00:00.000Z',
-              '03 03 08',
-              'Glass - pre-sorted',
-              'No',
-              900,
-              90,
-              45,
-              765,
-              'Yes',
-              'Actual weight (100%)',
-              45,
-              0.85,
-              611.028 // (765-45)*0.9985*0.85
-            ]
+            {
+              rowNumber: 8,
+              values: [
+                1001,
+                '2025-01-15T00:00:00.000Z',
+                '03 03 08',
+                'Glass - pre-sorted',
+                'No',
+                1000,
+                100,
+                50,
+                850,
+                'Yes',
+                'Actual weight (100%)',
+                50,
+                0.85,
+                678.98 // (850-50)*0.9985*0.85
+              ]
+            },
+            {
+              rowNumber: 9,
+              values: [
+                1002,
+                '2025-01-16T00:00:00.000Z',
+                '03 03 08',
+                'Glass - pre-sorted',
+                'No',
+                900,
+                90,
+                45,
+                765,
+                'Yes',
+                'Actual weight (100%)',
+                45,
+                0.85,
+                611.028 // (765-45)*0.9985*0.85
+              ]
+            }
           ]
         }
       }
@@ -180,54 +186,63 @@ describe('Submission and placeholder tests', () => {
           location: { sheet: 'Received', row: 7, column: 'A' },
           headers: sharedHeaders,
           rows: [
-            [
-              1001,
-              '2025-01-15T00:00:00.000Z',
-              '03 03 08',
-              'Glass - pre-sorted',
-              'No',
-              1000,
-              100,
-              50,
-              850,
-              'Yes',
-              'Actual weight (100%)',
-              50,
-              0.85,
-              678.98 // (850-50)*0.9985*0.85 unchanged
-            ],
-            [
-              1002,
-              '2025-01-16T00:00:00.000Z',
-              '03 03 08',
-              'Glass - pre-sorted',
-              'No',
-              950,
-              95,
-              48,
-              807,
-              'Yes',
-              'Actual weight (100%)',
-              48,
-              0.85,
-              644.182275 // (807-48)*0.9985*0.85 adjusted
-            ],
-            [
-              1003,
-              '2025-01-17T00:00:00.000Z',
-              '03 03 08',
-              'Glass - pre-sorted',
-              'No',
-              800,
-              80,
-              40,
-              680,
-              'Yes',
-              'Actual weight (100%)',
-              40,
-              0.85,
-              543.184 // (680-40)*0.9985*0.85 new
-            ]
+            {
+              rowNumber: 8,
+              values: [
+                1001,
+                '2025-01-15T00:00:00.000Z',
+                '03 03 08',
+                'Glass - pre-sorted',
+                'No',
+                1000,
+                100,
+                50,
+                850,
+                'Yes',
+                'Actual weight (100%)',
+                50,
+                0.85,
+                678.98 // (850-50)*0.9985*0.85 unchanged
+              ]
+            },
+            {
+              rowNumber: 9,
+              values: [
+                1002,
+                '2025-01-16T00:00:00.000Z',
+                '03 03 08',
+                'Glass - pre-sorted',
+                'No',
+                950,
+                95,
+                48,
+                807,
+                'Yes',
+                'Actual weight (100%)',
+                48,
+                0.85,
+                644.182275 // (807-48)*0.9985*0.85 adjusted
+              ]
+            },
+            {
+              rowNumber: 10,
+              values: [
+                1003,
+                '2025-01-17T00:00:00.000Z',
+                '03 03 08',
+                'Glass - pre-sorted',
+                'No',
+                800,
+                80,
+                40,
+                680,
+                'Yes',
+                'Actual weight (100%)',
+                40,
+                0.85,
+                543.184 // (680-40)*0.9985*0.85 new
+              ]
+            }
           ]
         }
       }

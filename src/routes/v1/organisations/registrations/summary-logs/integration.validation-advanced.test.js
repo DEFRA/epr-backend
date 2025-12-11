@@ -67,14 +67,17 @@ describe('Advanced validation scenarios', () => {
                       'ADD_PRODUCT_WEIGHT'
                     ],
                     rows: [
-                      [
-                        3000,
-                        '2025-05-28T00:00:00.000Z',
-                        1001,
-                        0.5,
-                        500.5,
-                        'Yes'
-                      ]
+                      {
+                        rowNumber: 8,
+                        values: [
+                          3000,
+                          '2025-05-28T00:00:00.000Z',
+                          1001,
+                          0.5,
+                          500.5,
+                          'Yes'
+                        ]
+                      }
                     ]
                   }
                 }
@@ -189,7 +192,9 @@ describe('Advanced validation scenarios', () => {
               RECEIVED_LOADS_FOR_REPROCESSING: {
                 location: { sheet: 'Received', row: 7, column: 'B' },
                 headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-                rows: [[1000, '2025-05-28T00:00:00.000Z']]
+                rows: [
+                  { rowNumber: 8, values: [1000, '2025-05-28T00:00:00.000Z'] }
+                ]
               }
             }
           }
@@ -355,20 +360,23 @@ describe('Advanced validation scenarios', () => {
                 'TONNAGE_RECEIVED_FOR_RECYCLING'
               ],
               rows: [
-                [
-                  999,
-                  'invalid-date',
-                  '03 03 08',
-                  1000,
-                  100,
-                  50,
-                  850,
-                  true,
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
+                {
+                  rowNumber: 8,
+                  values: [
+                    999,
+                    'invalid-date',
+                    '03 03 08',
+                    1000,
+                    100,
+                    50,
+                    850,
+                    true,
+                    'WEIGHT',
+                    50,
+                    0.85,
+                    850
+                  ]
+                }
               ]
             }
           }
@@ -538,17 +546,20 @@ describe('Advanced validation scenarios', () => {
               location: { sheet: 'Received', row: 7, column: 'B' },
               headers: ['INVALID_HEADER'],
               rows: [
-                [
-                  999,
-                  'invalid-date',
-                  'bad-code',
-                  'not-a-number',
-                  'YES',
-                  'WEIGHT',
-                  50,
-                  0.85,
-                  850
-                ]
+                {
+                  rowNumber: 8,
+                  values: [
+                    999,
+                    'invalid-date',
+                    'bad-code',
+                    'not-a-number',
+                    'YES',
+                    'WEIGHT',
+                    50,
+                    0.85,
+                    850
+                  ]
+                }
               ]
             }
           }
@@ -688,8 +699,8 @@ describe('Advanced validation scenarios', () => {
                 location: { sheet: 'Unknown', row: 1, column: 'A' },
                 headers: ['ANYTHING', 'GOES', 'HERE'],
                 rows: [
-                  ['foo', 'bar', 'baz'],
-                  ['invalid', 123, true]
+                  { rowNumber: 2, values: ['foo', 'bar', 'baz'] },
+                  { rowNumber: 3, values: ['invalid', 123, true] }
                 ]
               }
             }

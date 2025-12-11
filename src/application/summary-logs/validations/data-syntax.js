@@ -146,7 +146,7 @@ const validateHeaders = ({
  *
  * @param {Object} params
  * @param {string} params.tableName - Name of the table
- * @param {number} params.rowIndex - Zero-based row index
+ * @param {number} params.rowNumber - Actual spreadsheet row number
  * @param {string} params.fieldName - Name of the field with the error
  * @param {number|undefined} params.colIndex - Column index for the field
  * @param {Object} params.location - Table location in spreadsheet
@@ -154,7 +154,7 @@ const validateHeaders = ({
  */
 const buildCellLocation = ({
   tableName,
-  rowIndex,
+  rowNumber,
   fieldName,
   colIndex,
   location
@@ -163,7 +163,7 @@ const buildCellLocation = ({
     ? {
         sheet: location.sheet,
         table: tableName,
-        row: location.row + rowIndex + 1,
+        row: rowNumber,
         column: offsetColumn(location.column, colIndex),
         header: fieldName
       }
@@ -194,11 +194,13 @@ const validateRows = ({
   location,
   issues
 }) => {
-  return rows.map((originalRow, rowIndex) => {
+  return rows.map((originalRow) => {
+    const { rowNumber, values } = originalRow
+
     // Build row object from array
     const rowObject = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
-      rowObject[headerName] = originalRow[colIndex]
+      rowObject[headerName] = values[colIndex]
     }
 
     // Classify row using domain pipeline
@@ -234,7 +236,7 @@ const validateRows = ({
         context: {
           location: buildCellLocation({
             tableName,
-            rowIndex,
+            rowNumber,
             fieldName,
             colIndex,
             location

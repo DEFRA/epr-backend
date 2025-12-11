@@ -184,6 +184,7 @@ const processDataMarker = (
       skipColumnIndices: [],
       rows: [],
       currentRow: [],
+      currentRowNumber: null,
       location: {
         sheet: worksheet.name,
         row: rowNumber,
@@ -280,7 +281,10 @@ const finalizeRowForCollection = (draftCollection) => {
     } else if (shouldSkipRow(draftCollection)) {
       draftCollection.currentRow = []
     } else {
-      draftCollection.rows.push(draftCollection.currentRow)
+      draftCollection.rows.push({
+        rowNumber: draftCollection.currentRowNumber,
+        values: draftCollection.currentRow
+      })
       draftCollection.currentRow = []
     }
   } else {
@@ -361,6 +365,7 @@ const processRow = (draftState, row, rowNumber, worksheet) => {
 
   for (const collection of draftState.activeCollections) {
     collection.currentRow = []
+    collection.currentRowNumber = rowNumber
   }
 
   for (const { cell, colNumber } of cells) {

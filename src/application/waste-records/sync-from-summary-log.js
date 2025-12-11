@@ -13,7 +13,7 @@ import { isEprMarker } from '#domain/summary-logs/markers.js'
  * Prepares rows for transformation by building data objects
  *
  * @param {Array<string|null>} headers - Array of header names
- * @param {Array<Array<*>>} rows - Array of raw row value arrays
+ * @param {Array<{rowNumber: number, values: Array<*>}>} rows - Array of row objects with row number and values
  * @returns {TransformableRow[]} Array of rows with data objects built
  */
 const prepareRows = (headers, rows) => {
@@ -26,10 +26,13 @@ const prepareRows = (headers, rows) => {
   }
 
   return rows.map((row) => {
+    // Extract values from row object (rows now store { rowNumber, values })
+    const { values } = row
+
     // Build row data object from values
     const data = {}
     for (const [headerName, colIndex] of headerToIndexMap) {
-      data[headerName] = row[colIndex]
+      data[headerName] = values[colIndex]
     }
 
     return { data }
