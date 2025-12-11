@@ -1,78 +1,50 @@
 import { validateAccreditationId } from './validation.js'
-import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
-import { randomUUID } from 'node:crypto'
+import { performUpdateWasteBalanceTransactions } from './helpers.js'
 
-const performUpdateWasteBalanceTransactions =
-  (wasteBalanceStorage, dependencies) =>
-  async (wasteRecords, accreditationId) => {
+/**
+ * Find a waste balance by accreditation ID.
+ *
+ * @param {import('#domain/waste-balances/model.js').WasteBalance[]} wasteBalanceStorage
+ * @returns {(id: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ */
+export const findBalance = (wasteBalanceStorage) => async (id) => {
+  const balance = wasteBalanceStorage.find((b) => b.accreditationId === id)
+  return balance ? structuredClone(balance) : null
+}
+
+/**
+ * Save a waste balance.
+ *
+ * @param {import('#domain/waste-balances/model.js').WasteBalance[]} wasteBalanceStorage
+ * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance) => Promise<void>}
+ */
+export const saveBalance = (wasteBalanceStorage) => async (updatedBalance) => {
+  const existingIndex = wasteBalanceStorage.findIndex(
+    (b) => b.accreditationId === updatedBalance.accreditationId
+  )
+
+  if (existingIndex === -1) {
+    wasteBalanceStorage.push(updatedBalance)
+  } else {
+    wasteBalanceStorage[existingIndex] = updatedBalance
+  }
+}
+
+/**
+ * Find a waste balance by accreditation ID.
+ *
+ * @param {import('#domain/waste-balances/model.js').WasteBalance[]} wasteBalanceStorage
+ * @returns {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ */
+export const performFindByAccreditationId =
+  (wasteBalanceStorage) => async (accreditationId) => {
     const validatedAccreditationId = validateAccreditationId(accreditationId)
 
-    const { organisationsRepository } = dependencies
-    if (!organisationsRepository) {
-      throw new Error('organisationsRepository dependency is required')
-    }
-
-    const accreditation = await organisationsRepository.getAccreditationById(
-      validatedAccreditationId
-    )
-    if (!accreditation) {
-      throw new Error(`Accreditation not found: ${validatedAccreditationId}`)
-    }
-
-    let wasteBalance = wasteBalanceStorage.find(
+    const balance = wasteBalanceStorage.find(
       (b) => b.accreditationId === validatedAccreditationId
     )
 
-    if (!wasteBalance) {
-      if (wasteRecords.length === 0) {
-        return
-      }
-
-      wasteBalance = {
-        _id: randomUUID(),
-        accreditationId: validatedAccreditationId,
-        organisationId: wasteRecords[0].organisationId,
-        amount: 0,
-        availableAmount: 0,
-        transactions: [],
-        version: 0,
-        schemaVersion: 1
-      }
-    }
-
-    const { newTransactions, newAmount, newAvailableAmount } =
-      calculateWasteBalanceUpdates({
-        currentBalance: wasteBalance,
-        wasteRecords,
-        accreditation
-      })
-
-    if (newTransactions.length === 0) {
-      return
-    }
-
-    const existingIndex = wasteBalanceStorage.findIndex(
-      (b) => b.accreditationId === accreditationId
-    )
-
-    if (existingIndex === -1) {
-      wasteBalanceStorage.push({
-        ...wasteBalance,
-        amount: newAmount,
-        availableAmount: newAvailableAmount,
-        transactions: newTransactions
-      })
-    } else {
-      wasteBalanceStorage[existingIndex] = {
-        ...wasteBalanceStorage[existingIndex],
-        amount: newAmount,
-        availableAmount: newAvailableAmount,
-        transactions: [
-          ...wasteBalanceStorage[existingIndex].transactions,
-          ...newTransactions
-        ]
-      }
-    }
+    return balance ? structuredClone(balance) : null
   }
 
 /**
@@ -87,23 +59,20 @@ export const createInMemoryWasteBalancesRepository = (
   initialWasteBalances = [],
   dependencies = {}
 ) => {
-  // Don't clone wasteBalanceStorage to maintain reference for testing
   const wasteBalanceStorage = initialWasteBalances
 
   return () => ({
-    async findByAccreditationId(accreditationId) {
-      const validatedAccreditationId = validateAccreditationId(accreditationId)
-
-      const balance = wasteBalanceStorage.find(
-        (b) => b.accreditationId === validatedAccreditationId
-      )
-
-      return balance ? structuredClone(balance) : null
+    findByAccreditationId: performFindByAccreditationId(wasteBalanceStorage),
+    updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {
+      return performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId,
+        dependencies,
+        findBalance: findBalance(wasteBalanceStorage),
+        saveBalance: saveBalance(wasteBalanceStorage)
+      })
     },
-
-    updateWasteBalanceTransactions: performUpdateWasteBalanceTransactions(
-      wasteBalanceStorage,
-      dependencies
-    )
+    // Test-only method to access internal storage
+    _getStorageForTesting: () => wasteBalanceStorage
   })
 }
