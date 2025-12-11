@@ -59,7 +59,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
   // Adds the user to the organisation if they are not already present
   const roles = await getRolesForOrganisationAccess(
     request,
-    linkedEprOrg,
+    linkedEprOrg.id,
     tokenPayload
   )
 

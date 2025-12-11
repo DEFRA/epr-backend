@@ -1,8 +1,8 @@
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { STATUS } from '#domain/organisations/model.js'
 
-export async function buildApprovedOrg(organisationsRepository) {
-  const org = buildOrganisation()
+export async function buildApprovedOrg(organisationsRepository, overrides) {
+  const org = buildOrganisation(overrides)
 
   const INITIAL_VERSION = 1
 

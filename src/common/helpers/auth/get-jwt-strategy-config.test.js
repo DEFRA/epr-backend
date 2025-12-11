@@ -449,7 +449,7 @@ describe('#getJwtStrategyConfig', () => {
         const testOrgId =
           userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
 
-        mockGetOrgMatchingUsersToken.mockResolvedValue(testOrgId)
+        mockGetOrgMatchingUsersToken.mockResolvedValue({ id: testOrgId })
 
         const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
