@@ -3,8 +3,7 @@ import { createAuditEventsRepository } from './inmemory.js'
 import { testAuditEventsRepositoryContract } from './port.contract.js'
 
 const it = base.extend({
-  auditEventsRepository: async ({}, use) => {
-    // Return a factory-like function that creates a fresh repository with current state
+  auditEventsRepository: async (_, use) => {
     const factory = () => createAuditEventsRepository()(null)
     await use(factory)
   }
