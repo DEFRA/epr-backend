@@ -1,86 +1,7 @@
 import { validateAccreditationId } from './validation.js'
-import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
+import { performUpdateWasteBalanceTransactions } from './helpers.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
-
-const performUpdateWasteBalanceTransactions =
-  (db, dependencies) => async (wasteRecords, accreditationId) => {
-    const { organisationsRepository } = dependencies
-    if (!organisationsRepository) {
-      throw new Error('organisationsRepository dependency is required')
-    }
-
-    // 1. Fetch Context
-    const accreditation =
-      await organisationsRepository.getAccreditationById(accreditationId)
-    if (!accreditation) {
-      throw new Error(`Accreditation not found: ${accreditationId}`)
-    }
-
-    // 2. Fetch or Initialize Waste Balance
-    let wasteBalance = await db
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
-      .findOne({ accreditationId })
-
-    if (!wasteBalance) {
-      if (wasteRecords.length === 0) {
-        return
-      }
-
-      // Initialize new balance if not exists
-      wasteBalance = {
-        accreditationId,
-        organisationId: wasteRecords[0].organisationId, // Assume all records belong to same org
-        amount: 0,
-        availableAmount: 0,
-        transactions: [],
-        version: 0,
-        schemaVersion: 1
-      }
-    }
-
-    // 3. Calculate Updates
-    const { newTransactions, newAmount, newAvailableAmount } =
-      calculateWasteBalanceUpdates({
-        currentBalance: wasteBalance,
-        wasteRecords,
-        accreditation
-      })
-
-    if (newTransactions.length === 0) {
-      return
-    }
-
-    // 4. Persist Updates
-    await db.collection(WASTE_BALANCE_COLLECTION_NAME).findOneAndUpdate(
-      { accreditationId },
-      [
-        {
-          $set: {
-            accreditationId,
-            organisationId: {
-              $ifNull: ['$organisationId', wasteRecords[0]?.organisationId]
-            },
-            amount: newAmount,
-            availableAmount: newAvailableAmount,
-            schemaVersion: { $ifNull: ['$schemaVersion', 1] },
-            version: { $ifNull: ['$version', 0] }
-          }
-        },
-        {
-          $set: {
-            transactions: {
-              $concatArrays: [
-                { $ifNull: ['$transactions', []] },
-                newTransactions
-              ]
-            }
-          }
-        }
-      ],
-      { upsert: true }
-    )
-  }
 
 const performFindByAccreditationId = (db) => async (accreditationId) => {
   const validatedAccreditationId = validateAccreditationId(accreditationId)
@@ -100,20 +21,70 @@ const performFindByAccreditationId = (db) => async (accreditationId) => {
 }
 
 /**
+ * Find a waste balance by accreditation ID.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {(id: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>}
+ */
+export const findBalance = (db) => async (id) => {
+  const doc = await db
+    .collection(WASTE_BALANCE_COLLECTION_NAME)
+    .findOne({ accreditationId: id })
+
+  if (!doc) {
+    return null
+  }
+
+  const { _id, ...domainFields } = doc
+  return structuredClone({ _id: _id.toString(), ...domainFields })
+}
+
+/**
+ * Save a waste balance.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
+ */
+export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
+  await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
+    { accreditationId: updatedBalance.accreditationId },
+    {
+      $set: {
+        amount: updatedBalance.amount,
+        availableAmount: updatedBalance.availableAmount,
+        version: updatedBalance.version,
+        schemaVersion: updatedBalance.schemaVersion
+      },
+      $push: {
+        transactions: { $each: newTransactions }
+      },
+      $setOnInsert: {
+        _id: updatedBalance._id,
+        organisationId: updatedBalance.organisationId
+      }
+    },
+    { upsert: true }
+  )
+}
+
+/**
  * Creates a MongoDB-backed waste balances repository
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} [dependencies] - Optional dependencies
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [dependencies.organisationsRepository]
  * @returns {import('./port.js').WasteBalancesRepositoryFactory}
  */
-export const createWasteBalancesRepository =
-  (db, dependencies = {}) =>
-  () => {
-    return {
-      findByAccreditationId: performFindByAccreditationId(db),
-      updateWasteBalanceTransactions: performUpdateWasteBalanceTransactions(
-        db,
-        dependencies
-      )
+export const createWasteBalancesRepository = (db, dependencies = {}) => {
+  return () => ({
+    findByAccreditationId: performFindByAccreditationId(db),
+    updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {
+      return performUpdateWasteBalanceTransactions({
+        wasteRecords,
+        accreditationId,
+        dependencies,
+        findBalance: findBalance(db),
+        saveBalance: saveBalance(db)
+      })
     }
-  }
+  })
+}

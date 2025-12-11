@@ -56,8 +56,14 @@ describe('syncFromSummaryLog', () => {
             FIELD_GROSS_WEIGHT
           ],
           rows: [
-            ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5],
-            ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            },
+            {
+              rowNumber: 3,
+              values: ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
+            }
           ]
         }
       }
@@ -146,7 +152,12 @@ describe('syncFromSummaryLog', () => {
             'DATE_RECEIVED_FOR_REPROCESSING',
             FIELD_GROSS_WEIGHT
           ],
-          rows: [['row-123', '2025-01-20', TEST_WEIGHT_250_5]]
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', '2025-01-20', TEST_WEIGHT_250_5]
+            }
+          ]
         }
       }
     }
@@ -228,7 +239,10 @@ describe('syncFromSummaryLog', () => {
           ],
           rows: [
             // Exact same data as existing record
-            ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
           ]
         }
       }
@@ -309,7 +323,10 @@ describe('syncFromSummaryLog', () => {
             FIELD_GROSS_WEIGHT
           ],
           rows: [
-            ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_200_75] // Only weight changed
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_200_75]
+            } // Only weight changed
           ]
         }
       }
@@ -400,7 +417,10 @@ describe('syncFromSummaryLog', () => {
             FIELD_GROSS_WEIGHT
           ],
           rows: [
-            ['row-123', '2025-01-20', TEST_WEIGHT_250_5] // Both date and weight changed
+            {
+              rowNumber: 2,
+              values: ['row-123', '2025-01-20', TEST_WEIGHT_250_5]
+            } // Both date and weight changed
           ]
         }
       }
@@ -464,13 +484,16 @@ describe('syncFromSummaryLog', () => {
             FIELD_GROSS_WEIGHT
           ],
           rows: [
-            [
-              'row-789',
-              'ignored',
-              'also-ignored',
-              TEST_DATE_2025_01_15,
-              TEST_WEIGHT_100_5
-            ]
+            {
+              rowNumber: 2,
+              values: [
+                'row-789',
+                'ignored',
+                'also-ignored',
+                TEST_DATE_2025_01_15,
+                TEST_WEIGHT_100_5
+              ]
+            }
           ]
         }
       }
@@ -516,7 +539,7 @@ describe('syncFromSummaryLog', () => {
         UNKNOWN_TABLE: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: ['SOME_FIELD'],
-          rows: [['some-value']]
+          rows: [{ rowNumber: 2, values: ['some-value'] }]
         },
         RECEIVED_LOADS_FOR_REPROCESSING: {
           location: { sheet: 'Sheet1', row: 10, column: 'A' },
@@ -525,7 +548,12 @@ describe('syncFromSummaryLog', () => {
             'DATE_RECEIVED_FOR_REPROCESSING',
             FIELD_GROSS_WEIGHT
           ],
-          rows: [['row-999', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]]
+          rows: [
+            {
+              rowNumber: 11,
+              values: ['row-999', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
         }
       }
     }
@@ -576,9 +604,18 @@ describe('syncFromSummaryLog', () => {
             FIELD_GROSS_WEIGHT
           ],
           rows: [
-            ['row-001', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5],
-            ['row-002', '2025-01-16', TEST_WEIGHT_200_75],
-            ['row-003', '2025-01-17', TEST_WEIGHT_250_5]
+            {
+              rowNumber: 2,
+              values: ['row-001', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            },
+            {
+              rowNumber: 3,
+              values: ['row-002', '2025-01-16', TEST_WEIGHT_200_75]
+            },
+            {
+              rowNumber: 4,
+              values: ['row-003', '2025-01-17', TEST_WEIGHT_250_5]
+            }
           ]
         }
       }

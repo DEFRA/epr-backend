@@ -1,5 +1,8 @@
 /** @import {Accreditation, Registration} from '#repositories/organisations/port.js' */
 
+/**
+ * @typedef {typeof STATUS[keyof typeof STATUS]} Status
+ */
 export const STATUS = Object.freeze({
   CREATED: 'created',
   APPROVED: 'approved',
@@ -92,6 +95,7 @@ export const VALUE_TYPE = Object.freeze({
  * @typedef {typeof USER_ROLES[keyof typeof USER_ROLES]} UserRoles
  */
 export const USER_ROLES = Object.freeze({
+  INITIAL: 'initial_user',
   STANDARD: 'standard_user'
 })
 
@@ -132,7 +136,6 @@ export const USER_ROLES = Object.freeze({
  * @typedef {{
  *   fullName: string;
  *   email: string;
- *   isInitialUser: boolean;
  *   roles: UserRoles[];
  * }} CollatedUser
  */
@@ -144,10 +147,6 @@ export const USER_ROLES = Object.freeze({
  *   linkedBy: {email: string; id: string};
  *   linkedAt: Date;
  * }} LinkedDefraOrganisation
- */
-
-/**
- * @typedef {'approved'|'archived'|'created'|'rejected'|'suspended'} StatusValue
  */
 
 /**
@@ -164,7 +163,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
- *   status: StatusValue;
+ *   status: Status;
  *   updatedAt: Date;
  *   updatedBy?: string;
  * }} StatusHistoryItem
@@ -198,11 +197,11 @@ export const USER_ROLES = Object.freeze({
  *   registrations?: Registration[];
  *   reprocessingNations?: NationValue[];
  *   schemaVersion: number;
- *   status: StatusValue;
+ *   status: Status;
  *   statusHistory: StatusHistoryItem[];
  *   submittedToRegulator: RegulatorValue;
  *   submitterContactDetails: User;
- *   users?: CollatedUser[];
+ *   users: CollatedUser[];
  *   version: number;
  *   wasteProcessingTypes: WasteProcessingTypeValue[];
  * }} Organisation

@@ -2,7 +2,7 @@ import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import equal from 'fast-deep-equal'
 import { validateStatusHistory } from './schema/index.js'
 
-/** @import {CollatedUser, Organisation, User} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, Organisation, Status, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Accreditation, Registration} from './port.js' */
 
 export const SCHEMA_VERSION = 1
@@ -127,7 +127,20 @@ export const hasChanges = (existing, incoming) => {
   return !equal(normalizedExisting, normalizedIncoming)
 }
 
-/** @typedef {Pick<User, 'fullName'|'email'>} SlimUser */
+/** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
+
+/**
+ * get user roles for the provided status
+ *
+ * @param {Status} status
+ * @returns {UserRoles[]}
+ */
+const getUserRolesForStatus = (status) => {
+  if (status === STATUS.CREATED || status === STATUS.APPROVED) {
+    return [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+  }
+  return [USER_ROLES.STANDARD]
+}
 
 /**
  * @param {Organisation} existing
@@ -136,7 +149,7 @@ export const hasChanges = (existing, incoming) => {
  * @param {(item: Accreditation|Registration) => SlimUser[]} extractAdditionalUsers
  * @returns {SlimUser[]}
  */
-const collateApprovedItems = (
+const collateItems = (
   existing,
   updated,
   collectionKey,
@@ -159,7 +172,8 @@ const collateApprovedItems = (
       users.push(
         {
           fullName: item.submitterContactDetails.fullName,
-          email: item.submitterContactDetails.email
+          email: item.submitterContactDetails.email,
+          roles: getUserRolesForStatus(itemStatus)
         },
         ...extractAdditionalUsers(item)
       )
@@ -174,15 +188,16 @@ const collateApprovedItems = (
  * @param {Organisation} updated
  * @returns {SlimUser[]}
  */
-const collateApprovedRegistrations = (existing, updated) =>
-  collateApprovedItems(
+const collateRegistrationUsers = (existing, updated) =>
+  collateItems(
     existing,
     updated,
     'registrations',
     (/** @type {Registration} */ registration) =>
       registration.approvedPersons.map(({ email, fullName }) => ({
         fullName,
-        email
+        email,
+        roles: getUserRolesForStatus(getCurrentStatus(registration))
       }))
   )
 
@@ -191,44 +206,18 @@ const collateApprovedRegistrations = (existing, updated) =>
  * @param {Organisation} updated
  * @returns {SlimUser[]}
  */
-const collateApprovedAccreditations = (existing, updated) =>
-  collateApprovedItems(
+const collateAccreditationUsers = (existing, updated) =>
+  collateItems(
     existing,
     updated,
     'accreditations',
     (/** @type {Accreditation} */ accreditation) =>
       accreditation.prnIssuance.signatories.map(({ email, fullName }) => ({
         fullName,
-        email
+        email,
+        roles: getUserRolesForStatus(getCurrentStatus(accreditation))
       }))
   )
-
-/**
- * @param {Organisation} existing
- * @param {Organisation} updated
- * @returns {CollatedUser[]}
- */
-export const collateUsersOnApproval = (existing, updated) => {
-  /** @type {SlimUser[]} */
-  const root = []
-
-  /* v8 ignore next 5 */
-  if (updated.submitterContactDetails) {
-    root.push({
-      fullName: updated.submitterContactDetails.fullName,
-      email: updated.submitterContactDetails.email
-    })
-  }
-
-  const users = [
-    ...existing.users,
-    ...root,
-    ...collateApprovedRegistrations(existing, updated),
-    ...collateApprovedAccreditations(existing, updated)
-  ]
-
-  return deduplicateUsers(users)
-}
 
 /**
  * Deduplicates users by email address (case-insensitive)
@@ -244,13 +233,38 @@ const deduplicateUsers = (users) => {
 
     if (!userMap.has(key)) {
       userMap.set(key, {
-        fullName: user.fullName,
-        email: user.email,
-        isInitialUser: true,
-        roles: [USER_ROLES.STANDARD]
+        ...user
       })
     }
   }
 
   return Array.from(userMap.values())
+}
+
+/**
+ * @param {Organisation} existing
+ * @param {Organisation} updated
+ * @returns {CollatedUser[]}
+ */
+export const collateUsers = (existing, updated) => {
+  /** @type {SlimUser[]} */
+  const root = []
+
+  /* v8 ignore next */
+  if (updated.submitterContactDetails) {
+    root.push({
+      fullName: updated.submitterContactDetails.fullName,
+      email: updated.submitterContactDetails.email,
+      roles: getUserRolesForStatus(getCurrentStatus(updated))
+    })
+  }
+
+  const users = [
+    ...existing.users,
+    ...root,
+    ...collateRegistrationUsers(existing, updated),
+    ...collateAccreditationUsers(existing, updated)
+  ]
+
+  return deduplicateUsers(users)
 }

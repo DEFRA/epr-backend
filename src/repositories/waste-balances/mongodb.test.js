@@ -85,7 +85,7 @@ describe('MongoDB waste balances repository', () => {
         const repository = createWasteBalancesRepository(database)
         const instance = repository()
         await expect(
-          instance.updateWasteBalanceTransactions([], 'acc-1')
+          instance.updateWasteBalanceTransactions(/** @type {any} */ ([{ organisationId: 'org-1' }]), 'acc-1')
         ).rejects.toThrow('organisationsRepository dependency is required')
       })
 
@@ -99,7 +99,7 @@ describe('MongoDB waste balances repository', () => {
         })
         const instance = repository()
         await expect(
-          instance.updateWasteBalanceTransactions([], 'acc-1')
+          instance.updateWasteBalanceTransactions(/** @type {any} */ ([{ organisationId: 'org-1' }]), 'acc-1')
         ).rejects.toThrow('Accreditation not found: acc-1')
       })
 

@@ -268,8 +268,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          [12345678910, '2025-05-25'],
-          [98765432100, '2025-05-26']
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: [98765432100, '2025-05-26'] }
         ]
       })
     })
@@ -291,7 +291,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.RECEIVED_LOADS_FOR_REPROCESSING).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
-        rows: [[12345678910, '2025-05-25']]
+        rows: [{ rowNumber: 2, values: [12345678910, '2025-05-25'] }]
       })
     })
 
@@ -315,13 +315,13 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.TABLE_ONE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['REF_ONE', 'DATE_ONE'],
-        rows: [['ABC123', '2025-01-01']]
+        rows: [{ rowNumber: 2, values: ['ABC123', '2025-01-01'] }]
       })
 
       expect(result.data.TABLE_TWO).toEqual({
         location: { sheet: 'Test', row: 1, column: 'F' },
         headers: ['REF_TWO', 'DATE_TWO'],
-        rows: [['XYZ789', '2025-02-02']]
+        rows: [{ rowNumber: 2, values: ['XYZ789', '2025-02-02'] }]
       })
     })
 
@@ -337,7 +337,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.TRANSITION_TEST).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['HEADER_ONE', 'HEADER_TWO'],
-        rows: [['row1_col1', 'row1_col2']]
+        rows: [{ rowNumber: 2, values: ['row1_col1', 'row1_col2'] }]
       })
 
       expect(result.data.TRANSITION_TEST.rows).toHaveLength(1)
@@ -367,7 +367,12 @@ describe('ExcelJSSummaryLogsParser', () => {
           'SUPPLIER_REF',
           'SUPPLIER_NAME'
         ],
-        rows: [[12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs']]
+        rows: [
+          {
+            rowNumber: 2,
+            values: [12345678910, '2025-05-25', null, 'ABC123', 'Joe Blogs']
+          }
+        ]
       })
     })
 
@@ -382,7 +387,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.SPARSE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['COL_A', 'COL_B', 'COL_C'],
-        rows: [['A1', null, 'C1']]
+        rows: [{ rowNumber: 2, values: ['A1', null, 'C1'] }]
       })
     })
 
@@ -426,8 +431,14 @@ describe('ExcelJSSummaryLogsParser', () => {
           'SUPPLIER_NAME'
         ],
         rows: [
-          [12345678910, '2025-05-25', null, 'ABC123', 'Joe Bloggs'],
-          [98765432100, '2025-05-26', null, null, 'Jane Smith']
+          {
+            rowNumber: 5,
+            values: [12345678910, '2025-05-25', null, 'ABC123', 'Joe Bloggs']
+          },
+          {
+            rowNumber: 6,
+            values: [98765432100, '2025-05-26', null, null, 'Jane Smith']
+          }
         ]
       })
     })
@@ -481,8 +492,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Sheet1', row: 3, column: 'B' },
         headers: ['ROW_ID', 'WEIGHT'],
         rows: [
-          [12345, 100],
-          [67890, 200]
+          { rowNumber: 4, values: [12345, 100] },
+          { rowNumber: 5, values: [67890, 200] }
         ]
       })
 
@@ -490,8 +501,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Sheet2', row: 3, column: 'B' },
         headers: ['SUPPLIER_NAME', 'SUPPLIER_REF'],
         rows: [
-          ['ABC Ltd', 'ABC123'],
-          ['XYZ Corp', 'XYZ789']
+          { rowNumber: 4, values: ['ABC Ltd', 'ABC123'] },
+          { rowNumber: 5, values: ['XYZ Corp', 'XYZ789'] }
         ]
       })
     })
@@ -585,9 +596,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          [12345678910, '2025-05-25'],
-          [98765432100, '2025-05-26'],
-          [11122233344, '2025-05-27']
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: [98765432100, '2025-05-26'] },
+          { rowNumber: 4, values: [11122233344, '2025-05-27'] }
         ]
       })
     })
@@ -660,8 +671,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'C' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          [12345678910, '2025-05-25'],
-          [98765432100, '2025-05-26']
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: [98765432100, '2025-05-26'] }
         ]
       })
     })
@@ -694,13 +705,13 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.SECTION_ONE).toEqual({
         location: { sheet: 'Test', row: 3, column: 'D' },
         headers: ['HEADER_A', 'HEADER_B'],
-        rows: [['value_a1', 'value_b1']]
+        rows: [{ rowNumber: 4, values: ['value_a1', 'value_b1'] }]
       })
 
       expect(result.data.SECTION_TWO).toEqual({
         location: { sheet: 'Test', row: 3, column: 'H' },
         headers: ['HEADER_X'],
-        rows: [['value_x1']]
+        rows: [{ rowNumber: 4, values: ['value_x1'] }]
       })
     })
   })
@@ -719,8 +730,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['HEADER_A', 'HEADER_B', 'HEADER_C'],
         rows: [
-          ['value_a1', 'value_b1', 'value_c1'],
-          ['value_a2', 'value_b2', 'value_c2']
+          { rowNumber: 2, values: ['value_a1', 'value_b1', 'value_c1'] },
+          { rowNumber: 3, values: ['value_a2', 'value_b2', 'value_c2'] }
         ]
       })
     })
@@ -773,8 +784,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['INPUT', 'RESULT'],
         rows: [
-          [5, 10],
-          [7, 14]
+          { rowNumber: 2, values: [5, 10] },
+          { rowNumber: 3, values: [7, 14] }
         ]
       })
     })
@@ -831,7 +842,9 @@ describe('ExcelJSSummaryLogsParser', () => {
       const buffer = await workbook.xlsx.writeBuffer()
       const result = await parse(buffer)
 
-      expect(result.data.TEST_TABLE.rows).toEqual([[1, 'First item']])
+      expect(result.data.TEST_TABLE.rows).toEqual([
+        { rowNumber: 2, values: [1, 'First item'] }
+      ])
     })
   })
 
@@ -854,8 +867,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: [null, 'DATE_RECEIVED', 'SUPPLIER_REF'],
         rows: [
-          [null, '2025-05-25', 'ABC123'],
-          [null, '2025-05-26', 'XYZ789']
+          { rowNumber: 2, values: [null, '2025-05-25', 'ABC123'] },
+          { rowNumber: 3, values: [null, '2025-05-26', 'XYZ789'] }
         ]
       })
     })
@@ -880,8 +893,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: [null, null, null],
         rows: [
-          ['value1', 'value2', 'value3'],
-          ['value4', 'value5', 'value6']
+          { rowNumber: 2, values: ['value1', 'value2', 'value3'] },
+          { rowNumber: 3, values: ['value4', 'value5', 'value6'] }
         ]
       })
     })
@@ -909,8 +922,8 @@ describe('ExcelJSSummaryLogsParser', () => {
           location: { sheet: 'Test', row: 1, column: 'B' },
           headers: ['ROW_ID', null, 'DATE_LOAD_LEFT_SITE', 'WEIGHT'],
           rows: [
-            ['row-2', null, '2024-01-16', 200],
-            ['row-3', null, '2024-01-17', 300]
+            { rowNumber: 3, values: ['row-2', null, '2024-01-16', 200] },
+            { rowNumber: 4, values: ['row-3', null, '2024-01-17', 300] }
           ]
         })
       })
@@ -927,8 +940,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          ['real-1', null, 300],
-          ['real-2', null, 400]
+          { rowNumber: 4, values: ['real-1', null, 300] },
+          { rowNumber: 5, values: ['real-2', null, 400] }
         ])
       })
 
@@ -944,9 +957,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          ['row-2', 'Not Example', 200],
-          ['row-3', 'example', 300],
-          ['row-4', 'EXAMPLE', 400]
+          { rowNumber: 3, values: ['row-2', 'Not Example', 200] },
+          { rowNumber: 4, values: ['row-3', 'example', 300] },
+          { rowNumber: 5, values: ['row-4', 'EXAMPLE', 400] }
         ])
       })
 
@@ -967,7 +980,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          ['row-3', null, 300, null]
+          { rowNumber: 4, values: ['row-3', null, 300, null] }
         ])
       })
 
@@ -980,7 +993,9 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         })
 
-        expect(result.data.TEST_TABLE.rows).toEqual([[null, 'row-2', 200]])
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          { rowNumber: 3, values: [null, 'row-2', 200] }
+        ])
       })
 
       it('should still terminate section on empty row even after skipping example rows', async () => {
@@ -993,7 +1008,9 @@ describe('ExcelJSSummaryLogsParser', () => {
           ]
         })
 
-        expect(result.data.TEST_TABLE.rows).toEqual([['row-2', null, 200]])
+        expect(result.data.TEST_TABLE.rows).toEqual([
+          { rowNumber: 3, values: ['row-2', null, 200] }
+        ])
       })
 
       it('should handle section with only example rows (results in empty rows array)', async () => {
@@ -1019,8 +1036,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          [12345678910, '2025-05-25'],
-          ['Example', '2025-05-26']
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: ['Example', '2025-05-26'] }
         ])
       })
     })
@@ -1042,8 +1059,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          [12345678910, '2025-05-25', 'ABC123'],
-          [98765432100, '2025-05-26', 'DEF456']
+          { rowNumber: 3, values: [12345678910, '2025-05-25', 'ABC123'] },
+          { rowNumber: 4, values: [98765432100, '2025-05-26', 'DEF456'] }
         ])
       })
 
@@ -1065,8 +1082,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          [98765432100, '2025-05-26', null, 'DEF456'],
-          [11122233344, '2025-05-27', null, 'GHI789']
+          { rowNumber: 4, values: [98765432100, '2025-05-26', null, 'DEF456'] },
+          { rowNumber: 5, values: [11122233344, '2025-05-27', null, 'GHI789'] }
         ])
       })
 
@@ -1082,9 +1099,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          ['row id', '2025-05-26'],
-          ['ROW_ID', '2025-05-27'],
-          ['ROW ID', '2025-05-28']
+          { rowNumber: 3, values: ['row id', '2025-05-26'] },
+          { rowNumber: 4, values: ['ROW_ID', '2025-05-27'] },
+          { rowNumber: 5, values: ['ROW ID', '2025-05-28'] }
         ])
       })
 
@@ -1116,8 +1133,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         const result = await parse(buffer)
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          [1001, '2025-05-25'],
-          [1002, '2025-05-26']
+          { rowNumber: 3, values: [1001, '2025-05-25'] },
+          { rowNumber: 4, values: [1002, '2025-05-26'] }
         ])
       })
 
@@ -1132,8 +1149,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          [1001, '2025-05-25'],
-          [1002, '2025-05-26']
+          { rowNumber: 3, values: [1001, '2025-05-25'] },
+          { rowNumber: 4, values: [1002, '2025-05-26'] }
         ])
       })
 
@@ -1150,9 +1167,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         })
 
         expect(result.data.TEST_TABLE.rows).toEqual([
-          [1001, '2025-05-25', 'Yes'],
-          [1002, '2025-05-26', 'No'],
-          [1003, '2025-05-27', 'Yes']
+          { rowNumber: 2, values: [1001, '2025-05-25', 'Yes'] },
+          { rowNumber: 3, values: [1002, '2025-05-26', 'No'] },
+          { rowNumber: 6, values: [1003, '2025-05-27', 'Yes'] }
         ])
       })
     })
@@ -1174,9 +1191,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['COLUMN_A', 'COLUMN_B', 'COLUMN_C'],
         rows: [
-          ['value1', 'value2', 'value3'],
-          [null, null, 'only_last_has_value'],
-          ['value4', null, 'value5']
+          { rowNumber: 2, values: ['value1', 'value2', 'value3'] },
+          { rowNumber: 3, values: [null, null, 'only_last_has_value'] },
+          { rowNumber: 4, values: ['value4', null, 'value5'] }
         ]
       })
     })
@@ -1225,8 +1242,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          [12345678910, date1],
-          [98765432100, date2]
+          { rowNumber: 2, values: [12345678910, date1] },
+          { rowNumber: 3, values: [98765432100, date2] }
         ]
       })
     })
@@ -1252,7 +1269,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.MIXED_TYPES).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['STRING_COL', 'DATE_COL', 'NUMBER_COL'],
-        rows: [['some text', date, 42]]
+        rows: [{ rowNumber: 2, values: ['some text', date, 42] }]
       })
     })
   })
@@ -1274,8 +1291,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          [12345678910, '2025-05-25'],
-          [98765432100, '2025-05-26']
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: [98765432100, '2025-05-26'] }
         ]
       })
 
@@ -1312,9 +1329,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          [12345678910, '2025-05-25'],
-          [98765432100, '2025-05-26'],
-          [11122233344, '2025-05-27']
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: [98765432100, '2025-05-26'] },
+          { rowNumber: 4, values: [11122233344, '2025-05-27'] }
         ]
       })
 
@@ -1342,8 +1359,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['SUPPLIER_NAME', 'SUPPLIER_REF'],
         rows: [
-          ['ABC Ltd', 'ABC123'],
-          ['XYZ Corp', 'XYZ789']
+          { rowNumber: 2, values: ['ABC Ltd', 'ABC123'] },
+          { rowNumber: 3, values: ['XYZ Corp', 'XYZ789'] }
         ]
       })
 
@@ -1383,7 +1400,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.FIRST_SECTION).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['COLUMN_A', 'COLUMN_B'],
-        rows: [['value_a1', 'value_b1']]
+        rows: [{ rowNumber: 2, values: ['value_a1', 'value_b1'] }]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
@@ -1400,8 +1417,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 8, column: 'B' },
         headers: ['COLUMN_X', 'COLUMN_Y'],
         rows: [
-          ['value_x1', 'value_y1'],
-          ['value_x2', 'value_y2']
+          { rowNumber: 9, values: ['value_x1', 'value_y1'] },
+          { rowNumber: 10, values: ['value_x2', 'value_y2'] }
         ]
       })
     })
@@ -1425,7 +1442,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.WASTE_BALANCE).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
-        rows: [[12345678910, '2025-05-25']]
+        rows: [{ rowNumber: 2, values: [12345678910, '2025-05-25'] }]
       })
 
       expect(result.meta.PROCESSING_TYPE).toEqual({
@@ -1446,8 +1463,8 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [12345678910, null, null],
-        [98765432100, 'Active', null]
+        { rowNumber: 2, values: [12345678910, null, null] },
+        { rowNumber: 3, values: [98765432100, 'Active', null] }
       ])
     })
 
@@ -1463,7 +1480,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [12345678910, '2025-01-15', '03 03 08', 1000]
+        { rowNumber: 2, values: [12345678910, '2025-01-15', '03 03 08', 1000] }
       ])
     })
 
@@ -1484,7 +1501,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [null, null, null, 'actual value']
+        { rowNumber: 2, values: [null, null, null, 'actual value'] }
       ])
     })
 
@@ -1497,7 +1514,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.WASTE_RECEIVED.rows).toEqual([
-        [null, 'CHOOSE OPTION', 'choose Option']
+        { rowNumber: 2, values: [null, 'CHOOSE OPTION', 'choose Option'] }
       ])
     })
   })
@@ -1523,8 +1540,12 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.TYPE.value).toBe('REPROCESSOR_INPUT')
-      expect(result.data.SECTION_ONE.rows).toEqual([['value_a']])
-      expect(result.data.SECTION_TWO.rows).toEqual([['value_b']])
+      expect(result.data.SECTION_ONE.rows).toEqual([
+        { rowNumber: 6, values: ['value_a'] }
+      ])
+      expect(result.data.SECTION_TWO.rows).toEqual([
+        { rowNumber: 12, values: ['value_b'] }
+      ])
     })
 
     it('should continue processing data sections after empty row gaps', async () => {
@@ -1543,8 +1564,12 @@ describe('ExcelJSSummaryLogsParser', () => {
         ]
       })
 
-      expect(result.data.FIRST.rows).toEqual([['row_1']])
-      expect(result.data.SECOND.rows).toEqual([['row_2']])
+      expect(result.data.FIRST.rows).toEqual([
+        { rowNumber: 2, values: ['row_1'] }
+      ])
+      expect(result.data.SECOND.rows).toEqual([
+        { rowNumber: 10, values: ['row_2'] }
+      ])
     })
 
     it('should handle worksheet ending with empty rows', async () => {
@@ -1561,7 +1586,9 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.meta.TYPE.value).toBe('TEST_VALUE')
-      expect(result.data.TEST.rows).toEqual([['data_row_1']])
+      expect(result.data.TEST.rows).toEqual([
+        { rowNumber: 3, values: ['data_row_1'] }
+      ])
     })
 
     it('should correctly parse data before large empty gaps', async () => {
@@ -1588,10 +1615,12 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
       expect(result.data.LOADS.rows).toEqual([
-        ['load-001', 100],
-        ['load-002', 200]
+        { rowNumber: 3, values: ['load-001', 100] },
+        { rowNumber: 4, values: ['load-002', 200] }
       ])
-      expect(result.data.OUTPUTS.rows).toEqual([['output-001']])
+      expect(result.data.OUTPUTS.rows).toEqual([
+        { rowNumber: 57, values: ['output-001'] }
+      ])
     })
 
     it('should stop processing worksheet after 100 consecutive empty rows with formatting', async () => {
@@ -1624,7 +1653,9 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       // Data before the phantom gap should be parsed
       expect(result.meta.TYPE.value).toBe('BEFORE_PHANTOM')
-      expect(result.data.FIRST.rows).toEqual([['valid_data']])
+      expect(result.data.FIRST.rows).toEqual([
+        { rowNumber: 3, values: ['valid_data'] }
+      ])
 
       // Data after the phantom gap should NOT be parsed (processing stopped)
       expect(result.meta.PHANTOM).toBeUndefined()
@@ -1643,7 +1674,9 @@ describe('ExcelJSSummaryLogsParser', () => {
       })
 
       expect(result.data.SECTION.headers).toEqual(['COL_A', 'COL_B', 'COL_C'])
-      expect(result.data.SECTION.rows).toEqual([['val1', 'val2', 'val3']])
+      expect(result.data.SECTION.rows).toEqual([
+        { rowNumber: 2, values: ['val1', 'val2', 'val3'] }
+      ])
     })
 
     it('should handle skip columns within data', async () => {
@@ -1669,7 +1702,9 @@ describe('ExcelJSSummaryLogsParser', () => {
         null,
         'COL_B'
       ])
-      expect(result.data.SECTION.rows).toEqual([['val1', null, null, 'val2']])
+      expect(result.data.SECTION.rows).toEqual([
+        { rowNumber: 2, values: ['val1', null, null, 'val2'] }
+      ])
     })
 
     it('should stop collecting cells after 100 consecutive empty columns', async () => {
@@ -1701,12 +1736,12 @@ describe('ExcelJSSummaryLogsParser', () => {
       const result = await parse(buffer)
 
       // Data within the threshold should be parsed
-      expect(result.data.SECTION.rows[0]).toContain('data_a')
-      expect(result.data.SECTION.rows[0]).toContain('data_b')
+      expect(result.data.SECTION.rows[0].values).toContain('data_a')
+      expect(result.data.SECTION.rows[0].values).toContain('data_b')
 
       // Data after the phantom column gap should NOT be in the results
       // (the phantom_data in column 105 should not appear)
-      expect(result.data.SECTION.rows[0]).not.toContain('phantom_data')
+      expect(result.data.SECTION.rows[0].values).not.toContain('phantom_data')
     })
 
     it('should handle metadata in columns before phantom gap', async () => {

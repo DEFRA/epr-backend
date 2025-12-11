@@ -46,6 +46,20 @@ describe('waste-balances repository - in-memory implementation', () => {
     expect(instance.findByAccreditationId).toBeTypeOf('function')
   })
 
+  it('should throw error when organisationsRepository dependency is missing', async () => {
+    const repository = createInMemoryWasteBalancesRepository([], {})()
+    const record = { organisationId: 'org-1' }
+    await expect(
+      repository.updateWasteBalanceTransactions([record], 'acc-1')
+    ).rejects.toThrow('organisationsRepository dependency is required')
+  })
+
+  it('should expose internal storage for testing', () => {
+    const initialStorage = [{ accreditationId: 'acc-1' }]
+    const repository = createInMemoryWasteBalancesRepository(initialStorage)()
+    expect(repository._getStorageForTesting()).toBe(initialStorage)
+  })
+
   testWasteBalancesRepositoryContract(extendedIt)
 
   describe('implementation details', () => {
@@ -53,7 +67,7 @@ describe('waste-balances repository - in-memory implementation', () => {
       const repository = createInMemoryWasteBalancesRepository()
       const instance = repository()
       await expect(
-        instance.updateWasteBalanceTransactions([], 'acc-1')
+        instance.updateWasteBalanceTransactions(/** @type {any} */ ([{ organisationId: 'org-1' }]), 'acc-1')
       ).rejects.toThrow('organisationsRepository dependency is required')
     })
 
@@ -66,7 +80,7 @@ describe('waste-balances repository - in-memory implementation', () => {
       })
       const instance = repository()
       await expect(
-        instance.updateWasteBalanceTransactions([], 'acc-1')
+        instance.updateWasteBalanceTransactions(/** @type {any} */ ([{ organisationId: 'org-1' }]), 'acc-1')
       ).rejects.toThrow('Accreditation not found: acc-1')
     })
 
