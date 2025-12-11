@@ -1,7 +1,6 @@
 import { createOrUpdateAccreditationCollection } from './create-update-accreditation.js'
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
-import { createOrUpdateWasteBalancesCollection } from './create-update-waste-balances.js'
 
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 import {
@@ -59,7 +58,6 @@ export async function createOrUpdateCollections(db) {
   await createOrUpdateAccreditationCollection(db, collections)
 
   await createOrUpdateEPROrganisationCollection(db, collections)
-  await createOrUpdateWasteBalancesCollection(db, collections)
 }
 
 /**

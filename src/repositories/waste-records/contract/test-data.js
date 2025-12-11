@@ -3,7 +3,6 @@ import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecordVersion} WasteRecordVersion
@@ -81,7 +80,6 @@ export const buildWasteRecord = (overrides = {}) => {
   const registrationId = overrides.registrationId || 'reg-1'
   const type = overrides.type || WASTE_RECORD_TYPE.RECEIVED
   const data = overrides.data || {
-    processingType: PROCESSING_TYPES.EXPORTER,
     DATE_RECEIVED_FOR_REPROCESSING: '2025-01-15',
     GROSS_WEIGHT: 100.5
   }
