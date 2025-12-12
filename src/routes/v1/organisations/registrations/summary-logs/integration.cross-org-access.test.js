@@ -44,7 +44,7 @@ describe('Cross-organisation access control', () => {
         { authContext }
       )
 
-      // Create summary log via API
+      // Create summary log via API (no auth - callback from CDP uploader)
       await server.inject({
         method: 'POST',
         url: buildPostUrl(aliceOrgId, aliceRegId, summaryLogId),
@@ -54,8 +54,7 @@ describe('Cross-organisation access control', () => {
           UPLOAD_STATUS.COMPLETE,
           'file-123',
           'test.xlsx'
-        ),
-        ...asStandardUser({ id: 'alice' })
+        )
       })
 
       // Alice can access her own org's summary log
@@ -91,7 +90,7 @@ describe('Cross-organisation access control', () => {
         { authContext }
       )
 
-      // Bob creates a summary log in his org
+      // Bob creates a summary log in his org (no auth - callback from CDP uploader)
       await server.inject({
         method: 'POST',
         url: buildPostUrl(bobOrgId, bobRegId, summaryLogId),
@@ -101,8 +100,7 @@ describe('Cross-organisation access control', () => {
           UPLOAD_STATUS.COMPLETE,
           'file-456',
           'test.xlsx'
-        ),
-        ...asStandardUser({ id: 'bob' })
+        )
       })
 
       // Alice tries to access Bob's summary log - should be denied
@@ -140,7 +138,7 @@ describe('Cross-organisation access control', () => {
         { authContext }
       )
 
-      // Bob creates a summary log
+      // Bob creates a summary log (no auth - callback from CDP uploader)
       await server.inject({
         method: 'POST',
         url: buildPostUrl(bobOrgId, bobRegId, summaryLogId),
@@ -150,8 +148,7 @@ describe('Cross-organisation access control', () => {
           UPLOAD_STATUS.COMPLETE,
           'file-789',
           'test.xlsx'
-        ),
-        ...asStandardUser({ id: 'bob' })
+        )
       })
 
       // Initially, Alice cannot access Bob's org

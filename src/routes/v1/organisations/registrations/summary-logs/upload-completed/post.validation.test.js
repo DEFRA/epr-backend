@@ -3,7 +3,6 @@ import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 const organisationId = 'org-123'
@@ -32,8 +31,7 @@ describe('POST upload-completed validation', () => {
       url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         metadata: { organisationId }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -48,8 +46,7 @@ describe('POST upload-completed validation', () => {
         form: {
           notFile: 'wrong'
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -71,8 +68,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -94,8 +90,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -117,8 +112,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -141,8 +135,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -164,8 +157,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -187,8 +179,7 @@ describe('POST upload-completed validation', () => {
             s3Bucket: 'bucket'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -211,8 +202,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -232,8 +222,7 @@ describe('POST upload-completed validation', () => {
             s3Key: 'key'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -256,8 +245,7 @@ describe('POST upload-completed validation', () => {
             checksumSha256: 'abc123'
           }
         }
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -283,8 +271,7 @@ describe('POST upload-completed validation', () => {
           }
         },
         numberOfRejectedFiles: 0
-      },
-      ...asStandardUser()
+      }
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)

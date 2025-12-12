@@ -87,8 +87,7 @@ describe('Summary logs upload lifecycle', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        ...asStandardUser()
+        )
       })
     })
 
@@ -170,8 +169,7 @@ describe('Summary logs upload lifecycle', () => {
           fileId,
           filename,
           false
-        ),
-        ...asStandardUser()
+        )
       })
     })
 
@@ -238,8 +236,7 @@ describe('Summary logs upload lifecycle', () => {
           fileId,
           filename,
           false
-        ),
-        ...asStandardUser()
+        )
       })
     })
 
