@@ -1,6 +1,6 @@
+import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 import Jwt from '@hapi/jwt'
 import { generateKeyPairSync, randomUUID } from 'crypto'
-import org1 from '#data/fixtures/common/epr-organisations/sample-organisation-1.json' with { type: 'json' }
 
 const VALID_DEFRA_AUDIENCE = 'test-defra'
 export const VALID_TOKEN_CONTACT_ID = randomUUID()
@@ -9,7 +9,7 @@ export const USER_ABSENT_IN_ORG1_EMAIL = 'random@email.com'
 export const VALID_TOKEN_CURRENT_RELATIONSHIP = randomUUID()
 export const COMPANY_1_ID = randomUUID()
 export const COMPANY_1_NAME = 'Lost Ark Adventures Ltd'
-const COMPANY_2_ID = randomUUID()
+export const COMPANY_2_ID = randomUUID()
 export const DEFRA_TOKEN_SECOND_RELATIONSHIP_ID = randomUUID()
 export const VALID_TOKEN_RELATIONSHIPS = [
   `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
@@ -81,6 +81,13 @@ const generateValidDefraIdToken = (tokenPayload) => {
 
   return mockDefraIdToken
 }
+
+// TODO bit of a hack to override things that rely on the fixture
+export const generateValidTokenWith = (overrides = {}) =>
+  generateValidDefraIdToken({
+    ...userPresentInOrg1DefraIdTokenPayload,
+    ...overrides
+  })
 
 const generateDefraIdTokenWithWrongSignature = () => {
   // Generate a different key pair to create an invalid signature
