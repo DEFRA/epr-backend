@@ -106,10 +106,24 @@ export const createStandardMeta = (processingType) => ({
   }
 })
 
+/**
+ * @typedef {Object} TestInfrastructureOptions
+ * @property {import('#common/helpers/auth/auth-context-adapter.js').AuthContextAdapter} [authContext] - Optional auth context for Tier 2 cross-org tests
+ */
+
+/**
+ * Creates test infrastructure for integration tests.
+ *
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {object} extractorData
+ * @param {TestInfrastructureOptions} [options]
+ */
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,
-  extractorData
+  extractorData,
+  options = {}
 ) => {
   const mockLogger = {
     info: vi.fn(),
@@ -159,7 +173,8 @@ export const createTestInfrastructure = async (
     workers: {
       summaryLogsWorker: { validate: validateSummaryLog }
     },
-    featureFlags
+    featureFlags,
+    authContext: options.authContext
   })
 
   return { server, summaryLogsRepository }
