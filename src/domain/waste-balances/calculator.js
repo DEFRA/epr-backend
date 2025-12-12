@@ -85,7 +85,7 @@ export const buildTransaction = (
     closingAvailableAmount,
     entities: [
       {
-        id: record.rowId,
+        id: String(record.rowId),
         currentVersionId: record.versions?.[record.versions.length - 1]?.id,
         previousVersionIds:
           record.versions?.slice(0, -1).map((v) => v.id) || [],
@@ -119,27 +119,66 @@ export const calculateWasteBalanceUpdates = ({
   let currentAmount = currentBalance.amount || 0
   let currentAvailableAmount = currentBalance.availableAmount || 0
 
+  // Optimization: Pre-calculate allocations to avoid O(N*M) complexity
+  const allocationMap = new Map()
+
+  const updateAllocationMap = (t) => {
+    if (
+      t.type !== WASTE_BALANCE_TRANSACTION_TYPE.CREDIT &&
+      t.type !== WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+    ) {
+      return
+    }
+
+    const amount =
+      t.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? t.amount : -t.amount
+    const uniqueEntityIds = new Set((t.entities || []).map((e) => String(e.id)))
+
+    for (const id of uniqueEntityIds) {
+      allocationMap.set(id, (allocationMap.get(id) || 0) + amount)
+    }
+  }
+
+  // Initialize map with existing transactions
+  ;(currentBalance.transactions || []).forEach(updateAllocationMap)
+
   for (const record of wasteRecords) {
     if (
       isWithinAccreditationDateRange(record, accreditation) &&
       !hasPrnBeenIssued(record)
     ) {
-      // Calculate Amount
-      const amount = getTransactionAmount(record)
+      // Calculate Target Amount
+      const targetAmount = getTransactionAmount(record)
 
-      if (amount > 0) {
+      // Calculate Already Credited Amount
+      const alreadyAllocated = allocationMap.get(String(record.rowId)) || 0
+
+      const delta = targetAmount - alreadyAllocated
+
+      // Only create transaction if there is a difference (handling float precision)
+      if (Math.abs(delta) > 0.000001) {
+        const type =
+          delta > 0
+            ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+            : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+        const amount = Math.abs(delta)
+
         // Create Transaction
         const transaction = buildTransaction(
           record,
           amount,
           currentAmount,
-          currentAvailableAmount
+          currentAvailableAmount,
+          type
         )
 
         // Update State
         currentAmount = transaction.closingAmount
         currentAvailableAmount = transaction.closingAvailableAmount
         newTransactions.push(transaction)
+
+        // Update map for next iteration
+        updateAllocationMap(transaction)
       }
     }
   }
