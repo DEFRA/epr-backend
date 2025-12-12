@@ -78,7 +78,8 @@ export const performUpdateWasteBalanceTransactions = async ({
     throw new Error('organisationsRepository dependency is required')
   }
 
-  const accreditation = await organisationsRepository.getAccreditationById(
+  const accreditation = await organisationsRepository.findAccreditationById(
+    wasteRecords[0]?.organisationId,
     validatedAccreditationId
   )
   if (!accreditation) {
