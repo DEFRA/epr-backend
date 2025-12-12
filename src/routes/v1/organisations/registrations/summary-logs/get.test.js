@@ -9,6 +9,7 @@ import {
   buildAccreditation
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 
@@ -75,7 +76,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -100,7 +102,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -127,7 +130,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
