@@ -42,7 +42,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
           schemaVersion: 1
         })
       )
-      expect(result._id).toBeDefined()
+      expect(result.id).toBeDefined()
     })
 
     it('should return null if not found and shouldCreate is false', async () => {

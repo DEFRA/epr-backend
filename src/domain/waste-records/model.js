@@ -27,6 +27,7 @@ export const VERSION_STATUS = Object.freeze({
 
 /**
  * @typedef {Object} WasteRecordVersion
+ * @property {string} id - Version ID
  * @property {string} createdAt - ISO8601 timestamp
  * @property {VersionStatus} status
  * @property {SummaryLogReference} summaryLog - Reference to summary log that created this version
@@ -42,4 +43,5 @@ export const VERSION_STATUS = Object.freeze({
  * @property {WasteRecordType} type
  * @property {Object} data - Reporting fields only
  * @property {WasteRecordVersion[]} versions - Version history. createdAt/updatedAt derived from first/last version
+ * @property {import('#domain/waste-balances/model.js').UserSummary} [updatedBy] - User who last updated the record
  */

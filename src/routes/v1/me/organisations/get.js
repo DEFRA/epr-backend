@@ -3,6 +3,7 @@ import {
   getOrgDataFromDefraIdToken,
   isInitialUser
 } from '#common/helpers/auth/roles/helpers.js'
+import { STATUS } from '#domain/organisations/model.js'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -42,7 +43,9 @@ import { StatusCodes } from 'http-status-codes'
 
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
-const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
+const isNotALinkedOrg = () => (org) => !org.linkedDefraOrganisation
+const isNotOurLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
+const isApproved = () => (org) => org.status === STATUS.APPROVED
 
 /**
  * Get current Defra ID details from token
@@ -53,12 +56,11 @@ const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
 const getCurrentDetailsFromToken = (auth) => {
   const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
 
-  // Get the user's current organisation from the token
-  const currentOrgFromToken = orgInfo.find((org) => org.isCurrent)
+  const currentOrg = orgInfo.find((org) => org.isCurrent)
 
   return {
-    id: currentOrgFromToken.defraIdOrgId,
-    name: currentOrgFromToken.defraIdOrgName
+    id: currentOrg.defraIdOrgId,
+    name: currentOrg.defraIdOrgName
   }
 }
 
@@ -73,7 +75,7 @@ export const organisationsLinkedGetAll = {
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
    * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
-   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject & { organisations: UserOrganisationsResponse }>}
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async (request, h) => {
     const { organisationsRepository, auth } = request
@@ -84,7 +86,6 @@ export const organisationsLinkedGetAll = {
 
     const allOrganisations = await organisationsRepository.findAll()
 
-    // Get linked organisation details if a link exists
     const linkedOrg = allOrganisations.find(
       (org) => org.linkedDefraOrganisation?.orgId === current.id
     )
@@ -98,10 +99,11 @@ export const organisationsLinkedGetAll = {
         }
       : null
 
-    // Unlinked are all other organisations (excluding the current linked one)
     const unlinked = allOrganisations
-      .filter(isNotLinkedOrg(linkedOrg))
+      .filter(isNotALinkedOrg())
+      .filter(isNotOurLinkedOrg(linkedOrg))
       .filter(isInitialUser(email))
+      .filter(isApproved())
       .map((org) => ({
         id: org.id,
         name: org.companyDetails.name,
