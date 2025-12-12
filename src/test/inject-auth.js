@@ -2,8 +2,20 @@
  * Test helpers for injecting authentication credentials directly into server.inject()
  * calls, bypassing the full JWT validation and org lookup flow.
  *
- * Use these for testing business logic. For testing auth behaviour itself,
- * use the full auth stack with setupAuthContext() and real tokens.
+ * IMPORTANT: These helpers bypass BOTH Entra ID and Defra ID auth validation entirely.
+ * The injected credentials go directly to Hapi's auth system without:
+ * - Token signature/expiry validation
+ * - Issuer/audience checks
+ * - Provider-specific role extraction (getEntraUserRoles/getDefraUserRoles)
+ * - The addStandardUserIfNotPresent() side effect
+ *
+ * USE FOR: Testing business logic (what happens AFTER auth succeeds)
+ * DO NOT USE FOR: Testing auth behaviour itself
+ *
+ * For auth behaviour tests, use setupAuthContext() with real tokens from
+ * create-entra-id-test-tokens.js or create-defra-id-test-tokens.js
+ *
+ * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
  */
 
 import { ROLES } from '#common/helpers/auth/constants.js'
