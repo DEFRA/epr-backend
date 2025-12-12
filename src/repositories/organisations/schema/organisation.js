@@ -81,15 +81,17 @@ export const organisationInsertSchema = Joi.object({
 
 const NON_UPDATABLE_FIELDS = ['id']
 
-const insertSchemaKeys = Object.keys(organisationInsertSchema.describe().keys)
-const updatableFields = insertSchemaKeys.filter(
-  (key) => !NON_UPDATABLE_FIELDS.includes(key)
-)
-
 export const organisationUpdateSchema = organisationInsertSchema
   .fork(NON_UPDATABLE_FIELDS, (schema) => schema.forbidden())
-  .fork(updatableFields, (schema) => schema.optional())
+  .fork(['status'], (schema) => schema.optional())
   .keys({
-    registrations: Joi.array().items(registrationUpdateSchema).optional(),
-    accreditations: Joi.array().items(accreditationUpdateSchema).optional()
+    schemaVersion: Joi.number().required().valid(1),
+    registrations: Joi.array()
+      .items(registrationUpdateSchema)
+      .allow(null)
+      .optional(),
+    accreditations: Joi.array()
+      .items(accreditationUpdateSchema)
+      .allow(null)
+      .optional()
   })

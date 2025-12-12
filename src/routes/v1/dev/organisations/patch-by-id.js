@@ -76,10 +76,10 @@ export const devOrganisationsPatchById = {
 
     const merged = mergeWith({}, current, organisation, customMerger)
 
-    const { id: _, schemaVersion: _s, version: _v, ...updates } = merged
+    const { id: _, version: _v, ...updates } = merged
 
     try {
-      await organisationsRepository.update(id, current.version, updates)
+      await organisationsRepository.replace(id, current.version, updates)
       const updated = await organisationsRepository.findById(
         id,
         current.version + 1
