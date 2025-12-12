@@ -80,7 +80,10 @@ export function getJwtStrategyConfig(oidcConfigs) {
             email,
             issuer,
             scope,
-            currentRelationshipId: tokenPayload?.currentRelationshipId
+            currentRelationshipId: tokenPayload?.currentRelationshipId,
+            // For org-access-plugin (onPostAuth) to verify org access and add user if needed
+            linkedOrgId: request.app.linkedOrgId,
+            tokenPayload
           }
         }
       }

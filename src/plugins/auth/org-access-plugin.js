@@ -1,36 +1,34 @@
 /**
- * Organisation Access Plugin - Tier 2 testing infrastructure
+ * Organisation Access Plugin
  *
  * Registers an onPostAuth extension that verifies users can only access
- * organisations they are linked to. Uses the Auth Context Adapter pattern
- * to decouple org access checking from JWT validation.
+ * organisations they are linked to. This ensures proper 403 Forbidden
+ * responses for authorisation failures (not 401 Unauthorized).
  *
- * This plugin is optional and only registered when an authContext is provided.
- * In production, org access is still checked during JWT validation.
- * For Tier 2 tests, this plugin provides a second layer of checking that
- * works with Hapi's auth injection.
+ * Uses credentials.linkedOrgId set during JWT validation to check access.
+ *
+ * Also handles:
+ * - Organisation status validation (ACTIVE/SUSPENDED only)
+ * - Adding users to organisations on first access (addStandardUserIfNotPresent)
  *
  * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
  */
 
 import Boom from '@hapi/boom'
-
-/** @typedef {import('#common/helpers/auth/auth-context-adapter.js').AuthContextAdapter} AuthContextAdapter */
+import { STATUS } from '#domain/organisations/model.js'
+import { addStandardUserIfNotPresent } from '#common/helpers/auth/add-standard-user-if-not-present.js'
 
 /**
- * @type {import('@hapi/hapi').Plugin<{authContext: AuthContextAdapter}>}
+ * @type {import('@hapi/hapi').Plugin<void>}
  */
 export const orgAccessPlugin = {
   name: 'orgAccessPlugin',
-  version: '1.0.0',
+  version: '2.0.0',
 
   /**
    * @param {import('@hapi/hapi').Server} server
-   * @param {{authContext: AuthContextAdapter}} options
    */
-  register: async (server, options) => {
-    const { authContext } = options
-
+  register: async (server) => {
     server.ext('onPostAuth', async (request, h) => {
       const { organisationId } = request.params
 
@@ -39,12 +37,45 @@ export const orgAccessPlugin = {
         return h.continue
       }
 
-      const { id: userId } = request.auth.credentials
+      // Skip if not authenticated (let auth layer handle 401)
+      if (!request.auth.isAuthenticated) {
+        return h.continue
+      }
 
-      const access = await authContext.getUserOrgAccess(userId, organisationId)
+      const { credentials } = request.auth
+      const { linkedOrgId, tokenPayload } = credentials
 
-      if (!access.linkedOrgId || access.linkedOrgId !== organisationId) {
-        throw Boom.forbidden('Not linked to this organisation')
+      // If no linkedOrgId in credentials, this is likely an Entra ID token
+      // (service maintainer) or a special flow - skip org access check
+      if (!linkedOrgId) {
+        return h.continue
+      }
+
+      // Check org mismatch
+      if (organisationId !== linkedOrgId) {
+        throw Boom.forbidden('Access denied: organisation mismatch')
+      }
+
+      // Check org status
+      const organisationById =
+        await request.organisationsRepository.findById(organisationId)
+      const orgStatusIsAccessible = [STATUS.ACTIVE, STATUS.SUSPENDED].includes(
+        organisationById.status
+      )
+
+      if (!orgStatusIsAccessible) {
+        throw Boom.forbidden(
+          'Access denied: organisation status not accessible'
+        )
+      }
+
+      // Add user to organisation if not already present
+      if (tokenPayload) {
+        await addStandardUserIfNotPresent(
+          request,
+          tokenPayload,
+          organisationById
+        )
       }
 
       return h.continue

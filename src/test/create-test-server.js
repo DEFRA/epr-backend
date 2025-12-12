@@ -1,6 +1,6 @@
 import { createServer } from '#server/server.js'
 import { vi } from 'vitest'
-import { orgAccessPlugin } from '#plugins/auth/org-access-plugin.js'
+import { tier2OrgAccessPlugin } from './tier2-org-access-plugin.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -31,15 +31,19 @@ export async function createTestServer(options = {}) {
   // If repositories are provided, assume in-memory mode and skip MongoDB
   const skipMongoDb = serverOptions.repositories !== undefined
 
+  // If authContext provided, skip production org-access-plugin (use Tier 2 test plugin instead)
+  const skipOrgAccessPlugin = authContext !== undefined
+
   const server = await createServer({
     skipMongoDb,
+    skipOrgAccessPlugin,
     ...serverOptions
   })
 
-  // Register org access plugin for Tier 2 cross-org access testing
+  // Register Tier 2 test plugin for cross-org access testing with in-memory adapter
   if (authContext) {
     await server.register({
-      plugin: orgAccessPlugin,
+      plugin: tier2OrgAccessPlugin,
       options: { authContext }
     })
   }

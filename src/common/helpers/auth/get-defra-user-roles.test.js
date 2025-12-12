@@ -35,6 +35,7 @@ describe('#getDefraUserRoles', () => {
     path: '/api/v1/organisations',
     method: 'get',
     params: {},
+    app: {},
     server: {
       app: {}
     }
@@ -180,7 +181,7 @@ describe('#getDefraUserRoles', () => {
 
     test('returns roles for organisation access', async () => {
       const expectedRoles = [ROLES.editor, ROLES.viewer]
-      mockGetRolesForOrganisationAccess.mockResolvedValue(expectedRoles)
+      mockGetRolesForOrganisationAccess.mockReturnValue(expectedRoles)
 
       const tokenPayload = {
         id: 'user-123',
@@ -195,14 +196,12 @@ describe('#getDefraUserRoles', () => {
         mockOrganisationsRepository
       )
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledWith(
-        mockRequest,
-        mockLinkedEprOrg.id,
-        tokenPayload
+        mockRequest
       )
     })
 
     test('calls getUsersOrganisationInfo with correct parameters', async () => {
-      mockGetRolesForOrganisationAccess.mockResolvedValue([ROLES.viewer])
+      mockGetRolesForOrganisationAccess.mockReturnValue([ROLES.viewer])
 
       const tokenPayload = {
         id: 'user-456',
@@ -218,9 +217,9 @@ describe('#getDefraUserRoles', () => {
       expect(mockGetOrgMatchingUsersToken).toHaveBeenCalledTimes(1)
     })
 
-    test('calls getRolesForOrganisationAccess with request and linked org', async () => {
+    test('calls getRolesForOrganisationAccess with request', async () => {
       const customRoles = [ROLES.editor]
-      mockGetRolesForOrganisationAccess.mockResolvedValue(customRoles)
+      mockGetRolesForOrganisationAccess.mockReturnValue(customRoles)
 
       const tokenPayload = {
         id: 'user-789',
@@ -228,21 +227,20 @@ describe('#getDefraUserRoles', () => {
       }
       const customRequest = {
         ...mockRequest,
+        app: {},
         params: { organisationId: 'org-123' }
       }
 
       await getDefraUserRoles(tokenPayload, customRequest)
 
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledWith(
-        customRequest,
-        mockLinkedEprOrg.id,
-        tokenPayload
+        customRequest
       )
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledTimes(1)
     })
 
     test('returns empty array when getRolesForOrganisationAccess returns empty', async () => {
-      mockGetRolesForOrganisationAccess.mockResolvedValue([])
+      mockGetRolesForOrganisationAccess.mockReturnValue([])
 
       const tokenPayload = {
         id: 'user-123',
@@ -255,7 +253,7 @@ describe('#getDefraUserRoles', () => {
     })
 
     test('returns single role when user has one permission', async () => {
-      mockGetRolesForOrganisationAccess.mockResolvedValue([ROLES.viewer])
+      mockGetRolesForOrganisationAccess.mockReturnValue([ROLES.viewer])
 
       const tokenPayload = {
         id: 'user-123',
@@ -269,7 +267,7 @@ describe('#getDefraUserRoles', () => {
 
     test('returns multiple roles when user has multiple permissions', async () => {
       const multipleRoles = [ROLES.editor, ROLES.viewer, ROLES.admin]
-      mockGetRolesForOrganisationAccess.mockResolvedValue(multipleRoles)
+      mockGetRolesForOrganisationAccess.mockReturnValue(multipleRoles)
 
       const tokenPayload = {
         id: 'user-123',
@@ -300,21 +298,6 @@ describe('#getDefraUserRoles', () => {
       await expect(
         getDefraUserRoles(tokenPayload, mockRequest)
       ).rejects.toThrow('Organisation not found')
-    })
-
-    test('propagates error from getRolesForOrganisationAccess', async () => {
-      const error = new Error('Access denied')
-      mockGetOrgMatchingUsersToken.mockResolvedValue({ id: 'org-123' })
-      mockGetRolesForOrganisationAccess.mockRejectedValue(error)
-
-      const tokenPayload = {
-        id: 'user-123',
-        email: 'user@example.com'
-      }
-
-      await expect(
-        getDefraUserRoles(tokenPayload, mockRequest)
-      ).rejects.toThrow('Access denied')
     })
 
     test('propagates error from isAuthorisedOrgLinkingReq', async () => {
@@ -384,7 +367,7 @@ describe('#getDefraUserRoles', () => {
       mockIsAuthorisedOrgLinkingReq.mockResolvedValue(false)
       mockIsOrganisationsDiscoveryReq.mockReturnValue(false)
       mockGetOrgMatchingUsersToken.mockResolvedValue({ id: 'org-123' })
-      mockGetRolesForOrganisationAccess.mockResolvedValue([ROLES.viewer])
+      mockGetRolesForOrganisationAccess.mockReturnValue([ROLES.viewer])
 
       const tokenPayload = {
         id: 'user-123',

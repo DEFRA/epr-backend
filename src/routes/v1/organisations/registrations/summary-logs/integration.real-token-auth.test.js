@@ -110,9 +110,8 @@ describe('Real Token Authentication - Cross-organisation access control', () => 
         }
       })
 
-      // Auth validation returns 401 because the check happens during JWT validation.
-      // The message confirms the cross-org access denial is working.
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      // Org access check now happens in onPostAuth, returning proper 403 Forbidden
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
       expect(JSON.parse(response.payload).message).toBe(
         'Access denied: organisation mismatch'
       )
@@ -150,9 +149,8 @@ describe('Real Token Authentication - Cross-organisation access control', () => 
         }
       })
 
-      // Auth validation returns 401 because the check happens during JWT validation.
-      // The message confirms the cross-org access denial is working.
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      // Org access check now happens in onPostAuth, returning proper 403 Forbidden
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
       expect(JSON.parse(response.payload).message).toBe(
         'Access denied: organisation mismatch'
       )
