@@ -25,6 +25,7 @@ import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-org
 import exporterRecords from '#data/fixtures/common/waste-records/exporter-records.json' with { type: 'json' }
 
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
+import { createSystemLogsCollection } from '#common/helpers/collections/create-system-logs.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { toWasteRecordVersions } from '#repositories/waste-records/contract/test-data.js'
@@ -58,6 +59,7 @@ export async function createOrUpdateCollections(db) {
   await createOrUpdateAccreditationCollection(db, collections)
 
   await createOrUpdateEPROrganisationCollection(db, collections)
+  await createSystemLogsCollection(db, collections)
 }
 
 /**
