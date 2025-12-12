@@ -1,5 +1,5 @@
-import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import Boom from '@hapi/boom'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
