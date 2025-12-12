@@ -32,10 +32,10 @@ const createFileDetails = (overrides) => ({
   ...overrides
 })
 
-const createUploadCompletedPayload = (overrides) => ({
+const createUploadCompletedPayload = (overrides, orgId = organisationId) => ({
   uploadStatus: 'ready',
   metadata: {
-    organisationId,
+    organisationId: orgId,
     registrationId
   },
   form: {
@@ -45,47 +45,65 @@ const createUploadCompletedPayload = (overrides) => ({
   ...overrides
 })
 
-const createPendingPayload = (fileId = 'file-pending-123') =>
-  createUploadCompletedPayload({
-    form: {
-      summaryLogUpload: createFileDetails({
-        fileId,
-        filename: 'scanning.xlsx',
-        fileStatus: 'pending',
-        s3Bucket: undefined,
-        s3Key: undefined
-      })
-    }
-  })
-
-const createRejectedPayload = (fileId = 'file-rejected-123') =>
-  createUploadCompletedPayload({
-    form: {
-      summaryLogUpload: createFileDetails({
-        fileId,
-        filename: 'virus.xlsx',
-        fileStatus: 'rejected',
-        hasError: true,
-        errorMessage: 'The selected file contains a virus',
-        s3Bucket: undefined,
-        s3Key: undefined
-      })
+const createPendingPayload = (
+  fileId = 'file-pending-123',
+  orgId = organisationId
+) =>
+  createUploadCompletedPayload(
+    {
+      form: {
+        summaryLogUpload: createFileDetails({
+          fileId,
+          filename: 'scanning.xlsx',
+          fileStatus: 'pending',
+          s3Bucket: undefined,
+          s3Key: undefined
+        })
+      }
     },
-    numberOfRejectedFiles: 1
-  })
+    orgId
+  )
 
-const createCompletePayload = (fileId = 'file-complete-123') =>
-  createUploadCompletedPayload({
-    form: {
-      summaryLogUpload: createFileDetails({
-        fileId,
-        filename: 'test.xlsx',
-        fileStatus: 'complete',
-        s3Bucket: 'test-bucket',
-        s3Key: 'test-key'
-      })
-    }
-  })
+const createRejectedPayload = (
+  fileId = 'file-rejected-123',
+  orgId = organisationId
+) =>
+  createUploadCompletedPayload(
+    {
+      form: {
+        summaryLogUpload: createFileDetails({
+          fileId,
+          filename: 'virus.xlsx',
+          fileStatus: 'rejected',
+          hasError: true,
+          errorMessage: 'The selected file contains a virus',
+          s3Bucket: undefined,
+          s3Key: undefined
+        })
+      },
+      numberOfRejectedFiles: 1
+    },
+    orgId
+  )
+
+const createCompletePayload = (
+  fileId = 'file-complete-123',
+  orgId = organisationId
+) =>
+  createUploadCompletedPayload(
+    {
+      form: {
+        summaryLogUpload: createFileDetails({
+          fileId,
+          filename: 'test.xlsx',
+          fileStatus: 'complete',
+          s3Bucket: 'test-bucket',
+          s3Key: 'test-key'
+        })
+      }
+    },
+    orgId
+  )
 
 describe(`${summaryLogsUploadCompletedPath} route`, () => {
   // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
@@ -588,7 +606,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-456'),
           ...asStandardUser()
         })
@@ -597,7 +615,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-456'),
           ...asStandardUser()
         })
@@ -610,7 +628,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-789'),
           ...asStandardUser()
         })
@@ -619,7 +637,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createRejectedPayload('file-rejected-789'),
           ...asStandardUser()
         })
@@ -632,7 +650,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-101'),
           ...asStandardUser()
         })
@@ -641,7 +659,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createCompletePayload('file-complete-101'),
           ...asStandardUser()
         })
@@ -656,14 +674,14 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createCompletePayload('file-complete-202'),
           ...asStandardUser()
         })
 
         const response = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createPendingPayload('file-pending-202'),
           ...asStandardUser()
         })
@@ -676,14 +694,14 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createRejectedPayload('file-rejected-505'),
           ...asStandardUser()
         })
 
         const response = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
           payload: createCompletePayload('file-complete-505'),
           ...asStandardUser()
         })
