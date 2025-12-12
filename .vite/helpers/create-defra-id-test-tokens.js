@@ -9,7 +9,7 @@ export const USER_ABSENT_IN_ORG1_EMAIL = 'random@email.com'
 export const VALID_TOKEN_CURRENT_RELATIONSHIP_ID = randomUUID()
 export const COMPANY_1_ID = randomUUID()
 export const COMPANY_1_NAME = 'Lost Ark Adventures Ltd'
-const COMPANY_2_ID = randomUUID()
+export const COMPANY_2_ID = randomUUID()
 export const DEFRA_TOKEN_SECOND_RELATIONSHIP_ID = randomUUID()
 export const VALID_TOKEN_RELATIONSHIPS = [
   `${VALID_TOKEN_CURRENT_RELATIONSHIP_ID}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,

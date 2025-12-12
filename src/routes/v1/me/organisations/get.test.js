@@ -6,6 +6,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
+  COMPANY_2_ID,
   defraIdMockAuthTokens,
   USER_PRESENT_IN_ORG1_EMAIL
 } from '#vite/helpers/create-defra-id-test-tokens.js'
@@ -323,5 +324,71 @@ describe('GET /v1/me/organisations', () => {
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toHaveLength(1)
     expect(result.organisations.unlinked[0].id).toBe(initialUserOrg.id)
+  })
+
+  it('should exclude organisations already linked to other Defra organisations', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const userEmail = USER_PRESENT_IN_ORG1_EMAIL
+    const linkedAt = new Date().toISOString()
+
+    // Organisation already linked to a different Defra organisation
+    const alreadyLinkedOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ],
+      linkedDefraOrganisation: {
+        orgId: COMPANY_2_ID,
+        orgName: 'Different Defra Organisation',
+        linkedBy: {
+          email: 'someone.else@example.com',
+          id: '550e8400-e29b-41d4-a716-446655440002'
+        },
+        linkedAt
+      }
+    })
+
+    // Unlinked organisation (control case)
+    const unlinkedOrg = buildOrganisation({
+      users: [
+        {
+          fullName: 'Test User',
+          email: userEmail,
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    await organisationsRepository.insert(alreadyLinkedOrg)
+    await organisationsRepository.insert(unlinkedOrg)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.linked).toBeNull()
+    expect(result.organisations.unlinked).toHaveLength(1)
+    expect(result.organisations.unlinked[0].id).toBe(unlinkedOrg.id)
   })
 })

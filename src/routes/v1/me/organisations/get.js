@@ -42,7 +42,8 @@ import { StatusCodes } from 'http-status-codes'
 
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
-const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
+const isNotALinkedOrg = () => (org) => !org.linkedDefraOrganisation
+const isNotOurLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
 
 /**
  * Get current Defra ID details from token
@@ -53,12 +54,11 @@ const isNotLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
 const getCurrentDetailsFromToken = (auth) => {
   const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
 
-  // Get the user's current organisation from the token
-  const currentOrgFromToken = orgInfo.find((org) => org.isCurrent)
+  const currentOrg = orgInfo.find((org) => org.isCurrent)
 
   return {
-    id: currentOrgFromToken.defraIdOrgId,
-    name: currentOrgFromToken.defraIdOrgName
+    id: currentOrg.defraIdOrgId,
+    name: currentOrg.defraIdOrgName
   }
 }
 
@@ -84,7 +84,6 @@ export const organisationsLinkedGetAll = {
 
     const allOrganisations = await organisationsRepository.findAll()
 
-    // Get linked organisation details if a link exists
     const linkedOrg = allOrganisations.find(
       (org) => org.linkedDefraOrganisation?.orgId === current.id
     )
@@ -98,9 +97,9 @@ export const organisationsLinkedGetAll = {
         }
       : null
 
-    // Unlinked are all other organisations (excluding the current linked one)
     const unlinked = allOrganisations
-      .filter(isNotLinkedOrg(linkedOrg))
+      .filter(isNotALinkedOrg())
+      .filter(isNotOurLinkedOrg(linkedOrg))
       .filter(isInitialUser(email))
       .map((org) => ({
         id: org.id,
