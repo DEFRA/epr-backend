@@ -21,7 +21,7 @@ export const addStandardUserIfNotPresent = async (
   const user = findUserInOrg(organisationById, email, contactId)
 
   if (!user) {
-    await organisationsRepository.update(
+    await organisationsRepository.replace(
       organisationById.id,
       organisationById.version,
       {

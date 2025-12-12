@@ -14,7 +14,7 @@ describe('addStandardUserIfNotPresent', () => {
     vi.clearAllMocks()
 
     mockOrganisationsRepository = {
-      update: vi.fn()
+      replace: vi.fn()
     }
 
     mockRequest = {
@@ -47,8 +47,8 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {
@@ -78,7 +78,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {
@@ -101,7 +101,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
       expect(newUser.roles).toEqual([ROLES.standardUser])
@@ -118,7 +118,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
       expect(newUser.fullName).toBe('Jane Smith')
@@ -137,7 +137,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
         customOrgId,
         customVersion,
         expect.any(Object)
@@ -154,7 +154,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
       expect(newUser.fullName).toBe("O'Brien Smith-Jones")
@@ -178,7 +178,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
+      expect(mockOrganisationsRepository.replace).not.toHaveBeenCalled()
     })
 
     test('should not update organisation when user exists by contactId', async () => {
@@ -197,7 +197,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
+      expect(mockOrganisationsRepository.replace).not.toHaveBeenCalled()
     })
 
     test('should not update organisation when user exists by case-insensitive email match', async () => {
@@ -216,7 +216,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
+      expect(mockOrganisationsRepository.replace).not.toHaveBeenCalled()
     })
 
     test('should not update when user exists with same email and contactId', async () => {
@@ -235,7 +235,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
+      expect(mockOrganisationsRepository.replace).not.toHaveBeenCalled()
     })
   })
 
@@ -253,8 +253,8 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {
@@ -282,8 +282,8 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledWith(
         mockOrganisation.id,
         mockOrganisation.version,
         {
@@ -307,7 +307,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const usersArray = updateCall[2].users
 
       expect(usersArray).toHaveLength(1)
@@ -327,7 +327,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
       expect(newUser.fullName).toBe(' Doe')
@@ -343,7 +343,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
       expect(newUser.fullName).toBe('John ')
@@ -371,7 +371,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       expect(updateCall[2].users).toHaveLength(3)
       expect(updateCall[2].users[0]).toEqual(mockOrganisation.users[0])
       expect(updateCall[2].users[1]).toEqual(mockOrganisation.users[1])
@@ -387,12 +387,12 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
     })
 
     test('should propagate repository errors', async () => {
       const repositoryError = new Error('Database connection failed')
-      mockOrganisationsRepository.update.mockRejectedValue(repositoryError)
+      mockOrganisationsRepository.replace.mockRejectedValue(repositoryError)
 
       await expect(
         addStandardUserIfNotPresent(
@@ -413,7 +413,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
+      const updateCall = mockOrganisationsRepository.replace.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
       expect(newUser.fullName).toBe('José García')
@@ -432,7 +432,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
+      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
     })
 
     test('should correctly identify when user exists by partial match', async () => {
@@ -447,7 +447,7 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
+      expect(mockOrganisationsRepository.replace).not.toHaveBeenCalled()
     })
   })
 })

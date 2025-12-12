@@ -1,5 +1,5 @@
 import { describe, beforeEach, expect } from 'vitest'
-import { buildOrganisation } from './test-data.js'
+import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
 import { STATUS } from '#domain/organisations/model.js'
 
 export const testFindBehaviour = (it) => {
@@ -76,9 +76,11 @@ export const testFindBehaviour = (it) => {
         await repository.insert(orgData)
 
         // Update to create version 2
-        await repository.update(orgData.id, 1, {
+        const orgAfterInsert = await repository.findById(orgData.id)
+        const updatePayload = prepareOrgUpdate(orgAfterInsert, {
           wasteProcessingTypes: ['exporter']
         })
+        await repository.replace(orgData.id, 1, updatePayload)
 
         // Request with minimumVersion=2 - should retry until version 2 appears
         const result = await repository.findById(orgData.id, 2)
