@@ -14,8 +14,8 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { createTestServer } from '#test/create-test-server.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { asStandardUser } from '#test/inject-auth.js'
-
-export { asStandardUser }
+// eslint-disable-next-line n/no-unpublished-import
+export { asStandardUser } from '#test/inject-auth.js'
 
 export const createUploadPayload = (
   organisationId,
