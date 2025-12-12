@@ -96,28 +96,6 @@ export const buildTransaction = (
 }
 
 /**
- * Calculate the total amount already credited for a specific row ID from transactions.
- *
- * @param {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} transactions
- * @param {string} rowId
- * @returns {number}
- */
-const calculateNetAllocatedAmount = (transactions, rowId) => {
-  const rowIdStr = String(rowId)
-  return transactions.reduce((total, t) => {
-    const hasEntity = (t.entities || []).some((e) => String(e.id) === rowIdStr)
-    if (hasEntity) {
-      if (t.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT) {
-        return total + t.amount
-      } else if (t.type === WASTE_BALANCE_TRANSACTION_TYPE.DEBIT) {
-        return total - t.amount
-      }
-    }
-    return total
-  }, 0)
-}
-
-/**
  * Calculates new transactions and updated balance amounts based on waste records.
  * Implements a pipeline pattern to process each record through a series of steps.
  *
@@ -141,8 +119,28 @@ export const calculateWasteBalanceUpdates = ({
   let currentAmount = currentBalance.amount || 0
   let currentAvailableAmount = currentBalance.availableAmount || 0
 
-  // Track all transactions including existing ones and new ones created in this batch
-  const allTransactions = [...(currentBalance.transactions || [])]
+  // Optimization: Pre-calculate allocations to avoid O(N*M) complexity
+  const allocationMap = new Map()
+
+  const updateAllocationMap = (t) => {
+    if (
+      t.type !== WASTE_BALANCE_TRANSACTION_TYPE.CREDIT &&
+      t.type !== WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+    ) {
+      return
+    }
+
+    const amount =
+      t.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? t.amount : -t.amount
+    const uniqueEntityIds = new Set((t.entities || []).map((e) => String(e.id)))
+
+    for (const id of uniqueEntityIds) {
+      allocationMap.set(id, (allocationMap.get(id) || 0) + amount)
+    }
+  }
+
+  // Initialize map with existing transactions
+  ;(currentBalance.transactions || []).forEach(updateAllocationMap)
 
   for (const record of wasteRecords) {
     if (
@@ -153,10 +151,7 @@ export const calculateWasteBalanceUpdates = ({
       const targetAmount = getTransactionAmount(record)
 
       // Calculate Already Credited Amount
-      const alreadyAllocated = calculateNetAllocatedAmount(
-        allTransactions,
-        record.rowId
-      )
+      const alreadyAllocated = allocationMap.get(String(record.rowId)) || 0
 
       const delta = targetAmount - alreadyAllocated
 
@@ -181,7 +176,9 @@ export const calculateWasteBalanceUpdates = ({
         currentAmount = transaction.closingAmount
         currentAvailableAmount = transaction.closingAvailableAmount
         newTransactions.push(transaction)
-        allTransactions.push(transaction)
+
+        // Update map for next iteration
+        updateAllocationMap(transaction)
       }
     }
   }

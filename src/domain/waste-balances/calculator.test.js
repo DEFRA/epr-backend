@@ -557,6 +557,41 @@ describe('Waste Balance Calculator', () => {
     expect(result.newTransactions).toHaveLength(1)
     expect(result.newTransactions[0].amount).toBe(10.0)
   })
+
+  it('Should handle transactions with missing entities', () => {
+    const balanceWithTransaction = {
+      ...emptyBalance,
+      amount: 10,
+      availableAmount: 10,
+      transactions: [
+        {
+          type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+          amount: 10
+          // entities missing
+        }
+      ]
+    }
+
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+      }
+    })
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance: balanceWithTransaction,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    // Should create a new transaction because the existing one isn't linked to this record
+    expect(result.newTransactions).toHaveLength(1)
+    expect(result.newTransactions[0].amount).toBe(10.0)
+  })
+
   describe('buildTransaction', async () => {
     const { buildTransaction } = await import('./calculator.js')
 
