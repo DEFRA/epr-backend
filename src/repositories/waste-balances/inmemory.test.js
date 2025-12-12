@@ -11,7 +11,7 @@ const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
   organisationsRepository: async ({}, use) => {
     const mock = {
-      getAccreditationById: vi.fn()
+      findAccreditationById: vi.fn()
     }
     await use(mock)
   },
