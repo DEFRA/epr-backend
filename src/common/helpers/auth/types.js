@@ -54,4 +54,35 @@
  * }} DefraIdRelationship
  */
 
+/**
+ * Authentication credentials for Entra ID (service maintainer) users
+ *
+ * @typedef {{
+ *   id: string | undefined
+ *   email: string
+ *   issuer: string
+ *   scope: string[]
+ * }} EntraIdCredentials
+ */
+
+/**
+ * Authentication credentials for Defra ID (standard user) users
+ *
+ * @typedef {{
+ *   id: string
+ *   email: string
+ *   issuer: string
+ *   scope: string[]
+ *   currentRelationshipId: string
+ *   linkedOrgId: string | undefined
+ *   tokenPayload: DefraIdTokenPayload
+ * }} DefraIdCredentials
+ */
+
+/**
+ * Union type for all authentication credentials
+ *
+ * @typedef {EntraIdCredentials | DefraIdCredentials} AuthCredentials
+ */
+
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import

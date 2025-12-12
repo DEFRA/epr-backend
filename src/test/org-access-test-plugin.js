@@ -12,6 +12,13 @@ import Boom from '@hapi/boom'
 /** @typedef {import('#common/helpers/auth/auth-context-adapter.js').AuthContextAdapter} AuthContextAdapter */
 
 /**
+ * Extended request type for test plugin with auth injection credentials
+ * @typedef {import('@hapi/hapi').Request & {
+ *   auth: { credentials: { id: string } }
+ * }} TestAuthRequest
+ */
+
+/**
  * @type {import('@hapi/hapi').Plugin<{authContext: AuthContextAdapter}>}
  */
 export const orgAccessTestPlugin = {
@@ -26,15 +33,15 @@ export const orgAccessTestPlugin = {
     const { authContext } = options
 
     server.ext('onPostAuth', async (request, h) => {
-      const { organisationId } = request.params
+      const req = /** @type {TestAuthRequest} */ (request)
+      const { organisationId } = req.params
 
       // Skip if not accessing an organisation resource
       if (!organisationId) {
         return h.continue
       }
 
-      const userId = request.auth.credentials.id
-      // @ts-expect-error - userId type is set dynamically by auth injection in tests
+      const userId = req.auth.credentials.id
       const access = await authContext.getUserOrgAccess(userId, organisationId)
 
       if (!access.linkedOrgId || access.linkedOrgId !== organisationId) {
