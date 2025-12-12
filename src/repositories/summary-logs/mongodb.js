@@ -15,6 +15,22 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const insert = (db) => async (id, summaryLog) => {
   const validatedId = validateId(id)
   const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
+  const { organisationId, registrationId } = validatedSummaryLog
+
+  // Check for existing submitting log for same org/reg
+  /** @type {any} */
+  const submittingFilter = {
+    organisationId,
+    registrationId,
+    status: 'submitting'
+  }
+  const existingSubmitting = await db
+    .collection(COLLECTION_NAME)
+    .findOne(submittingFilter)
+
+  if (existingSubmitting) {
+    throw Boom.conflict('A submission is in progress. Please wait.')
+  }
 
   try {
     await db

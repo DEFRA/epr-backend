@@ -41,6 +41,7 @@ describe('MongoDB summary logs repository', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = {
         collection: () => ({
+          findOne: async () => null, // No existing submitting log
           insertOne: async () => {
             const error = new Error('Connection timeout')
             error.code = 'ETIMEOUT'
