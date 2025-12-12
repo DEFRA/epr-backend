@@ -20,6 +20,8 @@
 
 import { ROLES } from '#common/helpers/auth/constants.js'
 
+const ACCESS_TOKEN_STRATEGY = 'access-token'
+
 /**
  * Creates auth injection options for a standard user
  * @param {object} [overrides] - Optional credential overrides
@@ -27,7 +29,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
  */
 export const asStandardUser = (overrides = {}) => ({
   auth: {
-    strategy: 'access-token',
+    strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
       scope: [ROLES.standardUser],
       id: 'test-user-id',
@@ -44,7 +46,7 @@ export const asStandardUser = (overrides = {}) => ({
  */
 export const asServiceMaintainer = (overrides = {}) => ({
   auth: {
-    strategy: 'access-token',
+    strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
       scope: [ROLES.serviceMaintainer],
       id: 'test-maintainer-id',
@@ -61,7 +63,7 @@ export const asServiceMaintainer = (overrides = {}) => ({
  */
 export const asLinker = (overrides = {}) => ({
   auth: {
-    strategy: 'access-token',
+    strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
       scope: [ROLES.linker],
       id: 'test-linker-id',
@@ -78,7 +80,7 @@ export const asLinker = (overrides = {}) => ({
  */
 export const asInquirer = (overrides = {}) => ({
   auth: {
-    strategy: 'access-token',
+    strategy: ACCESS_TOKEN_STRATEGY,
     credentials: {
       scope: [ROLES.inquirer],
       id: 'test-inquirer-id',
