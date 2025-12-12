@@ -85,7 +85,7 @@ export const buildTransaction = (
     closingAvailableAmount,
     entities: [
       {
-        id: record.rowId,
+        id: String(record.rowId),
         currentVersionId: record.versions?.[record.versions.length - 1]?.id,
         previousVersionIds:
           record.versions?.slice(0, -1).map((v) => v.id) || [],
@@ -93,6 +93,28 @@ export const buildTransaction = (
       }
     ]
   }
+}
+
+/**
+ * Calculate the total amount already credited for a specific row ID from transactions.
+ *
+ * @param {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} transactions
+ * @param {string} rowId
+ * @returns {number}
+ */
+const calculateNetAllocatedAmount = (transactions, rowId) => {
+  const rowIdStr = String(rowId)
+  return transactions.reduce((total, t) => {
+    const hasEntity = (t.entities || []).some((e) => String(e.id) === rowIdStr)
+    if (hasEntity) {
+      if (t.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT) {
+        return total + t.amount
+      } else if (t.type === WASTE_BALANCE_TRANSACTION_TYPE.DEBIT) {
+        return total - t.amount
+      }
+    }
+    return total
+  }, 0)
 }
 
 /**
@@ -119,27 +141,47 @@ export const calculateWasteBalanceUpdates = ({
   let currentAmount = currentBalance.amount || 0
   let currentAvailableAmount = currentBalance.availableAmount || 0
 
+  // Track all transactions including existing ones and new ones created in this batch
+  const allTransactions = [...(currentBalance.transactions || [])]
+
   for (const record of wasteRecords) {
     if (
       isWithinAccreditationDateRange(record, accreditation) &&
       !hasPrnBeenIssued(record)
     ) {
-      // Calculate Amount
-      const amount = getTransactionAmount(record)
+      // Calculate Target Amount
+      const targetAmount = getTransactionAmount(record)
 
-      if (amount > 0) {
+      // Calculate Already Credited Amount
+      const alreadyAllocated = calculateNetAllocatedAmount(
+        allTransactions,
+        record.rowId
+      )
+
+      const delta = targetAmount - alreadyAllocated
+
+      // Only create transaction if there is a difference (handling float precision)
+      if (Math.abs(delta) > 0.000001) {
+        const type =
+          delta > 0
+            ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+            : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+        const amount = Math.abs(delta)
+
         // Create Transaction
         const transaction = buildTransaction(
           record,
           amount,
           currentAmount,
-          currentAvailableAmount
+          currentAvailableAmount,
+          type
         )
 
         // Update State
         currentAmount = transaction.closingAmount
         currentAvailableAmount = transaction.closingAvailableAmount
         newTransactions.push(transaction)
+        allTransactions.push(transaction)
       }
     }
   }
