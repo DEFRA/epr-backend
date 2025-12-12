@@ -32,9 +32,7 @@ runs:
 
     - name: Run tests
       shell: bash
-      # SKIP_BROKEN_TESTS: Temporarily skip broken tests while they are being fixed.
-      # Remove this env var once all tests in .vite/skipped-tests.js are fixed.
-      run: SKIP_BROKEN_TESTS=true npm test
+      run: npm test
 
     - name: SonarCloud Scan
       if: ${{ github.actor != 'dependabot[bot]' }}

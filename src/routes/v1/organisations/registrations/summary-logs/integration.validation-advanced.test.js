@@ -16,7 +16,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
-  validToken,
+  asStandardUser,
   createUploadPayload,
   buildGetUrl,
   buildPostUrl,
@@ -97,9 +97,7 @@ describe('Advanced validation scenarios', () => {
               fileId,
               filename
             ),
-            headers: {
-              Authorization: `Bearer ${validToken}`
-            }
+            ...asStandardUser()
           })
         })
 
@@ -121,9 +119,7 @@ describe('Advanced validation scenarios', () => {
             response = await server.inject({
               method: 'GET',
               url: buildGetUrl(organisationId, registrationId, summaryLogId),
-              headers: {
-                Authorization: `Bearer ${validToken}`
-              }
+              ...asStandardUser()
             })
           })
 
@@ -213,9 +209,7 @@ describe('Advanced validation scenarios', () => {
           fileId,
           filename
         ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
     })
 
@@ -237,9 +231,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 
@@ -414,9 +406,7 @@ describe('Advanced validation scenarios', () => {
           fileId,
           filename
         ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
     })
 
@@ -438,9 +428,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 
@@ -597,9 +585,7 @@ describe('Advanced validation scenarios', () => {
           fileId,
           filename
         ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
     })
 
@@ -621,9 +607,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 
@@ -720,9 +704,7 @@ describe('Advanced validation scenarios', () => {
           fileId,
           filename
         ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
     })
 
@@ -744,9 +726,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 
@@ -823,9 +803,7 @@ describe('Advanced validation scenarios', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)

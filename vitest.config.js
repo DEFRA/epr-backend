@@ -1,17 +1,4 @@
 import { configDefaults, defineConfig } from 'vitest/config'
-import { skippedTests } from './.vite/skipped-tests.js'
-
-// When SKIP_BROKEN_TESTS is enabled, these lower thresholds are used
-// to allow the build to pass while tests are being fixed incrementally.
-// Original thresholds: lines: 100, statements: 100, branches: 100, functions: 100
-const TEMPORARY_THRESHOLDS = {
-  lines: 85,
-  statements: 85,
-  branches: 85,
-  functions: 85
-}
-
-const shouldSkipBrokenTests = process.env.SKIP_BROKEN_TESTS === 'true'
 
 export default defineConfig({
   test: {
@@ -20,10 +7,6 @@ export default defineConfig({
     clearMocks: true,
     hookTimeout: 60000,
     fileParallelism: !process.env.CI,
-    // Conditionally exclude broken tests when SKIP_BROKEN_TESTS=true
-    exclude: shouldSkipBrokenTests
-      ? [...configDefaults.exclude, ...skippedTests]
-      : configDefaults.exclude,
     coverage: {
       provider: 'v8',
       reportsDirectory: './coverage',
@@ -51,14 +34,12 @@ export default defineConfig({
         'src/repositories/**/port.js',
         'src/test/**'
       ],
-      thresholds: shouldSkipBrokenTests
-        ? TEMPORARY_THRESHOLDS
-        : {
-            lines: 100,
-            statements: 100,
-            branches: 100,
-            functions: 100
-          }
+      thresholds: {
+        lines: 100,
+        statements: 100,
+        branches: 100,
+        functions: 100
+      }
     },
     setupFiles: ['.vite/setup-files.js']
   }

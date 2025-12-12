@@ -1,50 +1,39 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { createServer } from '#server/server.js'
+import { createTestServer } from '#test/create-test-server.js'
+import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens.js'
-import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
 
-const { validToken } = defraIdMockAuthTokens
+const organisationId = 'org-123'
 
-const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
-  `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
+const buildPostUrl = (orgId, registrationId, summaryLogId) =>
+  `/v1/organisations/${orgId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
 describe('POST upload-completed validation', () => {
-  let org
-  let server
-  let organisationsRepositoryFactory
-  let organisationsRepository
+  // Mock OIDC servers needed for server startup, but we inject credentials directly
   setupAuthContext()
 
+  let server
+
   beforeAll(async () => {
-    organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
-    organisationsRepository = organisationsRepositoryFactory()
-    server = await createServer({
-      skipMongoDb: true,
+    server = await createTestServer({
       repositories: {
-        summaryLogsRepository: createInMemorySummaryLogsRepository(),
-        organisationsRepository: organisationsRepositoryFactory
+        summaryLogsRepository: createInMemorySummaryLogsRepository()
       },
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
-    await server.initialize()
-    org = await buildActiveOrg(organisationsRepository)
   })
 
   it('rejects payload without form object', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
-        metadata: { organisationId: org.id }
+        metadata: { organisationId }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -54,15 +43,13 @@ describe('POST upload-completed validation', () => {
   it('rejects payload without form.summaryLogUpload', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           notFile: 'wrong'
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -74,7 +61,7 @@ describe('POST upload-completed validation', () => {
   it('rejects payload with missing fileId', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -85,9 +72,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -99,7 +84,7 @@ describe('POST upload-completed validation', () => {
   it('rejects payload with missing filename', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -110,9 +95,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -124,7 +107,7 @@ describe('POST upload-completed validation', () => {
   it('rejects payload with missing fileStatus', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -135,9 +118,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -149,7 +130,7 @@ describe('POST upload-completed validation', () => {
   it('rejects payload with invalid fileStatus', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -161,9 +142,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -175,7 +154,7 @@ describe('POST upload-completed validation', () => {
   it('rejects payload with missing s3Bucket', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -186,9 +165,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -200,7 +177,7 @@ describe('POST upload-completed validation', () => {
   it('rejects payload with missing s3Key', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -211,9 +188,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -225,7 +200,7 @@ describe('POST upload-completed validation', () => {
   it('accepts valid payload with complete status', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-789'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-789'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -237,9 +212,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -248,7 +221,7 @@ describe('POST upload-completed validation', () => {
   it('accepts valid payload with rejected status', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-999'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-999'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -260,9 +233,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -271,7 +242,7 @@ describe('POST upload-completed validation', () => {
   it('accepts payload with extra unknown fields in form.summaryLogUpload', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-888'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-888'),
       payload: {
         form: {
           summaryLogUpload: {
@@ -286,9 +257,7 @@ describe('POST upload-completed validation', () => {
           }
         }
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -297,11 +266,11 @@ describe('POST upload-completed validation', () => {
   it('accepts payload with extra unknown fields at top level', async () => {
     const response = await server.inject({
       method: 'POST',
-      url: buildPostUrl(org.id, 'reg-456', 'sum-777'),
+      url: buildPostUrl(organisationId, 'reg-456', 'sum-777'),
       payload: {
         uploadStatus: 'ready',
         metadata: {
-          organisationId: org.id,
+          organisationId,
           registrationId: 'reg-456'
         },
         form: {
@@ -315,9 +284,7 @@ describe('POST upload-completed validation', () => {
         },
         numberOfRejectedFiles: 0
       },
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)

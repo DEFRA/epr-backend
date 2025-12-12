@@ -1,4 +1,2 @@
 npx lint-staged
-# SKIP_BROKEN_TESTS: Temporarily skip broken tests while they are being fixed.
-# Remove this env var once all tests in .vite/skipped-tests.js are fixed.
-SKIP_BROKEN_TESTS=true npm test
+npm test
