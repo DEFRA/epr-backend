@@ -664,11 +664,11 @@ describe('syncFromSummaryLog', () => {
     const parsedData = {
       meta: {
         PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT'
+          value: 'EXPORTER'
         }
       },
       data: {
-        RECEIVED_LOADS_FOR_REPROCESSING: {
+        RECEIVED_LOADS_FOR_EXPORT: {
           location: { sheet: 'Sheet1', row: 1, column: 'A' },
           headers: [
             'ROW_ID',
@@ -704,7 +704,7 @@ describe('syncFromSummaryLog', () => {
       expect.arrayContaining([
         expect.objectContaining({
           rowId: 'row-123',
-          type: WASTE_RECORD_TYPE.RECEIVED
+          type: WASTE_RECORD_TYPE.EXPORTED
         })
       ]),
       'acc-1'

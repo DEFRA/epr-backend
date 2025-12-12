@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
+import { transformExportLoadsRow as transformReceivedLoadsExportRow } from './row-transformers/received-loads-export.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -59,7 +60,7 @@ const TABLE_TRANSFORMERS = {
     RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
   },
   [PROCESSING_TYPES.EXPORTER]: {
-    // No table transformers yet - awaiting business confirmation of data mappings
+    RECEIVED_LOADS_FOR_EXPORT: transformReceivedLoadsExportRow
   }
 }
 
