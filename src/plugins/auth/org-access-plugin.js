@@ -55,6 +55,7 @@ export const orgAccessPlugin = {
       }
 
       // Check org status
+      // @ts-expect-error - organisationsRepository is decorated on request by Hapi plugin
       const organisationById =
         await request.organisationsRepository.findById(organisationId)
       const orgStatusIsAccessible = [STATUS.ACTIVE, STATUS.SUSPENDED].includes(
@@ -69,6 +70,7 @@ export const orgAccessPlugin = {
 
       // Add user to organisation if not already present
       if (tokenPayload) {
+        // @ts-expect-error - tokenPayload shape is validated by JWT strategy
         await addStandardUserIfNotPresent(
           request,
           tokenPayload,

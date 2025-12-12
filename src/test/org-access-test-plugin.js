@@ -33,8 +33,8 @@ export const orgAccessTestPlugin = {
         return h.continue
       }
 
-      const { id: userId } = request.auth.credentials
-
+      const userId = request.auth.credentials.id
+      // @ts-expect-error - userId type is set dynamically by auth injection in tests
       const access = await authContext.getUserOrgAccess(userId, organisationId)
 
       if (!access.linkedOrgId || access.linkedOrgId !== organisationId) {
