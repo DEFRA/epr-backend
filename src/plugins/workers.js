@@ -6,19 +6,58 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
 export const workers = {
   plugin: {
     name: 'workers',
     version: '1.0.0',
     register: (server, options) => {
-      const summaryLogsWorker =
-        options?.summaryLogsWorker ??
-        createSummaryLogsCommandExecutor(server.logger)
+      // If test provides a mock worker, use it directly
+      if (options?.summaryLogsWorker) {
+        server.decorate(
+          'request',
+          'summaryLogsWorker',
+          () => options.summaryLogsWorker,
+          { apply: true }
+        )
+        return
+      }
 
-      server.decorate('request', 'summaryLogsWorker', () => summaryLogsWorker, {
-        apply: true
-      })
+      // Check if mongodb plugin is registered
+      const hasMongoDb = server.registrations.mongodb !== undefined
+
+      if (hasMongoDb) {
+        // Production: wait for mongodb to be available, then create worker with repository
+        server.dependency('mongodb', () => {
+          const summaryLogsRepository = createSummaryLogsRepository(server.db)(
+            server.logger
+          )
+          const summaryLogsWorker = createSummaryLogsCommandExecutor(
+            server.logger,
+            summaryLogsRepository
+          )
+
+          server.decorate(
+            'request',
+            'summaryLogsWorker',
+            () => summaryLogsWorker,
+            { apply: true }
+          )
+        })
+      } else {
+        // No mongodb (e.g., in-memory tests) - create worker without safety net repository
+        const summaryLogsWorker = createSummaryLogsCommandExecutor(
+          server.logger
+        )
+
+        server.decorate(
+          'request',
+          'summaryLogsWorker',
+          () => summaryLogsWorker,
+          { apply: true }
+        )
+      }
 
       server.events.on('stop', async () => {
         server.logger.info({
