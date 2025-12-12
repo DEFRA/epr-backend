@@ -10,8 +10,6 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 
-import fs from 'fs'
-
 const { validToken } = entraIdMockAuthTokens
 
 const mockCdpAuditing = vi.fn()
