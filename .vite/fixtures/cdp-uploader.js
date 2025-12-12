@@ -89,6 +89,7 @@ const cdpUploaderStackFixture = {
               mode: 0o755
             }
           ])
+          .withStartupTimeout(90000)
           .withWaitStrategy(
             Wait.forLogMessage(/Creating queues/).withStartupTimeout(90000)
           )
@@ -98,6 +99,7 @@ const cdpUploaderStackFixture = {
 
         new GenericContainer(REDIS_IMAGE)
           .withExposedPorts(REDIS_PORT)
+          .withStartupTimeout(30000)
           .withWaitStrategy(Wait.forLogMessage(/Ready to accept connections/))
           .withNetwork(network)
           .withNetworkAliases('redis')
@@ -119,6 +121,7 @@ const cdpUploaderStackFixture = {
         CDP_UPLOADER_IMAGE
       )
         // Don't expose ports - we'll use SocatContainer as a proxy
+        .withStartupTimeout(120000)
         .withEnvironment({
           AWS_REGION: REGION,
           AWS_DEFAULT_REGION: REGION,
@@ -149,6 +152,7 @@ const cdpUploaderStackFixture = {
 
       // Use SocatContainer as a TCP proxy to CDP Uploader (see ARM note above)
       const socatContainer = await new SocatContainer()
+        .withStartupTimeout(30000)
         .withNetwork(network)
         .withTarget(CDP_UPLOADER_PORT, 'cdp-uploader', CDP_UPLOADER_PORT)
         .start()
