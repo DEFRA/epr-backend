@@ -180,7 +180,7 @@ const buildCellLocation = ({
  * @param {Object} params
  * @param {string} params.tableName - Name of the table being validated
  * @param {Map<string, number>} params.headerToIndexMap - Map of header names to column indices
- * @param {Array<Array<*>>} params.rows - Array of raw data rows
+ * @param {Array<{rowNumber: number, values: Array<*>}>} params.rows - Array of raw data rows
  * @param {Object} params.domainSchema - Domain table schema with unfilledValues, validationSchema, fieldsRequiredForWasteBalance
  * @param {Object} params.location - Table location in spreadsheet
  * @param {ReturnType<typeof createValidationIssues>} params.issues - Validation issues collector

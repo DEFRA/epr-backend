@@ -341,6 +341,54 @@ describe('status', () => {
       ).toThrow('Cannot transition summary log from submitting to invalid')
     })
 
+    it.each([
+      SUMMARY_LOG_STATUS.PREPROCESSING,
+      SUMMARY_LOG_STATUS.VALIDATING,
+      SUMMARY_LOG_STATUS.VALIDATED
+    ])(
+      'returns updated summary log for %s -> superseded transition',
+      (fromStatus) => {
+        const summaryLog = {
+          id: 'log-supersede',
+          status: fromStatus,
+          file: { id: 'file-supersede' }
+        }
+        const result = transitionStatus(
+          summaryLog,
+          SUMMARY_LOG_STATUS.SUPERSEDED
+        )
+
+        expect(result).toEqual({
+          id: 'log-supersede',
+          status: SUMMARY_LOG_STATUS.SUPERSEDED,
+          file: { id: 'file-supersede' }
+        })
+      }
+    )
+
+    it('throws error for superseded -> any transition (terminal state)', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUPERSEDED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
+      ).toThrow(
+        'Cannot transition summary log from superseded to preprocessing'
+      )
+    })
+
+    it.each([SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED])(
+      'throws error for %s -> superseded transition',
+      (fromStatus) => {
+        const summaryLog = { status: fromStatus }
+
+        expect(() =>
+          transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+        ).toThrow(
+          `Cannot transition summary log from ${fromStatus} to superseded`
+        )
+      }
+    )
+
     it('throws error for preprocessing -> submitting transition', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.PREPROCESSING }
 

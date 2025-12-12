@@ -1,7 +1,6 @@
 import Joi from 'joi'
-import { MESSAGES, ROW_ID_MINIMUMS } from '../shared/index.js'
-import { createRowIdSchema } from '../shared/row-id.schema.js'
-import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
+import { MESSAGES, createRowIdSchema } from '../shared/index.js'
+import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 
 /**
  * Maximum value for tonnage field (in tonnes)

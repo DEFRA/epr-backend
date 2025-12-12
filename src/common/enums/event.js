@@ -28,7 +28,8 @@ export const LOGGING_EVENT_ACTIONS = {
   PROCESS_FAILURE: 'process_failure',
   PROCESS_SUCCESS: 'process_success',
   VERSION_CONFLICT_DETECTED: 'version_conflict_detected',
-  DATA_MIGRATION_FAILURE: 'data_migration_failure'
+  DATA_MIGRATION_FAILURE: 'data_migration_failure',
+  SUMMARY_LOG_SUPERSEDED: 'summary_log_superseded'
 }
 
 export const AUDIT_EVENT_CATEGORIES = {
