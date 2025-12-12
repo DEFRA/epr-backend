@@ -62,24 +62,6 @@ const getCurrentDetailsFromToken = (auth) => {
   }
 }
 
-/**
- * Get current Defra ID details from token
- *
- * @param {*} auth
- * @returns {DefraOrgSummary}
- */
-const getCurrentDetailsFromToken = (auth) => {
-  const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
-
-  // Get the user's current organisation from the token
-  const currentOrgFromToken = orgInfo.find((org) => org.isCurrent)
-
-  return {
-    id: currentOrgFromToken.defraIdOrgId,
-    name: currentOrgFromToken.defraIdOrgName
-  }
-}
-
 export const organisationsLinkedGetAll = {
   method: 'GET',
   path: organisationsLinkedGetAllPath,
