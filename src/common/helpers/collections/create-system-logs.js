@@ -10,7 +10,7 @@ import { SYSTEM_LOGS_COLLECTION_NAME } from '#repositories/system-logs/mongodb.j
  * @type {CreateOrUpdateCollection}
  */
 export async function createSystemLogsCollection(db, collections) {
-  if (!collections.find(({ name }) => name === SYSTEM_LOGS_COLLECTION_NAME)) {
+  if (!collections.some(({ name }) => name === SYSTEM_LOGS_COLLECTION_NAME)) {
     await db.createCollection(SYSTEM_LOGS_COLLECTION_NAME)
   }
 }
