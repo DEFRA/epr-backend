@@ -516,7 +516,7 @@ describe('Waste Balance Calculator', () => {
     expect(result.newAmount).toBe(10.0)
   })
 
-  it('Should ignore transactions with unknown types when calculating credited amount', () => {
+  it('Should ignore transactions with unknown types when calculating net allocated amount', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
