@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import Joi from 'joi'
 import {
-  validateTonnageReceived,
-  TONNAGE_RECEIVED_MESSAGES
-} from './tonnage-received-validator.js'
+  validateTonnageExport,
+  TONNAGE_EXPORT_MESSAGES
+} from './tonnage-export-validator.js'
 
-describe('validateTonnageReceived', () => {
+describe('validateTonnageExport', () => {
   // Create a minimal Joi schema that uses the validator
   const createTestSchema = () =>
     Joi.object({
@@ -13,10 +13,10 @@ describe('validateTonnageReceived', () => {
       WEIGHT_OF_NON_TARGET_MATERIALS: Joi.number().optional(),
       BAILING_WIRE_PROTOCOL: Joi.string().optional(),
       RECYCLABLE_PROPORTION_PERCENTAGE: Joi.number().optional(),
-      TONNAGE_RECEIVED_FOR_RECYCLING: Joi.number().optional()
+      TONNAGE_RECEIVED_FOR_EXPORT: Joi.number().optional()
     })
-      .custom(validateTonnageReceived)
-      .messages(TONNAGE_RECEIVED_MESSAGES)
+      .custom(validateTonnageExport)
+      .messages(TONNAGE_EXPORT_MESSAGES)
       .prefs({ abortEarly: false })
 
   describe('when all fields are present (BAILING_WIRE_PROTOCOL = No)', () => {
@@ -27,7 +27,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        TONNAGE_RECEIVED_FOR_EXPORT: 72
       })
 
       expect(error).toBeUndefined()
@@ -40,7 +40,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 5.5,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.975,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 43.875
+        TONNAGE_RECEIVED_FOR_EXPORT: 43.875
       })
 
       expect(error).toBeUndefined()
@@ -53,7 +53,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 0
+        TONNAGE_RECEIVED_FOR_EXPORT: 0
       })
 
       expect(error).toBeUndefined()
@@ -66,7 +66,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 50,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 0
+        TONNAGE_RECEIVED_FOR_EXPORT: 0
       })
 
       expect(error).toBeUndefined()
@@ -79,7 +79,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 0,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.5,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 50
+        TONNAGE_RECEIVED_FOR_EXPORT: 50
       })
 
       expect(error).toBeUndefined()
@@ -92,7 +92,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 1,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 90
+        TONNAGE_RECEIVED_FOR_EXPORT: 90
       })
 
       expect(error).toBeUndefined()
@@ -105,7 +105,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 80 // Should be 72
+        TONNAGE_RECEIVED_FOR_EXPORT: 80 // Should be 72
       })
 
       expect(error).toBeDefined()
@@ -122,7 +122,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72.01
+        TONNAGE_RECEIVED_FOR_EXPORT: 72.01
       })
 
       expect(error).toBeDefined()
@@ -141,7 +141,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'Yes',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 71.892
+        TONNAGE_RECEIVED_FOR_EXPORT: 71.892
       })
 
       expect(error).toBeUndefined()
@@ -154,7 +154,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 0,
         BAILING_WIRE_PROTOCOL: 'Yes',
         RECYCLABLE_PROPORTION_PERCENTAGE: 1,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 99.85
+        TONNAGE_RECEIVED_FOR_EXPORT: 99.85
       })
 
       expect(error).toBeUndefined()
@@ -167,7 +167,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'Yes',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 0
+        TONNAGE_RECEIVED_FOR_EXPORT: 0
       })
 
       expect(error).toBeUndefined()
@@ -180,22 +180,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'Yes',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72 // Wrong - should be 71.892 with deduction
-      })
-
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.tonnageCalculationMismatch')
-    })
-
-    it('rejects calculation with incorrect bailing wire factor', () => {
-      const schema = createTestSchema()
-      // Using wrong factor: 90 * 0.99 * 0.8 = 71.28 (instead of 71.892)
-      const { error } = schema.validate({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'Yes',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 71.28
+        TONNAGE_RECEIVED_FOR_EXPORT: 72 // Wrong - should be 71.892 with deduction
       })
 
       expect(error).toBeDefined()
@@ -204,7 +189,7 @@ describe('validateTonnageReceived', () => {
   })
 
   describe('when some fields are missing', () => {
-    it('skips validation when TONNAGE_RECEIVED_FOR_RECYCLING is missing', () => {
+    it('skips validation when TONNAGE_RECEIVED_FOR_EXPORT is missing', () => {
       const schema = createTestSchema()
       const { error } = schema.validate({
         NET_WEIGHT: 100,
@@ -222,7 +207,7 @@ describe('validateTonnageReceived', () => {
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        TONNAGE_RECEIVED_FOR_EXPORT: 72
       })
 
       expect(error).toBeUndefined()
@@ -234,7 +219,7 @@ describe('validateTonnageReceived', () => {
         NET_WEIGHT: 100,
         BAILING_WIRE_PROTOCOL: 'No',
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        TONNAGE_RECEIVED_FOR_EXPORT: 72
       })
 
       expect(error).toBeUndefined()
@@ -246,7 +231,7 @@ describe('validateTonnageReceived', () => {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        TONNAGE_RECEIVED_FOR_EXPORT: 72
       })
 
       expect(error).toBeUndefined()
@@ -258,7 +243,7 @@ describe('validateTonnageReceived', () => {
         NET_WEIGHT: 100,
         WEIGHT_OF_NON_TARGET_MATERIALS: 10,
         BAILING_WIRE_PROTOCOL: 'No',
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+        TONNAGE_RECEIVED_FOR_EXPORT: 72
       })
 
       expect(error).toBeUndefined()
@@ -270,88 +255,46 @@ describe('validateTonnageReceived', () => {
 
       expect(error).toBeUndefined()
     })
-
-    it('skips validation when only TONNAGE_RECEIVED_FOR_RECYCLING is present', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        TONNAGE_RECEIVED_FOR_RECYCLING: 72
-      })
-
-      expect(error).toBeUndefined()
-    })
   })
 
   describe('edge cases', () => {
-    it('handles large numbers correctly', () => {
+    it('handles large numbers correctly without bailing wire', () => {
       const schema = createTestSchema()
-      // (999 - 100) * 0.975 = 899 * 0.975 = 876.525
+      // (900 - 100) * 0.95 = 760
       const { error } = schema.validate({
-        NET_WEIGHT: 999,
+        NET_WEIGHT: 900,
         WEIGHT_OF_NON_TARGET_MATERIALS: 100,
         BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.975,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 876.525
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
+        TONNAGE_RECEIVED_FOR_EXPORT: 760
       })
 
       expect(error).toBeUndefined()
     })
 
-    it('handles very small decimal differences within tolerance', () => {
+    it('handles large numbers correctly with bailing wire', () => {
       const schema = createTestSchema()
-      // Testing floating point arithmetic
+      // (900 - 100) * 0.9985 * 0.95 = 800 * 0.9985 * 0.95 = 758.86
       const { error } = schema.validate({
-        NET_WEIGHT: 0.3,
+        NET_WEIGHT: 900,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 100,
+        BAILING_WIRE_PROTOCOL: 'Yes',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.95,
+        TONNAGE_RECEIVED_FOR_EXPORT: 758.86
+      })
+
+      expect(error).toBeUndefined()
+    })
+
+    it('handles very small values correctly', () => {
+      const schema = createTestSchema()
+      // (1 - 0.1) * 0.9 = 0.81
+      const { error } = schema.validate({
+        NET_WEIGHT: 1,
         WEIGHT_OF_NON_TARGET_MATERIALS: 0.1,
         BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.5,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 0.1 // (0.3 - 0.1) * 0.5 = 0.1
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('handles bailing wire calculation with many decimal places', () => {
-      const schema = createTestSchema()
-      // (50.123 - 5.456) * 0.9985 * 0.875 = 44.667 * 0.9985 * 0.875 = 39.0164...
-      const baseWeight = 50.123 - 5.456
-      const expected = baseWeight * 0.9985 * 0.875
-
-      const { error } = schema.validate({
-        NET_WEIGHT: 50.123,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 5.456,
-        BAILING_WIRE_PROTOCOL: 'Yes',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.875,
-        TONNAGE_RECEIVED_FOR_RECYCLING: expected
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('validates correctly when base weight is negative (invalid scenario)', () => {
-      const schema = createTestSchema()
-      // This is a logically invalid scenario but we should still validate the calculation
-      // (10 - 20) * 0.8 = -10 * 0.8 = -8
-      const { error } = schema.validate({
-        NET_WEIGHT: 10,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 20,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: -8
-      })
-
-      expect(error).toBeUndefined() // Calculation is mathematically correct
-    })
-
-    it('handles the exact 0.15% bailing wire deduction correctly', () => {
-      const schema = createTestSchema()
-      // 0.15% = 0.0015, factor = 0.9985
-      // (1000 - 0) * 0.9985 * 1 = 998.5
-      const { error } = schema.validate({
-        NET_WEIGHT: 1000,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 0,
-        BAILING_WIRE_PROTOCOL: 'Yes',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 1,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 998.5
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.9,
+        TONNAGE_RECEIVED_FOR_EXPORT: 0.81
       })
 
       expect(error).toBeUndefined()

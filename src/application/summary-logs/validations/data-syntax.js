@@ -58,10 +58,17 @@ const JOI_TYPE_TO_ERROR_CODE = Object.freeze({
   'number.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'number.greater': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'number.less': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
+  'number.integer': VALIDATION_CODE.INVALID_TYPE,
   'string.base': VALIDATION_CODE.INVALID_TYPE,
   'string.pattern.base': VALIDATION_CODE.INVALID_FORMAT,
+  'string.max': VALIDATION_CODE.VALUE_OUT_OF_RANGE,
   'date.base': VALIDATION_CODE.INVALID_DATE,
-  'custom.calculationMismatch': VALIDATION_CODE.CALCULATED_VALUE_MISMATCH
+  'custom.netWeightCalculationMismatch':
+    VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
+  'custom.tonnageCalculationMismatch':
+    VALIDATION_CODE.CALCULATED_VALUE_MISMATCH,
+  'custom.ukPackagingProportionCalculationMismatch':
+    VALIDATION_CODE.CALCULATED_VALUE_MISMATCH
 })
 
 /**

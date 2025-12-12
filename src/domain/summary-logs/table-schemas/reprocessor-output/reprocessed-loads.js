@@ -1,5 +1,12 @@
 import Joi from 'joi'
-import { MESSAGES, YES_NO_VALUES, createRowIdSchema } from '../shared/index.js'
+import {
+  createRowIdSchema,
+  createDateFieldSchema,
+  createWeightFieldSchema,
+  createPercentageFieldSchema,
+  createYesNoFieldSchema,
+  createNumberFieldSchema
+} from '../shared/index.js'
 import {
   REPROCESSED_LOADS_FIELDS as FIELDS,
   ROW_ID_MINIMUMS
@@ -8,13 +15,6 @@ import {
   validateUkPackagingWeightProportion,
   UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES
 } from './validators/uk-packaging-weight-proportion-validator.js'
-
-/**
- * Maximum value for product tonnage field (in tonnes)
- *
- * Defined locally as this limit is specific to this table.
- */
-const MAX_PRODUCT_TONNAGE = 1000
 
 /**
  * Table schema for REPROCESSED_LOADS (REPROCESSOR_OUTPUT)
@@ -62,38 +62,11 @@ export const REPROCESSED_LOADS = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.REPROCESSED_LOADS
     ).optional(),
-    [FIELDS.DATE_LOAD_LEFT_SITE]: Joi.date().optional().messages({
-      'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-    }),
-    [FIELDS.PRODUCT_TONNAGE]: Joi.number()
-      .min(0)
-      .max(MAX_PRODUCT_TONNAGE)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]: Joi.number()
-      .min(0)
-      .max(1)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1
-      }),
-    [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: Joi.number()
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER
-      }),
-    [FIELDS.ADD_PRODUCT_WEIGHT]: Joi.string()
-      .valid(YES_NO_VALUES.YES, YES_NO_VALUES.NO)
-      .optional()
-      .messages({
-        'any.only': MESSAGES.MUST_BE_YES_OR_NO
-      })
+    [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
+    [FIELDS.PRODUCT_TONNAGE]: createWeightFieldSchema(),
+    [FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]: createPercentageFieldSchema(),
+    [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: createNumberFieldSchema(),
+    [FIELDS.ADD_PRODUCT_WEIGHT]: createYesNoFieldSchema()
   })
     .custom(validateUkPackagingWeightProportion)
     .messages(UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES)

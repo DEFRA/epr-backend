@@ -5,7 +5,7 @@ import {
   NET_WEIGHT_MESSAGES
 } from './net-weight-validator.js'
 
-describe('validateNetWeight', () => {
+describe('validateNetWeight (exporter)', () => {
   // Create a minimal Joi schema that uses the validator
   const createTestSchema = () =>
     Joi.object({
@@ -45,7 +45,6 @@ describe('validateNetWeight', () => {
 
     it('accepts calculation within floating-point tolerance', () => {
       const schema = createTestSchema()
-      // 100 - 33.33 - 33.33 = 33.34 (may have FP representation issues)
       const { error } = schema.validate({
         GROSS_WEIGHT: 100,
         TARE_WEIGHT: 33.33,
@@ -63,30 +62,6 @@ describe('validateNetWeight', () => {
         TARE_WEIGHT: 25,
         PALLET_WEIGHT: 25,
         NET_WEIGHT: 0
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts zero result when all weights are zero (0 - 0 - 0 = 0)', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        GROSS_WEIGHT: 0,
-        TARE_WEIGHT: 0,
-        PALLET_WEIGHT: 0,
-        NET_WEIGHT: 0
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('accepts calculation when tare and pallet are zero (100 - 0 - 0 = 100)', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        GROSS_WEIGHT: 100,
-        TARE_WEIGHT: 0,
-        PALLET_WEIGHT: 0,
-        NET_WEIGHT: 100
       })
 
       expect(error).toBeUndefined()
@@ -115,32 +90,6 @@ describe('validateNetWeight', () => {
         TARE_WEIGHT: 5,
         PALLET_WEIGHT: 5,
         NET_WEIGHT: 90.001
-      })
-
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
-    })
-
-    it('rejects calculation when net weight is too low', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        GROSS_WEIGHT: 100,
-        TARE_WEIGHT: 5,
-        PALLET_WEIGHT: 5,
-        NET_WEIGHT: 80 // Should be 90
-      })
-
-      expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
-    })
-
-    it('rejects calculation when net weight is significantly different', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        GROSS_WEIGHT: 500,
-        TARE_WEIGHT: 50,
-        PALLET_WEIGHT: 25,
-        NET_WEIGHT: 500 // Should be 425
       })
 
       expect(error).toBeDefined()
@@ -199,25 +148,6 @@ describe('validateNetWeight', () => {
 
       expect(error).toBeUndefined()
     })
-
-    it('skips validation when only NET_WEIGHT is present', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        NET_WEIGHT: 90
-      })
-
-      expect(error).toBeUndefined()
-    })
-
-    it('skips validation when only GROSS_WEIGHT and NET_WEIGHT are present', () => {
-      const schema = createTestSchema()
-      const { error } = schema.validate({
-        GROSS_WEIGHT: 100,
-        NET_WEIGHT: 90
-      })
-
-      expect(error).toBeUndefined()
-    })
   })
 
   describe('edge cases', () => {
@@ -235,7 +165,6 @@ describe('validateNetWeight', () => {
 
     it('handles very small decimal differences within tolerance', () => {
       const schema = createTestSchema()
-      // Testing floating point arithmetic: 0.1 + 0.2 !== 0.3 in JS
       const { error } = schema.validate({
         GROSS_WEIGHT: 0.3,
         TARE_WEIGHT: 0.1,
@@ -244,19 +173,6 @@ describe('validateNetWeight', () => {
       })
 
       expect(error).toBeUndefined()
-    })
-
-    it('validates correctly when result should be negative (invalid scenario)', () => {
-      const schema = createTestSchema()
-      // This is a logically invalid scenario but we should still validate the calculation
-      const { error } = schema.validate({
-        GROSS_WEIGHT: 10,
-        TARE_WEIGHT: 15,
-        PALLET_WEIGHT: 5,
-        NET_WEIGHT: -10
-      })
-
-      expect(error).toBeUndefined() // Calculation is correct: 10 - 15 - 5 = -10
     })
   })
 })

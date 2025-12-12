@@ -117,7 +117,7 @@ describe('createDataSyntaxValidator', () => {
           .prefs({ abortEarly: false }),
         fieldsRequiredForWasteBalance: ['ROW_ID', 'YES_NO_FIELD']
       },
-      // Schema with custom calculation validator to test custom.calculationMismatch mapping
+      // Schema with custom calculation validator to test calculation mismatch mapping
       CALCULATED_TABLE: {
         requiredHeaders: ['ROW_ID', 'VALUE_A', 'VALUE_B', 'CALCULATED_RESULT'],
         rowIdField: 'ROW_ID',
@@ -142,14 +142,15 @@ describe('createDataSyntaxValidator', () => {
               allPresent &&
               Math.abs(CALCULATED_RESULT - VALUE_A * VALUE_B) > 1e-9
             ) {
-              return helpers.error('custom.calculationMismatch', {
+              return helpers.error('custom.netWeightCalculationMismatch', {
                 field: 'CALCULATED_RESULT'
               })
             }
             return value
           })
           .messages({
-            'custom.calculationMismatch': 'must equal VALUE_A × VALUE_B'
+            'custom.netWeightCalculationMismatch':
+              'must equal VALUE_A × VALUE_B'
           })
           .unknown(true)
           .prefs({ abortEarly: false }),
@@ -855,7 +856,7 @@ describe('createDataSyntaxValidator', () => {
     })
   })
 
-  describe('custom.calculationMismatch validation', () => {
+  describe('calculation mismatch validation', () => {
     it('accepts correct calculation', () => {
       const result = validate({
         CALCULATED_TABLE: {

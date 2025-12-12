@@ -41,7 +41,7 @@ export const validateUkPackagingWeightProportion = (value, helpers) => {
     value[REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]
 
   if (!isProductCorrect(proportion, tonnage, percentage)) {
-    return helpers.error('custom.calculationMismatch', {
+    return helpers.error('custom.ukPackagingProportionCalculationMismatch', {
       field: REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION
     })
   }
@@ -53,5 +53,5 @@ export const validateUkPackagingWeightProportion = (value, helpers) => {
  * Joi messages for the UK packaging weight proportion validator
  */
 export const UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES = Object.freeze({
-  'custom.calculationMismatch': MUST_MATCH_CALCULATION
+  'custom.ukPackagingProportionCalculationMismatch': MUST_MATCH_CALCULATION
 })

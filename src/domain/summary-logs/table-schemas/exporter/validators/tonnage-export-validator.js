@@ -10,7 +10,7 @@ import { RECEIVED_LOADS_FIELDS } from '../fields.js'
 const BAILING_WIRE_FACTOR = 0.9985
 
 /**
- * Error message for TONNAGE_RECEIVED_FOR_RECYCLING calculation mismatch
+ * Error message for TONNAGE_RECEIVED_FOR_EXPORT calculation mismatch
  *
  * Defined locally as this message is specific to this validator.
  */
@@ -18,7 +18,7 @@ const MUST_EQUAL_TONNAGE_CALCULATION =
   'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
 
 /**
- * Validates that TONNAGE_RECEIVED_FOR_RECYCLING matches the expected formula
+ * Validates that TONNAGE_RECEIVED_FOR_EXPORT matches the expected formula
  *
  * Formula:
  * - If BAILING_WIRE_PROTOCOL = "Yes":
@@ -39,13 +39,13 @@ const MUST_EQUAL_TONNAGE_CALCULATION =
  * @param {Object} helpers - Joi validation helpers
  * @returns {Object} The value if valid, or helpers.error() if invalid
  */
-export const validateTonnageReceived = (value, helpers) => {
+export const validateTonnageExport = (value, helpers) => {
   const hasAllFields =
     RECEIVED_LOADS_FIELDS.NET_WEIGHT in value &&
     RECEIVED_LOADS_FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS in value &&
     RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL in value &&
     RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE in value &&
-    RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING in value
+    RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_EXPORT in value
 
   if (!hasAllFields) {
     return value
@@ -57,8 +57,7 @@ export const validateTonnageReceived = (value, helpers) => {
   const bailingWireProtocol = value[RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL]
   const recyclableProportion =
     value[RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]
-  const actualTonnage =
-    value[RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]
+  const actualTonnage = value[RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]
 
   // Calculate base weight (adjusted weight before recyclable proportion)
   const baseWeight = netWeight - nonTargetMaterials
@@ -74,7 +73,7 @@ export const validateTonnageReceived = (value, helpers) => {
 
   if (!areNumbersEqual(actualTonnage, expectedTonnage)) {
     return helpers.error('custom.tonnageCalculationMismatch', {
-      field: RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
+      field: RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
     })
   }
 
@@ -82,8 +81,8 @@ export const validateTonnageReceived = (value, helpers) => {
 }
 
 /**
- * Joi messages for the TONNAGE_RECEIVED_FOR_RECYCLING validator
+ * Joi messages for the TONNAGE_RECEIVED_FOR_EXPORT validator
  */
-export const TONNAGE_RECEIVED_MESSAGES = Object.freeze({
+export const TONNAGE_EXPORT_MESSAGES = Object.freeze({
   'custom.tonnageCalculationMismatch': MUST_EQUAL_TONNAGE_CALCULATION
 })
