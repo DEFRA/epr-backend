@@ -4,6 +4,7 @@ import { createFormSubmissionsRepository } from '#repositories/form-submissions/
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createCdpUploader } from '#adapters/cdp-uploader/status.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 
@@ -175,6 +176,7 @@ export const repositories = {
         organisationsRepository: (db) =>
           createOrganisationsRepository(db, options?.eventualConsistency),
         formSubmissionsRepository: createFormSubmissionsRepository,
+        systemLogsRepository: createSystemLogsRepository,
         wasteRecordsRepository: createWasteRecordsRepository
       }
 
