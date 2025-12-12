@@ -13,7 +13,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
     }) => {
       // Arrange
       const repository = await wasteBalancesRepository()
-      organisationsRepository.getAccreditationById.mockResolvedValue(null)
+      organisationsRepository.findAccreditationById.mockResolvedValue(null)
 
       const record = buildWasteRecord()
 
@@ -31,7 +31,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
-      organisationsRepository.getAccreditationById.mockResolvedValue({
+      organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       })
@@ -66,7 +66,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       // Arrange
       const repository = await wasteBalancesRepository()
 
-      organisationsRepository.getAccreditationById.mockResolvedValue({
+      organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       })
@@ -88,7 +88,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
-      organisationsRepository.getAccreditationById.mockResolvedValue({
+      organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       })
@@ -131,7 +131,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       // Arrange
       const repository = await wasteBalancesRepository()
 
-      organisationsRepository.getAccreditationById.mockResolvedValue({
+      organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       })
@@ -164,7 +164,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const repository = await wasteBalancesRepository()
       const user = { id: 'user-1', name: 'Test User' }
 
-      organisationsRepository.getAccreditationById.mockResolvedValue({
+      organisationsRepository.findAccreditationById.mockResolvedValue({
         validFrom: '2023-01-01',
         validTo: '2023-12-31'
       })
