@@ -3,7 +3,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
-import { buildOrganisation } from './contract/test-data.js'
+import { buildOrganisation, prepareOrgUpdate } from './contract/test-data.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const DATABASE_NAME = 'epr-backend'
@@ -73,9 +73,15 @@ describe('MongoDB organisations repository', () => {
           { $set: { registrations: null, accreditations: null } }
         )
 
-      await repository.update(organisation.id, 1, {
-        status: 'approved'
-      })
+      const orgAfterInsert = await repository.findById(organisation.id)
+
+      await repository.replace(
+        organisation.id,
+        1,
+        prepareOrgUpdate(orgAfterInsert, {
+          status: 'approved'
+        })
+      )
 
       const result = await repository.findById(organisation.id)
       expect(result.status).toBe('approved')
@@ -83,8 +89,8 @@ describe('MongoDB organisations repository', () => {
       expect(result.statusHistory[0].status).toBe('created')
       expect(result.statusHistory[1].status).toBe('approved')
       expect(result.statusHistory[1].updatedAt).toBeInstanceOf(Date)
-      expect(result.registrations).toBeNull()
-      expect(result.accreditations).toBeNull()
+      expect(result.registrations).toEqual([])
+      expect(result.accreditations).toEqual([])
     })
 
     it('does not persist status field to database ', async ({
@@ -95,22 +101,27 @@ describe('MongoDB organisations repository', () => {
       const organisation = buildOrganisation()
       await repository.insert(organisation)
 
+      const orgAfterInsert = await repository.findById(organisation.id)
       // Update with status at all levels  (organisation, registration, accreditation)
-      await repository.update(organisation.id, 1, {
-        status: 'rejected',
-        registrations: [
-          {
-            ...organisation.registrations[0],
-            status: 'rejected'
-          }
-        ],
-        accreditations: [
-          {
-            ...organisation.accreditations[0],
-            status: 'archived'
-          }
-        ]
-      })
+      await repository.replace(
+        organisation.id,
+        1,
+        prepareOrgUpdate(orgAfterInsert, {
+          status: 'rejected',
+          registrations: [
+            {
+              ...organisation.registrations[0],
+              status: 'rejected'
+            }
+          ],
+          accreditations: [
+            {
+              ...organisation.accreditations[0],
+              status: 'archived'
+            }
+          ]
+        })
+      )
 
       // Read directly from MongoDB (bypassing repository mapping)
       const rawDoc = await mongoClient

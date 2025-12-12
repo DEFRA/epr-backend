@@ -29,13 +29,15 @@ export const organisationsLink = {
     const { organisationId } = request.params
 
     const { organisationsRepository } = request
-    const organisation = await organisationsRepository.findById(organisationId)
+    const {
+      id,
+      version: currentVersion,
+      ...organisation
+    } = await organisationsRepository.findById(organisationId)
 
     if (organisation?.status !== STATUS.APPROVED) {
       throw Boom.conflict('Organisation is not in an approvable state')
     }
-
-    const currentVersion = organisation.version
 
     const linkedDefraOrg = {
       orgId: orgInToken.defraIdOrgId,
@@ -47,7 +49,8 @@ export const organisationsLink = {
       linkedAt: new Date().toISOString()
     }
 
-    await organisationsRepository.update(organisation.id, currentVersion, {
+    await organisationsRepository.replace(id, currentVersion, {
+      ...organisation,
       status: STATUS.ACTIVE,
       linkedDefraOrganisation: linkedDefraOrg,
       registrations: organisation.registrations.reduce(
@@ -67,7 +70,7 @@ export const organisationsLink = {
     })
 
     const updatedOrganisation = await organisationsRepository.findById(
-      organisation.id,
+      id,
       currentVersion + 1
     )
 

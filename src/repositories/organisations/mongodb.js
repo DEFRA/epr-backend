@@ -4,7 +4,7 @@ import {
   collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
-  mergeSubcollection,
+  updateStatusHistoryForItems,
   SCHEMA_VERSION,
   statusHistoryWithChanges
 } from './helpers.js'
@@ -70,7 +70,7 @@ const performInsert = (db) => async (organisation) => {
   }
 }
 
-const performUpdate = (db) => async (id, version, updates) => {
+const performReplace = (db) => async (id, version, updates) => {
   const validatedId = validateId(id)
   const validatedUpdates = validateOrganisationUpdate(updates)
 
@@ -82,14 +82,16 @@ const performUpdate = (db) => async (id, version, updates) => {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
 
-  const { status: _, ...merged } = { ...existing, ...validatedUpdates }
+  const { status: _, ...validatedUpdatesWithoutStatus } = {
+    ...validatedUpdates
+  }
 
-  const registrations = mergeSubcollection(
+  const registrations = updateStatusHistoryForItems(
     existing.registrations,
     validatedUpdates.registrations
   )
 
-  const accreditations = mergeSubcollection(
+  const accreditations = updateStatusHistoryForItems(
     existing.accreditations,
     validatedUpdates.accreditations
   )
@@ -100,14 +102,14 @@ const performUpdate = (db) => async (id, version, updates) => {
   )
 
   const users = collateUsers(existing, {
-    ...merged,
+    ...validatedUpdatesWithoutStatus,
     statusHistory: updatedStatusHistory,
     registrations,
     accreditations
   })
 
   const updatePayload = {
-    ...merged,
+    ...validatedUpdatesWithoutStatus,
     statusHistory: updatedStatusHistory,
     registrations,
     accreditations,
@@ -243,7 +245,7 @@ export const createOrganisationsRepository =
 
     return {
       insert: performInsert(db),
-      update: performUpdate(db),
+      replace: performReplace(db),
       findById,
       findAll: performFindAll(db),
       findAllIds: findAllIds(db),
