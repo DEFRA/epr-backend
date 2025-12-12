@@ -96,7 +96,8 @@ export const buildTransaction = (
 }
 
 /**
- * Calculate the total amount already credited for a specific row ID from transactions.
+ * Calculate the net allocated amount for a specific row ID from transactions.
+ * CREDIT transactions add to the total, DEBIT transactions subtract from it.
  *
  * @param {Array<import('#domain/waste-balances/model.js').WasteBalanceTransaction>} transactions
  * @param {string} rowId
