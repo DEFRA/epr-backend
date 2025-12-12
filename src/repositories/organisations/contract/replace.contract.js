@@ -6,8 +6,8 @@ import {
   buildRegistration
 } from './test-data.js'
 
-export const testUpdateBehaviour = (it) => {
-  describe('update', () => {
+export const testReplaceBehaviour = (it) => {
+  describe('replace', () => {
     let repository
 
     beforeEach(async ({ organisationsRepository }) => {
@@ -15,7 +15,7 @@ export const testUpdateBehaviour = (it) => {
     })
 
     describe('basic behaviour', () => {
-      it('updates an organisation successfully', async () => {
+      it('updates organisation level fields successfully', async () => {
         const orgData = buildOrganisation()
         await repository.insert(orgData)
 
@@ -131,7 +131,7 @@ export const testUpdateBehaviour = (it) => {
         })
       })
 
-      it('adds new registration via update', async () => {
+      it('adds new registration', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
@@ -166,7 +166,7 @@ export const testUpdateBehaviour = (it) => {
         expect(actualStatusHistory[0].status).toBe(STATUS.CREATED)
       })
 
-      it('adds new accreditation via update', async () => {
+      it('adds new accreditation', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
@@ -201,6 +201,35 @@ export const testUpdateBehaviour = (it) => {
         expect(actualAcc).toMatchObject(expectedAcc)
         expect(actualStatusHistory).toHaveLength(1)
         expect(actualStatusHistory[0].status).toBe(STATUS.CREATED)
+      })
+
+      it('removes registration and accreditation', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        // Organisation initially has 2 registrations and 3 accreditations
+        expect(organisation.registrations).toHaveLength(2)
+        expect(organisation.accreditations).toHaveLength(3)
+
+        // Remove the second registration and last two accreditations by not including them
+        const { id: _, ...orgWithoutId } = organisation
+        const updatePayload = {
+          ...orgWithoutId,
+          registrations: [organisation.registrations[0]],
+          accreditations: [organisation.accreditations[0]]
+        }
+        await repository.replace(organisation.id, 1, updatePayload)
+
+        const result = await repository.findById(organisation.id, 2)
+
+        // Verify only the first registration and accreditation remain
+        expect(result.registrations).toHaveLength(1)
+        expect(result.registrations[0].id).toBe(organisation.registrations[0].id)
+
+        expect(result.accreditations).toHaveLength(1)
+        expect(result.accreditations[0].id).toBe(
+          organisation.accreditations[0].id
+        )
       })
     })
 
