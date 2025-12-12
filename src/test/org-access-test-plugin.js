@@ -1,12 +1,10 @@
 /**
- * Tier 2 Organisation Access Plugin (Test Infrastructure)
+ * Organisation Access Test Plugin
  *
- * A test-only plugin that uses an in-memory auth context adapter for
+ * Test infrastructure that uses an in-memory auth context adapter for
  * controlled cross-organisation access testing with Hapi's auth injection.
  *
  * This plugin should ONLY be used in tests. Production uses org-access-plugin.js.
- *
- * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
  */
 
 import Boom from '@hapi/boom'
@@ -16,8 +14,8 @@ import Boom from '@hapi/boom'
 /**
  * @type {import('@hapi/hapi').Plugin<{authContext: AuthContextAdapter}>}
  */
-export const tier2OrgAccessPlugin = {
-  name: 'tier2OrgAccessPlugin',
+export const orgAccessTestPlugin = {
+  name: 'orgAccessTestPlugin',
   version: '1.0.0',
 
   /**

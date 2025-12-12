@@ -4,8 +4,8 @@
  * These tests verify that the FULL authentication flow works correctly,
  * including JWT validation, org linking checks, and cross-org access control.
  *
- * Unlike Tier 1 tests (which use asStandardUser() to bypass JWT validation)
- * and Tier 2 tests (which use the in-memory auth context adapter), these
+ * Unlike auth-injected tests (which use asStandardUser() to bypass JWT validation)
+ * or cross-org tests (which use the in-memory auth context adapter), these
  * tests use cryptographically valid JWT tokens and the real auth flow.
  *
  * This proves that:

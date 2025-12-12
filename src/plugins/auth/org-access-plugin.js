@@ -10,8 +10,6 @@
  * Also handles:
  * - Organisation status validation (ACTIVE/SUSPENDED only)
  * - Adding users to organisations on first access (addStandardUserIfNotPresent)
- *
- * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
  */
 
 import Boom from '@hapi/boom'

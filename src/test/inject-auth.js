@@ -14,8 +14,6 @@
  *
  * For auth behaviour tests, use setupAuthContext() with real tokens from
  * create-entra-id-test-tokens.js or create-defra-id-test-tokens.js
- *
- * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
  */
 
 import { ROLES } from '#common/helpers/auth/constants.js'

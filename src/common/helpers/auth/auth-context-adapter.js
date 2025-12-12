@@ -1,11 +1,9 @@
 /**
- * Auth Context Adapter - Tier 2 testing infrastructure
+ * Auth Context Adapter
  *
  * This module provides the ports and adapters for decoupling org access
  * checking from JWT validation, enabling integration tests that verify
  * users can only access their own organisation's data.
- *
- * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
  */
 
 /**

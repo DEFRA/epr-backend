@@ -1,11 +1,9 @@
 /**
- * Cross-organisation access control integration tests (Tier 2)
+ * Cross-organisation access control integration tests
  *
  * These tests verify that users can only access their own organisation's data.
- * Unlike Tier 1 tests (which bypass org checks entirely), these tests use the
- * Auth Context Adapter to enforce org-level access control.
- *
- * See ADR 0007 (docs/testing/0007-auth-context-adapter-for-testing.md) for details.
+ * Unlike auth-injected tests (which bypass org checks entirely), these tests
+ * use the in-memory Auth Context Adapter to enforce org-level access control.
  */
 
 import { StatusCodes } from 'http-status-codes'

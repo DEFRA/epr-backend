@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { tier2OrgAccessPlugin } from './tier2-org-access-plugin.js'
+import { orgAccessTestPlugin } from './org-access-test-plugin.js'
 import { createInMemoryAuthContext } from '#common/helpers/auth/auth-context-adapter.js'
 
-describe('tier2OrgAccessPlugin (test infrastructure)', () => {
+describe('orgAccessTestPlugin (test infrastructure)', () => {
   let server
   let authContext
 
@@ -25,7 +25,7 @@ describe('tier2OrgAccessPlugin (test infrastructure)', () => {
     server.auth.strategy('test-strategy', 'test')
 
     await server.register({
-      plugin: tier2OrgAccessPlugin,
+      plugin: orgAccessTestPlugin,
       options: { authContext }
     })
   })
