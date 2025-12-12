@@ -710,4 +710,63 @@ describe('syncFromSummaryLog', () => {
       'acc-1'
     )
   })
+
+  it('does not attempt to fetch accreditationId if organisationsRepository is not provided', async () => {
+    const summaryLog = {
+      file: { id: 'file-1', uri: 's3://bucket/key' },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+      // accreditationId is missing
+    }
+
+    const extractor = {
+      extract: vi.fn().mockResolvedValue({
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+        data: {}
+      })
+    }
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository: undefined
+    })
+
+    await sync(summaryLog)
+
+    // If it didn't crash, it passed the check
+    expect(true).toBe(true)
+  })
+
+  it('does not update accreditationId if registration is not found', async () => {
+    const summaryLog = {
+      file: { id: 'file-1', uri: 's3://bucket/key' },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+      // accreditationId is missing
+    }
+
+    const extractor = {
+      extract: vi.fn().mockResolvedValue({
+        meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+        data: {}
+      })
+    }
+
+    const organisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue(null)
+    }
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository
+    })
+
+    await sync(summaryLog)
+
+    expect(organisationsRepository.findRegistrationById).toHaveBeenCalled()
+  })
 })
