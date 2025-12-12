@@ -7,12 +7,9 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
-
-const { validToken } = entraIdMockAuthTokens
 
 const summaryLogId = 'summary-log-123'
 
@@ -34,10 +31,10 @@ const createFileDetails = (overrides) => ({
   ...overrides
 })
 
-const createUploadCompletedPayload = (overrides) => ({
+const createUploadCompletedPayload = (overrides, orgId = organisationId) => ({
   uploadStatus: 'ready',
   metadata: {
-    organisationId,
+    organisationId: orgId,
     registrationId
   },
   form: {
@@ -47,50 +44,71 @@ const createUploadCompletedPayload = (overrides) => ({
   ...overrides
 })
 
-const createPendingPayload = (fileId = 'file-pending-123') =>
-  createUploadCompletedPayload({
-    form: {
-      summaryLogUpload: createFileDetails({
-        fileId,
-        filename: 'scanning.xlsx',
-        fileStatus: 'pending',
-        s3Bucket: undefined,
-        s3Key: undefined
-      })
-    }
-  })
-
-const createRejectedPayload = (fileId = 'file-rejected-123') =>
-  createUploadCompletedPayload({
-    form: {
-      summaryLogUpload: createFileDetails({
-        fileId,
-        filename: 'virus.xlsx',
-        fileStatus: 'rejected',
-        hasError: true,
-        errorMessage: 'The selected file contains a virus',
-        s3Bucket: undefined,
-        s3Key: undefined
-      })
+const createPendingPayload = (
+  fileId = 'file-pending-123',
+  orgId = organisationId
+) =>
+  createUploadCompletedPayload(
+    {
+      form: {
+        summaryLogUpload: createFileDetails({
+          fileId,
+          filename: 'scanning.xlsx',
+          fileStatus: 'pending',
+          s3Bucket: undefined,
+          s3Key: undefined
+        })
+      }
     },
-    numberOfRejectedFiles: 1
-  })
+    orgId
+  )
 
-const createCompletePayload = (fileId = 'file-complete-123') =>
-  createUploadCompletedPayload({
-    form: {
-      summaryLogUpload: createFileDetails({
-        fileId,
-        filename: 'test.xlsx',
-        fileStatus: 'complete',
-        s3Bucket: 'test-bucket',
-        s3Key: 'test-key'
-      })
-    }
-  })
+const createRejectedPayload = (
+  fileId = 'file-rejected-123',
+  orgId = organisationId
+) =>
+  createUploadCompletedPayload(
+    {
+      form: {
+        summaryLogUpload: createFileDetails({
+          fileId,
+          filename: 'virus.xlsx',
+          fileStatus: 'rejected',
+          hasError: true,
+          errorMessage: 'The selected file contains a virus',
+          s3Bucket: undefined,
+          s3Key: undefined
+        })
+      },
+      numberOfRejectedFiles: 1
+    },
+    orgId
+  )
+
+const createCompletePayload = (
+  fileId = 'file-complete-123',
+  orgId = organisationId
+) =>
+  createUploadCompletedPayload(
+    {
+      form: {
+        summaryLogUpload: createFileDetails({
+          fileId,
+          filename: 'test.xlsx',
+          fileStatus: 'complete',
+          s3Bucket: 'test-bucket',
+          s3Key: 'test-key'
+        })
+      }
+    },
+    orgId
+  )
 
 describe(`${summaryLogsUploadCompletedPath} route`, () => {
+  // Mock OIDC servers are needed for server startup (auth plugin fetches configs)
+  // but we inject credentials directly so don't need tokens or org setup
   setupAuthContext()
+
   let server
   let payload
 
@@ -121,8 +139,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       },
       featureFlags
     })
-
-    await server.initialize()
   })
 
   beforeEach(() => {
@@ -180,10 +196,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -193,10 +206,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
@@ -221,10 +231,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
@@ -263,10 +270,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(summaryLogsWorker.validate).toHaveBeenCalledWith(summaryLogId)
@@ -280,10 +284,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
@@ -298,10 +299,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(summaryLogsWorker.validate).not.toHaveBeenCalled()
@@ -311,10 +309,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload: 'not-an-object',
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload: 'not-an-object'
     })
 
     expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
@@ -326,10 +321,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload: null,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload: null
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -341,9 +333,6 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
       payload: {
         uploadStatus: 'ready'
-      },
-      headers: {
-        Authorization: `Bearer ${validToken}`
       }
     })
 
@@ -359,10 +348,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -379,11 +365,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-      payload,
-
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -397,10 +379,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     const response = await server.inject({
       method: 'POST',
       url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/pending-${summaryLogId}/upload-completed`,
-      payload,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      payload
     })
 
     expect(response.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -428,10 +407,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
@@ -455,11 +431,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
@@ -484,10 +456,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
@@ -517,10 +486,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       consoleErrorSpy.mockRestore()
@@ -565,10 +531,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -623,22 +586,16 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-456'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-456')
         })
 
         expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-456'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-456')
         })
 
         expect(secondResponse.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -649,22 +606,16 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-789'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-789')
         })
 
         expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createRejectedPayload('file-rejected-789'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-789')
         })
 
         expect(secondResponse.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -675,22 +626,16 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         const firstResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-101'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-101')
         })
 
         expect(firstResponse.statusCode).toBe(StatusCodes.ACCEPTED)
 
         const secondResponse = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createCompletePayload('file-complete-101'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-101')
         })
 
         expect(secondResponse.statusCode).toBe(StatusCodes.ACCEPTED)
@@ -703,20 +648,14 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createCompletePayload('file-complete-202'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-202')
         })
 
         const response = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createPendingPayload('file-pending-202'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createPendingPayload('file-pending-202')
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -727,20 +666,14 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
         await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createRejectedPayload('file-rejected-505'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createRejectedPayload('file-rejected-505')
         })
 
         const response = await transitionServer.inject({
           method: 'POST',
-          url: `/v1/organisations/org-123/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
-          payload: createCompletePayload('file-complete-505'),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          url: `/v1/organisations/${organisationId}/registrations/reg-456/summary-logs/${summaryLogId}/upload-completed`,
+          payload: createCompletePayload('file-complete-505')
         })
 
         expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -753,10 +686,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       expect(summaryLogsRepository.supersedePendingLogs).toHaveBeenCalledWith(
@@ -782,10 +712,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-          payload,
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          payload
         })
 
         expect(
@@ -800,10 +727,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
@@ -819,10 +743,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
-        payload,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        payload
       })
 
       const calls = server.loggerMocks.info.mock.calls

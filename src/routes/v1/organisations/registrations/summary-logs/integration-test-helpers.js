@@ -12,9 +12,10 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { createTestServer } from '#test/create-test-server.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-
-export const { validToken } = entraIdMockAuthTokens
+// eslint-disable-next-line n/no-unpublished-import
+import { asStandardUser } from '#test/inject-auth.js'
+// eslint-disable-next-line n/no-unpublished-import
+export { asStandardUser } from '#test/inject-auth.js'
 
 export const createUploadPayload = (
   organisationId,
@@ -78,9 +79,7 @@ export const pollForValidation = async (
     const checkResponse = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     status = JSON.parse(checkResponse.payload).status
@@ -107,10 +106,24 @@ export const createStandardMeta = (processingType) => ({
   }
 })
 
+/**
+ * @typedef {Object} TestInfrastructureOptions
+ * @property {import('#common/helpers/auth/auth-context-adapter.js').AuthContextAdapter} [authContext] - Optional auth context for cross-org access tests
+ */
+
+/**
+ * Creates test infrastructure for integration tests.
+ *
+ * @param {string} organisationId
+ * @param {string} registrationId
+ * @param {object} extractorData
+ * @param {TestInfrastructureOptions} [options]
+ */
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,
-  extractorData
+  extractorData,
+  options = {}
 ) => {
   const mockLogger = {
     info: vi.fn(),
@@ -160,7 +173,8 @@ export const createTestInfrastructure = async (
     workers: {
       summaryLogsWorker: { validate: validateSummaryLog }
     },
-    featureFlags
+    featureFlags,
+    authContext: options.authContext
   })
 
   return { server, summaryLogsRepository }

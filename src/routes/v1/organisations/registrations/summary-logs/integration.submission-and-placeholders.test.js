@@ -22,12 +22,12 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
+  asStandardUser,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
-  pollForValidation,
-  validToken
+  pollForValidation
 } from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests', () => {
@@ -326,9 +326,7 @@ describe('Submission and placeholder tests', () => {
       submitResponse = await server.inject({
         method: 'POST',
         url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       let attempts = 0
@@ -344,9 +342,7 @@ describe('Submission and placeholder tests', () => {
         const checkResponse = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
 
         status = JSON.parse(checkResponse.payload).status
@@ -373,9 +369,7 @@ describe('Submission and placeholder tests', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -387,9 +381,7 @@ describe('Submission and placeholder tests', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -407,8 +399,7 @@ describe('Submission and placeholder tests', () => {
           UPLOAD_STATUS.COMPLETE,
           secondFileId,
           secondFilename
-        ),
-        headers: { Authorization: `Bearer ${validToken}` }
+        )
       })
       await pollForValidation(
         server,
@@ -420,7 +411,7 @@ describe('Submission and placeholder tests', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, secondSummaryLogId),
-        headers: { Authorization: `Bearer ${validToken}` }
+        ...asStandardUser()
       })
 
       const payload = JSON.parse(response.payload)
@@ -644,9 +635,6 @@ describe('Submission and placeholder tests', () => {
             }
           },
           numberOfRejectedFiles: 0
-        },
-        headers: {
-          Authorization: `Bearer ${validToken}`
         }
       })
     })
@@ -669,9 +657,7 @@ describe('Submission and placeholder tests', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 

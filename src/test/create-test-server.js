@@ -1,5 +1,6 @@
 import { createServer } from '#server/server.js'
 import { vi } from 'vitest'
+import { orgAccessTestPlugin } from './org-access-test-plugin.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -12,16 +13,41 @@ import { vi } from 'vitest'
  */
 
 /**
+ * @typedef {import('#common/helpers/auth/auth-context-adapter.js').AuthContextAdapter} AuthContextAdapter
+ */
+
+/**
+ * @param {{
+ *   repositories?: object,
+ *   featureFlags?: object,
+ *   authContext?: AuthContextAdapter,
+ *   [key: string]: unknown
+ * }} [options]
  * @returns {Promise<TestServer>}
  */
 export async function createTestServer(options = {}) {
+  const { authContext, ...serverOptions } = options
+
   // If repositories are provided, assume in-memory mode and skip MongoDB
-  const skipMongoDb = options.repositories !== undefined
+  const skipMongoDb = serverOptions.repositories !== undefined
+
+  // If authContext provided, skip production org-access-plugin (use test plugin instead)
+  const skipOrgAccessPlugin = authContext !== undefined
 
   const server = await createServer({
     skipMongoDb,
-    ...options
+    skipOrgAccessPlugin,
+    ...serverOptions
   })
+
+  // Register test plugin for cross-org access testing with in-memory adapter
+  if (authContext) {
+    await server.register({
+      plugin: orgAccessTestPlugin,
+      options: { authContext }
+    })
+  }
+
   await server.initialize()
 
   /** @type {TestServer} */

@@ -465,6 +465,7 @@ describe('#getJwtStrategyConfig', () => {
             }),
             update: vi.fn().mockResolvedValue()
           },
+          app: {},
           path: '/any',
           params: {
             organisationId: testOrgId
@@ -493,6 +494,7 @@ describe('#getJwtStrategyConfig', () => {
         }
         const request = {
           organisationsRepository: {},
+          app: {},
           path: '/v1/me/organisations',
           method: 'get'
         }
@@ -517,6 +519,7 @@ describe('#getJwtStrategyConfig', () => {
         }
         const request = {
           organisationsRepository: {},
+          app: {},
           path: '/v1/me/organisations',
           method: 'get'
         }
@@ -571,6 +574,7 @@ describe('#getJwtStrategyConfig', () => {
         }
         const request = {
           organisationsRepository: {},
+          app: {},
           path: '/v1/me/organisations',
           method: 'get'
         }
@@ -611,6 +615,7 @@ describe('#getJwtStrategyConfig', () => {
 
         const defraRequest = {
           organisationsRepository: {},
+          app: {},
           path: '/v1/me/organisations',
           method: 'get'
         }

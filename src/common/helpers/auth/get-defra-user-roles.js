@@ -12,7 +12,11 @@ import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
 
 /**
- * Determines the roles for a Defra ID user based on their token and request context
+ * Determines the roles for a Defra ID user based on their token and request context.
+ *
+ * Also stores linkedOrgId on request.app for the org-access-plugin to use in onPostAuth.
+ * The actual org mismatch and status checks happen there to ensure proper 403 responses.
+ *
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
  * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
  * @returns {Promise<string[]>} Array of role strings
@@ -52,16 +56,12 @@ export async function getDefraUserRoles(tokenPayload, request) {
     throw Boom.unauthorized('User token is not linked to an organisation')
   }
 
-  // Throws error if:
-  // - the request does not have an organisationId param
-  // - or if the linkedEprOrg does not match the organisationId param
-  // - or if the organisation status is not accessible
-  // Adds the user to the organisation if they are not already present
-  const roles = await getRolesForOrganisationAccess(
-    request,
-    linkedEprOrg.id,
-    tokenPayload
-  )
+  // Store linkedOrgId for the org-access-plugin to use in onPostAuth
+  request.app.linkedOrgId = linkedEprOrg.id
+
+  // Returns [standardUser] if organisationId param exists, otherwise []
+  // Actual org mismatch and status checks happen in org-access-plugin (onPostAuth)
+  const roles = getRolesForOrganisationAccess(request)
 
   return roles
 }
