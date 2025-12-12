@@ -79,6 +79,7 @@ export const performUpdateWasteBalanceTransactions = async ({
   }
 
   const accreditation = await organisationsRepository.findAccreditationById(
+    wasteRecords[0]?.organisationId,
     validatedAccreditationId
   )
   if (!accreditation) {
