@@ -70,7 +70,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(mockCdpUploader.getUploadStatus).toHaveBeenCalledWith(uploadId)
@@ -80,7 +80,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: buildGetUrl(summaryLogId),
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -94,7 +94,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(200)
@@ -119,7 +119,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(200)
@@ -144,7 +144,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(200)
@@ -169,7 +169,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       // Wait for eventual consistency (in-memory repository uses setImmediate)
@@ -188,7 +188,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(200)
@@ -237,7 +237,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       // Should return the current status (validating), NOT validation_failed
@@ -273,7 +273,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -296,7 +296,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -317,7 +317,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -331,7 +331,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl('non-existent-id')}?uploadId=${uploadId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(200)
@@ -387,7 +387,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      ...asStandardUser()
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     expect(response.statusCode).toBe(200)
@@ -397,7 +397,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      ...asStandardUser()
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     const payload = JSON.parse(response.payload)
@@ -408,7 +408,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      ...asStandardUser()
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     const payload = JSON.parse(response.payload)
@@ -419,7 +419,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      ...asStandardUser()
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     const payload = JSON.parse(response.payload)

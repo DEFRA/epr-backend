@@ -123,7 +123,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           response = await server.inject({
             method: 'GET',
             url: buildGetUrl(organisationId, registrationId, summaryLogId),
-            ...asStandardUser()
+            ...asStandardUser({ linkedOrgId: organisationId })
           })
         })
 
@@ -305,7 +305,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           response = await server.inject({
             method: 'GET',
             url: buildGetUrl(organisationId, registrationId, summaryLogId),
-            ...asStandardUser()
+            ...asStandardUser({ linkedOrgId: organisationId })
           })
         })
 

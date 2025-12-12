@@ -9,21 +9,31 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 
 /**
- * Creates auth injection options for a standard user
- * @param {object} [overrides] - Optional credential overrides
+ * Creates auth injection options for a standard user.
+ * Requires linkedOrgId because a standard user is always linked to an
+ * organisation via their Defra ID relationships.
+ * @param {object} options - Options object
+ * @param {string} options.linkedOrgId - The organisation ID the user is linked to
+ * @param {object} [options.overrides] - Additional credential overrides
  * @returns {object} Auth options for server.inject()
  */
-export const asStandardUser = (overrides = {}) => ({
-  auth: {
-    strategy: 'access-token',
-    credentials: {
-      scope: [ROLES.standardUser],
-      id: 'test-user-id',
-      email: 'test@example.com',
-      ...overrides
+export const asStandardUser = ({ linkedOrgId, ...overrides } = {}) => {
+  if (!linkedOrgId) {
+    throw new Error('linkedOrgId is required for asStandardUser')
+  }
+  return {
+    auth: {
+      strategy: 'access-token',
+      credentials: {
+        scope: [ROLES.standardUser],
+        id: 'test-user-id',
+        email: 'test@example.com',
+        linkedOrgId,
+        ...overrides
+      }
     }
   }
-})
+}
 
 /**
  * Creates auth injection options for a service maintainer

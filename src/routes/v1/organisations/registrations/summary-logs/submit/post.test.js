@@ -75,7 +75,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -85,7 +85,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       const body = JSON.parse(response.payload)
@@ -96,7 +96,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.headers.location).toBe(
@@ -108,7 +108,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(summaryLogsRepository.update).toHaveBeenCalledWith(
@@ -124,7 +124,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(summaryLogsWorker.submit).toHaveBeenCalledWith(summaryLogId)
@@ -134,7 +134,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith({
@@ -155,7 +155,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -176,7 +176,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -198,7 +198,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       consoleErrorSpy.mockRestore()
@@ -218,7 +218,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       consoleErrorSpy.mockRestore()

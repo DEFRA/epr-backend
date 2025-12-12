@@ -118,7 +118,7 @@ describe('Advanced validation scenarios', () => {
             response = await server.inject({
               method: 'GET',
               url: buildGetUrl(organisationId, registrationId, summaryLogId),
-              ...asStandardUser()
+              ...asStandardUser({ linkedOrgId: organisationId })
             })
           })
 
@@ -229,7 +229,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser()
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
 
@@ -425,7 +425,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser()
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
 
@@ -603,7 +603,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser()
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
 
@@ -721,7 +721,7 @@ describe('Advanced validation scenarios', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser()
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
 
@@ -798,7 +798,7 @@ describe('Advanced validation scenarios', () => {
       const response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(200)

@@ -77,7 +77,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -103,7 +103,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -131,7 +131,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)

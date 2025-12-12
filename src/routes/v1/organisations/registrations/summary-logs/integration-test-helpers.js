@@ -79,7 +79,7 @@ export const pollForValidation = async (
     const checkResponse = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser()
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     status = JSON.parse(checkResponse.payload).status

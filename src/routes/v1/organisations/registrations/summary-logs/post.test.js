@@ -64,7 +64,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -83,7 +83,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -103,7 +103,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -126,13 +126,13 @@ describe(`${summaryLogsCreatePath} route`, () => {
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          ...asStandardUser(),
+          ...asStandardUser({ linkedOrgId: organisationId }),
           payload: { redirectUrl: 'https://frontend.test/redirect' }
         }),
         server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-          ...asStandardUser(),
+          ...asStandardUser({ linkedOrgId: organisationId }),
           payload: { redirectUrl: 'https://frontend.test/redirect' }
         })
       ])
@@ -184,7 +184,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -204,7 +204,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -238,7 +238,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {}
       })
 
@@ -249,7 +249,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser(),
+        ...asStandardUser({ linkedOrgId: organisationId }),
         payload: {
           redirectUrl:
             '/organisations/org-123/registrations/reg-456/summary-logs/sl-789'

@@ -56,7 +56,7 @@ describe('Summary logs upload lifecycle', () => {
       response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        ...asStandardUser()
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
     })
 
@@ -122,7 +122,7 @@ describe('Summary logs upload lifecycle', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser()
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
 
@@ -197,7 +197,7 @@ describe('Summary logs upload lifecycle', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser()
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
 
