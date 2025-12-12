@@ -244,8 +244,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       summaryLogsRepository = {
         insert: vi.fn().mockResolvedValue(undefined),
         update: vi.fn().mockResolvedValue(undefined),
-        findById: vi.fn().mockResolvedValue(null),
-        hasSubmittingLog: vi.fn().mockResolvedValue(false)
+        findById: vi.fn().mockResolvedValue(null)
       }
 
       server = await createTestServer({
