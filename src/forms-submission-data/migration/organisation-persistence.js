@@ -7,7 +7,7 @@ import { removeUndefinedValues } from '#formsubmission/parsing-common/transform-
 
 /**
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
- * @import {MigrationResult, OrganisationMigrationItem, SuccessResult} from '#formsubmission/types.js'
+ * @import {OrganisationMigrationItem} from '#formsubmission/types.js'
  */
 
 function isSuccessResult(result) {
