@@ -11,7 +11,6 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
-import { ROLES } from '#common/helpers/auth/constants.js'
 
 import { uploadCompletedPayloadSchema } from './post.schema.js'
 
@@ -166,9 +165,7 @@ export const summaryLogsUploadCompleted = {
   method: 'POST',
   path: summaryLogsUploadCompletedPath,
   options: {
-    auth: {
-      scope: [ROLES.standardUser]
-    },
+    auth: false,
     validate: {
       payload: uploadCompletedPayloadSchema,
       failAction: (_request, _h, err) => {

@@ -313,8 +313,7 @@ describe('Submission and placeholder tests', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        ...asStandardUser()
+        )
       })
 
       await pollForValidation(
@@ -400,8 +399,7 @@ describe('Submission and placeholder tests', () => {
           UPLOAD_STATUS.COMPLETE,
           secondFileId,
           secondFilename
-        ),
-        ...asStandardUser()
+        )
       })
       await pollForValidation(
         server,
@@ -637,8 +635,7 @@ describe('Submission and placeholder tests', () => {
             }
           },
           numberOfRejectedFiles: 0
-        },
-        ...asStandardUser()
+        }
       })
     })
 

@@ -96,8 +96,7 @@ describe('Advanced validation scenarios', () => {
               UPLOAD_STATUS.COMPLETE,
               fileId,
               filename
-            ),
-            ...asStandardUser()
+            )
           })
         })
 
@@ -208,8 +207,7 @@ describe('Advanced validation scenarios', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        ...asStandardUser()
+        )
       })
     })
 
@@ -405,8 +403,7 @@ describe('Advanced validation scenarios', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        ...asStandardUser()
+        )
       })
     })
 
@@ -584,8 +581,7 @@ describe('Advanced validation scenarios', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        ...asStandardUser()
+        )
       })
     })
 
@@ -703,8 +699,7 @@ describe('Advanced validation scenarios', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        ...asStandardUser()
+        )
       })
     })
 

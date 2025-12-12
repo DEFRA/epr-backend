@@ -101,8 +101,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             UPLOAD_STATUS.COMPLETE,
             fileId,
             filename
-          ),
-          ...asStandardUser()
+          )
         })
       })
 
@@ -284,8 +283,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             UPLOAD_STATUS.COMPLETE,
             fileId,
             filename
-          ),
-          ...asStandardUser()
+          )
         })
       })
 
