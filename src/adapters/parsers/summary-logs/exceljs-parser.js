@@ -490,7 +490,9 @@ export const parse = async (buffer, options = {}) => {
   } = options
 
   const workbook = new ExcelJS.Workbook()
-  await workbook.xlsx.load(buffer)
+  await workbook.xlsx.load(
+    /** @type {import('exceljs').Buffer} */ (/** @type {unknown} */ (buffer))
+  )
 
   validateWorkbookStructure(workbook, {
     requiredWorksheet,
