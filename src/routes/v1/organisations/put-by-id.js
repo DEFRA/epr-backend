@@ -75,10 +75,7 @@ export const organisationsPutById = {
       const initial = await organisationsRepository.findById(id)
       await organisationsRepository.update(id, version, updates)
       const updated = await organisationsRepository.findById(id, version + 1)
-      await auditOrganisationUpdate(request, {
-        organisationId: id,
-        details: { initial, updated }
-      })
+      await auditOrganisationUpdate(request, id, initial, updated)
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)

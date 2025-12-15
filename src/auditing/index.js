@@ -6,22 +6,28 @@ import { audit } from '@defra/cdp-auditing'
 
 /**
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {string} organisationId
+ * @param {Object} previous
+ * @param {Object} next
  */
-async function auditOrganisationUpdate(request, { organisationId, details }) {
+async function auditOrganisationUpdate(request, organisationId, previous, next) {
   const payload = {
     event: {
-      category: 'organisation',
+      category: 'entity',
+      subCategory: 'epr-organisations',
       action: 'update'
     },
     context: {
-      user: extractUserDetails(request),
       organisationId,
-      ...details
-    }
+      previous,
+      next
+    },
+    // TODO is `createdBy` an acceptable name for the SOC/CDP audit payload?
+    createdBy: extractUserDetails(request)
   }
 
   audit(payload)
-  await recordSystemLog(request.systemLogsRepository, payload)
+  await recordSystemLog(request, payload)
 }
 
 function extractUserDetails(request) {
@@ -31,11 +37,15 @@ function extractUserDetails(request) {
         email: request.auth.credentials.email,
         scope: request.auth.credentials.scope
       }
-    : undefined
+    : { id: '', email: '', scope: [] }
 }
 
-async function recordSystemLog(systemLogsRepository, payload) {
-  systemLogsRepository.insert({
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {object} payload
+ */
+async function recordSystemLog(request, payload) {
+  request.systemLogsRepository.insert({
     createdAt: new Date(),
     ...payload
   })

@@ -9,7 +9,10 @@ export const createSystemLogsRepository = (db) => (logger) => ({
     try {
       await db
         .collection(SYSTEM_LOGS_COLLECTION_NAME)
-        .insertOne({ ...systemLog }) // spread operator here to avoid mutating systemLog (Mongo DB adds a _id)
+        .insertOne({
+          schemaVersion: 1,
+          ...systemLog
+        })
     } catch (error) {
       logger.error({
         error,
@@ -27,7 +30,8 @@ export const createSystemLogsRepository = (db) => (logger) => ({
     return docs.map((doc) => ({
       event: doc.event,
       context: doc.context,
-      createdAt: doc.createdAt
+      createdAt: doc.createdAt,
+      createdBy: doc.createdBy
     }))
   }
 })

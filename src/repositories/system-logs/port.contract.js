@@ -14,19 +14,27 @@ export const testSystemLogsRepositoryContract = (it) => {
     const organisationId2 = randomUUID()
     const now = new Date()
 
-    const event = { category: 'c', action: 'a' }
+    const event = {
+      category: 'test-category',
+      subCategory: 'test-sub-category',
+      action: 'test-action'
+    }
+    const createdBy = { id: 'user-001', email: 'user@email.com', scope: [] }
     const payload1 = {
       createdAt: now,
+      createdBy,
       event,
       context: { organisationId: organisationId1, id: 1 }
     }
     const payload2 = {
       createdAt: now,
+      createdBy,
       event,
       context: { organisationId: organisationId2, id: 2 }
     }
     const payload3 = {
       createdAt: now,
+      createdBy,
       event,
       context: {
         /* no organisationId */
@@ -35,6 +43,7 @@ export const testSystemLogsRepositoryContract = (it) => {
     }
     const payload4 = {
       createdAt: now,
+      createdBy,
       event,
       context: { organisationId: organisationId1, id: 4 }
     }

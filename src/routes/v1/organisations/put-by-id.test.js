@@ -107,6 +107,7 @@ describe('PUT /v1/organisations/{id}', () => {
     it('captures a system log and audit event', async () => {
       const initialOrg = await createOrganisation()
       const organisationId = initialOrg.id
+      const start = new Date()
 
       const updateResponse = await server.inject({
         method: 'PUT',
@@ -135,28 +136,43 @@ describe('PUT /v1/organisations/{id}', () => {
       })
 
       expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
-      const systemLogsResponseBody = JSON.parse(systemLogsResponse.payload)
 
-      const verifyRecordedOrganisationUpdateData = (payload) => {
-        expect(payload.event.category).toEqual('organisation')
+      const verifyCreatedBy = (payload) => {
+        expect(payload.createdBy.id).toEqual('test-user-id')
+        expect(payload.createdBy.email).toEqual('me@example.com')
+        expect(payload.createdBy.scope).toEqual(['service_maintainer'])
+      }
+
+      const verifyEvent = (payload) => {
+        expect(payload.event.category).toEqual('entity')
+        expect(payload.event.subCategory).toEqual('epr-organisations')
         expect(payload.event.action).toEqual('update')
+      }
+
+      const verifyContext = (payload) => {
         expect(payload.context.organisationId).toEqual(organisationId)
-        expect(payload.context.user.email).toEqual('me@example.com')
-        expect(payload.context.initial).toEqual(initialOrg)
-        expect(payload.context.updated).toEqual(updatedOrgResponseBody)
+        expect(payload.context.previous).toEqual(initialOrg)
+        expect(payload.context.next).toEqual(updatedOrgResponseBody)
       }
 
       // System log
+      const systemLogsResponseBody = JSON.parse(systemLogsResponse.payload)
       expect(systemLogsResponseBody.systemLogs).toHaveLength(1)
-      verifyRecordedOrganisationUpdateData(systemLogsResponseBody.systemLogs[0])
+      const systemLogPayload = systemLogsResponseBody.systemLogs[0]
+      verifyCreatedBy(systemLogPayload)
+      expect(new Date(systemLogPayload.createdAt).getTime()).toBeGreaterThanOrEqual(start.getTime())
+      verifyEvent(systemLogPayload)
+      verifyContext(systemLogPayload)
 
-      // SOC audit event
+      // CDP audit event
       expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
       // stringify then parse to coerce Date objects to ISO strings
-      const auditingEvent = JSON.parse(
+      const auditPayload = JSON.parse(
         JSON.stringify(mockCdpAuditing.mock.calls[0][0])
       )
-      verifyRecordedOrganisationUpdateData(auditingEvent)
+      verifyCreatedBy(auditPayload)
+      verifyEvent(auditPayload)
+      verifyContext(auditPayload)
     })
   })
 
