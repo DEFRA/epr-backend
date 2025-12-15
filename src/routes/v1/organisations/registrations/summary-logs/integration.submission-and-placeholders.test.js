@@ -118,6 +118,7 @@ describe('Submission and placeholder tests', () => {
       }
 
       const sharedHeaders = [
+        // Mandatory fields (Section 1)
         'ROW_ID',
         'DATE_RECEIVED_FOR_REPROCESSING',
         'EWC_CODE',
@@ -131,7 +132,19 @@ describe('Submission and placeholder tests', () => {
         'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
         'WEIGHT_OF_NON_TARGET_MATERIALS',
         'RECYCLABLE_PROPORTION_PERCENTAGE',
-        'TONNAGE_RECEIVED_FOR_RECYCLING'
+        'TONNAGE_RECEIVED_FOR_RECYCLING',
+        // Optional fields (Sections 2 & 3)
+        'SUPPLIER_NAME',
+        'SUPPLIER_ADDRESS',
+        'SUPPLIER_POSTCODE',
+        'SUPPLIER_EMAIL',
+        'SUPPLIER_PHONE_NUMBER',
+        'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+        'YOUR_REFERENCE',
+        'WEIGHBRIDGE_TICKET',
+        'CARRIER_NAME',
+        'CBD_REG_NUMBER',
+        'CARRIER_VEHICLE_REGISTRATION_NUMBER'
       ]
 
       const firstUploadData = {
@@ -155,7 +168,19 @@ describe('Submission and placeholder tests', () => {
                 'Actual weight (100%)',
                 50,
                 0.85,
-                678.98 // (850-50)*0.9985*0.85
+                678.98, // (850-50)*0.9985*0.85
+                // Optional fields left empty
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
               ]
             },
             {
@@ -174,7 +199,19 @@ describe('Submission and placeholder tests', () => {
                 'Actual weight (100%)',
                 45,
                 0.85,
-                611.028 // (765-45)*0.9985*0.85
+                611.028, // (765-45)*0.9985*0.85
+                // Optional fields left empty
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
               ]
             }
           ]
@@ -202,7 +239,19 @@ describe('Submission and placeholder tests', () => {
                 'Actual weight (100%)',
                 50,
                 0.85,
-                678.98 // (850-50)*0.9985*0.85 unchanged
+                678.98, // (850-50)*0.9985*0.85 unchanged
+                // Optional fields left empty
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
               ]
             },
             {
@@ -221,7 +270,19 @@ describe('Submission and placeholder tests', () => {
                 'Actual weight (100%)',
                 48,
                 0.85,
-                644.182275 // (807-48)*0.9985*0.85 adjusted
+                644.182275, // (807-48)*0.9985*0.85 adjusted
+                // Optional fields left empty
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
               ]
             },
             {
@@ -240,7 +301,19 @@ describe('Submission and placeholder tests', () => {
                 'Actual weight (100%)',
                 40,
                 0.85,
-                543.184 // (680-40)*0.9985*0.85 new
+                543.184, // (680-40)*0.9985*0.85 new
+                // Optional fields left empty
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                '',
+                ''
               ]
             }
           ]
@@ -456,6 +529,7 @@ describe('Submission and placeholder tests', () => {
 
       worksheet.getCell('A6').value =
         '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
+      // Mandatory fields (Section 1)
       worksheet.getCell('B6').value = 'ROW_ID'
       worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
       worksheet.getCell('D6').value = 'EWC_CODE'
@@ -471,6 +545,18 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
       worksheet.getCell('N6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
       worksheet.getCell('O6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
+      // Optional fields (Sections 2 & 3)
+      worksheet.getCell('P6').value = 'SUPPLIER_NAME'
+      worksheet.getCell('Q6').value = 'SUPPLIER_ADDRESS'
+      worksheet.getCell('R6').value = 'SUPPLIER_POSTCODE'
+      worksheet.getCell('S6').value = 'SUPPLIER_EMAIL'
+      worksheet.getCell('T6').value = 'SUPPLIER_PHONE_NUMBER'
+      worksheet.getCell('U6').value = 'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+      worksheet.getCell('V6').value = 'YOUR_REFERENCE'
+      worksheet.getCell('W6').value = 'WEIGHBRIDGE_TICKET'
+      worksheet.getCell('X6').value = 'CARRIER_NAME'
+      worksheet.getCell('Y6').value = 'CBD_REG_NUMBER'
+      worksheet.getCell('Z6').value = 'CARRIER_VEHICLE_REGISTRATION_NUMBER'
 
       // Row 7: valid row
       worksheet.getCell('B7').value = 10000000001
@@ -487,6 +573,18 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M7').value = 50
       worksheet.getCell('N7').value = 0.85
       worksheet.getCell('O7').value = 678.98 // (850-50)*0.9985*0.85
+      // Optional fields left empty
+      worksheet.getCell('P7').value = null
+      worksheet.getCell('Q7').value = null
+      worksheet.getCell('R7').value = null
+      worksheet.getCell('S7').value = null
+      worksheet.getCell('T7').value = null
+      worksheet.getCell('U7').value = null
+      worksheet.getCell('V7').value = null
+      worksheet.getCell('W7').value = null
+      worksheet.getCell('X7').value = null
+      worksheet.getCell('Y7').value = null
+      worksheet.getCell('Z7').value = null
 
       // Row 8: placeholder row (partially filled with placeholders)
       worksheet.getCell('B8').value = 10000000002
@@ -503,6 +601,18 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M8').value = 40
       worksheet.getCell('N8').value = 0.9
       worksheet.getCell('O8').value = 680
+      // Optional fields left empty
+      worksheet.getCell('P8').value = null
+      worksheet.getCell('Q8').value = null
+      worksheet.getCell('R8').value = null
+      worksheet.getCell('S8').value = null
+      worksheet.getCell('T8').value = null
+      worksheet.getCell('U8').value = null
+      worksheet.getCell('V8').value = null
+      worksheet.getCell('W8').value = null
+      worksheet.getCell('X8').value = null
+      worksheet.getCell('Y8').value = null
+      worksheet.getCell('Z8').value = null
 
       // Row 9: all placeholders/null (should terminate data section)
       worksheet.getCell('B9').value = null
@@ -519,6 +629,18 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M9').value = null
       worksheet.getCell('N9').value = null
       worksheet.getCell('O9').value = null
+      // Optional fields left empty
+      worksheet.getCell('P9').value = null
+      worksheet.getCell('Q9').value = null
+      worksheet.getCell('R9').value = null
+      worksheet.getCell('S9').value = null
+      worksheet.getCell('T9').value = null
+      worksheet.getCell('U9').value = null
+      worksheet.getCell('V9').value = null
+      worksheet.getCell('W9').value = null
+      worksheet.getCell('X9').value = null
+      worksheet.getCell('Y9').value = null
+      worksheet.getCell('Z9').value = null
 
       // Row 10: another valid row after terminator row (should be excluded)
       worksheet.getCell('B10').value = 99999999999
@@ -535,6 +657,18 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M10').value = 50
       worksheet.getCell('N10').value = 0.5
       worksheet.getCell('O10').value = 420.5 // (891-50)*1*0.5 no bailing wire
+      // Optional fields left empty
+      worksheet.getCell('P10').value = null
+      worksheet.getCell('Q10').value = null
+      worksheet.getCell('R10').value = null
+      worksheet.getCell('S10').value = null
+      worksheet.getCell('T10').value = null
+      worksheet.getCell('U10').value = null
+      worksheet.getCell('V10').value = null
+      worksheet.getCell('W10').value = null
+      worksheet.getCell('X10').value = null
+      worksheet.getCell('Y10').value = null
+      worksheet.getCell('Z10').value = null
 
       return workbook.xlsx.writeBuffer()
     }

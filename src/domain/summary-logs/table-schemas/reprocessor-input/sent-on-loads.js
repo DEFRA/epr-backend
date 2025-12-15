@@ -7,18 +7,42 @@ import {
 import { SENT_ON_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 
 /**
- * Table schema for SENT_ON_LOADS
+ * Mandatory fields - required for data validation and waste balance
+ */
+const MANDATORY_FIELDS = [
+  FIELDS.ROW_ID,
+  FIELDS.DATE_LOAD_LEFT_SITE,
+  FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
+]
+
+/**
+ * Optional fields - columns present in template but not mandatory
+ */
+const OPTIONAL_FIELDS = [
+  FIELDS.FINAL_DESTINATION_FACILITY_TYPE,
+  FIELDS.FINAL_DESTINATION_NAME,
+  FIELDS.FINAL_DESTINATION_ADDRESS,
+  FIELDS.FINAL_DESTINATION_POSTCODE,
+  FIELDS.FINAL_DESTINATION_EMAIL,
+  FIELDS.FINAL_DESTINATION_PHONE,
+  FIELDS.YOUR_REFERENCE,
+  FIELDS.DESCRIPTION_WASTE,
+  FIELDS.EWC_CODE,
+  FIELDS.WEIGHBRIDGE_TICKET
+]
+
+/**
+ * Table schema for SENT_ON_LOADS (REPROCESSOR_INPUT)
  *
  * Tracks waste sent on to other facilities.
  */
 export const SENT_ON_LOADS = {
   rowIdField: FIELDS.ROW_ID,
 
-  requiredHeaders: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_LOAD_LEFT_SITE,
-    FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
-  ],
+  /**
+   * VAL008: All columns that must be present in the uploaded file
+   */
+  requiredHeaders: [...MANDATORY_FIELDS, ...OPTIONAL_FIELDS],
 
   /**
    * Per-field values that indicate "unfilled"
@@ -27,12 +51,10 @@ export const SENT_ON_LOADS = {
 
   /**
    * Fields that produce FATAL errors when validation fails
+   *
+   * Only mandatory fields cause fatal errors.
    */
-  fatalFields: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_LOAD_LEFT_SITE,
-    FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
-  ],
+  fatalFields: MANDATORY_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields
@@ -49,10 +71,8 @@ export const SENT_ON_LOADS = {
 
   /**
    * VAL011: Fields required for Waste Balance calculation
+   *
+   * Only mandatory fields are required for waste balance.
    */
-  fieldsRequiredForWasteBalance: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_LOAD_LEFT_SITE,
-    FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON
-  ]
+  fieldsRequiredForWasteBalance: MANDATORY_FIELDS
 }

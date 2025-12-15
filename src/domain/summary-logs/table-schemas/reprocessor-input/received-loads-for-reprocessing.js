@@ -24,10 +24,9 @@ import {
 } from './validators/tonnage-received-validator.js'
 
 /**
- * All fields in this table - used for requiredHeaders, fatalFields,
- * and fieldsRequiredForWasteBalance since they're identical for this schema.
+ * Mandatory fields (Section 1) - required for data validation and waste balance
  */
-const ALL_FIELDS = [
+const MANDATORY_FIELDS = [
   FIELDS.ROW_ID,
   FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
   FIELDS.EWC_CODE,
@@ -45,6 +44,23 @@ const ALL_FIELDS = [
 ]
 
 /**
+ * Optional fields (Sections 2 & 3) - columns present in template but not mandatory
+ */
+const OPTIONAL_FIELDS = [
+  FIELDS.SUPPLIER_NAME,
+  FIELDS.SUPPLIER_ADDRESS,
+  FIELDS.SUPPLIER_POSTCODE,
+  FIELDS.SUPPLIER_EMAIL,
+  FIELDS.SUPPLIER_PHONE_NUMBER,
+  FIELDS.ACTIVITIES_CARRIED_OUT_BY_SUPPLIER,
+  FIELDS.YOUR_REFERENCE,
+  FIELDS.WEIGHBRIDGE_TICKET,
+  FIELDS.CARRIER_NAME,
+  FIELDS.CBD_REG_NUMBER,
+  FIELDS.CARRIER_VEHICLE_REGISTRATION_NUMBER
+]
+
+/**
  * Table schema for RECEIVED_LOADS_FOR_REPROCESSING
  *
  * Tracks waste received for reprocessing. This schema defines:
@@ -55,7 +71,10 @@ const ALL_FIELDS = [
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
 
-  requiredHeaders: ALL_FIELDS,
+  /**
+   * VAL008: All columns that must be present in the uploaded file
+   */
+  requiredHeaders: [...MANDATORY_FIELDS, ...OPTIONAL_FIELDS],
 
   /**
    * Per-field values that indicate "unfilled"
@@ -73,9 +92,9 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * Fields that produce FATAL errors when validation fails
    *
    * ROW_ID is always fatal as it indicates tampering or corruption.
-   * All fields are fatal per ticket requirements.
+   * Only mandatory fields cause fatal errors.
    */
-  fatalFields: ALL_FIELDS,
+  fatalFields: MANDATORY_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields
@@ -124,6 +143,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    *
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
+   * Only mandatory fields are required for waste balance.
    */
-  fieldsRequiredForWasteBalance: ALL_FIELDS
+  fieldsRequiredForWasteBalance: MANDATORY_FIELDS
 }

@@ -48,6 +48,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                 RECEIVED_LOADS_FOR_REPROCESSING: {
                   location: { sheet: 'Received', row: 7, column: 'B' },
                   headers: [
+                    // Mandatory fields (Section 1)
                     'ROW_ID',
                     'DATE_RECEIVED_FOR_REPROCESSING',
                     'EWC_CODE',
@@ -61,7 +62,19 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
                     'WEIGHT_OF_NON_TARGET_MATERIALS',
                     'RECYCLABLE_PROPORTION_PERCENTAGE',
-                    'TONNAGE_RECEIVED_FOR_RECYCLING'
+                    'TONNAGE_RECEIVED_FOR_RECYCLING',
+                    // Optional fields (Sections 2 & 3)
+                    'SUPPLIER_NAME',
+                    'SUPPLIER_ADDRESS',
+                    'SUPPLIER_POSTCODE',
+                    'SUPPLIER_EMAIL',
+                    'SUPPLIER_PHONE_NUMBER',
+                    'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+                    'YOUR_REFERENCE',
+                    'WEIGHBRIDGE_TICKET',
+                    'CARRIER_NAME',
+                    'CBD_REG_NUMBER',
+                    'CARRIER_VEHICLE_REGISTRATION_NUMBER'
                   ],
                   rows: [
                     {
@@ -80,7 +93,19 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                         'INVALID_METHOD', // Invalid HOW_DID_YOU value - causes fatal error
                         50,
                         0.85,
-                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
+                        678.98, // (850-50)*0.9985*0.85 with bailing wire deduction
+                        // Optional fields left empty
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        ''
                       ]
                     }
                   ]
@@ -211,6 +236,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                 RECEIVED_LOADS_FOR_REPROCESSING: {
                   location: { sheet: 'Received', row: 7, column: 'B' },
                   headers: [
+                    // Mandatory fields (Section 1)
                     'ROW_ID',
                     'DATE_RECEIVED_FOR_REPROCESSING',
                     'EWC_CODE',
@@ -224,7 +250,19 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                     'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
                     'WEIGHT_OF_NON_TARGET_MATERIALS',
                     'RECYCLABLE_PROPORTION_PERCENTAGE',
-                    'TONNAGE_RECEIVED_FOR_RECYCLING'
+                    'TONNAGE_RECEIVED_FOR_RECYCLING',
+                    // Optional fields (Sections 2 & 3)
+                    'SUPPLIER_NAME',
+                    'SUPPLIER_ADDRESS',
+                    'SUPPLIER_POSTCODE',
+                    'SUPPLIER_EMAIL',
+                    'SUPPLIER_PHONE_NUMBER',
+                    'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+                    'YOUR_REFERENCE',
+                    'WEIGHBRIDGE_TICKET',
+                    'CARRIER_NAME',
+                    'CBD_REG_NUMBER',
+                    'CARRIER_VEHICLE_REGISTRATION_NUMBER'
                   ],
                   rows: [
                     {
@@ -243,7 +281,19 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                         'Actual weight (100%)',
                         50,
                         0.85,
-                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
+                        678.98, // (850-50)*0.9985*0.85 with bailing wire deduction
+                        // Optional fields left empty
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        ''
                       ]
                     },
                     {
@@ -262,7 +312,19 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
                         'Actual weight (100%)',
                         50,
                         0.85,
-                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
+                        678.98, // (850-50)*0.9985*0.85 with bailing wire deduction
+                        // Optional fields left empty
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        '',
+                        ''
                       ]
                     }
                   ]
