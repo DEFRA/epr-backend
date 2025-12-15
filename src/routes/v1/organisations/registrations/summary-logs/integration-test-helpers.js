@@ -25,6 +25,38 @@ export { asStandardUser } from '#test/inject-auth.js'
 const RECEIVED_LOADS_HEADERS = Object.values(RECEIVED_LOADS_FIELDS)
 const REPROCESSED_LOADS_HEADERS = Object.values(REPROCESSED_LOADS_FIELDS)
 
+// Excel row positions for data tables
+const TABLE_HEADER_ROW = 6
+const TABLE_DATA_START_ROW = 7
+
+// Valid test fixture data for REPROCESSOR_INPUT template
+const VALID_RECEIVED_LOAD = {
+  rowId: 10000000001,
+  dateReceived: new Date('2025-05-28'),
+  ewcCode: '03 03 08',
+  description: 'Glass - pre-sorted',
+  prnIssued: 'No',
+  grossWeight: 1000,
+  tareWeight: 100,
+  palletWeight: 50,
+  netWeight: 850,
+  bailingWireProtocol: 'Yes',
+  howCalculated: 'Actual weight (100%)',
+  nonTargetWeight: 50,
+  recyclableProportion: 0.85,
+  tonnageReceived: 678.98
+}
+
+// Valid test fixture data for REPROCESSOR_OUTPUT template
+const VALID_REPROCESSED_LOAD = {
+  rowId: 30000000001,
+  dateLeftSite: new Date('2025-05-28'),
+  productTonnage: 500,
+  ukPackagingPercentage: 0.75,
+  ukPackagingProportion: 375,
+  addProductWeight: 'Yes'
+}
+
 export const createUploadPayload = (
   organisationId,
   registrationId,
@@ -240,14 +272,14 @@ const createWorkbookWithMetadata = (processingType) => {
 const addDataTable = (workbook, tableMarker, headers, rowData) => {
   const dataSheet = workbook.getWorksheet('Data')
 
-  dataSheet.getCell('A6').value = tableMarker
+  dataSheet.getCell(`A${TABLE_HEADER_ROW}`).value = tableMarker
 
   headers.forEach((header, index) => {
-    dataSheet.getCell(6, index + 2).value = header
+    dataSheet.getCell(TABLE_HEADER_ROW, index + 2).value = header
   })
 
   rowData.forEach((value, index) => {
-    dataSheet.getCell(7, index + 2).value = value
+    dataSheet.getCell(TABLE_DATA_START_ROW, index + 2).value = value
   })
 }
 
@@ -258,22 +290,7 @@ export const createReprocessorInputWorkbook = () => {
     workbook,
     '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING',
     RECEIVED_LOADS_HEADERS,
-    [
-      10000000001, // ROW_ID
-      new Date('2025-05-28'), // DATE_RECEIVED_FOR_REPROCESSING
-      '03 03 08', // EWC_CODE
-      'Glass - pre-sorted', // DESCRIPTION_WASTE
-      'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-      1000, // GROSS_WEIGHT
-      100, // TARE_WEIGHT
-      50, // PALLET_WEIGHT
-      850, // NET_WEIGHT
-      'Yes', // BAILING_WIRE_PROTOCOL
-      'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-      50, // WEIGHT_OF_NON_TARGET_MATERIALS
-      0.85, // RECYCLABLE_PROPORTION_PERCENTAGE
-      678.98 // TONNAGE_RECEIVED_FOR_RECYCLING
-    ]
+    Object.values(VALID_RECEIVED_LOAD)
   )
 
   return workbook
@@ -286,14 +303,7 @@ export const createReprocessorOutputWorkbook = () => {
     workbook,
     '__EPR_DATA_REPROCESSED_LOADS',
     REPROCESSED_LOADS_HEADERS,
-    [
-      30000000001, // ROW_ID (3000+ range for REPROCESSED_LOADS)
-      new Date('2025-05-28'), // DATE_LOAD_LEFT_SITE
-      500, // PRODUCT_TONNAGE (0-1000 range)
-      0.75, // UK_PACKAGING_WEIGHT_PERCENTAGE
-      375, // PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION
-      'Yes' // ADD_PRODUCT_WEIGHT
-    ]
+    Object.values(VALID_REPROCESSED_LOAD)
   )
 
   return workbook
