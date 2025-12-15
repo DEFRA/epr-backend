@@ -18,7 +18,6 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
-  createExpectedRegistrationResponse,
   createTestInfrastructure
 } from './integration-test-helpers.js'
 
@@ -140,7 +139,8 @@ describe('Summary logs upload lifecycle', () => {
             concerns: {}
           },
           loads: createEmptyLoads(),
-          registration: createExpectedRegistrationResponse('REPROCESSOR_INPUT')
+          processingType: 'REPROCESSOR_INPUT',
+          material: 'Paper_and_board'
         })
       })
 

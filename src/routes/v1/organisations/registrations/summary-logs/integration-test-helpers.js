@@ -106,15 +106,6 @@ export const createStandardMeta = (processingType) => ({
   }
 })
 
-/**
- * Creates the expected registration response object
- * for use in response assertions
- */
-export const createExpectedRegistrationResponse = (processingType) => ({
-  processingType,
-  material: 'Paper_and_board'
-})
-
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,
