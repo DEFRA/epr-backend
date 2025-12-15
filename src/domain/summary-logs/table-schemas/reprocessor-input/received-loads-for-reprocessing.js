@@ -24,9 +24,9 @@ import {
 } from './validators/tonnage-received-validator.js'
 
 /**
- * Mandatory fields (Section 1) - required for data validation and waste balance
+ * Fields required for waste balance calculation (Section 1)
  */
-const MANDATORY_FIELDS = [
+const WASTE_BALANCE_FIELDS = [
   FIELDS.ROW_ID,
   FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
   FIELDS.EWC_CODE,
@@ -44,9 +44,9 @@ const MANDATORY_FIELDS = [
 ]
 
 /**
- * Optional fields (Sections 2 & 3) - columns present in template but not mandatory
+ * Supplementary fields (Sections 2 & 3) - columns present in template but not required for waste balance
  */
-const OPTIONAL_FIELDS = [
+const SUPPLEMENTARY_FIELDS = [
   FIELDS.SUPPLIER_NAME,
   FIELDS.SUPPLIER_ADDRESS,
   FIELDS.SUPPLIER_POSTCODE,
@@ -74,7 +74,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
   /**
    * VAL008: All columns that must be present in the uploaded file
    */
-  requiredHeaders: [...MANDATORY_FIELDS, ...OPTIONAL_FIELDS],
+  requiredHeaders: [...WASTE_BALANCE_FIELDS, ...SUPPLEMENTARY_FIELDS],
 
   /**
    * Per-field values that indicate "unfilled"
@@ -92,9 +92,9 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * Fields that produce FATAL errors when validation fails
    *
    * ROW_ID is always fatal as it indicates tampering or corruption.
-   * Only mandatory fields cause fatal errors.
+   * Only waste balance fields cause fatal errors.
    */
-  fatalFields: MANDATORY_FIELDS,
+  fatalFields: WASTE_BALANCE_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields
@@ -143,7 +143,6 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    *
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
-   * Only mandatory fields are required for waste balance.
    */
-  fieldsRequiredForWasteBalance: MANDATORY_FIELDS
+  fieldsRequiredForWasteBalance: WASTE_BALANCE_FIELDS
 }

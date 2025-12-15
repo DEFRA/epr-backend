@@ -118,7 +118,7 @@ describe('Submission and placeholder tests', () => {
       }
 
       const sharedHeaders = [
-        // Mandatory fields (Section 1)
+        // Waste balance fields (Section 1)
         'ROW_ID',
         'DATE_RECEIVED_FOR_REPROCESSING',
         'EWC_CODE',
@@ -133,7 +133,7 @@ describe('Submission and placeholder tests', () => {
         'WEIGHT_OF_NON_TARGET_MATERIALS',
         'RECYCLABLE_PROPORTION_PERCENTAGE',
         'TONNAGE_RECEIVED_FOR_RECYCLING',
-        // Optional fields (Sections 2 & 3)
+        // Supplementary fields (Sections 2 & 3)
         'SUPPLIER_NAME',
         'SUPPLIER_ADDRESS',
         'SUPPLIER_POSTCODE',
@@ -169,7 +169,7 @@ describe('Submission and placeholder tests', () => {
                 50,
                 0.85,
                 678.98, // (850-50)*0.9985*0.85
-                // Optional fields left empty
+                // Supplementary fields left empty
                 '',
                 '',
                 '',
@@ -200,7 +200,7 @@ describe('Submission and placeholder tests', () => {
                 45,
                 0.85,
                 611.028, // (765-45)*0.9985*0.85
-                // Optional fields left empty
+                // Supplementary fields left empty
                 '',
                 '',
                 '',
@@ -240,7 +240,7 @@ describe('Submission and placeholder tests', () => {
                 50,
                 0.85,
                 678.98, // (850-50)*0.9985*0.85 unchanged
-                // Optional fields left empty
+                // Supplementary fields left empty
                 '',
                 '',
                 '',
@@ -271,7 +271,7 @@ describe('Submission and placeholder tests', () => {
                 48,
                 0.85,
                 644.182275, // (807-48)*0.9985*0.85 adjusted
-                // Optional fields left empty
+                // Supplementary fields left empty
                 '',
                 '',
                 '',
@@ -302,7 +302,7 @@ describe('Submission and placeholder tests', () => {
                 40,
                 0.85,
                 543.184, // (680-40)*0.9985*0.85 new
-                // Optional fields left empty
+                // Supplementary fields left empty
                 '',
                 '',
                 '',
@@ -529,7 +529,7 @@ describe('Submission and placeholder tests', () => {
 
       worksheet.getCell('A6').value =
         '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
-      // Mandatory fields (Section 1)
+      // Waste balance fields (Section 1)
       worksheet.getCell('B6').value = 'ROW_ID'
       worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
       worksheet.getCell('D6').value = 'EWC_CODE'
@@ -545,7 +545,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
       worksheet.getCell('N6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
       worksheet.getCell('O6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
-      // Optional fields (Sections 2 & 3)
+      // Supplementary fields (Sections 2 & 3)
       worksheet.getCell('P6').value = 'SUPPLIER_NAME'
       worksheet.getCell('Q6').value = 'SUPPLIER_ADDRESS'
       worksheet.getCell('R6').value = 'SUPPLIER_POSTCODE'
@@ -573,7 +573,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M7').value = 50
       worksheet.getCell('N7').value = 0.85
       worksheet.getCell('O7').value = 678.98 // (850-50)*0.9985*0.85
-      // Optional fields left empty
+      // Supplementary fields left empty
       worksheet.getCell('P7').value = null
       worksheet.getCell('Q7').value = null
       worksheet.getCell('R7').value = null
@@ -601,7 +601,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M8').value = 40
       worksheet.getCell('N8').value = 0.9
       worksheet.getCell('O8').value = 680
-      // Optional fields left empty
+      // Supplementary fields left empty
       worksheet.getCell('P8').value = null
       worksheet.getCell('Q8').value = null
       worksheet.getCell('R8').value = null
@@ -629,7 +629,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M9').value = null
       worksheet.getCell('N9').value = null
       worksheet.getCell('O9').value = null
-      // Optional fields left empty
+      // Supplementary fields left empty
       worksheet.getCell('P9').value = null
       worksheet.getCell('Q9').value = null
       worksheet.getCell('R9').value = null
@@ -657,7 +657,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('M10').value = 50
       worksheet.getCell('N10').value = 0.5
       worksheet.getCell('O10').value = 420.5 // (891-50)*1*0.5 no bailing wire
-      // Optional fields left empty
+      // Supplementary fields left empty
       worksheet.getCell('P10').value = null
       worksheet.getCell('Q10').value = null
       worksheet.getCell('R10').value = null

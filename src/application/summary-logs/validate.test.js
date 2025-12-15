@@ -15,7 +15,7 @@ import {
 // ============================================================================
 
 const RECEIVED_LOADS_HEADERS = [
-  // Mandatory fields (Section 1)
+  // Waste balance fields (Section 1)
   'ROW_ID',
   'DATE_RECEIVED_FOR_REPROCESSING',
   'EWC_CODE',
@@ -30,7 +30,7 @@ const RECEIVED_LOADS_HEADERS = [
   'WEIGHT_OF_NON_TARGET_MATERIALS',
   'RECYCLABLE_PROPORTION_PERCENTAGE',
   'TONNAGE_RECEIVED_FOR_RECYCLING',
-  // Optional fields (Sections 2 & 3)
+  // Supplementary fields (Sections 2 & 3)
   'SUPPLIER_NAME',
   'SUPPLIER_ADDRESS',
   'SUPPLIER_POSTCODE',
@@ -53,7 +53,7 @@ const buildMeta = (overrides = {}) => ({
 })
 
 const buildReceivedLoadRow = (overrides = {}) => ({
-  // Mandatory fields (Section 1)
+  // Waste balance fields (Section 1)
   ROW_ID: 10000,
   DATE_RECEIVED_FOR_REPROCESSING: '2025-05-28T00:00:00.000Z',
   EWC_CODE: '03 03 08',
@@ -68,7 +68,7 @@ const buildReceivedLoadRow = (overrides = {}) => ({
   WEIGHT_OF_NON_TARGET_MATERIALS: 50,
   RECYCLABLE_PROPORTION_PERCENTAGE: 0.85,
   TONNAGE_RECEIVED_FOR_RECYCLING: 678.98, // (850-50)*0.9985*0.85 with bailing wire
-  // Optional fields (Sections 2 & 3)
+  // Supplementary fields (Sections 2 & 3)
   SUPPLIER_NAME: '',
   SUPPLIER_ADDRESS: '',
   SUPPLIER_POSTCODE: '',

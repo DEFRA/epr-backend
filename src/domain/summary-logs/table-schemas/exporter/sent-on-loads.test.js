@@ -10,7 +10,7 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
-      it('contains all mandatory columns', () => {
+      it('contains all waste balance columns', () => {
         expect(schema.requiredHeaders).toContain('ROW_ID')
         expect(schema.requiredHeaders).toContain('DATE_LOAD_LEFT_SITE')
         expect(schema.requiredHeaders).toContain(
@@ -18,7 +18,7 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
         )
       })
 
-      it('contains all optional columns from template sections', () => {
+      it('contains all supplementary columns from template sections', () => {
         expect(schema.requiredHeaders).toContain(
           'FINAL_DESTINATION_FACILITY_TYPE'
         )
@@ -38,8 +38,8 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
       })
     })
 
-    describe('fatalFields (data validation - mandatory fields only)', () => {
-      it('contains mandatory fields that cause fatal errors on validation failure', () => {
+    describe('fatalFields (data validation - waste balance fields only)', () => {
+      it('contains waste balance fields that cause fatal errors on validation failure', () => {
         expect(schema.fatalFields).toContain('ROW_ID')
         expect(schema.fatalFields).toContain('DATE_LOAD_LEFT_SITE')
         expect(schema.fatalFields).toContain(
@@ -47,11 +47,11 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
         )
       })
 
-      it('has exactly 3 fatal fields (mandatory columns only)', () => {
+      it('has exactly 3 fatal fields (waste balance columns only)', () => {
         expect(schema.fatalFields).toHaveLength(3)
       })
 
-      it('does NOT contain optional columns', () => {
+      it('does NOT contain supplementary columns', () => {
         expect(schema.fatalFields).not.toContain(
           'FINAL_DESTINATION_FACILITY_TYPE'
         )
@@ -68,7 +68,7 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
     })
 
     describe('fieldsRequiredForWasteBalance (VAL011)', () => {
-      it('contains mandatory fields required for waste balance calculation', () => {
+      it('contains fields required for waste balance calculation', () => {
         expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
         expect(schema.fieldsRequiredForWasteBalance).toContain(
           'DATE_LOAD_LEFT_SITE'
@@ -78,11 +78,11 @@ describe('SENT_ON_LOADS (EXPORTER)', () => {
         )
       })
 
-      it('has exactly 3 fields required for waste balance (mandatory columns only)', () => {
+      it('has exactly 3 fields required for waste balance', () => {
         expect(schema.fieldsRequiredForWasteBalance).toHaveLength(3)
       })
 
-      it('does NOT contain optional columns', () => {
+      it('does NOT contain supplementary columns', () => {
         expect(schema.fieldsRequiredForWasteBalance).not.toContain(
           'FINAL_DESTINATION_FACILITY_TYPE'
         )

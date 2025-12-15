@@ -10,7 +10,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('requiredHeaders (VAL008 - column presence validation)', () => {
-      it('contains all mandatory columns (Section 1)', () => {
+      it('contains all waste balance columns (Section 1)', () => {
         expect(schema.requiredHeaders).toContain('ROW_ID')
         expect(schema.requiredHeaders).toContain(
           'DATE_RECEIVED_FOR_REPROCESSING'
@@ -39,7 +39,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         )
       })
 
-      it('contains all optional columns from template (Sections 2 & 3)', () => {
+      it('contains all supplementary columns from template (Sections 2 & 3)', () => {
         expect(schema.requiredHeaders).toContain('SUPPLIER_NAME')
         expect(schema.requiredHeaders).toContain('SUPPLIER_ADDRESS')
         expect(schema.requiredHeaders).toContain('SUPPLIER_POSTCODE')
@@ -57,7 +57,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         )
       })
 
-      it('has exactly 25 required headers (14 mandatory + 11 optional)', () => {
+      it('has exactly 25 required headers (14 waste balance + 11 supplementary)', () => {
         expect(schema.requiredHeaders).toHaveLength(25)
       })
     })
@@ -72,8 +72,8 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       ).toContain('Choose option')
     })
 
-    describe('fatalFields (data validation - mandatory fields only)', () => {
-      it('contains mandatory fields that cause fatal errors on validation failure', () => {
+    describe('fatalFields (data validation - waste balance fields only)', () => {
+      it('contains waste balance fields that cause fatal errors on validation failure', () => {
         expect(Array.isArray(schema.fatalFields)).toBe(true)
         expect(schema.fatalFields).toContain('ROW_ID')
         expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
@@ -95,11 +95,11 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
       })
 
-      it('has exactly 14 fatal fields (mandatory columns only)', () => {
+      it('has exactly 14 fatal fields (waste balance columns only)', () => {
         expect(schema.fatalFields).toHaveLength(14)
       })
 
-      it('does NOT contain optional columns from Sections 2 & 3', () => {
+      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
         expect(schema.fatalFields).not.toContain('SUPPLIER_NAME')
         expect(schema.fatalFields).not.toContain('SUPPLIER_ADDRESS')
         expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
@@ -110,7 +110,7 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
     })
 
     describe('fieldsRequiredForWasteBalance (VAL011)', () => {
-      it('contains mandatory fields required for waste balance calculation', () => {
+      it('contains fields required for waste balance calculation', () => {
         expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
         expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
         expect(schema.fieldsRequiredForWasteBalance).toContain(
@@ -144,11 +144,11 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
         )
       })
 
-      it('has exactly 14 fields required for waste balance (mandatory columns only)', () => {
+      it('has exactly 14 fields required for waste balance', () => {
         expect(schema.fieldsRequiredForWasteBalance).toHaveLength(14)
       })
 
-      it('does NOT contain optional columns from Sections 2 & 3', () => {
+      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
         expect(schema.fieldsRequiredForWasteBalance).not.toContain(
           'SUPPLIER_NAME'
         )
