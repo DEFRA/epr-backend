@@ -119,28 +119,36 @@ export const calculateWasteBalanceUpdates = ({
   let currentAmount = currentBalance.amount || 0
   let currentAvailableAmount = currentBalance.availableAmount || 0
 
-  // Optimization: Pre-calculate allocations to avoid O(N*M) complexity
-  const allocationMap = new Map()
+  // Optimization: Pre-calculate credited amounts to avoid O(N*M) complexity
+  const creditedAmountMap = new Map()
 
-  const updateAllocationMap = (t) => {
-    if (
-      t.type !== WASTE_BALANCE_TRANSACTION_TYPE.CREDIT &&
-      t.type !== WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
-    ) {
+  /**
+   * Updates the credited amount map with the transaction amount for each entity.
+   * Credits increase the credited amount, Debits decrease it.
+   * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
+   */
+  const updateCreditedAmountMap = (transaction) => {
+    const isCredit = transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+    const isDebit = transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+
+    if (!isCredit && !isDebit) {
       return
     }
 
-    const amount =
-      t.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? t.amount : -t.amount
-    const uniqueEntityIds = new Set((t.entities || []).map((e) => String(e.id)))
+    const sign = isCredit ? 1 : -1
+    const netAmount = transaction.amount * sign
+
+    const entityIds = (transaction.entities || []).map((e) => String(e.id))
+    const uniqueEntityIds = new Set(entityIds)
 
     for (const id of uniqueEntityIds) {
-      allocationMap.set(id, (allocationMap.get(id) || 0) + amount)
+      const currentCreditedAmount = creditedAmountMap.get(id) || 0
+      creditedAmountMap.set(id, currentCreditedAmount + netAmount)
     }
   }
 
   // Initialize map with existing transactions
-  ;(currentBalance.transactions || []).forEach(updateAllocationMap)
+  ;(currentBalance.transactions || []).forEach(updateCreditedAmountMap)
 
   for (const record of wasteRecords) {
     if (
@@ -151,9 +159,10 @@ export const calculateWasteBalanceUpdates = ({
       const targetAmount = getTransactionAmount(record)
 
       // Calculate Already Credited Amount
-      const alreadyAllocated = allocationMap.get(String(record.rowId)) || 0
+      const alreadyCreditedAmount =
+        creditedAmountMap.get(String(record.rowId)) || 0
 
-      const delta = targetAmount - alreadyAllocated
+      const delta = targetAmount - alreadyCreditedAmount
 
       // Only create transaction if there is a difference (handling float precision)
       if (Math.abs(delta) > 0.000001) {
@@ -178,7 +187,7 @@ export const calculateWasteBalanceUpdates = ({
         newTransactions.push(transaction)
 
         // Update map for next iteration
-        updateAllocationMap(transaction)
+        updateCreditedAmountMap(transaction)
       }
     }
   }
