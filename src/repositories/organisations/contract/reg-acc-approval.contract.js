@@ -1,20 +1,21 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
-  buildOrganisation,
   buildAccreditation,
+  buildOrganisation,
   buildRegistration
 } from './test-data.js'
 import {
-  STATUS,
-  WASTE_PROCESSING_TYPE,
   MATERIAL,
-  TIME_SCALE
+  STATUS,
+  TIME_SCALE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 
-export const testApprovalValidation = (it) => {
-  const oneDayAgo = new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
-  const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+export const testRegAccApprovalValidation = (it) => {
+  const DAY = 24 * 60 * 60 * 1000
+  const oneDayAgo = new Date(Date.now() - DAY)
+  const twoDaysAgo = new Date(Date.now() - 2 * DAY)
 
   describe('approval validation', () => {
     let repository
@@ -236,15 +237,13 @@ export const testApprovalValidation = (it) => {
 
           const validUpdates = {
             accreditations: inserted.accreditations.map((acc) => {
-              const update = {
+              return {
                 ...acc,
                 status: STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: new Date('2025-01-01'),
                 validTo: new Date('2025-12-31')
               }
-
-              return update
             }),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
@@ -364,14 +363,13 @@ export const testApprovalValidation = (it) => {
 
           const invalidUpdates = {
             accreditations: inserted.accreditations.map((acc) => {
-              const update = {
+              return {
                 ...acc,
                 status: STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: new Date('2025-01-01'),
                 validTo: new Date('2025-12-31')
               }
-              return update
             })
           }
 
