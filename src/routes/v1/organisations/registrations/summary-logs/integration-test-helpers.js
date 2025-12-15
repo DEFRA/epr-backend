@@ -106,6 +106,17 @@ export const createStandardMeta = (processingType) => ({
   }
 })
 
+/**
+ * Creates the expected meta response values (just values, no locations)
+ * for use in response assertions
+ */
+export const createExpectedMetaResponse = (processingType) => ({
+  REGISTRATION_NUMBER: 'REG-123',
+  PROCESSING_TYPE: processingType,
+  MATERIAL: 'Paper_and_board',
+  TEMPLATE_VERSION: 1
+})
+
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,

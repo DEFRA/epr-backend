@@ -18,6 +18,7 @@ import {
   buildPostUrl,
   pollForValidation,
   createStandardMeta,
+  createExpectedMetaResponse,
   createTestInfrastructure
 } from './integration-test-helpers.js'
 
@@ -138,7 +139,8 @@ describe('Summary logs upload lifecycle', () => {
             failures: [],
             concerns: {}
           },
-          loads: createEmptyLoads()
+          loads: createEmptyLoads(),
+          meta: createExpectedMetaResponse('REPROCESSOR_INPUT')
         })
       })
 
