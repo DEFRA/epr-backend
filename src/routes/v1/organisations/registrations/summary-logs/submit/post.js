@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -7,6 +8,7 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
@@ -19,9 +21,7 @@ export const summaryLogsSubmit = {
   method: 'POST',
   path: summaryLogsSubmitPath,
   options: {
-    auth: {
-      scope: [ROLES.standardUser]
-    },
+    auth: getAuthConfig([ROLES.standardUser]),
     response: {
       schema: summaryLogResponseSchema
     }

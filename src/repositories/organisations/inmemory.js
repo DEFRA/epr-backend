@@ -1,11 +1,10 @@
 import Boom from '@hapi/boom'
 import {
-  SCHEMA_VERSION,
   collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
-  hasChanges,
   mergeSubcollection,
+  SCHEMA_VERSION,
   statusHistoryWithChanges
 } from './helpers.js'
 import {
@@ -140,28 +139,6 @@ const performUpdate =
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-  }
-
-const performUpsert =
-  (storage, staleCache, pendingSyncRef, insertFn, updateFn) =>
-  async (organisation) => {
-    const validated = validateOrganisationInsert(organisation)
-    const { id, version: _v, schemaVersion: _s, ...updateData } = validated
-
-    const existing = storage.find((o) => o.id === id)
-
-    if (!existing) {
-      await insertFn(organisation)
-      return { action: 'inserted', id }
-    }
-
-    if (!hasChanges(existing, validated)) {
-      return { action: 'unchanged', id }
-    }
-
-    await updateFn(id, existing.version, updateData)
-    scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
-    return { action: 'updated', id }
   }
 
 const performFindById = (staleCache) => (id) => {
@@ -307,10 +284,6 @@ export const createInMemoryOrganisationsRepository = (
     return {
       insert: insertFn,
       update: updateFn,
-      upsert:
-        /** @type {(organisation: Object) => Promise<import('./port.js').UpsertResult>} */ (
-          performUpsert(storage, staleCache, pendingSyncRef, insertFn, updateFn)
-        ),
       findAll: performFindAll(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,

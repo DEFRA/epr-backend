@@ -1,12 +1,11 @@
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
-  SCHEMA_VERSION,
   collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
-  hasChanges,
   mergeSubcollection,
+  SCHEMA_VERSION,
   statusHistoryWithChanges
 } from './helpers.js'
 import {
@@ -130,27 +129,6 @@ const performUpdate = (db) => async (id, version, updates) => {
   }
 }
 
-const performUpsert = (db) => async (organisation) => {
-  const validated = validateOrganisationInsert(organisation)
-  const { id, version: _v, schemaVersion: _s, ...updateData } = validated
-
-  const existing = await db
-    .collection(COLLECTION_NAME)
-    .findOne({ _id: ObjectId.createFromHexString(id) })
-
-  if (!existing) {
-    await performInsert(db)(organisation)
-    return { action: 'inserted', id }
-  }
-
-  if (!hasChanges(mapDocumentWithCurrentStatuses(existing), validated)) {
-    return { action: 'unchanged', id }
-  }
-
-  await performUpdate(db)(id, existing.version, updateData)
-  return { action: 'updated', id }
-}
-
 const handleFoundDocument = (doc, minimumVersion) => {
   const mapped = mapDocumentWithCurrentStatuses(doc)
 
@@ -266,10 +244,6 @@ export const createOrganisationsRepository =
     return {
       insert: performInsert(db),
       update: performUpdate(db),
-      upsert:
-        /** @type {(organisation: Object) => Promise<import('./port.js').UpsertResult>} */ (
-          performUpsert(db)
-        ),
       findById,
       findAll: performFindAll(db),
       findAllIds: findAllIds(db),
