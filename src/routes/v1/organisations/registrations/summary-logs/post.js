@@ -10,6 +10,7 @@ import { config } from '#root/config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
+import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
@@ -21,9 +22,7 @@ export const summaryLogsCreate = {
   method: 'POST',
   path: summaryLogsCreatePath,
   options: {
-    auth: {
-      scope: [ROLES.standardUser]
-    },
+    auth: getAuthConfig([ROLES.standardUser]),
     validate: {
       payload: summaryLogsCreatePayloadSchema,
       failAction: (_request, _h, err) => {
