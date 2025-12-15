@@ -21,11 +21,31 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   }
 
+  /**
+   * Adds a worksheet with protection to a workbook.
+   * The parser only processes protected worksheets.
+   *
+   * Use this for tests that need to manipulate individual cells (getCell),
+   * set complex values (formula, richText), or use programmatic loops.
+   * For simpler row-based data, prefer parseWorkbook() or createWorkbookWithProtection().
+   *
+   * @param {Object} workbook - ExcelJS workbook
+   * @param {string} name - Worksheet name
+   * @returns {Object} The created worksheet
+   */
+  const addWorksheetWithProtection = (workbook, name) => {
+    const worksheet = workbook.addWorksheet(name)
+    worksheet.protect('password', {})
+    return worksheet
+  }
+
   const parseWorkbook = async (worksheets, options = {}) => {
     const workbook = new ExcelJS.Workbook()
 
     for (const [sheetName, rows] of Object.entries(worksheets)) {
       const worksheet = workbook.addWorksheet(sheetName)
+      // Protect worksheets by default - parser only processes protected sheets
+      worksheet.protect('password', {})
       populateWorksheet(worksheet, rows)
     }
 
@@ -48,7 +68,7 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('workbook structure validation', () => {
     it('should throw SpreadsheetValidationError when required worksheet is missing', async () => {
       const workbook = new ExcelJS.Workbook()
-      workbook.addWorksheet('NotCover')
+      addWorksheetWithProtection(workbook, 'NotCover')
 
       const buffer = await workbook.xlsx.writeBuffer()
 
@@ -63,7 +83,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should accept workbook when required worksheet exists', async () => {
       const workbook = new ExcelJS.Workbook()
-      workbook.addWorksheet('Cover')
+      addWorksheetWithProtection(workbook, 'Cover')
 
       const buffer = await workbook.xlsx.writeBuffer()
 
@@ -77,7 +97,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should skip required worksheet check when option is null', async () => {
       const workbook = new ExcelJS.Workbook()
-      workbook.addWorksheet('AnySheet')
+      addWorksheetWithProtection(workbook, 'AnySheet')
 
       const buffer = await workbook.xlsx.writeBuffer()
 
@@ -94,7 +114,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       // Add 4 worksheets (exceeds limit of 3)
       for (let i = 1; i <= 4; i++) {
-        workbook.addWorksheet(`Sheet${i}`)
+        addWorksheetWithProtection(workbook, `Sheet${i}`)
       }
 
       const buffer = await workbook.xlsx.writeBuffer()
@@ -110,7 +130,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should throw SpreadsheetValidationError when worksheet has too many rows', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('TooManyRows')
+      const worksheet = addWorksheetWithProtection(workbook, 'TooManyRows')
 
       // Set a cell far down to simulate large rowCount
       worksheet.getCell('A101').value = 'data'
@@ -128,7 +148,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should throw SpreadsheetValidationError when worksheet has too many columns', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('TooManyColumns')
+      const worksheet = addWorksheetWithProtection(workbook, 'TooManyColumns')
 
       // Set a cell far to the right to simulate large columnCount
       worksheet.getCell(1, 51).value = 'data'
@@ -148,8 +168,8 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
 
       // 2 worksheets (exactly at limit of 2)
-      workbook.addWorksheet('Sheet1')
-      const worksheet = workbook.addWorksheet('Sheet2')
+      addWorksheetWithProtection(workbook, 'Sheet1')
+      const worksheet = addWorksheetWithProtection(workbook, 'Sheet2')
       worksheet.getCell('A10').value = 'last row' // exactly at row limit
       worksheet.getCell(1, 5).value = 'last column' // exactly at column limit
 
@@ -169,7 +189,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should use default limits when no options provided', async () => {
       const workbook = new ExcelJS.Workbook()
-      workbook.addWorksheet('Test')
+      addWorksheetWithProtection(workbook, 'Test')
 
       const buffer = await workbook.xlsx.writeBuffer()
 
@@ -749,7 +769,7 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('formula cells', () => {
     it('should extract formula result from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       worksheet.getCell('A1').value = '__EPR_META_CALCULATION'
       worksheet.getCell('B1').value = { formula: '=10+20', result: 30 }
@@ -765,7 +785,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should extract formula results from data rows', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       worksheet.getCell('A1').value = '__EPR_DATA_CALCULATIONS'
       worksheet.getCell('B1').value = 'INPUT'
@@ -792,7 +812,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should handle formula without cached result', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       worksheet.getCell('A1').value = '__EPR_META_UNCACHED'
       worksheet.getCell('B1').value = { formula: '=SUM(1,2,3)' }
@@ -810,7 +830,7 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('richText cells', () => {
     it('should extract text from richText metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       worksheet.getCell('A1').value = '__EPR_META_TITLE'
       worksheet.getCell('B1').value = {
@@ -828,7 +848,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should extract text from richText in data rows', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       worksheet.getCell('A1').value = '__EPR_DATA_TEST_TABLE'
       worksheet.getCell('B1').value = 'ID'
@@ -1107,7 +1127,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
       it('should skip header row when ROW_ID starts with "Row ID" but contains additional text', async () => {
         const workbook = new ExcelJS.Workbook()
-        const worksheet = workbook.addWorksheet('Test')
+        const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
         worksheet.getCell('A1').value = '__EPR_DATA_TEST_TABLE'
         worksheet.getCell('B1').value = 'ROW_ID'
@@ -1202,7 +1222,7 @@ describe('ExcelJSSummaryLogsParser', () => {
   describe('date cells', () => {
     it('should extract Date object from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       const testDate = new Date('2025-05-25')
 
@@ -1220,7 +1240,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should extract Date objects from data rows', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       const date1 = new Date('2025-05-25')
       const date2 = new Date('2025-06-15')
@@ -1250,7 +1270,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should handle dates in mixed data types', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       const date = new Date('2025-05-25')
 
@@ -1628,7 +1648,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // any cell data (including just formatting). This test simulates phantom rows
       // by creating rows with empty string values, which get visited by eachRow().
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       // Real data at the top
       worksheet.getRow(1).values = ['__EPR_META_TYPE', 'BEFORE_PHANTOM']
@@ -1710,7 +1730,7 @@ describe('ExcelJSSummaryLogsParser', () => {
     it('should stop collecting cells after 100 consecutive empty columns', async () => {
       // Create a workbook with phantom columns extending far to the right
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       // Row 1: data marker and headers in first few columns
       worksheet.getRow(1).values = ['__EPR_DATA_SECTION', 'COL_A', 'COL_B']
@@ -1746,7 +1766,7 @@ describe('ExcelJSSummaryLogsParser', () => {
 
     it('should handle metadata in columns before phantom gap', async () => {
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       // Metadata in columns A and B
       worksheet.getRow(1).values = ['__EPR_META_TYPE', 'VALID_TYPE']
@@ -1774,7 +1794,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       // Test that scattered empty cells don't accumulate across non-empty cells
       // This tests the cell collection, not header parsing (which terminates on empty)
       const workbook = new ExcelJS.Workbook()
-      const worksheet = workbook.addWorksheet('Test')
+      const worksheet = addWorksheetWithProtection(workbook, 'Test')
 
       // Row 1: metadata with 50 empty cells before the value
       // (metadata parsing looks at each pair of cells, so this tests cell collection)
@@ -1803,6 +1823,268 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.meta.FIRST.value).toBe('value_a')
       expect(result.meta.SECOND.value).toBe('value_b')
       expect(result.meta.THIRD.value).toBe('value_c')
+    })
+  })
+
+  describe('worksheet protection filtering', () => {
+    const createWorkbookWithProtection = async (worksheets) => {
+      const workbook = new ExcelJS.Workbook()
+
+      for (const [sheetName, config] of Object.entries(worksheets)) {
+        const worksheet = workbook.addWorksheet(sheetName)
+
+        if (config.protected) {
+          worksheet.protect('password', {})
+        }
+
+        if (config.rows) {
+          config.rows.forEach((rowData, index) => {
+            worksheet.getRow(index + 1).values = rowData
+          })
+        }
+      }
+
+      return workbook.xlsx.writeBuffer()
+    }
+
+    it('should only process protected worksheets', async () => {
+      const buffer = await createWorkbookWithProtection({
+        Cover: {
+          protected: true,
+          rows: [['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT']]
+        },
+        'Data Sheet': {
+          protected: true,
+          rows: [
+            ['__EPR_DATA_TEST_TABLE', 'ROW_ID', 'VALUE'],
+            [null, 'row-1', 100]
+          ]
+        },
+        Worksheet: {
+          protected: false,
+          rows: [['__EPR_META_IGNORED', 'should not appear']]
+        }
+      })
+
+      const result = await parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE).toBeDefined()
+      expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
+      expect(result.data.TEST_TABLE).toBeDefined()
+      expect(result.meta.IGNORED).toBeUndefined()
+    })
+
+    it('should ignore unprotected worksheets with data markers', async () => {
+      const buffer = await createWorkbookWithProtection({
+        Cover: {
+          protected: true,
+          rows: [['__EPR_META_PROCESSING_TYPE', 'EXPORTER']]
+        },
+        Worksheet1: {
+          protected: false,
+          rows: [
+            ['__EPR_DATA_UNWANTED_TABLE', 'COL_A', 'COL_B'],
+            [null, 'value_a', 'value_b']
+          ]
+        }
+      })
+
+      const result = await parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE.value).toBe('EXPORTER')
+      expect(result.data.UNWANTED_TABLE).toBeUndefined()
+    })
+
+    it('should ignore hidden unprotected worksheets', async () => {
+      const workbook = new ExcelJS.Workbook()
+
+      // Protected visible worksheet
+      const coverSheet = workbook.addWorksheet('Cover')
+      coverSheet.protect('password', {})
+      coverSheet.getRow(1).values = [
+        '__EPR_META_PROCESSING_TYPE',
+        'REPROCESSOR_OUTPUT'
+      ]
+
+      // Hidden unprotected worksheet (like Sheet1 in templates)
+      const hiddenSheet = workbook.addWorksheet('Sheet1')
+      hiddenSheet.state = 'hidden'
+      hiddenSheet.getRow(1).values = [
+        '__EPR_META_HIDDEN_DATA',
+        'should be ignored'
+      ]
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_OUTPUT')
+      expect(result.meta.HIDDEN_DATA).toBeUndefined()
+    })
+
+    it('should process multiple protected worksheets', async () => {
+      const buffer = await createWorkbookWithProtection({
+        Cover: {
+          protected: true,
+          rows: [
+            ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
+            ['__EPR_META_MATERIAL', 'Paper_and_board']
+          ]
+        },
+        'Received (sections 1, 2 and 3)': {
+          protected: true,
+          rows: [
+            ['__EPR_DATA_RECEIVED_LOADS', 'ROW_ID', 'WEIGHT'],
+            [null, 'load-1', 1000]
+          ]
+        },
+        'Sent on (sections 5, 6 and 7)': {
+          protected: true,
+          rows: [
+            ['__EPR_DATA_SENT_LOADS', 'ROW_ID', 'WEIGHT'],
+            [null, 'sent-1', 500]
+          ]
+        },
+        Worksheet: {
+          protected: false,
+          rows: [['__EPR_DATA_JUNK', 'RUBBISH']]
+        },
+        Worksheet1: {
+          protected: false,
+          rows: [['__EPR_META_RUBBISH', 'ignore me']]
+        }
+      })
+
+      const result = await parse(buffer)
+
+      // Protected worksheets should be processed
+      expect(result.meta.PROCESSING_TYPE.value).toBe('REPROCESSOR_INPUT')
+      expect(result.meta.MATERIAL.value).toBe('Paper_and_board')
+      expect(result.data.RECEIVED_LOADS).toBeDefined()
+      expect(result.data.RECEIVED_LOADS.rows).toHaveLength(1)
+      expect(result.data.SENT_LOADS).toBeDefined()
+      expect(result.data.SENT_LOADS.rows).toHaveLength(1)
+
+      // Unprotected worksheets should be ignored
+      expect(result.data.JUNK).toBeUndefined()
+      expect(result.meta.RUBBISH).toBeUndefined()
+    })
+
+    it('should return empty result when no worksheets are protected', async () => {
+      const buffer = await createWorkbookWithProtection({
+        Sheet1: {
+          protected: false,
+          rows: [['__EPR_META_TYPE', 'VALUE']]
+        },
+        Sheet2: {
+          protected: false,
+          rows: [['__EPR_DATA_TABLE', 'COL_A']]
+        }
+      })
+
+      const result = await parse(buffer)
+
+      expect(result.meta).toEqual({})
+      expect(result.data).toEqual({})
+    })
+
+    it('should still validate required worksheet when protected', async () => {
+      const buffer = await createWorkbookWithProtection({
+        Cover: {
+          protected: true,
+          rows: [['__EPR_META_PROCESSING_TYPE', 'EXPORTER']]
+        },
+        Worksheet: {
+          protected: false,
+          rows: []
+        }
+      })
+
+      await expect(
+        parse(buffer, { requiredWorksheet: 'Cover' })
+      ).resolves.toEqual({
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'EXPORTER',
+            location: { sheet: 'Cover', row: 1, column: 'B' }
+          }
+        },
+        data: {}
+      })
+    })
+
+    it('should fail required worksheet check even if worksheet exists but is unprotected', async () => {
+      // This tests that required worksheet validation still happens before protection filtering
+      const buffer = await createWorkbookWithProtection({
+        NotCover: {
+          protected: true,
+          rows: [['__EPR_META_PROCESSING_TYPE', 'EXPORTER']]
+        }
+      })
+
+      await expect(
+        parse(buffer, { requiredWorksheet: 'Cover' })
+      ).rejects.toThrow("Missing required 'Cover' worksheet")
+    })
+
+    it('should handle workbook matching real v4 template structure', async () => {
+      // Simulates the actual v4 Exporter template structure
+      const buffer = await createWorkbookWithProtection({
+        Cover: {
+          protected: true,
+          rows: [
+            ['__EPR_META_PROCESSING_TYPE', 'EXPORTER'],
+            ['__EPR_META_MATERIAL', 'Paper_and_board'],
+            ['__EPR_META_REGISTRATION_NUMBER', 'REG-001']
+          ]
+        },
+        'Exported (sections 1, 2 and 3)': {
+          protected: true,
+          rows: [
+            ['__EPR_DATA_RECEIVED_LOADS_FOR_EXPORT', 'ROW_ID', 'WEIGHT'],
+            [null, 'exp-1', 2000]
+          ]
+        },
+        'Sent on (sections 4 and 5)': {
+          protected: true,
+          rows: [
+            ['__EPR_DATA_SENT_ON_LOADS', 'ROW_ID', 'WEIGHT'],
+            [null, 'sent-1', 1500]
+          ]
+        },
+        Worksheet: {
+          protected: false,
+          rows: [
+            // User might accidentally paste data here
+            ['__EPR_DATA_MISTAKE', 'OOPS'],
+            [null, 'bad data']
+          ]
+        },
+        Worksheet1: {
+          protected: false,
+          rows: []
+        }
+      })
+
+      // Also add a hidden Sheet1 like the real templates have
+      const workbook = new ExcelJS.Workbook()
+      await workbook.xlsx.load(buffer)
+      const hiddenSheet = workbook.addWorksheet('Sheet1')
+      hiddenSheet.state = 'hidden'
+      hiddenSheet.getRow(1).values = ['__EPR_META_HIDDEN', 'secret']
+      const finalBuffer = await workbook.xlsx.writeBuffer()
+
+      const result = await parse(finalBuffer, { requiredWorksheet: 'Cover' })
+
+      // All protected worksheet data should be present
+      expect(result.meta.PROCESSING_TYPE.value).toBe('EXPORTER')
+      expect(result.meta.MATERIAL.value).toBe('Paper_and_board')
+      expect(result.meta.REGISTRATION_NUMBER.value).toBe('REG-001')
+      expect(result.data.RECEIVED_LOADS_FOR_EXPORT).toBeDefined()
+      expect(result.data.SENT_ON_LOADS).toBeDefined()
+
+      // Unprotected worksheet data should be absent
+      expect(result.data.MISTAKE).toBeUndefined()
+      expect(result.meta.HIDDEN).toBeUndefined()
     })
   })
 })

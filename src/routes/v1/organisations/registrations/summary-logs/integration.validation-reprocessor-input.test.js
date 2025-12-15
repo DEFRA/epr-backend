@@ -8,12 +8,11 @@ import { ObjectId } from 'mongodb'
 
 import {
   asStandardUser,
-  createUploadPayload,
   buildGetUrl,
   buildPostUrl,
   pollForValidation,
-  createStandardMeta,
-  createTestInfrastructure
+  createReprocessorInputWorkbook,
+  createSpreadsheetInfrastructure
 } from './integration-test-helpers.js'
 
 describe('REPROCESSOR_INPUT data syntax validation', () => {
@@ -37,71 +36,55 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       let summaryLogsRepository
       let uploadResponse
 
+      const createInvalidFieldsWorkbook = async () => {
+        const workbook = createReprocessorInputWorkbook()
+        const dataSheet = workbook.getWorksheet('Data')
+
+        // Overwrite valid row 7 with invalid values
+        dataSheet.getCell('B7').value = 999 // Invalid ROW_ID (too small)
+        dataSheet.getCell('C7').value = 'invalid-date' // Invalid date
+        dataSheet.getCell('D7').value = 'bad-ewc-code' // Invalid EWC code
+        dataSheet.getCell('L7').value = 'INVALID_METHOD' // Invalid HOW_DID_YOU value
+
+        return workbook.xlsx.writeBuffer()
+      }
+
       beforeEach(async () => {
-        const result = await createTestInfrastructure(
+        const spreadsheetBuffer = await createInvalidFieldsWorkbook()
+
+        const result = await createSpreadsheetInfrastructure({
           organisationId,
           registrationId,
-          {
-            [fileId]: {
-              meta: createStandardMeta('REPROCESSOR_INPUT'),
-              data: {
-                RECEIVED_LOADS_FOR_REPROCESSING: {
-                  location: { sheet: 'Received', row: 7, column: 'B' },
-                  headers: [
-                    'ROW_ID',
-                    'DATE_RECEIVED_FOR_REPROCESSING',
-                    'EWC_CODE',
-                    'DESCRIPTION_WASTE',
-                    'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-                    'GROSS_WEIGHT',
-                    'TARE_WEIGHT',
-                    'PALLET_WEIGHT',
-                    'NET_WEIGHT',
-                    'BAILING_WIRE_PROTOCOL',
-                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                    'WEIGHT_OF_NON_TARGET_MATERIALS',
-                    'RECYCLABLE_PROPORTION_PERCENTAGE',
-                    'TONNAGE_RECEIVED_FOR_RECYCLING'
-                  ],
-                  rows: [
-                    {
-                      rowNumber: 8,
-                      values: [
-                        999,
-                        'invalid-date',
-                        'bad-ewc-code',
-                        'Glass - pre-sorted',
-                        'No',
-                        1000,
-                        100,
-                        50,
-                        850,
-                        'Yes',
-                        'INVALID_METHOD', // Invalid HOW_DID_YOU value - causes fatal error
-                        50,
-                        0.85,
-                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        )
+          summaryLogId,
+          spreadsheetBuffer
+        })
+
         server = result.server
         summaryLogsRepository = result.summaryLogsRepository
 
         uploadResponse = await server.inject({
           method: 'POST',
           url: buildPostUrl(organisationId, registrationId, summaryLogId),
-          payload: createUploadPayload(
-            organisationId,
-            registrationId,
-            UPLOAD_STATUS.COMPLETE,
-            fileId,
-            filename
-          )
+          payload: {
+            uploadStatus: 'ready',
+            metadata: { organisationId, registrationId },
+            form: {
+              summaryLogUpload: {
+                fileId,
+                filename,
+                fileStatus: UPLOAD_STATUS.COMPLETE,
+                contentType:
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                contentLength: 12345,
+                checksumSha256: 'abc123def456',
+                detectedContentType:
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                s3Bucket: result.s3Bucket,
+                s3Key: result.s3Key
+              }
+            },
+            numberOfRejectedFiles: 0
+          }
         })
       })
 
@@ -146,7 +129,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             await summaryLogsRepository.findById(summaryLogId)
 
           expect(summaryLog.validation).toBeDefined()
-          // Now 4 fatal errors: ROW_ID, DATE_RECEIVED, EWC_CODE, HOW_DID_YOU_CALCULATE
+          // 4 fatal errors: ROW_ID, DATE_RECEIVED, EWC_CODE, HOW_DID_YOU_CALCULATE
           expect(summaryLog.validation.issues).toHaveLength(4)
 
           const fatalErrors = summaryLog.validation.issues.filter(
@@ -200,90 +183,69 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
       let summaryLogsRepository
       let uploadResponse
 
+      const createMixedValidInvalidWorkbook = async () => {
+        const workbook = createReprocessorInputWorkbook()
+        const dataSheet = workbook.getWorksheet('Data')
+
+        // Row 7 is already valid from createReprocessorInputWorkbook
+        // Update ROW_ID to be in valid range
+        dataSheet.getCell('B7').value = 10000000001
+
+        // Add second row (row 8) with invalid EWC code
+        dataSheet.getCell('B8').value = 10000000002
+        dataSheet.getCell('C8').value = new Date('2025-05-29')
+        dataSheet.getCell('D8').value = 'bad-code' // Invalid EWC code
+        dataSheet.getCell('E8').value = 'Glass - pre-sorted'
+        dataSheet.getCell('F8').value = 'No'
+        dataSheet.getCell('G8').value = 1000
+        dataSheet.getCell('H8').value = 100
+        dataSheet.getCell('I8').value = 50
+        dataSheet.getCell('J8').value = 850
+        dataSheet.getCell('K8').value = 'Yes'
+        dataSheet.getCell('L8').value = 'Actual weight (100%)'
+        dataSheet.getCell('M8').value = 50
+        dataSheet.getCell('N8').value = 0.85
+        dataSheet.getCell('O8').value = 678.98
+
+        return workbook.xlsx.writeBuffer()
+      }
+
       beforeEach(async () => {
-        const result = await createTestInfrastructure(
+        const spreadsheetBuffer = await createMixedValidInvalidWorkbook()
+
+        const result = await createSpreadsheetInfrastructure({
           organisationId,
           registrationId,
-          {
-            [fileId]: {
-              meta: createStandardMeta('REPROCESSOR_INPUT'),
-              data: {
-                RECEIVED_LOADS_FOR_REPROCESSING: {
-                  location: { sheet: 'Received', row: 7, column: 'B' },
-                  headers: [
-                    'ROW_ID',
-                    'DATE_RECEIVED_FOR_REPROCESSING',
-                    'EWC_CODE',
-                    'DESCRIPTION_WASTE',
-                    'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-                    'GROSS_WEIGHT',
-                    'TARE_WEIGHT',
-                    'PALLET_WEIGHT',
-                    'NET_WEIGHT',
-                    'BAILING_WIRE_PROTOCOL',
-                    'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                    'WEIGHT_OF_NON_TARGET_MATERIALS',
-                    'RECYCLABLE_PROPORTION_PERCENTAGE',
-                    'TONNAGE_RECEIVED_FOR_RECYCLING'
-                  ],
-                  rows: [
-                    {
-                      rowNumber: 8,
-                      values: [
-                        1000,
-                        '2025-05-28T00:00:00.000Z',
-                        '03 03 08',
-                        'Glass - pre-sorted',
-                        'No',
-                        1000,
-                        100,
-                        50,
-                        850,
-                        'Yes',
-                        'Actual weight (100%)',
-                        50,
-                        0.85,
-                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
-                      ]
-                    },
-                    {
-                      rowNumber: 9,
-                      values: [
-                        1001,
-                        '2025-05-29T00:00:00.000Z',
-                        'bad-code', // Invalid EWC code - now causes fatal error
-                        'Glass - pre-sorted',
-                        'No',
-                        1000,
-                        100,
-                        50,
-                        850,
-                        'Yes',
-                        'Actual weight (100%)',
-                        50,
-                        0.85,
-                        678.98 // (850-50)*0.9985*0.85 with bailing wire deduction
-                      ]
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        )
+          summaryLogId,
+          spreadsheetBuffer
+        })
+
         server = result.server
         summaryLogsRepository = result.summaryLogsRepository
 
         uploadResponse = await server.inject({
           method: 'POST',
           url: buildPostUrl(organisationId, registrationId, summaryLogId),
-          payload: createUploadPayload(
-            organisationId,
-            registrationId,
-            UPLOAD_STATUS.COMPLETE,
-            fileId,
-            filename
-          )
+          payload: {
+            uploadStatus: 'ready',
+            metadata: { organisationId, registrationId },
+            form: {
+              summaryLogUpload: {
+                fileId,
+                filename,
+                fileStatus: UPLOAD_STATUS.COMPLETE,
+                contentType:
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                contentLength: 12345,
+                checksumSha256: 'abc123def456',
+                detectedContentType:
+                  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                s3Bucket: result.s3Bucket,
+                s3Key: result.s3Key
+              }
+            },
+            numberOfRejectedFiles: 0
+          }
         })
       })
 
@@ -333,7 +295,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
 
           expect(
             summaryLog.validation.issues.every(
-              (i) => i.context.location?.row === 9
+              (i) => i.context.location?.row === 8
             )
           ).toBe(true)
 
@@ -363,7 +325,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             location: {
               header: 'EWC_CODE',
               column: 'D',
-              row: 9
+              row: 8
             },
             actual: 'bad-code'
           })

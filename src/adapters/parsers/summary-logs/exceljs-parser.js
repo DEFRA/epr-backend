@@ -509,6 +509,10 @@ export const parse = async (buffer, options = {}) => {
 
   return produce(initialState, (draft) => {
     for (const worksheet of workbook.worksheets) {
+      if (!worksheet.sheetProtection?.sheet) {
+        continue
+      }
+
       processWorksheet(draft, worksheet)
     }
   }).result

@@ -1,4 +1,3 @@
-import { createEmptyLoads } from '#application/summary-logs/classify-loads.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -17,8 +16,8 @@ import {
   buildGetUrl,
   buildPostUrl,
   pollForValidation,
-  createStandardMeta,
-  createTestInfrastructure
+  createReprocessorInputWorkbook,
+  createSpreadsheetInfrastructure
 } from './integration-test-helpers.js'
 
 describe('Summary logs upload lifecycle', () => {
@@ -26,6 +25,12 @@ describe('Summary logs upload lifecycle', () => {
   let summaryLogsRepository
   let organisationId
   let registrationId
+  let s3Bucket
+  let s3Key
+
+  const summaryLogId = 'summary-789'
+  const fileId = 'file-123'
+  const filename = 'summary-log.xlsx'
 
   setupAuthContext()
 
@@ -33,29 +38,31 @@ describe('Summary logs upload lifecycle', () => {
     organisationId = new ObjectId().toString()
     registrationId = new ObjectId().toString()
 
-    const result = await createTestInfrastructure(
+    const workbook = createReprocessorInputWorkbook()
+    const spreadsheetBuffer = await workbook.xlsx.writeBuffer()
+
+    const result = await createSpreadsheetInfrastructure({
       organisationId,
       registrationId,
-      {
-        'file-123': {
-          meta: createStandardMeta('REPROCESSOR_INPUT'),
-          data: {}
-        }
-      }
-    )
+      summaryLogId,
+      spreadsheetBuffer
+    })
+
     server = result.server
     summaryLogsRepository = result.summaryLogsRepository
+    s3Bucket = result.s3Bucket
+    s3Key = result.s3Key
   })
 
   describe('retrieving summary log that has not been uploaded', () => {
     let response
 
     beforeEach(async () => {
-      const summaryLogId = 'summary-999'
+      const unknownSummaryLogId = 'summary-999'
 
       response = await server.inject({
         method: 'GET',
-        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        url: buildGetUrl(organisationId, registrationId, unknownSummaryLogId),
         ...asStandardUser({ linkedOrgId: organisationId })
       })
     })
@@ -72,22 +79,32 @@ describe('Summary logs upload lifecycle', () => {
   })
 
   describe('marking upload as completed with valid file', () => {
-    const summaryLogId = 'summary-789'
-    const fileId = 'file-123'
-    const filename = 'summary-log.xlsx'
     let uploadResponse
 
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
+        payload: {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket,
+              s3Key
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
       })
     })
 
@@ -98,7 +115,7 @@ describe('Summary logs upload lifecycle', () => {
     it('should log completion with file location', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=test-bucket, s3Key=path/to/${filename}`,
+          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=complete, s3Bucket=${s3Bucket}, s3Key=${s3Key}`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
@@ -132,14 +149,18 @@ describe('Summary logs upload lifecycle', () => {
 
       it('should return complete validation response with no issues', () => {
         const payload = JSON.parse(response.payload)
-        expect(payload).toEqual({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          validation: {
-            failures: [],
-            concerns: {}
-          },
-          loads: createEmptyLoads()
+        expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        expect(payload.validation).toEqual({
+          failures: [],
+          concerns: {}
         })
+        expect(payload.loads).toEqual(
+          expect.objectContaining({
+            added: expect.objectContaining({
+              valid: expect.objectContaining({ count: 1 })
+            })
+          })
+        )
       })
 
       it('should persist validation issues in database', async () => {
@@ -153,21 +174,21 @@ describe('Summary logs upload lifecycle', () => {
   })
 
   describe('marking upload as completed with rejected file', () => {
-    const summaryLogId = 'summary-888'
-    const fileId = 'file-789'
-    const filename = 'virus.xlsx'
+    const rejectedSummaryLogId = 'summary-888'
+    const rejectedFileId = 'file-789'
+    const rejectedFilename = 'virus.xlsx'
     let uploadResponse
 
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(organisationId, registrationId, rejectedSummaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
           UPLOAD_STATUS.REJECTED,
-          fileId,
-          filename,
+          rejectedFileId,
+          rejectedFilename,
           false
         )
       })
@@ -180,11 +201,11 @@ describe('Summary logs upload lifecycle', () => {
     it('should log completion', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=rejected`,
+          message: `File upload completed: summaryLogId=${rejectedSummaryLogId}, fileId=${rejectedFileId}, filename=${rejectedFilename}, status=rejected`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-            reference: summaryLogId
+            reference: rejectedSummaryLogId
           }
         })
       )
@@ -196,7 +217,11 @@ describe('Summary logs upload lifecycle', () => {
       beforeEach(async () => {
         response = await server.inject({
           method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
+          url: buildGetUrl(
+            organisationId,
+            registrationId,
+            rejectedSummaryLogId
+          ),
           ...asStandardUser({ linkedOrgId: organisationId })
         })
       })
@@ -220,21 +245,21 @@ describe('Summary logs upload lifecycle', () => {
   })
 
   describe('marking upload as completed with pending file', () => {
-    const summaryLogId = 'summary-666'
-    const fileId = 'file-555'
-    const filename = 'pending-file.xlsx'
+    const pendingSummaryLogId = 'summary-666'
+    const pendingFileId = 'file-555'
+    const pendingFilename = 'pending-file.xlsx'
     let uploadResponse
 
     beforeEach(async () => {
       uploadResponse = await server.inject({
         method: 'POST',
-        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        url: buildPostUrl(organisationId, registrationId, pendingSummaryLogId),
         payload: createUploadPayload(
           organisationId,
           registrationId,
           UPLOAD_STATUS.PENDING,
-          fileId,
-          filename,
+          pendingFileId,
+          pendingFilename,
           false
         )
       })
@@ -247,11 +272,11 @@ describe('Summary logs upload lifecycle', () => {
     it('should log completion', () => {
       expect(server.loggerMocks.info).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: `File upload completed: summaryLogId=${summaryLogId}, fileId=${fileId}, filename=${filename}, status=pending`,
+          message: `File upload completed: summaryLogId=${pendingSummaryLogId}, fileId=${pendingFileId}, filename=${pendingFilename}, status=pending`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.SERVER,
             action: LOGGING_EVENT_ACTIONS.REQUEST_SUCCESS,
-            reference: summaryLogId
+            reference: pendingSummaryLogId
           }
         })
       )

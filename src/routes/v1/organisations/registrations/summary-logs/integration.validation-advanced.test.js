@@ -1,32 +1,25 @@
-import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
-import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { ObjectId } from 'mongodb'
 
 import {
   asStandardUser,
-  createUploadPayload,
   buildGetUrl,
   buildPostUrl,
   pollForValidation,
-  createStandardMeta,
-  createTestInfrastructure
+  createReprocessorInputWorkbook,
+  createReprocessorOutputWorkbook,
+  createSpreadsheetInfrastructure
 } from './integration-test-helpers.js'
 
 describe('Advanced validation scenarios', () => {
-  let server
   let organisationId
   let registrationId
 
@@ -48,55 +41,53 @@ describe('Advanced validation scenarios', () => {
         let summaryLogsRepository
         let uploadResponse
 
+        const createInvalidReprocessorOutputWorkbook = async () => {
+          const workbook = createReprocessorOutputWorkbook()
+          const dataSheet = workbook.getWorksheet('Data')
+
+          // Overwrite PRODUCT_TONNAGE with invalid value (exceeds 1000 limit)
+          dataSheet.getCell('D7').value = 1001
+
+          return workbook.xlsx.writeBuffer()
+        }
+
         beforeEach(async () => {
-          const result = await createTestInfrastructure(
+          const spreadsheetBuffer =
+            await createInvalidReprocessorOutputWorkbook()
+
+          const result = await createSpreadsheetInfrastructure({
             organisationId,
             registrationId,
-            {
-              [fileId]: {
-                meta: createStandardMeta('REPROCESSOR_OUTPUT'),
-                data: {
-                  REPROCESSED_LOADS: {
-                    location: { sheet: 'Reprocessed', row: 7, column: 'B' },
-                    headers: [
-                      'ROW_ID',
-                      'DATE_LOAD_LEFT_SITE',
-                      'PRODUCT_TONNAGE',
-                      'UK_PACKAGING_WEIGHT_PERCENTAGE',
-                      'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-                      'ADD_PRODUCT_WEIGHT'
-                    ],
-                    rows: [
-                      {
-                        rowNumber: 8,
-                        values: [
-                          3000,
-                          '2025-05-28T00:00:00.000Z',
-                          1001,
-                          0.5,
-                          500.5,
-                          'Yes'
-                        ]
-                      }
-                    ]
-                  }
-                }
-              }
-            }
-          )
+            summaryLogId,
+            spreadsheetBuffer
+          })
+
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository
 
           uploadResponse = await server.inject({
             method: 'POST',
             url: buildPostUrl(organisationId, registrationId, summaryLogId),
-            payload: createUploadPayload(
-              organisationId,
-              registrationId,
-              UPLOAD_STATUS.COMPLETE,
-              fileId,
-              filename
-            )
+            payload: {
+              uploadStatus: 'ready',
+              metadata: { organisationId, registrationId },
+              form: {
+                summaryLogUpload: {
+                  fileId,
+                  filename,
+                  fileStatus: UPLOAD_STATUS.COMPLETE,
+                  contentType:
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  contentLength: 12345,
+                  checksumSha256: 'abc123def456',
+                  detectedContentType:
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                  s3Bucket: result.s3Bucket,
+                  s3Key: result.s3Key
+                }
+              },
+              numberOfRejectedFiles: 0
+            }
           })
         })
 
@@ -176,38 +167,59 @@ describe('Advanced validation scenarios', () => {
     let summaryLogsRepository
     let uploadResponse
 
+    const createMissingHeadersWorkbook = async () => {
+      const workbook = createReprocessorInputWorkbook()
+      const dataSheet = workbook.getWorksheet('Data')
+
+      // Clear all headers except first two
+      for (let col = 4; col <= 15; col++) {
+        dataSheet.getCell(6, col).value = null
+      }
+
+      // Clear corresponding data cells
+      for (let col = 4; col <= 15; col++) {
+        dataSheet.getCell(7, col).value = null
+      }
+
+      return workbook.xlsx.writeBuffer()
+    }
+
     beforeEach(async () => {
-      const result = await createTestInfrastructure(
+      const spreadsheetBuffer = await createMissingHeadersWorkbook()
+
+      const result = await createSpreadsheetInfrastructure({
         organisationId,
         registrationId,
-        {
-          [fileId]: {
-            meta: createStandardMeta('REPROCESSOR_INPUT'),
-            data: {
-              RECEIVED_LOADS_FOR_REPROCESSING: {
-                location: { sheet: 'Received', row: 7, column: 'B' },
-                headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
-                rows: [
-                  { rowNumber: 8, values: [1000, '2025-05-28T00:00:00.000Z'] }
-                ]
-              }
-            }
-          }
-        }
-      )
+        summaryLogId,
+        spreadsheetBuffer
+      })
+
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
+        payload: {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: result.s3Bucket,
+              s3Key: result.s3Key
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
       })
     })
 
@@ -286,124 +298,59 @@ describe('Advanced validation scenarios', () => {
     const filename = 'combined-errors.xlsx'
     let uploadResponse
     let testSummaryLogsRepository
+    let server
+
+    const createMissingRegistrationNumberWorkbook = async () => {
+      const workbook = createReprocessorInputWorkbook()
+      const dataSheet = workbook.getWorksheet('Data')
+
+      // Remove REGISTRATION_NUMBER metadata
+      dataSheet.getCell('A1').value = null
+      dataSheet.getCell('B1').value = null
+
+      // Add invalid data that would fail data validation (to test short-circuit)
+      dataSheet.getCell('B7').value = 999 // Invalid ROW_ID
+      dataSheet.getCell('C7').value = 'invalid-date'
+
+      return workbook.xlsx.writeBuffer()
+    }
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const spreadsheetBuffer = await createMissingRegistrationNumberWorkbook()
 
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Paper_and_board',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            },
-            TEMPLATE_VERSION: {
-              value: 1,
-              location: { sheet: 'Cover', row: 4, column: 'B' }
-            }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: [
-                'ROW_ID',
-                'DATE_RECEIVED_FOR_REPROCESSING',
-                'EWC_CODE',
-                'GROSS_WEIGHT',
-                'TARE_WEIGHT',
-                'PALLET_WEIGHT',
-                'NET_WEIGHT',
-                'BAILING_WIRE_PROTOCOL',
-                'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-                'WEIGHT_OF_NON_TARGET_MATERIALS',
-                'RECYCLABLE_PROPORTION_PERCENTAGE',
-                'TONNAGE_RECEIVED_FOR_RECYCLING'
-              ],
-              rows: [
-                {
-                  rowNumber: 8,
-                  values: [
-                    999,
-                    'invalid-date',
-                    '03 03 08',
-                    1000,
-                    100,
-                    50,
-                    850,
-                    true,
-                    'WEIGHT',
-                    50,
-                    0.85,
-                    850
-                  ]
-                }
-              ]
-            }
-          }
-        }
+      const result = await createSpreadsheetInfrastructure({
+        organisationId,
+        registrationId,
+        summaryLogId,
+        spreadsheetBuffer
       })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = result.server
+      testSummaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
+        payload: {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: result.s3Bucket,
+              s3Key: result.s3Key
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
       })
     })
 
@@ -481,107 +428,69 @@ describe('Advanced validation scenarios', () => {
     const filename = 'meta-syntax-fatal.xlsx'
     let uploadResponse
     let testSummaryLogsRepository
+    let server
+
+    const createMissingTemplateVersionWorkbook = async () => {
+      const workbook = createReprocessorInputWorkbook()
+      const dataSheet = workbook.getWorksheet('Data')
+
+      // Update registration number and material to match test org
+      dataSheet.getCell('B1').value = 'REG12345'
+      dataSheet.getCell('B3').value = 'Aluminium'
+
+      // Remove TEMPLATE_VERSION metadata
+      dataSheet.getCell('A4').value = null
+      dataSheet.getCell('B4').value = null
+
+      // Add invalid data and headers that would fail data validation
+      // (to verify short-circuit prevents these from being checked)
+      dataSheet.getCell('B7').value = 999
+      dataSheet.getCell('C7').value = 'invalid-date'
+      dataSheet.getCell('D7').value = 'bad-code'
+
+      return workbook.xlsx.writeBuffer()
+    }
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      const uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const spreadsheetBuffer = await createMissingTemplateVersionWorkbook()
 
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG12345',
-            material: 'aluminium',
-            wasteProcessingType: 'reprocessor',
-            accreditation: null
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const summaryLogExtractor = createInMemorySummaryLogExtractor({
-        [fileId]: {
-          meta: {
-            REGISTRATION_NUMBER: {
-              value: 'REG12345',
-              location: { sheet: 'Cover', row: 1, column: 'B' }
-            },
-            PROCESSING_TYPE: {
-              value: 'REPROCESSOR_INPUT',
-              location: { sheet: 'Cover', row: 2, column: 'B' }
-            },
-            MATERIAL: {
-              value: 'Aluminium',
-              location: { sheet: 'Cover', row: 3, column: 'B' }
-            }
-          },
-          data: {
-            RECEIVED_LOADS_FOR_REPROCESSING: {
-              location: { sheet: 'Received', row: 7, column: 'B' },
-              headers: ['INVALID_HEADER'],
-              rows: [
-                {
-                  rowNumber: 8,
-                  values: [
-                    999,
-                    'invalid-date',
-                    'bad-code',
-                    'not-a-number',
-                    'YES',
-                    'WEIGHT',
-                    50,
-                    0.85,
-                    850
-                  ]
-                }
-              ]
-            }
-          }
+      const result = await createSpreadsheetInfrastructure({
+        organisationId,
+        registrationId,
+        summaryLogId,
+        spreadsheetBuffer,
+        registration: {
+          registrationNumber: 'REG12345',
+          material: 'aluminium'
         }
       })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = result.server
+      testSummaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
+        payload: {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: result.s3Bucket,
+              s3Key: result.s3Key
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
       })
     })
 
@@ -667,39 +576,72 @@ describe('Advanced validation scenarios', () => {
     let summaryLogsRepository
     let uploadResponse
 
+    const createUnrecognisedTableWorkbook = async () => {
+      const workbook = createReprocessorInputWorkbook()
+      const dataSheet = workbook.getWorksheet('Data')
+
+      // Replace the known table marker with an unrecognised one
+      dataSheet.getCell('A6').value = '__EPR_DATA_UNKNOWN_FUTURE_TABLE'
+
+      // Update headers for this fake table
+      dataSheet.getCell('B6').value = 'ANYTHING'
+      dataSheet.getCell('C6').value = 'GOES'
+      dataSheet.getCell('D6').value = 'HERE'
+
+      // Clear remaining header cells
+      for (let col = 5; col <= 15; col++) {
+        dataSheet.getCell(6, col).value = null
+      }
+
+      // Update data row for fake table
+      dataSheet.getCell('B7').value = 'foo'
+      dataSheet.getCell('C7').value = 'bar'
+      dataSheet.getCell('D7').value = 'baz'
+
+      // Clear remaining data cells
+      for (let col = 5; col <= 15; col++) {
+        dataSheet.getCell(7, col).value = null
+      }
+
+      return workbook.xlsx.writeBuffer()
+    }
+
     beforeEach(async () => {
-      const result = await createTestInfrastructure(
+      const spreadsheetBuffer = await createUnrecognisedTableWorkbook()
+
+      const result = await createSpreadsheetInfrastructure({
         organisationId,
         registrationId,
-        {
-          [fileId]: {
-            meta: createStandardMeta('REPROCESSOR_INPUT'),
-            data: {
-              UNKNOWN_FUTURE_TABLE: {
-                location: { sheet: 'Unknown', row: 1, column: 'A' },
-                headers: ['ANYTHING', 'GOES', 'HERE'],
-                rows: [
-                  { rowNumber: 2, values: ['foo', 'bar', 'baz'] },
-                  { rowNumber: 3, values: ['invalid', 123, true] }
-                ]
-              }
-            }
-          }
-        }
-      )
+        summaryLogId,
+        spreadsheetBuffer
+      })
+
       server = result.server
       summaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, summaryLogId),
-        payload: createUploadPayload(
-          organisationId,
-          registrationId,
-          UPLOAD_STATUS.COMPLETE,
-          fileId,
-          filename
-        )
+        payload: {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket: result.s3Bucket,
+              s3Key: result.s3Key
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
       })
     })
 

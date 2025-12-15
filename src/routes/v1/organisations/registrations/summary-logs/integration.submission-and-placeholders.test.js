@@ -1,10 +1,8 @@
-import ExcelJS from 'exceljs'
 import { http, HttpResponse } from 'msw'
+import { ObjectId } from 'mongodb'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { parseS3Uri } from '#adapters/repositories/uploads/s3-uri.js'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
@@ -19,13 +17,13 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { ObjectId } from 'mongodb'
-
 import {
   asStandardUser,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
+  createReprocessorInputWorkbook,
+  createSpreadsheetInfrastructure,
   createUploadPayload,
   pollForValidation
 } from './integration-test-helpers.js'
@@ -434,191 +432,82 @@ describe('Submission and placeholder tests', () => {
     const filename = 'placeholder-test.xlsx'
     let uploadResponse
     let testSummaryLogsRepository
-    let uploadsRepository
     let server
 
-    const createExcelWithPlaceholders = async () => {
-      const workbook = new ExcelJS.Workbook()
-      workbook.addWorksheet('Cover')
-      const worksheet = workbook.addWorksheet('Data')
-
-      worksheet.getCell('A1').value = '__EPR_META_REGISTRATION_NUMBER'
-      worksheet.getCell('B1').value = 'REG-123'
-
-      worksheet.getCell('A2').value = '__EPR_META_PROCESSING_TYPE'
-      worksheet.getCell('B2').value = 'REPROCESSOR_INPUT'
-
-      worksheet.getCell('A3').value = '__EPR_META_MATERIAL'
-      worksheet.getCell('B3').value = 'Paper_and_board'
-
-      worksheet.getCell('A4').value = '__EPR_META_TEMPLATE_VERSION'
-      worksheet.getCell('B4').value = 1
-
-      worksheet.getCell('A6').value =
-        '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'
-      worksheet.getCell('B6').value = 'ROW_ID'
-      worksheet.getCell('C6').value = 'DATE_RECEIVED_FOR_REPROCESSING'
-      worksheet.getCell('D6').value = 'EWC_CODE'
-      worksheet.getCell('E6').value = 'DESCRIPTION_WASTE'
-      worksheet.getCell('F6').value = 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      worksheet.getCell('G6').value = 'GROSS_WEIGHT'
-      worksheet.getCell('H6').value = 'TARE_WEIGHT'
-      worksheet.getCell('I6').value = 'PALLET_WEIGHT'
-      worksheet.getCell('J6').value = 'NET_WEIGHT'
-      worksheet.getCell('K6').value = 'BAILING_WIRE_PROTOCOL'
-      worksheet.getCell('L6').value =
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      worksheet.getCell('M6').value = 'WEIGHT_OF_NON_TARGET_MATERIALS'
-      worksheet.getCell('N6').value = 'RECYCLABLE_PROPORTION_PERCENTAGE'
-      worksheet.getCell('O6').value = 'TONNAGE_RECEIVED_FOR_RECYCLING'
-
-      // Row 7: valid row
-      worksheet.getCell('B7').value = 10000000001
-      worksheet.getCell('C7').value = new Date('2025-05-28')
-      worksheet.getCell('D7').value = '03 03 08'
-      worksheet.getCell('E7').value = 'Glass - pre-sorted'
-      worksheet.getCell('F7').value = 'No'
-      worksheet.getCell('G7').value = 1000
-      worksheet.getCell('H7').value = 100
-      worksheet.getCell('I7').value = 50
-      worksheet.getCell('J7').value = 850
-      worksheet.getCell('K7').value = 'Yes'
-      worksheet.getCell('L7').value = 'Actual weight (100%)'
-      worksheet.getCell('M7').value = 50
-      worksheet.getCell('N7').value = 0.85
-      worksheet.getCell('O7').value = 678.98 // (850-50)*0.9985*0.85
+    const createPlaceholderWorkbook = async () => {
+      const workbook = createReprocessorInputWorkbook()
+      const dataSheet = workbook.getWorksheet('Data')
 
       // Row 8: placeholder row (partially filled with placeholders)
-      worksheet.getCell('B8').value = 10000000002
-      worksheet.getCell('C8').value = new Date('2025-05-29')
-      worksheet.getCell('D8').value = 'Choose option'
-      worksheet.getCell('E8').value = 'Choose option'
-      worksheet.getCell('F8').value = 'Choose option'
-      worksheet.getCell('G8').value = 800
-      worksheet.getCell('H8').value = 80
-      worksheet.getCell('I8').value = 40
-      worksheet.getCell('J8').value = 680
-      worksheet.getCell('K8').value = 'Choose option'
-      worksheet.getCell('L8').value = 'Choose option'
-      worksheet.getCell('M8').value = 40
-      worksheet.getCell('N8').value = 0.9
-      worksheet.getCell('O8').value = 680
+      dataSheet.getCell('B8').value = 10000000002
+      dataSheet.getCell('C8').value = new Date('2025-05-29')
+      dataSheet.getCell('D8').value = 'Choose option'
+      dataSheet.getCell('E8').value = 'Choose option'
+      dataSheet.getCell('F8').value = 'Choose option'
+      dataSheet.getCell('G8').value = 800
+      dataSheet.getCell('H8').value = 80
+      dataSheet.getCell('I8').value = 40
+      dataSheet.getCell('J8').value = 680
+      dataSheet.getCell('K8').value = 'Choose option'
+      dataSheet.getCell('L8').value = 'Choose option'
+      dataSheet.getCell('M8').value = 40
+      dataSheet.getCell('N8').value = 0.9
+      dataSheet.getCell('O8').value = 680
 
       // Row 9: all placeholders/null (should terminate data section)
-      worksheet.getCell('B9').value = null
-      worksheet.getCell('C9').value = null
-      worksheet.getCell('D9').value = 'Choose option'
-      worksheet.getCell('E9').value = 'Choose option'
-      worksheet.getCell('F9').value = 'Choose option'
-      worksheet.getCell('G9').value = null
-      worksheet.getCell('H9').value = null
-      worksheet.getCell('I9').value = null
-      worksheet.getCell('J9').value = null
-      worksheet.getCell('K9').value = 'Choose option'
-      worksheet.getCell('L9').value = 'Choose option'
-      worksheet.getCell('M9').value = null
-      worksheet.getCell('N9').value = null
-      worksheet.getCell('O9').value = null
+      dataSheet.getCell('B9').value = null
+      dataSheet.getCell('C9').value = null
+      dataSheet.getCell('D9').value = 'Choose option'
+      dataSheet.getCell('E9').value = 'Choose option'
+      dataSheet.getCell('F9').value = 'Choose option'
+      dataSheet.getCell('G9').value = null
+      dataSheet.getCell('H9').value = null
+      dataSheet.getCell('I9').value = null
+      dataSheet.getCell('J9').value = null
+      dataSheet.getCell('K9').value = 'Choose option'
+      dataSheet.getCell('L9').value = 'Choose option'
+      dataSheet.getCell('M9').value = null
+      dataSheet.getCell('N9').value = null
+      dataSheet.getCell('O9').value = null
 
       // Row 10: another valid row after terminator row (should be excluded)
-      worksheet.getCell('B10').value = 99999999999
-      worksheet.getCell('C10').value = new Date('2025-12-31')
-      worksheet.getCell('D10').value = '03 03 08'
-      worksheet.getCell('E10').value = 'Glass - pre-sorted'
-      worksheet.getCell('F10').value = 'No'
-      worksheet.getCell('G10').value = 999
-      worksheet.getCell('H10').value = 99
-      worksheet.getCell('I10').value = 9
-      worksheet.getCell('J10').value = 891
-      worksheet.getCell('K10').value = 'No'
-      worksheet.getCell('L10').value = 'Actual weight (100%)'
-      worksheet.getCell('M10').value = 50
-      worksheet.getCell('N10').value = 0.5
-      worksheet.getCell('O10').value = 420.5 // (891-50)*1*0.5 no bailing wire
+      dataSheet.getCell('B10').value = 99999999999
+      dataSheet.getCell('C10').value = new Date('2025-12-31')
+      dataSheet.getCell('D10').value = '03 03 08'
+      dataSheet.getCell('E10').value = 'Glass - pre-sorted'
+      dataSheet.getCell('F10').value = 'No'
+      dataSheet.getCell('G10').value = 999
+      dataSheet.getCell('H10').value = 99
+      dataSheet.getCell('I10').value = 9
+      dataSheet.getCell('J10').value = 891
+      dataSheet.getCell('K10').value = 'No'
+      dataSheet.getCell('L10').value = 'Actual weight (100%)'
+      dataSheet.getCell('M10').value = 50
+      dataSheet.getCell('N10').value = 0.5
+      dataSheet.getCell('O10').value = 420.5 // (891-50)*1*0.5 no bailing wire
 
       return workbook.xlsx.writeBuffer()
     }
 
     beforeEach(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      const mockLogger = {
-        info: vi.fn(),
-        error: vi.fn(),
-        warn: vi.fn(),
-        debug: vi.fn()
-      }
-      uploadsRepository = createInMemoryUploadsRepository()
-      testSummaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const spreadsheetBuffer = await createPlaceholderWorkbook()
 
-      const testOrg = buildOrganisation({
-        registrations: [
-          {
-            id: registrationId,
-            registrationNumber: 'REG-123',
-            material: 'paper',
-            wasteProcessingType: 'reprocessor',
-            formSubmissionTime: new Date(),
-            submittedToRegulator: 'ea'
-          }
-        ]
-      })
-      testOrg.id = organisationId
-
-      const organisationsRepository = createInMemoryOrganisationsRepository([
-        testOrg
-      ])()
-
-      const excelBuffer = await createExcelWithPlaceholders()
-
-      const { uploadId } = await uploadsRepository.initiateSummaryLogUpload({
+      const result = await createSpreadsheetInfrastructure({
         organisationId,
         registrationId,
         summaryLogId,
-        redirectUrl: 'https://frontend.test/redirect',
-        callbackUrl: `http://localhost:3001/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
-      })
-      const { s3Uri } = await uploadsRepository.completeUpload(
-        uploadId,
-        excelBuffer
-      )
-
-      const { Bucket: s3Bucket, Key: s3Key } = parseS3Uri(s3Uri)
-
-      const summaryLogExtractor = createSummaryLogExtractor({
-        uploadsRepository,
-        logger: mockLogger
+        spreadsheetBuffer
       })
 
-      const wasteRecordsRepository = createInMemoryWasteRecordsRepository()()
-
-      const validateSummaryLog = createSummaryLogsValidator({
-        summaryLogsRepository: testSummaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        summaryLogExtractor
-      })
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: summaryLogsRepositoryFactory,
-          uploadsRepository
-        },
-        workers: {
-          summaryLogsWorker: { validate: validateSummaryLog }
-        },
-        featureFlags
-      })
+      server = result.server
+      testSummaryLogsRepository = result.summaryLogsRepository
 
       uploadResponse = await server.inject({
         method: 'POST',
         url: buildPostUrl(organisationId, registrationId, summaryLogId),
         payload: {
           uploadStatus: 'ready',
-          metadata: {
-            organisationId,
-            registrationId
-          },
+          metadata: { organisationId, registrationId },
           form: {
             summaryLogUpload: {
               fileId,
@@ -626,12 +515,12 @@ describe('Submission and placeholder tests', () => {
               fileStatus: UPLOAD_STATUS.COMPLETE,
               contentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              contentLength: excelBuffer.length,
+              contentLength: spreadsheetBuffer.length,
               checksumSha256: 'abc123def456',
               detectedContentType:
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-              s3Bucket,
-              s3Key
+              s3Bucket: result.s3Bucket,
+              s3Key: result.s3Key
             }
           },
           numberOfRejectedFiles: 0
@@ -675,6 +564,194 @@ describe('Submission and placeholder tests', () => {
           await testSummaryLogsRepository.findById(summaryLogId)
 
         expect(summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+      })
+    })
+  })
+
+  describe('empty worksheets handling', () => {
+    const summaryLogId = 'summary-extra-tabs-test'
+    const fileId = 'file-extra-tabs-test'
+    const filename = 'extra-tabs-test.xlsx'
+    let server
+
+    const uploadFile = async (s3Bucket, s3Key) => {
+      return server.inject({
+        method: 'POST',
+        url: buildPostUrl(organisationId, registrationId, summaryLogId),
+        payload: {
+          uploadStatus: 'ready',
+          metadata: { organisationId, registrationId },
+          form: {
+            summaryLogUpload: {
+              fileId,
+              filename,
+              fileStatus: UPLOAD_STATUS.COMPLETE,
+              contentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              contentLength: 12345,
+              checksumSha256: 'abc123def456',
+              detectedContentType:
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              s3Bucket,
+              s3Key
+            }
+          },
+          numberOfRejectedFiles: 0
+        }
+      })
+    }
+
+    describe('extra tabs with content should not affect validation or waste balance', () => {
+      let uploadResponse
+
+      beforeEach(async () => {
+        const workbook = createReprocessorInputWorkbook()
+
+        // Add unprotected "prep" worksheets with content (simulating v4 templates)
+        const worksheet1 = workbook.addWorksheet('Worksheet')
+        // DO NOT protect - this is a user prep tab
+        worksheet1.getCell('A1').value = 'User notes'
+        worksheet1.getCell('A2').value = 'Some user data'
+        // Add EPR markers that should be IGNORED
+        worksheet1.getCell('A3').value = '__EPR_META_ROGUE_FIELD'
+        worksheet1.getCell('B3').value = 'should_be_ignored'
+        worksheet1.getCell('A5').value = '__EPR_DATA_FAKE_TABLE'
+        worksheet1.getCell('B5').value = 'FAKE_COLUMN'
+        worksheet1.getCell('B6').value = 'fake_data_row'
+
+        const worksheet2 = workbook.addWorksheet('Worksheet1')
+        // DO NOT protect - this is a user prep tab
+        worksheet2.getCell('A1').value = 'More user prep data'
+        worksheet2.getCell('B1').value = 12345
+
+        const spreadsheetBuffer = await workbook.xlsx.writeBuffer()
+
+        const result = await createSpreadsheetInfrastructure({
+          organisationId,
+          registrationId,
+          summaryLogId,
+          spreadsheetBuffer
+        })
+
+        server = result.server
+        uploadResponse = await uploadFile(result.s3Bucket, result.s3Key)
+      })
+
+      it('should accept the upload', () => {
+        expect(uploadResponse.statusCode).toBe(202)
+      })
+
+      describe('after validation completes', () => {
+        let response
+
+        beforeEach(async () => {
+          await pollForValidation(
+            server,
+            organisationId,
+            registrationId,
+            summaryLogId
+          )
+
+          response = await server.inject({
+            method: 'GET',
+            url: buildGetUrl(organisationId, registrationId, summaryLogId),
+            ...asStandardUser({ linkedOrgId: organisationId })
+          })
+        })
+
+        it('should return OK', () => {
+          expect(response.statusCode).toBe(200)
+        })
+
+        it('should validate successfully', () => {
+          const payload = JSON.parse(response.payload)
+          expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        })
+
+        it('should run waste balance logic on protected worksheet data only', () => {
+          const payload = JSON.parse(response.payload)
+          expect(payload.loads).toBeDefined()
+          expect(payload.loads.added.valid.count).toBe(1)
+          expect(payload.loads.added.valid.rowIds).toContain(10000000001)
+        })
+
+        it('should not have processed content from unprotected worksheets', () => {
+          // If validation passed with only the protected worksheet data,
+          // and there are no validation errors about unrecognised tables,
+          // then the unprotected worksheets were correctly ignored.
+          // The FAKE_TABLE marker in the unprotected 'Worksheet' tab would have
+          // caused a TABLE_UNRECOGNISED fatal error if it had been processed.
+          const payload = JSON.parse(response.payload)
+          expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+          expect(payload.validation.failures).toEqual([])
+        })
+      })
+    })
+
+    describe('extra tabs with no content should not affect validation or waste balance', () => {
+      let uploadResponse
+
+      beforeEach(async () => {
+        const workbook = createReprocessorInputWorkbook()
+
+        // Add unprotected "prep" worksheets with NO content
+        workbook.addWorksheet('Worksheet')
+        workbook.addWorksheet('Worksheet1')
+
+        // Also add a hidden unprotected sheet (like Sheet1 in real templates)
+        const hiddenSheet = workbook.addWorksheet('Sheet1')
+        hiddenSheet.state = 'hidden'
+
+        const spreadsheetBuffer = await workbook.xlsx.writeBuffer()
+
+        const result = await createSpreadsheetInfrastructure({
+          organisationId,
+          registrationId,
+          summaryLogId,
+          spreadsheetBuffer
+        })
+
+        server = result.server
+        uploadResponse = await uploadFile(result.s3Bucket, result.s3Key)
+      })
+
+      it('should accept the upload', () => {
+        expect(uploadResponse.statusCode).toBe(202)
+      })
+
+      describe('after validation completes', () => {
+        let response
+
+        beforeEach(async () => {
+          await pollForValidation(
+            server,
+            organisationId,
+            registrationId,
+            summaryLogId
+          )
+
+          response = await server.inject({
+            method: 'GET',
+            url: buildGetUrl(organisationId, registrationId, summaryLogId),
+            ...asStandardUser({ linkedOrgId: organisationId })
+          })
+        })
+
+        it('should return OK', () => {
+          expect(response.statusCode).toBe(200)
+        })
+
+        it('should validate successfully', () => {
+          const payload = JSON.parse(response.payload)
+          expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+        })
+
+        it('should run waste balance logic on protected worksheet data only', () => {
+          const payload = JSON.parse(response.payload)
+          expect(payload.loads).toBeDefined()
+          expect(payload.loads.added.valid.count).toBe(1)
+          expect(payload.loads.added.valid.rowIds).toContain(10000000001)
+        })
       })
     })
   })
