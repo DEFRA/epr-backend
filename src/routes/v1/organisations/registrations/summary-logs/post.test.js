@@ -184,9 +184,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${testOrgId}/registrations/${testRegId}/summary-logs`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        },
+        ...asStandardUser({ linkedOrgId: testOrgId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
@@ -216,9 +214,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${testOrgId}/registrations/${testRegId}/summary-logs`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        },
+        ...asStandardUser({ linkedOrgId: testOrgId }),
         payload: {
           redirectUrl: 'https://frontend.test/redirect'
         }
