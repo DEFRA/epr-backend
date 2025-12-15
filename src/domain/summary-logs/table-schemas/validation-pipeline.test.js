@@ -234,14 +234,15 @@ describe('validation-pipeline', () => {
                 RESULT !== undefined &&
                 RESULT !== VALUE_A * VALUE_B
               ) {
-                return helpers.error('custom.calculationMismatch', {
+                return helpers.error('custom.netWeightCalculationMismatch', {
                   field: 'RESULT'
                 })
               }
               return value
             })
             .messages({
-              'custom.calculationMismatch': 'must equal VALUE_A × VALUE_B'
+              'custom.netWeightCalculationMismatch':
+                'must equal VALUE_A × VALUE_B'
             })
             .prefs({ abortEarly: false }),
           fieldsRequiredForWasteBalance: ['VALUE_A', 'VALUE_B', 'RESULT']
@@ -255,7 +256,9 @@ describe('validation-pipeline', () => {
         expect(result.issues).toHaveLength(1)
         expect(result.issues[0].field).toBe('RESULT')
         expect(result.issues[0].message).toBe('must equal VALUE_A × VALUE_B')
-        expect(result.issues[0].type).toBe('custom.calculationMismatch')
+        expect(result.issues[0].type).toBe(
+          'custom.netWeightCalculationMismatch'
+        )
       })
     })
   })

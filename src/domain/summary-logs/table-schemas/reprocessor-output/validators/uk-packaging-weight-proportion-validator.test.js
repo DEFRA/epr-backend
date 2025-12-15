@@ -83,7 +83,9 @@ describe('validateUkPackagingWeightProportion', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.calculationMismatch')
+      expect(error.details[0].type).toBe(
+        'custom.ukPackagingProportionCalculationMismatch'
+      )
       expect(error.details[0].message).toBe(
         'must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE'
       )
@@ -98,7 +100,9 @@ describe('validateUkPackagingWeightProportion', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.calculationMismatch')
+      expect(error.details[0].type).toBe(
+        'custom.ukPackagingProportionCalculationMismatch'
+      )
     })
 
     it('includes field name in error context', () => {
@@ -167,7 +171,9 @@ describe('validateUkPackagingWeightProportion', () => {
   describe('UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES', () => {
     it('exports calculationMismatch message', () => {
       expect(
-        UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES['custom.calculationMismatch']
+        UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES[
+          'custom.ukPackagingProportionCalculationMismatch'
+        ]
       ).toBe('must equal PRODUCT_TONNAGE × UK_PACKAGING_WEIGHT_PERCENTAGE')
     })
   })
