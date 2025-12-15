@@ -516,48 +516,6 @@ describe('Waste Balance Calculator', () => {
     expect(result.newAmount).toBe(10.0)
   })
 
-  it('Should ignore transactions with unknown types when calculating net allocated amount', () => {
-    const record = buildWasteRecord({
-      data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
-      }
-    })
-
-    const unknownTransaction = {
-      id: 'tx-1',
-      type: 'UNKNOWN_TYPE',
-      amount: 100.0,
-      createdAt: '2023-06-01T10:00:00.000Z',
-      createdBy: testUser,
-      openingAmount: 0,
-      closingAmount: 100.0,
-      openingAvailableAmount: 0,
-      closingAvailableAmount: 100.0,
-      entities: [
-        {
-          id: record.rowId,
-          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
-          currentVersionId: 'v1',
-          previousVersionIds: []
-        }
-      ]
-    }
-
-    const result = calculateWasteBalanceUpdates({
-      currentBalance: {
-        ...emptyBalance,
-        transactions: [/** @type {any} */ (unknownTransaction)]
-      },
-      wasteRecords: [record],
-      accreditation
-    })
-
-    expect(result.newTransactions).toHaveLength(1)
-    expect(result.newTransactions[0].amount).toBe(10.0)
-  })
-
   it('Should handle transactions with missing entities', () => {
     const balanceWithTransaction = {
       ...emptyBalance,

@@ -128,14 +128,8 @@ export const calculateWasteBalanceUpdates = ({
    * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
    */
   const updateCreditedAmountMap = (transaction) => {
-    const isCredit = transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
-    const isDebit = transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
-
-    if (!isCredit && !isDebit) {
-      return
-    }
-
-    const sign = isCredit ? 1 : -1
+    const sign =
+      transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
     const netAmount = transaction.amount * sign
 
     const entityIds = (transaction.entities || []).map((e) => String(e.id))
