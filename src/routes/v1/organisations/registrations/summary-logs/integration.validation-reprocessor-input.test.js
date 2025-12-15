@@ -7,7 +7,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
-  validToken,
+  asStandardUser,
   createUploadPayload,
   buildGetUrl,
   buildPostUrl,
@@ -101,10 +101,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             UPLOAD_STATUS.COMPLETE,
             fileId,
             filename
-          ),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          )
         })
       })
 
@@ -126,9 +123,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           response = await server.inject({
             method: 'GET',
             url: buildGetUrl(organisationId, registrationId, summaryLogId),
-            headers: {
-              Authorization: `Bearer ${validToken}`
-            }
+            ...asStandardUser({ linkedOrgId: organisationId })
           })
         })
 
@@ -288,10 +283,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
             UPLOAD_STATUS.COMPLETE,
             fileId,
             filename
-          ),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          )
         })
       })
 
@@ -313,9 +305,7 @@ describe('REPROCESSOR_INPUT data syntax validation', () => {
           response = await server.inject({
             method: 'GET',
             url: buildGetUrl(organisationId, registrationId, summaryLogId),
-            headers: {
-              Authorization: `Bearer ${validToken}`
-            }
+            ...asStandardUser({ linkedOrgId: organisationId })
           })
         })
 
