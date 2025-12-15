@@ -32,52 +32,19 @@ _The application runs at `https://epr-backend.{env}.cdp-int.defra.cloud`, where 
 
 ## Docker
 
-### Running with Docker Compose
-
-The project uses a shared compose file (`compose.shared.yml`) for all supporting services, which can be used by both backend and frontend repositories.
-
-**Run supporting services only:**
-
-```sh
-docker compose -f compose.shared.yml up
-```
-
-Then run the backend locally with `npm run dev` in a separate terminal.
-
-**Run backend + supporting services:**
+Run locally with docker
 
 ```sh
 docker compose up
 ```
 
-**Run backend + frontend + supporting services:**
+Run the frontend with the backend
 
 ```sh
 docker compose --profile all up
 ```
 
-**Run with specific frontend version:**
-
-```sh
-FRONTEND_VERSION=1.2.3 docker compose --profile all up
-```
-
-**Include Defra ID stub (for frontend authentication):**
-
-```sh
-docker compose --profile stub up
-```
-
-**Supporting services included:**
-
-- LocalStack (AWS service emulation)
-- MongoDB (backend only)
-- Redis (frontend + supporting services)
-- nginx-proxy (frontend only)
-- cdp-uploader (file upload service)
-- cdp-defra-id-stub (authentication stub, `--profile stub`)
-
-**Note:** Running the backend requires `GOVUK_NOTIFY_API_KEY` environment variable.
+Note: this requires `GOVUK_NOTIFY_API_KEY` envvar
 
 ## Contributing
 
