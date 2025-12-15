@@ -71,7 +71,7 @@ describe('GET /v1/system-logs', () => {
   })
 
   describe('no query parameters supplied', () => {
-    it('returns no system logs when queried without paramaters', async () => {
+    it('returns no system logs when queried without parameters', async () => {
       await addSystemLog({ organisationId: randomUUID() })
       await addSystemLog({ organisationId: randomUUID() })
       await addSystemLog({ organisationId: randomUUID() })

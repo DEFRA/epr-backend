@@ -18,8 +18,9 @@ export const systemLogsGet = {
   handler: async ({ systemLogsRepository, query }, h) => {
     const { organisationId } = query
 
-    const systemLogs =
-      await systemLogsRepository.findByOrganisationId(organisationId)
+    const systemLogs = organisationId
+      ? await systemLogsRepository.findByOrganisationId(organisationId)
+      : []
 
     const responseData = { systemLogs }
 
