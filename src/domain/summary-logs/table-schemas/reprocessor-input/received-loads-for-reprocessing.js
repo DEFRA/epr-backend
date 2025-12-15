@@ -1,10 +1,17 @@
 import Joi from 'joi'
 import {
   MESSAGES,
+  DROPDOWN_PLACEHOLDER,
   EWC_CODES,
   RECYCLABLE_PROPORTION_METHODS,
   WASTE_DESCRIPTIONS,
-  createRowIdSchema
+  createRowIdSchema,
+  createWeightFieldSchema,
+  createYesNoFieldSchema,
+  createDateFieldSchema,
+  createPercentageFieldSchema,
+  createEnumFieldSchema,
+  createNumberFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
@@ -17,16 +24,25 @@ import {
 } from './validators/tonnage-received-validator.js'
 
 /**
- * Maximum values for weight fields (in tonnes)
- *
- * Defined locally as these limits are specific to this table and may
- * differ from similar fields in other tables.
+ * All fields in this table - used for requiredHeaders, fatalFields,
+ * and fieldsRequiredForWasteBalance since they're identical for this schema.
  */
-const MAX_GROSS_WEIGHT = 1000
-const MAX_TARE_WEIGHT = 1000
-const MAX_PALLET_WEIGHT = 1000
-const MAX_NET_WEIGHT = 1000
-const MAX_WEIGHT_OF_NON_TARGET_MATERIALS = 1000
+const ALL_FIELDS = [
+  FIELDS.ROW_ID,
+  FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
+  FIELDS.EWC_CODE,
+  FIELDS.DESCRIPTION_WASTE,
+  FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
+  FIELDS.GROSS_WEIGHT,
+  FIELDS.TARE_WEIGHT,
+  FIELDS.PALLET_WEIGHT,
+  FIELDS.NET_WEIGHT,
+  FIELDS.BAILING_WIRE_PROTOCOL,
+  FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
+  FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
+  FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
+  FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
+]
 
 /**
  * Table schema for RECEIVED_LOADS_FOR_REPROCESSING
@@ -39,22 +55,7 @@ const MAX_WEIGHT_OF_NON_TARGET_MATERIALS = 1000
 export const RECEIVED_LOADS_FOR_REPROCESSING = {
   rowIdField: FIELDS.ROW_ID,
 
-  requiredHeaders: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
-    FIELDS.EWC_CODE,
-    FIELDS.DESCRIPTION_WASTE,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
-    FIELDS.GROSS_WEIGHT,
-    FIELDS.TARE_WEIGHT,
-    FIELDS.PALLET_WEIGHT,
-    FIELDS.NET_WEIGHT,
-    FIELDS.BAILING_WIRE_PROTOCOL,
-    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
-    FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
-    FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
-  ],
+  requiredHeaders: ALL_FIELDS,
 
   /**
    * Per-field values that indicate "unfilled"
@@ -64,8 +65,8 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * typically dropdown placeholder values from the Excel template.
    */
   unfilledValues: {
-    [FIELDS.BAILING_WIRE_PROTOCOL]: ['Choose option'],
-    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: ['Choose option']
+    [FIELDS.BAILING_WIRE_PROTOCOL]: DROPDOWN_PLACEHOLDER,
+    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: DROPDOWN_PLACEHOLDER
   },
 
   /**
@@ -74,22 +75,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * ROW_ID is always fatal as it indicates tampering or corruption.
    * All fields are fatal per ticket requirements.
    */
-  fatalFields: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
-    FIELDS.EWC_CODE,
-    FIELDS.DESCRIPTION_WASTE,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
-    FIELDS.GROSS_WEIGHT,
-    FIELDS.TARE_WEIGHT,
-    FIELDS.PALLET_WEIGHT,
-    FIELDS.NET_WEIGHT,
-    FIELDS.BAILING_WIRE_PROTOCOL,
-    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
-    FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
-    FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
-  ],
+  fatalFields: ALL_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields
@@ -101,101 +87,28 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     [FIELDS.ROW_ID]: createRowIdSchema(
       ROW_ID_MINIMUMS.RECEIVED_LOADS_FOR_REPROCESSING
     ).optional(),
-    [FIELDS.DATE_RECEIVED_FOR_REPROCESSING]: Joi.date().optional().messages({
-      'date.base': MESSAGES.MUST_BE_A_VALID_DATE
-    }),
-    [FIELDS.EWC_CODE]: Joi.string()
-      .valid(...EWC_CODES)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_EWC_CODE
-      }),
-    [FIELDS.DESCRIPTION_WASTE]: Joi.string()
-      .valid(...WASTE_DESCRIPTIONS)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_WASTE_DESCRIPTION
-      }),
-    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: Joi.string()
-      .valid('Yes', 'No')
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_YES_OR_NO
-      }),
-    [FIELDS.GROSS_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_GROSS_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.TARE_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_TARE_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.PALLET_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_PALLET_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.NET_WEIGHT]: Joi.number()
-      .min(0)
-      .max(MAX_NET_WEIGHT)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.BAILING_WIRE_PROTOCOL]: Joi.string()
-      .valid('Yes', 'No')
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_YES_OR_NO
-      }),
-    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: Joi.string()
-      .valid(...RECYCLABLE_PROPORTION_METHODS)
-      .optional()
-      .messages({
-        'string.base': MESSAGES.MUST_BE_A_STRING,
-        'any.only': MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
-      }),
-    [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: Joi.number()
-      .min(0)
-      .max(MAX_WEIGHT_OF_NON_TARGET_MATERIALS)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1000
-      }),
-    [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: Joi.number()
-      .min(0)
-      .max(1)
-      .optional()
-      .messages({
-        'number.base': MESSAGES.MUST_BE_A_NUMBER,
-        'number.min': MESSAGES.MUST_BE_AT_LEAST_ZERO,
-        'number.max': MESSAGES.MUST_BE_AT_MOST_1
-      }),
-    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: Joi.number().optional().messages({
-      'number.base': MESSAGES.MUST_BE_A_NUMBER
-    })
+    [FIELDS.DATE_RECEIVED_FOR_REPROCESSING]: createDateFieldSchema(),
+    [FIELDS.EWC_CODE]: createEnumFieldSchema(
+      EWC_CODES,
+      MESSAGES.MUST_BE_VALID_EWC_CODE
+    ),
+    [FIELDS.DESCRIPTION_WASTE]: createEnumFieldSchema(
+      WASTE_DESCRIPTIONS,
+      MESSAGES.MUST_BE_VALID_WASTE_DESCRIPTION
+    ),
+    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: createYesNoFieldSchema(),
+    [FIELDS.GROSS_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.TARE_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.PALLET_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.NET_WEIGHT]: createWeightFieldSchema(),
+    [FIELDS.BAILING_WIRE_PROTOCOL]: createYesNoFieldSchema(),
+    [FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION]: createEnumFieldSchema(
+      RECYCLABLE_PROPORTION_METHODS,
+      MESSAGES.MUST_BE_VALID_RECYCLABLE_PROPORTION_METHOD
+    ),
+    [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: createWeightFieldSchema(),
+    [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
+    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createNumberFieldSchema()
   })
     .custom(validateNetWeight)
     .custom(validateTonnageReceived)
@@ -212,20 +125,5 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
    * If any of these fields are missing (unfilled), the row is EXCLUDED
    * from the Waste Balance but still included in the submission.
    */
-  fieldsRequiredForWasteBalance: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_RECEIVED_FOR_REPROCESSING,
-    FIELDS.EWC_CODE,
-    FIELDS.DESCRIPTION_WASTE,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
-    FIELDS.GROSS_WEIGHT,
-    FIELDS.TARE_WEIGHT,
-    FIELDS.PALLET_WEIGHT,
-    FIELDS.NET_WEIGHT,
-    FIELDS.BAILING_WIRE_PROTOCOL,
-    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
-    FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
-    FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
-  ]
+  fieldsRequiredForWasteBalance: ALL_FIELDS
 }
