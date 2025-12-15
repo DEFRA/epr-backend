@@ -12,9 +12,10 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 // eslint-disable-next-line n/no-unpublished-import
 import { createTestServer } from '#test/create-test-server.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-
-export const { validToken } = entraIdMockAuthTokens
+// eslint-disable-next-line n/no-unpublished-import
+import { asStandardUser } from '#test/inject-auth.js'
+// eslint-disable-next-line n/no-unpublished-import
+export { asStandardUser } from '#test/inject-auth.js'
 
 export const createUploadPayload = (
   organisationId,
@@ -78,9 +79,7 @@ export const pollForValidation = async (
     const checkResponse = await server.inject({
       method: 'GET',
       url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser({ linkedOrgId: organisationId })
     })
 
     status = JSON.parse(checkResponse.payload).status
