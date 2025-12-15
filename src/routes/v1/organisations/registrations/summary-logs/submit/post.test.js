@@ -7,12 +7,10 @@ import {
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 
 import { summaryLogsSubmitPath } from './post.js'
-
-const { validToken } = entraIdMockAuthTokens
 
 const summaryLogId = 'summary-log-123'
 const organisationId = 'org-123'
@@ -77,9 +75,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -89,9 +85,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       const body = JSON.parse(response.payload)
@@ -102,9 +96,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.headers.location).toBe(
@@ -116,9 +108,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(summaryLogsRepository.update).toHaveBeenCalledWith(
@@ -134,9 +124,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(summaryLogsWorker.submit).toHaveBeenCalledWith(summaryLogId)
@@ -146,9 +134,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(server.loggerMocks.info).toHaveBeenCalledWith({
@@ -169,9 +155,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -192,9 +176,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
@@ -216,9 +198,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       consoleErrorSpy.mockRestore()
@@ -238,9 +218,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       consoleErrorSpy.mockRestore()
