@@ -9,6 +9,7 @@ import {
   buildAccreditation
 } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asStandardUser, asServiceMaintainer } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 
@@ -54,6 +55,41 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     return server
   }
 
+  describe('authorisation', () => {
+    it('returns 401 when request has no authentication', async () => {
+      const organisation = buildOrganisation({
+        id: organisationId,
+        registrations: [buildRegistration({ id: registrationId })]
+      })
+
+      const server = await createServerWithData(organisation)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+    })
+
+    it('returns 403 when user has wrong scope', async () => {
+      const organisation = buildOrganisation({
+        id: organisationId,
+        registrations: [buildRegistration({ id: registrationId })]
+      })
+
+      const server = await createServerWithData(organisation)
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asServiceMaintainer()
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    })
+  })
+
   describe('accreditation number in response', () => {
     it('is included when registration has valid accreditation', async () => {
       const accreditation = buildAccreditation({
@@ -75,7 +111,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -100,7 +137,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -127,7 +165,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}`,
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)

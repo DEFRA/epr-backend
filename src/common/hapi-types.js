@@ -7,6 +7,7 @@
  * @typedef {Object} HapiRequest
  * @property {TypedLogger} logger - CDP-compliant typed logger
  * @property {HapiServer} server - Reference to the server object
+ * @property {{linkedOrgId?: string}} app - Request application state (per-request storage)
  * @property {*} [db] - MongoDB database (added by mongoDb plugin)
  * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
  * @property {*} [payload] - Request payload

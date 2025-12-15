@@ -7,10 +7,8 @@ import {
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-
-const { validToken } = entraIdMockAuthTokens
 
 const organisationId = new ObjectId().toString()
 const registrationId = new ObjectId().toString()
@@ -72,9 +70,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(mockCdpUploader.getUploadStatus).toHaveBeenCalledWith(uploadId)
@@ -84,9 +80,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: buildGetUrl(summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -100,9 +94,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -127,9 +119,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -154,9 +144,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -181,9 +169,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       // Wait for eventual consistency (in-memory repository uses setImmediate)
@@ -202,9 +188,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -253,9 +237,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       // Should return the current status (validating), NOT validation_failed
@@ -291,9 +273,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -316,9 +296,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -339,9 +317,7 @@ describe('CDP status check for stale preprocessing status', () => {
       await server.inject({
         method: 'GET',
         url: `${buildGetUrl(summaryLogId)}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(mockCdpUploader.getUploadStatus).not.toHaveBeenCalled()
@@ -355,9 +331,7 @@ describe('CDP status check for stale preprocessing status', () => {
       const response = await server.inject({
         method: 'GET',
         url: `${buildGetUrl('non-existent-id')}?uploadId=${uploadId}`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
 
       expect(response.statusCode).toBe(200)
@@ -413,9 +387,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     expect(response.statusCode).toBe(200)
@@ -425,9 +397,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     const payload = JSON.parse(response.payload)
@@ -438,9 +408,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     const payload = JSON.parse(response.payload)
@@ -451,9 +419,7 @@ describe('retrieving summary log with validation_failed status', () => {
     const response = await server.inject({
       method: 'GET',
       url: buildGetUrl(summaryLogId),
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
+      ...asStandardUser()
     })
 
     const payload = JSON.parse(response.payload)

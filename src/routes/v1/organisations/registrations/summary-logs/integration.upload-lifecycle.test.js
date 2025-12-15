@@ -12,7 +12,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
-  validToken,
+  asStandardUser,
   createUploadPayload,
   buildGetUrl,
   buildPostUrl,
@@ -56,9 +56,7 @@ describe('Summary logs upload lifecycle', () => {
       response = await server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser()
       })
     })
 
@@ -89,10 +87,7 @@ describe('Summary logs upload lifecycle', () => {
           UPLOAD_STATUS.COMPLETE,
           fileId,
           filename
-        ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        )
       })
     })
 
@@ -127,9 +122,7 @@ describe('Summary logs upload lifecycle', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 
@@ -176,10 +169,7 @@ describe('Summary logs upload lifecycle', () => {
           fileId,
           filename,
           false
-        ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        )
       })
     })
 
@@ -207,9 +197,7 @@ describe('Summary logs upload lifecycle', () => {
         response = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser()
         })
       })
 
@@ -248,10 +236,7 @@ describe('Summary logs upload lifecycle', () => {
           fileId,
           filename,
           false
-        ),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        )
       })
     })
 
