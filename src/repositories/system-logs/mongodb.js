@@ -13,7 +13,7 @@ export const createSystemLogsRepository = (db) => (logger) => ({
     } catch (error) {
       logger.error({
         error,
-        message: 'Failed to internally record auditing event'
+        message: 'Failed to internally record system log'
       })
     }
   },

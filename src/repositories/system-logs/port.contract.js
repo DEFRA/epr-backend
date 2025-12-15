@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto'
 /** @import {SystemLogsRepository} from './port.js' */
 
 export const testSystemLogsRepositoryContract = (it) => {
-  it('auditing events can be inserted then retrieved by organisation id', async ({
+  it('system logs can be inserted then retrieved by organisation id', async ({
     systemLogsRepository
   }) => {
     /** @type {SystemLogsRepository} */
