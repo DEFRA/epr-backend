@@ -248,6 +248,47 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
+  it('should persist extracted meta when validation succeeds', async () => {
+    await validateSummaryLog(summaryLogId)
+
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        meta: {
+          REGISTRATION_NUMBER: 'REG12345',
+          PROCESSING_TYPE: 'REPROCESSOR_INPUT',
+          TEMPLATE_VERSION: 1,
+          MATERIAL: 'Aluminium'
+        }
+      })
+    )
+  })
+
+  it('should persist extracted meta even when meta business validation fails', async () => {
+    summaryLogExtractor.extract.mockResolvedValue(
+      buildExtractedData({
+        meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal business error
+      })
+    )
+
+    await validateSummaryLog(summaryLogId)
+
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        meta: {
+          REGISTRATION_NUMBER: 'REG99999',
+          PROCESSING_TYPE: 'REPROCESSOR_INPUT',
+          TEMPLATE_VERSION: 1,
+          MATERIAL: 'Aluminium'
+        }
+      })
+    )
+  })
+
   it('should update status as expected when extraction fails', async () => {
     summaryLogExtractor.extract.mockRejectedValue(
       new Error('Something went wrong while retrieving your file upload')

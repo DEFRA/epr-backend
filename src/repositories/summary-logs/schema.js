@@ -37,6 +37,8 @@ const fileSchema = Joi.object({
   })
 })
 
+const metaSchema = Joi.object().pattern(Joi.string(), Joi.any())
+
 export const summaryLogInsertSchema = Joi.object({
   status: statusSchema.required(),
   validation: Joi.object({
@@ -61,7 +63,8 @@ export const summaryLogUpdateSchema = Joi.object({
   loads: loadsSchema.optional(),
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),
-  registrationId: Joi.string().optional()
+  registrationId: Joi.string().optional(),
+  meta: metaSchema.optional()
 })
   .min(1)
   .messages({
