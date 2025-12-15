@@ -6,7 +6,7 @@
 
 /**
  * @typedef {Object} SummaryLogsRepository
- * @property {(id: string, summaryLog: Object) => Promise<void>} insert - Inserts a new summary log. Throws 409 Conflict if a summary log with 'submitting' status already exists for the same organisationId/registrationId pair.
+ * @property {(id: string, summaryLog: Object) => Promise<void>} insert
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(organisationId: string, registrationId: string, excludeId: string) => Promise<number>} supersedePendingLogs
