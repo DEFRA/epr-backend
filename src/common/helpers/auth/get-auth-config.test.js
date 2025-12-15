@@ -5,6 +5,10 @@ import { getAuthConfig } from './get-auth-config.js'
 import { ROLES } from './constants.js'
 
 describe('getAuthConfig', () => {
+  afterEach(() => {
+    config.reset('featureFlags.defraIdAuth')
+  })
+
   describe('when defraIdAuth is enabled', () => {
     beforeEach(() => {
       config.set('featureFlags.defraIdAuth', true)
