@@ -160,7 +160,9 @@ describe('PUT /v1/organisations/{id}', () => {
       expect(systemLogsResponseBody.systemLogs).toHaveLength(1)
       const systemLogPayload = systemLogsResponseBody.systemLogs[0]
       verifyCreatedBy(systemLogPayload)
-      expect(new Date(systemLogPayload.createdAt).getTime()).toBeGreaterThanOrEqual(start.getTime())
+      expect(
+        new Date(systemLogPayload.createdAt).getTime()
+      ).toBeGreaterThanOrEqual(start.getTime())
       verifyEvent(systemLogPayload)
       verifyContext(systemLogPayload)
 

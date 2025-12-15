@@ -7,12 +7,10 @@ export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 export const createSystemLogsRepository = (db) => (logger) => ({
   async insert(systemLog) {
     try {
-      await db
-        .collection(SYSTEM_LOGS_COLLECTION_NAME)
-        .insertOne({
-          schemaVersion: 1,
-          ...systemLog
-        })
+      await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertOne({
+        schemaVersion: 1,
+        ...systemLog
+      })
     } catch (error) {
       logger.error({
         error,

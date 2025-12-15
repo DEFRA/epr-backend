@@ -10,7 +10,12 @@ import { audit } from '@defra/cdp-auditing'
  * @param {Object} previous
  * @param {Object} next
  */
-async function auditOrganisationUpdate(request, organisationId, previous, next) {
+async function auditOrganisationUpdate(
+  request,
+  organisationId,
+  previous,
+  next
+) {
   const payload = {
     event: {
       category: 'entity',
