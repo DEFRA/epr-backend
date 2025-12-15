@@ -80,7 +80,15 @@ export const summaryLogsGet = {
     }
 
     if (summaryLog.meta) {
-      response.meta = summaryLog.meta
+      response.registration = {
+        processingType: summaryLog.meta.PROCESSING_TYPE,
+        material: summaryLog.meta.MATERIAL
+      }
+
+      if (summaryLog.meta.ACCREDITATION_NUMBER) {
+        response.registration.accreditationNumber =
+          summaryLog.meta.ACCREDITATION_NUMBER
+      }
     }
 
     // Add accreditation number if status is SUBMITTED

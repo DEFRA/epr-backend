@@ -36,7 +36,11 @@ const validationConcernsSchema = Joi.object().pattern(
   })
 )
 
-const metaSchema = Joi.object().pattern(Joi.string(), Joi.any())
+const registrationSchema = Joi.object({
+  processingType: Joi.string().required(),
+  material: Joi.string().required(),
+  accreditationNumber: Joi.string().optional()
+})
 
 export const summaryLogResponseSchema = Joi.object({
   status: Joi.string()
@@ -58,5 +62,5 @@ export const summaryLogResponseSchema = Joi.object({
   }).optional(),
   loads: loadsSchema.optional(),
   accreditationNumber: Joi.string().allow(null).optional(),
-  meta: metaSchema.optional()
+  registration: registrationSchema.optional()
 })
