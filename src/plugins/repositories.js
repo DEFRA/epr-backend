@@ -177,7 +177,9 @@ export const repositories = {
           createOrganisationsRepository(db, options?.eventualConsistency),
         formSubmissionsRepository: createFormSubmissionsRepository,
         wasteRecordsRepository: createWasteRecordsRepository,
-        wasteBalancesRepository: (db) => createWasteBalancesRepository(db)
+        wasteBalancesRepository: (db) => createWasteBalancesRepository(db, {
+          organisationsRepository: createOrganisationsRepository(db, options?.eventualConsistency)
+        })
       }
 
       for (const [name, creator] of Object.entries(repositoryFactories)) {
