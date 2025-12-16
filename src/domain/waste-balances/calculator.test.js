@@ -6,6 +6,10 @@ import {
   VERSION_STATUS
 } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import {
+  WASTE_BALANCE_TRANSACTION_TYPE,
+  WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
+} from '#domain/waste-balances/model.js'
 
 const buildWasteRecord = (overrides = {}) => {
   const defaultData = {
@@ -31,6 +35,7 @@ const buildWasteRecord = (overrides = {}) => {
     updatedBy: testUser,
     versions: [
       {
+        id: 'v1',
         createdAt: '2025-01-20T10:00:00.000Z',
         status: VERSION_STATUS.CREATED,
         summaryLog: { id: 'log-1', uri: 's3://...' },
@@ -80,8 +85,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -103,8 +107,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -125,8 +128,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -145,8 +147,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -155,6 +156,7 @@ describe('Waste Balance Calculator', () => {
 
   it('AC04: Should aggregate multiple valid records', () => {
     const record1 = buildWasteRecord({
+      rowId: 'row-1',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
         [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
@@ -162,6 +164,7 @@ describe('Waste Balance Calculator', () => {
       }
     })
     const record2 = buildWasteRecord({
+      rowId: 'row-2',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
         [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-07-01',
@@ -172,8 +175,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record1, record2],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(2)
@@ -202,8 +204,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -223,8 +224,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -243,8 +243,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(1)
@@ -264,8 +263,7 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(0)
@@ -284,17 +282,276 @@ describe('Waste Balance Calculator', () => {
     const result = calculateWasteBalanceUpdates({
       currentBalance: emptyBalance,
       wasteRecords: [record],
-      accreditation,
-      user: testUser
+      accreditation
     })
 
     expect(result.newTransactions).toHaveLength(0)
   })
 
+  it('Should account for existing CREDIT transactions', () => {
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+      }
+    })
+
+    const existingTransaction = {
+      id: 'tx-1',
+      type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+      amount: 10.0,
+      entities: [
+        {
+          id: 'row-1',
+          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
+          currentVersionId: 'v1',
+          previousVersionIds: []
+        }
+      ],
+      createdAt: '2023-01-01T00:00:00.000Z',
+      createdBy: { id: 'user-1', name: 'Test User' },
+      openingAmount: 0,
+      closingAmount: 10.0,
+      openingAvailableAmount: 0,
+      closingAvailableAmount: 10.0
+    }
+
+    const currentBalance = {
+      ...emptyBalance,
+      transactions: [existingTransaction]
+    }
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    // Target is 20, already credited 10. Delta is 10.
+    expect(result.newTransactions).toHaveLength(1)
+    expect(result.newTransactions[0].amount).toBe(10.0)
+    expect(result.newTransactions[0].type).toBe(
+      WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+    )
+  })
+
+  it('Should account for existing DEBIT transactions', () => {
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+      }
+    })
+
+    // Suppose we had 30 credited, then 10 debited. Net 20.
+    // If target is 20, delta should be 0.
+    const existingCredit = {
+      id: 'tx-1',
+      type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+      amount: 30.0,
+      entities: [
+        {
+          id: 'row-1',
+          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
+          currentVersionId: 'v1',
+          previousVersionIds: []
+        }
+      ],
+      createdAt: '2023-01-01T00:00:00.000Z',
+      createdBy: { id: 'user-1', name: 'Test User' },
+      openingAmount: 0,
+      closingAmount: 30.0,
+      openingAvailableAmount: 0,
+      closingAvailableAmount: 30.0
+    }
+    const existingDebit = {
+      id: 'tx-2',
+      type: WASTE_BALANCE_TRANSACTION_TYPE.DEBIT,
+      amount: 10.0,
+      entities: [
+        {
+          id: 'row-1',
+          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
+          currentVersionId: 'v1',
+          previousVersionIds: []
+        }
+      ],
+      createdAt: '2023-01-02T00:00:00.000Z',
+      createdBy: { id: 'user-1', name: 'Test User' },
+      openingAmount: 30.0,
+      closingAmount: 20.0,
+      openingAvailableAmount: 30.0,
+      closingAvailableAmount: 20.0
+    }
+
+    const currentBalance = {
+      ...emptyBalance,
+      transactions: [existingCredit, existingDebit]
+    }
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    expect(result.newTransactions).toHaveLength(0)
+  })
+
+  it('Should handle missing transactions array in currentBalance', () => {
+    const record = buildWasteRecord({
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+      }
+    })
+
+    const balance = { ...emptyBalance }
+    delete balance.transactions
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance: balance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    expect(result.newTransactions).toHaveLength(1)
+    expect(result.newTransactions[0].amount).toBe(10.0)
+  })
+
+  it('Should create DEBIT transaction when correcting downwards', () => {
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+      }
+    })
+
+    const existingTransaction = {
+      id: 'tx-1',
+      type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+      amount: 20.0,
+      entities: [
+        {
+          id: 'row-1',
+          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
+          currentVersionId: 'v1',
+          previousVersionIds: []
+        }
+      ],
+      createdAt: '2023-01-01T00:00:00.000Z',
+      createdBy: { id: 'user-1', name: 'Test User' },
+      openingAmount: 0,
+      closingAmount: 20.0,
+      openingAvailableAmount: 0,
+      closingAvailableAmount: 20.0
+    }
+
+    const currentBalance = {
+      ...emptyBalance,
+      transactions: [existingTransaction]
+    }
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    // Target 10, Credited 20. Delta -10.
+    expect(result.newTransactions).toHaveLength(1)
+    expect(result.newTransactions[0].amount).toBe(10.0)
+    expect(result.newTransactions[0].type).toBe(
+      WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+    )
+  })
+  it('Should not create transaction if balance is already correct', () => {
+    const record = buildWasteRecord({
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+      }
+    })
+
+    const existingTransaction = {
+      id: 'tx-1',
+      type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+      amount: 10.0,
+      createdAt: '2023-06-01T10:00:00.000Z',
+      createdBy: testUser,
+      openingAmount: 0,
+      closingAmount: 10.0,
+      openingAvailableAmount: 0,
+      closingAvailableAmount: 10.0,
+      entities: [
+        {
+          id: record.rowId,
+          type: WASTE_BALANCE_TRANSACTION_ENTITY_TYPE.WASTE_RECORD_RECEIVED,
+          currentVersionId: 'v1',
+          previousVersionIds: []
+        }
+      ]
+    }
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance: {
+        ...emptyBalance,
+        amount: 10.0,
+        availableAmount: 10.0,
+        transactions: [existingTransaction]
+      },
+      wasteRecords: [record],
+      accreditation
+    })
+
+    expect(result.newTransactions).toHaveLength(0)
+    expect(result.newAmount).toBe(10.0)
+  })
+
+  it('Should handle transactions with missing entities', () => {
+    const balanceWithTransaction = {
+      ...emptyBalance,
+      amount: 10,
+      availableAmount: 10,
+      transactions: [
+        {
+          type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+          amount: 10
+          // entities missing
+        }
+      ]
+    }
+
+    const record = buildWasteRecord({
+      rowId: 'row-1',
+      data: {
+        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+      }
+    })
+
+    const result = calculateWasteBalanceUpdates({
+      currentBalance: balanceWithTransaction,
+      wasteRecords: [record],
+      accreditation
+    })
+
+    // Should create a new transaction because the existing one isn't linked to this record
+    expect(result.newTransactions).toHaveLength(1)
+    expect(result.newTransactions[0].amount).toBe(10.0)
+  })
+
   describe('buildTransaction', async () => {
     const { buildTransaction } = await import('./calculator.js')
-    const { WASTE_BALANCE_TRANSACTION_TYPE } =
-      await import('#domain/waste-balances/model.js')
 
     const mockRecord = buildWasteRecord()
 
