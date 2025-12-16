@@ -19,12 +19,12 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { ObjectId } from 'mongodb'
 
 import {
+  asStandardUser,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
-  pollForValidation,
-  validToken
+  pollForValidation
 } from './integration-test-helpers.js'
 
 describe('Submission and placeholder tests (Exporter)', () => {
@@ -75,7 +75,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
     const sharedHeaders = [
       'ROW_ID',
-      'DATE_OF_DISPATCH',
+      'DATE_RECEIVED_FOR_EXPORT',
       'EWC_CODE',
       'DESCRIPTION_WASTE',
       'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
@@ -84,9 +84,21 @@ describe('Submission and placeholder tests (Exporter)', () => {
       'PALLET_WEIGHT',
       'NET_WEIGHT',
       'BAILING_WIRE_PROTOCOL',
+      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+      'WEIGHT_OF_NON_TARGET_MATERIALS',
+      'RECYCLABLE_PROPORTION_PERCENTAGE',
+      'TONNAGE_RECEIVED_FOR_EXPORT',
       'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
+      'INTERIM_SITE_ID',
       'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
-      'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
+      'DATE_RECEIVED_BY_OSR',
+      'OSR_ID',
+      'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+      'DATE_OF_EXPORT',
+      'EXPORT_CONTROLS',
+      'BASEL_EXPORT_CODE',
+      'CUSTOMS_CODES',
+      'CONTAINER_NUMBER'
     ]
 
     const setupIntegrationEnvironment = async () => {
@@ -240,11 +252,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       )
 
       await server.inject({
+        method: 'GET',
+        url: buildGetUrl(organisationId, registrationId, summaryLogId),
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      await server.inject({
         method: 'POST',
         url: buildSubmitUrl(organisationId, registrationId, summaryLogId),
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       let attempts = 0
@@ -260,9 +276,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         const checkResponse = await server.inject({
           method: 'GET',
           url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          headers: {
-            Authorization: `Bearer ${validToken}`
-          }
+          ...asStandardUser({ linkedOrgId: organisationId })
         })
 
         status = JSON.parse(checkResponse.payload).status
@@ -283,7 +297,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
               rowNumber: 8,
               values: [
                 1001, // ROW_ID
-                '2025-01-15T00:00:00.000Z', // DATE_OF_DISPATCH
+                '2025-01-15T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
                 '03 03 08', // EWC_CODE
                 'Glass - pre-sorted', // DESCRIPTION_WASTE
                 'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
@@ -291,28 +305,52 @@ describe('Submission and placeholder tests (Exporter)', () => {
                 100, // TARE_WEIGHT
                 50, // PALLET_WEIGHT
                 850, // NET_WEIGHT
-                'Yes', // BAILING_WIRE_PROTOCOL
+                'No', // BAILING_WIRE_PROTOCOL
+                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+                0, // WEIGHT_OF_NON_TARGET_MATERIALS
+                1, // RECYCLABLE_PROPORTION_PERCENTAGE
+                850, // TONNAGE_RECEIVED_FOR_EXPORT
                 'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+                null, // INTERIM_SITE_ID
                 null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                100 // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                null, // DATE_RECEIVED_BY_OSR
+                null, // OSR_ID
+                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                '2025-01-20T00:00:00.000Z', // DATE_OF_EXPORT
+                'Article 18 (green list)', // EXPORT_CONTROLS
+                'B3020', // BASEL_EXPORT_CODE
+                '123456', // CUSTOMS_CODES
+                'CONT123456' // CONTAINER_NUMBER
               ]
             },
             {
               rowNumber: 9,
               values: [
                 1002, // ROW_ID
-                '2025-01-16T00:00:00.000Z', // DATE_OF_DISPATCH
+                '2025-01-16T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
                 '03 03 08', // EWC_CODE
                 'Glass - pre-sorted', // DESCRIPTION_WASTE
                 'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                2000, // GROSS_WEIGHT
+                900, // GROSS_WEIGHT
                 200, // TARE_WEIGHT
                 100, // PALLET_WEIGHT
-                1700, // NET_WEIGHT
-                'Yes', // BAILING_WIRE_PROTOCOL
+                600, // NET_WEIGHT
+                'No', // BAILING_WIRE_PROTOCOL
+                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+                0, // WEIGHT_OF_NON_TARGET_MATERIALS
+                1, // RECYCLABLE_PROPORTION_PERCENTAGE
+                600, // TONNAGE_RECEIVED_FOR_EXPORT
                 'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+                null, // INTERIM_SITE_ID
                 null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                200 // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                null, // DATE_RECEIVED_BY_OSR
+                null, // OSR_ID
+                200, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                '2025-01-21T00:00:00.000Z', // DATE_OF_EXPORT
+                'Article 18 (green list)', // EXPORT_CONTROLS
+                'B3020', // BASEL_EXPORT_CODE
+                '123456', // CUSTOMS_CODES
+                'CONT123457' // CONTAINER_NUMBER
               ]
             }
           ]
@@ -370,7 +408,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
               rowNumber: 8,
               values: [
                 1001, // ROW_ID
-                '2025-01-15T00:00:00.000Z', // DATE_OF_DISPATCH
+                '2025-01-15T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
                 '03 03 08', // EWC_CODE
                 'Glass - pre-sorted', // DESCRIPTION_WASTE
                 'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
@@ -378,28 +416,52 @@ describe('Submission and placeholder tests (Exporter)', () => {
                 100, // TARE_WEIGHT
                 50, // PALLET_WEIGHT
                 850, // NET_WEIGHT
-                'Yes', // BAILING_WIRE_PROTOCOL
+                'No', // BAILING_WIRE_PROTOCOL
+                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+                0, // WEIGHT_OF_NON_TARGET_MATERIALS
+                1, // RECYCLABLE_PROPORTION_PERCENTAGE
+                850, // TONNAGE_RECEIVED_FOR_EXPORT
                 'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+                null, // INTERIM_SITE_ID
                 null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                100 // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                null, // DATE_RECEIVED_BY_OSR
+                null, // OSR_ID
+                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                '2025-01-20T00:00:00.000Z', // DATE_OF_EXPORT
+                'Article 18 (green list)', // EXPORT_CONTROLS
+                'B3020', // BASEL_EXPORT_CODE
+                '123456', // CUSTOMS_CODES
+                'CONT123456' // CONTAINER_NUMBER
               ]
             },
             {
               rowNumber: 9,
               values: [
                 1002, // ROW_ID
-                '2025-01-16T00:00:00.000Z', // DATE_OF_DISPATCH
+                '2025-01-16T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
                 '03 03 08', // EWC_CODE
                 'Glass - pre-sorted', // DESCRIPTION_WASTE
                 'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                2000, // GROSS_WEIGHT
+                900, // GROSS_WEIGHT
                 200, // TARE_WEIGHT
                 100, // PALLET_WEIGHT
-                1700, // NET_WEIGHT
-                'Yes', // BAILING_WIRE_PROTOCOL
+                600, // NET_WEIGHT
+                'No', // BAILING_WIRE_PROTOCOL
+                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+                0, // WEIGHT_OF_NON_TARGET_MATERIALS
+                1, // RECYCLABLE_PROPORTION_PERCENTAGE
+                600, // TONNAGE_RECEIVED_FOR_EXPORT
                 'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+                null, // INTERIM_SITE_ID
                 null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                200 // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                null, // DATE_RECEIVED_BY_OSR
+                null, // OSR_ID
+                200, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                '2025-01-21T00:00:00.000Z', // DATE_OF_EXPORT
+                'Article 18 (green list)', // EXPORT_CONTROLS
+                'B3020', // BASEL_EXPORT_CODE
+                '123456', // CUSTOMS_CODES
+                'CONT123457' // CONTAINER_NUMBER
               ]
             }
           ]
@@ -430,7 +492,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
               rowNumber: 8,
               values: [
                 1001, // ROW_ID
-                '2025-01-15T00:00:00.000Z', // DATE_OF_DISPATCH
+                '2025-01-15T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
                 '03 03 08', // EWC_CODE
                 'Glass - pre-sorted', // DESCRIPTION_WASTE
                 'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
@@ -438,17 +500,29 @@ describe('Submission and placeholder tests (Exporter)', () => {
                 100, // TARE_WEIGHT
                 50, // PALLET_WEIGHT
                 850, // NET_WEIGHT
-                'Yes', // BAILING_WIRE_PROTOCOL
+                'No', // BAILING_WIRE_PROTOCOL
+                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+                0, // WEIGHT_OF_NON_TARGET_MATERIALS
+                1, // RECYCLABLE_PROPORTION_PERCENTAGE
+                850, // TONNAGE_RECEIVED_FOR_EXPORT
                 'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+                null, // INTERIM_SITE_ID
                 null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                100 // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                null, // DATE_RECEIVED_BY_OSR
+                null, // OSR_ID
+                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
+                '2025-01-20T00:00:00.000Z', // DATE_OF_EXPORT
+                'Article 18 (green list)', // EXPORT_CONTROLS
+                'B3020', // BASEL_EXPORT_CODE
+                '123456', // CUSTOMS_CODES
+                'CONT123456' // CONTAINER_NUMBER
               ]
             },
             {
               rowNumber: 9,
               values: [
                 1002, // ROW_ID
-                '2025-01-16T00:00:00.000Z', // DATE_OF_DISPATCH
+                '2025-01-16T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
                 '03 03 08', // EWC_CODE
                 'Glass - pre-sorted', // DESCRIPTION_WASTE
                 'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
@@ -456,10 +530,22 @@ describe('Submission and placeholder tests (Exporter)', () => {
                 100, // TARE_WEIGHT (Changed)
                 50, // PALLET_WEIGHT (Changed)
                 850, // NET_WEIGHT (Changed)
-                'Yes', // BAILING_WIRE_PROTOCOL
+                'No', // BAILING_WIRE_PROTOCOL
+                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
+                0, // WEIGHT_OF_NON_TARGET_MATERIALS
+                1, // RECYCLABLE_PROPORTION_PERCENTAGE
+                850, // TONNAGE_RECEIVED_FOR_EXPORT
                 'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+                null, // INTERIM_SITE_ID
                 null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                100 // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED (Changed from 200 to 100)
+                null, // DATE_RECEIVED_BY_OSR
+                null, // OSR_ID
+                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED (Changed from 200 to 100)
+                '2025-01-21T00:00:00.000Z', // DATE_OF_EXPORT
+                'Article 18 (green list)', // EXPORT_CONTROLS
+                'B3020', // BASEL_EXPORT_CODE
+                '123456', // CUSTOMS_CODES
+                'CONT123457' // CONTAINER_NUMBER
               ]
             }
           ]
