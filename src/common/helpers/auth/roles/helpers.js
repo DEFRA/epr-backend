@@ -44,10 +44,12 @@ const stringEquals = (a, b) =>
  * @returns {(organisation: Organisation) => boolean} Function that checks if the user is an initial user
  */
 export const isInitialUser = (email) => (organisation) =>
-  organisation.users.some(
-    (user) =>
-      stringEquals(user.email, email) &&
-      user.roles?.includes(USER_ROLES.INITIAL)
+  Boolean(
+    organisation.users?.some(
+      (user) =>
+        stringEquals(user.email, email) &&
+        user.roles?.includes(USER_ROLES.INITIAL)
+    )
   )
 
 /**

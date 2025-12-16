@@ -4,6 +4,7 @@ import {
   WASTE_PROCESSING_TYPE,
   WASTE_PERMIT_TYPE
 } from '#domain/organisations/model.js'
+import { isAccreditationForRegistration } from '#formsubmission/link-form-submissions.js'
 
 export const whenReprocessor = (schema) =>
   Joi.when('wasteProcessingType', {
@@ -78,4 +79,87 @@ export const requiredWhenApprovedOrSuspended = {
     { is: STATUS.SUSPENDED, then: Joi.required() }
   ],
   otherwise: Joi.optional()
+}
+
+export function uniqueKeyForRegAcc(item) {
+  const site =
+    item.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
+      ? `::${item.site.address.postcode}`
+      : ''
+  return `${item.wasteProcessingType}::${item.material}${site}`
+}
+
+function findAccreditationsWithoutApprovedRegistration(
+  accreditations,
+  registrations
+) {
+  return accreditations
+    .filter((acc) => acc.status === STATUS.APPROVED)
+    .filter((acc) => {
+      const hasApprovedRegistration = registrations.some(
+        (reg) =>
+          reg.accreditationId === acc.id &&
+          reg.status === STATUS.APPROVED &&
+          isAccreditationForRegistration(acc, reg)
+      )
+      return !hasApprovedRegistration
+    })
+}
+
+function findDuplicateApprovals(items) {
+  const grouped = Object.groupBy(
+    items.filter((item) => item.status === STATUS.APPROVED),
+    (item) => uniqueKeyForRegAcc(item)
+  )
+
+  return Object.entries(grouped).filter(([_key, group]) => group.length > 1)
+}
+
+function formatDuplicateError(duplicates, itemType) {
+  const keys = duplicates.map(([key]) => key).join(', ')
+  const ids = duplicates
+    .flatMap(([_key, group]) => group.map((item) => item.id))
+    .join(', ')
+  return `Multiple approved ${itemType} found with duplicate keys [${keys}]: ${ids}`
+}
+
+export function validateApprovals(value, helpers) {
+  const errorMessages = []
+
+  // Check if approved accreditations have linked registrations
+  const accWithoutReg = findAccreditationsWithoutApprovedRegistration(
+    value.accreditations ?? [],
+    value.registrations ?? []
+  )
+
+  if (accWithoutReg.length > 0) {
+    const ids = accWithoutReg.map((acc) => acc.id).join(', ')
+    errorMessages.push(
+      `Accreditations with id ${ids} are approved but not linked to an approved registration`
+    )
+  }
+
+  // Check for duplicate approved accreditations
+  const accDuplicates = findDuplicateApprovals(value.accreditations ?? [])
+  if (accDuplicates.length > 0) {
+    errorMessages.push(formatDuplicateError(accDuplicates, 'accreditations'))
+  }
+
+  // Check for duplicate approved registrations
+  const regDuplicates = findDuplicateApprovals(value.registrations ?? [])
+  if (regDuplicates.length > 0) {
+    errorMessages.push(formatDuplicateError(regDuplicates, 'registrations'))
+  }
+
+  if (errorMessages.length > 0) {
+    return helpers.error('organisation.validationErrors', {
+      message: errorMessages.join('; ')
+    })
+  }
+
+  return value
+}
+
+export const approvalValidationMessages = {
+  'organisation.validationErrors': '{{#message}}'
 }

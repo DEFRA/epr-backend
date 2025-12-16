@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest'
+import { ObjectId } from 'mongodb'
 import {
+  validateAccreditation,
   validateRegistration,
-  validateStatusHistory,
-  validateAccreditation
+  validateStatusHistory
 } from './validation.js'
-import { STATUS, REGULATOR, MATERIAL } from '#domain/organisations/model.js'
+import { MATERIAL, REGULATOR, STATUS } from '#domain/organisations/model.js'
 import {
-  buildRegistration,
-  buildAccreditation
+  buildAccreditation,
+  buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 
 describe('validateStatusHistory', () => {
@@ -32,7 +33,7 @@ describe('validateStatusHistory', () => {
       {
         status: STATUS.CREATED,
         updatedAt: new Date(),
-        updatedBy: '507f1f77bcf86cd799439011'
+        updatedBy: new ObjectId().toString()
       }
     ]
 
