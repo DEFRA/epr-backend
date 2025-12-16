@@ -46,7 +46,8 @@ const stringEquals = (a, b) =>
 export const isInitialUser = (email) => (organisation) =>
   organisation.users.some(
     (user) =>
-      stringEquals(user.email, email) && user.roles.includes(USER_ROLES.INITIAL)
+      stringEquals(user.email, email) &&
+      user.roles?.includes(USER_ROLES.INITIAL)
   )
 
 /**

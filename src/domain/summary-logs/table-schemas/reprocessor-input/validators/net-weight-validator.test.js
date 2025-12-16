@@ -102,7 +102,7 @@ describe('validateNetWeight', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.calculationMismatch')
+      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
       expect(error.details[0].message).toBe(
         'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
       )
@@ -118,7 +118,7 @@ describe('validateNetWeight', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.calculationMismatch')
+      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
     })
 
     it('rejects calculation when net weight is too low', () => {
@@ -131,7 +131,7 @@ describe('validateNetWeight', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.calculationMismatch')
+      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
     })
 
     it('rejects calculation when net weight is significantly different', () => {
@@ -144,7 +144,7 @@ describe('validateNetWeight', () => {
       })
 
       expect(error).toBeDefined()
-      expect(error.details[0].type).toBe('custom.calculationMismatch')
+      expect(error.details[0].type).toBe('custom.netWeightCalculationMismatch')
     })
   })
 

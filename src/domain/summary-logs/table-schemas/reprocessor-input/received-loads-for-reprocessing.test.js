@@ -699,7 +699,9 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           NET_WEIGHT: 100
         })
         expect(error).toBeDefined()
-        expect(error.details[0].type).toBe('custom.calculationMismatch')
+        expect(error.details[0].type).toBe(
+          'custom.netWeightCalculationMismatch'
+        )
       })
 
       it('rejects calculation that is close but outside tolerance', () => {
@@ -710,7 +712,9 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
           NET_WEIGHT: 90.001
         })
         expect(error).toBeDefined()
-        expect(error.details[0].type).toBe('custom.calculationMismatch')
+        expect(error.details[0].type).toBe(
+          'custom.netWeightCalculationMismatch'
+        )
       })
 
       it('skips calculation check when NET_WEIGHT is missing', () => {

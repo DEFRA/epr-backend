@@ -73,7 +73,7 @@ export const validateTonnageReceived = (value, helpers) => {
   const expectedTonnage = adjustedWeight * recyclableProportion
 
   if (!areNumbersEqual(actualTonnage, expectedTonnage)) {
-    return helpers.error('custom.calculationMismatch', {
+    return helpers.error('custom.tonnageCalculationMismatch', {
       field: RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
     })
   }
@@ -85,5 +85,5 @@ export const validateTonnageReceived = (value, helpers) => {
  * Joi messages for the TONNAGE_RECEIVED_FOR_RECYCLING validator
  */
 export const TONNAGE_RECEIVED_MESSAGES = Object.freeze({
-  'custom.calculationMismatch': MUST_EQUAL_TONNAGE_CALCULATION
+  'custom.tonnageCalculationMismatch': MUST_EQUAL_TONNAGE_CALCULATION
 })
