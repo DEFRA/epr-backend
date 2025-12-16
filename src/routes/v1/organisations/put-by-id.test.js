@@ -47,7 +47,7 @@ describe('PUT /v1/organisations/{id}', () => {
     const organisationId = fixture.id
     await organisationsRepository.insert(fixture)
 
-    const fetchReposnse = await server.inject({
+    const fetchResponse = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}`,
       headers: {
@@ -55,9 +55,9 @@ describe('PUT /v1/organisations/{id}', () => {
       }
     })
 
-    expect(fetchReposnse.statusCode).toBe(StatusCodes.OK)
+    expect(fetchResponse.statusCode).toBe(StatusCodes.OK)
 
-    return JSON.parse(fetchReposnse.payload)
+    return JSON.parse(fetchResponse.payload)
   }
 
   describe('happy path', () => {
