@@ -224,7 +224,9 @@ export const testReplaceBehaviour = (it) => {
 
         // Verify only the first registration and accreditation remain
         expect(result.registrations).toHaveLength(1)
-        expect(result.registrations[0].id).toBe(organisation.registrations[0].id)
+        expect(result.registrations[0].id).toBe(
+          organisation.registrations[0].id
+        )
 
         expect(result.accreditations).toHaveLength(1)
         expect(result.accreditations[0].id).toBe(

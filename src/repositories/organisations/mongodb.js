@@ -117,12 +117,12 @@ const performReplace = (db) => async (id, version, updates) => {
     version: existing.version + 1
   }
 
-  const result = await db.collection(COLLECTION_NAME).updateOne(
-    { _id: ObjectId.createFromHexString(validatedId), version },
-    {
-      $set: updatePayload
-    }
-  )
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .replaceOne(
+      { _id: ObjectId.createFromHexString(validatedId), version },
+      updatePayload
+    )
 
   if (result.matchedCount === 0) {
     throw Boom.conflict(
