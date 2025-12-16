@@ -18,6 +18,15 @@ export {
   createNumberFieldSchema
 } from './field-schemas.js'
 
+// Shared field definitions
+export {
+  SENT_ON_LOADS_FIELDS,
+  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS
+} from './fields.js'
+
+// Schema factories
+export { createSentOnLoadsSchema } from './sent-on-loads-schema.js'
+
 // Enums
 export { EWC_CODES } from './enums/ewc-codes.js'
 export { RECYCLABLE_PROPORTION_METHODS } from './enums/recyclable-proportion-methods.js'
