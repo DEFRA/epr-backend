@@ -277,158 +277,54 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
     })
 
-    describe('GROSS_WEIGHT validation', () => {
-      it('accepts zero', () => {
-        const { error } = validationSchema.validate({ GROSS_WEIGHT: 0 })
-        expect(error).toBeUndefined()
-      })
+    describe('Weight field validations', () => {
+      const weightFields = [
+        'GROSS_WEIGHT',
+        'TARE_WEIGHT',
+        'PALLET_WEIGHT',
+        'NET_WEIGHT',
+        'WEIGHT_OF_NON_TARGET_MATERIALS',
+        'TONNAGE_RECEIVED_FOR_RECYCLING'
+      ]
 
-      it('accepts maximum value (1000)', () => {
-        const { error } = validationSchema.validate({ GROSS_WEIGHT: 1000 })
-        expect(error).toBeUndefined()
-      })
+      for (const field of weightFields) {
+        describe(`${field} validation`, () => {
+          it('accepts zero', () => {
+            const { error } = validationSchema.validate({ [field]: 0 })
+            expect(error).toBeUndefined()
+          })
 
-      it('accepts value within range', () => {
-        const { error } = validationSchema.validate({ GROSS_WEIGHT: 500.5 })
-        expect(error).toBeUndefined()
-      })
+          it('accepts maximum value (1000)', () => {
+            const { error } = validationSchema.validate({ [field]: 1000 })
+            expect(error).toBeUndefined()
+          })
 
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({ GROSS_WEIGHT: -1 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
+          it('accepts value within range', () => {
+            const { error } = validationSchema.validate({ [field]: 500.5 })
+            expect(error).toBeUndefined()
+          })
 
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({ GROSS_WEIGHT: 1001 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1000')
-      })
+          it('rejects negative value', () => {
+            const { error } = validationSchema.validate({ [field]: -1 })
+            expect(error).toBeDefined()
+            expect(error.details[0].message).toBe('must be at least 0')
+          })
 
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({ GROSS_WEIGHT: 'heavy' })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
-      })
-    })
+          it('rejects value above maximum (1000)', () => {
+            const { error } = validationSchema.validate({ [field]: 1001 })
+            expect(error).toBeDefined()
+            expect(error.details[0].message).toBe('must be at most 1000')
+          })
 
-    describe('TARE_WEIGHT validation', () => {
-      it('accepts zero', () => {
-        const { error } = validationSchema.validate({ TARE_WEIGHT: 0 })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts maximum value (1000)', () => {
-        const { error } = validationSchema.validate({ TARE_WEIGHT: 1000 })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range', () => {
-        const { error } = validationSchema.validate({ TARE_WEIGHT: 50.25 })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({ TARE_WEIGHT: -0.5 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
-
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({ TARE_WEIGHT: 1000.1 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1000')
-      })
-
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({ TARE_WEIGHT: 'light' })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
-      })
-    })
-
-    describe('PALLET_WEIGHT validation', () => {
-      it('accepts zero', () => {
-        const { error } = validationSchema.validate({ PALLET_WEIGHT: 0 })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts maximum value (1000)', () => {
-        const { error } = validationSchema.validate({ PALLET_WEIGHT: 1000 })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range', () => {
-        const { error } = validationSchema.validate({ PALLET_WEIGHT: 25.5 })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({ PALLET_WEIGHT: -1 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
-
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({ PALLET_WEIGHT: 1001 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1000')
-      })
-
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
-          PALLET_WEIGHT: 'not-a-number'
+          it('rejects non-number', () => {
+            const { error } = validationSchema.validate({
+              [field]: 'not-a-number'
+            })
+            expect(error).toBeDefined()
+            expect(error.details[0].message).toBe('must be a number')
+          })
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
-      })
-    })
-
-    describe('WEIGHT_OF_NON_TARGET_MATERIALS validation', () => {
-      it('accepts zero', () => {
-        const { error } = validationSchema.validate({
-          WEIGHT_OF_NON_TARGET_MATERIALS: 0
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts maximum value (1000)', () => {
-        const { error } = validationSchema.validate({
-          WEIGHT_OF_NON_TARGET_MATERIALS: 1000
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts value within range', () => {
-        const { error } = validationSchema.validate({
-          WEIGHT_OF_NON_TARGET_MATERIALS: 10.5
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects negative value', () => {
-        const { error } = validationSchema.validate({
-          WEIGHT_OF_NON_TARGET_MATERIALS: -1
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
-
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({
-          WEIGHT_OF_NON_TARGET_MATERIALS: 1001
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1000')
-      })
-
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
-          WEIGHT_OF_NON_TARGET_MATERIALS: 'contaminants'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
-      })
+      }
     })
 
     describe('RECYCLABLE_PROPORTION_PERCENTAGE validation', () => {
