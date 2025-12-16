@@ -41,7 +41,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
           [EXPORTER_FIELD.INTERIM_SITE]: 'No',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
         }
@@ -109,7 +109,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
           [EXPORTER_FIELD.INTERIM_SITE]: 'No',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
         }
@@ -141,7 +141,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2022-01-01', // Outside valid range
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2022-01-01', // Outside valid range
           [EXPORTER_FIELD.INTERIM_SITE]: 'No',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
         }
@@ -185,7 +185,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
           [EXPORTER_FIELD.INTERIM_SITE]: 'No',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
         }

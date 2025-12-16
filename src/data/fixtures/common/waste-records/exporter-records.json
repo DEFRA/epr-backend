@@ -7,7 +7,7 @@
     "type": "received",
     "data": {
       "processingType": "EXPORTER",
-      "DATE_OF_EXPORT": "2025-06-01T00:00:00.000Z",
+      "DATE_OF_DISPATCH": "2025-06-01T00:00:00.000Z",
       "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
       "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "No",
       "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 10.5
@@ -28,7 +28,7 @@
         },
         "data": {
           "processingType": "EXPORTER",
-          "DATE_OF_EXPORT": "2025-06-01T00:00:00.000Z",
+          "DATE_OF_DISPATCH": "2025-06-01T00:00:00.000Z",
           "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
           "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "No",
           "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 10.5
@@ -44,7 +44,7 @@
     "type": "received",
     "data": {
       "processingType": "EXPORTER",
-      "DATE_OF_EXPORT": "2025-06-02T00:00:00.000Z",
+      "DATE_OF_DISPATCH": "2025-06-02T00:00:00.000Z",
       "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
       "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "Yes",
       "TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR": 20.0
@@ -65,7 +65,7 @@
         },
         "data": {
           "processingType": "EXPORTER",
-          "DATE_OF_EXPORT": "2025-06-02T00:00:00.000Z",
+          "DATE_OF_DISPATCH": "2025-06-02T00:00:00.000Z",
           "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "No",
           "DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE": "Yes",
           "TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR": 20.0
@@ -81,7 +81,7 @@
     "type": "received",
     "data": {
       "processingType": "EXPORTER",
-      "DATE_OF_EXPORT": "2025-06-03T00:00:00.000Z",
+      "DATE_OF_DISPATCH": "2025-06-03T00:00:00.000Z",
       "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "Yes",
       "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 100.0
     },
@@ -101,7 +101,7 @@
         },
         "data": {
           "processingType": "EXPORTER",
-          "DATE_OF_EXPORT": "2025-06-03T00:00:00.000Z",
+          "DATE_OF_DISPATCH": "2025-06-03T00:00:00.000Z",
           "WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE": "Yes",
           "TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED": 100.0
         }
