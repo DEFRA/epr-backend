@@ -36,13 +36,11 @@ async function auditOrganisationUpdate(
 }
 
 function extractUserDetails(request) {
-  return request.auth?.credentials
-    ? {
-        id: request.auth.credentials.id,
-        email: request.auth.credentials.email,
-        scope: request.auth.credentials.scope
-      }
-    : { id: '', email: '', scope: [] }
+  return {
+    id: request.auth?.credentials?.id,
+    email: request.auth?.credentials?.email,
+    scope: request.auth?.credentials?.scope
+  }
 }
 
 /**
