@@ -1,6 +1,6 @@
 import parse from 'joi-to-json'
-import { organisationUpdateSchema } from '#repositories/organisations/schema/organisation.js'
+import { organisationReplaceSchema } from '#repositories/organisations/schema/organisation.js'
 
 export const getOrganisationJSONSchema = () => {
-  return parse(organisationUpdateSchema, 'json-draft-2019-09')
+  return parse(organisationReplaceSchema, 'json-draft-2019-09')
 }

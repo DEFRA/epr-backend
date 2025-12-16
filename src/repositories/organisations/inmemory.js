@@ -88,12 +88,13 @@ const performInsert = (storage, staleCache) => async (organisation) => {
 const performReplace =
   (storage, staleCache, pendingSyncRef) => async (id, version, updates) => {
     const validatedId = validateId(id)
-    const validatedUpdates = validateOrganisationUpdate(updates)
 
     const existingIndex = storage.findIndex((o) => o.id === validatedId)
     if (existingIndex === -1) {
       throw Boom.notFound(`Organisation with id ${validatedId} not found`)
     }
+
+    const validatedUpdates = validateOrganisationUpdate(updates)
 
     const existing = storage[existingIndex]
 

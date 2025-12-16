@@ -72,15 +72,15 @@ const performInsert = (db) => async (organisation) => {
 
 const performReplace = (db) => async (id, version, updates) => {
   const validatedId = validateId(id)
-  const validatedUpdates = validateOrganisationUpdate(updates)
 
   const existing = await db
     .collection(COLLECTION_NAME)
     .findOne({ _id: ObjectId.createFromHexString(validatedId) })
-
   if (!existing) {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
+
+  const validatedUpdates = validateOrganisationUpdate(updates)
 
   const { status: _, ...validatedUpdatesWithoutStatus } = {
     ...validatedUpdates

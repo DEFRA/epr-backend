@@ -82,7 +82,7 @@ export const organisationInsertSchema = Joi.object({
 
 const NON_UPDATABLE_FIELDS = ['id']
 
-export const organisationUpdateSchema = organisationInsertSchema
+export const organisationReplaceSchema = organisationInsertSchema
   .fork(NON_UPDATABLE_FIELDS, (schema) => schema.forbidden())
   .fork(['status'], (schema) => schema.optional())
   .keys({
