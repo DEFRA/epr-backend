@@ -1,3 +1,14 @@
+/**
+ * A validated row containing weight fields.
+ * Used as a type guard target - after checking field presence,
+ * these fields are guaranteed to be numbers.
+ * @typedef {Object} ValidatedWeightRow
+ * @property {number} GROSS_WEIGHT
+ * @property {number} TARE_WEIGHT
+ * @property {number} PALLET_WEIGHT
+ * @property {number} NET_WEIGHT
+ */
+
 export {
   MESSAGES,
   YES_NO_VALUES,

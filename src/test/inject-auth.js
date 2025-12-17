@@ -19,7 +19,7 @@ const ACCESS_TOKEN_STRATEGY = 'access-token'
  * @param {object} [options.overrides] - Additional credential overrides
  * @returns {object} Auth options for server.inject()
  */
-export const asStandardUser = ({ linkedOrgId, ...overrides } = {}) => {
+export const asStandardUser = ({ linkedOrgId, ...overrides }) => {
   if (!linkedOrgId) {
     throw new Error('linkedOrgId is required for asStandardUser')
   }
