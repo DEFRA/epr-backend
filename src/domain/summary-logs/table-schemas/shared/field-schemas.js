@@ -116,7 +116,7 @@ export const createAlphanumericFieldSchema = (
 /**
  * Creates an enum dropdown field schema
  *
- * @param {Array<string>} validValues - Array of valid enum values
+ * @param {readonly string[]} validValues - Array of valid enum values
  * @param {string} invalidMessage - Message for invalid value
  * @returns {Joi.StringSchema} Joi string schema
  */
