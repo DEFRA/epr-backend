@@ -4,6 +4,9 @@
  * Single source of truth for field names used throughout schemas in this folder.
  */
 
+// Re-export shared fields (identical across exporter and reprocessor-input)
+export { SENT_ON_LOADS_FIELDS } from '../shared/index.js'
+
 /**
  * ROW_ID minimum values for EXPORTER tables
  *
@@ -46,10 +49,4 @@ export const RECEIVED_LOADS_FIELDS = Object.freeze({
   TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR:
     'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
   EXPORT_CONTROLS: 'EXPORT_CONTROLS'
-})
-
-export const SENT_ON_LOADS_FIELDS = Object.freeze({
-  ROW_ID: 'ROW_ID',
-  DATE_LOAD_LEFT_SITE: 'DATE_LOAD_LEFT_SITE',
-  TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON'
 })

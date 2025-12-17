@@ -9,27 +9,57 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       expect(schema.rowIdField).toBe('ROW_ID')
     })
 
-    it('has requiredHeaders array with expected fields', () => {
-      expect(schema.requiredHeaders).toContain('ROW_ID')
-      expect(schema.requiredHeaders).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-      expect(schema.requiredHeaders).toContain('EWC_CODE')
-      expect(schema.requiredHeaders).toContain('DESCRIPTION_WASTE')
-      expect(schema.requiredHeaders).toContain('GROSS_WEIGHT')
-      expect(schema.requiredHeaders).toContain('TARE_WEIGHT')
-      expect(schema.requiredHeaders).toContain('PALLET_WEIGHT')
-      expect(schema.requiredHeaders).toContain('NET_WEIGHT')
-      expect(schema.requiredHeaders).toContain('BAILING_WIRE_PROTOCOL')
-      expect(schema.requiredHeaders).toContain(
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      )
-      expect(schema.requiredHeaders).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
-      expect(schema.requiredHeaders).toContain(
-        'RECYCLABLE_PROPORTION_PERCENTAGE'
-      )
-      expect(schema.requiredHeaders).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
-      expect(schema.requiredHeaders).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
+    describe('requiredHeaders (VAL008 - column presence validation)', () => {
+      it('contains all waste balance columns (Section 1)', () => {
+        expect(schema.requiredHeaders).toContain('ROW_ID')
+        expect(schema.requiredHeaders).toContain(
+          'DATE_RECEIVED_FOR_REPROCESSING'
+        )
+        expect(schema.requiredHeaders).toContain('EWC_CODE')
+        expect(schema.requiredHeaders).toContain('DESCRIPTION_WASTE')
+        expect(schema.requiredHeaders).toContain('GROSS_WEIGHT')
+        expect(schema.requiredHeaders).toContain('TARE_WEIGHT')
+        expect(schema.requiredHeaders).toContain('PALLET_WEIGHT')
+        expect(schema.requiredHeaders).toContain('NET_WEIGHT')
+        expect(schema.requiredHeaders).toContain('BAILING_WIRE_PROTOCOL')
+        expect(schema.requiredHeaders).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
+        expect(schema.requiredHeaders).toContain(
+          'WEIGHT_OF_NON_TARGET_MATERIALS'
+        )
+        expect(schema.requiredHeaders).toContain(
+          'RECYCLABLE_PROPORTION_PERCENTAGE'
+        )
+        expect(schema.requiredHeaders).toContain(
+          'TONNAGE_RECEIVED_FOR_RECYCLING'
+        )
+        expect(schema.requiredHeaders).toContain(
+          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+        )
+      })
+
+      it('contains all supplementary columns from template (Sections 2 & 3)', () => {
+        expect(schema.requiredHeaders).toContain('SUPPLIER_NAME')
+        expect(schema.requiredHeaders).toContain('SUPPLIER_ADDRESS')
+        expect(schema.requiredHeaders).toContain('SUPPLIER_POSTCODE')
+        expect(schema.requiredHeaders).toContain('SUPPLIER_EMAIL')
+        expect(schema.requiredHeaders).toContain('SUPPLIER_PHONE_NUMBER')
+        expect(schema.requiredHeaders).toContain(
+          'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER'
+        )
+        expect(schema.requiredHeaders).toContain('YOUR_REFERENCE')
+        expect(schema.requiredHeaders).toContain('WEIGHBRIDGE_TICKET')
+        expect(schema.requiredHeaders).toContain('CARRIER_NAME')
+        expect(schema.requiredHeaders).toContain('CBD_REG_NUMBER')
+        expect(schema.requiredHeaders).toContain(
+          'CARRIER_VEHICLE_REGISTRATION_NUMBER'
+        )
+      })
+
+      it('has exactly 25 required headers (14 waste balance + 11 supplementary)', () => {
+        expect(schema.requiredHeaders).toHaveLength(25)
+      })
     })
 
     it('has unfilledValues object with dropdown placeholders', () => {
@@ -42,60 +72,93 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       ).toContain('Choose option')
     })
 
-    it('has fatalFields array with all validated fields', () => {
-      expect(Array.isArray(schema.fatalFields)).toBe(true)
-      expect(schema.fatalFields).toContain('ROW_ID')
-      expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
-      expect(schema.fatalFields).toContain('EWC_CODE')
-      expect(schema.fatalFields).toContain('DESCRIPTION_WASTE')
-      expect(schema.fatalFields).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
-      expect(schema.fatalFields).toContain('GROSS_WEIGHT')
-      expect(schema.fatalFields).toContain('TARE_WEIGHT')
-      expect(schema.fatalFields).toContain('PALLET_WEIGHT')
-      expect(schema.fatalFields).toContain('NET_WEIGHT')
-      expect(schema.fatalFields).toContain('BAILING_WIRE_PROTOCOL')
-      expect(schema.fatalFields).toContain(
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      )
-      expect(schema.fatalFields).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
-      expect(schema.fatalFields).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
-      expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
+    describe('fatalFields (data validation - waste balance fields only)', () => {
+      it('contains waste balance fields that cause fatal errors on validation failure', () => {
+        expect(Array.isArray(schema.fatalFields)).toBe(true)
+        expect(schema.fatalFields).toContain('ROW_ID')
+        expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_REPROCESSING')
+        expect(schema.fatalFields).toContain('EWC_CODE')
+        expect(schema.fatalFields).toContain('DESCRIPTION_WASTE')
+        expect(schema.fatalFields).toContain(
+          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+        )
+        expect(schema.fatalFields).toContain('GROSS_WEIGHT')
+        expect(schema.fatalFields).toContain('TARE_WEIGHT')
+        expect(schema.fatalFields).toContain('PALLET_WEIGHT')
+        expect(schema.fatalFields).toContain('NET_WEIGHT')
+        expect(schema.fatalFields).toContain('BAILING_WIRE_PROTOCOL')
+        expect(schema.fatalFields).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
+        expect(schema.fatalFields).toContain('WEIGHT_OF_NON_TARGET_MATERIALS')
+        expect(schema.fatalFields).toContain('RECYCLABLE_PROPORTION_PERCENTAGE')
+        expect(schema.fatalFields).toContain('TONNAGE_RECEIVED_FOR_RECYCLING')
+      })
+
+      it('has exactly 14 fatal fields (waste balance columns only)', () => {
+        expect(schema.fatalFields).toHaveLength(14)
+      })
+
+      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
+        expect(schema.fatalFields).not.toContain('SUPPLIER_NAME')
+        expect(schema.fatalFields).not.toContain('SUPPLIER_ADDRESS')
+        expect(schema.fatalFields).not.toContain('YOUR_REFERENCE')
+        expect(schema.fatalFields).not.toContain('WEIGHBRIDGE_TICKET')
+        expect(schema.fatalFields).not.toContain('CARRIER_NAME')
+        expect(schema.fatalFields).not.toContain('CBD_REG_NUMBER')
+      })
     })
 
-    it('has fieldsRequiredForWasteBalance array with validated fields', () => {
-      expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
-      expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DATE_RECEIVED_FOR_REPROCESSING'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DESCRIPTION_WASTE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain('GROSS_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('TARE_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('PALLET_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('NET_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'BAILING_WIRE_PROTOCOL'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'WEIGHT_OF_NON_TARGET_MATERIALS'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'RECYCLABLE_PROPORTION_PERCENTAGE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'TONNAGE_RECEIVED_FOR_RECYCLING'
-      )
+    describe('fieldsRequiredForWasteBalance (VAL011)', () => {
+      it('contains fields required for waste balance calculation', () => {
+        expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
+        expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'DATE_RECEIVED_FOR_REPROCESSING'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'DESCRIPTION_WASTE'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain('GROSS_WEIGHT')
+        expect(schema.fieldsRequiredForWasteBalance).toContain('TARE_WEIGHT')
+        expect(schema.fieldsRequiredForWasteBalance).toContain('PALLET_WEIGHT')
+        expect(schema.fieldsRequiredForWasteBalance).toContain('NET_WEIGHT')
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'BAILING_WIRE_PROTOCOL'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'WEIGHT_OF_NON_TARGET_MATERIALS'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'RECYCLABLE_PROPORTION_PERCENTAGE'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).toContain(
+          'TONNAGE_RECEIVED_FOR_RECYCLING'
+        )
+      })
+
+      it('has exactly 14 fields required for waste balance', () => {
+        expect(schema.fieldsRequiredForWasteBalance).toHaveLength(14)
+      })
+
+      it('does NOT contain supplementary columns from Sections 2 & 3', () => {
+        expect(schema.fieldsRequiredForWasteBalance).not.toContain(
+          'SUPPLIER_NAME'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).not.toContain(
+          'YOUR_REFERENCE'
+        )
+        expect(schema.fieldsRequiredForWasteBalance).not.toContain(
+          'CARRIER_NAME'
+        )
+      })
     })
   })
 

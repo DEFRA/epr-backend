@@ -1,17 +1,11 @@
-import Joi from 'joi'
+import { createSentOnLoadsSchema } from '../shared/index.js'
+import { ROW_ID_MINIMUMS } from './fields.js'
 
 /**
- * Table schema for SENT_ON_LOADS (exporter variant)
+ * Table schema for SENT_ON_LOADS (EXPORTER)
  *
- * Tracks waste sent on from exporters.
- * May differ from reprocessor variant - separate file for flexibility.
- * Validation rules not yet defined - placeholder schema.
+ * Tracks waste sent on from exporters to other facilities.
  */
-export const SENT_ON_LOADS = {
-  rowIdField: 'ROW_ID',
-  requiredHeaders: [],
-  unfilledValues: {},
-  fatalFields: ['ROW_ID'],
-  validationSchema: Joi.object({}).unknown(true).prefs({ abortEarly: false }),
-  fieldsRequiredForWasteBalance: []
-}
+export const SENT_ON_LOADS = createSentOnLoadsSchema(
+  ROW_ID_MINIMUMS.SENT_ON_LOADS
+)

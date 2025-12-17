@@ -32,12 +32,18 @@
  */
 
 /**
+ * @typedef {Object.<string, string>} SummaryLogMeta
+ * Metadata extracted from the summary log spreadsheet (e.g. PROCESSING_TYPE, MATERIAL)
+ */
+
+/**
  * @typedef {Object} SummaryLog
  * @property {import('./status.js').SummaryLogStatus} status
  * @property {SummaryLogFile} file
  * @property {Validation} [validation]
  * @property {string} [organisationId]
  * @property {string} [registrationId]
+ * @property {SummaryLogMeta} [meta]
  */
 
 /**
@@ -47,6 +53,7 @@
  * @property {Validation} [validation]
  * @property {string} [organisationId]
  * @property {string} [registrationId]
+ * @property {SummaryLogMeta} [meta]
  */
 
 export {} // NOSONAR: javascript:S7787 - Required to make this file a module for JSDoc @import
