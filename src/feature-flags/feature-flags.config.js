@@ -13,5 +13,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isDevEndpointsEnabled() {
     return config.get('featureFlags.devEndpoints')
+  },
+  isCalculateWasteBalanceOnImportEnabled() {
+    return config.get('featureFlags.calculateWasteBalanceOnImport')
   }
 })

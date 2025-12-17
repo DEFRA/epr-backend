@@ -4,6 +4,7 @@ import {
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
@@ -73,6 +74,29 @@ const prepareRowsForTransformation = (parsedData) => {
   }
 }
 
+const updateWasteBalances = async ({
+  parsedData,
+  accreditationId,
+  featureFlags,
+  wasteBalancesRepository,
+  wasteRecords
+}) => {
+  // We only calculate waste balance for exporters currently
+  const isExporter =
+    parsedData?.meta?.PROCESSING_TYPE?.value === PROCESSING_TYPES.EXPORTER
+
+  if (
+    accreditationId &&
+    isExporter &&
+    featureFlags?.isCalculateWasteBalanceOnImportEnabled()
+  ) {
+    await wasteBalancesRepository.updateWasteBalanceTransactions(
+      wasteRecords.map((r) => r.record),
+      accreditationId
+    )
+  }
+}
+
 /**
  * Orchestrates the extraction, transformation, and persistence of waste records from a summary log
  *
@@ -81,6 +105,7 @@ const prepareRowsForTransformation = (parsedData) => {
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
+ * @param {Object} dependencies.featureFlags - The feature flags
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
@@ -88,7 +113,8 @@ export const syncFromSummaryLog = (dependencies) => {
     extractor,
     wasteRecordRepository,
     wasteBalancesRepository,
-    organisationsRepository
+    organisationsRepository,
+    featureFlags
   } = dependencies
 
   /**
@@ -177,16 +203,12 @@ export const syncFromSummaryLog = (dependencies) => {
     )
 
     // 8. Update waste balances if accreditation ID exists
-    // TODO: Remove this check later. Currently only Exporters have processingType in their data.
-    const isExporter =
-      wasteRecords.length > 0 &&
-      wasteRecords[0].record.data.processingType === 'EXPORTER'
-
-    if (accreditationId && isExporter) {
-      await wasteBalancesRepository.updateWasteBalanceTransactions(
-        wasteRecords.map((r) => r.record),
-        accreditationId
-      )
-    }
+    await updateWasteBalances({
+      parsedData,
+      accreditationId,
+      featureFlags,
+      wasteBalancesRepository,
+      wasteRecords
+    })
   }
 }

@@ -320,6 +320,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_DEV_ENDPOINTS'
+    },
+    calculateWasteBalanceOnImport: {
+      doc: 'Feature Flag: Enable waste balance calculation on summary log import',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_CALCULATE_WASTE_BALANCE_ON_IMPORT'
     }
   },
   formSubmissionOverrides: {

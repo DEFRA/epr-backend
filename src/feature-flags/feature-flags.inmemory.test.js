@@ -55,4 +55,38 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isFormsDataMigrationEnabled()).toBe(false)
   })
+
+  it('returns true when devEndpoints flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ devEndpoints: true })
+    expect(flags.isDevEndpointsEnabled()).toBe(true)
+  })
+
+  it('returns false when devEndpoints flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ devEndpoints: false })
+    expect(flags.isDevEndpointsEnabled()).toBe(false)
+  })
+
+  it('returns false when devEndpoints flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isDevEndpointsEnabled()).toBe(false)
+  })
+
+  it('returns true when calculateWasteBalanceOnImport flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      calculateWasteBalanceOnImport: true
+    })
+    expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(true)
+  })
+
+  it('returns false when calculateWasteBalanceOnImport flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      calculateWasteBalanceOnImport: false
+    })
+    expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
+  })
+
+  it('returns false when calculateWasteBalanceOnImport flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
+  })
 })
