@@ -134,6 +134,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
+ *   contactId?: string;
  *   fullName: string;
  *   email: string;
  *   roles: UserRoles[];

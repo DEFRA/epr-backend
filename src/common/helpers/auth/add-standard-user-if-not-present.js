@@ -1,13 +1,15 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { findUserInOrg } from '#common/helpers/auth/roles/helpers.js'
 
-/** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
+/** @import {DefraIdTokenPayload} from './types.js' */
+/** @import {HapiRequest} from '#common/hapi-types.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
  * Adds a user to an organisation if they are not there
- * @param {Object} request - The Hapi request object
+ * @param {HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
- * @param {Object} organisationById - The organisation object
+ * @param {Organisation} organisationById - The organisation object
  * @returns {Promise<void>}
  */
 export const addStandardUserIfNotPresent = async (
@@ -28,6 +30,7 @@ export const addStandardUserIfNotPresent = async (
         users: [
           ...(organisationById.users || []),
           {
+            contactId,
             email,
             fullName: `${firstName} ${lastName}`,
             roles: [ROLES.standardUser]

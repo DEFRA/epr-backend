@@ -54,6 +54,7 @@ describe('addStandardUserIfNotPresent', () => {
         {
           users: [
             {
+              contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
               roles: [ROLES.standardUser]
@@ -85,6 +86,7 @@ describe('addStandardUserIfNotPresent', () => {
           users: [
             existingUser,
             {
+              contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
               roles: [ROLES.standardUser]
@@ -260,6 +262,7 @@ describe('addStandardUserIfNotPresent', () => {
         {
           users: [
             {
+              contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
               roles: [ROLES.standardUser]
@@ -289,6 +292,7 @@ describe('addStandardUserIfNotPresent', () => {
         {
           users: [
             {
+              contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
               roles: [ROLES.standardUser]

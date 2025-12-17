@@ -203,6 +203,7 @@ export const collateUsers = (existing, updated) => {
   }
 
   const users = [
+    ...updated.users,
     ...existing.users,
     ...root,
     ...collateRegistrationUsers(existing, updated),

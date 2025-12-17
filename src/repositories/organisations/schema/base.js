@@ -44,6 +44,7 @@ export const userSchema = baseUserSchema.keys({
 })
 
 export const collatedUserSchema = baseUserSchema.keys({
+  contactId: Joi.string().trim().empty('').min(1).optional(),
   roles: Joi.array()
     .items(Joi.string().valid(USER_ROLES.INITIAL, USER_ROLES.STANDARD))
     .min(1)

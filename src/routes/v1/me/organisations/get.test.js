@@ -1,6 +1,7 @@
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
@@ -426,5 +427,105 @@ describe('GET /v1/me/organisations', () => {
 
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toHaveLength(1)
+  })
+
+  it('should add the user if they are not already present in the org', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const linkedAt = new Date().toISOString()
+
+    // Linked organisation (linked by another user)
+    const linkedOrg = await buildApprovedOrg(organisationsRepository, {
+      linkedDefraOrganisation: {
+        orgId: COMPANY_1_ID,
+        orgName: COMPANY_1_NAME,
+        linkedBy: {
+          email: 'initial.user@example.com',
+          id: '550e8400-e29b-41d4-a716-446655440001'
+        },
+        linkedAt
+      },
+      users: [
+        {
+          fullName: 'Test User',
+          email: 'initial.user@example.com',
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    // Organisation without the user (should not appear in response)
+    await buildApprovedOrg(organisationsRepository, {
+      users: [
+        {
+          fullName: 'Other User',
+          email: 'other@example.com',
+          roles: ['initial_user', 'standard_user']
+        }
+      ]
+    })
+
+    const tokenOverrides = {
+      contactId: randomUUID(),
+      email: 'invited.user@example.com',
+      firstName: 'Invited',
+      lastName: 'User'
+    }
+
+    const token = generateValidTokenWith(tokenOverrides)
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    const linkedAndUpdated = await waitForVersion(
+      organisationsRepository,
+      linkedOrg.id,
+      3
+    )
+
+    // FIXME typing issue due to hardcoded return type
+    // expect our invited user has been appended as a standard_user
+    expect(linkedAndUpdated.users).toStrictEqual([
+      ...linkedOrg.users,
+      {
+        contactId: tokenOverrides.contactId,
+        email: tokenOverrides.email,
+        fullName: 'Invited User',
+        roles: ['standard_user']
+      }
+    ])
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    // pre-linked organisation
+    expect(result).toEqual({
+      organisations: expect.objectContaining({
+        linked: {
+          id: COMPANY_1_ID,
+          name: COMPANY_1_NAME,
+          linkedBy: {
+            email: 'initial.user@example.com',
+            id: '550e8400-e29b-41d4-a716-446655440001'
+          },
+          linkedAt
+        }
+      })
+    })
   })
 })
