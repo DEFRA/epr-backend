@@ -19,7 +19,7 @@ describe('#getRolesForOrganisationAccess', () => {
 
     mockOrganisationsRepository = {
       findById: vi.fn(),
-      update: vi.fn()
+      replace: vi.fn()
     }
 
     mockRequest = {
