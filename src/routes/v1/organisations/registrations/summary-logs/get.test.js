@@ -211,5 +211,28 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload).not.toHaveProperty('material')
       expect(payload).not.toHaveProperty('accreditationNumber')
     })
+
+    it('omits null meta values from response', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.INVALID
+      })
+      await summaryLogsRepository.update(summaryLogId, 1, {
+        meta: {
+          PROCESSING_TYPE: null,
+          MATERIAL: null,
+          ACCREDITATION_NUMBER: null
+        }
+      })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload).not.toHaveProperty('processingType')
+      expect(payload).not.toHaveProperty('material')
+      expect(payload).not.toHaveProperty('accreditationNumber')
+    })
   })
 })

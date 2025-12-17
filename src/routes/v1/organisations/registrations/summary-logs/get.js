@@ -73,8 +73,13 @@ export const summaryLogsGet = {
     }
 
     if (summaryLog.meta) {
-      response.processingType = summaryLog.meta.PROCESSING_TYPE
-      response.material = summaryLog.meta.MATERIAL
+      if (summaryLog.meta.PROCESSING_TYPE) {
+        response.processingType = summaryLog.meta.PROCESSING_TYPE
+      }
+
+      if (summaryLog.meta.MATERIAL) {
+        response.material = summaryLog.meta.MATERIAL
+      }
 
       if (summaryLog.meta.ACCREDITATION_NUMBER) {
         response.accreditationNumber = summaryLog.meta.ACCREDITATION_NUMBER
