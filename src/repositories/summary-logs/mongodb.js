@@ -104,7 +104,7 @@ const supersedePendingLogs =
       .collection(COLLECTION_NAME)
       .findOne(currentLogFilter)
 
-    if (!currentLog || !currentLog.createdAt) {
+    if (!currentLog?.createdAt) {
       // If the current log doesn't exist or has no createdAt, don't supersede anything
       return 0
     }

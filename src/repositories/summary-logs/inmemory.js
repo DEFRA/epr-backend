@@ -173,7 +173,7 @@ const supersedePendingLogs =
     // Look up the current log to get its createdAt timestamp
     // This ensures we only supersede logs created at or before the current upload
     const currentLog = staleCache.get(excludeId)
-    if (!currentLog || !currentLog.summaryLog.createdAt) {
+    if (!currentLog?.summaryLog?.createdAt) {
       // If the current log doesn't exist or has no createdAt, don't supersede anything
       return 0
     }
