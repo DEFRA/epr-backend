@@ -48,14 +48,18 @@ export const extractResponseMetaFields = (meta) => {
       meta[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
     ).error
   ) {
-    result.processingType = meta[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+    result.processingType = /** @type {string} */ (
+      meta[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+    )
   }
 
   // MATERIAL must be a non-empty string
   if (
     !stringFieldSchema.validate(meta[SUMMARY_LOG_META_FIELDS.MATERIAL]).error
   ) {
-    result.material = meta[SUMMARY_LOG_META_FIELDS.MATERIAL]
+    result.material = /** @type {string} */ (
+      meta[SUMMARY_LOG_META_FIELDS.MATERIAL]
+    )
   }
 
   // ACCREDITATION_NUMBER must be a non-empty string
@@ -64,8 +68,9 @@ export const extractResponseMetaFields = (meta) => {
       meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
     ).error
   ) {
-    result.accreditationNumber =
+    result.accreditationNumber = /** @type {string} */ (
       meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
+    )
   }
 
   return result
