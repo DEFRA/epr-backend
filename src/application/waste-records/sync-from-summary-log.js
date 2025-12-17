@@ -4,6 +4,7 @@ import {
   PROCESSING_TYPE_TABLES
 } from '#domain/summary-logs/table-schemas/index.js'
 import { isEprMarker } from '#domain/summary-logs/markers.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
  * @typedef {import('./transform-from-summary-log.js').TransformableRow} TransformableRow
@@ -81,6 +82,7 @@ const prepareRowsForTransformation = (parsedData) => {
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
  * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
  * @param {Object} dependencies.organisationsRepository - The organisations repository
+ * @param {Object} dependencies.featureFlags - The feature flags
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
@@ -178,8 +180,13 @@ export const syncFromSummaryLog = (dependencies) => {
     )
 
     // 8. Update waste balances if accreditation ID exists
+    // We only calculate waste balance for exporters currently
+    const isExporter =
+      parsedData?.meta?.PROCESSING_TYPE?.value === PROCESSING_TYPES.EXPORTER
+
     if (
       accreditationId &&
+      isExporter &&
       featureFlags?.isCalculateWasteBalanceOnImportEnabled()
     ) {
       await wasteBalancesRepository.updateWasteBalanceTransactions(
