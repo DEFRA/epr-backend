@@ -79,10 +79,17 @@ const prepareRowsForTransformation = (parsedData) => {
  * @param {Object} dependencies - The service dependencies
  * @param {Object} dependencies.extractor - The summary log extractor
  * @param {Object} dependencies.wasteRecordRepository - The waste record repository
+ * @param {Object} dependencies.wasteBalancesRepository - The waste balances repository
+ * @param {Object} dependencies.organisationsRepository - The organisations repository
  * @returns {Function} A function that accepts a summary log and returns a Promise
  */
 export const syncFromSummaryLog = (dependencies) => {
-  const { extractor, wasteRecordRepository } = dependencies
+  const {
+    extractor,
+    wasteRecordRepository,
+    wasteBalancesRepository,
+    organisationsRepository
+  } = dependencies
 
   /**
    * @param {Object} summaryLog - The summary log to process
@@ -110,6 +117,17 @@ export const syncFromSummaryLog = (dependencies) => {
       summaryLog.registrationId
     )
 
+    let accreditationId = summaryLog.accreditationId
+    if (!accreditationId && organisationsRepository) {
+      const registration = await organisationsRepository.findRegistrationById(
+        summaryLog.organisationId,
+        summaryLog.registrationId
+      )
+      if (registration) {
+        accreditationId = registration.accreditationId
+      }
+    }
+
     // 4. Convert to Map keyed by type:rowId for efficient lookup
     const existingRecords = new Map(
       existingRecordsArray.map((record) => [
@@ -126,7 +144,7 @@ export const syncFromSummaryLog = (dependencies) => {
       },
       organisationId: summaryLog.organisationId,
       registrationId: summaryLog.registrationId,
-      accreditationId: summaryLog.accreditationId,
+      accreditationId,
       timestamp
     }
 
@@ -157,5 +175,18 @@ export const syncFromSummaryLog = (dependencies) => {
       summaryLog.registrationId,
       wasteRecordVersions
     )
+
+    // 8. Update waste balances if accreditation ID exists
+    // TODO: Remove this check later. Currently only Exporters have processingType in their data.
+    const isExporter =
+      wasteRecords.length > 0 &&
+      wasteRecords[0].record.data.processingType === 'EXPORTER'
+
+    if (accreditationId && isExporter) {
+      await wasteBalancesRepository.updateWasteBalanceTransactions(
+        wasteRecords.map((r) => r.record),
+        accreditationId
+      )
+    }
   }
 }

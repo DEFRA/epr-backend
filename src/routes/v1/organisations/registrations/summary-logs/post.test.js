@@ -13,6 +13,7 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { buildSummaryLog } from '#repositories/summary-logs/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -139,6 +140,87 @@ describe(`${summaryLogsCreatePath} route`, () => {
 
       const ids = responses.map((r) => JSON.parse(r.payload).summaryLogId)
       expect(ids[0]).not.toBe(ids[1])
+    })
+  })
+
+  describe('submission in progress', () => {
+    let server
+    let summaryLogsRepository
+
+    beforeAll(async () => {
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
+      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+
+      server = await createTestServer({
+        repositories: {
+          summaryLogsRepository: () => summaryLogsRepository,
+          uploadsRepository: createInMemoryUploadsRepository()
+        },
+        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
+      })
+
+      await server.initialize()
+    })
+
+    afterAll(async () => {
+      await server.stop()
+    })
+
+    it('returns 409 when a submission is in progress for same org/reg', async () => {
+      const testOrgId = 'org-conflict-test'
+      const testRegId = 'reg-conflict-test'
+
+      // Create a summary log in submitting status
+      const existingLogId = 'existing-submitting-log'
+      await summaryLogsRepository.insert(
+        existingLogId,
+        buildSummaryLog({
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId: testOrgId,
+          registrationId: testRegId
+        })
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${testOrgId}/registrations/${testRegId}/summary-logs`,
+        ...asStandardUser({ linkedOrgId: testOrgId }),
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toBe('A submission is in progress. Please wait.')
+    })
+
+    it('allows upload when submitting log is for different registration', async () => {
+      const testOrgId = 'org-different-reg-test'
+      const testRegId = 'reg-different-reg-test'
+      const otherRegId = 'different-registration'
+
+      // Create a summary log in submitting status for different registration
+      const existingLogId = 'existing-submitting-log-different-reg'
+      await summaryLogsRepository.insert(
+        existingLogId,
+        buildSummaryLog({
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId: testOrgId,
+          registrationId: otherRegId
+        })
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${testOrgId}/registrations/${testRegId}/summary-logs`,
+        ...asStandardUser({ linkedOrgId: testOrgId }),
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CREATED)
     })
   })
 

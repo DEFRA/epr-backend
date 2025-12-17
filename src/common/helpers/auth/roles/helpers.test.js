@@ -1,3 +1,4 @@
+import { USER_ROLES } from '#domain/organisations/model.js'
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 import { describe, expect, it } from 'vitest'
 import {
@@ -6,6 +7,7 @@ import {
   getCurrentRelationship,
   getDefraTokenSummary,
   getOrgDataFromDefraIdToken,
+  isInitialUser,
   isOrganisationsDiscoveryReq
 } from './helpers.js'
 
@@ -507,5 +509,182 @@ describe('deduplicateOrganisations', () => {
     const result = deduplicateOrganisations(unlinked, [])
 
     expect(result).toEqual(unlinked)
+  })
+})
+
+describe('isInitialUser', () => {
+  it('should return true when user has INITIAL role and email matches', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'user@example.com',
+          roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(true)
+  })
+
+  it('should perform case-insensitive email comparison', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'User@Example.COM',
+          roles: [USER_ROLES.INITIAL]
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(true)
+  })
+
+  it('should return false when user email matches but does not have INITIAL role', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'user@example.com',
+          roles: [USER_ROLES.STANDARD]
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when user has INITIAL role but email does not match', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'other@example.com',
+          roles: [USER_ROLES.INITIAL]
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when users array is undefined', () => {
+    const organisation = /** @type {any} */ ({})
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when users array is null', () => {
+    const organisation = /** @type {any} */ ({
+      users: null
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when users array is empty', () => {
+    const organisation = /** @type {any} */ ({
+      users: []
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when user roles array is undefined', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'user@example.com'
+          // roles is undefined
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when user roles array is null', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'user@example.com',
+          roles: null
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should return false when user roles array is empty', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'user@example.com',
+          roles: []
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(false)
+  })
+
+  it('should handle multiple users and find the correct one', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'other1@example.com',
+          roles: [USER_ROLES.STANDARD]
+        },
+        {
+          email: 'user@example.com',
+          roles: [USER_ROLES.INITIAL]
+        },
+        {
+          email: 'other2@example.com',
+          roles: [USER_ROLES.INITIAL]
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(true)
+  })
+
+  it('should return true when at least one matching user has INITIAL role', () => {
+    const organisation = /** @type {any} */ ({
+      users: [
+        {
+          email: 'user@example.com',
+          roles: [USER_ROLES.STANDARD]
+        },
+        {
+          email: 'user@example.com',
+          roles: [USER_ROLES.INITIAL]
+        }
+      ]
+    })
+
+    const result = isInitialUser('user@example.com')(organisation)
+
+    expect(result).toBe(true)
   })
 })

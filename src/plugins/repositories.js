@@ -2,6 +2,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createFormSubmissionsRepository } from '#repositories/form-submissions/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createCdpUploader } from '#adapters/cdp-uploader/status.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
@@ -175,7 +176,14 @@ export const repositories = {
         organisationsRepository: (db) =>
           createOrganisationsRepository(db, options?.eventualConsistency),
         formSubmissionsRepository: createFormSubmissionsRepository,
-        wasteRecordsRepository: createWasteRecordsRepository
+        wasteRecordsRepository: createWasteRecordsRepository,
+        wasteBalancesRepository: (db) =>
+          createWasteBalancesRepository(db, {
+            organisationsRepository: createOrganisationsRepository(
+              db,
+              options?.eventualConsistency
+            )
+          })
       }
 
       for (const [name, creator] of Object.entries(repositoryFactories)) {
