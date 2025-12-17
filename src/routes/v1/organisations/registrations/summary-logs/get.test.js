@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -14,7 +15,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   const registrationId = new ObjectId().toString()
   const summaryLogId = new ObjectId().toString()
 
-  const createServerWithSummaryLog = async (summaryLogData) => {
+  const createServer = async () => {
     const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
     const summaryLogsRepository = summaryLogsRepositoryFactory({
       info: vi.fn(),
@@ -30,7 +31,11 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
     })
 
-    await summaryLogsRepository.insert(summaryLogId, {
+    return { server, summaryLogsRepository }
+  }
+
+  const insertSummaryLog = async (repository, data) => {
+    await repository.insert(summaryLogId, {
       organisationId,
       registrationId,
       file: {
@@ -39,10 +44,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         status: 'complete',
         uri: 's3://test-bucket/test-file.xlsx'
       },
-      ...summaryLogData
+      ...data
     })
-
-    return server
   }
 
   const makeRequest = (server) =>
@@ -52,15 +55,98 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       ...asStandardUser({ linkedOrgId: organisationId })
     })
 
+  describe('when summary log does not exist', () => {
+    it('returns OK with default preprocessing status', async () => {
+      const { server } = await createServer()
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.PREPROCESSING)
+    })
+  })
+
+  describe('status in response', () => {
+    it('returns the summary log status', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      })
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    })
+  })
+
+  describe('loads in response', () => {
+    const createLoads = () => ({
+      added: {
+        valid: { count: 5, rowIds: ['1', '2', '3', '4', '5'] },
+        invalid: { count: 0, rowIds: [] },
+        included: { count: 5, rowIds: ['1', '2', '3', '4', '5'] },
+        excluded: { count: 0, rowIds: [] }
+      },
+      adjusted: {
+        valid: { count: 2, rowIds: ['6', '7'] },
+        invalid: { count: 1, rowIds: ['8'] },
+        included: { count: 2, rowIds: ['6', '7'] },
+        excluded: { count: 1, rowIds: ['8'] }
+      },
+      unchanged: {
+        valid: { count: 10, rowIds: [] },
+        invalid: { count: 0, rowIds: [] },
+        included: { count: 10, rowIds: [] },
+        excluded: { count: 0, rowIds: [] }
+      }
+    })
+
+    it('includes loads when present', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      const loads = createLoads()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      })
+      await summaryLogsRepository.update(summaryLogId, 1, { loads })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload.loads).toEqual(loads)
+    })
+
+    it('does not include loads when absent', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      })
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const payload = JSON.parse(response.payload)
+      expect(payload).not.toHaveProperty('loads')
+    })
+  })
+
   describe('meta fields in response', () => {
     it('includes processingType and material when meta exists', async () => {
-      const server = await createServerWithSummaryLog({
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      })
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
           MATERIAL: 'Paper_and_board'
         }
       })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -71,14 +157,18 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
 
     it('includes accreditationNumber when present in meta', async () => {
-      const server = await createServerWithSummaryLog({
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      })
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: 'EXPORTER',
           MATERIAL: 'Aluminium',
           ACCREDITATION_NUMBER: '87654321'
         }
       })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -88,13 +178,17 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
 
     it('does not include accreditationNumber when missing from meta', async () => {
-      const server = await createServerWithSummaryLog({
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
+        status: SUMMARY_LOG_STATUS.VALIDATED
+      })
+      await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: 'REPROCESSOR_OUTPUT',
           MATERIAL: 'Glass'
         }
       })
+      await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
       const response = await makeRequest(server)
 
@@ -104,7 +198,8 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
     })
 
     it('does not include meta fields when meta is absent', async () => {
-      const server = await createServerWithSummaryLog({
+      const { server, summaryLogsRepository } = await createServer()
+      await insertSummaryLog(summaryLogsRepository, {
         status: SUMMARY_LOG_STATUS.PREPROCESSING
       })
 
