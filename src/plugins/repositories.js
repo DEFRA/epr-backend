@@ -182,7 +182,7 @@ export const repositories = {
             organisationsRepository: createOrganisationsRepository(
               db,
               options?.eventualConsistency
-            )
+            )()
           })
       }
 

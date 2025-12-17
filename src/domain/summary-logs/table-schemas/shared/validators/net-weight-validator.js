@@ -1,3 +1,4 @@
+/** @import {ValidatedWeightRow} from '../index.js' */
 import { areNumbersEqual } from '../number-validation.js'
 
 /**
@@ -5,6 +6,19 @@ import { areNumbersEqual } from '../number-validation.js'
  */
 const MUST_EQUAL_NET_WEIGHT_CALCULATION =
   'must equal GROSS_WEIGHT − TARE_WEIGHT − PALLET_WEIGHT'
+
+/**
+ * Checks if all weight fields are present in the row.
+ * Acts as a type guard to narrow the row type.
+ * @param {Object} fields - Field name constants
+ * @param {Record<string, unknown>} value - Row to check
+ * @returns {value is ValidatedWeightRow} True if all weight fields are present
+ */
+const hasAllWeightFields = (fields, value) =>
+  fields.GROSS_WEIGHT in value &&
+  fields.TARE_WEIGHT in value &&
+  fields.PALLET_WEIGHT in value &&
+  fields.NET_WEIGHT in value
 
 /**
  * Creates a NET_WEIGHT validator for a given set of field names
@@ -20,24 +34,19 @@ const MUST_EQUAL_NET_WEIGHT_CALCULATION =
  * for field presence using the `in` operator.
  *
  * @param {Object} fields - Field name constants object with GROSS_WEIGHT, TARE_WEIGHT, PALLET_WEIGHT, NET_WEIGHT
- * @returns {function} Joi custom validator function
+ * @returns {import('joi').CustomValidator<Record<string, unknown>>} Joi custom validator function
  */
 export const createNetWeightValidator = (fields) => (value, helpers) => {
-  const hasAllFields =
-    fields.GROSS_WEIGHT in value &&
-    fields.TARE_WEIGHT in value &&
-    fields.PALLET_WEIGHT in value &&
-    fields.NET_WEIGHT in value
-
-  if (!hasAllFields) {
+  if (!hasAllWeightFields(fields, value)) {
     return value
   }
 
-  const gross = value[fields.GROSS_WEIGHT]
-  const tare = value[fields.TARE_WEIGHT]
-  const pallet = value[fields.PALLET_WEIGHT]
-  const net = value[fields.NET_WEIGHT]
-
+  const {
+    GROSS_WEIGHT: gross,
+    TARE_WEIGHT: tare,
+    PALLET_WEIGHT: pallet,
+    NET_WEIGHT: net
+  } = value
   const expected = gross - tare - pallet
 
   if (!areNumbersEqual(net, expected)) {
