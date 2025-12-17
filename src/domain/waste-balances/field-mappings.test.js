@@ -30,7 +30,7 @@ describe('Field Mappings', () => {
       const record = {
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          DATE_OF_DISPATCH: '2023-01-01'
+          DATE_OF_EXPORT: '2023-01-01'
         }
       }
       expect(getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)).toBe(
