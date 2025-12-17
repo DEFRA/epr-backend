@@ -80,7 +80,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       expect(body.statusUrl).toContain(body.uploadId)
     })
 
-    it('does not create summary log on initiate - deferred until upload completes', async () => {
+    it('does not create summary log record', async () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
@@ -93,7 +93,6 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const body = JSON.parse(response.payload)
       const stored = await summaryLogsRepository.findById(body.summaryLogId)
 
-      // Summary Log should NOT be created until upload completes (PAE-753)
       expect(stored).toBeNull()
     })
 

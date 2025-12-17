@@ -54,7 +54,6 @@ export const summaryLogsCreate = {
 
     try {
       // Check for conflicting submission in progress (throws 409 if found)
-      // Summary log creation is deferred until upload-completed callback (PAE-753)
       await summaryLogsRepository.checkForSubmittingLog(
         organisationId,
         registrationId
