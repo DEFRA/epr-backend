@@ -140,7 +140,8 @@ describe('Summary logs upload lifecycle', () => {
           },
           loads: createEmptyLoads(),
           processingType: 'REPROCESSOR_INPUT',
-          material: 'Paper_and_board'
+          material: 'Paper_and_board',
+          accreditationNumber: 'ACC-123'
         })
       })
 
