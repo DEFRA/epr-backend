@@ -66,41 +66,50 @@ describe('REPROCESSED_LOADS', () => {
       })
     })
 
-    describe('PRODUCT_TONNAGE validation', () => {
-      it('accepts zero', () => {
-        const { error } = validationSchema.validate({ PRODUCT_TONNAGE: 0 })
-        expect(error).toBeUndefined()
-      })
+    describe('Weight field validations', () => {
+      const weightFields = [
+        'PRODUCT_TONNAGE',
+        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION'
+      ]
 
-      it('accepts maximum value (1000)', () => {
-        const { error } = validationSchema.validate({ PRODUCT_TONNAGE: 1000 })
-        expect(error).toBeUndefined()
-      })
+      for (const field of weightFields) {
+        describe(`${field} validation`, () => {
+          it('accepts zero', () => {
+            const { error } = validationSchema.validate({ [field]: 0 })
+            expect(error).toBeUndefined()
+          })
 
-      it('accepts value within range', () => {
-        const { error } = validationSchema.validate({ PRODUCT_TONNAGE: 500.5 })
-        expect(error).toBeUndefined()
-      })
+          it('accepts maximum value (1000)', () => {
+            const { error } = validationSchema.validate({ [field]: 1000 })
+            expect(error).toBeUndefined()
+          })
 
-      it('rejects value below minimum (negative)', () => {
-        const { error } = validationSchema.validate({ PRODUCT_TONNAGE: -1 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at least 0')
-      })
+          it('accepts value within range', () => {
+            const { error } = validationSchema.validate({ [field]: 500.5 })
+            expect(error).toBeUndefined()
+          })
 
-      it('rejects value above maximum (1000)', () => {
-        const { error } = validationSchema.validate({ PRODUCT_TONNAGE: 1001 })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be at most 1000')
-      })
+          it('rejects negative value', () => {
+            const { error } = validationSchema.validate({ [field]: -1 })
+            expect(error).toBeDefined()
+            expect(error.details[0].message).toBe('must be at least 0')
+          })
 
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
-          PRODUCT_TONNAGE: 'not-a-number'
+          it('rejects value above maximum (1000)', () => {
+            const { error } = validationSchema.validate({ [field]: 1001 })
+            expect(error).toBeDefined()
+            expect(error.details[0].message).toBe('must be at most 1000')
+          })
+
+          it('rejects non-number', () => {
+            const { error } = validationSchema.validate({
+              [field]: 'not-a-number'
+            })
+            expect(error).toBeDefined()
+            expect(error.details[0].message).toBe('must be a number')
+          })
         })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
-      })
+      }
     })
 
     describe('DATE_LOAD_LEFT_SITE validation', () => {
@@ -191,30 +200,6 @@ describe('REPROCESSED_LOADS', () => {
       it('rejects non-number', () => {
         const { error } = validationSchema.validate({
           UK_PACKAGING_WEIGHT_PERCENTAGE: 'fifty percent'
-        })
-        expect(error).toBeDefined()
-        expect(error.details[0].message).toBe('must be a number')
-      })
-    })
-
-    describe('PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION validation', () => {
-      it('accepts valid number', () => {
-        const { error } = validationSchema.validate({
-          PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 375.38
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('accepts zero', () => {
-        const { error } = validationSchema.validate({
-          PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 0
-        })
-        expect(error).toBeUndefined()
-      })
-
-      it('rejects non-number', () => {
-        const { error } = validationSchema.validate({
-          PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION: 'not-a-number'
         })
         expect(error).toBeDefined()
         expect(error.details[0].message).toBe('must be a number')

@@ -4,8 +4,7 @@ import {
   YES_NO_VALUES,
   createWeightFieldSchema,
   createYesNoFieldSchema,
-  createPercentageFieldSchema,
-  createNumberFieldSchema
+  createPercentageFieldSchema
 } from '../../shared/index.js'
 import { RECEIVED_LOADS_FIELDS } from '../fields.js'
 
@@ -36,7 +35,7 @@ const tonnageReceivedFieldsSchema = Joi.object({
   [RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]:
     createPercentageFieldSchema().required(),
   [RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]:
-    createNumberFieldSchema().required()
+    createWeightFieldSchema().required()
 })
 
 /**

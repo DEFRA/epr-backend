@@ -14,8 +14,7 @@ import {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createAlphanumericFieldSchema,
-  createEnumFieldSchema,
-  createNumberFieldSchema
+  createEnumFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
@@ -125,7 +124,7 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     ),
     [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: createWeightFieldSchema(),
     [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
-    [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: createNumberFieldSchema(),
+    [FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]: createWeightFieldSchema(),
     [FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: createWeightFieldSchema(),
     [FIELDS.DATE_OF_EXPORT]: createDateFieldSchema(),
     [FIELDS.BASEL_EXPORT_CODE]: createEnumFieldSchema(
