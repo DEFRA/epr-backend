@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { customJoi } from '#common/validation/custom-joi.js'
 
 const VALID_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
 
@@ -8,21 +9,6 @@ const MAX_MATERIAL_LENGTH = 50
 const MIN_TEMPLATE_VERSION = 1
 
 const IS_REQUIRED = 'is required'
-
-/**
- * Extended Joi with a custom string type that coerces numbers to strings.
- * ExcelJS may return numeric values for cells that look like numbers,
- * even when they're intended to be string identifiers.
- */
-const customJoi = Joi.extend((joi) => ({
-  type: 'coercedString',
-  base: joi.string(),
-  coerce(value) {
-    if (typeof value === 'number') {
-      return { value: String(value) }
-    }
-  }
-}))
 
 /**
  * Joi schema for meta section fields

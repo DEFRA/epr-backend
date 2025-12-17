@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { MESSAGES } from './joi-messages.js'
+import { customJoi } from '#common/validation/custom-joi.js'
 
 /**
  * Common field schema factories for table validation
@@ -7,21 +8,6 @@ import { MESSAGES } from './joi-messages.js'
  * These factories create reusable Joi field schemas for common field types
  * found across multiple table schemas.
  */
-
-/**
- * Extended Joi with a custom string type that coerces numbers to strings.
- * ExcelJS may return numeric values for cells that look like numbers,
- * even when they're intended to be string identifiers (e.g. postal codes).
- */
-const customJoi = Joi.extend((joi) => ({
-  type: 'coercedString',
-  base: joi.string(),
-  coerce(value) {
-    if (typeof value === 'number') {
-      return { value: String(value) }
-    }
-  }
-}))
 
 /**
  * Default maximum weight in tonnes
