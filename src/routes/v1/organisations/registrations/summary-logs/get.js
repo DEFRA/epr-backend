@@ -6,6 +6,7 @@ import {
   getDefaultStatus,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
+import { extractResponseMetaFields } from '#domain/summary-logs/extract-response-meta-fields.js'
 import { transformValidationResponse } from './transform-validation-response.js'
 import { summaryLogResponseSchema } from './response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
@@ -72,18 +73,9 @@ export const summaryLogsGet = {
       response.loads = summaryLog.loads
     }
 
-    if (summaryLog.meta) {
-      if (summaryLog.meta.PROCESSING_TYPE) {
-        response.processingType = summaryLog.meta.PROCESSING_TYPE
-      }
-
-      if (summaryLog.meta.MATERIAL) {
-        response.material = summaryLog.meta.MATERIAL
-      }
-
-      if (summaryLog.meta.ACCREDITATION_NUMBER) {
-        response.accreditationNumber = summaryLog.meta.ACCREDITATION_NUMBER
-      }
+    const responseMeta = extractResponseMetaFields(summaryLog.meta)
+    if (responseMeta) {
+      Object.assign(response, responseMeta)
     }
 
     return h.response(response).code(StatusCodes.OK)
