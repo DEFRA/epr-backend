@@ -628,7 +628,7 @@ export const testUpdateBehaviour = (it) => {
           expect(updatedReg2.status).toBe(STATUS.CREATED)
           expect(result.users).toEqual([
             {
-              fullName: 'Luke Skywalker',
+              fullName: 'Anakin Skywalker',
               email: 'anakin.skywalker@starwars.com',
               roles: ['initial_user', 'standard_user']
             },
@@ -787,7 +787,7 @@ export const testUpdateBehaviour = (it) => {
           expect(updatedAcc2.status).toBe(STATUS.CREATED)
           expect(result.users).toEqual([
             {
-              fullName: 'Luke Skywalker',
+              fullName: 'Anakin Skywalker',
               email: 'anakin.skywalker@starwars.com',
               roles: ['initial_user', 'standard_user']
             },
