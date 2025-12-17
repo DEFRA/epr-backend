@@ -1,22 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import Joi from 'joi'
 import {
-  createNetWeightValidator,
-  createWeightFieldsExtractor,
+  validateNetWeight,
+  extractWeightFields,
   NET_WEIGHT_MESSAGES
 } from './net-weight-validator.js'
 
-// Define test field names
-const FIELDS = {
-  GROSS_WEIGHT: 'GROSS_WEIGHT',
-  TARE_WEIGHT: 'TARE_WEIGHT',
-  PALLET_WEIGHT: 'PALLET_WEIGHT',
-  NET_WEIGHT: 'NET_WEIGHT'
-}
-
-describe('createWeightFieldsExtractor', () => {
-  const extractWeightFields = createWeightFieldsExtractor(FIELDS)
-
+describe('extractWeightFields', () => {
   describe('when all fields are present and valid', () => {
     it('returns strongly-typed object with only weight fields', () => {
       const row = {
@@ -166,41 +156,9 @@ describe('createWeightFieldsExtractor', () => {
       })
     })
   })
-
-  describe('with different field names', () => {
-    it('returns camelCase output regardless of input field names', () => {
-      const customFields = {
-        GROSS_WEIGHT: 'MY_GROSS',
-        TARE_WEIGHT: 'MY_TARE',
-        PALLET_WEIGHT: 'MY_PALLET',
-        NET_WEIGHT: 'MY_NET'
-      }
-      const extractCustom = createWeightFieldsExtractor(customFields)
-
-      const row = {
-        MY_GROSS: 100,
-        MY_TARE: 20,
-        MY_PALLET: 5,
-        MY_NET: 75
-      }
-
-      const result = extractCustom(row)
-
-      // Output always has consistent camelCase keys
-      expect(result).toEqual({
-        grossWeight: 100,
-        tareWeight: 20,
-        palletWeight: 5,
-        netWeight: 75
-      })
-    })
-  })
 })
 
-describe('createNetWeightValidator', () => {
-  // Create validator using factory (uses FIELDS from outer scope)
-  const validateNetWeight = createNetWeightValidator(FIELDS)
-
+describe('validateNetWeight', () => {
   // Create a minimal Joi schema that uses the validator
   const createTestSchema = () =>
     Joi.object({
