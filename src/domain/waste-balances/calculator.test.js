@@ -76,7 +76,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.INTERIM_SITE]: 'No',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
       }
@@ -98,7 +98,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.INTERIM_SITE]: 'Yes',
         [EXPORTER_FIELD.INTERIM_TONNAGE]: '20.0'
       }
@@ -120,7 +120,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'Yes',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -139,7 +139,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2022-12-31', // Before validFrom
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2022-12-31', // Before validFrom
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -159,7 +159,7 @@ describe('Waste Balance Calculator', () => {
       rowId: 'row-1',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -167,7 +167,7 @@ describe('Waste Balance Calculator', () => {
       rowId: 'row-2',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-07-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-07-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
       }
     })
@@ -196,7 +196,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '0'
       }
     })
@@ -217,7 +217,7 @@ describe('Waste Balance Calculator', () => {
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
-        // DATE_OF_DISPATCH missing
+        // DATE_OF_EXPORT missing
       }
     })
 
@@ -234,7 +234,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '15.0'
         // INTERIM_SITE missing
       }
@@ -254,7 +254,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.INTERIM_SITE]: 'Yes'
         // INTERIM_TONNAGE missing
       }
@@ -273,7 +273,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.INTERIM_SITE]: 'No',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: undefined
       }
@@ -293,7 +293,7 @@ describe('Waste Balance Calculator', () => {
       rowId: 'row-1',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
       }
     })
@@ -342,7 +342,7 @@ describe('Waste Balance Calculator', () => {
       rowId: 'row-1',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
       }
     })
@@ -406,7 +406,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -429,7 +429,7 @@ describe('Waste Balance Calculator', () => {
       rowId: 'row-1',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -476,7 +476,7 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -534,7 +534,7 @@ describe('Waste Balance Calculator', () => {
       rowId: 'row-1',
       data: {
         [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
         [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
       }
     })
@@ -650,7 +650,7 @@ describe('Waste Balance Calculator', () => {
         ],
         data: {
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
         }
       })
@@ -671,7 +671,7 @@ describe('Waste Balance Calculator', () => {
       const record = buildWasteRecord({
         data: {
           [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_DISPATCH]: '2023-06-01',
+          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
           [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
         }
       })
