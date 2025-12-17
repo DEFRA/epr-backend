@@ -80,7 +80,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
       expect(body.statusUrl).toContain(body.uploadId)
     })
 
-    it('creates summary log with preprocessing status', async () => {
+    it('does not create summary log on initiate - deferred until upload completes', async () => {
       const response = await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
@@ -93,11 +93,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
       const body = JSON.parse(response.payload)
       const stored = await summaryLogsRepository.findById(body.summaryLogId)
 
-      expect(stored.summaryLog).toMatchObject({
-        status: SUMMARY_LOG_STATUS.PREPROCESSING,
-        organisationId,
-        registrationId
-      })
+      // Summary Log should NOT be created until upload completes (PAE-753)
+      expect(stored).toBeNull()
     })
 
     it('initiates upload via uploads repository', async () => {
@@ -232,7 +229,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
       summaryLogsRepository = {
         insert: vi.fn().mockResolvedValue(undefined),
         update: vi.fn().mockResolvedValue(undefined),
-        findById: vi.fn().mockResolvedValue(null)
+        findById: vi.fn().mockResolvedValue(null),
+        checkForSubmittingLog: vi.fn().mockResolvedValue(undefined)
       }
 
       server = await createTestServer({
@@ -254,8 +252,8 @@ describe(`${summaryLogsCreatePath} route`, () => {
       await server.stop()
     })
 
-    it('returns 500 when repository insert fails', async () => {
-      summaryLogsRepository.insert.mockRejectedValue(
+    it('returns 500 when checkForSubmittingLog fails with non-Boom error', async () => {
+      summaryLogsRepository.checkForSubmittingLog.mockRejectedValue(
         new Error('Database error')
       )
 
@@ -279,7 +277,7 @@ describe(`${summaryLogsCreatePath} route`, () => {
 
     it('re-throws Boom errors with original status', async () => {
       const Boom = await import('@hapi/boom')
-      summaryLogsRepository.insert.mockRejectedValue(
+      summaryLogsRepository.checkForSubmittingLog.mockRejectedValue(
         Boom.default.forbidden('Access denied')
       )
 
