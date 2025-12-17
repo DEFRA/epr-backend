@@ -138,7 +138,10 @@ describe('Summary logs upload lifecycle', () => {
             failures: [],
             concerns: {}
           },
-          loads: createEmptyLoads()
+          loads: createEmptyLoads(),
+          processingType: 'REPROCESSOR_INPUT',
+          material: 'Paper_and_board',
+          accreditationNumber: 'ACC-123'
         })
       })
 

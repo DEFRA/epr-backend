@@ -55,5 +55,7 @@ export const summaryLogResponseSchema = Joi.object({
     concerns: validationConcernsSchema.required()
   }).optional(),
   loads: loadsSchema.optional(),
-  accreditationNumber: Joi.string().allow(null).optional()
+  processingType: Joi.string().optional(),
+  material: Joi.string().optional(),
+  accreditationNumber: Joi.string().optional()
 })
