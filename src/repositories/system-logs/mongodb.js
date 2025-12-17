@@ -7,13 +7,14 @@ export const SYSTEM_LOGS_COLLECTION_NAME = 'system-logs'
 export const createSystemLogsRepository = (db) => (logger) => ({
   async insert(systemLog) {
     try {
-      await db
-        .collection(SYSTEM_LOGS_COLLECTION_NAME)
-        .insertOne({ ...systemLog }) // spread operator here to avoid mutating systemLog (Mongo DB adds a _id)
+      await db.collection(SYSTEM_LOGS_COLLECTION_NAME).insertOne({
+        schemaVersion: 1,
+        ...systemLog
+      })
     } catch (error) {
       logger.error({
         error,
-        message: 'Failed to internally record auditing event'
+        message: 'Failed to internally record system log'
       })
     }
   },
@@ -27,7 +28,8 @@ export const createSystemLogsRepository = (db) => (logger) => ({
     return docs.map((doc) => ({
       event: doc.event,
       context: doc.context,
-      createdAt: doc.createdAt
+      createdAt: doc.createdAt,
+      createdBy: doc.createdBy
     }))
   }
 })

@@ -35,7 +35,7 @@ export const publicKey = {
 
 const baseValidObject = {
   name: 'John Doe',
-  id: 'test-contact-id', // Contact ID for the user
+  oid: 'test-user-id', // ID for the user
   preferred_username: SERVICE_MAINTAINER_EMAIL,
   aud: VALID_ENTRA_AUDIENCE,
   iss: `https://login.microsoftonline.com/6f504113-6b64-43f2-ade9-242e05780007/v2.0`,
