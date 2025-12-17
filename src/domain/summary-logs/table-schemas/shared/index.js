@@ -14,8 +14,7 @@ export {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createAlphanumericFieldSchema,
-  createEnumFieldSchema,
-  createNumberFieldSchema
+  createEnumFieldSchema
 } from './field-schemas.js'
 
 // Shared field definitions

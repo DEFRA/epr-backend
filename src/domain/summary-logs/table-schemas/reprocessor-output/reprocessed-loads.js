@@ -4,8 +4,7 @@ import {
   createDateFieldSchema,
   createWeightFieldSchema,
   createPercentageFieldSchema,
-  createYesNoFieldSchema,
-  createNumberFieldSchema
+  createYesNoFieldSchema
 } from '../shared/index.js'
 import {
   REPROCESSED_LOADS_FIELDS as FIELDS,
@@ -65,7 +64,7 @@ export const REPROCESSED_LOADS = {
     [FIELDS.DATE_LOAD_LEFT_SITE]: createDateFieldSchema(),
     [FIELDS.PRODUCT_TONNAGE]: createWeightFieldSchema(),
     [FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]: createPercentageFieldSchema(),
-    [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: createNumberFieldSchema(),
+    [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: createWeightFieldSchema(),
     [FIELDS.ADD_PRODUCT_WEIGHT]: createYesNoFieldSchema()
   })
     .custom(validateUkPackagingWeightProportion)

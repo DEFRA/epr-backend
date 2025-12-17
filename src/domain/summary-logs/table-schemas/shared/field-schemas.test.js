@@ -6,8 +6,7 @@ import {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createAlphanumericFieldSchema,
-  createEnumFieldSchema,
-  createNumberFieldSchema
+  createEnumFieldSchema
 } from './field-schemas.js'
 
 describe('field-schemas', () => {
@@ -267,28 +266,6 @@ describe('field-schemas', () => {
 
     it('is optional', () => {
       const schema = createEnumFieldSchema(validValues, invalidMessage)
-      expect(schema.validate(undefined).error).toBeUndefined()
-    })
-  })
-
-  describe('createNumberFieldSchema', () => {
-    it('accepts any number', () => {
-      const schema = createNumberFieldSchema()
-      expect(schema.validate(0).error).toBeUndefined()
-      expect(schema.validate(100).error).toBeUndefined()
-      expect(schema.validate(-50).error).toBeUndefined()
-      expect(schema.validate(3.14).error).toBeUndefined()
-    })
-
-    it('rejects non-number', () => {
-      const schema = createNumberFieldSchema()
-      const { error } = schema.validate('abc')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a number')
-    })
-
-    it('is optional', () => {
-      const schema = createNumberFieldSchema()
       expect(schema.validate(undefined).error).toBeUndefined()
     })
   })
