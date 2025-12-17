@@ -20,7 +20,9 @@ describe('createConfigFeatureFlags', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
     expect(flags.isLogFileUploadsFromFormsEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.logFileUploadsFromForms')
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.logFileUploadsFromForms'
+    )
   })
 
   it('returns true when formsDataMigration flag is enabled', () => {
@@ -41,13 +43,17 @@ describe('createConfigFeatureFlags', () => {
     const config = { get: vi.fn().mockReturnValue(true) }
     const flags = createConfigFeatureFlags(config)
     expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(true)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.calculateWasteBalanceOnImport')
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.calculateWasteBalanceOnImport'
+    )
   })
 
   it('returns false when calculateWasteBalanceOnImport flag is disabled', () => {
     const config = { get: vi.fn().mockReturnValue(false) }
     const flags = createConfigFeatureFlags(config)
     expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
-    expect(config.get).toHaveBeenCalledWith('featureFlags.calculateWasteBalanceOnImport')
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.calculateWasteBalanceOnImport'
+    )
   })
 })
