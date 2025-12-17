@@ -12,5 +12,6 @@ export const customJoi = Joi.extend((joi) => ({
     if (typeof value === 'number') {
       return { value: String(value) }
     }
+    return undefined
   }
 }))
