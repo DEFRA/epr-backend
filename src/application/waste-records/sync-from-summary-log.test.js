@@ -689,11 +689,16 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
+    const featureFlags = {
+      isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(true)
+    }
+
     const sync = syncFromSummaryLog({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
-      organisationsRepository
+      organisationsRepository,
+      featureFlags
     })
 
     await sync(summaryLog)
@@ -768,5 +773,64 @@ describe('syncFromSummaryLog', () => {
     await sync(summaryLog)
 
     expect(organisationsRepository.findRegistrationById).toHaveBeenCalled()
+  })
+
+  it('does not update waste balances when feature flag is disabled', async () => {
+    const fileId = 'test-file-wb-disabled'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1'
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_RECEIVED_FOR_REPROCESSING',
+            FIELD_GROSS_WEIGHT
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    const featureFlags = {
+      isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(false)
+    }
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      featureFlags
+    })
+
+    await sync(summaryLog)
+
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).not.toHaveBeenCalled()
   })
 })

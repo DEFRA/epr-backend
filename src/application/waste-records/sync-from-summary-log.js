@@ -88,7 +88,8 @@ export const syncFromSummaryLog = (dependencies) => {
     extractor,
     wasteRecordRepository,
     wasteBalancesRepository,
-    organisationsRepository
+    organisationsRepository,
+    featureFlags
   } = dependencies
 
   /**
@@ -177,12 +178,10 @@ export const syncFromSummaryLog = (dependencies) => {
     )
 
     // 8. Update waste balances if accreditation ID exists
-    // TODO: Remove this check later. Currently only Exporters have processingType in their data.
-    const isExporter =
-      wasteRecords.length > 0 &&
-      wasteRecords[0].record.data.processingType === 'EXPORTER'
-
-    if (accreditationId && isExporter) {
+    if (
+      accreditationId &&
+      featureFlags?.isCalculateWasteBalanceOnImportEnabled()
+    ) {
       await wasteBalancesRepository.updateWasteBalanceTransactions(
         wasteRecords.map((r) => r.record),
         accreditationId
