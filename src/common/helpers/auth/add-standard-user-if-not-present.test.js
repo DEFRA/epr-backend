@@ -334,7 +334,7 @@ describe('addStandardUserIfNotPresent', () => {
       const updateCall = mockOrganisationsRepository.update.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
-      expect(newUser.fullName).toBe(' Doe')
+      expect(newUser.fullName).toBe('Doe')
     })
 
     test('should handle empty string for lastName', async () => {
@@ -350,7 +350,7 @@ describe('addStandardUserIfNotPresent', () => {
       const updateCall = mockOrganisationsRepository.update.mock.calls[0]
       const newUser = updateCall[2].users[0]
 
-      expect(newUser.fullName).toBe('John ')
+      expect(newUser.fullName).toBe('John')
     })
 
     test('should handle organisation with multiple existing users', async () => {

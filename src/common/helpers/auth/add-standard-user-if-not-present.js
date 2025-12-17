@@ -5,6 +5,9 @@ import { findUserInOrg } from '#common/helpers/auth/roles/helpers.js'
 /** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
+export const getDisplayName = ({ firstName, lastName }) =>
+  [firstName, lastName].filter(Boolean).join(' ')
+
 /**
  * Adds a user to an organisation if they are not there
  * @param {HapiRequest} request - The Hapi request object
@@ -32,7 +35,7 @@ export const addStandardUserIfNotPresent = async (
           {
             contactId,
             email,
-            fullName: `${firstName} ${lastName}`,
+            fullName: getDisplayName({ firstName, lastName }),
             roles: [ROLES.standardUser]
           }
         ]
