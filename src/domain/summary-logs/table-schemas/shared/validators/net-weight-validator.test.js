@@ -31,10 +31,10 @@ describe('createWeightFieldsExtractor', () => {
       const result = extractWeightFields(row)
 
       expect(result).toEqual({
-        GROSS_WEIGHT: 100,
-        TARE_WEIGHT: 20,
-        PALLET_WEIGHT: 5,
-        NET_WEIGHT: 75
+        grossWeight: 100,
+        tareWeight: 20,
+        palletWeight: 5,
+        netWeight: 75
       })
     })
 
@@ -50,9 +50,12 @@ describe('createWeightFieldsExtractor', () => {
 
       const result = extractWeightFields(row)
 
-      expect(result).not.toHaveProperty('EXTRA_FIELD_1')
-      expect(result).not.toHaveProperty('EXTRA_FIELD_2')
-      expect(Object.keys(result)).toHaveLength(4)
+      expect(Object.keys(result)).toEqual([
+        'grossWeight',
+        'tareWeight',
+        'palletWeight',
+        'netWeight'
+      ])
     })
   })
 
@@ -138,10 +141,10 @@ describe('createWeightFieldsExtractor', () => {
       const result = extractWeightFields(row)
 
       expect(result).toEqual({
-        GROSS_WEIGHT: 0,
-        TARE_WEIGHT: 0,
-        PALLET_WEIGHT: 0,
-        NET_WEIGHT: 0
+        grossWeight: 0,
+        tareWeight: 0,
+        palletWeight: 0,
+        netWeight: 0
       })
     })
 
@@ -156,16 +159,16 @@ describe('createWeightFieldsExtractor', () => {
       const result = extractWeightFields(row)
 
       expect(result).toEqual({
-        GROSS_WEIGHT: 100.5,
-        TARE_WEIGHT: 20.25,
-        PALLET_WEIGHT: 5.1,
-        NET_WEIGHT: 75.15
+        grossWeight: 100.5,
+        tareWeight: 20.25,
+        palletWeight: 5.1,
+        netWeight: 75.15
       })
     })
   })
 
   describe('with different field names', () => {
-    it('works with custom field names', () => {
+    it('returns camelCase output regardless of input field names', () => {
       const customFields = {
         GROSS_WEIGHT: 'MY_GROSS',
         TARE_WEIGHT: 'MY_TARE',
@@ -183,11 +186,12 @@ describe('createWeightFieldsExtractor', () => {
 
       const result = extractCustom(row)
 
+      // Output always has consistent camelCase keys
       expect(result).toEqual({
-        MY_GROSS: 100,
-        MY_TARE: 20,
-        MY_PALLET: 5,
-        MY_NET: 75
+        grossWeight: 100,
+        tareWeight: 20,
+        palletWeight: 5,
+        netWeight: 75
       })
     })
   })

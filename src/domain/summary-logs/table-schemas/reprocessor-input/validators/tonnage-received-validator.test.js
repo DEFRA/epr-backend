@@ -22,11 +22,11 @@ describe('extractTonnageReceivedFields', () => {
       const result = extractTonnageReceivedFields(row)
 
       expect(result).toEqual({
-        NET_WEIGHT: 100,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
-        BAILING_WIRE_PROTOCOL: 'Yes',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 71.892
+        netWeight: 100,
+        weightOfNonTargetMaterials: 10,
+        bailingWireProtocol: true,
+        recyclableProportionPercentage: 0.8,
+        tonnageReceivedForRecycling: 71.892
       })
     })
 
@@ -43,9 +43,13 @@ describe('extractTonnageReceivedFields', () => {
 
       const result = extractTonnageReceivedFields(row)
 
-      expect(result).not.toHaveProperty('EXTRA_FIELD_1')
-      expect(result).not.toHaveProperty('EXTRA_FIELD_2')
-      expect(Object.keys(result)).toHaveLength(5)
+      expect(Object.keys(result)).toEqual([
+        'netWeight',
+        'weightOfNonTargetMaterials',
+        'bailingWireProtocol',
+        'recyclableProportionPercentage',
+        'tonnageReceivedForRecycling'
+      ])
     })
   })
 
@@ -173,11 +177,11 @@ describe('extractTonnageReceivedFields', () => {
       const result = extractTonnageReceivedFields(row)
 
       expect(result).toEqual({
-        NET_WEIGHT: 0,
-        WEIGHT_OF_NON_TARGET_MATERIALS: 0,
-        BAILING_WIRE_PROTOCOL: 'No',
-        RECYCLABLE_PROPORTION_PERCENTAGE: 0,
-        TONNAGE_RECEIVED_FOR_RECYCLING: 0
+        netWeight: 0,
+        weightOfNonTargetMaterials: 0,
+        bailingWireProtocol: false,
+        recyclableProportionPercentage: 0,
+        tonnageReceivedForRecycling: 0
       })
     })
 

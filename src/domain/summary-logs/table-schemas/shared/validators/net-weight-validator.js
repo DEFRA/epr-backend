@@ -3,28 +3,22 @@ import { areNumbersEqual } from '../number-validation.js'
 import { createWeightFieldSchema } from '../field-schemas.js'
 
 /**
- * A validated row containing weight fields.
- * Used as a type guard target - after extraction,
- * these fields are guaranteed to have the correct types.
+ * Extracted weight fields.
  * @typedef {Object} WeightFields
- * @property {number} GROSS_WEIGHT
- * @property {number} TARE_WEIGHT
- * @property {number} PALLET_WEIGHT
- * @property {number} NET_WEIGHT
+ * @property {number} grossWeight
+ * @property {number} tareWeight
+ * @property {number} palletWeight
+ * @property {number} netWeight
  */
 
 /**
- * Creates a weight fields extractor for a given set of field names.
+ * Creates a weight fields extractor for a given set of column headers.
  *
- * Returns a function that extracts and validates weight fields from a row.
- * The extractor returns a strongly-typed object containing only the weight
- * fields if all fields are present and valid, or null otherwise.
- *
- * @param {Object} fields - Field name constants object
- * @param {string} fields.GROSS_WEIGHT - Name of the gross weight field
- * @param {string} fields.TARE_WEIGHT - Name of the tare weight field
- * @param {string} fields.PALLET_WEIGHT - Name of the pallet weight field
- * @param {string} fields.NET_WEIGHT - Name of the net weight field
+ * @param {Object} fields - Column header mapping
+ * @param {string} fields.GROSS_WEIGHT - Column header for gross weight
+ * @param {string} fields.TARE_WEIGHT - Column header for tare weight
+ * @param {string} fields.PALLET_WEIGHT - Column header for pallet weight
+ * @param {string} fields.NET_WEIGHT - Column header for net weight
  * @returns {(row: Record<string, unknown>) => WeightFields | null} Extractor function
  */
 export const createWeightFieldsExtractor = (fields) => {
@@ -43,7 +37,12 @@ export const createWeightFieldsExtractor = (fields) => {
     if (error) {
       return null
     }
-    return value
+    return {
+      grossWeight: value[fields.GROSS_WEIGHT],
+      tareWeight: value[fields.TARE_WEIGHT],
+      palletWeight: value[fields.PALLET_WEIGHT],
+      netWeight: value[fields.NET_WEIGHT]
+    }
   }
 }
 
@@ -78,14 +77,10 @@ export const createNetWeightValidator = (fields) => {
       return value
     }
 
-    const gross = weightFields[fields.GROSS_WEIGHT]
-    const tare = weightFields[fields.TARE_WEIGHT]
-    const pallet = weightFields[fields.PALLET_WEIGHT]
-    const net = weightFields[fields.NET_WEIGHT]
+    const { grossWeight, tareWeight, palletWeight, netWeight } = weightFields
+    const expected = grossWeight - tareWeight - palletWeight
 
-    const expected = gross - tare - pallet
-
-    if (!areNumbersEqual(net, expected)) {
+    if (!areNumbersEqual(netWeight, expected)) {
       return helpers.error('custom.netWeightCalculationMismatch', {
         field: fields.NET_WEIGHT
       })
