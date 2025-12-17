@@ -27,8 +27,7 @@ async function auditOrganisationUpdate(
       previous,
       next
     },
-    // TODO is `createdBy` an acceptable name for the SOC/CDP audit payload?
-    createdBy: extractUserDetails(request)
+    user: extractUserDetails(request),
   }
 
   audit(payload)
@@ -47,10 +46,11 @@ function extractUserDetails(request) {
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {object} payload
  */
-async function recordSystemLog(request, payload) {
+async function recordSystemLog(request, { user, ...restPayload }) {
   return request.systemLogsRepository.insert({
     createdAt: new Date(),
-    ...payload
+    createdBy: user,
+    ...restPayload
   })
 }
 

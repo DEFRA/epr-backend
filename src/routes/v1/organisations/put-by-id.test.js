@@ -138,9 +138,9 @@ describe('PUT /v1/organisations/{id}', () => {
       expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
 
       const verifyCreatedBy = (payload) => {
-        expect(payload.createdBy.id).toEqual('test-user-id')
-        expect(payload.createdBy.email).toEqual('me@example.com')
-        expect(payload.createdBy.scope).toEqual(['service_maintainer'])
+        expect(payload.id).toEqual('test-user-id')
+        expect(payload.email).toEqual('me@example.com')
+        expect(payload.scope).toEqual(['service_maintainer'])
       }
 
       const verifyEvent = (payload) => {
@@ -159,7 +159,7 @@ describe('PUT /v1/organisations/{id}', () => {
       const systemLogsResponseBody = JSON.parse(systemLogsResponse.payload)
       expect(systemLogsResponseBody.systemLogs).toHaveLength(1)
       const systemLogPayload = systemLogsResponseBody.systemLogs[0]
-      verifyCreatedBy(systemLogPayload)
+      verifyCreatedBy(systemLogPayload.createdBy)
       expect(
         new Date(systemLogPayload.createdAt).getTime()
       ).toBeGreaterThanOrEqual(start.getTime())
@@ -172,7 +172,7 @@ describe('PUT /v1/organisations/{id}', () => {
       const auditPayload = JSON.parse(
         JSON.stringify(mockCdpAuditing.mock.calls[0][0])
       )
-      verifyCreatedBy(auditPayload)
+      verifyCreatedBy(auditPayload.user)
       verifyEvent(auditPayload)
       verifyContext(auditPayload)
     })
