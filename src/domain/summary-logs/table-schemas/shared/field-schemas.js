@@ -116,7 +116,7 @@ export const createAlphanumericFieldSchema = (
 /**
  * Creates an enum dropdown field schema
  *
- * @param {Array<string>} validValues - Array of valid enum values
+ * @param {readonly string[]} validValues - Array of valid enum values
  * @param {string} invalidMessage - Message for invalid value
  * @returns {Joi.StringSchema} Joi string schema
  */
@@ -128,13 +128,3 @@ export const createEnumFieldSchema = (validValues, invalidMessage) =>
       'string.base': MESSAGES.MUST_BE_A_STRING,
       'any.only': invalidMessage
     })
-
-/**
- * Creates a simple number field schema (no range constraints)
- *
- * @returns {Joi.NumberSchema} Joi number schema
- */
-export const createNumberFieldSchema = () =>
-  Joi.number().optional().messages({
-    'number.base': MESSAGES.MUST_BE_A_NUMBER
-  })

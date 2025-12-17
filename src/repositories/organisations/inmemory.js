@@ -1,17 +1,17 @@
 import Boom from '@hapi/boom'
 import {
-  collateUsers,
-  createInitialStatusHistory,
-  getCurrentStatus,
-  mergeSubcollection,
-  SCHEMA_VERSION,
-  statusHistoryWithChanges
-} from './helpers.js'
-import {
   validateId,
   validateOrganisationInsert,
   validateOrganisationUpdate
 } from './schema/index.js'
+import {
+  collateUsers,
+  createInitialStatusHistory,
+  getCurrentStatus,
+  SCHEMA_VERSION,
+  statusHistoryWithChanges,
+  updateStatusHistoryForItems
+} from './helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
 const MAX_CONSISTENCY_RETRIES = 5
@@ -85,15 +85,16 @@ const performInsert = (storage, staleCache) => async (organisation) => {
   staleCache.push(structuredClone(newOrg))
 }
 
-const performUpdate =
+const performReplace =
   (storage, staleCache, pendingSyncRef) => async (id, version, updates) => {
     const validatedId = validateId(id)
-    const validatedUpdates = validateOrganisationUpdate(updates)
 
     const existingIndex = storage.findIndex((o) => o.id === validatedId)
     if (existingIndex === -1) {
       throw Boom.notFound(`Organisation with id ${validatedId} not found`)
     }
+
+    const validatedUpdates = validateOrganisationUpdate(updates)
 
     const existing = storage[existingIndex]
 
@@ -103,13 +104,15 @@ const performUpdate =
       )
     }
 
-    const { status: _, ...merged } = { ...existing, ...validatedUpdates }
+    const { status: _, ...validatedUpdatesWithoutStatus } = {
+      ...validatedUpdates
+    }
 
-    const registrations = mergeSubcollection(
+    const registrations = updateStatusHistoryForItems(
       existing.registrations,
       validatedUpdates.registrations
     )
-    const accreditations = mergeSubcollection(
+    const accreditations = updateStatusHistoryForItems(
       existing.accreditations,
       validatedUpdates.accreditations
     )
@@ -120,14 +123,15 @@ const performUpdate =
     )
 
     const users = collateUsers(existing, {
-      ...merged,
+      ...validatedUpdatesWithoutStatus,
       statusHistory: updatedStatusHistory,
       registrations,
       accreditations
     })
 
     const updatePayload = {
-      ...merged,
+      id: existing.id,
+      ...validatedUpdatesWithoutStatus,
       statusHistory: updatedStatusHistory,
       registrations,
       accreditations,
@@ -279,11 +283,11 @@ export const createInMemoryOrganisationsRepository = (
   return () => {
     const findById = performFindByIdWithRetry(findByIdFromCache)
     const insertFn = performInsert(storage, staleCache)
-    const updateFn = performUpdate(storage, staleCache, pendingSyncRef)
+    const replaceFn = performReplace(storage, staleCache, pendingSyncRef)
 
     return {
       insert: insertFn,
-      update: updateFn,
+      replace: replaceFn,
       findAll: performFindAll(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,

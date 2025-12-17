@@ -103,6 +103,10 @@ export const createStandardMeta = (processingType) => ({
   TEMPLATE_VERSION: {
     value: 1,
     location: { sheet: 'Cover', row: 4, column: 'B' }
+  },
+  ACCREDITATION_NUMBER: {
+    value: 'ACC-123',
+    location: { sheet: 'Cover', row: 5, column: 'B' }
   }
 })
 
@@ -130,7 +134,10 @@ export const createTestInfrastructure = async (
         material: 'paper',
         wasteProcessingType: 'reprocessor',
         formSubmissionTime: new Date(),
-        submittedToRegulator: 'ea'
+        submittedToRegulator: 'ea',
+        accreditation: {
+          accreditationNumber: 'ACC-123'
+        }
       }
     ]
   })

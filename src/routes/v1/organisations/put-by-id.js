@@ -61,19 +61,14 @@ export const organisationsPutById = {
 
     const { version, updateFragment } = request.payload
 
-    const {
-      version: _v,
-      id: _,
-      schemaVersion: _s,
-      ...sanitisedFragment
-    } = updateFragment
+    const { version: _v, id: _, ...sanitisedFragment } = updateFragment
 
     /** @type {OrganisationUpdateFragment} */
     const updates = sanitisedFragment
 
     try {
       const initial = await organisationsRepository.findById(id)
-      await organisationsRepository.update(id, version, updates)
+      await organisationsRepository.replace(id, version, updates)
       const updated = await organisationsRepository.findById(id, version + 1)
       await auditOrganisationUpdate(request, id, initial, updated)
       return h.response(updated).code(StatusCodes.OK)

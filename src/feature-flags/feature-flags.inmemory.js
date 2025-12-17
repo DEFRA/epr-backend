@@ -13,5 +13,8 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   },
   isDevEndpointsEnabled() {
     return flags.devEndpoints ?? false
+  },
+  isCalculateWasteBalanceOnImportEnabled() {
+    return flags.calculateWasteBalanceOnImport ?? false
   }
 })

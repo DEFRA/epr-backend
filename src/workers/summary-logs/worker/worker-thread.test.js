@@ -7,6 +7,7 @@ import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
+import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { logger } from '#common/helpers/logging/logger.js'
@@ -30,6 +31,7 @@ vi.mock('#common/helpers/secure-context.js')
 vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('#repositories/organisations/mongodb.js')
 vi.mock('#repositories/waste-records/mongodb.js')
+vi.mock('#repositories/waste-balances/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
 describe('summaryLogsWorkerThread', () => {
@@ -40,6 +42,7 @@ describe('summaryLogsWorkerThread', () => {
   let mockUploadsRepository
   let mockOrganisationsRepository
   let mockWasteRecordsRepository
+  let mockWasteBalancesRepository
   let mockSummaryLogExtractor
   let mockSummaryLogsValidator
   let mockSyncFromSummaryLog
@@ -76,6 +79,11 @@ describe('summaryLogsWorkerThread', () => {
       appendVersions: vi.fn()
     }
 
+    mockWasteBalancesRepository = {
+      findByAccreditationId: vi.fn(),
+      updateWasteBalanceTransactions: vi.fn()
+    }
+
     mockSummaryLogExtractor = {
       extract: vi.fn()
     }
@@ -97,6 +105,9 @@ describe('summaryLogsWorkerThread', () => {
     )
     vi.mocked(createWasteRecordsRepository).mockReturnValue(
       () => mockWasteRecordsRepository
+    )
+    vi.mocked(createWasteBalancesRepository).mockReturnValue(
+      () => mockWasteBalancesRepository
     )
     vi.mocked(createSummaryLogExtractor).mockReturnValue(
       mockSummaryLogExtractor
@@ -405,7 +416,12 @@ describe('summaryLogsWorkerThread', () => {
 
       expect(syncFromSummaryLog).toHaveBeenCalledWith({
         extractor: mockSummaryLogExtractor,
-        wasteRecordRepository: mockWasteRecordsRepository
+        wasteRecordRepository: mockWasteRecordsRepository,
+        wasteBalancesRepository: mockWasteBalancesRepository,
+        organisationsRepository: mockOrganisationsRepository,
+        featureFlags: expect.objectContaining({
+          isCalculateWasteBalanceOnImportEnabled: expect.any(Function)
+        })
       })
     })
   })

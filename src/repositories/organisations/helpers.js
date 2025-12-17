@@ -38,37 +38,32 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
   return validateStatusHistory(statusHistory)
 }
 
-export const mergeItemsWithUpdates = (existingItems, itemUpdates) => {
-  const updatesById = new Map(itemUpdates.map((item) => [item.id, item]))
+export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
+  const existingItemsById = new Map(
+    (existingItems ?? []).map((item) => [item.id, item])
+  )
 
-  const processedExisting = existingItems.map((existingItem) => {
-    const update = updatesById.get(existingItem.id)
-    if (update) {
-      updatesById.delete(existingItem.id)
+  const processedUpdates = (itemUpdates ?? []).map((updatedItem) => {
+    const existingItem = existingItemsById.get(updatedItem.id)
+    if (existingItem) {
+      existingItemsById.delete(updatedItem.id)
       return {
-        ...existingItem,
-        ...update,
-        statusHistory: statusHistoryWithChanges(update, existingItem)
+        ...updatedItem,
+        statusHistory: statusHistoryWithChanges(updatedItem, existingItem)
+      }
+    } else {
+      return {
+        ...updatedItem,
+        statusHistory: createInitialStatusHistory()
       }
     }
-    return existingItem
   })
 
-  const newItems = Array.from(updatesById.values()).map((newItem) => ({
-    ...newItem,
-    statusHistory: createInitialStatusHistory()
-  }))
-
-  return [...processedExisting, ...newItems].map((item) => {
+  return [...processedUpdates].map((item) => {
     const { status: _, ...remainingFields } = item
     return remainingFields
   })
 }
-
-export const mergeSubcollection = (existingItems, updateItems) =>
-  updateItems
-    ? mergeItemsWithUpdates(existingItems, updateItems)
-    : existingItems
 
 /** @typedef {Pick<CollatedUser, 'fullName'|'email'|'roles'>} SlimUser */
 
@@ -101,7 +96,7 @@ const collateItems = (
   /** @type {SlimUser[]} */
   const users = []
 
-  for (const item of updated[collectionKey] || []) {
+  for (const item of updated[collectionKey]) {
     const itemStatus = getCurrentStatus(item)
     const existingItem = existing[collectionKey]?.find((i) => i.id === item.id)
     const existingItemStatus = existingItem

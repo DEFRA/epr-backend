@@ -27,7 +27,8 @@ describe('repositories plugin', () => {
           organisationsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           systemLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
-          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() }))
         }
       })
 
@@ -64,7 +65,8 @@ describe('repositories plugin', () => {
           summaryLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           systemLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
-          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() }))
         }
       })
 

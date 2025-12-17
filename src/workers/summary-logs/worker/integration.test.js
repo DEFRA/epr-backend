@@ -135,31 +135,29 @@ describe('SummaryLogsValidator integration', () => {
   }
 
   it('should update status as expected when validation succeeds', async () => {
+    const metadata = {
+      REGISTRATION_NUMBER: {
+        value: 'REG-123',
+        location: { sheet: 'Cover', row: 1, column: 'B' }
+      },
+      PROCESSING_TYPE: {
+        value: 'REPROCESSOR_INPUT',
+        location: { sheet: 'Cover', row: 2, column: 'B' }
+      },
+      MATERIAL: {
+        value: 'Paper_and_board',
+        location: { sheet: 'Cover', row: 3, column: 'B' }
+      },
+      TEMPLATE_VERSION: {
+        value: 1,
+        location: { sheet: 'Cover', row: 4, column: 'B' }
+      }
+    }
+
     const { updated, summaryLog } = await runValidation({
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
-      metadata: {
-        REGISTRATION_NUMBER: {
-          value: 'REG-123',
-          location: { sheet: 'Cover', row: 1, column: 'B' }
-        },
-        PROCESSING_TYPE: {
-          value: 'REPROCESSOR_INPUT',
-          location: { sheet: 'Cover', row: 2, column: 'B' }
-        },
-        MATERIAL: {
-          value: 'Paper_and_board',
-          location: { sheet: 'Cover', row: 3, column: 'B' },
-          TEMPLATE_VERSION: {
-            value: 1,
-            location: { sheet: 'Cover', row: 4, column: 'B' }
-          }
-        },
-        TEMPLATE_VERSION: {
-          value: 1,
-          location: { sheet: 'Cover', row: 4, column: 'B' }
-        }
-      }
+      metadata
     })
 
     expect(updated).toEqual({
@@ -170,7 +168,13 @@ describe('SummaryLogsValidator integration', () => {
         validation: {
           issues: []
         },
-        loads: createEmptyLoads()
+        loads: createEmptyLoads(),
+        meta: {
+          REGISTRATION_NUMBER: 'REG-123',
+          PROCESSING_TYPE: 'REPROCESSOR_INPUT',
+          MATERIAL: 'Paper_and_board',
+          TEMPLATE_VERSION: 1
+        }
       }
     })
   })
@@ -222,27 +226,29 @@ describe('SummaryLogsValidator integration', () => {
       'when $spreadsheetType type matches $registrationType registration',
       ({ registrationType, registrationWRN, spreadsheetType }) => {
         it('should validate successfully', async () => {
+          const metadata = {
+            REGISTRATION_NUMBER: {
+              value: registrationWRN,
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: spreadsheetType,
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
+          }
+
           const { updated, summaryLog } = await runValidation({
             registrationType,
             registrationWRN,
-            metadata: {
-              REGISTRATION_NUMBER: {
-                value: registrationWRN,
-                location: { sheet: 'Cover', row: 1, column: 'B' }
-              },
-              PROCESSING_TYPE: {
-                value: spreadsheetType,
-                location: { sheet: 'Cover', row: 2, column: 'B' }
-              },
-              MATERIAL: {
-                value: 'Paper_and_board',
-                location: { sheet: 'Cover', row: 3, column: 'B' }
-              },
-              TEMPLATE_VERSION: {
-                value: 1,
-                location: { sheet: 'Cover', row: 4, column: 'B' }
-              }
-            }
+            metadata
           })
 
           expect(updated).toEqual({
@@ -253,7 +259,13 @@ describe('SummaryLogsValidator integration', () => {
               validation: {
                 issues: []
               },
-              loads: createEmptyLoads()
+              loads: createEmptyLoads(),
+              meta: {
+                REGISTRATION_NUMBER: registrationWRN,
+                PROCESSING_TYPE: spreadsheetType,
+                MATERIAL: 'Paper_and_board',
+                TEMPLATE_VERSION: 1
+              }
             }
           })
         })
@@ -277,27 +289,29 @@ describe('SummaryLogsValidator integration', () => {
       'when $spreadsheetType type does not match $registrationType registration',
       ({ registrationType, registrationWRN, spreadsheetType }) => {
         it('should fail validation with mismatch error', async () => {
+          const metadata = {
+            REGISTRATION_NUMBER: {
+              value: registrationWRN,
+              location: { sheet: 'Cover', row: 1, column: 'B' }
+            },
+            PROCESSING_TYPE: {
+              value: spreadsheetType,
+              location: { sheet: 'Cover', row: 2, column: 'B' }
+            },
+            MATERIAL: {
+              value: 'Paper_and_board',
+              location: { sheet: 'Cover', row: 3, column: 'B' }
+            },
+            TEMPLATE_VERSION: {
+              value: 1,
+              location: { sheet: 'Cover', row: 4, column: 'B' }
+            }
+          }
+
           const { updated, summaryLog } = await runValidation({
             registrationType,
             registrationWRN,
-            metadata: {
-              REGISTRATION_NUMBER: {
-                value: registrationWRN,
-                location: { sheet: 'Cover', row: 1, column: 'B' }
-              },
-              PROCESSING_TYPE: {
-                value: spreadsheetType,
-                location: { sheet: 'Cover', row: 2, column: 'B' }
-              },
-              MATERIAL: {
-                value: 'Paper_and_board',
-                location: { sheet: 'Cover', row: 3, column: 'B' }
-              },
-              TEMPLATE_VERSION: {
-                value: 1,
-                location: { sheet: 'Cover', row: 4, column: 'B' }
-              }
-            }
+            metadata
           })
 
           expect(updated).toEqual({
@@ -325,6 +339,12 @@ describe('SummaryLogsValidator integration', () => {
                     }
                   }
                 ]
+              },
+              meta: {
+                REGISTRATION_NUMBER: registrationWRN,
+                PROCESSING_TYPE: spreadsheetType,
+                MATERIAL: 'Paper_and_board',
+                TEMPLATE_VERSION: 1
               }
             }
           })
@@ -335,23 +355,25 @@ describe('SummaryLogsValidator integration', () => {
 
   describe('invalid type scenarios', () => {
     it('should fail validation when type is missing', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 1,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
       const { updated, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        metadata: {
-          REGISTRATION_NUMBER: {
-            value: 'REG-123',
-            location: { sheet: 'Cover', row: 1, column: 'B' }
-          },
-          MATERIAL: {
-            value: 'Paper_and_board',
-            location: { sheet: 'Cover', row: 3, column: 'B' }
-          },
-          TEMPLATE_VERSION: {
-            value: 1,
-            location: { sheet: 'Cover', row: 4, column: 'B' }
-          }
-        }
+        metadata
       })
 
       expect(updated).toEqual({
@@ -372,33 +394,40 @@ describe('SummaryLogsValidator integration', () => {
                 }
               }
             ]
+          },
+          meta: {
+            REGISTRATION_NUMBER: 'REG-123',
+            MATERIAL: 'Paper_and_board',
+            TEMPLATE_VERSION: 1
           }
         }
       })
     })
 
     it('should fail validation when type is unrecognized', async () => {
+      const metadata = {
+        REGISTRATION_NUMBER: {
+          value: 'REG-123',
+          location: { sheet: 'Cover', row: 1, column: 'B' }
+        },
+        PROCESSING_TYPE: {
+          value: 'INVALID_TYPE',
+          location: { sheet: 'Cover', row: 2, column: 'B' }
+        },
+        MATERIAL: {
+          value: 'Paper_and_board',
+          location: { sheet: 'Cover', row: 3, column: 'B' }
+        },
+        TEMPLATE_VERSION: {
+          value: 1,
+          location: { sheet: 'Cover', row: 4, column: 'B' }
+        }
+      }
+
       const { updated, summaryLog } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
-        metadata: {
-          REGISTRATION_NUMBER: {
-            value: 'REG-123',
-            location: { sheet: 'Cover', row: 1, column: 'B' }
-          },
-          PROCESSING_TYPE: {
-            value: 'INVALID_TYPE',
-            location: { sheet: 'Cover', row: 2, column: 'B' }
-          },
-          MATERIAL: {
-            value: 'Paper_and_board',
-            location: { sheet: 'Cover', row: 3, column: 'B' }
-          },
-          TEMPLATE_VERSION: {
-            value: 1,
-            location: { sheet: 'Cover', row: 4, column: 'B' }
-          }
-        }
+        metadata
       })
 
       // Unrecognized type now fails at Level 1 (meta-syntax) with PROCESSING_TYPE_INVALID
@@ -426,6 +455,12 @@ describe('SummaryLogsValidator integration', () => {
                 }
               }
             ]
+          },
+          meta: {
+            REGISTRATION_NUMBER: 'REG-123',
+            PROCESSING_TYPE: 'INVALID_TYPE',
+            MATERIAL: 'Paper_and_board',
+            TEMPLATE_VERSION: 1
           }
         }
       })

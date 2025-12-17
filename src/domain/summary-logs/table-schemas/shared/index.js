@@ -1,3 +1,14 @@
+/**
+ * A validated row containing weight fields.
+ * Used as a type guard target - after checking field presence,
+ * these fields are guaranteed to be numbers.
+ * @typedef {Object} ValidatedWeightRow
+ * @property {number} GROSS_WEIGHT
+ * @property {number} TARE_WEIGHT
+ * @property {number} PALLET_WEIGHT
+ * @property {number} NET_WEIGHT
+ */
+
 export {
   MESSAGES,
   YES_NO_VALUES,
@@ -14,9 +25,17 @@ export {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createAlphanumericFieldSchema,
-  createEnumFieldSchema,
-  createNumberFieldSchema
+  createEnumFieldSchema
 } from './field-schemas.js'
+
+// Shared field definitions
+export {
+  SENT_ON_LOADS_FIELDS,
+  RECEIVED_LOADS_FOR_REPROCESSING_FIELDS
+} from './fields.js'
+
+// Schema factories
+export { createSentOnLoadsSchema } from './sent-on-loads-schema.js'
 
 // Enums
 export { EWC_CODES } from './enums/ewc-codes.js'

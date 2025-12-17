@@ -113,7 +113,8 @@ export const performUpdateWasteBalanceTransactions = async ({
     ...wasteBalance,
     amount: newAmount,
     availableAmount: newAvailableAmount,
-    transactions: [...(wasteBalance.transactions || []), ...newTransactions]
+    transactions: [...(wasteBalance.transactions || []), ...newTransactions],
+    version: (wasteBalance.version || 0) + 1
   }
 
   await saveBalance(updatedBalance, newTransactions)
