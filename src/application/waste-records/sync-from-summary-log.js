@@ -74,6 +74,29 @@ const prepareRowsForTransformation = (parsedData) => {
   }
 }
 
+const updateWasteBalances = async ({
+  parsedData,
+  accreditationId,
+  featureFlags,
+  wasteBalancesRepository,
+  wasteRecords
+}) => {
+  // We only calculate waste balance for exporters currently
+  const isExporter =
+    parsedData?.meta?.PROCESSING_TYPE?.value === PROCESSING_TYPES.EXPORTER
+
+  if (
+    accreditationId &&
+    isExporter &&
+    featureFlags?.isCalculateWasteBalanceOnImportEnabled()
+  ) {
+    await wasteBalancesRepository.updateWasteBalanceTransactions(
+      wasteRecords.map((r) => r.record),
+      accreditationId
+    )
+  }
+}
+
 /**
  * Orchestrates the extraction, transformation, and persistence of waste records from a summary log
  *
@@ -180,19 +203,12 @@ export const syncFromSummaryLog = (dependencies) => {
     )
 
     // 8. Update waste balances if accreditation ID exists
-    // We only calculate waste balance for exporters currently
-    const isExporter =
-      parsedData?.meta?.PROCESSING_TYPE?.value === PROCESSING_TYPES.EXPORTER
-
-    if (
-      accreditationId &&
-      isExporter &&
-      featureFlags?.isCalculateWasteBalanceOnImportEnabled()
-    ) {
-      await wasteBalancesRepository.updateWasteBalanceTransactions(
-        wasteRecords.map((r) => r.record),
-        accreditationId
-      )
-    }
+    await updateWasteBalances({
+      parsedData,
+      accreditationId,
+      featureFlags,
+      wasteBalancesRepository,
+      wasteRecords
+    })
   }
 }
