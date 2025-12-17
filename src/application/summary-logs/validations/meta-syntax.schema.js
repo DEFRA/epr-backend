@@ -10,11 +10,27 @@ const MIN_TEMPLATE_VERSION = 1
 const IS_REQUIRED = 'is required'
 
 /**
+ * Extended Joi with a custom string type that coerces numbers to strings.
+ * ExcelJS may return numeric values for cells that look like numbers,
+ * even when they're intended to be string identifiers.
+ */
+const customJoi = Joi.extend((joi) => ({
+  type: 'coercedString',
+  base: joi.string(),
+  coerce(value) {
+    if (typeof value === 'number') {
+      return { value: String(value) }
+    }
+  }
+}))
+
+/**
  * Joi schema for meta section fields
  * This validates the syntax and format of meta fields to prevent malicious input
  */
 export const metaSchema = Joi.object({
-  PROCESSING_TYPE: Joi.string()
+  PROCESSING_TYPE: customJoi
+    .coercedString()
     .valid(...VALID_PROCESSING_TYPES)
     .required()
     .messages({
@@ -28,15 +44,16 @@ export const metaSchema = Joi.object({
       'number.min': `must be at least ${MIN_TEMPLATE_VERSION}`,
       'any.required': IS_REQUIRED
     }),
-  MATERIAL: Joi.string()
+  MATERIAL: customJoi
+    .coercedString()
     .max(MAX_MATERIAL_LENGTH)
     .required()
     .messages({
       'string.max': `must be at most ${MAX_MATERIAL_LENGTH} characters`,
       'any.required': IS_REQUIRED
     }),
-  REGISTRATION_NUMBER: Joi.string().required().messages({
+  REGISTRATION_NUMBER: customJoi.coercedString().required().messages({
     'any.required': IS_REQUIRED
   }),
-  ACCREDITATION_NUMBER: Joi.string().optional().allow(null, '')
+  ACCREDITATION_NUMBER: customJoi.coercedString().optional().allow(null, '')
 }).unknown(true) // Allow other fields that might be present

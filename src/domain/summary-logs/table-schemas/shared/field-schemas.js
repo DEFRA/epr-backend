@@ -9,6 +9,21 @@ import { MESSAGES } from './joi-messages.js'
  */
 
 /**
+ * Extended Joi with a custom string type that coerces numbers to strings.
+ * ExcelJS may return numeric values for cells that look like numbers,
+ * even when they're intended to be string identifiers (e.g. postal codes).
+ */
+const customJoi = Joi.extend((joi) => ({
+  type: 'coercedString',
+  base: joi.string(),
+  coerce(value) {
+    if (typeof value === 'number') {
+      return { value: String(value) }
+    }
+  }
+}))
+
+/**
  * Default maximum weight in tonnes
  */
 const DEFAULT_MAX_WEIGHT = 1000
@@ -95,7 +110,9 @@ export const createPercentageFieldSchema = () =>
   })
 
 /**
- * Creates an alphanumeric string field schema
+ * Creates an alphanumeric string field schema that coerces numbers to strings.
+ * ExcelJS may return numeric values for cells that look like numbers
+ * (e.g. postal codes like "12345").
  *
  * @param {number} [maxLength=100] - Maximum string length
  * @returns {Joi.StringSchema} Joi string schema
@@ -103,7 +120,8 @@ export const createPercentageFieldSchema = () =>
 export const createAlphanumericFieldSchema = (
   maxLength = DEFAULT_MAX_STRING_LENGTH
 ) =>
-  Joi.string()
+  customJoi
+    .coercedString()
     .pattern(/^[a-zA-Z0-9]+$/)
     .max(maxLength)
     .optional()
@@ -114,14 +132,17 @@ export const createAlphanumericFieldSchema = (
     })
 
 /**
- * Creates an enum dropdown field schema
+ * Creates an enum dropdown field schema that coerces numbers to strings.
+ * ExcelJS may return numeric values if enum values look like numbers
+ * (e.g. "1", "2", "3").
  *
  * @param {Array<string>} validValues - Array of valid enum values
  * @param {string} invalidMessage - Message for invalid value
  * @returns {Joi.StringSchema} Joi string schema
  */
 export const createEnumFieldSchema = (validValues, invalidMessage) =>
-  Joi.string()
+  customJoi
+    .coercedString()
     .valid(...validValues)
     .optional()
     .messages({
