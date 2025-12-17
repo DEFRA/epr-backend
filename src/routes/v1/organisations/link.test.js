@@ -1,6 +1,9 @@
 import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -122,7 +125,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
 
           await organisationsRepository.insert(org)
 
-          await organisationsRepository.update(org.id, 1, {
+          const orgWithSubmitterDetails = prepareOrgUpdate(org, {
             submitterContactDetails: {
               fullName: user.fullName,
               email: user.email,
@@ -130,12 +133,21 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               jobTitle: 'Director'
             }
           })
+          await organisationsRepository.replace(
+            org.id,
+            1,
+            orgWithSubmitterDetails
+          )
 
-          await organisationsRepository.update(org.id, 2, {
-            status
-          })
+          const orgWithUpdatedStatus = prepareOrgUpdate(
+            orgWithSubmitterDetails,
+            {
+              status
+            }
+          )
+          await organisationsRepository.replace(org.id, 2, orgWithUpdatedStatus)
 
-          await organisationsRepository.findById(org.id, 2)
+          await organisationsRepository.findById(org.id, 3)
 
           const response = await server.inject({
             method: 'POST',

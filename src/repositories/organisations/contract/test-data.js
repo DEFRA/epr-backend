@@ -72,3 +72,46 @@ export const buildOrganisation = (overrides = {}) => {
 
   return org
 }
+
+const mergeArrayById = (existing, updates) => {
+  const updatesById = new Map(updates.map((item) => [item.id, item]))
+  const merged = existing.map((item) => updatesById.get(item.id) || item)
+  const newItems = updates.filter(
+    (item) => !existing.some((e) => e.id === item.id)
+  )
+  return [...merged, ...newItems]
+}
+
+/**
+ * Builds a replacement object for organisationsRepository.replace()
+ * Removes the id field and merges updates
+ * Smartly merges registrations/accreditations by ID: updates existing, adds new
+ *
+ * @param {Object} org - Current organisation object
+ * @param {Object} updates - Fields to update
+ * @returns {Object} Organisation object without id, ready for replace()
+ */
+export const prepareOrgUpdate = (org, updates = {}) => {
+  const { id: _, ...orgWithoutId } = org
+
+  const result = {
+    ...orgWithoutId,
+    ...updates
+  }
+
+  if (updates.registrations) {
+    result.registrations = mergeArrayById(
+      org.registrations,
+      updates.registrations
+    )
+  }
+
+  if (updates.accreditations) {
+    result.accreditations = mergeArrayById(
+      org.accreditations,
+      updates.accreditations
+    )
+  }
+
+  return result
+}
