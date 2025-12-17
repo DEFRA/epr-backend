@@ -32,11 +32,22 @@ export const testOrgRegOperations = (it) => {
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert the log to be superseded first
         await repository.insert(
           idToSupersede,
           buildSummaryLog({
             status: 'preprocessing',
             file: undefined,
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
             organisationId,
             registrationId
           })
@@ -58,8 +69,19 @@ export const testOrgRegOperations = (it) => {
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert the log to be superseded first
         await repository.insert(
           idToSupersede,
+          buildSummaryLog({
+            status: 'validating',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
           buildSummaryLog({
             status: 'validating',
             organisationId,
@@ -83,10 +105,21 @@ export const testOrgRegOperations = (it) => {
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert the log to be superseded first
         await repository.insert(
           idToSupersede,
           buildSummaryLog({
             status: 'validated',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
             organisationId,
             registrationId
           })
@@ -108,14 +141,28 @@ export const testOrgRegOperations = (it) => {
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert as validated first (can't insert as submitting - it blocks new inserts)
         await repository.insert(
           id,
           buildSummaryLog({
-            status: 'submitting',
+            status: 'validated',
             organisationId,
             registrationId
           })
         )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Now transition to submitting (simulates user clicking submit)
+        await repository.update(id, 1, { status: 'submitting' })
 
         const result = await repository.supersedePendingLogs(
           organisationId,
@@ -124,7 +171,7 @@ export const testOrgRegOperations = (it) => {
         )
 
         expect(result).toBe(0)
-        const notSuperseded = await repository.findById(id)
+        const notSuperseded = await waitForVersion(repository, id, 2)
         expect(notSuperseded.summaryLog.status).toBe('submitting')
       })
 
@@ -133,10 +180,21 @@ export const testOrgRegOperations = (it) => {
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert the log with submitted status first
         await repository.insert(
           id,
           buildSummaryLog({
             status: 'submitted',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
             organisationId,
             registrationId
           })
@@ -185,12 +243,23 @@ export const testOrgRegOperations = (it) => {
         const { organisationId: otherOrgId, registrationId: otherRegId } =
           generateOrgReg()
 
+        // Insert a log for a DIFFERENT org/reg
         await repository.insert(
           id,
           buildSummaryLog({
             status: 'validated',
             organisationId: otherOrgId,
             registrationId: otherRegId
+          })
+        )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
+            organisationId,
+            registrationId
           })
         )
 
@@ -212,6 +281,7 @@ export const testOrgRegOperations = (it) => {
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert logs to be superseded (all created before idToKeep)
         await repository.insert(
           id1,
           buildSummaryLog({
@@ -238,6 +308,16 @@ export const testOrgRegOperations = (it) => {
           })
         )
 
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
+            organisationId,
+            registrationId
+          })
+        )
+
         const result = await repository.supersedePendingLogs(
           organisationId,
           registrationId,
@@ -247,15 +327,91 @@ export const testOrgRegOperations = (it) => {
         expect(result).toBe(3)
       })
 
+      it('only supersedes logs created before the current log', async () => {
+        const { organisationId, registrationId } = generateOrgReg()
+
+        // Insert log A (created first)
+        const idA = `summary-A-${randomUUID()}`
+        await repository.insert(
+          idA,
+          buildSummaryLog({
+            status: 'validated',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Small delay to ensure different timestamps
+        await new Promise((resolve) => setTimeout(resolve, 10))
+
+        // Insert log B (created second - this is the "current" log)
+        const idB = `summary-B-${randomUUID()}`
+        await repository.insert(
+          idB,
+          buildSummaryLog({
+            status: 'validating',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Small delay to ensure different timestamps
+        await new Promise((resolve) => setTimeout(resolve, 10))
+
+        // Insert log C (created third - after the "current" log)
+        const idC = `summary-C-${randomUUID()}`
+        await repository.insert(
+          idC,
+          buildSummaryLog({
+            status: 'validated',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Supersede pending logs for log B (the middle one)
+        // Should only supersede A (created before B), NOT C (created after B)
+        const result = await repository.supersedePendingLogs(
+          organisationId,
+          registrationId,
+          idB
+        )
+
+        // Only A should be superseded (created before B)
+        expect(result).toBe(1)
+
+        const logA = await waitForVersion(repository, idA, 2)
+        expect(logA.summaryLog.status).toBe('superseded')
+
+        // B should not be superseded (it's the current log, excluded by ID)
+        const logB = await repository.findById(idB)
+        expect(logB.summaryLog.status).toBe('validating')
+
+        // C should NOT be superseded (created AFTER B)
+        const logC = await repository.findById(idC)
+        expect(logC.summaryLog.status).toBe('validated')
+      })
+
       it('increments version when superseding', async () => {
         const id = `summary-${randomUUID()}`
         const idToKeep = `summary-${randomUUID()}`
         const { organisationId, registrationId } = generateOrgReg()
 
+        // Insert the log to be superseded first
         await repository.insert(
           id,
           buildSummaryLog({
             status: 'validated',
+            organisationId,
+            registrationId
+          })
+        )
+
+        // Insert the "current" log that triggers the supersede
+        await repository.insert(
+          idToKeep,
+          buildSummaryLog({
+            status: 'validating',
             organisationId,
             registrationId
           })
@@ -280,11 +436,21 @@ export const testOrgRegOperations = (it) => {
           const idToKeep = `summary-${randomUUID()}`
           const { organisationId, registrationId } = generateOrgReg()
 
-          // Insert a pending log
+          // Insert the log to be superseded first
           await repository.insert(
             id,
             buildSummaryLog({
               status: 'validated',
+              organisationId,
+              registrationId
+            })
+          )
+
+          // Insert the "current" log that triggers the supersede
+          await repository.insert(
+            idToKeep,
+            buildSummaryLog({
+              status: 'validating',
               organisationId,
               registrationId
             })
@@ -316,7 +482,7 @@ export const testOrgRegOperations = (it) => {
           const idToKeepB = `summary-${randomUUID()}`
           const { organisationId, registrationId } = generateOrgReg()
 
-          // Insert two pending logs
+          // Insert two pending logs to be superseded (created first)
           await repository.insert(
             id1,
             buildSummaryLog({
@@ -334,7 +500,28 @@ export const testOrgRegOperations = (it) => {
             })
           )
 
+          // Insert two "current" logs that trigger the supersede
+          // Use 'submitted' status so they're not considered pending themselves
+          await repository.insert(
+            idToKeepA,
+            buildSummaryLog({
+              status: 'submitted',
+              organisationId,
+              registrationId
+            })
+          )
+          await repository.insert(
+            idToKeepB,
+            buildSummaryLog({
+              status: 'submitted',
+              organisationId,
+              registrationId
+            })
+          )
+
           // Run two supersede operations concurrently
+          // Both operations will try to supersede id1 and id2
+          // With optimistic concurrency, each doc gets superseded exactly once
           const results = await Promise.all([
             repository.supersedePendingLogs(
               organisationId,
@@ -363,6 +550,7 @@ export const testOrgRegOperations = (it) => {
           const idToKeep = `summary-${randomUUID()}`
           const { organisationId, registrationId } = generateOrgReg()
 
+          // Insert the log to be superseded first
           await repository.insert(
             id,
             buildSummaryLog({
@@ -372,14 +560,24 @@ export const testOrgRegOperations = (it) => {
             })
           )
 
-          // Modify to a non-pending status
+          // Insert the "current" log that triggers the supersede
+          await repository.insert(
+            idToKeep,
+            buildSummaryLog({
+              status: 'validating',
+              organisationId,
+              registrationId
+            })
+          )
+
+          // Modify target to a non-pending status before supersede runs
           const doc = await repository.findById(id)
           await repository.update(id, doc.version, {
             ...doc.summaryLog,
             status: 'submitting'
           })
 
-          // Supersede should find nothing to supersede
+          // Supersede should find nothing to supersede (status no longer pending)
           const result = await repository.supersedePendingLogs(
             organisationId,
             registrationId,

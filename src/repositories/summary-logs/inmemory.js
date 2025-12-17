@@ -52,7 +52,10 @@ const insert = (storage, staleCache) => async (id, summaryLog) => {
 
   const newDoc = {
     version: 1,
-    summaryLog: structuredClone(validatedSummaryLog)
+    summaryLog: structuredClone({
+      ...validatedSummaryLog,
+      createdAt: new Date()
+    })
   }
   storage.set(validatedId, newDoc)
   // Insert is immediately visible (no lag simulation for inserts)
@@ -112,23 +115,33 @@ const isPendingLogForOrgReg = (
   doc,
   organisationId,
   registrationId,
-  excludeId
+  excludeId,
+  createdAtOrBefore
 ) =>
   id !== excludeId &&
   doc.summaryLog.organisationId === organisationId &&
   doc.summaryLog.registrationId === registrationId &&
-  PENDING_STATUSES.has(doc.summaryLog.status)
+  PENDING_STATUSES.has(doc.summaryLog.status) &&
+  doc.summaryLog.createdAt <= createdAtOrBefore
 
 const findPendingLogs = (
   staleCache,
   organisationId,
   registrationId,
-  excludeId
+  excludeId,
+  createdAtOrBefore
 ) => {
   const docs = []
   for (const [id, doc] of staleCache) {
     if (
-      isPendingLogForOrgReg(id, doc, organisationId, registrationId, excludeId)
+      isPendingLogForOrgReg(
+        id,
+        doc,
+        organisationId,
+        registrationId,
+        excludeId,
+        createdAtOrBefore
+      )
     ) {
       docs.push({ id, version: doc.version })
     }
@@ -157,12 +170,23 @@ const applySupersede = (storage, docsToSupersede) => {
 const supersedePendingLogs =
   (storage, staleCache) =>
   async (organisationId, registrationId, excludeId) => {
+    // Look up the current log to get its createdAt timestamp
+    // This ensures we only supersede logs created at or before the current upload
+    const currentLog = staleCache.get(excludeId)
+    if (!currentLog || !currentLog.summaryLog.createdAt) {
+      // If the current log doesn't exist or has no createdAt, don't supersede anything
+      return 0
+    }
+
+    const createdAtOrBefore = currentLog.summaryLog.createdAt
+
     // Find from staleCache (replica) to provide weaker consistency guarantees
     const docsToSupersede = findPendingLogs(
       staleCache,
       organisationId,
       registrationId,
-      excludeId
+      excludeId,
+      createdAtOrBefore
     )
 
     if (docsToSupersede.length === 0) {

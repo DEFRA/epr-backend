@@ -46,6 +46,28 @@ export const testInsertBehaviour = (it) => {
         expect(found.summaryLog.registrationId).toBe('reg-789')
       })
 
+      it('sets createdAt timestamp on insert', async () => {
+        const id = `contract-createdAt-${randomUUID()}`
+        const summaryLog = buildSummaryLog({
+          organisationId: 'org-timestamp',
+          registrationId: 'reg-timestamp'
+        })
+
+        const beforeInsert = new Date()
+        await repository.insert(id, summaryLog)
+        const afterInsert = new Date()
+
+        const found = await repository.findById(id)
+
+        expect(found.summaryLog.createdAt).toBeInstanceOf(Date)
+        expect(found.summaryLog.createdAt.getTime()).toBeGreaterThanOrEqual(
+          beforeInsert.getTime()
+        )
+        expect(found.summaryLog.createdAt.getTime()).toBeLessThanOrEqual(
+          afterInsert.getTime()
+        )
+      })
+
       it('throws conflict error when inserting duplicate ID', async () => {
         const id = `contract-duplicate-${randomUUID()}`
         const summaryLog = buildSummaryLog()

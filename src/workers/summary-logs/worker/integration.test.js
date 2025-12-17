@@ -124,13 +124,16 @@ describe('SummaryLogsValidator integration', () => {
 
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
 
+    // Read back the inserted document to get createdAt for assertions
+    const inserted = await summaryLogsRepository.findById(summaryLogId)
+
     await validateSummaryLog(summaryLogId).catch((err) => err)
 
     const updated = await waitForVersion(summaryLogsRepository, summaryLogId, 2)
 
     return {
       updated,
-      summaryLog
+      summaryLog: inserted.summaryLog
     }
   }
 

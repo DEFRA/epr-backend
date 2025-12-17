@@ -33,9 +33,12 @@ const insert = (db) => async (id, summaryLog) => {
   }
 
   try {
-    await db
-      .collection(COLLECTION_NAME)
-      .insertOne({ _id: validatedId, version: 1, ...validatedSummaryLog })
+    await db.collection(COLLECTION_NAME).insertOne({
+      _id: validatedId,
+      version: 1,
+      ...validatedSummaryLog,
+      createdAt: new Date()
+    })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
       throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
@@ -93,12 +96,26 @@ const findById = (db) => async (id) => {
 
 const supersedePendingLogs =
   (db) => async (organisationId, registrationId, excludeId) => {
+    // Look up the current log to get its createdAt timestamp
+    // This ensures we only supersede logs created at or before the current upload
+    /** @type {any} */
+    const currentLogFilter = { _id: excludeId }
+    const currentLog = await db
+      .collection(COLLECTION_NAME)
+      .findOne(currentLogFilter)
+
+    if (!currentLog || !currentLog.createdAt) {
+      // If the current log doesn't exist or has no createdAt, don't supersede anything
+      return 0
+    }
+
     /** @type {any} */
     const filter = {
       _id: { $ne: excludeId },
       organisationId,
       registrationId,
-      status: { $in: ['preprocessing', 'validating', 'validated'] }
+      status: { $in: ['preprocessing', 'validating', 'validated'] },
+      createdAt: { $lte: currentLog.createdAt }
     }
 
     // Find all matching documents with their versions
