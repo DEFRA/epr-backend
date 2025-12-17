@@ -1,17 +1,66 @@
-import { areNumbersEqual, YES_NO_VALUES } from '../../shared/index.js'
+import Joi from 'joi'
+import {
+  areNumbersEqual,
+  YES_NO_VALUES,
+  createWeightFieldSchema,
+  createYesNoFieldSchema,
+  createPercentageFieldSchema,
+  createNumberFieldSchema
+} from '../../shared/index.js'
 import { RECEIVED_LOADS_FIELDS } from '../fields.js'
 
 /**
  * A validated row containing tonnage export fields.
- * Used as a type guard target - after checking field presence,
+ * Used as a type guard target - after extraction,
  * these fields are guaranteed to have the correct types.
- * @typedef {Object} ValidatedTonnageExportRow
+ * @typedef {Object} TonnageExportFields
  * @property {number} NET_WEIGHT
  * @property {number} WEIGHT_OF_NON_TARGET_MATERIALS
  * @property {string} BAILING_WIRE_PROTOCOL
  * @property {number} RECYCLABLE_PROPORTION_PERCENTAGE
  * @property {number} TONNAGE_RECEIVED_FOR_EXPORT
  */
+
+/**
+ * Joi schema for extracting and validating tonnage export fields.
+ *
+ * Uses the same field schema factories as the main table schema,
+ * but makes fields required for extraction.
+ * Does not allow unknown fields - stripUnknown at validation time
+ * returns only these fields.
+ */
+const tonnageExportFieldsSchema = Joi.object({
+  [RECEIVED_LOADS_FIELDS.NET_WEIGHT]: createWeightFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]:
+    createWeightFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL]:
+    createYesNoFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]:
+    createPercentageFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_EXPORT]:
+    createNumberFieldSchema().required()
+})
+
+/**
+ * Extracts and validates tonnage export fields from a row.
+ *
+ * Returns a strongly-typed object containing only the tonnage fields
+ * if all fields are present and valid. Returns null if any field is
+ * missing or fails validation.
+ *
+ * @param {Record<string, unknown>} row - Row data to extract from
+ * @returns {TonnageExportFields | null} Extracted fields or null
+ */
+export const extractTonnageExportFields = (row) => {
+  const { error, value } = tonnageExportFieldsSchema.validate(row, {
+    stripUnknown: true,
+    abortEarly: true
+  })
+  if (error) {
+    return null
+  }
+  return value
+}
 
 /**
  * Bailing wire deduction factor
@@ -30,19 +79,6 @@ const MUST_EQUAL_TONNAGE_CALCULATION =
   'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
 
 /**
- * Checks if all tonnage export fields are present in the row.
- * Acts as a type guard to narrow the row type.
- * @param {Record<string, unknown>} value - Row to check
- * @returns {value is ValidatedTonnageExportRow} True if all fields are present
- */
-const hasAllTonnageExportFields = (value) =>
-  RECEIVED_LOADS_FIELDS.NET_WEIGHT in value &&
-  RECEIVED_LOADS_FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS in value &&
-  RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL in value &&
-  RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE in value &&
-  RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_EXPORT in value
-
-/**
  * Validates that TONNAGE_RECEIVED_FOR_EXPORT matches the expected formula
  *
  * Formula:
@@ -54,16 +90,17 @@ const hasAllTonnageExportFields = (value) =>
  * The 0.9985 factor represents a 0.15% bailing wire deduction.
  *
  * This is a Joi custom validator for use at the object level.
- * It only validates when all required fields are present (filled).
+ * It only validates when all required fields are present and valid.
  *
- * Note: By the time this validator runs, unfilled values (null, undefined, '')
- * have already been filtered out by the validation pipeline. So we check
- * for field presence using the `in` operator.
+ * Uses the extractor to get strongly-typed fields, ensuring both
+ * presence and type correctness before performing calculations.
  *
  * @type {import('joi').CustomValidator<Record<string, unknown>>}
  */
 export const validateTonnageExport = (value, helpers) => {
-  if (!hasAllTonnageExportFields(value)) {
+  const tonnageFields = extractTonnageExportFields(value)
+  if (!tonnageFields) {
+    // Fields not present or invalid - skip validation
     return value
   }
 
@@ -73,7 +110,7 @@ export const validateTonnageExport = (value, helpers) => {
     BAILING_WIRE_PROTOCOL: bailingWireProtocol,
     RECYCLABLE_PROPORTION_PERCENTAGE: recyclableProportion,
     TONNAGE_RECEIVED_FOR_EXPORT: actualTonnage
-  } = value
+  } = tonnageFields
 
   // Calculate base weight (adjusted weight before recyclable proportion)
   const baseWeight = netWeight - nonTargetMaterials
