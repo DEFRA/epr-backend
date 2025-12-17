@@ -12,7 +12,6 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('#adapters/cdp-uploader/status.js').CdpUploader} CdpUploader */
 
 export const summaryLogsGetPath =
@@ -33,18 +32,12 @@ export const summaryLogsGet = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository, organisationsRepository: OrganisationsRepository, cdpUploader: CdpUploader}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository, cdpUploader: CdpUploader}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const {
-      summaryLogsRepository,
-      organisationsRepository,
-      cdpUploader,
-      params,
-      query
-    } = request
-    const { summaryLogId, organisationId, registrationId } = params
+    const { summaryLogsRepository, cdpUploader, params, query } = request
+    const { summaryLogId } = params
     const { uploadId } = query
 
     const result = await summaryLogsRepository.findById(summaryLogId)
@@ -79,15 +72,18 @@ export const summaryLogsGet = {
       response.loads = summaryLog.loads
     }
 
-    // Add accreditation number if status is SUBMITTED
-    if (summaryLog.status === SUMMARY_LOG_STATUS.SUBMITTED) {
-      const registration = await organisationsRepository.findRegistrationById(
-        organisationId,
-        registrationId
-      )
+    if (summaryLog.meta) {
+      if (summaryLog.meta.PROCESSING_TYPE) {
+        response.processingType = summaryLog.meta.PROCESSING_TYPE
+      }
 
-      response.accreditationNumber =
-        registration?.accreditation?.accreditationNumber ?? null
+      if (summaryLog.meta.MATERIAL) {
+        response.material = summaryLog.meta.MATERIAL
+      }
+
+      if (summaryLog.meta.ACCREDITATION_NUMBER) {
+        response.accreditationNumber = summaryLog.meta.ACCREDITATION_NUMBER
+      }
     }
 
     return h.response(response).code(StatusCodes.OK)

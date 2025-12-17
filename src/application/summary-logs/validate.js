@@ -112,9 +112,15 @@ const fetchRegistration = async ({
 }
 
 /**
+ * @typedef {Object.<string, *>} ExtractedMeta
+ * Metadata values extracted from parsed summary log (key: field name, value: field value)
+ */
+
+/**
  * @typedef {Object} ValidationResult
  * @property {ReturnType<typeof createValidationIssues>} issues - Validation issues object with methods like getAllIssues(), isFatal()
  * @property {ValidatedWasteRecord[]|null} wasteRecords - Waste records with validation issues (null if transformation not reached)
+ * @property {ExtractedMeta} [meta] - Extracted metadata values (only present after successful extraction)
  */
 
 /**
@@ -159,6 +165,19 @@ const fetchRegistration = async ({
  * @param {Function} params.validateDataSyntax - Data syntax validator function
  * @returns {Promise<ValidationResult>} Validation result with issues and transformed records
  */
+/**
+ * Extracts just the values from parsed metadata entries
+ * @param {Object<string, {value: *}>} parsedMeta - Parsed metadata with value/location objects
+ * @returns {ExtractedMeta} Object with field names mapped to their values
+ */
+const extractMetaValues = (parsedMeta) => {
+  return Object.fromEntries(
+    Object.entries(parsedMeta)
+      .filter(([, entry]) => entry !== undefined)
+      .map(([key, entry]) => [key, entry.value])
+  )
+}
+
 const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
@@ -170,6 +189,7 @@ const performValidationChecks = async ({
 }) => {
   const issues = createValidationIssues()
   let wasteRecords = null
+  let meta
 
   try {
     const parsed = await extractSummaryLog({
@@ -178,10 +198,12 @@ const performValidationChecks = async ({
       loggingContext
     })
 
+    meta = extractMetaValues(parsed.meta)
+
     issues.merge(validateMetaSyntax({ parsed }))
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords }
+      return { issues, wasteRecords, meta }
     }
 
     const registration = await fetchRegistration({
@@ -194,7 +216,7 @@ const performValidationChecks = async ({
     issues.merge(validateMetaBusiness({ parsed, registration, loggingContext }))
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords }
+      return { issues, wasteRecords, meta }
     }
 
     // Data syntax validation returns validated data with issues attached to rows
@@ -203,7 +225,7 @@ const performValidationChecks = async ({
     issues.merge(dataSyntaxIssues)
 
     if (issues.isFatal()) {
-      return { issues, wasteRecords }
+      return { issues, wasteRecords, meta }
     }
 
     const dataResult = await transformAndValidateData({
@@ -240,7 +262,7 @@ const performValidationChecks = async ({
     }
   }
 
-  return { issues, wasteRecords }
+  return { issues, wasteRecords, meta }
 }
 
 /**
@@ -283,7 +305,7 @@ export const createSummaryLogsValidator = ({
       }
     })
 
-    const { issues, wasteRecords } = await performValidationChecks({
+    const { issues, wasteRecords, meta } = await performValidationChecks({
       summaryLogId,
       summaryLog,
       loggingContext,
@@ -313,7 +335,8 @@ export const createSummaryLogsValidator = ({
       validation: {
         issues: issues.getAllIssues()
       },
-      ...(loads && { loads })
+      ...(loads && { loads }),
+      ...(meta && { meta })
     })
 
     logger.info({
