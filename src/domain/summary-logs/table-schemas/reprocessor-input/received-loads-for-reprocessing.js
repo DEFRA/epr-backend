@@ -10,8 +10,7 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema,
   createPercentageFieldSchema,
-  createEnumFieldSchema,
-  createNumberFieldSchema
+  createEnumFieldSchema
 } from '../shared/index.js'
 import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
@@ -127,7 +126,7 @@ export const RECEIVED_LOADS_FOR_REPROCESSING = {
     ),
     [FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]: createWeightFieldSchema(),
     [FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]: createPercentageFieldSchema(),
-    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createNumberFieldSchema()
+    [FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]: createWeightFieldSchema()
   })
     .custom(validateNetWeight)
     .custom(validateTonnageReceived)
