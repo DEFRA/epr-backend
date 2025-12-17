@@ -1,4 +1,7 @@
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  prepareOrgUpdate
+} from '#repositories/organisations/contract/test-data.js'
 import { STATUS } from '#domain/organisations/model.js'
 
 export async function buildApprovedOrg(organisationsRepository, overrides) {
@@ -36,12 +39,15 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
     })
   ]
 
-  await organisationsRepository.update(org.id, INITIAL_VERSION, {
-    status: STATUS.APPROVED,
-    accreditations: approvedAccreditations,
-    registrations: approvedRegistrations
-  })
-
+  await organisationsRepository.replace(
+    org.id,
+    INITIAL_VERSION,
+    prepareOrgUpdate(org, {
+      status: STATUS.APPROVED,
+      accreditations: approvedAccreditations,
+      registrations: approvedRegistrations
+    })
+  )
   // TODO: For some reason, without this request tests fail
   const updatedOrg = await organisationsRepository.findById(
     org.id,

@@ -3,7 +3,8 @@ import { ObjectId } from 'mongodb'
 import {
   buildAccreditation,
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  prepareOrgUpdate
 } from './test-data.js'
 import {
   MATERIAL,
@@ -39,9 +40,13 @@ export const testRegAccApprovalValidation = (it) => {
         }
 
         await expect(
-          repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
-          })
+          repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate]
+            })
+          )
         ).rejects.toThrow(
           `Accreditations with id ${inserted.accreditations[0].id} are approved but not linked to an approved registration`
         )
@@ -69,10 +74,14 @@ export const testRegAccApprovalValidation = (it) => {
           accreditationId: inserted.accreditations[0].id
         }
 
-        await repository.update(organisation.id, 1, {
-          accreditations: [accreditationToUpdate],
-          registrations: [registrationToUpdate]
-        })
+        await repository.replace(
+          organisation.id,
+          1,
+          prepareOrgUpdate(inserted, {
+            accreditations: [accreditationToUpdate],
+            registrations: [registrationToUpdate]
+          })
+        )
 
         const updated = await repository.findById(organisation.id, 2)
         const updatedAcc = updated.accreditations.find(
@@ -170,7 +179,11 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          await repository.update(organisation.id, 1, validUpdates)
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, validUpdates)
+          )
 
           const saved = await repository.findById(organisation.id, 2)
           expect(saved.accreditations).toHaveLength(2)
@@ -254,7 +267,11 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          await repository.update(organisation.id, 1, validUpdates)
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, validUpdates)
+          )
 
           const saved = await repository.findById(organisation.id, 2)
           expect(saved.accreditations).toHaveLength(2)
@@ -315,7 +332,11 @@ export const testRegAccApprovalValidation = (it) => {
             `Multiple approved accreditations found with duplicate keys [${duplicateKey}]: ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id}`
 
           await expect(
-            repository.update(organisation.id, 1, invalidUpdates)
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, invalidUpdates)
+            )
           ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
         })
 
@@ -378,7 +399,11 @@ export const testRegAccApprovalValidation = (it) => {
             `Accreditations with id ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id} are approved but not linked to an approved registration; ` +
             `Multiple approved accreditations found with duplicate keys [${duplicateKey}]: ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id}`
           await expect(
-            repository.update(organisation.id, 1, invalidUpdates)
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, invalidUpdates)
+            )
           ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
         })
       })
@@ -444,7 +469,11 @@ export const testRegAccApprovalValidation = (it) => {
           const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
 
           await expect(
-            repository.update(organisation.id, 1, invalidUpdates)
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, invalidUpdates)
+            )
           ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
         })
 
@@ -502,7 +531,11 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          await repository.update(organisation.id, 1, validUpdates)
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, validUpdates)
+          )
 
           const saved = await repository.findById(organisation.id, 2)
           expect(saved.registrations).toHaveLength(2)
@@ -542,7 +575,11 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          await repository.update(organisation.id, 1, validUpdates)
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, validUpdates)
+          )
 
           const saved = await repository.findById(organisation.id, 2)
           expect(saved.registrations).toHaveLength(2)
@@ -588,7 +625,11 @@ export const testRegAccApprovalValidation = (it) => {
           const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
 
           await expect(
-            repository.update(organisation.id, 1, invalidUpdates)
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, invalidUpdates)
+            )
           ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
         })
       })
@@ -610,9 +651,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              registrations: [registrationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.registrationNumber: any.required'
           )
@@ -631,9 +676,13 @@ export const testRegAccApprovalValidation = (it) => {
             validTo: new Date('2025-12-31')
           }
 
-          await repository.update(organisation.id, 1, {
-            registrations: [registrationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              registrations: [registrationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedReg = result.registrations.find(
@@ -658,9 +707,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              registrations: [registrationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.registrationNumber: any.required'
           )
@@ -682,9 +735,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              accreditations: [accreditationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.accreditationNumber: any.required'
           )
@@ -703,19 +760,23 @@ export const testRegAccApprovalValidation = (it) => {
             validTo: new Date('2025-12-31')
           }
 
-          await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate],
-            registrations: [
-              {
-                ...inserted.registrations[0],
-                status: STATUS.APPROVED,
-                validFrom: new Date('2025-01-01'),
-                registrationNumber: 'REG12345',
-                validTo: new Date('2025-12-31'),
-                accreditationId: inserted.accreditations[0].id
-              }
-            ]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate],
+              registrations: [
+                {
+                  ...inserted.registrations[0],
+                  status: STATUS.APPROVED,
+                  validFrom: new Date('2025-01-01'),
+                  registrationNumber: 'REG12345',
+                  validTo: new Date('2025-12-31'),
+                  accreditationId: inserted.accreditations[0].id
+                }
+              ]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(
@@ -740,9 +801,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              accreditations: [accreditationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.accreditationNumber: any.required'
           )
@@ -761,9 +826,13 @@ export const testRegAccApprovalValidation = (it) => {
             validTo: new Date('2025-12-31')
           }
 
-          await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(
@@ -786,9 +855,13 @@ export const testRegAccApprovalValidation = (it) => {
             glassRecyclingProcess: null
           }
 
-          await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(
@@ -818,9 +891,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              registrations: [registrationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.validFrom: any.required'
           )
@@ -840,9 +917,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              registrations: [registrationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.validTo: any.required'
           )
@@ -864,9 +945,13 @@ export const testRegAccApprovalValidation = (it) => {
             validTo
           }
 
-          await repository.update(organisation.id, 1, {
-            registrations: [registrationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              registrations: [registrationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedReg = result.registrations.find(
@@ -892,9 +977,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              registrations: [registrationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.validFrom: any.required'
           )
@@ -914,9 +1003,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              registrations: [registrationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.validTo: any.required'
           )
@@ -938,9 +1031,13 @@ export const testRegAccApprovalValidation = (it) => {
             validTo
           }
 
-          await repository.update(organisation.id, 1, {
-            registrations: [registrationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              registrations: [registrationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedReg = result.registrations.find(
@@ -965,9 +1062,13 @@ export const testRegAccApprovalValidation = (it) => {
             validTo: undefined
           }
 
-          await repository.update(organisation.id, 1, {
-            registrations: [registrationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              registrations: [registrationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedReg = result.registrations.find(
@@ -999,9 +1100,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              accreditations: [accreditationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.validFrom: any.required'
           )
@@ -1021,9 +1126,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              accreditations: [accreditationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.validTo: any.required'
           )
@@ -1045,19 +1154,23 @@ export const testRegAccApprovalValidation = (it) => {
             validTo
           }
 
-          await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate],
-            registrations: [
-              {
-                ...inserted.registrations[0],
-                status: STATUS.APPROVED,
-                validFrom: new Date('2025-01-01'),
-                registrationNumber: 'REG12345',
-                validTo: new Date('2025-12-31'),
-                accreditationId: inserted.accreditations[0].id
-              }
-            ]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate],
+              registrations: [
+                {
+                  ...inserted.registrations[0],
+                  status: STATUS.APPROVED,
+                  validFrom: new Date('2025-01-01'),
+                  registrationNumber: 'REG12345',
+                  validTo: new Date('2025-12-31'),
+                  accreditationId: inserted.accreditations[0].id
+                }
+              ]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(
@@ -1083,9 +1196,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              accreditations: [accreditationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.validFrom: any.required'
           )
@@ -1105,9 +1222,13 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           await expect(
-            repository.update(organisation.id, 1, {
-              accreditations: [accreditationToUpdate]
-            })
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.validTo: any.required'
           )
@@ -1129,9 +1250,13 @@ export const testRegAccApprovalValidation = (it) => {
             validTo
           }
 
-          await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(
@@ -1156,9 +1281,13 @@ export const testRegAccApprovalValidation = (it) => {
             glassRecyclingProcess: null
           }
 
-          await repository.update(organisation.id, 1, {
-            accreditations: [accreditationToUpdate]
-          })
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, {
+              accreditations: [accreditationToUpdate]
+            })
+          )
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(

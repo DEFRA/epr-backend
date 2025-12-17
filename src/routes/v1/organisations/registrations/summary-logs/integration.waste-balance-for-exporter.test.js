@@ -172,11 +172,17 @@ describe('Submission and placeholder tests (Exporter)', () => {
         summaryLogExtractor: dynamicExtractor
       })
 
+      const featureFlags = createInMemoryFeatureFlags({
+        summaryLogs: true,
+        calculateWasteBalanceOnImport: true
+      })
+
       const syncWasteRecords = syncFromSummaryLog({
         extractor: dynamicExtractor,
         wasteRecordRepository: wasteRecordsRepository,
         wasteBalancesRepository,
-        organisationsRepository
+        organisationsRepository,
+        featureFlags
       })
 
       const submitterWorker = {
@@ -195,8 +201,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
           })
         }
       }
-
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
       const server = await createTestServer({
         repositories: {
