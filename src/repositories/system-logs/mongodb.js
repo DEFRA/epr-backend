@@ -23,6 +23,7 @@ export const createSystemLogsRepository = (db) => (logger) => ({
     const docs = await db
       .collection(SYSTEM_LOGS_COLLECTION_NAME)
       .find({ 'context.organisationId': organisationId })
+      .sort({ createdAt: -1 }) // most recent first
       .toArray()
 
     return docs.map((doc) => ({

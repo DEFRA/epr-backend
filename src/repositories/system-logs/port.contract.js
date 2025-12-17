@@ -57,4 +57,39 @@ export const testSystemLogsRepositoryContract = (it) => {
 
     expect(result).toEqual([payload1, payload4])
   })
+
+  it('returns system logs sorted by createdAt, most recent first', async ({
+    systemLogsRepository
+  }) => {
+    /** @type {SystemLogsRepository} */
+    const repository = systemLogsRepository()
+
+    const organisationId = randomUUID()
+
+    const event = {
+      category: 'test-category',
+      subCategory: 'test-sub-category',
+      action: 'test-action'
+    }
+    const createdBy = { id: 'user-001', email: 'user@email.com', scope: [] }
+    const payload1 = {
+      createdAt: new Date('2025-01-01'),
+      createdBy,
+      event,
+      context: { organisationId, id: 1 }
+    }
+    const payload2 = {
+      createdAt: new Date('2025-01-02'),
+      createdBy,
+      event,
+      context: { organisationId, id: 2 }
+    }
+
+    await repository.insert(payload1)
+    await repository.insert(payload2)
+
+    const result = await repository.findByOrganisationId(organisationId)
+
+    expect(result).toEqual([payload2, payload1])
+  })
 }
