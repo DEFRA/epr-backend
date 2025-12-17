@@ -27,7 +27,7 @@ async function auditOrganisationUpdate(
       previous,
       next
     },
-    user: extractUserDetails(request),
+    user: extractUserDetails(request)
   }
 
   audit(payload)
