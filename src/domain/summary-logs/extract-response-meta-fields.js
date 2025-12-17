@@ -33,11 +33,11 @@ const stringFieldSchema = Joi.string().min(1).required()
  * in the summary log GET response.
  *
  * @param {Record<string, unknown> | null | undefined} meta - Raw meta object from storage
- * @returns {ResponseMetaFields | null} Extracted fields or null if no valid fields
+ * @returns {ResponseMetaFields} Extracted fields (empty object if no valid fields)
  */
 export const extractResponseMetaFields = (meta) => {
   if (!meta) {
-    return null
+    return {}
   }
 
   const result = {}
@@ -68,5 +68,5 @@ export const extractResponseMetaFields = (meta) => {
       meta[SUMMARY_LOG_META_FIELDS.ACCREDITATION_NUMBER]
   }
 
-  return Object.keys(result).length > 0 ? result : null
+  return result
 }

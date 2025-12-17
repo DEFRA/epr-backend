@@ -3,14 +3,14 @@ import { PROCESSING_TYPES } from './meta-fields.js'
 
 describe('extractResponseMetaFields', () => {
   describe('when meta is null or undefined', () => {
-    it('returns null for null meta', () => {
+    it('returns empty object for null meta', () => {
       const result = extractResponseMetaFields(null)
-      expect(result).toBeNull()
+      expect(result).toEqual({})
     })
 
-    it('returns null for undefined meta', () => {
+    it('returns empty object for undefined meta', () => {
       const result = extractResponseMetaFields(undefined)
-      expect(result).toBeNull()
+      expect(result).toEqual({})
     })
   })
 
@@ -144,7 +144,7 @@ describe('extractResponseMetaFields', () => {
   })
 
   describe('when meta has no valid fields', () => {
-    it('returns null when all fields are invalid', () => {
+    it('returns empty object when all fields are invalid', () => {
       const meta = {
         PROCESSING_TYPE: 'INVALID',
         MATERIAL: null,
@@ -153,13 +153,13 @@ describe('extractResponseMetaFields', () => {
 
       const result = extractResponseMetaFields(meta)
 
-      expect(result).toBeNull()
+      expect(result).toEqual({})
     })
 
-    it('returns null for empty object', () => {
+    it('returns empty object for empty object', () => {
       const result = extractResponseMetaFields({})
 
-      expect(result).toBeNull()
+      expect(result).toEqual({})
     })
   })
 

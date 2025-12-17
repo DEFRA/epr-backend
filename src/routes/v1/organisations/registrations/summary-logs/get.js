@@ -66,16 +66,9 @@ export const summaryLogsGet = {
 
     const response = {
       status: summaryLog.status,
-      ...transformValidationResponse(summaryLog.validation)
-    }
-
-    if (summaryLog.loads) {
-      response.loads = summaryLog.loads
-    }
-
-    const responseMeta = extractResponseMetaFields(summaryLog.meta)
-    if (responseMeta) {
-      Object.assign(response, responseMeta)
+      ...transformValidationResponse(summaryLog.validation),
+      ...(summaryLog.loads && { loads: summaryLog.loads }),
+      ...extractResponseMetaFields(summaryLog.meta)
     }
 
     return h.response(response).code(StatusCodes.OK)
