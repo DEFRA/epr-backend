@@ -51,7 +51,8 @@ export const summaryLogInsertSchema = Joi.object({
     otherwise: fileSchema.required()
   }),
   organisationId: Joi.string().optional(),
-  registrationId: Joi.string().optional()
+  registrationId: Joi.string().optional(),
+  meta: metaSchema.optional()
 }).messages(commonMessages)
 
 export const summaryLogUpdateSchema = Joi.object({
