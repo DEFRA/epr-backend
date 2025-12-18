@@ -211,6 +211,9 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result.success).toBe(true)
       expect(result.version).toBe(2)
 
+      // Allow staleCache to sync before reading (eventual consistency)
+      await new Promise((resolve) => setImmediate(resolve))
+
       // Verify persisted version
       const updated = await repository.findById(logId)
       expect(updated.version).toBe(2)
@@ -290,6 +293,60 @@ export const testTransitionToSubmittingExclusive = (it) => {
         // The other should have failed
         const failures = results.filter((r) => !r.success)
         expect(failures.length).toBe(1)
+      })
+
+      it('reverts loser to validated status after race', async () => {
+        const { organisationId, registrationId } = generateOrgReg()
+        const logId1 = `summary-${randomUUID()}`
+        const logId2 = `summary-${randomUUID()}`
+
+        // Insert two validated logs for the same org/reg
+        await repository.insert(
+          logId1,
+          buildSummaryLog({
+            status: SUMMARY_LOG_STATUS.VALIDATED,
+            organisationId,
+            registrationId
+          })
+        )
+        await repository.insert(
+          logId2,
+          buildSummaryLog({
+            status: SUMMARY_LOG_STATUS.VALIDATED,
+            organisationId,
+            registrationId
+          })
+        )
+
+        const existing1 = await repository.findById(logId1)
+        const existing2 = await repository.findById(logId2)
+
+        // Race two transitions
+        await Promise.all([
+          repository.transitionToSubmittingExclusive(
+            logId1,
+            existing1.version,
+            organisationId,
+            registrationId
+          ),
+          repository.transitionToSubmittingExclusive(
+            logId2,
+            existing2.version,
+            organisationId,
+            registrationId
+          )
+        ])
+
+        // Allow staleCache to sync before reading (eventual consistency)
+        await new Promise((resolve) => setImmediate(resolve))
+
+        // Verify end state: exactly one submitting, one validated
+        const log1 = await repository.findById(logId1)
+        const log2 = await repository.findById(logId2)
+        const statuses = [log1.summaryLog.status, log2.summaryLog.status]
+
+        expect(statuses).toContain(SUMMARY_LOG_STATUS.SUBMITTING)
+        expect(statuses).toContain(SUMMARY_LOG_STATUS.VALIDATED)
       })
     })
   })

@@ -230,8 +230,10 @@ const transitionToSubmittingExclusive =
       throw Boom.conflict(conflictError.message)
     }
 
-    // Atomically check if another log for same org/reg is already submitting
-    // Read from storage (not staleCache) for strong consistency in this check
+    // Pre-check: is another log for same org/reg already submitting?
+    // Read from storage (strong consistency) - in single-threaded JS,
+    // true race conditions can't occur like they can in MongoDB with
+    // network I/O interleaving. The post-check exists for MongoDB's benefit.
     for (const [id, doc] of storage) {
       if (
         id !== validatedId &&
@@ -256,8 +258,12 @@ const transitionToSubmittingExclusive =
       summaryLog: structuredClone(updatedSummaryLog)
     }
     storage.set(validatedId, newDoc)
-    // Transition is immediately visible (like insert) for consistency
-    staleCache.set(validatedId, structuredClone(newDoc))
+    // Note: Unlike MongoDB where network I/O can interleave and cause races,
+    // JavaScript's single-threaded nature means races can't occur here.
+    // MongoDB has post-check logic to detect/resolve races, but it's not
+    // needed for in-memory. The pre-check above (strong consistency) ensures
+    // only one transition succeeds.
+    scheduleStaleCacheSync(storage, staleCache)
 
     return {
       success: true,
