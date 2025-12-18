@@ -169,19 +169,33 @@ const collateAccreditationUsers = (existing, updated) =>
  * @returns {CollatedUser[]}
  */
 const deduplicateUsers = (users) => {
-  const userMap = new Map()
+  const seenEmails = new Set()
+  const seenContactIds = new Set()
+
+  const result = []
 
   for (const user of users) {
-    const key = user.contactId ?? user.email.toLowerCase()
+    const emailKey = user.email.toLowerCase()
+    const contactKey = user.contactId
 
-    if (!userMap.has(key)) {
-      userMap.set(key, {
-        ...user
-      })
+    const emailSeen = seenEmails.has(emailKey)
+    const contactSeen = contactKey && seenContactIds.has(contactKey)
+
+    // skip if either key was already seen
+    if (emailSeen || contactSeen) {
+      continue
+    }
+
+    // keep first occurrence
+    result.push(user)
+    seenEmails.add(emailKey)
+
+    if (contactKey !== undefined) {
+      seenContactIds.add(contactKey)
     }
   }
 
-  return Array.from(userMap.values())
+  return result
 }
 
 /**
