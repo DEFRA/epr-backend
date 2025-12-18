@@ -1,7 +1,11 @@
-import { describe, expect } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { buildWasteRecord } from './test-data.js'
 import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import * as validationPipeline from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import * as tableSchemas from '#domain/summary-logs/table-schemas/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
@@ -198,6 +202,72 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const balance = await repository.findByAccreditationId(accreditationId)
       expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBe(15.5)
+    })
+
+    it('Should ignore records with outcome other than INCLUDED', async ({
+      wasteBalancesRepository,
+      organisationsRepository
+    }) => {
+      // Arrange
+      const repository = await wasteBalancesRepository()
+      const user = { id: 'user-1', name: 'Test User' }
+
+      organisationsRepository.findAccreditationById.mockResolvedValue({
+        validFrom: '2023-01-01',
+        validTo: '2023-12-31'
+      })
+
+      const validRecord = buildWasteRecord({
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        updatedBy: user,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        }
+      })
+
+      const invalidRecord = buildWasteRecord({
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        updatedBy: user,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER,
+          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
+          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+        }
+      })
+
+      const input = [validRecord, invalidRecord]
+
+      // Mock validation
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy
+        .mockReturnValueOnce({ outcome: ROW_OUTCOME.INCLUDED })
+        .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
+
+      // Act
+      await repository.updateWasteBalanceTransactions(input, accreditationId)
+
+      // Assert
+      const balance = await repository.findByAccreditationId(accreditationId)
+      expect(balance).toBeDefined()
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.transactions[0].amount).toBe(10.5)
+      expect(balance.amount).toBe(10.5)
+
+      // Cleanup
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
     })
   })
 }
