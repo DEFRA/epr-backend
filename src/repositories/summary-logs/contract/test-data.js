@@ -30,11 +30,22 @@ export const buildRejectedFile = (overrides = {}) => {
   }
 }
 
+const STATUSES_REQUIRING_SUBMITTED_AT = new Set(['submitting', 'submitted'])
+
 export const buildSummaryLog = (overrides = {}) => {
-  const { file, ...logOverrides } = overrides
-  return {
-    status: 'validating',
+  const { file, submittedAt, ...logOverrides } = overrides
+  const status = logOverrides.status ?? 'validating'
+
+  const base = {
+    status,
     file: file === undefined ? buildFile() : file,
     ...logOverrides
   }
+
+  // Auto-generate submittedAt for submitting/submitted statuses if not provided
+  if (STATUSES_REQUIRING_SUBMITTED_AT.has(status)) {
+    base.submittedAt = submittedAt ?? new Date().toISOString()
+  }
+
+  return base
 }

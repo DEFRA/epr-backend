@@ -161,6 +161,37 @@ const checkForSubmittingLog =
     }
   }
 
+const findLatestSubmittedForOrgReg =
+  (staleCache) => async (organisationId, registrationId) => {
+    let latestDoc = null
+    let latestSubmittedAt = null
+
+    for (const [, doc] of staleCache) {
+      if (
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        doc.summaryLog.status === 'submitted'
+      ) {
+        const { submittedAt } = doc.summaryLog
+
+        // Return the most recently submitted summary log
+        if (latestDoc === null || submittedAt > latestSubmittedAt) {
+          latestDoc = doc
+          latestSubmittedAt = submittedAt
+        }
+      }
+    }
+
+    if (!latestDoc) {
+      return null
+    }
+
+    return {
+      version: latestDoc.version,
+      summaryLog: structuredClone(latestDoc.summaryLog)
+    }
+  }
+
 const supersedePendingLogs =
   (storage, staleCache) =>
   async (organisationId, registrationId, excludeId) => {
@@ -201,6 +232,7 @@ export const createInMemorySummaryLogsRepository = () => {
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
     supersedePendingLogs: supersedePendingLogs(storage, staleCache),
-    checkForSubmittingLog: checkForSubmittingLog(staleCache)
+    checkForSubmittingLog: checkForSubmittingLog(staleCache),
+    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache)
   })
 }

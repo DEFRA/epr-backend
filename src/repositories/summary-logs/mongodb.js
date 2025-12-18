@@ -108,6 +108,27 @@ const checkForSubmittingLog =
     }
   }
 
+const findLatestSubmittedForOrgReg =
+  (db) => async (organisationId, registrationId) => {
+    /** @type {any} */
+    const filter = {
+      organisationId,
+      registrationId,
+      status: 'submitted'
+    }
+
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne(filter, { sort: { submittedAt: -1 } })
+
+    if (!doc) {
+      return null
+    }
+
+    const { _id, version, ...summaryLog } = doc
+    return { version, summaryLog }
+  }
+
 const supersedePendingLogs =
   (db) => async (organisationId, registrationId, excludeId) => {
     /** @type {any} */
@@ -146,5 +167,6 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   update: update(db, logger),
   findById: findById(db),
   supersedePendingLogs: supersedePendingLogs(db),
-  checkForSubmittingLog: checkForSubmittingLog(db)
+  checkForSubmittingLog: checkForSubmittingLog(db),
+  findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db)
 })
