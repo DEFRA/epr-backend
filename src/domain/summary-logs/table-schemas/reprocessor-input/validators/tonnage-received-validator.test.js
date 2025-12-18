@@ -2,8 +2,211 @@ import { describe, expect, it } from 'vitest'
 import Joi from 'joi'
 import {
   validateTonnageReceived,
+  extractTonnageReceivedFields,
   TONNAGE_RECEIVED_MESSAGES
 } from './tonnage-received-validator.js'
+
+describe('extractTonnageReceivedFields', () => {
+  describe('when all fields are present and valid', () => {
+    it('returns strongly-typed object with only tonnage fields', () => {
+      const row = {
+        ROW_ID: 1001,
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'Yes',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 71.892,
+        OTHER_FIELD: 'ignored'
+      }
+
+      const result = extractTonnageReceivedFields(row)
+
+      expect(result).toEqual({
+        netWeight: 100,
+        weightOfNonTargetMaterials: 10,
+        bailingWireProtocol: true,
+        recyclableProportionPercentage: 0.8,
+        tonnageReceivedForRecycling: 71.892
+      })
+    })
+
+    it('strips unknown fields from the result', () => {
+      const row = {
+        NET_WEIGHT: 50,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 5,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.9,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 40.5,
+        EXTRA_FIELD_1: 'should not appear',
+        EXTRA_FIELD_2: 12345
+      }
+
+      const result = extractTonnageReceivedFields(row)
+
+      expect(Object.keys(result)).toEqual([
+        'netWeight',
+        'weightOfNonTargetMaterials',
+        'bailingWireProtocol',
+        'recyclableProportionPercentage',
+        'tonnageReceivedForRecycling'
+      ])
+    })
+  })
+
+  describe('when fields are missing', () => {
+    it('returns null when NET_WEIGHT is missing', () => {
+      const row = {
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when WEIGHT_OF_NON_TARGET_MATERIALS is missing', () => {
+      const row = {
+        NET_WEIGHT: 100,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when BAILING_WIRE_PROTOCOL is missing', () => {
+      const row = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when RECYCLABLE_PROPORTION_PERCENTAGE is missing', () => {
+      const row = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when TONNAGE_RECEIVED_FOR_RECYCLING is missing', () => {
+      const row = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when row is empty', () => {
+      expect(extractTonnageReceivedFields({})).toBeNull()
+    })
+  })
+
+  describe('when fields have invalid types', () => {
+    it('returns null when NET_WEIGHT is not a number', () => {
+      const row = {
+        NET_WEIGHT: 'not a number',
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when BAILING_WIRE_PROTOCOL is not Yes or No', () => {
+      const row = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'Maybe',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when RECYCLABLE_PROPORTION_PERCENTAGE is out of range', () => {
+      const row = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 1.5,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+
+    it('returns null when NET_WEIGHT is negative', () => {
+      const row = {
+        NET_WEIGHT: -100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0.8,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 72
+      }
+
+      expect(extractTonnageReceivedFields(row)).toBeNull()
+    })
+  })
+
+  describe('edge cases', () => {
+    it('accepts zero values', () => {
+      const row = {
+        NET_WEIGHT: 0,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 0,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 0
+      }
+
+      const result = extractTonnageReceivedFields(row)
+
+      expect(result).toEqual({
+        netWeight: 0,
+        weightOfNonTargetMaterials: 0,
+        bailingWireProtocol: false,
+        recyclableProportionPercentage: 0,
+        tonnageReceivedForRecycling: 0
+      })
+    })
+
+    it('accepts boundary percentage values', () => {
+      const rowMin = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 0,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 0
+      }
+
+      const rowMax = {
+        NET_WEIGHT: 100,
+        WEIGHT_OF_NON_TARGET_MATERIALS: 10,
+        BAILING_WIRE_PROTOCOL: 'No',
+        RECYCLABLE_PROPORTION_PERCENTAGE: 1,
+        TONNAGE_RECEIVED_FOR_RECYCLING: 90
+      }
+
+      expect(extractTonnageReceivedFields(rowMin)).not.toBeNull()
+      expect(extractTonnageReceivedFields(rowMax)).not.toBeNull()
+    })
+  })
+})
 
 describe('validateTonnageReceived', () => {
   // Create a minimal Joi schema that uses the validator
