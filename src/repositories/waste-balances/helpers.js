@@ -85,8 +85,7 @@ const evaluateRecord = (record, processingType, getTableSchema) => {
     return { actualRecord, isValid }
   }
 
-  const isValid = isRecordValidByOutcome(record)
-  return { actualRecord, isValid }
+  return { actualRecord, isValid: isRecordValidByOutcome(record) }
 }
 
 /**
