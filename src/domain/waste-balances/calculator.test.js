@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { calculateWasteBalanceUpdates } from './calculator.js'
-import { EXPORTER_FIELD } from './constants.js'
+import {
+  calculateWasteBalanceUpdates,
+  getTransactionAmount
+} from './calculator.js'
+import { EXPORTER_FIELD, REPROCESSOR_INPUT_FIELD } from './constants.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -31,7 +34,7 @@ const buildWasteRecord = (overrides = {}) => {
     registrationId: 'reg-1',
     accreditationId: 'acc-1',
     rowId: 'row-1',
-    type: WASTE_RECORD_TYPE.RECEIVED,
+    type: WASTE_RECORD_TYPE.EXPORTED,
     updatedBy: testUser,
     versions: [
       {
@@ -523,9 +526,16 @@ describe('Waste Balance Calculator', () => {
       availableAmount: 10,
       transactions: [
         {
+          id: 'tx-1',
           type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
-          amount: 10
-          // entities missing
+          amount: 10,
+          createdAt: new Date().toISOString(),
+          createdBy: { id: 'user-1', name: 'Test User' },
+          openingAmount: 0,
+          closingAmount: 10,
+          openingAvailableAmount: 0,
+          closingAvailableAmount: 10,
+          entities: []
         }
       ]
     }
@@ -687,6 +697,185 @@ describe('Waste Balance Calculator', () => {
       const entity = result.newTransactions[0].entities[0]
       expect(entity.currentVersionId).toBeUndefined()
       expect(entity.previousVersionIds).toEqual([])
+    })
+  })
+
+  describe('REPROCESSOR_INPUT', () => {
+    const buildReprocessorInputRecord = (overrides = {}) => {
+      return buildWasteRecord({
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        ...overrides,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT,
+          ...(overrides.data || {})
+        }
+      })
+    }
+
+    it('should calculate balance for REPROCESSOR_INPUT (Received only)', () => {
+      const record = buildReprocessorInputRecord({
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          [REPROCESSOR_INPUT_FIELD.DATE_RECEIVED]: '2023-06-01',
+          [REPROCESSOR_INPUT_FIELD.PRN_ISSUED]: 'No',
+          [REPROCESSOR_INPUT_FIELD.RECEIVED_TONNAGE]: 100
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation
+      })
+
+      expect(result.newTransactions).toHaveLength(1)
+      expect(result.newTransactions[0].amount).toBe(100)
+      expect(result.newTransactions[0].type).toBe(
+        WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+      )
+      expect(result.newAmount).toBe(100)
+    })
+
+    it('should calculate balance for REPROCESSOR_INPUT (Sent on only)', () => {
+      const record = buildReprocessorInputRecord({
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          [REPROCESSOR_INPUT_FIELD.DATE_SENT_ON]: '2023-06-01',
+          [REPROCESSOR_INPUT_FIELD.SENT_ON_TONNAGE]: 40
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [record],
+        accreditation
+      })
+
+      expect(result.newTransactions).toHaveLength(1)
+      expect(result.newTransactions[0].amount).toBe(40)
+      expect(result.newTransactions[0].type).toBe(
+        WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+      )
+      expect(result.newAmount).toBe(-40)
+    })
+
+    it('should throw error for unsupported record type', () => {
+      const record = buildReprocessorInputRecord({
+        type: 'UNSUPPORTED_TYPE',
+        data: {
+          [REPROCESSOR_INPUT_FIELD.DATE_RECEIVED]: '2023-06-01'
+        }
+      })
+
+      expect(() =>
+        calculateWasteBalanceUpdates({
+          currentBalance: emptyBalance,
+          wasteRecords: [record],
+          accreditation
+        })
+      ).toThrow(
+        'No mapping found for record type: UNSUPPORTED_TYPE in processingType: REPROCESSOR_INPUT'
+      )
+    })
+
+    it('should calculate balance for REPROCESSOR_INPUT (Both Received and Sent on)', () => {
+      const receivedRecord = buildReprocessorInputRecord({
+        rowId: 'row-1',
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          [REPROCESSOR_INPUT_FIELD.DATE_RECEIVED]: '2023-06-01',
+          [REPROCESSOR_INPUT_FIELD.PRN_ISSUED]: 'No',
+          [REPROCESSOR_INPUT_FIELD.RECEIVED_TONNAGE]: 100
+        }
+      })
+
+      const sentOnRecord = buildReprocessorInputRecord({
+        rowId: 'row-2',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          [REPROCESSOR_INPUT_FIELD.DATE_SENT_ON]: '2023-06-01',
+          [REPROCESSOR_INPUT_FIELD.SENT_ON_TONNAGE]: 40
+        }
+      })
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: emptyBalance,
+        wasteRecords: [receivedRecord, sentOnRecord],
+        accreditation
+      })
+
+      expect(result.newTransactions).toHaveLength(2)
+      expect(result.newAmount).toBe(60)
+    })
+
+    it('should return 0 for unsupported processing types', () => {
+      const record = {
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          processingType: 'UNSUPPORTED'
+        }
+      }
+      expect(getTransactionAmount(record)).toBe(0)
+    })
+
+    it('should return 0 for unsupported record types in REPROCESSOR_INPUT', () => {
+      const record = {
+        type: 'UNSUPPORTED',
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
+      }
+      expect(getTransactionAmount(record)).toBe(0)
+    })
+
+    it('should handle missing tonnage fields for REPROCESSOR_INPUT', () => {
+      const receivedRecord = {
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
+      }
+      const sentOnRecord = {
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
+      }
+      expect(getTransactionAmount(receivedRecord)).toBe(0)
+      expect(getTransactionAmount(sentOnRecord)).toBe(-0)
+    })
+
+    it('should handle missing entities in existing transactions', () => {
+      const record = buildReprocessorInputRecord({
+        rowId: 'row-1',
+        data: {
+          [REPROCESSOR_INPUT_FIELD.DATE_RECEIVED]: '2023-06-01',
+          [REPROCESSOR_INPUT_FIELD.RECEIVED_TONNAGE]: 100
+        }
+      })
+
+      const balanceWithNoEntities = {
+        amount: 50,
+        availableAmount: 50,
+        transactions: [
+          {
+            type: WASTE_BALANCE_TRANSACTION_TYPE.CREDIT,
+            amount: 50
+            // entities missing
+          }
+        ]
+      }
+
+      const result = calculateWasteBalanceUpdates({
+        currentBalance: balanceWithNoEntities,
+        wasteRecords: [record],
+        accreditation
+      })
+
+      // Since the existing transaction had no entities, it didn't count towards 'row-1'
+      // So the delta for 'row-1' is 100 - 0 = 100
+      expect(result.newTransactions).toHaveLength(1)
+      expect(result.newTransactions[0].amount).toBe(100)
     })
   })
 })

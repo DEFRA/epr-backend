@@ -1,14 +1,15 @@
 import { describe, it, expect } from 'vitest'
 import { transformExportLoadsRow } from './received-loads-export.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 describe('transformExportLoadsRow', () => {
   it('throws error if ROW_ID is missing', () => {
     const rowData = {
       SOME_OTHER_FIELD: 'value'
     }
-    expect(() => transformExportLoadsRow(rowData, 1)).toThrow(
-      'Missing ROW_ID at row 1'
-    )
+    expect(() =>
+      transformExportLoadsRow(rowData, 1, PROCESSING_TYPES.EXPORTER)
+    ).toThrow('Missing ROW_ID at row 1')
   })
 
   it('transforms valid row data', () => {
@@ -16,7 +17,11 @@ describe('transformExportLoadsRow', () => {
       ROW_ID: 123,
       OTHER_FIELD: 'value'
     }
-    const result = transformExportLoadsRow(rowData, 1)
+    const result = transformExportLoadsRow(
+      rowData,
+      1,
+      PROCESSING_TYPES.EXPORTER
+    )
     expect(result).toEqual({
       wasteRecordType: 'exported',
       rowId: 123,

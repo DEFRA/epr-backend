@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { getFieldValue } from './field-mappings.js'
 import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -28,6 +30,9 @@ export const isWithinAccreditationDateRange = (record, accreditation) => {
  * Filter by PRN Status (AC02)
  */
 export const hasPrnBeenIssued = (record) => {
+  if (record.type === WASTE_RECORD_TYPE.SENT_ON) {
+    return false
+  }
   const prnIssued = getFieldValue(record, COMMON_FIELD.PRN_ISSUED)
   return prnIssued && prnIssued.toLowerCase() === 'yes'
 }
@@ -36,11 +41,26 @@ export const hasPrnBeenIssued = (record) => {
  * Calculate Transaction Amount (AC01a, AC01b)
  */
 export const getTransactionAmount = (record) => {
-  const interimSite = getFieldValue(record, COMMON_FIELD.INTERIM_SITE)
-  if (interimSite && interimSite.toLowerCase() === 'yes') {
-    return Number(getFieldValue(record, COMMON_FIELD.INTERIM_TONNAGE) || 0)
+  const processingType = record.data?.processingType
+
+  if (processingType === PROCESSING_TYPES.EXPORTER) {
+    const interimSite = getFieldValue(record, COMMON_FIELD.INTERIM_SITE)
+    if (interimSite && interimSite.toLowerCase() === 'yes') {
+      return Number(getFieldValue(record, COMMON_FIELD.INTERIM_TONNAGE) || 0)
+    }
+    return Number(getFieldValue(record, COMMON_FIELD.EXPORT_TONNAGE) || 0)
   }
-  return Number(getFieldValue(record, COMMON_FIELD.EXPORT_TONNAGE) || 0)
+
+  if (processingType === PROCESSING_TYPES.REPROCESSOR_INPUT) {
+    if (record.type === WASTE_RECORD_TYPE.RECEIVED) {
+      return Number(getFieldValue(record, COMMON_FIELD.RECEIVED_TONNAGE) || 0)
+    }
+    if (record.type === WASTE_RECORD_TYPE.SENT_ON) {
+      return -Number(getFieldValue(record, COMMON_FIELD.SENT_ON_TONNAGE) || 0)
+    }
+  }
+
+  return 0
 }
 
 /**

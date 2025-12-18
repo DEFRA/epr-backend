@@ -5,6 +5,7 @@ import {
 } from '#domain/waste-balances/model.js'
 import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 /**
  * Build a minimal waste balance for testing
@@ -72,12 +73,19 @@ export const buildWasteRecord = (overrides = {}) => {
     'Date Received': '2025-01-20'
   }
 
+  const processingType = data?.processingType || defaultData.processingType
+  const type =
+    overrides.type ||
+    (processingType === PROCESSING_TYPES.EXPORTER
+      ? WASTE_RECORD_TYPE.EXPORTED
+      : WASTE_RECORD_TYPE.RECEIVED)
+
   return {
     organisationId: 'org-1',
     registrationId: 'reg-1',
     accreditationId: 'acc-1',
     rowId: randomUUID(),
-    type: 'received',
+    type,
     data: {
       ...defaultData,
       ...data

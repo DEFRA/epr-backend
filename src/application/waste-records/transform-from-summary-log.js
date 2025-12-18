@@ -3,6 +3,7 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 import { transformExportLoadsRow } from './row-transformers/received-loads-export.js'
+import { transformSentOnLoadsRow } from './row-transformers/sent-on-loads.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -54,13 +55,16 @@ import { transformExportLoadsRow } from './row-transformers/received-loads-expor
  */
 const TABLE_TRANSFORMERS = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: {
-    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
+    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow,
+    SENT_ON_LOADS: transformSentOnLoadsRow
   },
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
-    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
+    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow,
+    SENT_ON_LOADS: transformSentOnLoadsRow
   },
   [PROCESSING_TYPES.EXPORTER]: {
-    RECEIVED_LOADS_FOR_EXPORT: transformExportLoadsRow
+    RECEIVED_LOADS_FOR_EXPORT: transformExportLoadsRow,
+    SENT_ON_LOADS: transformSentOnLoadsRow
   }
 }
 
@@ -74,7 +78,7 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  *
  * @param {Object} tableData - Table data with rows
  * @param {TransformableRow[]} tableData.rows - Array of rows to transform
- * @param {function(Record<string, any>): {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
+ * @param {function(Record<string, any>, number, string): {wasteRecordType: WasteRecordType, rowId: string, data: Record<string, any>}} rowTransformer - Function to transform row data
  * @param {Object} context - Context for creating waste records
  * @param {Object} context.summaryLog - Summary log reference
  * @param {string} context.summaryLog.id - Summary log ID
@@ -83,6 +87,7 @@ const KNOWN_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
  * @param {string} context.registrationId - Registration ID
  * @param {string} [context.accreditationId] - Accreditation ID
  * @param {string} context.timestamp - ISO timestamp for version createdAt
+ * @param {string} processingType - The processing type for the summary log
  * @param {Map<string, WasteRecord>} existingRecords - Map of existing records keyed by "${type}:${rowId}"
  * @returns {ValidatedWasteRecord[]} Array of waste records with issues and outcome
  */
@@ -90,6 +95,7 @@ const transformTable = (
   tableData,
   rowTransformer,
   context,
+  processingType,
   existingRecords
 ) => {
   const { rows } = tableData
@@ -101,11 +107,15 @@ const transformTable = (
     timestamp
   } = context
 
-  return rows.map((row) => {
+  return rows.map((row, index) => {
     const { data: rowData, issues, outcome } = row
 
     // Transform row using type-specific transformer
-    const { wasteRecordType, rowId, data } = rowTransformer(rowData)
+    const { wasteRecordType, rowId, data } = rowTransformer(
+      rowData,
+      index,
+      processingType
+    )
 
     // Look up existing waste record from Map
     const existingRecord =
@@ -219,6 +229,7 @@ export const transformFromSummaryLog = (
         tableData,
         rowTransformer,
         summaryLogContext,
+        processingType,
         existingRecords
       )
     }

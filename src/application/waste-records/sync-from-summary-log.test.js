@@ -188,7 +188,8 @@ describe('syncFromSummaryLog', () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({
@@ -273,7 +274,8 @@ describe('syncFromSummaryLog', () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({
@@ -367,7 +369,8 @@ describe('syncFromSummaryLog', () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({

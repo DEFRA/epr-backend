@@ -86,6 +86,76 @@ describe('transformFromSummaryLog', () => {
     expectValidWasteRecord(result[1], 'row-456', '2025-01-16', SECOND_WEIGHT)
   })
 
+  it('returns existing record unchanged if no data changed', () => {
+    const existingRecord = {
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'acc-1',
+      rowId: FIRST_ROW_ID,
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: {
+        ROW_ID: FIRST_ROW_ID,
+        DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
+        GROSS_WEIGHT: FIRST_WEIGHT,
+        processingType: 'REPROCESSOR_INPUT'
+      },
+      versions: [
+        {
+          id: 'v1',
+          createdAt: '2025-01-10T10:00:00.000Z',
+          status: VERSION_STATUS.CREATED,
+          summaryLog: { id: 'old-log', uri: 's3://...' },
+          data: {}
+        }
+      ]
+    }
+
+    const existingRecords = new Map([
+      [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingRecord]
+    ])
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: RECEIVED_LOADS_HEADERS,
+          rows: [
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            )
+          ]
+        }
+      }
+    }
+
+    const summaryLogContext = {
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      timestamp: SUBMISSION_TIMESTAMP
+    }
+
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      existingRecords
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0].record).toBe(existingRecord)
+    expect(result[0].record.versions).toHaveLength(1)
+  })
+
   it('returns empty array when no RECEIVED_LOADS data present', () => {
     const parsedData = {
       meta: {

@@ -4,6 +4,7 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('buildWasteBalance', () => {
   it('generates a waste balance with default values', () => {
@@ -164,7 +165,7 @@ describe('buildWasteRecord', () => {
     expect(record.registrationId).toBe('reg-1')
     expect(record.accreditationId).toBe('acc-1')
     expect(record.rowId).toBeDefined()
-    expect(record.type).toBe('received')
+    expect(record.type).toBe(WASTE_RECORD_TYPE.EXPORTED)
     expect(record.data).toBeDefined()
     expect(record.versions).toHaveLength(1)
   })
@@ -196,5 +197,18 @@ describe('buildWasteRecord', () => {
     const record = buildWasteRecord({ data: customData })
 
     expect(record.data['Date Received']).toBe('2025-02-01')
+  })
+
+  it('defaults type to received for non-exporter processing type', () => {
+    const record = buildWasteRecord({
+      data: { processingType: 'REPROCESSOR_INPUT' }
+    })
+    expect(record.type).toBe(WASTE_RECORD_TYPE.RECEIVED)
+  })
+
+  it('uses default processing type when data is not provided', () => {
+    const record = buildWasteRecord(undefined, { id: 'test-id' })
+    expect(record.data.processingType).toBeDefined()
+    expect(record.type).toBe(WASTE_RECORD_TYPE.EXPORTED)
   })
 })
