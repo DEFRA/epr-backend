@@ -25,13 +25,23 @@ describe('GET /v1/system-logs', () => {
     })
   })
 
-  const addSystemLog = async ({ organisationId }) => {
+  const addSystemLog = async ({
+    createdAt = new Date(),
+    organisationId,
+    id = undefined
+  }) => {
     const systemLog = {
-      event: { category: 'test', action: 'test' },
+      event: { category: 'test', subCategory: 'test', action: 'test' },
       context: {
-        organisationId
+        organisationId,
+        id
       },
-      createdAt: new Date()
+      createdAt,
+      createdBy: {
+        id: 'user-id',
+        email: 'user@email.com',
+        scope: []
+      }
     }
     systemLogsRepository.insert(systemLog)
   }
@@ -59,6 +69,29 @@ describe('GET /v1/system-logs', () => {
       expect(response.statusCode).toBe(StatusCodes.OK)
       const result = JSON.parse(response.payload)
       expect(result.systemLogs).toHaveLength(1)
+    })
+
+    it('returns system logs most recent first', async () => {
+      const organisationId = randomUUID()
+
+      await addSystemLog({
+        organisationId: organisationId,
+        createdAt: new Date('2025-01-01'),
+        id: 'id1'
+      })
+      await addSystemLog({
+        organisationId: organisationId,
+        createdAt: new Date('2025-01-02'),
+        id: 'id2'
+      })
+
+      const response = await makeRequest(organisationId)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const result = JSON.parse(response.payload)
+      expect(result.systemLogs).toHaveLength(2)
+      expect(result.systemLogs[0].context.id).toEqual('id2')
+      expect(result.systemLogs[1].context.id).toEqual('id1')
     })
 
     it('includes Cache-Control header in successful response', async () => {
