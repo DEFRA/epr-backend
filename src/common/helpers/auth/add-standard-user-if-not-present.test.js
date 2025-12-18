@@ -89,35 +89,66 @@ describe('addStandardUserIfNotPresent', () => {
   })
 
   describe('when user already exists in organisation', () => {
-    test('should update user name when user exists with same email and contact-id', async () => {
-      mockOrganisation.users = [
-        {
-          email: 'newuser@example.com',
-          fullName: 'Existing User',
-          contactId: 'contact-123',
-          roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
-        }
-      ]
+    test('should update when user exists by email with changed details', async () => {
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+
+      /** @type {Object & Partial<Organisation>} */
+      const org = buildOrganisation({
+        users: [
+          {
+            email: 'existing.user@example.com',
+            fullName: 'Existing User',
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          },
+          {
+            email: 'other.user@example.com',
+            fullName: 'Tobe Ignored',
+            contactId: 'contact-789',
+            roles: [USER_ROLES.STANDARD]
+          }
+        ]
+      })
+
+      await organisationsRepository.insert(org)
+      await waitForVersion(organisationsRepository, org.id, 1)
+
+      /** @type {Object & Partial<HapiRequest>} */
+      const fakeRequest = { organisationsRepository }
 
       await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
+        fakeRequest,
+        /** @type {any} */ ({
+          contactId: 'contact-123',
+          email: 'existing.user@example.com',
+          firstName: 'New Name',
+          lastName: 'New Me'
+        }),
+        org
       )
 
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
-        mockOrganisation.id,
-        1,
-        {
-          users: [
-            {
-              contactId: 'contact-123',
-              email: 'newuser@example.com',
-              fullName: 'John Doe',
-              roles: ['initial_user', 'standard_user']
-            }
-          ]
-        }
+      const updated = await waitForVersion(organisationsRepository, org.id, 2)
+
+      expect(
+        updated.users.filter((u) => u.email === 'existing.user@example.com')
+      ).toHaveLength(1)
+
+      expect(updated.users).toStrictEqual(
+        expect.arrayContaining([
+          {
+            email: 'existing.user@example.com',
+            fullName: 'New Name New Me',
+            contactId: 'contact-123',
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          },
+          {
+            email: 'other.user@example.com',
+            fullName: 'Tobe Ignored',
+            contactId: 'contact-789',
+            roles: [USER_ROLES.STANDARD]
+          }
+        ])
       )
     })
 

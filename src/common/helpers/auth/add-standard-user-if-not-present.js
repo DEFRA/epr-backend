@@ -1,8 +1,8 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
 import {
   findUserInOrg,
   stringEquals
 } from '#common/helpers/auth/roles/helpers.js'
+import { USER_ROLES } from '#domain/organisations/model.js'
 
 /** @import {DefraIdTokenPayload} from './types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
@@ -50,7 +50,7 @@ export const addStandardUserIfNotPresent = async (
             contactId,
             email,
             fullName: getDisplayName({ firstName, lastName }),
-            roles: user ? user.roles : [ROLES.standardUser]
+            roles: user?.roles ?? [USER_ROLES.STANDARD]
           }
         ]
       }
