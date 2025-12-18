@@ -152,6 +152,51 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         }
       })
     })
+
+    it('calls findLatestSubmittedForOrgReg with correct org/reg IDs', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(
+        summaryLogsRepository.findLatestSubmittedForOrgReg
+      ).toHaveBeenCalledWith(organisationId, registrationId)
+    })
+
+    it('succeeds when validatedAgainstSummaryLogId matches current latest submitted', async () => {
+      const baselineId = 'matching-submission-id'
+
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: true,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId,
+          registrationId,
+          validatedAgainstSummaryLogId: baselineId
+        },
+        version: 2
+      })
+
+      summaryLogsRepository.findLatestSubmittedForOrgReg.mockResolvedValue({
+        id: baselineId,
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          organisationId,
+          registrationId
+        }
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
   })
 
   describe('error cases', () => {
@@ -243,6 +288,41 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       const body = JSON.parse(response.payload)
       expect(body.message).toBe(
         'Waste records have changed since preview was generated. Please re-upload.'
+      )
+    })
+
+    it('reverts to validated status when preview is stale', async () => {
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: true,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId,
+          registrationId,
+          validatedAgainstSummaryLogId: 'old-submission-id'
+        },
+        version: 2
+      })
+
+      summaryLogsRepository.findLatestSubmittedForOrgReg.mockResolvedValue({
+        id: 'new-submission-id',
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          organisationId,
+          registrationId
+        }
+      })
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+        summaryLogId,
+        2,
+        { status: SUMMARY_LOG_STATUS.VALIDATED }
       )
     })
 
