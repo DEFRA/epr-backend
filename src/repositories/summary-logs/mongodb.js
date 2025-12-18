@@ -15,22 +15,6 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const insert = (db) => async (id, summaryLog) => {
   const validatedId = validateId(id)
   const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
-  const { organisationId, registrationId } = validatedSummaryLog
-
-  // Check for existing submitting log for same org/reg
-  /** @type {any} */
-  const submittingFilter = {
-    organisationId,
-    registrationId,
-    status: 'submitting'
-  }
-  const existingSubmitting = await db
-    .collection(COLLECTION_NAME)
-    .findOne(submittingFilter)
-
-  if (existingSubmitting) {
-    throw Boom.conflict('A submission is in progress. Please wait.')
-  }
 
   try {
     await db
@@ -90,23 +74,6 @@ const findById = (db) => async (id) => {
   const { _id, version, ...summaryLog } = doc
   return { version, summaryLog }
 }
-
-const checkForSubmittingLog =
-  (db) => async (organisationId, registrationId) => {
-    /** @type {any} */
-    const submittingFilter = {
-      organisationId,
-      registrationId,
-      status: 'submitting'
-    }
-    const existingSubmitting = await db
-      .collection(COLLECTION_NAME)
-      .findOne(submittingFilter)
-
-    if (existingSubmitting) {
-      throw Boom.conflict('A submission is in progress. Please wait.')
-    }
-  }
 
 const findLatestSubmittedForOrgReg =
   (db) => async (organisationId, registrationId) => {
@@ -227,7 +194,6 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   insert: insert(db),
   update: update(db, logger),
   findById: findById(db),
-  checkForSubmittingLog: checkForSubmittingLog(db),
   findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
   transitionToSubmittingExclusive: transitionToSubmittingExclusive(db, logger)
 })

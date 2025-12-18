@@ -19,35 +19,12 @@ const scheduleStaleCacheSync = (storage, staleCache) => {
   })
 }
 
-const hasSubmittingLogForOrgReg = (
-  staleCache,
-  organisationId,
-  registrationId
-) => {
-  for (const [, doc] of staleCache) {
-    if (
-      doc.summaryLog.organisationId === organisationId &&
-      doc.summaryLog.registrationId === registrationId &&
-      doc.summaryLog.status === 'submitting'
-    ) {
-      return true
-    }
-  }
-  return false
-}
-
 const insert = (storage, staleCache) => async (id, summaryLog) => {
   const validatedId = validateId(id)
   const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
 
   if (storage.has(validatedId)) {
     throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
-  }
-
-  // Check for existing submitting log for same org/reg (read from staleCache for eventual consistency)
-  const { organisationId, registrationId } = validatedSummaryLog
-  if (hasSubmittingLogForOrgReg(staleCache, organisationId, registrationId)) {
-    throw Boom.conflict('A submission is in progress. Please wait.')
   }
 
   const newDoc = {
@@ -104,13 +81,6 @@ const findById = (staleCache) => async (id) => {
   }
   return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
-
-const checkForSubmittingLog =
-  (staleCache) => async (organisationId, registrationId) => {
-    if (hasSubmittingLogForOrgReg(staleCache, organisationId, registrationId)) {
-      throw Boom.conflict('A submission is in progress. Please wait.')
-    }
-  }
 
 const findLatestSubmittedForOrgReg =
   (staleCache) => async (organisationId, registrationId) => {
@@ -238,7 +208,6 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
-    checkForSubmittingLog: checkForSubmittingLog(staleCache),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
       storage,
