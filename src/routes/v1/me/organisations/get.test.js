@@ -501,13 +501,13 @@ describe('GET /v1/me/organisations', () => {
     // FIXME typing issue due to hardcoded return type
     // expect our invited user has been appended as a standard_user
     expect(linkedAndUpdated.users).toStrictEqual([
-      ...linkedOrg.users,
       {
         contactId: tokenOverrides.contactId,
         email: tokenOverrides.email,
         fullName: 'Invited User',
         roles: ['standard_user']
-      }
+      },
+      ...linkedOrg.users
     ])
 
     expect(response.statusCode).toBe(StatusCodes.OK)

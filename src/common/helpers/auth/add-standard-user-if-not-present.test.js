@@ -1,8 +1,15 @@
-import { ROLES } from '#common/helpers/auth/constants.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { ObjectId } from 'mongodb'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.js'
+
+/**
+ * @import {HapiRequest} from '#common/hapi-types.js'
+ * @import {Organisation} from '#domain/organisations/model.js'
+ */
 
 describe('addStandardUserIfNotPresent', () => {
   let mockRequest
@@ -57,92 +64,10 @@ describe('addStandardUserIfNotPresent', () => {
               contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              roles: [ROLES.standardUser]
+              roles: [USER_ROLES.STANDARD]
             }
           ]
         }
-      )
-    })
-
-    test('should preserve existing users when adding new user', async () => {
-      const existingUser = {
-        email: 'existing@example.com',
-        fullName: 'Existing User',
-        roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
-      }
-
-      mockOrganisation.users = [existingUser]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
-        mockOrganisation.id,
-        mockOrganisation.version,
-        {
-          users: [
-            existingUser,
-            {
-              contactId: 'contact-123',
-              email: 'newuser@example.com',
-              fullName: 'John Doe',
-              roles: [ROLES.standardUser]
-            }
-          ]
-        }
-      )
-    })
-
-    test('should add user with standard_user role', async () => {
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
-      const newUser = updateCall[2].users[0]
-
-      expect(newUser.roles).toEqual([ROLES.standardUser])
-      expect(newUser.roles[0]).toBe('standard_user')
-    })
-
-    test('should construct fullName from firstName and lastName', async () => {
-      mockTokenPayload.firstName = 'Jane'
-      mockTokenPayload.lastName = 'Smith'
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
-      const newUser = updateCall[2].users[0]
-
-      expect(newUser.fullName).toBe('Jane Smith')
-    })
-
-    test('should use correct organisation id and version for update', async () => {
-      const customOrgId = new ObjectId().toString()
-      const customVersion = 5
-
-      mockOrganisation.id = customOrgId
-      mockOrganisation.version = customVersion
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
-        customOrgId,
-        customVersion,
-        expect.any(Object)
       )
     })
 
@@ -164,70 +89,13 @@ describe('addStandardUserIfNotPresent', () => {
   })
 
   describe('when user already exists in organisation', () => {
-    test('should not update organisation when user exists by email', async () => {
-      mockOrganisation.users = [
-        {
-          email: 'newuser@example.com',
-          fullName: 'Existing User',
-          contactId: 'different-contact',
-          roles: [ROLES.standardUser]
-        }
-      ]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
-    })
-
-    test('should not update organisation when user exists by contactId', async () => {
-      mockOrganisation.users = [
-        {
-          email: 'different@example.com',
-          fullName: 'Existing User',
-          contactId: 'contact-123',
-          roles: [ROLES.standardUser]
-        }
-      ]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
-    })
-
-    test('should not update organisation when user exists by case-insensitive email match', async () => {
-      mockOrganisation.users = [
-        {
-          email: 'NEWUSER@EXAMPLE.COM',
-          fullName: 'Existing User',
-          contactId: 'different-contact',
-          roles: [ROLES.standardUser]
-        }
-      ]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
-    })
-
-    test('should not update when user exists with same email and contactId', async () => {
+    test('should update user name when user exists with same email and contact-id', async () => {
       mockOrganisation.users = [
         {
           email: 'newuser@example.com',
           fullName: 'Existing User',
           contactId: 'contact-123',
-          roles: [ROLES.standardUser]
+          roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
         }
       ]
 
@@ -237,7 +105,84 @@ describe('addStandardUserIfNotPresent', () => {
         mockOrganisation
       )
 
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
+      expect(mockOrganisationsRepository.update).toHaveBeenCalledWith(
+        mockOrganisation.id,
+        1,
+        {
+          users: [
+            {
+              contactId: 'contact-123',
+              email: 'newuser@example.com',
+              fullName: 'John Doe',
+              roles: ['initial_user', 'standard_user']
+            }
+          ]
+        }
+      )
+    })
+
+    test('should update when user exists by contact-id with changed details', async () => {
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const organisationsRepository = organisationsRepositoryFactory()
+
+      /** @type {Object & Partial<Organisation>} */
+      const org = buildOrganisation({
+        users: [
+          {
+            email: 'existing.user@example.com',
+            fullName: 'Existing User',
+            contactId: 'contact-123',
+            roles: [USER_ROLES.STANDARD]
+          },
+          {
+            email: 'other.user@example.com',
+            fullName: 'Tobe Ignored',
+            contactId: 'contact-789',
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          }
+        ]
+      })
+
+      await organisationsRepository.insert(org)
+      await waitForVersion(organisationsRepository, org.id, 1)
+
+      /** @type {Object & Partial<HapiRequest>} */
+      const fakeRequest = { organisationsRepository }
+
+      await addStandardUserIfNotPresent(
+        fakeRequest,
+        /** @type {any} */ ({
+          email: 'new.email.for.me@example.com',
+          firstName: 'New Name',
+          lastName: 'New Me',
+          contactId: 'contact-123'
+        }),
+        org
+      )
+
+      const updated = await waitForVersion(organisationsRepository, org.id, 2)
+
+      expect(
+        updated.users.filter((u) => u.contactId === 'contact-123')
+      ).toHaveLength(1)
+
+      expect(updated.users).toStrictEqual(
+        expect.arrayContaining([
+          {
+            email: 'new.email.for.me@example.com',
+            fullName: 'New Name New Me',
+            contactId: 'contact-123',
+            roles: [USER_ROLES.STANDARD]
+          },
+          {
+            email: 'other.user@example.com',
+            fullName: 'Tobe Ignored',
+            contactId: 'contact-789',
+            roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
+          }
+        ])
+      )
     })
   })
 
@@ -265,7 +210,7 @@ describe('addStandardUserIfNotPresent', () => {
               contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              roles: [ROLES.standardUser]
+              roles: [USER_ROLES.STANDARD]
             }
           ]
         }
@@ -295,7 +240,7 @@ describe('addStandardUserIfNotPresent', () => {
               contactId: 'contact-123',
               email: 'newuser@example.com',
               fullName: 'John Doe',
-              roles: [ROLES.standardUser]
+              roles: [USER_ROLES.STANDARD]
             }
           ]
         }
@@ -353,35 +298,6 @@ describe('addStandardUserIfNotPresent', () => {
       expect(newUser.fullName).toBe('John')
     })
 
-    test('should handle organisation with multiple existing users', async () => {
-      mockOrganisation.users = [
-        {
-          email: 'user1@example.com',
-          contactId: 'contact-1',
-          fullName: 'User One',
-          roles: [ROLES.standardUser]
-        },
-        {
-          email: 'user2@example.com',
-          contactId: 'contact-2',
-          fullName: 'User Two',
-          roles: [ROLES.standardUser]
-        }
-      ]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      const updateCall = mockOrganisationsRepository.update.mock.calls[0]
-      expect(updateCall[2].users).toHaveLength(3)
-      expect(updateCall[2].users[0]).toEqual(mockOrganisation.users[0])
-      expect(updateCall[2].users[1]).toEqual(mockOrganisation.users[1])
-      expect(updateCall[2].users[2].email).toBe('newuser@example.com')
-    })
-
     test('should work with different contactId formats', async () => {
       mockTokenPayload.contactId = '12345-67890-abcdef'
 
@@ -437,21 +353,6 @@ describe('addStandardUserIfNotPresent', () => {
       )
 
       expect(mockOrganisationsRepository.update).toHaveBeenCalledOnce()
-    })
-
-    test('should correctly identify when user exists by partial match', async () => {
-      // User exists with same email but different contactId
-      mockOrganisation.users = [
-        { email: 'newuser@example.com', contactId: 'different-contact' }
-      ]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.update).not.toHaveBeenCalled()
     })
   })
 })

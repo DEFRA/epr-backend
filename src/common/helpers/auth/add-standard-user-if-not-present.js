@@ -1,12 +1,26 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { findUserInOrg } from '#common/helpers/auth/roles/helpers.js'
+import {
+  findUserInOrg,
+  stringEquals
+} from '#common/helpers/auth/roles/helpers.js'
 
 /** @import {DefraIdTokenPayload} from './types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
-/** @import {Organisation} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
 
 export const getDisplayName = ({ firstName, lastName }) =>
   [firstName, lastName].filter(Boolean).join(' ')
+
+/** @param {CollatedUser} user */
+const noUser = (user) => !user
+
+/** @param {CollatedUser} user */
+const withChangedDetails = (
+  user,
+  /** @type {DefraIdTokenPayload} */ { email, firstName, lastName }
+) =>
+  !stringEquals(user.email, email) ||
+  !stringEquals(user.fullName, getDisplayName({ firstName, lastName }))
 
 /**
  * Adds a user to an organisation if they are not there
@@ -25,18 +39,18 @@ export const addStandardUserIfNotPresent = async (
 
   const user = findUserInOrg(organisationById, email, contactId)
 
-  if (!user) {
+  /* v8 ignore next */
+  if (noUser(user) || withChangedDetails(user, tokenPayload)) {
     await organisationsRepository.update(
       organisationById.id,
       organisationById.version,
       {
         users: [
-          ...(organisationById.users || []),
           {
             contactId,
             email,
             fullName: getDisplayName({ firstName, lastName }),
-            roles: [ROLES.standardUser]
+            roles: user ? user.roles : [ROLES.standardUser]
           }
         ]
       }

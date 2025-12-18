@@ -32,7 +32,7 @@ export function findUserInOrg(organisation, email, contactId) {
  * @param {string} b
  * @returns {boolean}
  */
-const stringEquals = (a, b) =>
+export const stringEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
 
 /**

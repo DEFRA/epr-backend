@@ -163,16 +163,16 @@ const collateAccreditationUsers = (existing, updated) =>
   )
 
 /**
- * Deduplicates users by email address (case-insensitive)
+ * Deduplicates users by contact-id / email address
  *
- * @param {SlimUser[]} users
+ * @param {CollatedUser[]} users
  * @returns {CollatedUser[]}
  */
 const deduplicateUsers = (users) => {
   const userMap = new Map()
 
   for (const user of users) {
-    const key = user.email.toLowerCase()
+    const key = user.contactId ?? user.email.toLowerCase()
 
     if (!userMap.has(key)) {
       userMap.set(key, {
