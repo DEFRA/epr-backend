@@ -291,7 +291,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       )
     })
 
-    it('reverts to validated status when preview is stale', async () => {
+    it('supersedes stale summary log when preview is stale', async () => {
       summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
         success: true,
         summaryLog: {
@@ -322,7 +322,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       expect(summaryLogsRepository.update).toHaveBeenCalledWith(
         summaryLogId,
         2,
-        { status: SUMMARY_LOG_STATUS.VALIDATED }
+        { status: SUMMARY_LOG_STATUS.SUPERSEDED }
       )
     })
 

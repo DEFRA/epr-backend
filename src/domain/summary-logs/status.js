@@ -73,7 +73,7 @@ const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.INVALID]: [],
   [SUMMARY_LOG_STATUS.SUBMITTING]: [
     SUMMARY_LOG_STATUS.SUBMITTED,
-    SUMMARY_LOG_STATUS.VALIDATED // Allow revert on staleness check failure
+    SUMMARY_LOG_STATUS.SUPERSEDED // Stale preview - cannot be resubmitted
   ],
   [SUMMARY_LOG_STATUS.SUBMITTED]: [],
   [SUMMARY_LOG_STATUS.SUPERSEDED]: [], // Keep state for backwards compatibility

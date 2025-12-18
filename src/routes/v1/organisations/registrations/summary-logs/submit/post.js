@@ -64,9 +64,9 @@ export const summaryLogsSubmit = {
       const current = currentLatest?.id ?? NO_PRIOR_SUBMISSION
 
       if (baseline !== current) {
-        // Revert to validated and reject
+        // Mark as superseded - stale preview cannot be resubmitted
         await summaryLogsRepository.update(summaryLogId, newVersion, {
-          status: SUMMARY_LOG_STATUS.VALIDATED
+          status: SUMMARY_LOG_STATUS.SUPERSEDED
         })
         throw Boom.conflict(
           'Waste records have changed since preview was generated. Please re-upload.'
