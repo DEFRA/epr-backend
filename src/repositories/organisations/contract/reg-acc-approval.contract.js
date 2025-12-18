@@ -645,7 +645,7 @@ export const testRegAccApprovalValidation = (it) => {
           const registrationToUpdate = {
             ...inserted.registrations[0],
             status: STATUS.APPROVED,
-            registrationNumber: undefined,
+            registrationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -659,7 +659,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.registrationNumber: any.required'
+            'Invalid organisation data: registrations.0.registrationNumber: any.invalid'
           )
         })
 
@@ -701,7 +701,7 @@ export const testRegAccApprovalValidation = (it) => {
           const registrationToUpdate = {
             ...inserted.registrations[0],
             status: STATUS.SUSPENDED,
-            registrationNumber: undefined,
+            registrationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -715,7 +715,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.registrationNumber: any.required'
+            'Invalid organisation data: registrations.0.registrationNumber: any.invalid'
           )
         })
       })
@@ -729,7 +729,7 @@ export const testRegAccApprovalValidation = (it) => {
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
             status: STATUS.APPROVED,
-            accreditationNumber: undefined,
+            accreditationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -743,7 +743,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.accreditationNumber: any.required'
+            'Invalid organisation data: accreditations.0.accreditationNumber: any.invalid'
           )
         })
 
@@ -795,7 +795,7 @@ export const testRegAccApprovalValidation = (it) => {
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
             status: STATUS.SUSPENDED,
-            accreditationNumber: undefined,
+            accreditationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -809,7 +809,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.accreditationNumber: any.required'
+            'Invalid organisation data: accreditations.0.accreditationNumber: any.invalid'
           )
         })
 
@@ -851,7 +851,7 @@ export const testRegAccApprovalValidation = (it) => {
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
             material: 'plastic',
-            accreditationNumber: undefined,
+            accreditationNumber: null,
             glassRecyclingProcess: null
           }
 
@@ -869,10 +869,7 @@ export const testRegAccApprovalValidation = (it) => {
           )
 
           expect(updatedAcc.material).toBe('plastic')
-          expect(
-            updatedAcc.accreditationNumber === null ||
-              updatedAcc.accreditationNumber === undefined
-          ).toBe(true)
+          expect(updatedAcc.accreditationNumber).toBeNull()
         })
       })
 
@@ -886,7 +883,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.registrations[0],
             status: STATUS.APPROVED,
             registrationNumber: 'REG12345',
-            validFrom: undefined,
+            validFrom: null,
             validTo: new Date('2025-12-31')
           }
 
@@ -899,7 +896,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validFrom: any.required'
+            'Invalid organisation data: registrations.0.validFrom: any.invalid'
           )
         })
 
@@ -913,7 +910,7 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
-            validTo: undefined
+            validTo: null
           }
 
           await expect(
@@ -925,7 +922,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validTo: any.required'
+            'Invalid organisation data: registrations.0.validTo: any.invalid'
           )
         })
 
@@ -972,7 +969,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.registrations[0],
             status: STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
-            validFrom: undefined,
+            validFrom: null,
             validTo: new Date('2025-12-31')
           }
 
@@ -985,7 +982,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validFrom: any.required'
+            'Invalid organisation data: registrations.0.validFrom: any.invalid'
           )
         })
 
@@ -999,7 +996,7 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
-            validTo: undefined
+            validTo: null
           }
 
           await expect(
@@ -1011,7 +1008,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: registrations.0.validTo: any.required'
+            'Invalid organisation data: registrations.0.validTo: any.invalid'
           )
         })
 
@@ -1058,8 +1055,8 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.registrations[0],
             material: 'plastic',
             glassRecyclingProcess: null,
-            validFrom: undefined,
-            validTo: undefined
+            validFrom: null,
+            validTo: null
           }
 
           await repository.replace(
@@ -1076,12 +1073,8 @@ export const testRegAccApprovalValidation = (it) => {
           )
 
           expect(updatedReg.material).toBe('plastic')
-          expect(
-            updatedReg.validFrom === null || updatedReg.validFrom === undefined
-          ).toBe(true)
-          expect(
-            updatedReg.validTo === null || updatedReg.validTo === undefined
-          ).toBe(true)
+          expect(updatedReg.validFrom).toBeNull()
+          expect(updatedReg.validTo).toBeNull()
         })
       })
 
@@ -1095,7 +1088,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.accreditations[0],
             status: STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
-            validFrom: undefined,
+            validFrom: null,
             validTo: new Date('2025-12-31')
           }
 
@@ -1108,7 +1101,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validFrom: any.required'
+            'Invalid organisation data: accreditations.0.validFrom: any.invalid'
           )
         })
 
@@ -1122,7 +1115,7 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
-            validTo: undefined
+            validTo: null
           }
 
           await expect(
@@ -1134,7 +1127,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validTo: any.required'
+            'Invalid organisation data: accreditations.0.validTo: any.invalid'
           )
         })
 
@@ -1191,7 +1184,7 @@ export const testRegAccApprovalValidation = (it) => {
             ...inserted.accreditations[0],
             status: STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
-            validFrom: undefined,
+            validFrom: null,
             validTo: new Date('2025-12-31')
           }
 
@@ -1204,7 +1197,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validFrom: any.required'
+            'Invalid organisation data: accreditations.0.validFrom: any.invalid'
           )
         })
 
@@ -1218,7 +1211,7 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
-            validTo: undefined
+            validTo: null
           }
 
           await expect(
@@ -1230,7 +1223,7 @@ export const testRegAccApprovalValidation = (it) => {
               })
             )
           ).rejects.toThrow(
-            'Invalid organisation data: accreditations.0.validTo: any.required'
+            'Invalid organisation data: accreditations.0.validTo: any.invalid'
           )
         })
 
@@ -1276,8 +1269,8 @@ export const testRegAccApprovalValidation = (it) => {
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
             material: 'plastic',
-            validFrom: undefined,
-            validTo: undefined,
+            validFrom: null,
+            validTo: null,
             glassRecyclingProcess: null
           }
 
@@ -1295,12 +1288,8 @@ export const testRegAccApprovalValidation = (it) => {
           )
 
           expect(updatedAcc.material).toBe('plastic')
-          expect(
-            updatedAcc.validFrom === null || updatedAcc.validFrom === undefined
-          ).toBe(true)
-          expect(
-            updatedAcc.validTo === null || updatedAcc.validTo === undefined
-          ).toBe(true)
+          expect(updatedAcc.validFrom).toBeNull()
+          expect(updatedAcc.validTo).toBeNull()
         })
       })
     })

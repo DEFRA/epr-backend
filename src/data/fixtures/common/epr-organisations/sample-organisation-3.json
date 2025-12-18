@@ -20,6 +20,7 @@
     "jobTitle": "Director",
     "phone": "3334445555"
   },
+  "users": [],
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943932",
@@ -115,7 +116,10 @@
           "defraFormUploadedFileId": "file-345",
           "defraFormUserDownloadLink": "https://example.com/file-345"
         }
-      ]
+      ],
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null
     },
     {
       "id": "6507f1f77bcf86cd79943933",
@@ -164,7 +168,10 @@
         "line1": "101 Export Centre",
         "town": "Belfast",
         "postcode": "BT1 1AA"
-      }
+      },
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null
     }
   ],
   "accreditations": [
@@ -247,7 +254,10 @@
           "defraFormUploadedFileId": "file-345-part2",
           "defraFormUserDownloadLink": "https://example.com/file-345-part2"
         }
-      ]
+      ],
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null
     }
   ],
   "companyDetails": {

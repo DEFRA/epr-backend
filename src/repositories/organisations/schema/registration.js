@@ -22,7 +22,8 @@ import {
   requiredForReprocessorOptionalForExporter,
   requiredForExporterOptionalForReprocessor,
   whenMaterial,
-  requiredWhenApprovedOrSuspended
+  requiredWhenApprovedOrSuspended,
+  dateRequiredWhenApprovedOrSuspended
 } from './helpers.js'
 
 const siteCapacitySchema = Joi.object({
@@ -61,12 +62,12 @@ export const registrationSchema = Joi.object({
       STATUS.ARCHIVED
     )
     .forbidden(),
-  registrationNumber: Joi.string().when(
-    'status',
-    requiredWhenApprovedOrSuspended
-  ),
-  validFrom: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
-  validTo: Joi.date().iso().when('status', requiredWhenApprovedOrSuspended),
+  registrationNumber: Joi.string()
+    .allow(null)
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null),
+  validFrom: dateRequiredWhenApprovedOrSuspended(),
+  validTo: dateRequiredWhenApprovedOrSuspended(),
   formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)

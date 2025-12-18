@@ -20,6 +20,7 @@
     "jobTitle": "Manager",
     "phone": "1112223333"
   },
+  "users": [],
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943912",
@@ -115,7 +116,10 @@
           "defraFormUploadedFileId": "file-654",
           "defraFormUserDownloadLink": "https://example.com/file-654"
         }
-      ]
+      ],
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null
     },
     {
       "id": "6507f1f77bcf86cd79943913",
@@ -164,7 +168,10 @@
         "line1": "2 Export Park",
         "town": "Edinburgh",
         "postcode": "EH1 1AA"
-      }
+      },
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null
     }
   ],
   "accreditations": [
@@ -247,7 +254,10 @@
           "defraFormUploadedFileId": "file-654-part2",
           "defraFormUserDownloadLink": "https://example.com/file-654-part2"
         }
-      ]
+      ],
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null
     },
     {
       "id": "68f6a147c117aec8a1ab7498",
@@ -328,7 +338,10 @@
           "defraFormUploadedFileId": "file-655-ors-accred",
           "defraFormUserDownloadLink": "https://example.com/file-655-ors-accred"
         }
-      ]
+      ],
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null
     }
   ],
   "companyDetails": {

@@ -65,7 +65,7 @@ export const organisationInsertSchema = Joi.object({
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
   submitterContactDetails: userSchema.required(),
-  users: Joi.array().items(collatedUserSchema).optional(),
+  users: Joi.array().items(collatedUserSchema).default([]),
   wasteProcessingTypes: Joi.array()
     .items(
       Joi.string().valid(
@@ -87,14 +87,8 @@ export const organisationReplaceSchema = organisationInsertSchema
   .fork(['status'], (schema) => schema.optional())
   .keys({
     schemaVersion: Joi.number().required().valid(1),
-    registrations: Joi.array()
-      .items(registrationUpdateSchema)
-      .allow(null)
-      .optional(),
-    accreditations: Joi.array()
-      .items(accreditationUpdateSchema)
-      .allow(null)
-      .optional()
+    registrations: Joi.array().items(registrationUpdateSchema).default([]),
+    accreditations: Joi.array().items(accreditationUpdateSchema).default([])
   })
   .custom(validateApprovals)
   .messages(approvalValidationMessages)

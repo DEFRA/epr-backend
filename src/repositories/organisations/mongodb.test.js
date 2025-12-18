@@ -56,43 +56,6 @@ describe('MongoDB organisations repository', () => {
   })
 
   describe('handling missing registrations/accreditations', () => {
-    it('handles status update when arrays are set to null directly in database', async ({
-      organisationsRepository,
-      mongoClient
-    }) => {
-      const repository = organisationsRepository()
-      const organisation = buildOrganisation()
-      await repository.insert(organisation)
-
-      // Directly set arrays to null in database (simulating edge case)
-      await mongoClient
-        .db(DATABASE_NAME)
-        .collection(COLLECTION_NAME)
-        .updateOne(
-          { _id: ObjectId.createFromHexString(organisation.id) },
-          { $set: { registrations: null, accreditations: null } }
-        )
-
-      const orgAfterInsert = await repository.findById(organisation.id)
-
-      await repository.replace(
-        organisation.id,
-        1,
-        prepareOrgUpdate(orgAfterInsert, {
-          status: 'approved'
-        })
-      )
-
-      const result = await repository.findById(organisation.id)
-      expect(result.status).toBe('approved')
-      expect(result.statusHistory).toHaveLength(2)
-      expect(result.statusHistory[0].status).toBe('created')
-      expect(result.statusHistory[1].status).toBe('approved')
-      expect(result.statusHistory[1].updatedAt).toBeInstanceOf(Date)
-      expect(result.registrations).toEqual([])
-      expect(result.accreditations).toEqual([])
-    })
-
     it('does not persist status field to database ', async ({
       organisationsRepository,
       mongoClient

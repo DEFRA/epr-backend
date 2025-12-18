@@ -75,11 +75,14 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
 
 export const requiredWhenApprovedOrSuspended = {
   switch: [
-    { is: STATUS.APPROVED, then: Joi.required() },
-    { is: STATUS.SUSPENDED, then: Joi.required() }
+    { is: STATUS.APPROVED, then: Joi.required().invalid(null) },
+    { is: STATUS.SUSPENDED, then: Joi.required().invalid(null) }
   ],
-  otherwise: Joi.optional()
+  otherwise: Joi.optional().allow(null)
 }
+
+export const dateRequiredWhenApprovedOrSuspended = () =>
+  Joi.date().iso().when('status', requiredWhenApprovedOrSuspended).default(null)
 
 export function uniqueKeyForRegAcc(item) {
   const site =
@@ -128,8 +131,8 @@ export function validateApprovals(value, helpers) {
 
   // Check if approved accreditations have linked registrations
   const accWithoutReg = findAccreditationsWithoutApprovedRegistration(
-    value.accreditations ?? [],
-    value.registrations ?? []
+    value.accreditations,
+    value.registrations
   )
 
   if (accWithoutReg.length > 0) {
@@ -140,13 +143,13 @@ export function validateApprovals(value, helpers) {
   }
 
   // Check for duplicate approved accreditations
-  const accDuplicates = findDuplicateApprovals(value.accreditations ?? [])
+  const accDuplicates = findDuplicateApprovals(value.accreditations)
   if (accDuplicates.length > 0) {
     errorMessages.push(formatDuplicateError(accDuplicates, 'accreditations'))
   }
 
   // Check for duplicate approved registrations
-  const regDuplicates = findDuplicateApprovals(value.registrations ?? [])
+  const regDuplicates = findDuplicateApprovals(value.registrations)
   if (regDuplicates.length > 0) {
     errorMessages.push(formatDuplicateError(regDuplicates, 'registrations'))
   }
