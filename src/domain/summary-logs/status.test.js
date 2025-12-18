@@ -325,12 +325,19 @@ describe('status', () => {
       })
     })
 
-    it('throws error for submitting -> validated transition', () => {
-      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTING }
+    it('returns updated summary log for submitting -> validated transition (staleness revert)', () => {
+      const summaryLog = {
+        id: 'log-staleness-revert',
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
+        file: { id: 'file-revert' }
+      }
+      const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
 
-      expect(() =>
-        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
-      ).toThrow('Cannot transition summary log from submitting to validated')
+      expect(result).toEqual({
+        id: 'log-staleness-revert',
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        file: { id: 'file-revert' }
+      })
     })
 
     it('throws error for submitting -> invalid transition', () => {
@@ -345,26 +352,15 @@ describe('status', () => {
       SUMMARY_LOG_STATUS.PREPROCESSING,
       SUMMARY_LOG_STATUS.VALIDATING,
       SUMMARY_LOG_STATUS.VALIDATED
-    ])(
-      'returns updated summary log for %s -> superseded transition',
-      (fromStatus) => {
-        const summaryLog = {
-          id: 'log-supersede',
-          status: fromStatus,
-          file: { id: 'file-supersede' }
-        }
-        const result = transitionStatus(
-          summaryLog,
-          SUMMARY_LOG_STATUS.SUPERSEDED
-        )
+    ])('throws error for %s -> superseded transition', (fromStatus) => {
+      const summaryLog = { status: fromStatus }
 
-        expect(result).toEqual({
-          id: 'log-supersede',
-          status: SUMMARY_LOG_STATUS.SUPERSEDED,
-          file: { id: 'file-supersede' }
-        })
-      }
-    )
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+      ).toThrow(
+        `Cannot transition summary log from ${fromStatus} to superseded`
+      )
+    })
 
     it('throws error for superseded -> any transition (terminal state)', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.SUPERSEDED }
