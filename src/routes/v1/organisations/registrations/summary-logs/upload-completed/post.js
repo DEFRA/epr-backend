@@ -137,40 +137,6 @@ const formatS3Info = (upload) =>
     ? `, s3Bucket=${upload.s3Bucket}, s3Key=${upload.s3Key}`
     : ''
 
-/**
- * Supersede pending logs if upload completed successfully.
- * @param {{summaryLogsRepository: SummaryLogsRepository, logger: TypedLogger, organisationId: string, registrationId: string, summaryLogId: string, newStatus: string}} params
- */
-const handlePendingLogsOnValidation = async ({
-  summaryLogsRepository,
-  logger,
-  organisationId,
-  registrationId,
-  summaryLogId,
-  newStatus
-}) => {
-  if (newStatus !== SUMMARY_LOG_STATUS.VALIDATING) {
-    return
-  }
-
-  // Supersede any pending logs for this org/reg
-  const supersededCount = await summaryLogsRepository.supersedePendingLogs(
-    organisationId,
-    registrationId,
-    summaryLogId
-  )
-  if (supersededCount > 0) {
-    logger.info({
-      message: `Superseded ${supersededCount} pending summary logs for organisationId=${organisationId}, registrationId=${registrationId}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.SUMMARY_LOG_SUPERSEDED,
-        reference: summaryLogId
-      }
-    })
-  }
-}
-
 export const summaryLogsUploadCompletedPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs/{summaryLogId}/upload-completed'
 
@@ -203,17 +169,6 @@ export const summaryLogsUploadCompleted = {
     const { summaryLogUpload } = payload.form
 
     try {
-      const newStatus = determineStatusFromUpload(summaryLogUpload.fileStatus)
-
-      await handlePendingLogsOnValidation({
-        summaryLogsRepository,
-        logger,
-        organisationId,
-        registrationId,
-        summaryLogId,
-        newStatus
-      })
-
       const status = await updateStatusBasedOnUpload(
         summaryLogsRepository,
         summaryLogId,

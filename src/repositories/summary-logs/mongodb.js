@@ -219,35 +219,6 @@ const transitionToSubmittingExclusive =
     }
   }
 
-const supersedePendingLogs =
-  (db) => async (organisationId, registrationId, excludeId) => {
-    /** @type {any} */
-    const filter = {
-      _id: { $ne: excludeId },
-      organisationId,
-      registrationId,
-      status: { $in: ['preprocessing', 'validating', 'validated'] }
-    }
-
-    // Find all matching documents with their versions
-    const docs = await db.collection(COLLECTION_NAME).find(filter).toArray()
-
-    if (docs.length === 0) {
-      return 0
-    }
-
-    // Build bulk operations with optimistic concurrency (version checking)
-    const bulkOps = docs.map((doc) => ({
-      updateOne: {
-        filter: { _id: doc._id, version: doc.version },
-        update: { $set: { status: 'superseded' }, $inc: { version: 1 } }
-      }
-    }))
-
-    const result = await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
-    return result.modifiedCount
-  }
-
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @returns {import('./port.js').SummaryLogsRepositoryFactory}
@@ -256,7 +227,6 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   insert: insert(db),
   update: update(db, logger),
   findById: findById(db),
-  supersedePendingLogs: supersedePendingLogs(db),
   checkForSubmittingLog: checkForSubmittingLog(db),
   findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
   transitionToSubmittingExclusive: transitionToSubmittingExclusive(db, logger)

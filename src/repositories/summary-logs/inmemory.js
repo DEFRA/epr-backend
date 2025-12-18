@@ -105,55 +105,6 @@ const findById = (staleCache) => async (id) => {
   return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
 
-const PENDING_STATUSES = new Set(['preprocessing', 'validating', 'validated'])
-
-const isPendingLogForOrgReg = (
-  id,
-  doc,
-  organisationId,
-  registrationId,
-  excludeId
-) =>
-  id !== excludeId &&
-  doc.summaryLog.organisationId === organisationId &&
-  doc.summaryLog.registrationId === registrationId &&
-  PENDING_STATUSES.has(doc.summaryLog.status)
-
-const findPendingLogs = (
-  staleCache,
-  organisationId,
-  registrationId,
-  excludeId
-) => {
-  const docs = []
-  for (const [id, doc] of staleCache) {
-    if (
-      isPendingLogForOrgReg(id, doc, organisationId, registrationId, excludeId)
-    ) {
-      docs.push({ id, version: doc.version })
-    }
-  }
-  return docs
-}
-
-const applySupersede = (storage, docsToSupersede) => {
-  let count = 0
-  for (const { id, version } of docsToSupersede) {
-    const current = storage.get(id)
-    if (current && current.version === version) {
-      storage.set(id, {
-        version: current.version + 1,
-        summaryLog: structuredClone({
-          ...current.summaryLog,
-          status: 'superseded'
-        })
-      })
-      count++
-    }
-  }
-  return count
-}
-
 const checkForSubmittingLog =
   (staleCache) => async (organisationId, registrationId) => {
     if (hasSubmittingLogForOrgReg(staleCache, organisationId, registrationId)) {
@@ -272,30 +223,6 @@ const transitionToSubmittingExclusive =
     }
   }
 
-const supersedePendingLogs =
-  (storage, staleCache) =>
-  async (organisationId, registrationId, excludeId) => {
-    // Find from staleCache (replica) to provide weaker consistency guarantees
-    const docsToSupersede = findPendingLogs(
-      staleCache,
-      organisationId,
-      registrationId,
-      excludeId
-    )
-
-    if (docsToSupersede.length === 0) {
-      return 0
-    }
-
-    // Update with optimistic concurrency (version checking)
-    const count = applySupersede(storage, docsToSupersede)
-
-    if (count > 0) {
-      scheduleStaleCacheSync(storage, staleCache)
-    }
-    return count
-  }
-
 /**
  * Create an in-memory summary logs repository.
  * Simulates eventual consistency by maintaining separate storage and staleCache.
@@ -311,7 +238,6 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
-    supersedePendingLogs: supersedePendingLogs(storage, staleCache),
     checkForSubmittingLog: checkForSubmittingLog(staleCache),
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
