@@ -40,10 +40,10 @@ export const statusHistoryWithChanges = (updatedItem, existingItem) => {
 
 export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
   const existingItemsById = new Map(
-    (existingItems ?? []).map((item) => [item.id, item])
+    existingItems.map((item) => [item.id, item])
   )
 
-  const processedUpdates = (itemUpdates ?? []).map((updatedItem) => {
+  const processedUpdates = itemUpdates.map((updatedItem) => {
     const existingItem = existingItemsById.get(updatedItem.id)
     if (existingItem) {
       existingItemsById.delete(updatedItem.id)
