@@ -164,7 +164,7 @@ const transitionToSubmittingExclusive =
       throw Boom.conflict(conflictError.message)
     }
 
-    // Check if another log for same org/reg is already submitting
+    // Check if another log for same org/reg is already submitting (fast path)
     /** @type {any} */
     const submittingFilter = {
       _id: { $ne: validatedId },
@@ -181,65 +181,41 @@ const transitionToSubmittingExclusive =
     }
 
     // Atomically transition to submitting with version check
+    // The unique partial index on (organisationId, registrationId) where status='submitting'
+    // ensures only one document can be in submitting status per org/reg at a time
     const submittedAt = new Date().toISOString()
     /** @type {any} */
     const updateFilter = { _id: validatedId, version, status: 'validated' }
-    const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-      updateFilter,
-      {
-        $set: { status: 'submitting', submittedAt },
-        $inc: { version: 1 }
-      },
-      { returnDocument: 'after' }
-    )
 
-    // If update failed, another transaction beat us
-    if (!result) {
-      return { success: false }
-    }
+    try {
+      const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+        updateFilter,
+        {
+          $set: { status: 'submitting', submittedAt },
+          $inc: { version: 1 }
+        },
+        { returnDocument: 'after' }
+      )
 
-    // Post-check for race condition: find all submitting logs for this org/reg
-    // If there's more than one, we have a race. Use min _id as deterministic winner.
-    /** @type {any} */
-    const raceCheckFilter = {
-      organisationId,
-      registrationId,
-      status: 'submitting'
-    }
-    const submittingDocs = await db
-      .collection(COLLECTION_NAME)
-      .find(raceCheckFilter)
-      .project({ _id: 1 })
-      .toArray()
-
-    if (submittingDocs.length > 1) {
-      // Race detected - pick winner deterministically (min _id)
-      const sortedIds = submittingDocs.map((d) => d._id).sort()
-      const winnerId = sortedIds[0]
-
-      if (validatedId !== winnerId) {
-        // We're not the winner - revert to validated
-        /** @type {any} */
-        const revertFilter = {
-          _id: validatedId,
-          version: result.version,
-          status: 'submitting'
-        }
-        await db.collection(COLLECTION_NAME).updateOne(revertFilter, {
-          $set: { status: 'validated' },
-          $inc: { version: 1 },
-          $unset: { submittedAt: '' }
-        })
+      // If update failed due to version/status mismatch, another transaction beat us
+      if (!result) {
         return { success: false }
       }
-    }
 
-    // Extract summaryLog from result (remove _id and version)
-    const { _id, version: newVersion, ...summaryLog } = result
-    return {
-      success: true,
-      summaryLog,
-      version: newVersion
+      // Extract summaryLog from result (remove _id and version)
+      const { _id, version: newVersion, ...summaryLog } = result
+      return {
+        success: true,
+        summaryLog,
+        version: newVersion
+      }
+    } catch (error) {
+      // Unique index violation means another document for same org/reg is already submitting
+      // This can happen in a race even if the pre-check passed
+      if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+        return { success: false }
+      }
+      throw error
     }
   }
 

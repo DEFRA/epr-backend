@@ -34,10 +34,12 @@ export const buildRejectedFile = (overrides = {}) => {
   }
 }
 
+/** @type {Set<string>} */
 const STATUSES_REQUIRING_SUBMITTED_AT = new Set([
   SUMMARY_LOG_STATUS.SUBMITTING,
   SUMMARY_LOG_STATUS.SUBMITTED
 ])
+/** @type {Set<string>} */
 const STATUSES_REQUIRING_BASELINE = new Set([SUMMARY_LOG_STATUS.VALIDATING])
 
 /**

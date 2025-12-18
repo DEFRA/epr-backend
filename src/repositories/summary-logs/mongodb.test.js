@@ -5,6 +5,7 @@ import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { NO_PRIOR_SUBMISSION } from '#domain/summary-logs/status.js'
+import { createIndexes } from '#common/helpers/collections/create-update.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -17,6 +18,10 @@ const it = mongoIt.extend({
 
   summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
+
+    // Apply production indexes
+    await createIndexes(database)
+
     const factory = createSummaryLogsRepository(database)
     await use(factory)
   },
@@ -110,9 +115,8 @@ describe('MongoDB summary logs repository', () => {
       expect(result.success).toBe(false)
     })
 
-    it('reverts and returns success: false when race detected and we are not the winner', async () => {
-      const logId = `test-bbb-${randomUUID()}` // Will not be min ID
-      const winnerId = `test-aaa-${randomUUID()}` // Will be min ID (aaa < bbb)
+    it('returns success: false when unique index violation occurs (race condition)', async () => {
+      const logId = `test-${randomUUID()}`
       let findOneCallCount = 0
 
       const mockDb = {
@@ -132,24 +136,14 @@ describe('MongoDB summary logs repository', () => {
             // Second call: check for existing submitting - none found
             return null
           },
-          findOneAndUpdate: async () => ({
-            // Update succeeds
-            _id: logId,
-            version: 2,
-            status: 'submitting',
-            submittedAt: new Date().toISOString(),
-            organisationId: 'org-1',
-            registrationId: 'reg-1'
-          }),
-          find: () => ({
-            project: () => ({
-              toArray: async () => [
-                { _id: winnerId }, // Another document is also submitting
-                { _id: logId } // Our document
-              ]
-            })
-          }),
-          updateOne: vi.fn().mockResolvedValue({ modifiedCount: 1 }) // Revert succeeds
+          findOneAndUpdate: async () => {
+            // Another request beat us and the unique index blocks our update
+            const error = new Error(
+              'E11000 duplicate key error collection: epr-backend.summary-logs'
+            )
+            error.code = 11000
+            throw error
+          }
         })
       }
 
@@ -167,9 +161,8 @@ describe('MongoDB summary logs repository', () => {
       expect(result.success).toBe(false)
     })
 
-    it('returns success: true when race detected but we are the winner', async () => {
-      const logId = `test-aaa-${randomUUID()}` // Will be min ID
-      const loserId = `test-bbb-${randomUUID()}` // Will not be min ID (bbb > aaa)
+    it('re-throws non-duplicate key errors from findOneAndUpdate', async () => {
+      const logId = `test-${randomUUID()}`
       let findOneCallCount = 0
 
       const mockDb = {
@@ -189,23 +182,11 @@ describe('MongoDB summary logs repository', () => {
             // Second call: check for existing submitting - none found
             return null
           },
-          findOneAndUpdate: async () => ({
-            // Update succeeds
-            _id: logId,
-            version: 2,
-            status: 'submitting',
-            submittedAt: new Date().toISOString(),
-            organisationId: 'org-1',
-            registrationId: 'reg-1'
-          }),
-          find: () => ({
-            project: () => ({
-              toArray: async () => [
-                { _id: logId }, // Our document
-                { _id: loserId } // Another document is also submitting
-              ]
-            })
-          })
+          findOneAndUpdate: async () => {
+            const error = new Error('Connection timeout')
+            error.code = 'ETIMEOUT'
+            throw error
+          }
         })
       }
 
@@ -213,16 +194,9 @@ describe('MongoDB summary logs repository', () => {
       const repositoryFactory = createSummaryLogsRepository(mockDb)
       const repository = repositoryFactory(mockLogger)
 
-      const result = await repository.transitionToSubmittingExclusive(
-        logId,
-        1,
-        'org-1',
-        'reg-1'
-      )
-
-      expect(result.success).toBe(true)
-      expect(result.version).toBe(2)
-      expect(result.summaryLog.status).toBe('submitting')
+      await expect(
+        repository.transitionToSubmittingExclusive(logId, 1, 'org-1', 'reg-1')
+      ).rejects.toThrow('Connection timeout')
     })
   })
 })

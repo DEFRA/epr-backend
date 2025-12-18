@@ -86,6 +86,16 @@ export async function createIndexes(db) {
       { organisationId: 1, registrationId: 1, type: 1, rowId: 1 },
       { unique: true }
     )
+
+  // Enforces at most one summary log in 'submitting' status per org/reg pair
+  // This prevents race conditions when two users try to confirm simultaneously
+  await db.collection('summary-logs').createIndex(
+    { organisationId: 1, registrationId: 1 },
+    {
+      unique: true,
+      partialFilterExpression: { status: 'submitting' }
+    }
+  )
 }
 
 /**
