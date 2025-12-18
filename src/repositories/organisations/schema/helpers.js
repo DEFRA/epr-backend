@@ -75,11 +75,14 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
 
 export const requiredWhenApprovedOrSuspended = {
   switch: [
-    { is: STATUS.APPROVED, then: Joi.required() },
-    { is: STATUS.SUSPENDED, then: Joi.required() }
+    { is: STATUS.APPROVED, then: Joi.required().invalid(null) },
+    { is: STATUS.SUSPENDED, then: Joi.required().invalid(null) }
   ],
-  otherwise: Joi.optional()
+  otherwise: Joi.optional().allow(null)
 }
+
+export const dateRequiredWhenApprovedOrSuspended = () =>
+  Joi.date().iso().when('status', requiredWhenApprovedOrSuspended).default(null)
 
 export function uniqueKeyForRegAcc(item) {
   const site =
