@@ -195,6 +195,77 @@ const findLatestSubmittedForOrgReg =
     }
   }
 
+const transitionToSubmittingExclusive =
+  (storage, staleCache, logger) =>
+  async (logId, version, organisationId, registrationId) => {
+    const validatedId = validateId(logId)
+    const existing = storage.get(validatedId)
+
+    // Verify summary log exists
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+    }
+
+    // Verify summary log is in validated status
+    if (existing.summaryLog.status !== 'validated') {
+      throw Boom.conflict(
+        `Summary log ${validatedId} is not in validated status`
+      )
+    }
+
+    // Verify version matches (optimistic concurrency)
+    if (existing.version !== version) {
+      const conflictError = new Error(
+        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
+      )
+      logger.error({
+        error: conflictError,
+        message: `Version conflict detected for summary log ${validatedId}`,
+        event: {
+          category: LOGGING_EVENT_CATEGORIES.DB,
+          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
+          reference: validatedId
+        }
+      })
+      throw Boom.conflict(conflictError.message)
+    }
+
+    // Atomically check if another log for same org/reg is already submitting
+    // Read from storage (not staleCache) for strong consistency in this check
+    for (const [id, doc] of storage) {
+      if (
+        id !== validatedId &&
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        doc.summaryLog.status === 'submitting'
+      ) {
+        return { success: false }
+      }
+    }
+
+    // Transition to submitting
+    const updatedSummaryLog = {
+      ...existing.summaryLog,
+      status: 'submitting',
+      submittedAt: new Date().toISOString()
+    }
+    const newVersion = existing.version + 1
+
+    const newDoc = {
+      version: newVersion,
+      summaryLog: structuredClone(updatedSummaryLog)
+    }
+    storage.set(validatedId, newDoc)
+    // Transition is immediately visible (like insert) for consistency
+    staleCache.set(validatedId, structuredClone(newDoc))
+
+    return {
+      success: true,
+      summaryLog: structuredClone(updatedSummaryLog),
+      version: newVersion
+    }
+  }
+
 const supersedePendingLogs =
   (storage, staleCache) =>
   async (organisationId, registrationId, excludeId) => {
@@ -236,6 +307,11 @@ export const createInMemorySummaryLogsRepository = () => {
     findById: findById(staleCache),
     supersedePendingLogs: supersedePendingLogs(storage, staleCache),
     checkForSubmittingLog: checkForSubmittingLog(staleCache),
-    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache)
+    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
+    transitionToSubmittingExclusive: transitionToSubmittingExclusive(
+      storage,
+      staleCache,
+      logger
+    )
   })
 }

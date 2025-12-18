@@ -5,6 +5,7 @@ import { testOptimisticConcurrency } from './contract/optimistic-concurrency.con
 import { testOrgRegOperations } from './contract/org-reg-operations.contract.js'
 import { testCheckForSubmittingLog } from './contract/check-for-submitting-log.contract.js'
 import { testFindLatestSubmittedForOrgReg } from './contract/find-latest-submitted.contract.js'
+import { testTransitionToSubmittingExclusive } from './contract/transition-to-submitting-exclusive.contract.js'
 
 export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
   describe('summary logs repository contract', () => {
@@ -15,5 +16,6 @@ export const testSummaryLogsRepositoryContract = (repositoryFactory) => {
     testOrgRegOperations(repositoryFactory)
     testCheckForSubmittingLog(repositoryFactory)
     testFindLatestSubmittedForOrgReg(repositoryFactory)
+    testTransitionToSubmittingExclusive(repositoryFactory)
   })
 }
