@@ -270,6 +270,33 @@ export const testInsertBehaviour = (it) => {
           expect(found).toBeTruthy()
         })
 
+        it('preserves validatedAgainstSummaryLogId on insert', async () => {
+          const id = `contract-baseline-${randomUUID()}`
+          const baselineSummaryLogId = `previous-submitted-${randomUUID()}`
+          const summaryLog = buildSummaryLog({
+            validatedAgainstSummaryLogId: baselineSummaryLogId
+          })
+
+          await repository.insert(id, summaryLog)
+
+          const found = await repository.findById(id)
+          expect(found.summaryLog.validatedAgainstSummaryLogId).toBe(
+            baselineSummaryLogId
+          )
+        })
+
+        it('preserves null validatedAgainstSummaryLogId on insert', async () => {
+          const id = `contract-null-baseline-${randomUUID()}`
+          const summaryLog = buildSummaryLog({
+            validatedAgainstSummaryLogId: null
+          })
+
+          await repository.insert(id, summaryLog)
+
+          const found = await repository.findById(id)
+          expect(found.summaryLog.validatedAgainstSummaryLogId).toBeNull()
+        })
+
         it('accepts valid file.status values', async () => {
           const id1 = `contract-complete-${randomUUID()}`
           const id2 = `contract-rejected-${randomUUID()}`

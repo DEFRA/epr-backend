@@ -57,7 +57,8 @@ export const summaryLogInsertSchema = Joi.object({
     is: Joi.valid(SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED),
     then: Joi.string().isoDate().required(),
     otherwise: Joi.forbidden()
-  })
+  }),
+  validatedAgainstSummaryLogId: Joi.string().allow(null).optional()
 }).messages(commonMessages)
 
 export const summaryLogUpdateSchema = Joi.object({
