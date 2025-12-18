@@ -9,13 +9,13 @@ import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.
 /**
  * Determines roles for organization access based on token and organization status
  * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
- * @param {string} linkedEprOgId - The linked EPR organization ID
+ * @param {string} linkedEprOrgId - The linked EPR organization ID
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
  * @returns {Promise<string[]>} Array of role strings
  */
 export const getRolesForOrganisationAccess = async (
   request,
-  linkedEprOgId,
+  linkedEprOrgId,
   tokenPayload
 ) => {
   const { organisationId } = request.params
@@ -25,7 +25,7 @@ export const getRolesForOrganisationAccess = async (
     return []
   }
 
-  if (organisationId !== linkedEprOgId) {
+  if (organisationId !== linkedEprOrgId) {
     throw Boom.forbidden('Access denied: organisation mismatch')
   }
 
