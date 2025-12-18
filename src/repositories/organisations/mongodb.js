@@ -4,7 +4,7 @@ import {
   collateUsers,
   createInitialStatusHistory,
   getCurrentStatus,
-  mergeSubcollection,
+  updateStatusHistoryForItems,
   SCHEMA_VERSION,
   statusHistoryWithChanges
 } from './helpers.js'
@@ -70,26 +70,28 @@ const performInsert = (db) => async (organisation) => {
   }
 }
 
-const performUpdate = (db) => async (id, version, updates) => {
+const performReplace = (db) => async (id, version, updates) => {
   const validatedId = validateId(id)
-  const validatedUpdates = validateOrganisationUpdate(updates)
 
   const existing = await db
     .collection(COLLECTION_NAME)
     .findOne({ _id: ObjectId.createFromHexString(validatedId) })
-
   if (!existing) {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
 
-  const { status: _, ...merged } = { ...existing, ...validatedUpdates }
+  const validatedUpdates = validateOrganisationUpdate(updates)
 
-  const registrations = mergeSubcollection(
+  const { status: _, ...validatedUpdatesWithoutStatus } = {
+    ...validatedUpdates
+  }
+
+  const registrations = updateStatusHistoryForItems(
     existing.registrations,
     validatedUpdates.registrations
   )
 
-  const accreditations = mergeSubcollection(
+  const accreditations = updateStatusHistoryForItems(
     existing.accreditations,
     validatedUpdates.accreditations
   )
@@ -100,14 +102,14 @@ const performUpdate = (db) => async (id, version, updates) => {
   )
 
   const users = collateUsers(existing, {
-    ...merged,
+    ...validatedUpdatesWithoutStatus,
     statusHistory: updatedStatusHistory,
     registrations,
     accreditations
   })
 
   const updatePayload = {
-    ...merged,
+    ...validatedUpdatesWithoutStatus,
     statusHistory: updatedStatusHistory,
     registrations,
     accreditations,
@@ -115,12 +117,12 @@ const performUpdate = (db) => async (id, version, updates) => {
     version: existing.version + 1
   }
 
-  const result = await db.collection(COLLECTION_NAME).updateOne(
-    { _id: ObjectId.createFromHexString(validatedId), version },
-    {
-      $set: updatePayload
-    }
-  )
+  const result = await db
+    .collection(COLLECTION_NAME)
+    .replaceOne(
+      { _id: ObjectId.createFromHexString(validatedId), version },
+      updatePayload
+    )
 
   if (result.matchedCount === 0) {
     throw Boom.conflict(
@@ -243,7 +245,7 @@ export const createOrganisationsRepository =
 
     return {
       insert: performInsert(db),
-      update: performUpdate(db),
+      replace: performReplace(db),
       findById,
       findAll: performFindAll(db),
       findAllIds: findAllIds(db),

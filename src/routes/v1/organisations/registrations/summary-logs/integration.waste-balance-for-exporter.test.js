@@ -101,6 +101,75 @@ describe('Submission and placeholder tests (Exporter)', () => {
       'CONTAINER_NUMBER'
     ]
 
+    const createRowValues = (overrides = {}) => {
+      const defaults = {
+        rowId: 1001,
+        dateReceived: '2025-01-15T00:00:00.000Z',
+        ewcCode: '03 03 08',
+        wasteDescription: 'Glass - pre-sorted',
+        prnIssued: 'No',
+        grossWeight: 1000,
+        tareWeight: 100,
+        palletWeight: 50,
+        netWeight: 850,
+        bailingWire: 'No',
+        recyclablePropMethod: 'Actual weight (100%)',
+        nonTargetWeight: 0,
+        recyclablePropPct: 1,
+        tonnageReceived: 850,
+        interimSite: 'No',
+        interimSiteId: null,
+        interimTonnage: null,
+        dateReceivedByOsr: null,
+        osrId: null,
+        exportTonnage: 100,
+        exportDate: '2025-01-20T00:00:00.000Z',
+        exportControls: 'Article 18 (green list)',
+        baselCode: 'B3020',
+        customsCode: '123456',
+        containerNumber: 'CONT123456'
+      }
+      const d = { ...defaults, ...overrides }
+      return [
+        d.rowId,
+        d.dateReceived,
+        d.ewcCode,
+        d.wasteDescription,
+        d.prnIssued,
+        d.grossWeight,
+        d.tareWeight,
+        d.palletWeight,
+        d.netWeight,
+        d.bailingWire,
+        d.recyclablePropMethod,
+        d.nonTargetWeight,
+        d.recyclablePropPct,
+        d.tonnageReceived,
+        d.interimSite,
+        d.interimSiteId,
+        d.interimTonnage,
+        d.dateReceivedByOsr,
+        d.osrId,
+        d.exportTonnage,
+        d.exportDate,
+        d.exportControls,
+        d.baselCode,
+        d.customsCode,
+        d.containerNumber
+      ]
+    }
+
+    const createUploadData = (rows) => ({
+      RECEIVED_LOADS_FOR_EXPORT: {
+        location: { sheet: 'Received', row: 7, column: 'A' },
+        headers: sharedHeaders,
+        rows: rows.map((row, index) => ({
+          rowNumber: 8 + index,
+          values: createRowValues(row)
+        }))
+      }
+    })
+
     const setupIntegrationEnvironment = async () => {
       const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
@@ -172,11 +241,17 @@ describe('Submission and placeholder tests (Exporter)', () => {
         summaryLogExtractor: dynamicExtractor
       })
 
+      const featureFlags = createInMemoryFeatureFlags({
+        summaryLogs: true,
+        calculateWasteBalanceOnImport: true
+      })
+
       const syncWasteRecords = syncFromSummaryLog({
         extractor: dynamicExtractor,
         wasteRecordRepository: wasteRecordsRepository,
         wasteBalancesRepository,
-        organisationsRepository
+        organisationsRepository,
+        featureFlags
       })
 
       const submitterWorker = {
@@ -195,8 +270,6 @@ describe('Submission and placeholder tests (Exporter)', () => {
           })
         }
       }
-
-      const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 
       const server = await createTestServer({
         repositories: {
@@ -220,7 +293,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
       }
     }
 
-    const performSubmission = async (
+    const uploadAndValidate = async (
       env,
       summaryLogId,
       fileId,
@@ -251,11 +324,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
         summaryLogId
       )
 
-      await server.inject({
+      return server.inject({
         method: 'GET',
         url: buildGetUrl(organisationId, registrationId, summaryLogId),
         ...asStandardUser({ linkedOrgId: organisationId })
       })
+    }
+
+    const submitAndPoll = async (env, summaryLogId) => {
+      const { server } = env
 
       await server.inject({
         method: 'POST',
@@ -282,80 +359,33 @@ describe('Submission and placeholder tests (Exporter)', () => {
         status = JSON.parse(checkResponse.payload).status
         attempts++
       }
+      return status
+    }
+
+    const performSubmission = async (
+      env,
+      summaryLogId,
+      fileId,
+      filename,
+      uploadData
+    ) => {
+      await uploadAndValidate(env, summaryLogId, fileId, filename, uploadData)
+      await submitAndPoll(env, summaryLogId)
     }
 
     it('should update waste balance with transactions', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
-      const firstUploadData = {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Received', row: 7, column: 'A' },
-          headers: sharedHeaders,
-          rows: [
-            {
-              rowNumber: 8,
-              values: [
-                1001, // ROW_ID
-                '2025-01-15T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
-                '03 03 08', // EWC_CODE
-                'Glass - pre-sorted', // DESCRIPTION_WASTE
-                'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                1000, // GROSS_WEIGHT
-                100, // TARE_WEIGHT
-                50, // PALLET_WEIGHT
-                850, // NET_WEIGHT
-                'No', // BAILING_WIRE_PROTOCOL
-                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-                0, // WEIGHT_OF_NON_TARGET_MATERIALS
-                1, // RECYCLABLE_PROPORTION_PERCENTAGE
-                850, // TONNAGE_RECEIVED_FOR_EXPORT
-                'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
-                null, // INTERIM_SITE_ID
-                null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                null, // DATE_RECEIVED_BY_OSR
-                null, // OSR_ID
-                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-                '2025-01-20T00:00:00.000Z', // DATE_OF_EXPORT
-                'Article 18 (green list)', // EXPORT_CONTROLS
-                'B3020', // BASEL_EXPORT_CODE
-                '123456', // CUSTOMS_CODES
-                'CONT123456' // CONTAINER_NUMBER
-              ]
-            },
-            {
-              rowNumber: 9,
-              values: [
-                1002, // ROW_ID
-                '2025-01-16T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
-                '03 03 08', // EWC_CODE
-                'Glass - pre-sorted', // DESCRIPTION_WASTE
-                'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                900, // GROSS_WEIGHT
-                200, // TARE_WEIGHT
-                100, // PALLET_WEIGHT
-                600, // NET_WEIGHT
-                'No', // BAILING_WIRE_PROTOCOL
-                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-                0, // WEIGHT_OF_NON_TARGET_MATERIALS
-                1, // RECYCLABLE_PROPORTION_PERCENTAGE
-                600, // TONNAGE_RECEIVED_FOR_EXPORT
-                'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
-                null, // INTERIM_SITE_ID
-                null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                null, // DATE_RECEIVED_BY_OSR
-                null, // OSR_ID
-                200, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-                '2025-01-21T00:00:00.000Z', // DATE_OF_EXPORT
-                'Article 18 (green list)', // EXPORT_CONTROLS
-                'B3020', // BASEL_EXPORT_CODE
-                '123456', // CUSTOMS_CODES
-                'CONT123457' // CONTAINER_NUMBER
-              ]
-            }
-          ]
+      const firstUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 },
+        {
+          rowId: 1002,
+          exportTonnage: 200,
+          dateReceived: '2025-01-16T00:00:00.000Z',
+          dateOfExport: '2025-01-21T00:00:00.000Z'
         }
-      }
+      ])
 
       await performSubmission(
         env,
@@ -399,74 +429,15 @@ describe('Submission and placeholder tests (Exporter)', () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
-      const firstUploadData = {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Received', row: 7, column: 'A' },
-          headers: sharedHeaders,
-          rows: [
-            {
-              rowNumber: 8,
-              values: [
-                1001, // ROW_ID
-                '2025-01-15T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
-                '03 03 08', // EWC_CODE
-                'Glass - pre-sorted', // DESCRIPTION_WASTE
-                'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                1000, // GROSS_WEIGHT
-                100, // TARE_WEIGHT
-                50, // PALLET_WEIGHT
-                850, // NET_WEIGHT
-                'No', // BAILING_WIRE_PROTOCOL
-                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-                0, // WEIGHT_OF_NON_TARGET_MATERIALS
-                1, // RECYCLABLE_PROPORTION_PERCENTAGE
-                850, // TONNAGE_RECEIVED_FOR_EXPORT
-                'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
-                null, // INTERIM_SITE_ID
-                null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                null, // DATE_RECEIVED_BY_OSR
-                null, // OSR_ID
-                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-                '2025-01-20T00:00:00.000Z', // DATE_OF_EXPORT
-                'Article 18 (green list)', // EXPORT_CONTROLS
-                'B3020', // BASEL_EXPORT_CODE
-                '123456', // CUSTOMS_CODES
-                'CONT123456' // CONTAINER_NUMBER
-              ]
-            },
-            {
-              rowNumber: 9,
-              values: [
-                1002, // ROW_ID
-                '2025-01-16T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
-                '03 03 08', // EWC_CODE
-                'Glass - pre-sorted', // DESCRIPTION_WASTE
-                'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                900, // GROSS_WEIGHT
-                200, // TARE_WEIGHT
-                100, // PALLET_WEIGHT
-                600, // NET_WEIGHT
-                'No', // BAILING_WIRE_PROTOCOL
-                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-                0, // WEIGHT_OF_NON_TARGET_MATERIALS
-                1, // RECYCLABLE_PROPORTION_PERCENTAGE
-                600, // TONNAGE_RECEIVED_FOR_EXPORT
-                'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
-                null, // INTERIM_SITE_ID
-                null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                null, // DATE_RECEIVED_BY_OSR
-                null, // OSR_ID
-                200, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-                '2025-01-21T00:00:00.000Z', // DATE_OF_EXPORT
-                'Article 18 (green list)', // EXPORT_CONTROLS
-                'B3020', // BASEL_EXPORT_CODE
-                '123456', // CUSTOMS_CODES
-                'CONT123457' // CONTAINER_NUMBER
-              ]
-            }
-          ]
+      const firstUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 },
+        {
+          rowId: 1002,
+          exportTonnage: 200,
+          dateReceived: '2025-01-16T00:00:00.000Z',
+          dateOfExport: '2025-01-21T00:00:00.000Z'
         }
-      }
+      ])
 
       // First submission
       await performSubmission(
@@ -483,74 +454,19 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(balance.availableAmount).toBeCloseTo(300)
 
       // Second submission (revised data)
-      const secondUploadData = {
-        RECEIVED_LOADS_FOR_EXPORT: {
-          location: { sheet: 'Received', row: 7, column: 'A' },
-          headers: sharedHeaders,
-          rows: [
-            {
-              rowNumber: 8,
-              values: [
-                1001, // ROW_ID
-                '2025-01-15T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
-                '03 03 08', // EWC_CODE
-                'Glass - pre-sorted', // DESCRIPTION_WASTE
-                'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                1000, // GROSS_WEIGHT
-                100, // TARE_WEIGHT
-                50, // PALLET_WEIGHT
-                850, // NET_WEIGHT
-                'No', // BAILING_WIRE_PROTOCOL
-                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-                0, // WEIGHT_OF_NON_TARGET_MATERIALS
-                1, // RECYCLABLE_PROPORTION_PERCENTAGE
-                850, // TONNAGE_RECEIVED_FOR_EXPORT
-                'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
-                null, // INTERIM_SITE_ID
-                null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                null, // DATE_RECEIVED_BY_OSR
-                null, // OSR_ID
-                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
-                '2025-01-20T00:00:00.000Z', // DATE_OF_EXPORT
-                'Article 18 (green list)', // EXPORT_CONTROLS
-                'B3020', // BASEL_EXPORT_CODE
-                '123456', // CUSTOMS_CODES
-                'CONT123456' // CONTAINER_NUMBER
-              ]
-            },
-            {
-              rowNumber: 9,
-              values: [
-                1002, // ROW_ID
-                '2025-01-16T00:00:00.000Z', // DATE_RECEIVED_FOR_EXPORT
-                '03 03 08', // EWC_CODE
-                'Glass - pre-sorted', // DESCRIPTION_WASTE
-                'No', // WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
-                1000, // GROSS_WEIGHT (Changed)
-                100, // TARE_WEIGHT (Changed)
-                50, // PALLET_WEIGHT (Changed)
-                850, // NET_WEIGHT (Changed)
-                'No', // BAILING_WIRE_PROTOCOL
-                'Actual weight (100%)', // HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION
-                0, // WEIGHT_OF_NON_TARGET_MATERIALS
-                1, // RECYCLABLE_PROPORTION_PERCENTAGE
-                850, // TONNAGE_RECEIVED_FOR_EXPORT
-                'No', // DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
-                null, // INTERIM_SITE_ID
-                null, // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR
-                null, // DATE_RECEIVED_BY_OSR
-                null, // OSR_ID
-                100, // TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED (Changed from 200 to 100)
-                '2025-01-21T00:00:00.000Z', // DATE_OF_EXPORT
-                'Article 18 (green list)', // EXPORT_CONTROLS
-                'B3020', // BASEL_EXPORT_CODE
-                '123456', // CUSTOMS_CODES
-                'CONT123457' // CONTAINER_NUMBER
-              ]
-            }
-          ]
+      const secondUploadData = createUploadData([
+        { rowId: 1001, exportTonnage: 100 },
+        {
+          rowId: 1002,
+          exportTonnage: 100,
+          dateReceived: '2025-01-16T00:00:00.000Z',
+          dateOfExport: '2025-01-21T00:00:00.000Z',
+          grossWeight: 1000,
+          tareWeight: 100,
+          palletWeight: 50,
+          netWeight: 850
         }
-      }
+      ])
 
       // Submit revised log (new summary log ID, new file ID)
       await performSubmission(
@@ -596,6 +512,327 @@ describe('Submission and placeholder tests (Exporter)', () => {
       expect(tx3.amount).toBeCloseTo(100)
       expect(tx3.entities[0].currentVersionId).not.toBe(v1Id)
       expect(tx3.entities[0].previousVersionIds).toContain(v1Id)
+    })
+
+    it('should not create transaction for a row where PRN was already issued', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData([
+        { rowId: 2001, prnIssued: 'Yes', exportTonnage: 100 },
+        {
+          rowId: 2002,
+          prnIssued: 'No',
+          exportTonnage: 200,
+          dateReceived: '2025-01-16T00:00:00.000Z',
+          dateOfExport: '2025-01-21T00:00:00.000Z'
+        }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-prn-issued',
+        'file-prn-issued',
+        'waste-data-prn.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      expect(balance).toBeDefined()
+      // Only row 2002 should contribute (PRN not issued)
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.availableAmount).toBeCloseTo(200)
+
+      // Verify only the non-PRN-issued row created a transaction
+      const transaction = balance.transactions[0]
+      expect(transaction.entities[0].id).toBe('2002')
+      expect(transaction.type).toBe('credit')
+      expect(transaction.amount).toBeCloseTo(200)
+    })
+
+    it('should not create transaction for a row that falls outside the accreditation period', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData([
+        {
+          rowId: 3001,
+          dateReceived: '2024-06-15T00:00:00.000Z',
+          exportDate: '2024-06-20T00:00:00.000Z',
+          exportTonnage: 100
+        },
+        {
+          rowId: 3002,
+          dateReceived: '2025-06-15T00:00:00.000Z',
+          exportDate: '2025-06-21T00:00:00.000Z',
+          exportTonnage: 200
+        }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-outside-period',
+        'file-outside-period',
+        'waste-data-period.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      expect(balance).toBeDefined()
+      // Only row 3002 should contribute (within accreditation period)
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.availableAmount).toBeCloseTo(200)
+
+      // Verify only the in-period row created a transaction
+      const transaction = balance.transactions[0]
+      expect(transaction.entities[0].id).toBe('3002')
+      expect(transaction.type).toBe('credit')
+    })
+
+    it('should handle submission with missing mandatory fields', async () => {
+      const env = await setupIntegrationEnvironment()
+
+      const response = await uploadAndValidate(
+        env,
+        'summary-missing-fields',
+        'file-missing-fields',
+        'waste-data-missing.xlsx',
+        createUploadData([{ rowId: 4001, exportTonnage: 'not-a-number' }])
+      )
+
+      const summaryLog = JSON.parse(response.payload)
+
+      // Should either be in INVALID status or have validation errors
+      expect(
+        summaryLog.status === SUMMARY_LOG_STATUS.INVALID ||
+          (summaryLog.validation && summaryLog.validation.errors?.length > 0)
+      ).toBe(true)
+    })
+
+    it('should create debit transaction when a row previously within accreditation period is revised to fall outside', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // First submission: row within accreditation period
+      const firstUploadData = createUploadData([
+        { rowId: 5001, exportTonnage: 100 }
+      ])
+
+      // First submission
+      await performSubmission(
+        env,
+        'summary-period-change-1',
+        'file-period-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.transactions).toHaveLength(1)
+
+      // Second submission: same row ID but date revised to fall outside accreditation period
+      const secondUploadData = createUploadData([
+        {
+          rowId: 5001,
+          dateReceived: '2024-06-15T00:00:00.000Z',
+          exportDate: '2024-06-20T00:00:00.000Z',
+          exportTonnage: 100
+        }
+      ])
+
+      // Submit revised log
+      await performSubmission(
+        env,
+        'summary-period-change-2',
+        'file-period-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Balance should now be 0 - the credit was reversed
+      expect(balance.amount).toBeCloseTo(0)
+      expect(balance.availableAmount).toBeCloseTo(0)
+
+      // Should have 2 transactions: original credit and corrective debit
+      expect(balance.transactions).toHaveLength(2)
+
+      // Verify the original credit
+      const creditTx = balance.transactions.find((t) => t.type === 'credit')
+      expect(creditTx).toBeDefined()
+      expect(creditTx.amount).toBeCloseTo(100)
+      expect(creditTx.entities[0].id).toBe('5001')
+
+      // Verify the corrective debit
+      const debitTx = balance.transactions.find((t) => t.type === 'debit')
+      expect(debitTx).toBeDefined()
+      expect(debitTx.amount).toBeCloseTo(100)
+      expect(debitTx.entities[0].id).toBe('5001')
+    })
+
+    it('should create debit transaction when a row is revised to have PRN issued', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // First submission: row without PRN issued (gets credited)
+      const firstUploadData = createUploadData([
+        { rowId: 6001, prnIssued: 'No', exportTonnage: 100 }
+      ])
+
+      // First submission - should credit 100
+      await performSubmission(
+        env,
+        'summary-prn-change-1',
+        'file-prn-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.transactions).toHaveLength(1)
+
+      // Second submission: same row but now PRN has been issued
+      const secondUploadData = createUploadData([
+        { rowId: 6001, prnIssued: 'Yes', exportTonnage: 100 }
+      ])
+
+      // Submit revised log - should debit 100 (PRN now issued)
+      await performSubmission(
+        env,
+        'summary-prn-change-2',
+        'file-prn-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Balance should now be 0 - the credit was reversed because PRN was issued
+      expect(balance.amount).toBeCloseTo(0)
+      expect(balance.availableAmount).toBeCloseTo(0)
+
+      // Should have 2 transactions: original credit and corrective debit
+      expect(balance.transactions).toHaveLength(2)
+
+      const creditTx = balance.transactions.find((t) => t.type === 'credit')
+      expect(creditTx).toBeDefined()
+      expect(creditTx.amount).toBeCloseTo(100)
+
+      const debitTx = balance.transactions.find((t) => t.type === 'debit')
+      expect(debitTx).toBeDefined()
+      expect(debitTx.amount).toBeCloseTo(100)
+      expect(debitTx.entities[0].id).toBe('6001')
+    })
+
+    it('should create credit transaction when a row is revised from PRN issued to no PRN', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // First submission: row with PRN already issued (no credit)
+      const firstUploadData = createUploadData([
+        { rowId: 7001, prnIssued: 'Yes', exportTonnage: 100 }
+      ])
+
+      // First submission - should not credit (PRN issued)
+      await performSubmission(
+        env,
+        'summary-prn-reverse-1',
+        'file-prn-rev-1',
+        'waste-data-v1.xlsx',
+        firstUploadData
+      )
+
+      let balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // No transactions should exist - PRN was issued
+      expect(balance?.transactions?.length ?? 0).toBe(0)
+      expect(balance?.amount ?? 0).toBeCloseTo(0)
+
+      // Second submission: same row but PRN status corrected to No
+      const secondUploadData = createUploadData([
+        { rowId: 7001, prnIssued: 'No', exportTonnage: 100 }
+      ])
+
+      // Submit revised log - should now credit 100
+      await performSubmission(
+        env,
+        'summary-prn-reverse-2',
+        'file-prn-rev-2',
+        'waste-data-v2.xlsx',
+        secondUploadData
+      )
+
+      balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Balance should now be 100 - credited after PRN status corrected
+      expect(balance.amount).toBeCloseTo(100)
+      expect(balance.availableAmount).toBeCloseTo(100)
+
+      // Should have 1 credit transaction
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.transactions[0].type).toBe('credit')
+      expect(balance.transactions[0].amount).toBeCloseTo(100)
+      expect(balance.transactions[0].entities[0].id).toBe('7001')
+    })
+
+    it('should track multiple sequential revisions to the same row with correct running balance', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const revisions = [
+        { tonnage: 100, expectedBalance: 100 },
+        { tonnage: 150, expectedBalance: 150 },
+        { tonnage: 80, expectedBalance: 80 },
+        { tonnage: 200, expectedBalance: 200 }
+      ]
+
+      for (let i = 0; i < revisions.length; i++) {
+        const rev = revisions[i]
+        await performSubmission(
+          env,
+          `summary-multi-rev-${i + 1}`,
+          `file-multi-${i + 1}`,
+          `waste-data-v${i + 1}.xlsx`,
+          createUploadData([{ rowId: 8001, exportTonnage: rev.tonnage }])
+        )
+
+        const balance =
+          await wasteBalancesRepository.findByAccreditationId(accreditationId)
+        expect(balance.amount).toBeCloseTo(rev.expectedBalance)
+        expect(balance.transactions).toHaveLength(i + 1)
+      }
+
+      const finalBalance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+      expect(finalBalance.availableAmount).toBeCloseTo(200)
+
+      finalBalance.transactions.forEach((tx) => {
+        expect(tx.entities[0].id).toBe('8001')
+      })
+
+      expect(
+        finalBalance.transactions[0].entities[0].previousVersionIds?.length ?? 0
+      ).toBe(0)
+      for (let i = 1; i < finalBalance.transactions.length; i++) {
+        expect(
+          finalBalance.transactions[i].entities[0].previousVersionIds?.length
+        ).toBeGreaterThan(0)
+      }
     })
   })
 })

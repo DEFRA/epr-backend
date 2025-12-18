@@ -91,6 +91,23 @@ const findById = (db) => async (id) => {
   return { version, summaryLog }
 }
 
+const checkForSubmittingLog =
+  (db) => async (organisationId, registrationId) => {
+    /** @type {any} */
+    const submittingFilter = {
+      organisationId,
+      registrationId,
+      status: 'submitting'
+    }
+    const existingSubmitting = await db
+      .collection(COLLECTION_NAME)
+      .findOne(submittingFilter)
+
+    if (existingSubmitting) {
+      throw Boom.conflict('A submission is in progress. Please wait.')
+    }
+  }
+
 const supersedePendingLogs =
   (db) => async (organisationId, registrationId, excludeId) => {
     /** @type {any} */
@@ -128,5 +145,6 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   insert: insert(db),
   update: update(db, logger),
   findById: findById(db),
-  supersedePendingLogs: supersedePendingLogs(db)
+  supersedePendingLogs: supersedePendingLogs(db),
+  checkForSubmittingLog: checkForSubmittingLog(db)
 })

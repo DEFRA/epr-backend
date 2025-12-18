@@ -5,6 +5,7 @@ import * as organisationRoutes from '#routes/v1/organisations/index.js'
 import * as meRoutes from '#routes/v1/me/index.js'
 import * as devRoutes from '#routes/v1/dev/index.js'
 import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
+import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 
 const router = {
   plugin: {
@@ -29,7 +30,8 @@ const router = {
           ...summaryLogsRoutesBehindFeatureFlag,
           ...devRoutesBehindFeatureFlag,
           ...Object.values(organisationRoutes),
-          ...formSubmissionsRoutes
+          ...formSubmissionsRoutes,
+          ...Object.values(systemLogsRoutes)
         ])
       })
     }

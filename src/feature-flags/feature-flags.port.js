@@ -1,5 +1,6 @@
 /**
  * @typedef {Object} FeatureFlags
+ * @property {() => boolean} isCalculateWasteBalanceOnImportEnabled
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled

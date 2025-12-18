@@ -1,4 +1,4 @@
-import { describe, beforeEach } from 'vitest'
+import { beforeEach, describe } from 'vitest'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -8,7 +8,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const TEST_FILE_PATH = path.resolve(
   __dirname,
-  '../../../data/fixtures/spreadsheet/templates/V4/Summary_Log_Reprocessor_Input.xlsx'
+  '../../../data/fixtures/spreadsheet/templates/V5/Summary_Log_Reprocessor_Input.xlsx'
 )
 
 /**

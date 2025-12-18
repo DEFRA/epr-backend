@@ -18,7 +18,7 @@ describe('ExcelJS parser performance', () => {
 
   const TEMPLATES_DIR = path.join(
     dirname,
-    '../../../data/fixtures/spreadsheet/templates/V4'
+    '../../../data/fixtures/spreadsheet/templates/V5'
   )
 
   const SUMMARY_LOG_PARSE_OPTIONS = {

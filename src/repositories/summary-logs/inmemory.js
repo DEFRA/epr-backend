@@ -154,6 +154,13 @@ const applySupersede = (storage, docsToSupersede) => {
   return count
 }
 
+const checkForSubmittingLog =
+  (staleCache) => async (organisationId, registrationId) => {
+    if (hasSubmittingLogForOrgReg(staleCache, organisationId, registrationId)) {
+      throw Boom.conflict('A submission is in progress. Please wait.')
+    }
+  }
+
 const supersedePendingLogs =
   (storage, staleCache) =>
   async (organisationId, registrationId, excludeId) => {
@@ -193,6 +200,7 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
-    supersedePendingLogs: supersedePendingLogs(storage, staleCache)
+    supersedePendingLogs: supersedePendingLogs(storage, staleCache),
+    checkForSubmittingLog: checkForSubmittingLog(staleCache)
   })
 }

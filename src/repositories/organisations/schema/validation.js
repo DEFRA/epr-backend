@@ -3,7 +3,7 @@ import Joi from 'joi'
 import {
   idSchema,
   organisationInsertSchema,
-  organisationUpdateSchema,
+  organisationReplaceSchema,
   registrationSchema,
   statusHistoryItemSchema
 } from './organisation.js'
@@ -45,7 +45,7 @@ export const validateOrganisationInsert = (data) => {
 }
 
 export const validateOrganisationUpdate = (data) => {
-  const { error, value } = organisationUpdateSchema.validate(data, {
+  const { error, value } = organisationReplaceSchema.validate(data, {
     abortEarly: false,
     stripUnknown: true
   })

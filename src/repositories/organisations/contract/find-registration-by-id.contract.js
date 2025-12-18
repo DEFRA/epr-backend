@@ -3,7 +3,8 @@ import { ObjectId } from 'mongodb'
 import {
   buildOrganisation,
   buildRegistration,
-  buildAccreditation
+  buildAccreditation,
+  prepareOrgUpdate
 } from './test-data.js'
 
 export const testFindRegistrationByIdBehaviour = (it) => {
@@ -201,9 +202,11 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       await repository.insert(org)
 
       // Update to create version 2
-      await repository.update(org.id, 1, {
+      const orgAfterInsert = await repository.findById(org.id)
+      const updatePayload = prepareOrgUpdate(orgAfterInsert, {
         wasteProcessingTypes: ['exporter']
       })
+      await repository.replace(org.id, 1, updatePayload)
 
       // Request with minimumOrgVersion=2 - should retry until version 2 appears
       const result = await repository.findRegistrationById(
@@ -229,9 +232,11 @@ export const testFindRegistrationByIdBehaviour = (it) => {
       await repository.insert(org)
 
       // Update to create version 2
-      await repository.update(org.id, 1, {
+      const orgAfterInsert = await repository.findById(org.id)
+      const updatePayload = prepareOrgUpdate(orgAfterInsert, {
         wasteProcessingTypes: ['exporter']
       })
+      await repository.replace(org.id, 1, updatePayload)
 
       const nonExistentRegistrationId = new ObjectId().toString()
 

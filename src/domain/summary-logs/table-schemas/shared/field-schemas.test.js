@@ -6,8 +6,7 @@ import {
   createThreeDigitIdSchema,
   createPercentageFieldSchema,
   createAlphanumericFieldSchema,
-  createEnumFieldSchema,
-  createNumberFieldSchema
+  createEnumFieldSchema
 } from './field-schemas.js'
 
 describe('field-schemas', () => {
@@ -237,6 +236,14 @@ describe('field-schemas', () => {
       const schema = createAlphanumericFieldSchema()
       expect(schema.validate(undefined).error).toBeUndefined()
     })
+
+    it('coerces numeric value to string (e.g. postal code from ExcelJS)', () => {
+      // ExcelJS may return a number if the cell looks numeric (e.g. postal code "12345")
+      const schema = createAlphanumericFieldSchema()
+      const { error, value } = schema.validate(12345)
+      expect(error).toBeUndefined()
+      expect(value).toBe('12345')
+    })
   })
 
   describe('createEnumFieldSchema', () => {
@@ -269,27 +276,18 @@ describe('field-schemas', () => {
       const schema = createEnumFieldSchema(validValues, invalidMessage)
       expect(schema.validate(undefined).error).toBeUndefined()
     })
-  })
 
-  describe('createNumberFieldSchema', () => {
-    it('accepts any number', () => {
-      const schema = createNumberFieldSchema()
-      expect(schema.validate(0).error).toBeUndefined()
-      expect(schema.validate(100).error).toBeUndefined()
-      expect(schema.validate(-50).error).toBeUndefined()
-      expect(schema.validate(3.14).error).toBeUndefined()
-    })
-
-    it('rejects non-number', () => {
-      const schema = createNumberFieldSchema()
-      const { error } = schema.validate('abc')
-      expect(error).toBeDefined()
-      expect(error.details[0].message).toBe('must be a number')
-    })
-
-    it('is optional', () => {
-      const schema = createNumberFieldSchema()
-      expect(schema.validate(undefined).error).toBeUndefined()
+    it('coerces numeric value to string when enum values look like numbers', () => {
+      // If enum values are numeric-looking strings like '1', '2', '3',
+      // ExcelJS may return a number instead of the string
+      const numericEnumValues = ['1', '2', '3']
+      const schema = createEnumFieldSchema(
+        numericEnumValues,
+        'must be 1, 2, or 3'
+      )
+      const { error, value } = schema.validate(2)
+      expect(error).toBeUndefined()
+      expect(value).toBe('2')
     })
   })
 })

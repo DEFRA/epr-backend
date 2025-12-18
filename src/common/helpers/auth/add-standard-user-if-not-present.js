@@ -3,6 +3,7 @@ import {
   stringEquals
 } from '#common/helpers/auth/roles/helpers.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
+import partition from 'lodash.partition'
 
 /** @import {DefraIdTokenPayload} from './types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
@@ -23,6 +24,12 @@ const withChangedDetails = (
   !stringEquals(user.fullName, getDisplayName({ firstName, lastName }))
 
 /**
+ * @param {Organisation} org
+ * @returns {CollatedUser[]}
+ */
+const getUsers = (org) => org.users ?? []
+
+/**
  * Adds a user to an organisation if they are not there
  * @param {HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user information
@@ -39,20 +46,34 @@ export const addStandardUserIfNotPresent = async (
 
   const user = findUserInOrg(organisationById, email, contactId)
 
+  const [matchingUsers, nonMatchingUsers] = partition(
+    getUsers(organisationById),
+    /** @type {CollatedUser} */ (user) =>
+      stringEquals(user.email, email) || user.contactId === contactId
+  )
+
+  console.log('matchingUsers :>> ', matchingUsers)
+  console.log('nonMatchingUsers :>> ', nonMatchingUsers)
+
   /* v8 ignore next */
   if (noUser(user) || withChangedDetails(user, tokenPayload)) {
-    await organisationsRepository.update(
+    const { id: _, version: _v, ...org } = organisationById
+
+    const newOrUpdated = {
+      contactId,
+      email,
+      fullName: getDisplayName({ firstName, lastName }),
+      roles: user?.roles ?? [USER_ROLES.STANDARD]
+    }
+
+    console.log('newOrUpdated :>> ', newOrUpdated)
+
+    await organisationsRepository.replace(
       organisationById.id,
       organisationById.version,
       {
-        users: [
-          {
-            contactId,
-            email,
-            fullName: getDisplayName({ firstName, lastName }),
-            roles: user?.roles ?? [USER_ROLES.STANDARD]
-          }
-        ]
+        ...org,
+        users: [newOrUpdated, ...nonMatchingUsers]
       }
     )
   }

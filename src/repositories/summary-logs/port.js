@@ -10,6 +10,7 @@
  * @property {(id: string, version: number, summaryLog: Object) => Promise<void>} update
  * @property {(id: string) => Promise<SummaryLogVersion|null>} findById
  * @property {(organisationId: string, registrationId: string, excludeId: string) => Promise<number>} supersedePendingLogs
+ * @property {(organisationId: string, registrationId: string) => Promise<void>} checkForSubmittingLog - Throws 409 if a submitting log exists for org/reg
  */
 
 /**

@@ -22,7 +22,6 @@ export default defineConfig({
         '**/*.sh',
         '**/*.xlsx',
         '**/.DS_Store',
-        '**/index.js',
         '**/types.js',
         'coverage',
         'src/common/hapi-types.js',

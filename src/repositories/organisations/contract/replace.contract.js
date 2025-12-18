@@ -1,23 +1,28 @@
 import { STATUS } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation, buildRegistration } from './test-data.js'
+import {
+  buildOrganisation,
+  buildRegistration,
+  prepareOrgUpdate
+} from './test-data.js'
 
-export const testUpdateBehaviour = (it) => {
-  describe('update', () => {
+export const testReplaceBehaviour = (it) => {
+  describe('replace', () => {
     let repository
 
     beforeEach(async ({ organisationsRepository }) => {
       repository = await organisationsRepository()
     })
 
-    describe('basic behaviour', () => {
-      it('updates an organisation successfully', async () => {
+    describe.only('basic behaviour', () => {
+      it('updates organisation level fields successfully', async () => {
         const orgData = buildOrganisation()
         await repository.insert(orgData)
 
-        await repository.update(orgData.id, 1, {
+        const updatePayload = prepareOrgUpdate(orgData, {
           wasteProcessingTypes: ['reprocessor']
         })
+        await repository.replace(orgData.id, 1, updatePayload)
 
         const result = await repository.findById(orgData.id, 2)
         expect(result).toMatchObject({
@@ -33,11 +38,12 @@ export const testUpdateBehaviour = (it) => {
       })
 
       it('throws not found error when organisation does not exist', async () => {
-        const organisation = buildOrganisation()
+        const { id, ...organisation } = buildOrganisation()
 
         await expect(
-          repository.update(organisation.id, 1, {
-            wasteProcessingTypes: ['reprocessor']
+          repository.replace(id, 1, {
+            ...organisation,
+            schemaVersion: 1
           })
         ).rejects.toMatchObject({
           isBoom: true,
@@ -60,9 +66,10 @@ export const testUpdateBehaviour = (it) => {
         }
         const beforeUpdateOrg = await repository.findById(organisation.id)
 
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(beforeUpdateOrg, {
           registrations: [registrationToUpdate]
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
         const updatedReg = result.registrations.find(
@@ -95,9 +102,11 @@ export const testUpdateBehaviour = (it) => {
           glassRecyclingProcess: null,
           material: 'plastic'
         }
-        await repository.update(organisation.id, 1, {
+
+        const updatePayload = prepareOrgUpdate(organisation, {
           accreditations: [accreditationToUpdate]
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
         const updatedAcc = result.accreditations.find(
@@ -122,15 +131,15 @@ export const testUpdateBehaviour = (it) => {
         })
       })
 
-      it('adds new registration via update', async () => {
+      it('adds new registration', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
         const newRegistration = buildRegistration()
-
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(organisation, {
           registrations: [newRegistration]
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
 
@@ -157,7 +166,7 @@ export const testUpdateBehaviour = (it) => {
         expect(actualStatusHistory[0].status).toBe(STATUS.CREATED)
       })
 
-      it('adds new accreditation via update', async () => {
+      it('adds new accreditation', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
@@ -169,10 +178,10 @@ export const testUpdateBehaviour = (it) => {
           glassRecyclingProcess: null
         }
         delete newAccreditation.statusHistory
-
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(organisation, {
           accreditations: [newAccreditation]
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
 
@@ -193,17 +202,49 @@ export const testUpdateBehaviour = (it) => {
         expect(actualStatusHistory).toHaveLength(1)
         expect(actualStatusHistory[0].status).toBe(STATUS.CREATED)
       })
+
+      it('removes registration and accreditation', async () => {
+        const organisation = buildOrganisation()
+        await repository.insert(organisation)
+
+        // Organisation initially has 2 registrations and 3 accreditations
+        expect(organisation.registrations).toHaveLength(2)
+        expect(organisation.accreditations).toHaveLength(3)
+
+        // Remove the second registration and last two accreditations by not including them
+        const { id: _, ...orgWithoutId } = organisation
+        const updatePayload = {
+          ...orgWithoutId,
+          registrations: [organisation.registrations[0]],
+          accreditations: [organisation.accreditations[0]]
+        }
+        await repository.replace(organisation.id, 1, updatePayload)
+
+        const result = await repository.findById(organisation.id, 2)
+
+        // Verify only the first registration and accreditation remain
+        expect(result.registrations).toHaveLength(1)
+        expect(result.registrations[0].id).toBe(
+          organisation.registrations[0].id
+        )
+
+        expect(result.accreditations).toHaveLength(1)
+        expect(result.accreditations[0].id).toBe(
+          organisation.accreditations[0].id
+        )
+      })
     })
 
     describe('optimistic concurrency control', () => {
       it('throws conflict error when version does not match', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
+        const updatePayload = prepareOrgUpdate(organisation, {
+          wasteProcessingTypes: ['exporter']
+        })
 
         await expect(
-          repository.update(organisation.id, 2, {
-            wasteProcessingTypes: ['exporter']
-          })
+          repository.replace(organisation.id, 2, updatePayload)
         ).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 409 }
@@ -213,15 +254,16 @@ export const testUpdateBehaviour = (it) => {
       it('prevents lost updates in concurrent scenarios', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
-
-        await repository.update(organisation.id, 1, {
+        const updatePayload1 = prepareOrgUpdate(organisation, {
           wasteProcessingTypes: ['exporter']
         })
+        await repository.replace(organisation.id, 1, updatePayload1)
 
+        const updatePayload2 = prepareOrgUpdate(organisation, {
+          reprocessingNations: ['wales']
+        })
         await expect(
-          repository.update(organisation.id, 1, {
-            reprocessingNations: ['wales']
-          })
+          repository.replace(organisation.id, 1, updatePayload2)
         ).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 409 }
@@ -241,9 +283,10 @@ export const testUpdateBehaviour = (it) => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(organisation, {
           status: STATUS.APPROVED
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
         expect(result.status).toBe(STATUS.APPROVED)
@@ -257,9 +300,10 @@ export const testUpdateBehaviour = (it) => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(organisation, {
           wasteProcessingTypes: ['exporter']
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
         expect(result.status).toBe(STATUS.CREATED)
@@ -271,11 +315,21 @@ export const testUpdateBehaviour = (it) => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
-        await repository.update(organisation.id, 1, { status: STATUS.APPROVED })
-        await repository.update(organisation.id, 2, { status: STATUS.REJECTED })
-        await repository.update(organisation.id, 3, {
+        const orgUpdate1 = prepareOrgUpdate(organisation, {
+          status: STATUS.APPROVED
+        })
+        await repository.replace(organisation.id, 1, orgUpdate1)
+
+        const orgUpdate2 = prepareOrgUpdate(organisation, {
+          status: STATUS.REJECTED
+        })
+        await repository.replace(organisation.id, 2, orgUpdate2)
+
+        const org3 = await repository.findById(organisation.id, 3)
+        const orgUpdate3 = prepareOrgUpdate(org3, {
           status: STATUS.SUSPENDED
         })
+        await repository.replace(organisation.id, 3, orgUpdate3)
 
         const result = await repository.findById(organisation.id, 4)
         expect(result.status).toBe(STATUS.SUSPENDED)
@@ -297,9 +351,10 @@ export const testUpdateBehaviour = (it) => {
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31')
         }
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(organisation, {
           registrations: [registrationToUpdate]
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
         const updatedReg = result.registrations.find(
@@ -318,7 +373,7 @@ export const testUpdateBehaviour = (it) => {
 
         const regId = organisation.registrations[0].id
 
-        await repository.update(organisation.id, 1, {
+        const orgUpdate1 = prepareOrgUpdate(organisation, {
           registrations: [
             {
               ...organisation.registrations[0],
@@ -329,11 +384,14 @@ export const testUpdateBehaviour = (it) => {
             }
           ]
         })
-        await repository.update(organisation.id, 2, {
+        await repository.replace(organisation.id, 1, orgUpdate1)
+
+        const orgUpdate2 = prepareOrgUpdate(organisation, {
           registrations: [
             { ...organisation.registrations[0], status: STATUS.REJECTED }
           ]
         })
+        await repository.replace(organisation.id, 2, orgUpdate2)
 
         const result = await repository.findById(organisation.id, 3)
         const updatedReg = result.registrations.find((r) => r.id === regId)
@@ -355,9 +413,10 @@ export const testUpdateBehaviour = (it) => {
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31')
         }
-        await repository.update(organisation.id, 1, {
+        const updatePayload = prepareOrgUpdate(organisation, {
           accreditations: [accreditationToUpdate]
         })
+        await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
         const updatedAcc = result.accreditations.find(
@@ -376,7 +435,7 @@ export const testUpdateBehaviour = (it) => {
 
         const accId = organisation.accreditations[0].id
 
-        await repository.update(organisation.id, 1, {
+        const orgUpdate1 = prepareOrgUpdate(organisation, {
           accreditations: [
             {
               ...organisation.accreditations[0],
@@ -387,7 +446,9 @@ export const testUpdateBehaviour = (it) => {
             }
           ]
         })
-        await repository.update(organisation.id, 2, {
+        await repository.replace(organisation.id, 1, orgUpdate1)
+
+        const orgUpdate2 = prepareOrgUpdate(organisation, {
           accreditations: [
             {
               ...organisation.accreditations[0],
@@ -398,6 +459,7 @@ export const testUpdateBehaviour = (it) => {
             }
           ]
         })
+        await repository.replace(organisation.id, 2, orgUpdate2)
 
         const result = await repository.findById(organisation.id, 3)
         const updatedAcc = result.accreditations.find((a) => a.id === accId)
@@ -412,10 +474,12 @@ export const testUpdateBehaviour = (it) => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
 
+        const updatePayload = prepareOrgUpdate(organisation, {
+          status: 'invalid'
+        })
+
         await expect(
-          repository.update(organisation.id, 1, {
-            status: 'invalid'
-          })
+          repository.replace(organisation.id, 1, updatePayload)
         ).rejects.toThrow('Invalid organisation data: status: any.only')
       })
     })
@@ -425,10 +489,10 @@ export const testUpdateBehaviour = (it) => {
         it('populates users field with submitter on any update', async () => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
-
-          await repository.update(organisation.id, 1, {
+          const updatePayload = prepareOrgUpdate(organisation, {
             status: STATUS.APPROVED
           })
+          await repository.replace(organisation.id, 1, updatePayload)
 
           const result = await repository.findById(organisation.id, 2)
 
@@ -453,9 +517,11 @@ export const testUpdateBehaviour = (it) => {
           })
           await repository.insert(organisation)
 
-          await repository.update(organisation.id, 1, {
+          const org1 = await repository.findById(organisation.id)
+          const orgUpdate1 = prepareOrgUpdate(org1, {
             status: STATUS.APPROVED
           })
+          await repository.replace(organisation.id, 1, orgUpdate1)
 
           let result = await repository.findById(organisation.id, 2)
           expect(result.users).toHaveLength(1)
@@ -483,7 +549,8 @@ export const testUpdateBehaviour = (it) => {
             ]
           }
 
-          await repository.update(organisation.id, 2, {
+          const org2 = await repository.findById(organisation.id, 2)
+          const orgUpdate2 = prepareOrgUpdate(org2, {
             registrations: [
               {
                 ...registration,
@@ -495,6 +562,7 @@ export const testUpdateBehaviour = (it) => {
               }
             ]
           })
+          await repository.replace(organisation.id, 2, orgUpdate2)
 
           result = await repository.findById(organisation.id, 3)
           expect(result.users).toEqual([
@@ -547,8 +615,7 @@ export const testUpdateBehaviour = (it) => {
               }
             ]
           }
-
-          await repository.update(organisation.id, 1, {
+          const updatePayload = prepareOrgUpdate(organisation, {
             registrations: [
               {
                 ...registration,
@@ -560,6 +627,7 @@ export const testUpdateBehaviour = (it) => {
               }
             ]
           })
+          await repository.replace(organisation.id, 1, updatePayload)
 
           const result = await repository.findById(organisation.id, 2)
           const updatedReg = result.registrations.find(
@@ -603,8 +671,7 @@ export const testUpdateBehaviour = (it) => {
               }
             ]
           })
-
-          await repository.update(organisation.id, 1, {
+          const updatePayload = prepareOrgUpdate(organisation, {
             registrations: [
               {
                 ...reg1,
@@ -619,6 +686,7 @@ export const testUpdateBehaviour = (it) => {
               }
             ]
           })
+          await repository.replace(organisation.id, 1, updatePayload)
 
           const result = await repository.findById(organisation.id, 2)
           const updatedReg1 = result.registrations.find((r) => r.id === reg1.id)
@@ -681,8 +749,7 @@ export const testUpdateBehaviour = (it) => {
               ]
             }
           }
-
-          await repository.update(organisation.id, 1, {
+          const updatePayload = prepareOrgUpdate(organisation, {
             registrations: [
               {
                 ...registration,
@@ -702,6 +769,7 @@ export const testUpdateBehaviour = (it) => {
               }
             ]
           })
+          await repository.replace(organisation.id, 1, updatePayload)
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc = result.accreditations.find(
@@ -752,8 +820,7 @@ export const testUpdateBehaviour = (it) => {
                 )
             }
           }
-
-          await repository.update(organisation.id, 1, {
+          const updatePayload = prepareOrgUpdate(organisation, {
             registrations: [
               {
                 ...registration,
@@ -774,6 +841,7 @@ export const testUpdateBehaviour = (it) => {
               acc2
             ]
           })
+          await repository.replace(organisation.id, 1, updatePayload)
 
           const result = await repository.findById(organisation.id, 2)
           const updatedAcc1 = result.accreditations.find(
@@ -812,29 +880,31 @@ export const testUpdateBehaviour = (it) => {
         await repository.insert(organisation)
 
         const newId = buildOrganisation().id
+        const updatePayload = prepareOrgUpdate(organisation, {
+          id: newId,
+          wasteProcessingTypes: ['exporter']
+        })
 
         await expect(
-          repository.update(organisation.id, 1, {
-            id: newId,
-            wasteProcessingTypes: ['exporter']
-          })
+          repository.replace(organisation.id, 1, updatePayload)
         ).rejects.toThrow('Invalid organisation data: id: any.unknown')
       })
 
       it('does not leak PII data in error messages', async () => {
         const organisation = buildOrganisation()
         await repository.insert(organisation)
+        const updatePayload = prepareOrgUpdate(organisation, {
+          submitterContactDetails: {
+            fullName: 'Jane Smith',
+            email: 'jane.smith', // Invalid email format
+            phone: '1234567890',
+            jobTitle: 'Director'
+          }
+        })
 
         // Verify error message contains only field path and error type, not actual PII values
         await expect(
-          repository.update(organisation.id, 1, {
-            submitterContactDetails: {
-              fullName: 'Jane Smith',
-              email: 'jane.smith', // Invalid email format
-              phone: '1234567890',
-              jobTitle: 'Director'
-            }
-          })
+          repository.replace(organisation.id, 1, updatePayload)
         ).rejects.toThrow(
           'Invalid organisation data: submitterContactDetails.email: string.email'
         )

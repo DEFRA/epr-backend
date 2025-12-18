@@ -1,8 +1,14 @@
 /**
  * @typedef {{
  *   createdAt: Date
+ *   createdBy: {
+ *     id: string
+ *     email: string
+ *     scope: string[]
+ *   }
  *   event: {
  *     category: string
+ *     subCategory: string
  *     action: string
  *   }
  *   context: Object

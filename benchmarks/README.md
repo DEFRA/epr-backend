@@ -13,7 +13,7 @@ npm run benchmark:file <path-to-xlsx-file>
 Example:
 
 ```bash
-npm run benchmark:file ./src/data/fixtures/spreadsheet/templates/V4/Summary_Log_Exporter.xlsx
+npm run benchmark:file ./src/data/fixtures/spreadsheet/templates/V5/Summary_Log_Exporter.xlsx
 ```
 
 Output includes:

@@ -1,10 +1,12 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
+import { auditOrganisationUpdate } from '#root/auditing/index.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 /**
  * Organisation update payload with system fields removed
@@ -41,7 +43,11 @@ export const organisationsPutById = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *    organisationsRepository: OrganisationsRepository,
+   *    systemLogsRepository: SystemLogsRepository,
+   *    params: { id: string }
+   * }} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -55,19 +61,16 @@ export const organisationsPutById = {
 
     const { version, updateFragment } = request.payload
 
-    const {
-      version: _v,
-      id: _,
-      schemaVersion: _s,
-      ...sanitisedFragment
-    } = updateFragment
+    const { version: _v, id: _, ...sanitisedFragment } = updateFragment
 
     /** @type {OrganisationUpdateFragment} */
     const updates = sanitisedFragment
 
     try {
-      await organisationsRepository.update(id, version, updates)
+      const initial = await organisationsRepository.findById(id)
+      await organisationsRepository.replace(id, version, updates)
       const updated = await organisationsRepository.findById(id, version + 1)
+      await auditOrganisationUpdate(request, id, initial, updated)
       return h.response(updated).code(StatusCodes.OK)
     } catch (error) {
       throw Boom.boomify(error)

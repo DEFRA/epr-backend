@@ -418,7 +418,10 @@ describe('summaryLogsWorkerThread', () => {
         extractor: mockSummaryLogExtractor,
         wasteRecordRepository: mockWasteRecordsRepository,
         wasteBalancesRepository: mockWasteBalancesRepository,
-        organisationsRepository: mockOrganisationsRepository
+        organisationsRepository: mockOrganisationsRepository,
+        featureFlags: expect.objectContaining({
+          isCalculateWasteBalanceOnImportEnabled: expect.any(Function)
+        })
       })
     })
   })
