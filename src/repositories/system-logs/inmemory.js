@@ -2,8 +2,8 @@
  * @returns {import('./port.js').SystemLogsRepositoryFactory}
  */
 export function createSystemLogsRepository() {
+  const storage = []
   return () => {
-    const storage = []
     return {
       async insert(systemLog) {
         storage.push(systemLog)

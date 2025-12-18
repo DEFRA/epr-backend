@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { ObjectId } from 'mongodb'
@@ -11,28 +12,57 @@ import { testOnlyServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-r
 
 const { validToken } = entraIdMockAuthTokens
 
+const mockCdpAuditing = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
 describe('PUT /v1/organisations/{id}', () => {
   setupAuthContext()
   let server
-  let organisationsRepositoryFactory
   let organisationsRepository
 
   beforeEach(async () => {
-    organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
     const featureFlags = createInMemoryFeatureFlags({ organisations: true })
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      repositories: {
+        organisationsRepository: organisationsRepositoryFactory,
+        systemLogsRepository: createSystemLogsRepository()
+      },
       featureFlags
     })
   })
 
+  afterAll(() => {
+    vi.resetAllMocks()
+  })
+
+  const createOrganisation = async () => {
+    const fixture = buildOrganisation()
+    const organisationId = fixture.id
+    await organisationsRepository.insert(fixture)
+
+    const fetchResponse = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${organisationId}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(fetchResponse.statusCode).toBe(StatusCodes.OK)
+
+    return JSON.parse(fetchResponse.payload)
+  }
+
   describe('happy path', () => {
     it('returns 200 and the updated organisation when the org Id exists, the version is correct and the fragment is valid', async () => {
-      const org = buildOrganisation()
-
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -55,8 +85,7 @@ describe('PUT /v1/organisations/{id}', () => {
     })
 
     it('includes Cache-Control header in successful response', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -74,16 +103,87 @@ describe('PUT /v1/organisations/{id}', () => {
         'no-cache, no-store, must-revalidate'
       )
     })
+
+    it('captures a system log and audit event', async () => {
+      const initialOrg = await createOrganisation()
+      const organisationId = initialOrg.id
+      const start = new Date()
+
+      const updateResponse = await server.inject({
+        method: 'PUT',
+        url: `/v1/organisations/${organisationId}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        },
+        payload: {
+          version: initialOrg.version,
+          updateFragment: {
+            ...initialOrg,
+            wasteProcessingTypes: ['reprocessor']
+          }
+        }
+      })
+
+      expect(updateResponse.statusCode).toBe(StatusCodes.OK)
+      const updatedOrgResponseBody = JSON.parse(updateResponse.payload)
+
+      const systemLogsResponse = await server.inject({
+        method: 'GET',
+        url: `/v1/system-logs?organisationId=${organisationId}`,
+        headers: {
+          Authorization: `Bearer ${validToken}`
+        }
+      })
+
+      expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
+
+      const verifyCreatedBy = (payload) => {
+        expect(payload.id).toEqual('test-user-id')
+        expect(payload.email).toEqual('me@example.com')
+        expect(payload.scope).toEqual(['service_maintainer'])
+      }
+
+      const verifyEvent = (payload) => {
+        expect(payload.event.category).toEqual('entity')
+        expect(payload.event.subCategory).toEqual('epr-organisations')
+        expect(payload.event.action).toEqual('update')
+      }
+
+      const verifyContext = (payload) => {
+        expect(payload.context.organisationId).toEqual(organisationId)
+        expect(payload.context.previous).toEqual(initialOrg)
+        expect(payload.context.next).toEqual(updatedOrgResponseBody)
+      }
+
+      // System log
+      const systemLogsResponseBody = JSON.parse(systemLogsResponse.payload)
+      expect(systemLogsResponseBody.systemLogs).toHaveLength(1)
+      const systemLogPayload = systemLogsResponseBody.systemLogs[0]
+      verifyCreatedBy(systemLogPayload.createdBy)
+      expect(
+        new Date(systemLogPayload.createdAt).getTime()
+      ).toBeGreaterThanOrEqual(start.getTime())
+      verifyEvent(systemLogPayload)
+      verifyContext(systemLogPayload)
+
+      // CDP audit event
+      expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+      // stringify then parse to coerce Date objects to ISO strings
+      const auditPayload = JSON.parse(
+        JSON.stringify(mockCdpAuditing.mock.calls[0][0])
+      )
+      verifyCreatedBy(auditPayload.user)
+      verifyEvent(auditPayload)
+      verifyContext(auditPayload)
+    })
   })
 
   describe('not found cases', () => {
     describe('when the orgId does not exist', async () => {
       let response
       beforeEach(async () => {
-        const org = buildOrganisation()
+        const org = await createOrganisation()
         const nonExistentId = new ObjectId().toString()
-
-        await organisationsRepository.insert(org)
 
         response = await server.inject({
           method: 'PUT',
@@ -130,8 +230,7 @@ describe('PUT /v1/organisations/{id}', () => {
 
   describe('invalid payload', () => {
     it('returns 400 when version field is missing', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -152,8 +251,7 @@ describe('PUT /v1/organisations/{id}', () => {
     })
 
     it('returns 400 when version field is not a number', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -175,8 +273,7 @@ describe('PUT /v1/organisations/{id}', () => {
     })
 
     it('returns 400 when updateFragment field is missing', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -197,8 +294,7 @@ describe('PUT /v1/organisations/{id}', () => {
     })
 
     it('returns 400 when updateFragment is null', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -220,8 +316,7 @@ describe('PUT /v1/organisations/{id}', () => {
     })
 
     it('returns 400 when updateFragment is not an object', async () => {
-      const org = buildOrganisation()
-      await organisationsRepository.insert(org)
+      const org = await createOrganisation()
 
       const response = await server.inject({
         method: 'PUT',
@@ -244,8 +339,7 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 
   it('returns 409 when version number does not match current version', async () => {
-    const org = buildOrganisation()
-    await organisationsRepository.insert(org)
+    const org = await createOrganisation()
 
     const response = await server.inject({
       method: 'PUT',
@@ -265,8 +359,7 @@ describe('PUT /v1/organisations/{id}', () => {
   })
 
   it('it includes validation error information in the response', async () => {
-    const org = buildOrganisation()
-    await organisationsRepository.insert(org)
+    const org = await createOrganisation()
 
     const response = await server.inject({
       method: 'PUT',
@@ -290,8 +383,7 @@ describe('PUT /v1/organisations/{id}', () => {
   testInvalidTokenScenarios({
     server: () => server,
     makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
+      const org1 = await createOrganisation()
       return {
         method: 'PUT',
         url: `/v1/organisations/${org1.id}`,
@@ -311,8 +403,7 @@ describe('PUT /v1/organisations/{id}', () => {
   testOnlyServiceMaintainerCanAccess({
     server: () => server,
     makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
+      const org1 = await createOrganisation()
       return {
         method: 'PUT',
         url: `/v1/organisations/${org1.id}`,
