@@ -126,7 +126,7 @@ const findLatestSubmittedForOrgReg =
     }
 
     const { _id, version, ...summaryLog } = doc
-    return { version, summaryLog }
+    return { id: _id, version, summaryLog }
   }
 
 const supersedePendingLogs =

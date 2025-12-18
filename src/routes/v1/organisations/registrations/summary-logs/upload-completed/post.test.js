@@ -1,6 +1,7 @@
 import { StatusCodes } from 'http-status-codes'
 
 import {
+  NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
@@ -120,6 +121,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       insert: vi.fn().mockResolvedValue(undefined),
       update: vi.fn().mockResolvedValue(undefined),
       findById: vi.fn().mockResolvedValue(null),
+      findLatestSubmittedForOrgReg: vi.fn().mockResolvedValue(null),
       updateStatus: vi.fn().mockResolvedValue(undefined),
       supersedePendingLogs: vi.fn().mockResolvedValue(0)
     }
@@ -218,7 +220,8 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         name: filename,
         status: fileStatus,
         uri: `s3://${s3Bucket}/${s3Key}`
-      }
+      },
+      validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
     })
   })
 

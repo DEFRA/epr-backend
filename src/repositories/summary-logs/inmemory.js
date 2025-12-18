@@ -163,10 +163,11 @@ const checkForSubmittingLog =
 
 const findLatestSubmittedForOrgReg =
   (staleCache) => async (organisationId, registrationId) => {
+    let latestId = null
     let latestDoc = null
     let latestSubmittedAt = null
 
-    for (const [, doc] of staleCache) {
+    for (const [id, doc] of staleCache) {
       if (
         doc.summaryLog.organisationId === organisationId &&
         doc.summaryLog.registrationId === registrationId &&
@@ -176,6 +177,7 @@ const findLatestSubmittedForOrgReg =
 
         // Return the most recently submitted summary log
         if (latestDoc === null || submittedAt > latestSubmittedAt) {
+          latestId = id
           latestDoc = doc
           latestSubmittedAt = submittedAt
         }
@@ -187,6 +189,7 @@ const findLatestSubmittedForOrgReg =
     }
 
     return {
+      id: latestId,
       version: latestDoc.version,
       summaryLog: structuredClone(latestDoc.summaryLog)
     }

@@ -7,6 +7,7 @@ import {
 import {
   createRejectedValidation,
   determineStatusFromUpload,
+  NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
   transitionStatus,
   UPLOAD_STATUS
@@ -111,6 +112,18 @@ const updateStatusBasedOnUpload = async (
       organisationId,
       registrationId
     )
+
+    // Capture baseline for staleness detection when entering validating status
+    if (newStatus === SUMMARY_LOG_STATUS.VALIDATING) {
+      const latestSubmitted =
+        await summaryLogsRepository.findLatestSubmittedForOrgReg(
+          organisationId,
+          registrationId
+        )
+      summaryLog.validatedAgainstSummaryLogId =
+        latestSubmitted?.id ?? NO_PRIOR_SUBMISSION
+    }
+
     await summaryLogsRepository.insert(summaryLogId, summaryLog)
   }
 

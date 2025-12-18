@@ -1,6 +1,9 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  NO_PRIOR_SUBMISSION
+} from '#domain/summary-logs/status.js'
 import {
   generateFileId,
   buildFile,
@@ -285,16 +288,18 @@ export const testInsertBehaviour = (it) => {
           )
         })
 
-        it('preserves null validatedAgainstSummaryLogId on insert', async () => {
-          const id = `contract-null-baseline-${randomUUID()}`
+        it('preserves NO_PRIOR_SUBMISSION validatedAgainstSummaryLogId on insert', async () => {
+          const id = `contract-no-prior-baseline-${randomUUID()}`
           const summaryLog = buildSummaryLog({
-            validatedAgainstSummaryLogId: null
+            validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
           })
 
           await repository.insert(id, summaryLog)
 
           const found = await repository.findById(id)
-          expect(found.summaryLog.validatedAgainstSummaryLogId).toBeNull()
+          expect(found.summaryLog.validatedAgainstSummaryLogId).toBe(
+            NO_PRIOR_SUBMISSION
+          )
         })
 
         it('accepts valid file.status values', async () => {

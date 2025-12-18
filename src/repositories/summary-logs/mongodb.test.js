@@ -4,6 +4,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
+import { NO_PRIOR_SUBMISSION } from '#domain/summary-logs/status.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -60,8 +61,10 @@ describe('MongoDB summary logs repository', () => {
           file: {
             id: `file-${randomUUID()}`,
             name: 'test.xlsx',
-            s3: { bucket: 'bucket', key: 'key' }
-          }
+            status: 'complete',
+            uri: 's3://bucket/key'
+          },
+          validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
         })
       ).rejects.toThrow('Connection timeout')
     })

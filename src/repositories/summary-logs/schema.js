@@ -58,7 +58,11 @@ export const summaryLogInsertSchema = Joi.object({
     then: Joi.string().isoDate().required(),
     otherwise: Joi.forbidden()
   }),
-  validatedAgainstSummaryLogId: Joi.string().allow(null).optional()
+  validatedAgainstSummaryLogId: Joi.when('status', {
+    is: SUMMARY_LOG_STATUS.VALIDATING,
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden()
+  })
 }).messages(commonMessages)
 
 export const summaryLogUpdateSchema = Joi.object({
@@ -72,7 +76,9 @@ export const summaryLogUpdateSchema = Joi.object({
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
   meta: metaSchema.optional(),
-  submittedAt: Joi.string().isoDate().optional()
+  submittedAt: Joi.string().isoDate().optional(),
+  // Set once at insert time - must not be included in updates
+  validatedAgainstSummaryLogId: Joi.forbidden()
 })
   .min(1)
   .messages({

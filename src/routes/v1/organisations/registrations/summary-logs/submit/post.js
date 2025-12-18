@@ -53,7 +53,6 @@ export const summaryLogsSubmit = {
       }
 
       await summaryLogsRepository.update(summaryLogId, version, {
-        ...summaryLog,
         status: SUMMARY_LOG_STATUS.SUBMITTING
       })
 

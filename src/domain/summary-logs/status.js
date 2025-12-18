@@ -13,6 +13,12 @@ export const SUMMARY_LOG_STATUS = Object.freeze({
 })
 
 /**
+ * Sentinel value indicating this is the first submission for an org/reg pair.
+ * Used in `validatedAgainstSummaryLogId` when no prior submitted summary log exists.
+ */
+export const NO_PRIOR_SUBMISSION = 'NO_PRIOR_SUBMISSION'
+
+/**
  * Commands that can be sent to the summary log worker thread.
  */
 export const SUMMARY_LOG_COMMAND = Object.freeze({
