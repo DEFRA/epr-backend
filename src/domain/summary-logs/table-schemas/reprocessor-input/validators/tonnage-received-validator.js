@@ -1,17 +1,69 @@
-import { areNumbersEqual, YES_NO_VALUES } from '../../shared/index.js'
+import Joi from 'joi'
+import {
+  areNumbersEqual,
+  YES_NO_VALUES,
+  createWeightFieldSchema,
+  createYesNoFieldSchema,
+  createPercentageFieldSchema
+} from '../../shared/index.js'
 import { RECEIVED_LOADS_FIELDS } from '../fields.js'
 
 /**
- * A validated row containing tonnage reprocessing fields.
- * Used as a type guard target - after checking field presence,
- * these fields are guaranteed to have the correct types.
- * @typedef {Object} ValidatedTonnageReceivedRow
- * @property {number} NET_WEIGHT
- * @property {number} WEIGHT_OF_NON_TARGET_MATERIALS
- * @property {string} BAILING_WIRE_PROTOCOL
- * @property {number} RECYCLABLE_PROPORTION_PERCENTAGE
- * @property {number} TONNAGE_RECEIVED_FOR_RECYCLING
+ * Extracted tonnage received fields.
+ * @typedef {Object} TonnageReceivedFields
+ * @property {number} netWeight
+ * @property {number} weightOfNonTargetMaterials
+ * @property {boolean} bailingWireProtocol
+ * @property {number} recyclableProportionPercentage
+ * @property {number} tonnageReceivedForRecycling
  */
+
+/**
+ * Joi schema for extracting and validating tonnage received fields.
+ *
+ * Uses the same field schema factories as the main table schema,
+ * but makes fields required for extraction.
+ * Does not allow unknown fields - stripUnknown at validation time
+ * returns only these fields.
+ */
+const tonnageReceivedFieldsSchema = Joi.object({
+  [RECEIVED_LOADS_FIELDS.NET_WEIGHT]: createWeightFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS]:
+    createWeightFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL]:
+    createYesNoFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE]:
+    createPercentageFieldSchema().required(),
+  [RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]:
+    createWeightFieldSchema().required()
+})
+
+/**
+ * Extracts and validates tonnage received fields from a row.
+ *
+ * @param {Record<string, unknown>} row - Row data to extract from
+ * @returns {TonnageReceivedFields | null} Extracted fields or null if invalid
+ */
+export const extractTonnageReceivedFields = (row) => {
+  const { error, value } = tonnageReceivedFieldsSchema.validate(row, {
+    stripUnknown: true,
+    abortEarly: true
+  })
+  if (error) {
+    return null
+  }
+  return {
+    netWeight: value[RECEIVED_LOADS_FIELDS.NET_WEIGHT],
+    weightOfNonTargetMaterials:
+      value[RECEIVED_LOADS_FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS],
+    bailingWireProtocol:
+      value[RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL] === YES_NO_VALUES.YES,
+    recyclableProportionPercentage:
+      value[RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE],
+    tonnageReceivedForRecycling:
+      value[RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING]
+  }
+}
 
 /**
  * Bailing wire deduction factor
@@ -30,19 +82,6 @@ const MUST_EQUAL_TONNAGE_CALCULATION =
   'must equal the calculated tonnage based on NET_WEIGHT, WEIGHT_OF_NON_TARGET_MATERIALS, BAILING_WIRE_PROTOCOL, and RECYCLABLE_PROPORTION_PERCENTAGE'
 
 /**
- * Checks if all tonnage reprocessing fields are present in the row.
- * Acts as a type guard to narrow the row type.
- * @param {Record<string, unknown>} value - Row to check
- * @returns {value is ValidatedTonnageReceivedRow} True if all fields are present
- */
-const hasAllTonnageReceivedFields = (value) =>
-  RECEIVED_LOADS_FIELDS.NET_WEIGHT in value &&
-  RECEIVED_LOADS_FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS in value &&
-  RECEIVED_LOADS_FIELDS.BAILING_WIRE_PROTOCOL in value &&
-  RECEIVED_LOADS_FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE in value &&
-  RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING in value
-
-/**
  * Validates that TONNAGE_RECEIVED_FOR_RECYCLING matches the expected formula
  *
  * Formula:
@@ -54,40 +93,40 @@ const hasAllTonnageReceivedFields = (value) =>
  * The 0.9985 factor represents a 0.15% bailing wire deduction.
  *
  * This is a Joi custom validator for use at the object level.
- * It only validates when all required fields are present (filled).
+ * It only validates when all required fields are present and valid.
  *
- * Note: By the time this validator runs, unfilled values (null, undefined, '')
- * have already been filtered out by the validation pipeline. So we check
- * for field presence using the `in` operator.
+ * Uses the extractor to get strongly-typed fields, ensuring both
+ * presence and type correctness before performing calculations.
  *
  * @type {import('joi').CustomValidator<Record<string, unknown>>}
  */
 export const validateTonnageReceived = (value, helpers) => {
-  if (!hasAllTonnageReceivedFields(value)) {
+  const tonnageFields = extractTonnageReceivedFields(value)
+  if (!tonnageFields) {
+    // Fields not present or invalid - skip validation
     return value
   }
 
   const {
-    NET_WEIGHT: netWeight,
-    WEIGHT_OF_NON_TARGET_MATERIALS: nonTargetMaterials,
-    BAILING_WIRE_PROTOCOL: bailingWireProtocol,
-    RECYCLABLE_PROPORTION_PERCENTAGE: recyclableProportion,
-    TONNAGE_RECEIVED_FOR_RECYCLING: actualTonnage
-  } = value
+    netWeight,
+    weightOfNonTargetMaterials,
+    bailingWireProtocol,
+    recyclableProportionPercentage,
+    tonnageReceivedForRecycling
+  } = tonnageFields
 
   // Calculate base weight (adjusted weight before recyclable proportion)
-  const baseWeight = netWeight - nonTargetMaterials
+  const baseWeight = netWeight - weightOfNonTargetMaterials
 
-  // Apply bailing wire deduction if protocol is "Yes"
-  const adjustedWeight =
-    bailingWireProtocol === YES_NO_VALUES.YES
-      ? baseWeight * BAILING_WIRE_FACTOR
-      : baseWeight
+  // Apply bailing wire deduction if protocol is true
+  const adjustedWeight = bailingWireProtocol
+    ? baseWeight * BAILING_WIRE_FACTOR
+    : baseWeight
 
   // Calculate expected tonnage
-  const expectedTonnage = adjustedWeight * recyclableProportion
+  const expectedTonnage = adjustedWeight * recyclableProportionPercentage
 
-  if (!areNumbersEqual(actualTonnage, expectedTonnage)) {
+  if (!areNumbersEqual(tonnageReceivedForRecycling, expectedTonnage)) {
     return helpers.error('custom.tonnageCalculationMismatch', {
       field: RECEIVED_LOADS_FIELDS.TONNAGE_RECEIVED_FOR_RECYCLING
     })
