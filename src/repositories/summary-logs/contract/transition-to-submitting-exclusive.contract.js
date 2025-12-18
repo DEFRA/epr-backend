@@ -108,7 +108,9 @@ export const testTransitionToSubmittingExclusive = (it) => {
 
       await expect(
         repository.transitionToSubmittingExclusive(logId)
-      ).rejects.toThrow()
+      ).rejects.toThrow(
+        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+      )
     })
 
     it('allows concurrent submissions for different org/reg pairs', async () => {

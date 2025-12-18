@@ -129,7 +129,7 @@ const transitionToSubmittingExclusive =
     // Verify summary log is in validated status
     if (existing.summaryLog.status !== 'validated') {
       throw Boom.conflict(
-        `Summary log ${validatedId} is not in validated status`
+        `Summary log must be validated before submission. Current status: ${existing.summaryLog.status}`
       )
     }
 

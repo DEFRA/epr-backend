@@ -109,7 +109,9 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   }
 
   if (existing.status !== 'validated') {
-    throw Boom.conflict(`Summary log ${validatedId} is not in validated status`)
+    throw Boom.conflict(
+      `Summary log must be validated before submission. Current status: ${existing.status}`
+    )
   }
 
   const { organisationId, registrationId } = existing
