@@ -89,12 +89,10 @@ export const organisationReplaceSchema = organisationInsertSchema
     schemaVersion: Joi.number().required().valid(1),
     registrations: Joi.array()
       .items(registrationUpdateSchema)
-      .allow(null)
-      .optional(),
+      .default([]),
     accreditations: Joi.array()
       .items(accreditationUpdateSchema)
-      .allow(null)
-      .optional()
+      .default([])
   })
   .custom(validateApprovals)
   .messages(approvalValidationMessages)
