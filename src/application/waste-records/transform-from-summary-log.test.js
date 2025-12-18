@@ -221,6 +221,54 @@ describe('transformFromSummaryLog', () => {
     expect(record.versions[1].createdAt).toBe(SUBMISSION_TIMESTAMP)
   })
 
+  it('returns existing record unchanged if no data has changed', () => {
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: RECEIVED_LOADS_HEADERS,
+          rows: [
+            createRow(
+              RECEIVED_LOADS_HEADERS,
+              [FIRST_ROW_ID, FIRST_DATE, FIRST_WEIGHT],
+              FIRST_ROW_ID
+            )
+          ]
+        }
+      }
+    }
+
+    const summaryLogContext = {
+      summaryLog: {
+        id: SUMMARY_LOG_ID,
+        uri: SUMMARY_LOG_URI
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      timestamp: SUBMISSION_TIMESTAMP
+    }
+
+    const existingWasteRecord = createExistingWasteRecord()
+    const existingRecords = new Map([
+      [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
+    ])
+
+    const result = transformFromSummaryLog(
+      parsedData,
+      summaryLogContext,
+      existingRecords
+    )
+
+    expect(result).toHaveLength(1)
+    expect(result[0].record).toBe(existingWasteRecord)
+    expect(result[0].record.versions).toHaveLength(1)
+  })
+
   it('throws error for unknown processing type', () => {
     const parsedData = {
       meta: {

@@ -1,6 +1,6 @@
 import { describe, expect, vi } from 'vitest'
 import { buildWasteRecord } from './test-data.js'
-import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import * as validationPipeline from '#domain/summary-logs/table-schemas/validation-pipeline.js'
@@ -44,10 +44,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
         }
       })
 
@@ -112,10 +112,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
         }
       })
 
@@ -144,10 +144,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       const record = buildWasteRecord({
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2022-01-01', // Outside valid range
-          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2022-01-01', // Outside valid range
+          [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
         }
       })
 
@@ -188,10 +188,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
         }
       })
 
@@ -222,10 +222,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
         }
       })
 
@@ -234,10 +234,10 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
         updatedBy: user,
         data: {
           processingType: PROCESSING_TYPES.EXPORTER,
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '20.0'
         }
       })
 

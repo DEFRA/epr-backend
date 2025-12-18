@@ -269,6 +269,73 @@ describe('syncFromSummaryLog', () => {
     expect(savedRecords[0].versions[0].status).toBe(VERSION_STATUS.CREATED)
   })
 
+  it('should lookup accreditationId from organisationsRepository if missing in summaryLog', async () => {
+    const fileId = 'test-file-lookup'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+      // accreditationId is missing
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'EXPORTER'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_EXPORT: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: [
+            'ROW_ID',
+            'DATE_OF_EXPORT',
+            'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
+          ],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15, 10]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    organisationsRepository.findRegistrationById = vi
+      .fn()
+      .mockResolvedValue({ accreditationId: 'acc-from-repo' })
+
+    const featureFlags = {
+      isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(true)
+    }
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      featureFlags
+    })
+
+    await sync(summaryLog)
+
+    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
+      'org-1',
+      'reg-1'
+    )
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).toHaveBeenCalledWith(expect.any(Array), 'acc-from-repo')
+  })
+
   it('should create UPDATED version with delta when single field changes', async () => {
     // First, save an initial record
     const initialData = {

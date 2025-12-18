@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { calculateWasteBalanceUpdates } from './calculator.js'
-import { EXPORTER_FIELD } from './constants.js'
+import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import {
   WASTE_RECORD_TYPE,
   VERSION_STATUS
@@ -14,10 +14,10 @@ import {
 const buildWasteRecord = (overrides = {}) => {
   const defaultData = {
     processingType: PROCESSING_TYPES.EXPORTER,
-    [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-    [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-    [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
-    [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
+    [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+    [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+    [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: 10,
+    [RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]: 0,
     'Date Received': '2025-01-20'
   }
 
@@ -75,10 +75,10 @@ describe('Waste Balance Calculator', () => {
   it('AC01a: Should create transactions for valid PRN records (Export Tonnage)', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.5'
       }
     })
 
@@ -97,10 +97,11 @@ describe('Waste Balance Calculator', () => {
   it('AC01b: Should create transactions for valid PRN records (Interim Tonnage)', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.INTERIM_SITE]: 'Yes',
-        [EXPORTER_FIELD.INTERIM_TONNAGE]: '20.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'Yes',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]:
+          '20.0'
       }
     })
 
@@ -119,9 +120,9 @@ describe('Waste Balance Calculator', () => {
   it('AC02: Should ignore records where PRN was already issued', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'Yes',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'Yes',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
 
@@ -138,9 +139,9 @@ describe('Waste Balance Calculator', () => {
   it('AC03: Should ignore records outside accreditation date range', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2022-12-31', // Before validFrom
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2022-12-31', // Before validFrom
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
 
@@ -158,17 +159,17 @@ describe('Waste Balance Calculator', () => {
     const record1 = buildWasteRecord({
       rowId: 'row-1',
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
     const record2 = buildWasteRecord({
       rowId: 'row-2',
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-07-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-07-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '20.0'
       }
     })
 
@@ -195,9 +196,9 @@ describe('Waste Balance Calculator', () => {
   it('Should ignore records with zero or negative amount', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '0'
       }
     })
 
@@ -215,8 +216,8 @@ describe('Waste Balance Calculator', () => {
   it('Should ignore records with missing dispatch date', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
         // DATE_OF_EXPORT missing
       }
     })
@@ -233,9 +234,9 @@ describe('Waste Balance Calculator', () => {
   it('Should default to export tonnage if interim site is missing', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '15.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '15.0'
         // INTERIM_SITE missing
       }
     })
@@ -253,9 +254,9 @@ describe('Waste Balance Calculator', () => {
   it('Should default to 0 if interim tonnage is missing when interim site is Yes', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.INTERIM_SITE]: 'Yes'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'Yes'
         // INTERIM_TONNAGE missing
       }
     })
@@ -272,10 +273,11 @@ describe('Waste Balance Calculator', () => {
   it('Should default to 0 if export tonnage is missing', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: undefined
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]:
+          undefined
       }
     })
 
@@ -292,9 +294,9 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       rowId: 'row-1',
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '20.0'
       }
     })
 
@@ -341,9 +343,9 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       rowId: 'row-1',
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '20.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '20.0'
       }
     })
 
@@ -405,9 +407,9 @@ describe('Waste Balance Calculator', () => {
   it('Should handle missing transactions array in currentBalance', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
 
@@ -428,9 +430,9 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       rowId: 'row-1',
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
 
@@ -475,9 +477,9 @@ describe('Waste Balance Calculator', () => {
   it('Should not create transaction if balance is already correct', () => {
     const record = buildWasteRecord({
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
 
@@ -533,9 +535,9 @@ describe('Waste Balance Calculator', () => {
     const record = buildWasteRecord({
       rowId: 'row-1',
       data: {
-        [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-        [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-        [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+        [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+        [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+        [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
       }
     })
 
@@ -649,9 +651,9 @@ describe('Waste Balance Calculator', () => {
           { id: 'v3', status: 'created' }
         ],
         data: {
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
         }
       })
 
@@ -670,9 +672,9 @@ describe('Waste Balance Calculator', () => {
     it('Should handle missing versions array', () => {
       const record = buildWasteRecord({
         data: {
-          [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
-          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.0'
+          [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+          [RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]: '2023-06-01',
+          [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: '10.0'
         }
       })
       delete record.versions

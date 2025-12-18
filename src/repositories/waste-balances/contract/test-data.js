@@ -3,7 +3,7 @@ import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
-import { EXPORTER_FIELD } from '#domain/waste-balances/constants.js'
+import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 /**
@@ -65,10 +65,10 @@ export const buildWasteRecord = (overrides = {}) => {
   const { data, versions, ...restOverrides } = overrides
   const defaultData = {
     processingType: PROCESSING_TYPES.EXPORTER,
-    [EXPORTER_FIELD.PRN_ISSUED]: 'No',
-    [EXPORTER_FIELD.INTERIM_SITE]: 'No',
-    [EXPORTER_FIELD.EXPORT_TONNAGE]: 10,
-    [EXPORTER_FIELD.INTERIM_TONNAGE]: 0,
+    [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: 'No',
+    [RECEIVED_LOADS_FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE]: 'No',
+    [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: 10,
+    [RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]: 0,
     'Date Received': '2025-01-20'
   }
 

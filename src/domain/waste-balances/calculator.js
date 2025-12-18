@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { getFieldValue } from './field-mappings.js'
-import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
+import { extractWasteBalanceFields } from './extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -8,14 +7,12 @@ import {
 
 /**
  * Filter by Accreditation Date Range (AC03)
+ * @param {Object} fields - Extracted waste balance fields
+ * @param {Object} accreditation - Accreditation details
+ * @returns {boolean}
  */
-export const isWithinAccreditationDateRange = (record, accreditation) => {
-  const recordDateStr = getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)
-  if (!recordDateStr) {
-    return false
-  }
-
-  const recordDate = new Date(recordDateStr)
+export const isWithinAccreditationDateRange = (fields, accreditation) => {
+  const recordDate = new Date(fields.date)
   const validFrom = new Date(accreditation.validFrom)
   const validTo = new Date(accreditation.validTo)
 
@@ -24,21 +21,23 @@ export const isWithinAccreditationDateRange = (record, accreditation) => {
 
 /**
  * Filter by PRN Status (AC02)
+ * @param {Object} fields - Extracted waste balance fields
+ * @returns {boolean}
  */
-export const hasPrnBeenIssued = (record) => {
-  const prnIssued = getFieldValue(record, COMMON_FIELD.PRN_ISSUED)
-  return prnIssued && prnIssued.toLowerCase() === 'yes'
+export const hasPrnBeenIssued = (fields) => {
+  return fields.prnIssued
 }
 
 /**
  * Calculate Transaction Amount (AC01a, AC01b)
+ * @param {Object} fields - Extracted waste balance fields
+ * @returns {number}
  */
-export const getTransactionAmount = (record) => {
-  const interimSite = getFieldValue(record, COMMON_FIELD.INTERIM_SITE)
-  if (interimSite && interimSite.toLowerCase() === 'yes') {
-    return Number(getFieldValue(record, COMMON_FIELD.INTERIM_TONNAGE) || 0)
+export const getTransactionAmount = (fields) => {
+  if (fields.interimSite) {
+    return fields.interimTonnage
   }
-  return Number(getFieldValue(record, COMMON_FIELD.EXPORT_TONNAGE) || 0)
+  return fields.exportTonnage
 }
 
 /**
@@ -145,12 +144,15 @@ export const calculateWasteBalanceUpdates = ({
   ;(currentBalance.transactions || []).forEach(updateCreditedAmountMap)
 
   for (const record of wasteRecords) {
+    const fields = extractWasteBalanceFields(record.data)
+
     if (
-      isWithinAccreditationDateRange(record, accreditation) &&
-      !hasPrnBeenIssued(record)
+      fields &&
+      isWithinAccreditationDateRange(fields, accreditation) &&
+      !hasPrnBeenIssued(fields)
     ) {
       // Calculate Target Amount
-      const targetAmount = getTransactionAmount(record)
+      const targetAmount = getTransactionAmount(fields)
 
       // Calculate Already Credited Amount
       const alreadyCreditedAmount =
