@@ -36,7 +36,8 @@ export const testInsertBehaviour = (it) => {
               ...accWithoutStatusHistory,
               formSubmissionTime: new Date(acc.formSubmissionTime)
             }
-          })
+          }),
+          users: []
         }
 
         expect(result).toMatchObject(expectedData)
@@ -51,6 +52,9 @@ export const testInsertBehaviour = (it) => {
           expect(reg.statusHistory).toHaveLength(1)
           expect(reg.statusHistory[0].status).toBe('created')
           expect(reg.statusHistory[0].updatedAt).toBeInstanceOf(Date)
+          expect(reg.validFrom).toBeNull()
+          expect(reg.validTo).toBeNull()
+          expect(reg.registrationNumber).toBeNull()
         })
 
         result.accreditations.forEach((acc) => {
@@ -58,6 +62,9 @@ export const testInsertBehaviour = (it) => {
           expect(acc.statusHistory).toHaveLength(1)
           expect(acc.statusHistory[0].status).toBe('created')
           expect(acc.statusHistory[0].updatedAt).toBeInstanceOf(Date)
+          expect(acc.validFrom).toBeNull()
+          expect(acc.validTo).toBeNull()
+          expect(acc.accreditationNumber).toBeNull()
         })
       })
 

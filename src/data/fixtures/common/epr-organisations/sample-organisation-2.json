@@ -20,6 +20,7 @@
     "jobTitle": "Owner",
     "phone": "2223334444"
   },
+  "users": [],
   "registrations": [
     {
       "id": "6507f1f77bcf86cd79943922",
@@ -68,7 +69,10 @@
         "line1": "22 Export Lane",
         "town": "Cardiff",
         "postcode": "CF10 1AA"
-      }
+      },
+      "registrationNumber": null,
+      "validFrom": null,
+      "validTo": null
     }
   ],
   "accreditations": [
@@ -151,7 +155,10 @@
           "defraFormUploadedFileId": "file-789-ors-accred",
           "defraFormUserDownloadLink": "https://example.com/file-789-ors-accred"
         }
-      ]
+      ],
+      "accreditationNumber": null,
+      "validFrom": null,
+      "validTo": null
     }
   ],
   "companyDetails": {
