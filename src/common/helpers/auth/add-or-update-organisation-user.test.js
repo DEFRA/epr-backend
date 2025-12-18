@@ -4,14 +4,14 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { ObjectId } from 'mongodb'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { addStandardUserIfNotPresent } from './add-standard-user-if-not-present.js'
+import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.js'
 
 /**
  * @import {HapiRequest} from '#common/hapi-types.js'
  * @import {Organisation} from '#domain/organisations/model.js'
  */
 
-describe('addStandardUserIfNotPresent', () => {
+describe(addOrUpdateOrganisationUser, () => {
   let mockRequest
   let mockOrganisationsRepository
   let mockTokenPayload
@@ -48,7 +48,7 @@ describe('addStandardUserIfNotPresent', () => {
 
   describe('when user does not exist in organisation', () => {
     test('should add user to organisation with correct details', async () => {
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -75,7 +75,7 @@ describe('addStandardUserIfNotPresent', () => {
       mockTokenPayload.firstName = "O'Brien"
       mockTokenPayload.lastName = 'Smith-Jones'
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -117,7 +117,7 @@ describe('addStandardUserIfNotPresent', () => {
       /** @type {Object & Partial<HapiRequest>} */
       const fakeRequest = { organisationsRepository }
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         fakeRequest,
         /** @type {any} */ ({
           contactId: 'contact-123',
@@ -181,7 +181,7 @@ describe('addStandardUserIfNotPresent', () => {
       /** @type {Object & Partial<HapiRequest>} */
       const fakeRequest = { organisationsRepository }
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         fakeRequest,
         /** @type {any} */ ({
           email: 'new.email.for.me@example.com',
@@ -225,7 +225,7 @@ describe('addStandardUserIfNotPresent', () => {
         // users property is missing/undefined
       }
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -255,7 +255,7 @@ describe('addStandardUserIfNotPresent', () => {
         users: null
       }
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -281,7 +281,7 @@ describe('addStandardUserIfNotPresent', () => {
     test('should initialize empty users array when adding first user', async () => {
       delete mockOrganisation.users
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -301,7 +301,7 @@ describe('addStandardUserIfNotPresent', () => {
       mockTokenPayload.firstName = ''
       mockTokenPayload.lastName = 'Doe'
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -317,7 +317,7 @@ describe('addStandardUserIfNotPresent', () => {
       mockTokenPayload.firstName = 'John'
       mockTokenPayload.lastName = ''
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -332,7 +332,7 @@ describe('addStandardUserIfNotPresent', () => {
     test('should work with different contactId formats', async () => {
       mockTokenPayload.contactId = '12345-67890-abcdef'
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation
@@ -346,7 +346,7 @@ describe('addStandardUserIfNotPresent', () => {
       mockOrganisationsRepository.replace.mockRejectedValue(repositoryError)
 
       await expect(
-        addStandardUserIfNotPresent(
+        addOrUpdateOrganisationUser(
           mockRequest,
           mockTokenPayload,
           mockOrganisation
@@ -358,7 +358,7 @@ describe('addStandardUserIfNotPresent', () => {
       mockTokenPayload.firstName = 'José'
       mockTokenPayload.lastName = 'García'
 
-      await addStandardUserIfNotPresent(
+      await addOrUpdateOrganisationUser(
         mockRequest,
         mockTokenPayload,
         mockOrganisation

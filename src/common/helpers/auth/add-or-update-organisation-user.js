@@ -2,9 +2,9 @@ import { stringEquals } from '#common/helpers/auth/roles/helpers.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
 import partition from 'lodash.partition'
 
+/** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
 /** @import {DefraIdTokenPayload} from './types.js' */
 /** @import {HapiRequest} from '#common/hapi-types.js' */
-/** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
 
 export const getDisplayName = ({ firstName, lastName }) =>
   [firstName, lastName].filter(Boolean).join(' ')
@@ -48,7 +48,7 @@ const extractUserAndOthers = (organisation, { email, contactId }) => {
  * @param {Organisation} organisationById - The organisation object
  * @returns {Promise<void>}
  */
-export const addStandardUserIfNotPresent = async (
+export const addOrUpdateOrganisationUser = async (
   request,
   tokenPayload,
   organisationById

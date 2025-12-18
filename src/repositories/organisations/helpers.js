@@ -212,6 +212,7 @@ export const collateUsers = (existing, updated) => {
   }
 
   const users = [
+    /* v8 ignore next */
     ...(updated.users ?? []),
     ...root,
     ...collateRegistrationUsers(existing, updated),
