@@ -6,6 +6,8 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
 
+const FLOAT_PRECISION_THRESHOLD = 0.000001
+
 /**
  * Filter by Accreditation Date Range (AC03)
  */
@@ -160,7 +162,7 @@ export const calculateWasteBalanceUpdates = ({
     const delta = targetAmount - alreadyCreditedAmount
 
     // Only create transaction if there is a difference (handling float precision)
-    if (Math.abs(delta) > 0.000001) {
+    if (Math.abs(delta) > FLOAT_PRECISION_THRESHOLD) {
       const type =
         delta > 0
           ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
