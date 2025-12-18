@@ -65,7 +65,7 @@ export const organisationInsertSchema = Joi.object({
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
     .required(),
   submitterContactDetails: userSchema.required(),
-  users: Joi.array().items(collatedUserSchema).optional(),
+  users: Joi.array().items(collatedUserSchema).default([]),
   wasteProcessingTypes: Joi.array()
     .items(
       Joi.string().valid(
