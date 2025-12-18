@@ -1,7 +1,4 @@
-import {
-  findUserInOrg,
-  stringEquals
-} from '#common/helpers/auth/roles/helpers.js'
+import { stringEquals } from '#common/helpers/auth/roles/helpers.js'
 import { USER_ROLES } from '#domain/organisations/model.js'
 import partition from 'lodash.partition'
 
@@ -24,10 +21,25 @@ const withChangedDetails = (
   !stringEquals(user.fullName, getDisplayName({ firstName, lastName }))
 
 /**
- * @param {Organisation} org
- * @returns {CollatedUser[]}
+ * @param {Organisation} organisation
+ * @param {DefraIdTokenPayload} token
+ * @returns {{ user: CollatedUser|null, otherUsers: CollatedUser[] }}
  */
-const getUsers = (org) => org.users ?? []
+const extractUserAndOthers = (organisation, { email, contactId }) => {
+  const [matchingUsers, otherUsers] = partition(
+    organisation.users ?? [],
+    /**
+     * @param {CollatedUser} user
+     * @returns {boolean}
+     */
+    (user) => stringEquals(user.email, email) || user.contactId === contactId
+  )
+
+  return {
+    user: matchingUsers[0] ?? null,
+    otherUsers
+  }
+}
 
 /**
  * Adds a user to an organisation if they are not there
@@ -44,36 +56,29 @@ export const addStandardUserIfNotPresent = async (
   const { organisationsRepository } = request
   const { email, firstName, lastName, contactId } = tokenPayload
 
-  const user = findUserInOrg(organisationById, email, contactId)
-
-  const [matchingUsers, nonMatchingUsers] = partition(
-    getUsers(organisationById),
-    /** @type {CollatedUser} */ (user) =>
-      stringEquals(user.email, email) || user.contactId === contactId
+  const { user, otherUsers } = extractUserAndOthers(
+    organisationById,
+    tokenPayload
   )
-
-  console.log('matchingUsers :>> ', matchingUsers)
-  console.log('nonMatchingUsers :>> ', nonMatchingUsers)
 
   /* v8 ignore next */
   if (noUser(user) || withChangedDetails(user, tokenPayload)) {
     const { id: _, version: _v, ...org } = organisationById
-
-    const newOrUpdated = {
-      contactId,
-      email,
-      fullName: getDisplayName({ firstName, lastName }),
-      roles: user?.roles ?? [USER_ROLES.STANDARD]
-    }
-
-    console.log('newOrUpdated :>> ', newOrUpdated)
 
     await organisationsRepository.replace(
       organisationById.id,
       organisationById.version,
       {
         ...org,
-        users: [newOrUpdated, ...nonMatchingUsers]
+        users: [
+          {
+            contactId,
+            email,
+            fullName: getDisplayName({ firstName, lastName }),
+            roles: user?.roles ?? [USER_ROLES.STANDARD]
+          },
+          ...otherUsers
+        ]
       }
     )
   }

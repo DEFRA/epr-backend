@@ -2,27 +2,8 @@ import { USER_ROLES } from '#domain/organisations/model.js'
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 /** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
-/** @import {CollatedUser, Organisation} from '#domain/organisations/model.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
-
-/**
- * Finds a user in the organisation by email or contactId
- * @param {Organisation} organisation - The organisation object
- * @param {string} email - The user's email address in their Defra token
- * @param {string} contactId - The user's contact Id in their Defra token
- * @returns {CollatedUser | null | undefined} The user if found, null if no users array exists, undefined if user not found
- */
-export function findUserInOrg(organisation, email, contactId) {
-  const { users } = organisation
-
-  if (!users) {
-    return null
-  }
-
-  return organisation.users.find(
-    (user) => stringEquals(user.email, email) || user.contactId === contactId
-  )
-}
 
 /**
  * Performs a case-insensitive string comparison

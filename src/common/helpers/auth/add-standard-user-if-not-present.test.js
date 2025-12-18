@@ -372,20 +372,4 @@ describe('addStandardUserIfNotPresent', () => {
       expect(newUser.fullName).toBe('José García')
     })
   })
-
-  describe('integration with findUserInOrg', () => {
-    test('should correctly identify when user does not exist', async () => {
-      mockOrganisation.users = [
-        { email: 'other@example.com', contactId: 'other-contact' }
-      ]
-
-      await addStandardUserIfNotPresent(
-        mockRequest,
-        mockTokenPayload,
-        mockOrganisation
-      )
-
-      expect(mockOrganisationsRepository.replace).toHaveBeenCalledOnce()
-    })
-  })
 })
