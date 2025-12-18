@@ -14,15 +14,79 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const getTableName = (recordType, processingType) => {
-  if (processingType === PROCESSING_TYPES.EXPORTER) {
-    if (recordType === WASTE_RECORD_TYPE.EXPORTED) {
-      return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
-    }
-    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
-      return TABLE_NAMES.SENT_ON_LOADS
-    }
+  if (processingType !== PROCESSING_TYPES.EXPORTER) {
+    return null
+  }
+  if (recordType === WASTE_RECORD_TYPE.EXPORTED) {
+    return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
+  }
+  if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
+    return TABLE_NAMES.SENT_ON_LOADS
   }
   return null
+}
+
+/**
+ * Determines if a record should be included based on schema validation.
+ *
+ * @param {Object} actualRecord - The waste record to validate
+ * @param {string} processingType - The processing type for schema lookup
+ * @param {Function} getTableSchema - Function to get table schema
+ * @returns {boolean} Whether the record passes validation
+ */
+const isRecordValidBySchema = (
+  actualRecord,
+  processingType,
+  getTableSchema
+) => {
+  const tableName = getTableName(actualRecord.type, processingType)
+  const schema = tableName ? getTableSchema(tableName) : null
+
+  if (!schema) {
+    return true
+  }
+
+  const { outcome } = classifyRow(actualRecord.data, schema)
+  return outcome === ROW_OUTCOME.INCLUDED
+}
+
+/**
+ * Determines if a record should be included based on pre-calculated outcome.
+ *
+ * @param {Object} record - The wrapped record with outcome property
+ * @returns {boolean} Whether the record should be included
+ */
+const isRecordValidByOutcome = (record) => {
+  if (!record.outcome) {
+    return true
+  }
+  return record.outcome === ROW_OUTCOME.INCLUDED
+}
+
+/**
+ * Determines if a single record should be included in the valid records list.
+ *
+ * @param {Object} record - The wrapped or unwrapped record
+ * @param {string} processingType - The processing type for the batch
+ * @param {Function|null} getTableSchema - Function to get table schema, or null
+ * @returns {{actualRecord: Object, isValid: boolean}}
+ */
+const evaluateRecord = (record, processingType, getTableSchema) => {
+  const actualRecord = record.record || record
+  const recordProcessingType =
+    actualRecord.data?.processingType || processingType
+
+  if (getTableSchema) {
+    const isValid = isRecordValidBySchema(
+      actualRecord,
+      recordProcessingType,
+      getTableSchema
+    )
+    return { actualRecord, isValid }
+  }
+
+  const isValid = isRecordValidByOutcome(record)
+  return { actualRecord, isValid }
 }
 
 /**
@@ -95,30 +159,13 @@ export const filterValidRecords = (wasteRecords) => {
   const validRecords = []
 
   for (const record of wasteRecords) {
-    // Handle wrapped record { record, outcome } for backward compat if needed
-    const actualRecord = record.record || record
-    const recordProcessingType =
-      actualRecord.data?.processingType || processingType
-    let isIncluded = true
+    const { actualRecord, isValid } = evaluateRecord(
+      record,
+      processingType,
+      getTableSchema
+    )
 
-    if (getTableSchema) {
-      const tableName = getTableName(actualRecord.type, recordProcessingType)
-      const schema = tableName ? getTableSchema(tableName) : null
-
-      if (schema) {
-        const { outcome } = classifyRow(actualRecord.data, schema)
-        if (outcome !== ROW_OUTCOME.INCLUDED) {
-          isIncluded = false
-        }
-      }
-    } else if (record.outcome) {
-      // Fallback to pre-calculated outcome if processingType not available
-      if (record.outcome !== ROW_OUTCOME.INCLUDED) {
-        isIncluded = false
-      }
-    }
-
-    if (isIncluded) {
+    if (isValid) {
       validRecords.push(actualRecord)
     }
   }
