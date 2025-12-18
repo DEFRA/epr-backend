@@ -134,8 +134,6 @@ describe('addStandardUserIfNotPresent', () => {
         updated.users.filter((u) => u.email === 'existing.user@example.com')
       ).toHaveLength(1)
 
-      console.dir(updated.users, { depth: null })
-
       expect(updated.users).toEqual(
         expect.arrayContaining([
           {

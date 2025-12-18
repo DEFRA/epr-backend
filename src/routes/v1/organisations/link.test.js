@@ -80,7 +80,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
       }
 
-      const databaseStateScenarios = [
+      it.each([
         {
           description: 'user is not in the users list',
           user: baseUserObject,
@@ -93,61 +93,63 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           status: STATUS.CREATED,
           expectedStatusCode: StatusCodes.CONFLICT
         },
-        // FIXME reinstate
-        // {
-        //   description: 'user is valid',
-        //   user: fullyValidUser,
-        //   status: STATUS.ACTIVE,
-        //   expectedStatusCode: StatusCodes.CONFLICT
-        // },
-        // {
-        //   description: 'user is valid',
-        //   user: fullyValidUser,
-        //   status: STATUS.ARCHIVED,
-        //   expectedStatusCode: StatusCodes.CONFLICT
-        // },
-        // {
-        //   description: 'user is valid',
-        //   user: fullyValidUser,
-        //   status: STATUS.REJECTED,
-        //   expectedStatusCode: StatusCodes.CONFLICT
-        // },
+        {
+          description: 'user is valid',
+          user: fullyValidUser,
+          status: STATUS.ACTIVE,
+          expectedStatusCode: StatusCodes.CONFLICT
+        },
+        {
+          description: 'user is valid',
+          user: fullyValidUser,
+          status: STATUS.ARCHIVED,
+          expectedStatusCode: StatusCodes.CONFLICT
+        },
+        {
+          description: 'user is valid',
+          user: fullyValidUser,
+          status: STATUS.REJECTED,
+          expectedStatusCode: StatusCodes.CONFLICT
+        },
         {
           description: 'user is valid',
           user: fullyValidUser,
           status: STATUS.APPROVED,
           expectedStatusCode: StatusCodes.OK
         }
-      ]
-
-      it.each(databaseStateScenarios)(
+      ])(
         'returns $expectedStatusCode when $description and org status is $status',
         async ({ user, status, expectedStatusCode }) => {
           const org = buildOrganisation()
 
           await organisationsRepository.insert(org)
 
-          const orgWithSubmitterDetails = prepareOrgUpdate(org, {
-            submitterContactDetails: {
-              fullName: user.fullName,
-              email: user.email,
-              phone: '1234567890',
-              jobTitle: 'Director'
-            }
-          })
           await organisationsRepository.replace(
             org.id,
             1,
-            orgWithSubmitterDetails
+            prepareOrgUpdate(org, {
+              submitterContactDetails: {
+                fullName: user.fullName,
+                email: user.email,
+                phone: '1234567890',
+                jobTitle: 'Director'
+              }
+            })
           )
 
-          const orgWithUpdatedStatus = prepareOrgUpdate(
-            orgWithSubmitterDetails,
-            {
-              status
-            }
+          const orgWithSubmitterDetails = await waitForVersion(
+            organisationsRepository,
+            org.id,
+            2
           )
-          await organisationsRepository.replace(org.id, 2, orgWithUpdatedStatus)
+
+          await organisationsRepository.replace(
+            org.id,
+            2,
+            prepareOrgUpdate(orgWithSubmitterDetails, {
+              status
+            })
+          )
 
           await waitForVersion(organisationsRepository, org.id, 3)
 

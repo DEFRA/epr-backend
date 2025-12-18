@@ -14,7 +14,7 @@ export const testReplaceBehaviour = (it) => {
       repository = await organisationsRepository()
     })
 
-    describe.only('basic behaviour', () => {
+    describe('basic behaviour', () => {
       it('updates organisation level fields successfully', async () => {
         const orgData = buildOrganisation()
         await repository.insert(orgData)

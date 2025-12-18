@@ -1,6 +1,6 @@
+import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { ROLES } from '#common/helpers/auth/constants.js'
 
 import { STATUS } from '#domain/organisations/model.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
