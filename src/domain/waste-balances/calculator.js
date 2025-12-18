@@ -6,6 +6,8 @@ import {
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
 
+const FLOAT_PRECISION_THRESHOLD = 0.000001
+
 /**
  * Filter by Accreditation Date Range (AC03)
  */
@@ -145,44 +147,44 @@ export const calculateWasteBalanceUpdates = ({
   ;(currentBalance.transactions || []).forEach(updateCreditedAmountMap)
 
   for (const record of wasteRecords) {
-    if (
-      isWithinAccreditationDateRange(record, accreditation) &&
-      !hasPrnBeenIssued(record)
-    ) {
-      // Calculate Target Amount
-      const targetAmount = getTransactionAmount(record)
+    const isWithinRange = isWithinAccreditationDateRange(record, accreditation)
+    const prnIssued = hasPrnBeenIssued(record)
 
-      // Calculate Already Credited Amount
-      const alreadyCreditedAmount =
-        creditedAmountMap.get(String(record.rowId)) || 0
+    // Calculate Target Amount
+    // A record only contributes if it's within range AND PRN is NOT issued
+    const targetAmount =
+      isWithinRange && !prnIssued ? getTransactionAmount(record) : 0
 
-      const delta = targetAmount - alreadyCreditedAmount
+    // Calculate Already Credited Amount
+    const alreadyCreditedAmount =
+      creditedAmountMap.get(String(record.rowId)) || 0
 
-      // Only create transaction if there is a difference (handling float precision)
-      if (Math.abs(delta) > 0.000001) {
-        const type =
-          delta > 0
-            ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
-            : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
-        const amount = Math.abs(delta)
+    const delta = targetAmount - alreadyCreditedAmount
 
-        // Create Transaction
-        const transaction = buildTransaction(
-          record,
-          amount,
-          currentAmount,
-          currentAvailableAmount,
-          type
-        )
+    // Only create transaction if there is a difference (handling float precision)
+    if (Math.abs(delta) > FLOAT_PRECISION_THRESHOLD) {
+      const type =
+        delta > 0
+          ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
+          : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
+      const amount = Math.abs(delta)
 
-        // Update State
-        currentAmount = transaction.closingAmount
-        currentAvailableAmount = transaction.closingAvailableAmount
-        newTransactions.push(transaction)
+      // Create Transaction
+      const transaction = buildTransaction(
+        record,
+        amount,
+        currentAmount,
+        currentAvailableAmount,
+        type
+      )
 
-        // Update map for next iteration
-        updateCreditedAmountMap(transaction)
-      }
+      // Update State
+      currentAmount = transaction.closingAmount
+      currentAvailableAmount = transaction.closingAvailableAmount
+      newTransactions.push(transaction)
+
+      // Update map for next iteration
+      updateCreditedAmountMap(transaction)
     }
   }
 
