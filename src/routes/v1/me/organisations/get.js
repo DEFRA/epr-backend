@@ -1,4 +1,3 @@
-import { addStandardUserIfNotPresent } from '#common/helpers/auth/add-standard-user-if-not-present.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import {
   getOrgDataFromDefraIdToken,
@@ -110,14 +109,6 @@ export const organisationsLinkedGetAll = {
         name: org.companyDetails.name,
         orgId: org.orgId
       }))
-
-    if (linked) {
-      await addStandardUserIfNotPresent(
-        request,
-        auth.artifacts.decoded.payload,
-        linkedOrg
-      )
-    }
 
     /** @type {{ organisations: UserOrganisationsResponse }} */
     const payload = { organisations: { current, linked, unlinked } }
