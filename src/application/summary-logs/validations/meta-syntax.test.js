@@ -323,4 +323,75 @@ describe('validateMetaSyntax', () => {
     expect(fatals).toHaveLength(1)
     expect(fatals[0].code).toBe('VALIDATION_FALLBACK_ERROR')
   })
+
+  describe('type coercion for ExcelJS values', () => {
+    it('coerces numeric REGISTRATION_NUMBER to string', () => {
+      // ExcelJS may return a number if the cell looks numeric
+      const parsed = {
+        meta: {
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' },
+          REGISTRATION_NUMBER: { value: 12345 } // number instead of string
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+    })
+
+    it('coerces numeric MATERIAL to string', () => {
+      // ExcelJS may return a number if the cell looks numeric
+      const parsed = {
+        meta: {
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 12345 }, // number instead of string
+          REGISTRATION_NUMBER: { value: 'REG12345' }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+    })
+
+    it('coerces numeric ACCREDITATION_NUMBER to string', () => {
+      // ExcelJS may return a number if the cell looks numeric
+      const parsed = {
+        meta: {
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: 1 },
+          MATERIAL: { value: 'Aluminium' },
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          ACCREDITATION_NUMBER: { value: 98765 } // number instead of string
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+    })
+
+    it('coerces string TEMPLATE_VERSION to number', () => {
+      // ExcelJS may return a string if the cell is formatted as text
+      const parsed = {
+        meta: {
+          PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
+          TEMPLATE_VERSION: { value: '1' }, // string instead of number
+          MATERIAL: { value: 'Aluminium' },
+          REGISTRATION_NUMBER: { value: 'REG12345' }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(true)
+      expect(result.isFatal()).toBe(false)
+    })
+  })
 })

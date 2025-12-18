@@ -7,7 +7,6 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import { config } from '#root/config.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -54,12 +53,11 @@ export const summaryLogsCreate = {
     const callbackUrl = `${appBaseUrl}/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`
 
     try {
-      // Create summary log with preprocessing status
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.PREPROCESSING,
+      // Check for conflicting submission in progress (throws 409 if found)
+      await summaryLogsRepository.checkForSubmittingLog(
         organisationId,
         registrationId
-      })
+      )
 
       // Initiate upload via CDP Uploader
       const cdpResponse = await uploadsRepository.initiateSummaryLogUpload({
