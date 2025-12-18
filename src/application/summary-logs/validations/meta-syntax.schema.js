@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { customJoi } from '#common/validation/custom-joi.js'
 
 const VALID_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
 
@@ -14,7 +15,8 @@ const IS_REQUIRED = 'is required'
  * This validates the syntax and format of meta fields to prevent malicious input
  */
 export const metaSchema = Joi.object({
-  PROCESSING_TYPE: Joi.string()
+  PROCESSING_TYPE: customJoi
+    .coercedString()
     .valid(...VALID_PROCESSING_TYPES)
     .required()
     .messages({
@@ -28,15 +30,16 @@ export const metaSchema = Joi.object({
       'number.min': `must be at least ${MIN_TEMPLATE_VERSION}`,
       'any.required': IS_REQUIRED
     }),
-  MATERIAL: Joi.string()
+  MATERIAL: customJoi
+    .coercedString()
     .max(MAX_MATERIAL_LENGTH)
     .required()
     .messages({
       'string.max': `must be at most ${MAX_MATERIAL_LENGTH} characters`,
       'any.required': IS_REQUIRED
     }),
-  REGISTRATION_NUMBER: Joi.string().required().messages({
+  REGISTRATION_NUMBER: customJoi.coercedString().required().messages({
     'any.required': IS_REQUIRED
   }),
-  ACCREDITATION_NUMBER: Joi.string().optional().allow(null, '')
+  ACCREDITATION_NUMBER: customJoi.coercedString().optional().allow(null, '')
 }).unknown(true) // Allow other fields that might be present
