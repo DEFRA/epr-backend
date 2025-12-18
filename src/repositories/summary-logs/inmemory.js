@@ -117,8 +117,7 @@ const findLatestSubmittedForOrgReg =
   }
 
 const transitionToSubmittingExclusive =
-  (storage, staleCache, logger) =>
-  async (logId, version, organisationId, registrationId) => {
+  (storage, staleCache) => async (logId) => {
     const validatedId = validateId(logId)
     const existing = storage.get(validatedId)
 
@@ -134,27 +133,12 @@ const transitionToSubmittingExclusive =
       )
     }
 
-    // Verify version matches (optimistic concurrency)
-    if (existing.version !== version) {
-      const conflictError = new Error(
-        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-      )
-      logger.error({
-        error: conflictError,
-        message: `Version conflict detected for summary log ${validatedId}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: validatedId
-        }
-      })
-      throw Boom.conflict(conflictError.message)
-    }
+    const { organisationId, registrationId } = existing.summaryLog
 
     // Pre-check: is another log for same org/reg already submitting?
     // Read from storage (strong consistency) - in single-threaded JS,
     // true race conditions can't occur like they can in MongoDB with
-    // network I/O interleaving. The post-check exists for MongoDB's benefit.
+    // network I/O interleaving.
     for (const [id, doc] of storage) {
       if (
         id !== validatedId &&
@@ -179,11 +163,6 @@ const transitionToSubmittingExclusive =
       summaryLog: structuredClone(updatedSummaryLog)
     }
     storage.set(validatedId, newDoc)
-    // Note: Unlike MongoDB where network I/O can interleave and cause races,
-    // JavaScript's single-threaded nature means races can't occur here.
-    // MongoDB has post-check logic to detect/resolve races, but it's not
-    // needed for in-memory. The pre-check above (strong consistency) ensures
-    // only one transition succeeds.
     scheduleStaleCacheSync(storage, staleCache)
 
     return {
@@ -211,8 +190,7 @@ export const createInMemorySummaryLogsRepository = () => {
     findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
     transitionToSubmittingExclusive: transitionToSubmittingExclusive(
       storage,
-      staleCache,
-      logger
+      staleCache
     )
   })
 }

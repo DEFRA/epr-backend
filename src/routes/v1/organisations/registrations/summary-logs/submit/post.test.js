@@ -1,10 +1,14 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  NO_PRIOR_SUBMISSION
+} from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
@@ -25,7 +29,9 @@ describe(`${summaryLogsSubmitPath} route`, () => {
   beforeAll(async () => {
     summaryLogsRepository = {
       findById: vi.fn(),
-      update: vi.fn().mockResolvedValue(undefined)
+      update: vi.fn().mockResolvedValue(undefined),
+      transitionToSubmittingExclusive: vi.fn(),
+      findLatestSubmittedForOrgReg: vi.fn()
     }
 
     summaryLogsWorker = {
@@ -48,14 +54,18 @@ describe(`${summaryLogsSubmitPath} route`, () => {
   })
 
   beforeEach(() => {
-    summaryLogsRepository.findById.mockResolvedValue({
-      version: 1,
+    // Default happy path: transition succeeds
+    summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+      success: true,
       summaryLog: {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId,
-        registrationId
-      }
+        registrationId,
+        validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
+      },
+      version: 2
     })
+    summaryLogsRepository.findLatestSubmittedForOrgReg.mockResolvedValue(null)
   })
 
   afterEach(() => {
@@ -104,20 +114,16 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       )
     })
 
-    it('updates summary log status to SUBMITTING using optimistic concurrency', async () => {
+    it('calls transitionToSubmittingExclusive to atomically transition status', async () => {
       await server.inject({
         method: 'POST',
         url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(summaryLogsRepository.update).toHaveBeenCalledWith(
-        summaryLogId,
-        1, // version for optimistic concurrency
-        expect.objectContaining({
-          status: SUMMARY_LOG_STATUS.SUBMITTING
-        })
-      )
+      expect(
+        summaryLogsRepository.transitionToSubmittingExclusive
+      ).toHaveBeenCalledWith(summaryLogId)
     })
 
     it('calls validator submit with summary log ID', async () => {
@@ -150,7 +156,9 @@ describe(`${summaryLogsSubmitPath} route`, () => {
 
   describe('error cases', () => {
     it('returns 404 when summary log does not exist', async () => {
-      summaryLogsRepository.findById.mockResolvedValue(null)
+      summaryLogsRepository.transitionToSubmittingExclusive.mockRejectedValue(
+        Boom.notFound(`Summary log ${summaryLogId} not found`)
+      )
 
       const response = await server.inject({
         method: 'POST',
@@ -164,10 +172,62 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     })
 
     it('returns 409 when summary log status is not VALIDATED', async () => {
-      summaryLogsRepository.findById.mockResolvedValue({
+      summaryLogsRepository.transitionToSubmittingExclusive.mockRejectedValue(
+        Boom.conflict(
+          `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+        )
+      )
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toBe(
+        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+      )
+    })
+
+    it('returns 409 when another submission is in progress', async () => {
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: false
+      })
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
+      const body = JSON.parse(response.payload)
+      expect(body.message).toBe(
+        'Another submission is in progress. Please try again.'
+      )
+    })
+
+    it('returns 409 when preview is stale (another submission completed since preview)', async () => {
+      // Preview was generated when 'old-submission-id' was the latest submitted log
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: true,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId,
+          registrationId,
+          validatedAgainstSummaryLogId: 'old-submission-id'
+        },
+        version: 2
+      })
+
+      // But now there's a newer submitted log
+      summaryLogsRepository.findLatestSubmittedForOrgReg.mockResolvedValue({
+        id: 'new-submission-id',
         version: 1,
         summaryLog: {
-          status: SUMMARY_LOG_STATUS.VALIDATING,
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
           organisationId,
           registrationId
         }
@@ -182,7 +242,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.CONFLICT)
       const body = JSON.parse(response.payload)
       expect(body.message).toBe(
-        `Summary log must be validated before submission. Current status: ${SUMMARY_LOG_STATUS.VALIDATING}`
+        'Waste records have changed since preview was generated. Please re-upload.'
       )
     })
 

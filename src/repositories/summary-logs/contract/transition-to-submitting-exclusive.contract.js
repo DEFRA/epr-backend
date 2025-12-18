@@ -38,14 +38,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         })
       )
 
-      const existing = await repository.findById(logId)
-
-      const result = await repository.transitionToSubmittingExclusive(
-        logId,
-        existing.version,
-        organisationId,
-        registrationId
-      )
+      const result = await repository.transitionToSubmittingExclusive(logId)
 
       expect(result.success).toBe(true)
       expect(result.summaryLog).toBeDefined()
@@ -58,7 +51,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
       const existingSubmittingId = `summary-${randomUUID()}`
       const newLogId = `summary-${randomUUID()}`
 
-      // Insert both logs first as validated (insert blocks when submitting exists)
+      // Insert both logs first as validated
       await repository.insert(
         existingSubmittingId,
         buildSummaryLog({
@@ -84,14 +77,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
         submittedAt: new Date().toISOString()
       })
 
-      const existing = await repository.findById(newLogId)
-
-      const result = await repository.transitionToSubmittingExclusive(
-        newLogId,
-        existing.version,
-        organisationId,
-        registrationId
-      )
+      const result = await repository.transitionToSubmittingExclusive(newLogId)
 
       expect(result.success).toBe(false)
       expect(result.summaryLog).toBeUndefined()
@@ -99,16 +85,10 @@ export const testTransitionToSubmittingExclusive = (it) => {
     })
 
     it('throws when summary log not found', async () => {
-      const { organisationId, registrationId } = generateOrgReg()
       const nonExistentId = `summary-${randomUUID()}`
 
       await expect(
-        repository.transitionToSubmittingExclusive(
-          nonExistentId,
-          1,
-          organisationId,
-          registrationId
-        )
+        repository.transitionToSubmittingExclusive(nonExistentId)
       ).rejects.toThrow()
     })
 
@@ -126,15 +106,8 @@ export const testTransitionToSubmittingExclusive = (it) => {
         })
       )
 
-      const existing = await repository.findById(logId)
-
       await expect(
-        repository.transitionToSubmittingExclusive(
-          logId,
-          existing.version,
-          organisationId,
-          registrationId
-        )
+        repository.transitionToSubmittingExclusive(logId)
       ).rejects.toThrow()
     })
 
@@ -162,24 +135,11 @@ export const testTransitionToSubmittingExclusive = (it) => {
         })
       )
 
-      const existing1 = await repository.findById(logId1)
-      const existing2 = await repository.findById(logId2)
-
       // First transition should succeed
-      const result1 = await repository.transitionToSubmittingExclusive(
-        logId1,
-        existing1.version,
-        orgReg1.organisationId,
-        orgReg1.registrationId
-      )
+      const result1 = await repository.transitionToSubmittingExclusive(logId1)
 
       // Second transition for different org/reg should also succeed
-      const result2 = await repository.transitionToSubmittingExclusive(
-        logId2,
-        existing2.version,
-        orgReg2.organisationId,
-        orgReg2.registrationId
-      )
+      const result2 = await repository.transitionToSubmittingExclusive(logId2)
 
       expect(result1.success).toBe(true)
       expect(result2.success).toBe(true)
@@ -201,12 +161,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
       const existing = await repository.findById(logId)
       expect(existing.version).toBe(1)
 
-      const result = await repository.transitionToSubmittingExclusive(
-        logId,
-        existing.version,
-        organisationId,
-        registrationId
-      )
+      const result = await repository.transitionToSubmittingExclusive(logId)
 
       expect(result.success).toBe(true)
       expect(result.version).toBe(2)
@@ -217,30 +172,6 @@ export const testTransitionToSubmittingExclusive = (it) => {
       // Verify persisted version
       const updated = await repository.findById(logId)
       expect(updated.version).toBe(2)
-    })
-
-    it('throws on version conflict', async () => {
-      const { organisationId, registrationId } = generateOrgReg()
-      const logId = `summary-${randomUUID()}`
-
-      await repository.insert(
-        logId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          organisationId,
-          registrationId
-        })
-      )
-
-      // Use wrong version
-      await expect(
-        repository.transitionToSubmittingExclusive(
-          logId,
-          999,
-          organisationId,
-          registrationId
-        )
-      ).rejects.toThrow()
     })
 
     describe('concurrent calls for same org/reg', () => {
@@ -267,23 +198,10 @@ export const testTransitionToSubmittingExclusive = (it) => {
           })
         )
 
-        const existing1 = await repository.findById(logId1)
-        const existing2 = await repository.findById(logId2)
-
         // Race two transitions
         const results = await Promise.all([
-          repository.transitionToSubmittingExclusive(
-            logId1,
-            existing1.version,
-            organisationId,
-            registrationId
-          ),
-          repository.transitionToSubmittingExclusive(
-            logId2,
-            existing2.version,
-            organisationId,
-            registrationId
-          )
+          repository.transitionToSubmittingExclusive(logId1),
+          repository.transitionToSubmittingExclusive(logId2)
         ])
 
         // Exactly one should succeed
@@ -318,23 +236,10 @@ export const testTransitionToSubmittingExclusive = (it) => {
           })
         )
 
-        const existing1 = await repository.findById(logId1)
-        const existing2 = await repository.findById(logId2)
-
         // Race two transitions
         await Promise.all([
-          repository.transitionToSubmittingExclusive(
-            logId1,
-            existing1.version,
-            organisationId,
-            registrationId
-          ),
-          repository.transitionToSubmittingExclusive(
-            logId2,
-            existing2.version,
-            organisationId,
-            registrationId
-          )
+          repository.transitionToSubmittingExclusive(logId1),
+          repository.transitionToSubmittingExclusive(logId2)
         ])
 
         // Allow staleCache to sync before reading (eventual consistency)

@@ -96,95 +96,78 @@ const findLatestSubmittedForOrgReg =
     return { id: _id, version, summaryLog }
   }
 
-const transitionToSubmittingExclusive =
-  (db, logger) => async (logId, version, organisationId, registrationId) => {
-    const validatedId = validateId(logId)
+const transitionToSubmittingExclusive = (db) => async (logId) => {
+  const validatedId = validateId(logId)
 
-    // First, verify the document exists and check its current state
-    /** @type {any} */
-    const findFilter = { _id: validatedId }
-    const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+  // First, verify the document exists and check its current state
+  /** @type {any} */
+  const findFilter = { _id: validatedId }
+  const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
 
-    if (!existing) {
-      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
-    }
+  if (!existing) {
+    throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+  }
 
-    if (existing.status !== 'validated') {
-      throw Boom.conflict(
-        `Summary log ${validatedId} is not in validated status`
-      )
-    }
+  if (existing.status !== 'validated') {
+    throw Boom.conflict(`Summary log ${validatedId} is not in validated status`)
+  }
 
-    if (existing.version !== version) {
-      const conflictError = new Error(
-        `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
-      )
-      logger.error({
-        error: conflictError,
-        message: `Version conflict detected for summary log ${validatedId}`,
-        event: {
-          category: LOGGING_EVENT_CATEGORIES.DB,
-          action: LOGGING_EVENT_ACTIONS.VERSION_CONFLICT_DETECTED,
-          reference: validatedId
-        }
-      })
-      throw Boom.conflict(conflictError.message)
-    }
+  const { organisationId, registrationId } = existing
 
-    // Check if another log for same org/reg is already submitting (fast path)
-    /** @type {any} */
-    const submittingFilter = {
-      _id: { $ne: validatedId },
-      organisationId,
-      registrationId,
-      status: 'submitting'
-    }
-    const existingSubmitting = await db
-      .collection(COLLECTION_NAME)
-      .findOne(submittingFilter)
+  // Check if another log for same org/reg is already submitting (fast path)
+  /** @type {any} */
+  const submittingFilter = {
+    _id: { $ne: validatedId },
+    organisationId,
+    registrationId,
+    status: 'submitting'
+  }
+  const existingSubmitting = await db
+    .collection(COLLECTION_NAME)
+    .findOne(submittingFilter)
 
-    if (existingSubmitting) {
+  if (existingSubmitting) {
+    return { success: false }
+  }
+
+  // Atomically transition to submitting
+  // The unique partial index on (organisationId, registrationId) where status='submitting'
+  // ensures only one document can be in submitting status per org/reg at a time
+  const submittedAt = new Date().toISOString()
+  /** @type {any} */
+  const updateFilter = { _id: validatedId, status: 'validated' }
+
+  try {
+    const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+      updateFilter,
+      {
+        $set: { status: 'submitting', submittedAt },
+        $inc: { version: 1 }
+      },
+      { returnDocument: 'after' }
+    )
+
+    // If update failed due to status mismatch, another transaction beat us
+    if (!result) {
       return { success: false }
     }
 
-    // Atomically transition to submitting with version check
-    // The unique partial index on (organisationId, registrationId) where status='submitting'
-    // ensures only one document can be in submitting status per org/reg at a time
-    const submittedAt = new Date().toISOString()
-    /** @type {any} */
-    const updateFilter = { _id: validatedId, version, status: 'validated' }
-
-    try {
-      const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-        updateFilter,
-        {
-          $set: { status: 'submitting', submittedAt },
-          $inc: { version: 1 }
-        },
-        { returnDocument: 'after' }
-      )
-
-      // If update failed due to version/status mismatch, another transaction beat us
-      if (!result) {
-        return { success: false }
-      }
-
-      // Extract summaryLog from result (remove _id and version)
-      const { _id, version: newVersion, ...summaryLog } = result
-      return {
-        success: true,
-        summaryLog,
-        version: newVersion
-      }
-    } catch (error) {
-      // Unique index violation means another document for same org/reg is already submitting
-      // This can happen in a race even if the pre-check passed
-      if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-        return { success: false }
-      }
-      throw error
+    // Extract summaryLog from result (remove _id and version)
+    const { _id, version: newVersion, ...summaryLog } = result
+    return {
+      success: true,
+      summaryLog,
+      version: newVersion
     }
+  } catch (error) {
+    // Unique index violation means another document for same org/reg is already submitting
+    // This can happen in a race even if the pre-check passed
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      return { success: false }
+    }
+    throw error
   }
+}
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
@@ -195,5 +178,5 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   update: update(db, logger),
   findById: findById(db),
   findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
-  transitionToSubmittingExclusive: transitionToSubmittingExclusive(db, logger)
+  transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
 })
