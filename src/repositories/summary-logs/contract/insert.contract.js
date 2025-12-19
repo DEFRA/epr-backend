@@ -1,6 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { NO_PRIOR_SUBMISSION } from '#domain/summary-logs/status.js'
+import {
+  calculateExpiresAt,
+  NO_PRIOR_SUBMISSION,
+  SUMMARY_LOG_STATUS
+} from '#domain/summary-logs/status.js'
 import {
   generateFileId,
   buildFile,
@@ -222,7 +226,8 @@ export const testInsertBehaviour = (it) => {
         it('accepts preprocessing status without file data', async () => {
           const id = `contract-preprocessing-no-file-${randomUUID()}`
           const preprocessingLog = {
-            status: 'preprocessing',
+            status: SUMMARY_LOG_STATUS.PREPROCESSING,
+            expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.PREPROCESSING),
             organisationId: 'org-123',
             registrationId: 'reg-456'
           }
@@ -230,14 +235,15 @@ export const testInsertBehaviour = (it) => {
           await repository.insert(id, preprocessingLog)
 
           const found = await repository.findById(id)
-          expect(found.summaryLog.status).toBe('preprocessing')
+          expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.PREPROCESSING)
           expect(found.summaryLog.file).toBeUndefined()
         })
 
         it('rejects non-preprocessing status without file data', async () => {
           const id = `contract-validating-no-file-${randomUUID()}`
           const validatingLogWithoutFile = {
-            status: 'validating',
+            status: SUMMARY_LOG_STATUS.VALIDATING,
+            expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
             organisationId: 'org-123',
             registrationId: 'reg-456'
           }

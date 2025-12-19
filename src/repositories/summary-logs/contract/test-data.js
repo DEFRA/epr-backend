@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import {
+  calculateExpiresAt,
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS
 } from '#domain/summary-logs/status.js'
@@ -50,20 +51,27 @@ const STATUSES_REQUIRING_BASELINE = new Set([SUMMARY_LOG_STATUS.VALIDATING])
  * @property {string} [organisationId]
  * @property {string} [registrationId]
  * @property {string} [validatedAgainstSummaryLogId]
+ * @property {Date|null} [expiresAt]
  */
 
 /**
  * @param {SummaryLogOverrides} [overrides]
  */
 export const buildSummaryLog = (overrides = {}) => {
-  const { file, submittedAt, validatedAgainstSummaryLogId, ...logOverrides } =
-    overrides
+  const {
+    file,
+    submittedAt,
+    validatedAgainstSummaryLogId,
+    expiresAt,
+    ...logOverrides
+  } = overrides
   const status = logOverrides.status ?? SUMMARY_LOG_STATUS.VALIDATING
 
   /** @type {Record<string, unknown>} */
   const base = {
     status,
     file: file === undefined ? buildFile() : file,
+    expiresAt: expiresAt === undefined ? calculateExpiresAt(status) : expiresAt,
     ...logOverrides
   }
 

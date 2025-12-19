@@ -75,11 +75,11 @@ const handleSubmitCommand = async ({
   await sync(summaryLog)
 
   // Update status to SUBMITTED
-  transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
-
-  await summaryLogsRepository.update(summaryLogId, version, {
-    status: SUMMARY_LOG_STATUS.SUBMITTED
-  })
+  await summaryLogsRepository.update(
+    summaryLogId,
+    version,
+    transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+  )
 
   logger.info({
     message: `Summary log submitted: summaryLogId=${summaryLogId}`

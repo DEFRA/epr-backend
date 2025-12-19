@@ -1,7 +1,10 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { buildSummaryLog } from './test-data.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  calculateExpiresAt
+} from '#domain/summary-logs/status.js'
 import { waitForVersion } from './test-helpers.js'
 
 const generateOrgReg = () => ({
@@ -75,6 +78,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
       const existingDoc = await repository.findById(existingSubmittingId)
       await repository.update(existingSubmittingId, existingDoc.version, {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
+        expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.SUBMITTING),
         submittedAt: new Date().toISOString()
       })
 

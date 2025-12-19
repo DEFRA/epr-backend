@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { SUMMARY_LOG_STATUS } from './status.js'
-import { calculateExpiresAt } from './expiry.js'
+import { SUMMARY_LOG_STATUS, calculateExpiresAt } from './status.js'
 
 describe('calculateExpiresAt', () => {
   const FIXED_NOW = new Date('2024-12-19T12:00:00.000Z')

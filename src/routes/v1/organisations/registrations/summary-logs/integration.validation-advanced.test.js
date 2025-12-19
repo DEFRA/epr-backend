@@ -1,7 +1,8 @@
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
+  UPLOAD_STATUS,
+  calculateExpiresAt
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
@@ -769,6 +770,7 @@ describe('Advanced validation scenarios', () => {
 
       await summaryLogsRepository.insert(summaryLogId, {
         status: SUMMARY_LOG_STATUS.VALIDATED,
+        expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATED),
         organisationId,
         registrationId,
         file: {

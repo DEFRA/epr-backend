@@ -82,6 +82,7 @@ describe('In-memory summary logs repository', () => {
 
       const updates = {
         status: 'validating',
+        expiresAt: new Date('2025-01-01T00:00:00.000Z'),
         file: buildFile({ name: 'updated.xlsx' })
       }
       await repository.update(id, 1, updates)

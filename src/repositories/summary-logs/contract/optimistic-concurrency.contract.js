@@ -1,5 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { describe, beforeEach, expect, vi } from 'vitest'
+import {
+  SUMMARY_LOG_STATUS,
+  transitionStatus
+} from '#domain/summary-logs/status.js'
 import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
@@ -41,37 +45,46 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-version-increment',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
-        const updated = await updateAndFetch(repository, id, initial.version, {
-          status: 'validating'
-        })
+        const updated = await updateAndFetch(
+          repository,
+          id,
+          initial.version,
+          transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+        )
 
         expect(updated.version).toBe(2)
-        expect(updated.summaryLog.status).toBe('validating')
+        expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
       })
 
       it('throws conflict error when updating with stale version', async () => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-stale-version',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
-        await repository.update(id, initial.version, {
-          status: 'validating'
-        })
+        await repository.update(
+          id,
+          initial.version,
+          transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+        )
 
         await expect(
-          repository.update(id, initial.version, { status: 'rejected' })
+          repository.update(
+            id,
+            initial.version,
+            transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.REJECTED)
+          )
         ).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 409 }
         })
 
         const final = await waitForVersion(repository, id, 2)
-        expect(final.summaryLog.status).toBe('validating')
+        expect(final.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
         expect(final.version).toBe(2)
       })
 
@@ -79,22 +92,28 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-sequential-updates',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
         expect(initial.version).toBe(1)
 
-        let current = await updateAndFetch(repository, id, initial.version, {
-          status: 'validating'
-        })
+        let current = await updateAndFetch(
+          repository,
+          id,
+          initial.version,
+          transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+        )
         expect(current.version).toBe(2)
 
-        current = await updateAndFetch(repository, id, current.version, {
-          status: 'preprocessing'
-        })
+        current = await updateAndFetch(
+          repository,
+          id,
+          current.version,
+          transitionStatus(current.summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
+        )
         const expectedVersionAfterTwoUpdates = 3
         expect(current.version).toBe(expectedVersionAfterTwoUpdates)
-        expect(current.summaryLog.status).toBe('preprocessing')
+        expect(current.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
       })
 
       it('preserves version field integrity across updates', async () => {
@@ -102,7 +121,7 @@ export const testOptimisticConcurrency = (it) => {
           repository,
           'contract-version-integrity',
           {
-            status: 'preprocessing',
+            status: SUMMARY_LOG_STATUS.PREPROCESSING,
             organisationId: 'org-123',
             registrationId: 'reg-456',
             file: buildPendingFile()
@@ -110,7 +129,10 @@ export const testOptimisticConcurrency = (it) => {
         )
 
         const updated = await updateAndFetch(repository, id, initial.version, {
-          status: 'validating',
+          ...transitionStatus(
+            initial.summaryLog,
+            SUMMARY_LOG_STATUS.VALIDATING
+          ),
           file: buildFile({
             id: initial.summaryLog.file.id,
             name: initial.summaryLog.file.name
@@ -126,16 +148,22 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-conflict-message',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
-        await repository.update(id, initial.version, {
-          status: 'validating'
-        })
+        await repository.update(
+          id,
+          initial.version,
+          transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+        )
 
         const expectedCurrentVersion = 2
         await expect(
-          repository.update(id, initial.version, { status: 'rejected' })
+          repository.update(
+            id,
+            initial.version,
+            transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.REJECTED)
+          )
         ).rejects.toMatchObject({
           isBoom: true,
           output: {
@@ -147,7 +175,7 @@ export const testOptimisticConcurrency = (it) => {
         })
 
         const final = await waitForVersion(repository, id, 2)
-        expect(final.summaryLog.status).toBe('validating')
+        expect(final.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATING)
         expect(final.version).toBe(2)
       })
     })
@@ -157,12 +185,20 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-concurrent',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
         const results = await Promise.allSettled([
-          repository.update(id, initial.version, { status: 'validating' }),
-          repository.update(id, initial.version, { status: 'rejected' })
+          repository.update(
+            id,
+            initial.version,
+            transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+          ),
+          repository.update(
+            id,
+            initial.version,
+            transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.REJECTED)
+          )
         ])
 
         const fulfilled = results.filter((r) => r.status === 'fulfilled')
@@ -177,7 +213,10 @@ export const testOptimisticConcurrency = (it) => {
 
         const final = await waitForVersion(repository, id, 2)
         expect(final.version).toBe(2)
-        expect(['validating', 'rejected']).toContain(final.summaryLog.status)
+        expect([
+          SUMMARY_LOG_STATUS.VALIDATING,
+          SUMMARY_LOG_STATUS.REJECTED
+        ]).toContain(final.summaryLog.status)
       })
     })
 
@@ -196,17 +235,21 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-logging',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
-        await repository.update(id, initial.version, {
-          status: 'validating'
-        })
+        await repository.update(
+          id,
+          initial.version,
+          transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+        )
 
         await expect(
-          repository.update(id, initial.version, {
-            status: 'rejected'
-          })
+          repository.update(
+            id,
+            initial.version,
+            transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.REJECTED)
+          )
         ).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 409 }
@@ -239,17 +282,21 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-logging-details',
-          { status: 'preprocessing', file: buildPendingFile() }
+          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
         )
 
-        await repository.update(id, initial.version, {
-          status: 'validating'
-        })
+        await repository.update(
+          id,
+          initial.version,
+          transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
+        )
 
         await expect(
-          repository.update(id, initial.version, {
-            status: 'rejected'
-          })
+          repository.update(
+            id,
+            initial.version,
+            transitionStatus(initial.summaryLog, SUMMARY_LOG_STATUS.REJECTED)
+          )
         ).rejects.toMatchObject({
           isBoom: true,
           output: { statusCode: 409 }

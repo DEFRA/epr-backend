@@ -63,6 +63,7 @@ describe('MongoDB summary logs repository', () => {
       await expect(
         repository.insert(`test-${randomUUID()}`, {
           status: 'validating',
+          expiresAt: new Date('2025-01-01T00:00:00.000Z'),
           file: {
             id: `file-${randomUUID()}`,
             name: 'test.xlsx',

@@ -1,5 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
+import { calculateExpiresAt } from '#domain/summary-logs/status.js'
 import { buildSummaryLog } from './test-data.js'
 
 const generateOrgReg = () => ({
@@ -192,7 +193,12 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
         const logId = `summary-${status}-${randomUUID()}`
         const summaryLog =
           status === 'preprocessing'
-            ? { status, organisationId, registrationId }
+            ? {
+                status,
+                organisationId,
+                registrationId,
+                expiresAt: calculateExpiresAt(status)
+              }
             : buildSummaryLog({ status, organisationId, registrationId })
 
         await repository.insert(logId, summaryLog)

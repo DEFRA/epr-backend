@@ -1,5 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildSummaryLog } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
@@ -25,7 +26,10 @@ export const testExpiresAtBehaviour = (it) => {
 
       it('stores and retrieves expiresAt as null', async () => {
         const id = `contract-expires-at-null-${randomUUID()}`
-        const summaryLog = buildSummaryLog({ expiresAt: null })
+        const summaryLog = buildSummaryLog({
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          expiresAt: null
+        })
 
         await repository.insert(id, summaryLog)
         const found = await repository.findById(id)
@@ -33,20 +37,20 @@ export const testExpiresAtBehaviour = (it) => {
         expect(found.summaryLog.expiresAt).toBeNull()
       })
 
-      it('allows insert without expiresAt', async () => {
+      it('rejects insert without expiresAt', async () => {
         const id = `contract-expires-at-omitted-${randomUUID()}`
-        const summaryLog = buildSummaryLog()
+        const { expiresAt: _, ...summaryLogWithoutExpiresAt } =
+          buildSummaryLog()
 
-        await repository.insert(id, summaryLog)
-        const found = await repository.findById(id)
-
-        expect(found.summaryLog.expiresAt).toBeUndefined()
+        await expect(
+          repository.insert(id, summaryLogWithoutExpiresAt)
+        ).rejects.toThrow(/Invalid summary log data.*expiresAt/)
       })
     })
 
     describe('update', () => {
-      it('updates expiresAt to a Date', async () => {
-        const id = `contract-update-expires-at-${randomUUID()}`
+      it('updates status and expiresAt together', async () => {
+        const id = `contract-update-status-expires-at-${randomUUID()}`
         const summaryLog = buildSummaryLog()
         const newExpiresAt = new Date('2024-12-26T12:00:00.000Z')
 
@@ -54,28 +58,35 @@ export const testExpiresAtBehaviour = (it) => {
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
+          status: SUMMARY_LOG_STATUS.VALIDATED,
           expiresAt: newExpiresAt
         })
 
         const found = await waitForVersion(repository, id, current.version + 1)
+        expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
         expect(found.summaryLog.expiresAt).toEqual(newExpiresAt)
       })
 
-      it('updates expiresAt to null', async () => {
+      it('updates status and expiresAt to null together', async () => {
         const id = `contract-update-expires-at-null-${randomUUID()}`
-        const expiresAt = new Date('2024-12-26T12:00:00.000Z')
-        const summaryLog = buildSummaryLog({ expiresAt })
+        const summaryLog = buildSummaryLog({
+          status: SUMMARY_LOG_STATUS.SUBMITTING
+        })
 
         await repository.insert(id, summaryLog)
         const current = await repository.findById(id)
 
-        await repository.update(id, current.version, { expiresAt: null })
+        await repository.update(id, current.version, {
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          expiresAt: null
+        })
 
         const found = await waitForVersion(repository, id, current.version + 1)
+        expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.SUBMITTED)
         expect(found.summaryLog.expiresAt).toBeNull()
       })
 
-      it('preserves expiresAt when not included in update', async () => {
+      it('preserves expiresAt when updating other fields', async () => {
         const id = `contract-preserve-expires-at-${randomUUID()}`
         const expiresAt = new Date('2024-12-26T12:00:00.000Z')
         const summaryLog = buildSummaryLog({ expiresAt })
@@ -83,10 +94,40 @@ export const testExpiresAtBehaviour = (it) => {
         await repository.insert(id, summaryLog)
         const current = await repository.findById(id)
 
-        await repository.update(id, current.version, { status: 'validating' })
+        await repository.update(id, current.version, {
+          organisationId: 'updated-org'
+        })
 
         const found = await waitForVersion(repository, id, current.version + 1)
         expect(found.summaryLog.expiresAt).toEqual(expiresAt)
+      })
+
+      it('rejects update with status but without expiresAt', async () => {
+        const id = `contract-status-without-expires-at-${randomUUID()}`
+        const summaryLog = buildSummaryLog()
+
+        await repository.insert(id, summaryLog)
+        const current = await repository.findById(id)
+
+        await expect(
+          repository.update(id, current.version, {
+            status: SUMMARY_LOG_STATUS.VALIDATED
+          })
+        ).rejects.toThrow(/status and expiresAt must be updated together/)
+      })
+
+      it('rejects update with expiresAt but without status', async () => {
+        const id = `contract-expires-at-without-status-${randomUUID()}`
+        const summaryLog = buildSummaryLog()
+
+        await repository.insert(id, summaryLog)
+        const current = await repository.findById(id)
+
+        await expect(
+          repository.update(id, current.version, {
+            expiresAt: new Date('2024-12-26T12:00:00.000Z')
+          })
+        ).rejects.toThrow(/status and expiresAt must be updated together/)
       })
     })
   })

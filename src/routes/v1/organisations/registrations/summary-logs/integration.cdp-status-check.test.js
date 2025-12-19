@@ -4,7 +4,8 @@ import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/
 import {
   NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
+  UPLOAD_STATUS,
+  calculateExpiresAt
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -58,6 +59,7 @@ describe('CDP status check for stale preprocessing status', () => {
       // Create a summary log stuck in preprocessing (simulating missed callback)
       await summaryLogsRepository.insert(summaryLogId, {
         status: SUMMARY_LOG_STATUS.PREPROCESSING,
+        expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.PREPROCESSING),
         organisationId,
         registrationId
       })
@@ -209,6 +211,7 @@ describe('CDP status check for stale preprocessing status', () => {
         const { version } = await summaryLogsRepository.findById(summaryLogId)
         await summaryLogsRepository.update(summaryLogId, version, {
           status: SUMMARY_LOG_STATUS.VALIDATING,
+          expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
           file: {
             id: 'file-123',
             name: 'test.xlsx',
@@ -261,6 +264,7 @@ describe('CDP status check for stale preprocessing status', () => {
     it('does not query CDP when status is validated', async () => {
       await summaryLogsRepository.insert(summaryLogId, {
         status: SUMMARY_LOG_STATUS.VALIDATED,
+        expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATED),
         organisationId,
         registrationId,
         file: {
@@ -284,6 +288,7 @@ describe('CDP status check for stale preprocessing status', () => {
       // validating means the callback was received, so no need to check CDP
       await summaryLogsRepository.insert(summaryLogId, {
         status: SUMMARY_LOG_STATUS.VALIDATING,
+        expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
         organisationId,
         registrationId,
         file: {
@@ -307,6 +312,7 @@ describe('CDP status check for stale preprocessing status', () => {
     it('does not query CDP when status is rejected', async () => {
       await summaryLogsRepository.insert(summaryLogId, {
         status: SUMMARY_LOG_STATUS.REJECTED,
+        expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.REJECTED),
         organisationId,
         registrationId,
         file: {
@@ -365,6 +371,7 @@ describe('retrieving summary log with validation_failed status', () => {
     // Create a summary log with validation_failed status (simulating worker crash/timeout)
     await summaryLogsRepository.insert(summaryLogId, {
       status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+      expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATION_FAILED),
       organisationId,
       registrationId,
       file: {

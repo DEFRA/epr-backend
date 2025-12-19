@@ -3,7 +3,10 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  calculateExpiresAt
+} from '#domain/summary-logs/status.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -137,6 +140,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   // The unique partial index on (organisationId, registrationId) where status='submitting'
   // ensures only one document can be in submitting status per org/reg at a time
   const submittedAt = new Date().toISOString()
+  const expiresAt = calculateExpiresAt(SUMMARY_LOG_STATUS.SUBMITTING)
   /** @type {any} */
   const updateFilter = {
     _id: validatedId,
@@ -147,7 +151,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
     const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
       updateFilter,
       {
-        $set: { status: SUMMARY_LOG_STATUS.SUBMITTING, submittedAt },
+        $set: { status: SUMMARY_LOG_STATUS.SUBMITTING, submittedAt, expiresAt },
         $inc: { version: 1 }
       },
       { returnDocument: 'after' }

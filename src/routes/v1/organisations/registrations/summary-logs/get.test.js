@@ -1,6 +1,9 @@
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  calculateExpiresAt
+} from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
@@ -35,6 +38,7 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
   }
 
   const insertSummaryLog = async (repository, data) => {
+    const status = data.status ?? SUMMARY_LOG_STATUS.PREPROCESSING
     await repository.insert(summaryLogId, {
       organisationId,
       registrationId,
@@ -44,7 +48,9 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
         status: 'complete',
         uri: 's3://test-bucket/test-file.xlsx'
       },
-      ...data
+      ...data,
+      status,
+      expiresAt: calculateExpiresAt(status)
     })
   }
 
