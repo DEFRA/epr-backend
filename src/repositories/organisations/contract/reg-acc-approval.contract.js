@@ -338,7 +338,7 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          const duplicateKey = 'reprocessor::paper::AB12 3CD'
+          const duplicateKey = 'reprocessor::paper::AB123CD::input'
           const expectedError =
             `Accreditations with id ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id} are approved but not linked to an approved registration; ` +
             `Multiple approved accreditations found with duplicate keys [${duplicateKey}]: ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id}`
@@ -407,7 +407,7 @@ export const testRegAccApprovalValidation = (it) => {
             })
           }
 
-          const duplicateKey = `exporter::paper`
+          const duplicateKey = `exporter::paper::input`
           const expectedError =
             `Accreditations with id ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id} are approved but not linked to an approved registration; ` +
             `Multiple approved accreditations found with duplicate keys [${duplicateKey}]: ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id}`
@@ -479,7 +479,7 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          const duplicateKey = 'reprocessor::paper::AB12 3CD'
+          const duplicateKey = 'reprocessor::paper::AB123CD::input'
           const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
 
           await expect(
@@ -638,7 +638,7 @@ export const testRegAccApprovalValidation = (it) => {
             }))
           }
 
-          const duplicateKey = 'exporter::paper'
+          const duplicateKey = 'exporter::paper::input'
           const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
 
           await expect(
@@ -653,6 +653,60 @@ export const testRegAccApprovalValidation = (it) => {
     })
 
     describe('conditional field validation', () => {
+      describe('reprocessingType', () => {
+        it('rejects update when registration status changes to approved without reprocessingType', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const registrationToUpdate = {
+            ...inserted.registrations[0],
+            status: STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                registrations: [registrationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            'Invalid organisation data: registrations.0.reprocessingType: any.only; registrations.0.reprocessingType: any.invalid; registrations.0.reprocessingType: string.base'
+          )
+        })
+
+        it('rejects update when accreditation status changes to approved without reprocessingType', async () => {
+          const organisation = buildOrganisation()
+          await repository.insert(organisation)
+          const inserted = await repository.findById(organisation.id)
+
+          const accreditationToUpdate = {
+            ...inserted.accreditations[0],
+            status: STATUS.APPROVED,
+            accreditationNumber: 'ACC123',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31')
+          }
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, {
+                accreditations: [accreditationToUpdate]
+              })
+            )
+          ).rejects.toThrow(
+            'Invalid organisation data: accreditations.0.reprocessingType: any.only; accreditations.0.reprocessingType: any.invalid; accreditations.0.reprocessingType: string.base'
+          )
+        })
+      })
+
       describe('registrationNumber', () => {
         it('rejects update when registration status changes to approved without registrationNumber', async () => {
           const organisation = buildOrganisation()

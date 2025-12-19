@@ -26,6 +26,15 @@ export function compareSite(site1, site2) {
 }
 
 /**
+ * Generates a normalized key from a site's postcode (removes spaces and converts to uppercase)
+ * @param {Object} site - Site object with address property
+ * @returns {string|undefined} Normalized postcode or undefined if not present
+ */
+export function siteKey(site) {
+  return normalise(site.address?.postcode)
+}
+
+/**
  * Generates a log-safe string with hashed site information
  * @param {Object} site - Site object with address property
  * @returns {string} String with hashed line1 and postcode

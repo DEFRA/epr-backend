@@ -1,10 +1,13 @@
 import Joi from 'joi'
 import {
   STATUS,
-  WASTE_PROCESSING_TYPE,
-  WASTE_PERMIT_TYPE
+  WASTE_PERMIT_TYPE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { isAccreditationForRegistration } from '#formsubmission/link-form-submissions.js'
+import {
+  isAccreditationForRegistration,
+  getRegAccKey
+} from '#formsubmission/submission-keys.js'
 
 export const whenReprocessor = (schema) =>
   Joi.when('wasteProcessingType', {
@@ -84,14 +87,6 @@ export const requiredWhenApprovedOrSuspended = {
 export const dateRequiredWhenApprovedOrSuspended = () =>
   Joi.date().iso().when('status', requiredWhenApprovedOrSuspended).default(null)
 
-export function uniqueKeyForRegAcc(item) {
-  const site =
-    item.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-      ? `::${item.site.address.postcode}`
-      : ''
-  return `${item.wasteProcessingType}::${item.material}${site}`
-}
-
 function findAccreditationsWithoutApprovedRegistration(
   accreditations,
   registrations
@@ -112,7 +107,7 @@ function findAccreditationsWithoutApprovedRegistration(
 function findDuplicateApprovals(items) {
   const grouped = Object.groupBy(
     items.filter((item) => item.status === STATUS.APPROVED),
-    (item) => uniqueKeyForRegAcc(item)
+    (item) => getRegAccKey(item)
   )
 
   return Object.entries(grouped).filter(([_key, group]) => group.length > 1)

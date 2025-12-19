@@ -1,9 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   linkItemsToOrganisations,
-  linkRegistrationToAccreditations,
-  isAccreditationForRegistration
+  linkRegistrationToAccreditations
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
@@ -843,87 +842,5 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result[0].registrations[0].accreditationId).toBe(accId1)
     expect(result[0].registrations[1].accreditationId).toBeUndefined()
     expect(logger.warn).not.toHaveBeenCalled()
-  })
-})
-
-describe('isAccreditationForRegistration', () => {
-  describe('exporter', () => {
-    it('matches when type and material are the same', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.PLASTIC
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.PLASTIC
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        true
-      )
-    })
-
-    it('does not match when material differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.PLASTIC
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
-  })
-
-  describe('reprocessor', () => {
-    it('matches when type, material and site postcode are the same', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.ALUMINIUM,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.ALUMINIUM,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        true
-      )
-    })
-
-    it('does not match when material differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.STEEL,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.ALUMINIUM,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
-
-    it('does not match when site postcode differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.PLASTIC,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.PLASTIC,
-        site: { address: { postcode: 'W1C 2AA' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
   })
 })
