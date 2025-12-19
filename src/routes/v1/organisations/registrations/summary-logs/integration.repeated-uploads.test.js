@@ -23,42 +23,9 @@ import {
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
-  pollForValidation
+  pollForValidation,
+  pollWhileStatus
 } from './integration-test-helpers.js'
-
-const POLL_INTERVAL_MS = 50
-const MAX_POLL_ATTEMPTS = 20
-
-/**
- * Poll until summary log reaches submitted status
- */
-const pollForSubmission = async (
-  server,
-  organisationId,
-  registrationId,
-  summaryLogId
-) => {
-  let attempts = 0
-  let status = SUMMARY_LOG_STATUS.SUBMITTING
-
-  while (
-    status === SUMMARY_LOG_STATUS.SUBMITTING &&
-    attempts < MAX_POLL_ATTEMPTS
-  ) {
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
-
-    const checkResponse = await server.inject({
-      method: 'GET',
-      url: buildGetUrl(organisationId, registrationId, summaryLogId),
-      ...asStandardUser({ linkedOrgId: organisationId })
-    })
-
-    status = JSON.parse(checkResponse.payload).status
-    attempts++
-  }
-
-  return status
-}
 
 describe('Repeated uploads of identical data', () => {
   let organisationId
@@ -330,11 +297,12 @@ describe('Repeated uploads of identical data', () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      await pollForSubmission(
+      await pollWhileStatus(
         server,
         organisationId,
         registrationId,
-        firstSummaryLogId
+        firstSummaryLogId,
+        { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
       )
 
       // === Second upload: upload the same data again ===
@@ -411,11 +379,12 @@ describe('Repeated uploads of identical data', () => {
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
-        await pollForSubmission(
+        await pollWhileStatus(
           server,
           organisationId,
           registrationId,
-          secondSummaryLogId
+          secondSummaryLogId,
+          { waitWhile: SUMMARY_LOG_STATUS.SUBMITTING }
         )
 
         // Get waste records after second submission
