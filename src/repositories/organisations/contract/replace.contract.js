@@ -2,8 +2,8 @@ import { STATUS } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildOrganisation,
-  prepareOrgUpdate,
-  buildRegistration
+  buildRegistration,
+  prepareOrgUpdate
 } from './test-data.js'
 
 export const testReplaceBehaviour = (it) => {
@@ -696,7 +696,7 @@ export const testReplaceBehaviour = (it) => {
           expect(updatedReg2.status).toBe(STATUS.CREATED)
           expect(result.users).toEqual([
             {
-              fullName: 'Luke Skywalker',
+              fullName: 'Anakin Skywalker',
               email: 'anakin.skywalker@starwars.com',
               roles: ['initial_user', 'standard_user']
             },
@@ -855,7 +855,7 @@ export const testReplaceBehaviour = (it) => {
           expect(updatedAcc2.status).toBe(STATUS.CREATED)
           expect(result.users).toEqual([
             {
-              fullName: 'Luke Skywalker',
+              fullName: 'Anakin Skywalker',
               email: 'anakin.skywalker@starwars.com',
               roles: ['initial_user', 'standard_user']
             },

@@ -3,29 +3,7 @@ import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 /** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
-/** @import {OrganisationUser} from '#formsubmission/types.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
-
-/**
- * Finds a user in the organisation by email
- * @param {Object} organisation - The organisation object
- * @param {string} email - The user's email address in their Defra token
- * @param {string} contactId - The user's contact Id in their Defra token
- * @returns {OrganisationUser | null | undefined} The user if found, null if no users array exists, undefined if user not found
- */
-export function findUserInOrg(organisation, email, contactId) {
-  const { users } = organisation
-
-  if (!users) {
-    return null
-  }
-
-  return organisation.users.find(
-    (user) =>
-      user.email.toLowerCase() === email.toLowerCase() ||
-      user.contactId === contactId
-  )
-}
 
 /**
  * Performs a case-insensitive string comparison
@@ -35,7 +13,7 @@ export function findUserInOrg(organisation, email, contactId) {
  * @param {string} b
  * @returns {boolean}
  */
-const stringEquals = (a, b) =>
+export const stringEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
 
 /**

@@ -4,9 +4,10 @@ import {
   buildOrganisation,
   prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
-import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
+import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
@@ -19,6 +20,8 @@ import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scen
 import { StatusCodes } from 'http-status-codes'
 
 const { validToken } = defraIdMockAuthTokens
+
+const ISO_DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
 
 describe('POST /v1/organisations/{organisationId}/link', () => {
   setupAuthContext()
@@ -79,7 +82,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         roles: [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
       }
 
-      const databaseStateScenarios = [
+      it.each([
         {
           description: 'user is not in the users list',
           user: baseUserObject,
@@ -116,38 +119,41 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           status: STATUS.APPROVED,
           expectedStatusCode: StatusCodes.OK
         }
-      ]
-
-      it.each(databaseStateScenarios)(
+      ])(
         'returns $expectedStatusCode when $description and org status is $status',
         async ({ user, status, expectedStatusCode }) => {
           const org = buildOrganisation()
 
           await organisationsRepository.insert(org)
 
-          const orgWithSubmitterDetails = prepareOrgUpdate(org, {
-            submitterContactDetails: {
-              fullName: user.fullName,
-              email: user.email,
-              phone: '1234567890',
-              jobTitle: 'Director'
-            }
-          })
           await organisationsRepository.replace(
             org.id,
             1,
-            orgWithSubmitterDetails
+            prepareOrgUpdate(org, {
+              submitterContactDetails: {
+                fullName: user.fullName,
+                email: user.email,
+                phone: '1234567890',
+                jobTitle: 'Director'
+              }
+            })
           )
 
-          const orgWithUpdatedStatus = prepareOrgUpdate(
-            orgWithSubmitterDetails,
-            {
+          const orgWithSubmitterDetails = await waitForVersion(
+            organisationsRepository,
+            org.id,
+            2
+          )
+
+          await organisationsRepository.replace(
+            org.id,
+            2,
+            prepareOrgUpdate(orgWithSubmitterDetails, {
               status
-            }
+            })
           )
-          await organisationsRepository.replace(org.id, 2, orgWithUpdatedStatus)
 
-          await organisationsRepository.findById(org.id, 3)
+          await waitForVersion(organisationsRepository, org.id, 3)
 
           const response = await server.inject({
             method: 'POST',
@@ -176,16 +182,33 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               Authorization: `Bearer ${validToken}`
             }
           })
-          finalOrgVersion = await organisationsRepository.findById(org.id, 2)
+
+          finalOrgVersion = await waitForVersion(
+            organisationsRepository,
+            org.id,
+            2
+          )
         })
 
         it('returns 200 status code', async () => {
           expect(response.statusCode).toBe(StatusCodes.OK)
         })
 
-        it('returns a payload with `{status: active}`', async () => {
+        it('returns the expected payload', async () => {
           const result = JSON.parse(response.payload)
-          expect(result).toEqual({ status: 'active' })
+
+          expect(result).toEqual({
+            status: 'active',
+            linked: {
+              id: COMPANY_1_ID,
+              name: COMPANY_1_NAME,
+              linkedAt: expect.stringMatching(ISO_DATE_STRING_REGEX),
+              linkedBy: {
+                email: USER_PRESENT_IN_ORG1_EMAIL,
+                id: VALID_TOKEN_CONTACT_ID
+              }
+            }
+          })
         })
 
         it('leaves the organisation in the database with status: "active"', async () => {
@@ -196,11 +219,11 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(finalOrgVersion.linkedDefraOrganisation).toEqual({
             orgId: COMPANY_1_ID,
             orgName: COMPANY_1_NAME,
+            linkedAt: expect.any(Date),
             linkedBy: {
               email: USER_PRESENT_IN_ORG1_EMAIL,
               id: VALID_TOKEN_CONTACT_ID
-            },
-            linkedAt: expect.any(Date)
+            }
           })
         })
 
