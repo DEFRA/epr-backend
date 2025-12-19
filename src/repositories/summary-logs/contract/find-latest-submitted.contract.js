@@ -1,7 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { calculateExpiresAt } from '#domain/summary-logs/status.js'
-import { buildSummaryLog } from './test-data.js'
+import { summaryLogFactory } from './test-data.js'
 
 const generateOrgReg = () => ({
   organisationId: `org-${randomUUID()}`,
@@ -39,10 +38,10 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
 
       await repository.insert(
         logId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId,
-          registrationId
+          registrationId,
+          file: { name: 'submitted-file.xlsx' }
         })
       )
 
@@ -53,8 +52,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
 
       expect(result).not.toBeNull()
       expect(result.summaryLog.status).toBe('submitted')
-      expect(result.summaryLog.organisationId).toBe(organisationId)
-      expect(result.summaryLog.registrationId).toBe(registrationId)
+      expect(result.summaryLog.file.name).toBe('submitted-file.xlsx')
     })
 
     it('returns the most recent when multiple submitted summary logs exist (older first)', async () => {
@@ -65,8 +63,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // Insert older summary log first
       await repository.insert(
         olderId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId,
           registrationId,
           submittedAt: new Date('2024-01-01').toISOString()
@@ -76,8 +73,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // Insert newer summary log
       await repository.insert(
         newerId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId,
           registrationId,
           submittedAt: new Date('2024-06-01').toISOString()
@@ -104,8 +100,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // Insert newer summary log first
       await repository.insert(
         newerId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId,
           registrationId,
           submittedAt: new Date('2024-06-01').toISOString()
@@ -115,8 +110,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // Insert older summary log second
       await repository.insert(
         olderId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId,
           registrationId,
           submittedAt: new Date('2024-01-01').toISOString()
@@ -146,8 +140,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // Insert summary log for target org/reg
       await repository.insert(
         targetId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId,
           registrationId
         })
@@ -156,8 +149,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // Insert summary log for different org/reg
       await repository.insert(
         otherId,
-        buildSummaryLog({
-          status: 'submitted',
+        summaryLogFactory.submitted({
           organisationId: otherOrgId,
           registrationId: otherRegId
         })
@@ -181,26 +173,17 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       // prevents inserting other summary logs for the same org/reg after a
       // 'submitting' summary log exists. This constraint will be removed
       // as part of the deferred staleness detection work.
-      const statuses = [
-        'preprocessing',
-        'validating',
-        'validated',
-        'superseded',
-        'rejected'
+      const factories = [
+        summaryLogFactory.preprocessing,
+        summaryLogFactory.validating,
+        summaryLogFactory.validated,
+        summaryLogFactory.superseded,
+        summaryLogFactory.rejected
       ]
 
-      for (const status of statuses) {
-        const logId = `summary-${status}-${randomUUID()}`
-        const summaryLog =
-          status === 'preprocessing'
-            ? {
-                status,
-                organisationId,
-                registrationId,
-                expiresAt: calculateExpiresAt(status)
-              }
-            : buildSummaryLog({ status, organisationId, registrationId })
-
+      for (const factory of factories) {
+        const summaryLog = factory({ organisationId, registrationId })
+        const logId = `summary-${summaryLog.status}-${randomUUID()}`
         await repository.insert(logId, summaryLog)
       }
 
@@ -218,8 +201,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
 
       await repository.insert(
         logId,
-        buildSummaryLog({
-          status: 'submitting',
+        summaryLogFactory.submitting({
           organisationId,
           registrationId
         })
@@ -239,11 +221,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
 
       await repository.insert(
         logId,
-        buildSummaryLog({
-          status: 'submitted',
-          organisationId,
-          registrationId
-        })
+        summaryLogFactory.submitted({ organisationId, registrationId })
       )
 
       const result = await repository.findLatestSubmittedForOrgReg(

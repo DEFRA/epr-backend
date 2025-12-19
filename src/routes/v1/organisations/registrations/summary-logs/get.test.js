@@ -5,6 +5,7 @@ import {
   calculateExpiresAt
 } from '#domain/summary-logs/status.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
@@ -220,9 +221,10 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
 
     it('omits null meta values from response', async () => {
       const { server, summaryLogsRepository } = await createServer()
-      await insertSummaryLog(summaryLogsRepository, {
-        status: SUMMARY_LOG_STATUS.INVALID
-      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.invalid({ organisationId, registrationId })
+      )
       await summaryLogsRepository.update(summaryLogId, 1, {
         meta: {
           PROCESSING_TYPE: null,
