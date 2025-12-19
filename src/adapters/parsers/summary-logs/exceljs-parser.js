@@ -115,7 +115,8 @@ const extractCellValue = (cellValue) => {
       'result' in cellValue &&
       ('formula' in cellValue || 'sharedFormula' in cellValue)
     ) {
-      return cellValue.result
+      // Recursively extract in case result is a Date or other complex type
+      return extractCellValue(cellValue.result)
     }
     // Handle formula cells without a result
     if ('formula' in cellValue || 'sharedFormula' in cellValue) {
@@ -129,6 +130,18 @@ const extractCellValue = (cellValue) => {
     if ('text' in cellValue && 'hyperlink' in cellValue) {
       return cellValue.text
     }
+    // Handle error cells - treat as no valid value
+    if ('error' in cellValue) {
+      return null
+    }
+    // Unknown object type - fail fast so we can add explicit handling
+    // ExcelJS ValueType enum: Null, Merge, Number, String, Date, Hyperlink,
+    // Formula, SharedString, RichText, Boolean, Error
+    // All known object types should be handled above
+    throw new Error(
+      `Unknown cell value type: ${JSON.stringify(cellValue)}. ` +
+        'This may indicate a new ExcelJS cell type that needs explicit handling.'
+    )
   }
   return cellValue
 }

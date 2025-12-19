@@ -1279,6 +1279,203 @@ describe('ExcelJSSummaryLogsParser', () => {
     })
   })
 
+  describe('boolean cells', () => {
+    it('should extract boolean true from metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_IS_ACTIVE'
+      worksheet.getCell('B1').value = true
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.IS_ACTIVE).toEqual({
+        value: true,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract boolean false from metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_IS_ACTIVE'
+      worksheet.getCell('B1').value = false
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.IS_ACTIVE).toEqual({
+        value: false,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract booleans from data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_FLAGS'
+      worksheet.getCell('B1').value = 'ROW_ID'
+      worksheet.getCell('C1').value = 'IS_VERIFIED'
+
+      worksheet.getCell('B2').value = 1001
+      worksheet.getCell('C2').value = true
+
+      worksheet.getCell('B3').value = 1002
+      worksheet.getCell('C3').value = false
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.data.FLAGS.rows).toEqual([
+        { rowNumber: 2, values: [1001, true] },
+        { rowNumber: 3, values: [1002, false] }
+      ])
+    })
+  })
+
+  describe('error cells', () => {
+    it('should return null for formula with error result in metadata', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_CALCULATION'
+      // Simulate what ExcelJS returns for a formula that produces #DIV/0!
+      worksheet.getCell('B1').value = {
+        formula: '=1/0',
+        result: { error: '#DIV/0!' }
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.CALCULATION).toEqual({
+        value: null,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should return null for formula with error result in data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_CALCULATIONS'
+      worksheet.getCell('B1').value = 'ROW_ID'
+      worksheet.getCell('C1').value = 'RESULT'
+
+      worksheet.getCell('B2').value = 1001
+      // Formula that produces #DIV/0!
+      worksheet.getCell('C2').value = {
+        formula: '=1/0',
+        result: { error: '#DIV/0!' }
+      }
+
+      worksheet.getCell('B3').value = 1002
+      // Formula that produces #N/A (e.g. failed VLOOKUP)
+      worksheet.getCell('C3').value = {
+        formula: '=VLOOKUP("notfound",A1:A1,1,FALSE)',
+        result: { error: '#N/A' }
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.data.CALCULATIONS.rows).toEqual([
+        { rowNumber: 2, values: [1001, null] },
+        { rowNumber: 3, values: [1002, null] }
+      ])
+    })
+
+    it('should return null for direct error value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_ERROR'
+      // Direct error value (no formula)
+      worksheet.getCell('B1').value = { error: '#VALUE!' }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.ERROR).toEqual({
+        value: null,
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+  })
+
+  describe('hyperlink cells', () => {
+    it('should extract text from hyperlink in metadata value', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_WEBSITE'
+      worksheet.getCell('B1').value = {
+        text: 'Our Website',
+        hyperlink: 'https://example.com'
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.WEBSITE).toEqual({
+        value: 'Our Website',
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+
+    it('should extract text from hyperlinks in data rows', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_DATA_CONTACTS'
+      worksheet.getCell('B1').value = 'ROW_ID'
+      worksheet.getCell('C1').value = 'EMAIL'
+
+      worksheet.getCell('B2').value = 1001
+      worksheet.getCell('C2').value = {
+        text: 'contact@example.com',
+        hyperlink: 'mailto:contact@example.com'
+      }
+
+      worksheet.getCell('B3').value = 1002
+      worksheet.getCell('C3').value = {
+        text: 'support@example.com',
+        hyperlink: 'mailto:support@example.com',
+        tooltip: 'Email our support team'
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.data.CONTACTS.rows).toEqual([
+        { rowNumber: 2, values: [1001, 'contact@example.com'] },
+        { rowNumber: 3, values: [1002, 'support@example.com'] }
+      ])
+    })
+
+    it('should extract text from internal worksheet hyperlink', async () => {
+      const workbook = new ExcelJS.Workbook()
+      const worksheet = workbook.addWorksheet('Test')
+
+      worksheet.getCell('A1').value = '__EPR_META_LINK'
+      worksheet.getCell('B1').value = {
+        text: 'Go to Summary',
+        hyperlink: "#'Summary'!A1"
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer()
+      const result = await parse(buffer)
+
+      expect(result.meta.LINK).toEqual({
+        value: 'Go to Summary',
+        location: { sheet: 'Test', row: 1, column: 'B' }
+      })
+    })
+  })
+
   describe('metadata and data ordering', () => {
     it('should allow metadata after complete data section', async () => {
       const result = await parseWorkbook({
@@ -1844,9 +2041,11 @@ describe('extractCellValue', () => {
     ).toBe('Hello World')
   })
 
-  it('returns object unchanged if not a known cell type', () => {
+  it('throws error for unknown object cell type', () => {
     const unknownObject = { someProperty: 'value' }
-    expect(extractCellValue(unknownObject)).toBe(unknownObject)
+    expect(() => extractCellValue(unknownObject)).toThrow(
+      'Unknown cell value type'
+    )
   })
 
   it('extracts text from hyperlink cell', () => {
@@ -1875,5 +2074,130 @@ describe('extractCellValue', () => {
   it('converts Date objects with time to ISO strings', () => {
     const date = new Date('2025-12-25T14:30:00.000Z')
     expect(extractCellValue(date)).toBe('2025-12-25T14:30:00.000Z')
+  })
+
+  describe('boolean values', () => {
+    it('returns true unchanged', () => {
+      expect(extractCellValue(true)).toBe(true)
+    })
+
+    it('returns false unchanged', () => {
+      expect(extractCellValue(false)).toBe(false)
+    })
+  })
+
+  describe('error values', () => {
+    it.each([
+      '#N/A',
+      '#VALUE!',
+      '#REF!',
+      '#DIV/0!',
+      '#NULL!',
+      '#NAME?',
+      '#NUM!'
+    ])('returns null for %s error', (errorCode) => {
+      expect(extractCellValue({ error: errorCode })).toBe(null)
+    })
+  })
+
+  describe('hyperlink variations', () => {
+    it('extracts text from hyperlink with tooltip', () => {
+      expect(
+        extractCellValue({
+          text: 'Visit our site',
+          hyperlink: 'https://example.com',
+          tooltip: 'Click to visit example.com'
+        })
+      ).toBe('Visit our site')
+    })
+
+    it('extracts text from internal worksheet hyperlink', () => {
+      expect(
+        extractCellValue({
+          text: 'Go to Sheet2',
+          hyperlink: "#'Sheet2'!A1"
+        })
+      ).toBe('Go to Sheet2')
+    })
+
+    it('extracts text from mailto hyperlink', () => {
+      expect(
+        extractCellValue({
+          text: 'contact@example.com',
+          hyperlink: 'mailto:contact@example.com'
+        })
+      ).toBe('contact@example.com')
+    })
+  })
+
+  describe('array formulas', () => {
+    it('extracts result from array formula', () => {
+      expect(
+        extractCellValue({
+          formula: 'A1',
+          result: 10,
+          shareType: 'array',
+          ref: 'A2:B3'
+        })
+      ).toBe(10)
+    })
+
+    it('returns null for array formula without result', () => {
+      expect(
+        extractCellValue({
+          formula: 'SUM(A1:A10)',
+          shareType: 'array',
+          ref: 'B1:B10'
+        })
+      ).toBe(null)
+    })
+  })
+
+  describe('richText edge cases', () => {
+    it('returns empty string for empty richText array', () => {
+      expect(extractCellValue({ richText: [] })).toBe('')
+    })
+
+    it('handles richText with empty text segments', () => {
+      expect(
+        extractCellValue({
+          richText: [{ text: '' }, { text: 'visible' }, { text: '' }]
+        })
+      ).toBe('visible')
+    })
+
+    it('handles richText with various font properties', () => {
+      expect(
+        extractCellValue({
+          richText: [
+            {
+              font: {
+                bold: true,
+                size: 12,
+                color: { argb: 'FFFF6600' },
+                name: 'Calibri'
+              },
+              text: 'Bold'
+            },
+            {
+              font: { italic: true, underline: true },
+              text: ' and italic'
+            }
+          ]
+        })
+      ).toBe('Bold and italic')
+    })
+  })
+
+  describe('formula with date result', () => {
+    it('extracts date result from formula and converts to ISO string', () => {
+      const dateResult = new Date('2025-06-15T00:00:00.000Z')
+      expect(
+        extractCellValue({
+          formula: '=TODAY()',
+          result: dateResult
+        })
+      ).toBe('2025-06-15T00:00:00.000Z')
+    })
   })
 })
