@@ -1,8 +1,9 @@
+import { STATUS } from '#domain/organisations/model.js'
 import {
   buildOrganisation,
   prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
 export async function buildApprovedOrg(organisationsRepository, overrides) {
   const org = buildOrganisation(overrides)
@@ -48,11 +49,6 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
       registrations: approvedRegistrations
     })
   )
-  // TODO: For some reason, without this request tests fail
-  const updatedOrg = await organisationsRepository.findById(
-    org.id,
-    INITIAL_VERSION + 1
-  )
 
-  return updatedOrg
+  return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
 }

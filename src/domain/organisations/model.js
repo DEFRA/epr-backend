@@ -134,6 +134,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
+ *   contactId?: string;
  *   fullName: string;
  *   email: string;
  *   roles: UserRoles[];
@@ -144,8 +145,11 @@ export const USER_ROLES = Object.freeze({
  * @typedef {{
  *   orgId: string;
  *   orgName: string;
- *   linkedBy: {email: string; id: string};
  *   linkedAt: Date;
+ *   linkedBy: {
+ *     email: string
+ *     id: string
+ *   }
  * }} LinkedDefraOrganisation
  */
 

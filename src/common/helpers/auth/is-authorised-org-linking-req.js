@@ -8,7 +8,7 @@ import { isInitialUser } from './roles/helpers.js'
 
 /**
  * Checks if the request is an authorized organization linking request
- * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request - The Hapi request object
+ * @param {import('#common/hapi-types.js').HapiRequest} request - The Hapi request object
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user and organization data
  * @returns {Promise<boolean>} True if the request is authorized, false otherwise
  */

@@ -1,4 +1,5 @@
 import { STATUS } from '#domain/organisations/model.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { buildApprovedOrg } from './build-approved-org.js'
 import {
   COMPANY_1_ID,
@@ -40,10 +41,5 @@ export async function buildActiveOrg(organisationsRepository, overrides) {
     )
   })
 
-  const updatedOrg = await organisationsRepository.findById(
-    org.id,
-    INITIAL_VERSION + 1
-  )
-
-  return updatedOrg
+  return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
 }
