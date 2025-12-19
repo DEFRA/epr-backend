@@ -1,7 +1,7 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { buildSummaryLog } from './test-data.js'
+import { summaryLogFactory } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
 export const testExpiresAtBehaviour = (it) => {
@@ -16,9 +16,8 @@ export const testExpiresAtBehaviour = (it) => {
       it('stores and retrieves expiresAt as a Date', async () => {
         const id = `contract-expires-at-date-${randomUUID()}`
         const expiresAt = new Date('2024-12-26T12:00:00.000Z')
-        const summaryLog = buildSummaryLog({ expiresAt })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.validating({ expiresAt }))
         const found = await repository.findById(id)
 
         expect(found.summaryLog.expiresAt).toEqual(expiresAt)
@@ -26,12 +25,8 @@ export const testExpiresAtBehaviour = (it) => {
 
       it('stores and retrieves expiresAt as null', async () => {
         const id = `contract-expires-at-null-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.SUBMITTED,
-          expiresAt: null
-        })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.submitted())
         const found = await repository.findById(id)
 
         expect(found.summaryLog.expiresAt).toBeNull()
@@ -40,7 +35,7 @@ export const testExpiresAtBehaviour = (it) => {
       it('rejects insert without expiresAt', async () => {
         const id = `contract-expires-at-omitted-${randomUUID()}`
         const { expiresAt: _, ...summaryLogWithoutExpiresAt } =
-          buildSummaryLog()
+          summaryLogFactory.validating()
 
         await expect(
           repository.insert(id, summaryLogWithoutExpiresAt)
@@ -51,10 +46,9 @@ export const testExpiresAtBehaviour = (it) => {
     describe('update', () => {
       it('updates status and expiresAt together', async () => {
         const id = `contract-update-status-expires-at-${randomUUID()}`
-        const summaryLog = buildSummaryLog()
         const newExpiresAt = new Date('2024-12-26T12:00:00.000Z')
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.validating())
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
@@ -69,11 +63,8 @@ export const testExpiresAtBehaviour = (it) => {
 
       it('updates status and expiresAt to null together', async () => {
         const id = `contract-update-expires-at-null-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.SUBMITTING
-        })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.submitting())
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
@@ -89,9 +80,8 @@ export const testExpiresAtBehaviour = (it) => {
       it('preserves expiresAt when updating other fields', async () => {
         const id = `contract-preserve-expires-at-${randomUUID()}`
         const expiresAt = new Date('2024-12-26T12:00:00.000Z')
-        const summaryLog = buildSummaryLog({ expiresAt })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.validating({ expiresAt }))
         const current = await repository.findById(id)
 
         await repository.update(id, current.version, {
@@ -104,9 +94,8 @@ export const testExpiresAtBehaviour = (it) => {
 
       it('rejects update with status but without expiresAt', async () => {
         const id = `contract-status-without-expires-at-${randomUUID()}`
-        const summaryLog = buildSummaryLog()
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.validating())
         const current = await repository.findById(id)
 
         await expect(
@@ -118,9 +107,8 @@ export const testExpiresAtBehaviour = (it) => {
 
       it('rejects update with expiresAt but without status', async () => {
         const id = `contract-expires-at-without-status-${randomUUID()}`
-        const summaryLog = buildSummaryLog()
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(id, summaryLogFactory.validating())
         const current = await repository.findById(id)
 
         await expect(

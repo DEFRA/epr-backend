@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { buildSummaryLog } from './test-data.js'
+import { summaryLogFactory } from './test-data.js'
 import {
   SUMMARY_LOG_STATUS,
   calculateExpiresAt
@@ -35,11 +35,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
 
       await repository.insert(
         logId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          organisationId,
-          registrationId
-        })
+        summaryLogFactory.validated({ organisationId, registrationId })
       )
 
       const result = await repository.transitionToSubmittingExclusive(logId)
@@ -58,20 +54,12 @@ export const testTransitionToSubmittingExclusive = (it) => {
       // Insert both logs first as validated
       await repository.insert(
         existingSubmittingId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          organisationId,
-          registrationId
-        })
+        summaryLogFactory.validated({ organisationId, registrationId })
       )
 
       await repository.insert(
         newLogId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          organisationId,
-          registrationId
-        })
+        summaryLogFactory.validated({ organisationId, registrationId })
       )
 
       // Now transition the first log to submitting via update
@@ -101,14 +89,9 @@ export const testTransitionToSubmittingExclusive = (it) => {
       const { organisationId, registrationId } = generateOrgReg()
       const logId = `summary-${randomUUID()}`
 
-      // Insert a log in 'validating' status (not yet validated)
       await repository.insert(
         logId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATING,
-          organisationId,
-          registrationId
-        })
+        summaryLogFactory.validating({ organisationId, registrationId })
       )
 
       await expect(
@@ -127,16 +110,14 @@ export const testTransitionToSubmittingExclusive = (it) => {
       // Insert validated logs for two different org/reg pairs
       await repository.insert(
         logId1,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
+        summaryLogFactory.validated({
           organisationId: orgReg1.organisationId,
           registrationId: orgReg1.registrationId
         })
       )
       await repository.insert(
         logId2,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
+        summaryLogFactory.validated({
           organisationId: orgReg2.organisationId,
           registrationId: orgReg2.registrationId
         })
@@ -158,11 +139,7 @@ export const testTransitionToSubmittingExclusive = (it) => {
 
       await repository.insert(
         logId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.VALIDATED,
-          organisationId,
-          registrationId
-        })
+        summaryLogFactory.validated({ organisationId, registrationId })
       )
 
       const existing = await repository.findById(logId)
@@ -173,7 +150,6 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result.success).toBe(true)
       expect(result.version).toBe(2)
 
-      // Verify persisted version (waitForVersion handles eventual consistency)
       const updated = await waitForVersion(repository, logId, 2)
       expect(updated.version).toBe(2)
     })
@@ -187,19 +163,11 @@ export const testTransitionToSubmittingExclusive = (it) => {
         // Insert two validated logs for the same org/reg
         await repository.insert(
           logId1,
-          buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATED,
-            organisationId,
-            registrationId
-          })
+          summaryLogFactory.validated({ organisationId, registrationId })
         )
         await repository.insert(
           logId2,
-          buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATED,
-            organisationId,
-            registrationId
-          })
+          summaryLogFactory.validated({ organisationId, registrationId })
         )
 
         // Race two transitions
@@ -225,19 +193,11 @@ export const testTransitionToSubmittingExclusive = (it) => {
         // Insert two validated logs for the same org/reg
         await repository.insert(
           logId1,
-          buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATED,
-            organisationId,
-            registrationId
-          })
+          summaryLogFactory.validated({ organisationId, registrationId })
         )
         await repository.insert(
           logId2,
-          buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATED,
-            organisationId,
-            registrationId
-          })
+          summaryLogFactory.validated({ organisationId, registrationId })
         )
 
         // Race two transitions

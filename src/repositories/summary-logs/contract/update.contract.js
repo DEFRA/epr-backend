@@ -5,7 +5,7 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
+import { buildFile, buildPendingFile, summaryLogFactory } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
 export const testUpdateBehaviour = (it) => {
@@ -19,8 +19,7 @@ export const testUpdateBehaviour = (it) => {
     describe('basic behaviour', () => {
       it('updates an existing summary log', async () => {
         const id = `contract-update-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.PREPROCESSING,
+        const summaryLog = summaryLogFactory.preprocessing({
           file: buildPendingFile({ name: 'scanning.xlsx' })
         })
 
@@ -60,14 +59,15 @@ export const testUpdateBehaviour = (it) => {
 
       it('preserves existing fields not included in update', async () => {
         const id = `contract-preserve-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.PREPROCESSING,
-          organisationId: 'org-123',
-          registrationId: 'reg-456',
-          file: buildPendingFile()
-        })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(
+          id,
+          summaryLogFactory.preprocessing({
+            organisationId: 'org-123',
+            registrationId: 'reg-456',
+            file: buildPendingFile()
+          })
+        )
         const current = await repository.findById(id)
 
         await repository.update(
@@ -135,8 +135,7 @@ export const testUpdateBehaviour = (it) => {
       describe('updates parameter', () => {
         it('strips unknown fields from updates', async () => {
           const id = `contract-strip-update-${randomUUID()}`
-          const summaryLog = buildSummaryLog()
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
           const current = await repository.findById(id)
 
           await repository.update(id, current.version, {
@@ -160,8 +159,7 @@ export const testUpdateBehaviour = (it) => {
 
         it('rejects update with invalid status', async () => {
           const id = `contract-invalid-update-status-${randomUUID()}`
-          const summaryLog = buildSummaryLog()
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
 
           await expect(
             repository.update(id, 1, {
@@ -173,8 +171,7 @@ export const testUpdateBehaviour = (it) => {
 
         it('rejects update with null status', async () => {
           const id = `contract-null-status-${randomUUID()}`
-          const summaryLog = buildSummaryLog()
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
 
           await expect(
             repository.update(id, 1, { status: null, expiresAt: new Date() })
@@ -183,8 +180,7 @@ export const testUpdateBehaviour = (it) => {
 
         it('rejects update with empty file object', async () => {
           const id = `contract-empty-file-${randomUUID()}`
-          const summaryLog = buildSummaryLog()
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
 
           await expect(repository.update(id, 1, { file: {} })).rejects.toThrow(
             /file/
@@ -193,8 +189,7 @@ export const testUpdateBehaviour = (it) => {
 
         it('rejects update with file missing required fields', async () => {
           const id = `contract-file-missing-fields-${randomUUID()}`
-          const summaryLog = buildSummaryLog()
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
 
           await expect(
             repository.update(id, 1, {
@@ -207,11 +202,8 @@ export const testUpdateBehaviour = (it) => {
       describe('validation field', () => {
         it('updates and retrieves validation issues', async () => {
           const id = `contract-validation-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATING
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
           const current = await repository.findById(id)
 
           await repository.update(id, current.version, {
@@ -244,11 +236,8 @@ export const testUpdateBehaviour = (it) => {
 
         it('updates and retrieves validation with empty issues array', async () => {
           const id = `contract-validation-empty-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATING
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
           const current = await repository.findById(id)
 
           await repository.update(id, current.version, {
@@ -271,11 +260,8 @@ export const testUpdateBehaviour = (it) => {
 
         it('updates and retrieves validation with multiple issues', async () => {
           const id = `contract-validation-multiple-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATING
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
           const current = await repository.findById(id)
 
           await repository.update(id, current.version, {
@@ -314,11 +300,8 @@ export const testUpdateBehaviour = (it) => {
 
         it('updates and retrieves validation issues with optional code field', async () => {
           const id = `contract-validation-code-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATING
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
           const current = await repository.findById(id)
 
           await repository.update(id, current.version, {
@@ -352,11 +335,8 @@ export const testUpdateBehaviour = (it) => {
 
         it('preserves validation issues when updating other fields', async () => {
           const id = `contract-preserve-validation-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.VALIDATING
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
           let current = await repository.findById(id)
 
           // First update: add validation issues
