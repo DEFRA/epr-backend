@@ -28,6 +28,9 @@ const minutes = (n) => n * MILLISECONDS_PER_MINUTE
 const days = (n) => n * MILLISECONDS_PER_DAY
 const weeks = (n) => n * MILLISECONDS_PER_WEEK
 
+// TTL duration values - brief window for worker processing
+const SUBMITTING_TIMEOUT_MINUTES = 20
+
 const STATUS_TO_TTL = {
   [SUMMARY_LOG_STATUS.PREPROCESSING]: days(1),
   [SUMMARY_LOG_STATUS.VALIDATING]: days(1),
@@ -36,7 +39,7 @@ const STATUS_TO_TTL = {
   [SUMMARY_LOG_STATUS.REJECTED]: days(1),
   [SUMMARY_LOG_STATUS.INVALID]: weeks(1),
   [SUMMARY_LOG_STATUS.VALIDATION_FAILED]: days(1),
-  [SUMMARY_LOG_STATUS.SUBMITTING]: minutes(20),
+  [SUMMARY_LOG_STATUS.SUBMITTING]: minutes(SUBMITTING_TIMEOUT_MINUTES),
   [SUMMARY_LOG_STATUS.SUBMITTED]: null
 }
 
