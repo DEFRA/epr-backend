@@ -8,6 +8,7 @@ import {
 } from './test-data.js'
 import {
   MATERIAL,
+  REPROCESSING_TYPE,
   STATUS,
   TIME_SCALE,
   WASTE_PROCESSING_TYPE
@@ -36,7 +37,8 @@ export const testRegAccApprovalValidation = (it) => {
           status: STATUS.APPROVED,
           accreditationNumber: 'ACC12345',
           validFrom: new Date('2025-01-01'),
-          validTo: new Date('2025-12-31')
+          validTo: new Date('2025-12-31'),
+          reprocessingType: REPROCESSING_TYPE.INPUT
         }
 
         await expect(
@@ -62,7 +64,8 @@ export const testRegAccApprovalValidation = (it) => {
           status: STATUS.APPROVED,
           accreditationNumber: 'ACC12345',
           validFrom: new Date('2025-01-01'),
-          validTo: new Date('2025-12-31')
+          validTo: new Date('2025-12-31'),
+          reprocessingType: REPROCESSING_TYPE.INPUT
         }
 
         const registrationToUpdate = {
@@ -71,6 +74,7 @@ export const testRegAccApprovalValidation = (it) => {
           validFrom: new Date('2025-01-01'),
           registrationNumber: 'REG12345',
           validTo: new Date('2025-12-31'),
+          reprocessingType: REPROCESSING_TYPE.INPUT,
           accreditationId: inserted.accreditations[0].id
         }
 
@@ -168,14 +172,16 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             })),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
 
@@ -255,7 +261,8 @@ export const testRegAccApprovalValidation = (it) => {
                 status: STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             }),
             registrations: inserted.registrations.map((reg) => ({
@@ -263,7 +270,8 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
 
@@ -290,6 +298,7 @@ export const testRegAccApprovalValidation = (it) => {
                 wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
                 material: MATERIAL.PAPER,
                 glassRecyclingProcess: null,
+                reprocessingType: REPROCESSING_TYPE.INPUT,
                 site: {
                   address: { line1: '123 Test St', postcode: 'AB12 3CD' }
                 }
@@ -297,6 +306,7 @@ export const testRegAccApprovalValidation = (it) => {
               buildAccreditation({
                 id: acc2Id,
                 wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+                reprocessingType: REPROCESSING_TYPE.INPUT,
                 material: MATERIAL.PAPER,
                 glassRecyclingProcess: null,
                 site: {
@@ -314,6 +324,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...acc,
               status: STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
+              reprocessingType: REPROCESSING_TYPE.INPUT,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
             })),
@@ -321,6 +332,7 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
+              reprocessingType: REPROCESSING_TYPE.INPUT,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
             }))
@@ -388,6 +400,7 @@ export const testRegAccApprovalValidation = (it) => {
                 ...acc,
                 status: STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
+                reprocessingType: REPROCESSING_TYPE.INPUT,
                 validFrom: new Date('2025-01-01'),
                 validTo: new Date('2025-12-31')
               }
@@ -461,7 +474,8 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
 
@@ -527,7 +541,8 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
 
@@ -571,7 +586,8 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
 
@@ -617,7 +633,8 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }))
           }
 
@@ -673,7 +690,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(
@@ -757,7 +775,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(
@@ -772,7 +791,8 @@ export const testRegAccApprovalValidation = (it) => {
                   validFrom: new Date('2025-01-01'),
                   registrationNumber: 'REG12345',
                   validTo: new Date('2025-12-31'),
-                  accreditationId: inserted.accreditations[0].id
+                  accreditationId: inserted.accreditations[0].id,
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             })
@@ -823,7 +843,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(
@@ -884,7 +905,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: null,
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await expect(
@@ -910,6 +932,7 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
+            reprocessingType: REPROCESSING_TYPE.INPUT,
             validTo: null
           }
 
@@ -939,7 +962,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom,
-            validTo
+            validTo,
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(
@@ -970,7 +994,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: null,
-            validTo: new Date('2025-12-31')
+            validTo: new Date('2025-12-31'),
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await expect(
@@ -996,7 +1021,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
-            validTo: null
+            validTo: null,
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await expect(
@@ -1025,7 +1051,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom,
-            validTo
+            validTo,
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(
@@ -1144,7 +1171,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom,
-            validTo
+            validTo,
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(
@@ -1159,7 +1187,8 @@ export const testRegAccApprovalValidation = (it) => {
                   validFrom: new Date('2025-01-01'),
                   registrationNumber: 'REG12345',
                   validTo: new Date('2025-12-31'),
-                  accreditationId: inserted.accreditations[0].id
+                  accreditationId: inserted.accreditations[0].id,
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             })
@@ -1240,7 +1269,8 @@ export const testRegAccApprovalValidation = (it) => {
             status: STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom,
-            validTo
+            validTo,
+            reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
           await repository.replace(

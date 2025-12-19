@@ -1,4 +1,4 @@
-import { STATUS } from '#domain/organisations/model.js'
+import { REPROCESSING_TYPE, STATUS } from '#domain/organisations/model.js'
 import {
   buildOrganisation,
   prepareOrgUpdate
@@ -26,6 +26,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
       status: STATUS.APPROVED,
       accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
       validFrom: now,
+      reprocessingType: REPROCESSING_TYPE.INPUT,
       validTo: oneYearFromNow
     }
   ]
@@ -35,6 +36,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
       status: STATUS.APPROVED,
       cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
       registrationNumber: 'REG1',
+      reprocessingType: REPROCESSING_TYPE.INPUT,
       validFrom: now,
       validTo: oneYearFromNow
     })

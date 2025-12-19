@@ -1,11 +1,13 @@
 import {
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
+  REPROCESSING_TYPE,
   STATUS,
   USER_ROLES
 } from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
+import { requiredWhenApprovedOrSuspended } from '#repositories/organisations/schema/helpers.js'
 
 export const idSchema = Joi.string()
   .required()
@@ -109,3 +111,8 @@ export const formFileUploadSchema = Joi.object({
   defraFormUserDownloadLink: Joi.string().uri().required(),
   s3Uri: Joi.string().optional()
 })
+
+export const reprocessingTypeSchema = Joi.string()
+  .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+  .when('status', requiredWhenApprovedOrSuspended)
+  .default(null)
