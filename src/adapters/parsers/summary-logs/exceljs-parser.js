@@ -106,6 +106,10 @@ const validateWorkbookStructure = (workbook, options) => {
 
 const extractCellValue = (cellValue) => {
   if (cellValue && typeof cellValue === 'object') {
+    // Handle Date objects - convert to ISO string for consistent comparison
+    if (cellValue instanceof Date) {
+      return cellValue.toISOString()
+    }
     // Handle formula cells (both regular and shared formulas)
     if (
       'result' in cellValue &&
@@ -120,6 +124,10 @@ const extractCellValue = (cellValue) => {
     // Handle richText cells - concatenate all text segments
     if ('richText' in cellValue && Array.isArray(cellValue.richText)) {
       return cellValue.richText.map((segment) => segment.text).join('')
+    }
+    // Handle hyperlink cells - extract just the text
+    if ('text' in cellValue && 'hyperlink' in cellValue) {
+      return cellValue.text
     }
   }
   return cellValue

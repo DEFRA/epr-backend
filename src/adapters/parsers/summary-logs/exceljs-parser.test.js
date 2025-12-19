@@ -1200,11 +1200,11 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   describe('date cells', () => {
-    it('should extract Date object from metadata value', async () => {
+    it('should extract date as ISO string from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Test')
 
-      const testDate = new Date('2025-05-25')
+      const testDate = new Date('2025-05-25T00:00:00.000Z')
 
       worksheet.getCell('A1').value = '__EPR_META_SUBMISSION_DATE'
       worksheet.getCell('B1').value = testDate
@@ -1213,17 +1213,17 @@ describe('ExcelJSSummaryLogsParser', () => {
       const result = await parse(buffer)
 
       expect(result.meta.SUBMISSION_DATE).toEqual({
-        value: testDate,
+        value: '2025-05-25T00:00:00.000Z',
         location: { sheet: 'Test', row: 1, column: 'B' }
       })
     })
 
-    it('should extract Date objects from data rows', async () => {
+    it('should extract dates as ISO strings from data rows', async () => {
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Test')
 
-      const date1 = new Date('2025-05-25')
-      const date2 = new Date('2025-06-15')
+      const date1 = new Date('2025-05-25T00:00:00.000Z')
+      const date2 = new Date('2025-06-15T00:00:00.000Z')
 
       worksheet.getCell('A1').value = '__EPR_DATA_WASTE_RECEIVED'
       worksheet.getCell('B1').value = 'ROW_ID'
@@ -1242,8 +1242,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          { rowNumber: 2, values: [12345678910, date1] },
-          { rowNumber: 3, values: [98765432100, date2] }
+          { rowNumber: 2, values: [12345678910, '2025-05-25T00:00:00.000Z'] },
+          { rowNumber: 3, values: [98765432100, '2025-06-15T00:00:00.000Z'] }
         ]
       })
     })
@@ -1252,7 +1252,7 @@ describe('ExcelJSSummaryLogsParser', () => {
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Test')
 
-      const date = new Date('2025-05-25')
+      const date = new Date('2025-05-25T00:00:00.000Z')
 
       worksheet.getCell('A1').value = '__EPR_DATA_MIXED_TYPES'
       worksheet.getCell('B1').value = 'STRING_COL'
@@ -1269,7 +1269,12 @@ describe('ExcelJSSummaryLogsParser', () => {
       expect(result.data.MIXED_TYPES).toEqual({
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['STRING_COL', 'DATE_COL', 'NUMBER_COL'],
-        rows: [{ rowNumber: 2, values: ['some text', date, 42] }]
+        rows: [
+          {
+            rowNumber: 2,
+            values: ['some text', '2025-05-25T00:00:00.000Z', 42]
+          }
+        ]
       })
     })
   })
@@ -1842,5 +1847,33 @@ describe('extractCellValue', () => {
   it('returns object unchanged if not a known cell type', () => {
     const unknownObject = { someProperty: 'value' }
     expect(extractCellValue(unknownObject)).toBe(unknownObject)
+  })
+
+  it('extracts text from hyperlink cell', () => {
+    expect(
+      extractCellValue({
+        text: 'webuy@boomerang.co.uk',
+        hyperlink: 'mailto:webuy@boomerang.co.uk'
+      })
+    ).toBe('webuy@boomerang.co.uk')
+  })
+
+  it('extracts text from hyperlink cell with URL', () => {
+    expect(
+      extractCellValue({
+        text: 'Click here',
+        hyperlink: 'https://example.com'
+      })
+    ).toBe('Click here')
+  })
+
+  it('converts Date objects to ISO strings', () => {
+    const date = new Date('2025-08-01T00:00:00.000Z')
+    expect(extractCellValue(date)).toBe('2025-08-01T00:00:00.000Z')
+  })
+
+  it('converts Date objects with time to ISO strings', () => {
+    const date = new Date('2025-12-25T14:30:00.000Z')
+    expect(extractCellValue(date)).toBe('2025-12-25T14:30:00.000Z')
   })
 })
