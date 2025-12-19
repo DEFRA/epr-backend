@@ -3,6 +3,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -81,7 +82,7 @@ const findLatestSubmittedForOrgReg =
     const filter = {
       organisationId,
       registrationId,
-      status: 'submitted'
+      status: SUMMARY_LOG_STATUS.SUBMITTED
     }
 
     const doc = await db
@@ -108,7 +109,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
     throw Boom.notFound(`Summary log with id ${validatedId} not found`)
   }
 
-  if (existing.status !== 'validated') {
+  if (existing.status !== SUMMARY_LOG_STATUS.VALIDATED) {
     throw Boom.conflict(
       `Summary log must be validated before submission. Current status: ${existing.status}`
     )
@@ -122,7 +123,7 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
     _id: { $ne: validatedId },
     organisationId,
     registrationId,
-    status: 'submitting'
+    status: SUMMARY_LOG_STATUS.SUBMITTING
   }
   const existingSubmitting = await db
     .collection(COLLECTION_NAME)
@@ -137,13 +138,16 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
   // ensures only one document can be in submitting status per org/reg at a time
   const submittedAt = new Date().toISOString()
   /** @type {any} */
-  const updateFilter = { _id: validatedId, status: 'validated' }
+  const updateFilter = {
+    _id: validatedId,
+    status: SUMMARY_LOG_STATUS.VALIDATED
+  }
 
   try {
     const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
       updateFilter,
       {
-        $set: { status: 'submitting', submittedAt },
+        $set: { status: SUMMARY_LOG_STATUS.SUBMITTING, submittedAt },
         $inc: { version: 1 }
       },
       { returnDocument: 'after' }

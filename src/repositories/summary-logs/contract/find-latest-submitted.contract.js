@@ -227,29 +227,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
       expect(result).toBeNull()
     })
 
-    it('includes version in the returned result', async () => {
-      const { organisationId, registrationId } = generateOrgReg()
-      const logId = `summary-${randomUUID()}`
-
-      await repository.insert(
-        logId,
-        buildSummaryLog({
-          status: 'submitted',
-          organisationId,
-          registrationId
-        })
-      )
-
-      const result = await repository.findLatestSubmittedForOrgReg(
-        organisationId,
-        registrationId
-      )
-
-      expect(result).not.toBeNull()
-      expect(result.version).toBe(1)
-    })
-
-    it('includes the summary log id in the returned result', async () => {
+    it('includes id and version in the returned result', async () => {
       const { organisationId, registrationId } = generateOrgReg()
       const logId = `summary-${randomUUID()}`
 
@@ -269,6 +247,7 @@ export const testFindLatestSubmittedForOrgReg = (it) => {
 
       expect(result).not.toBeNull()
       expect(result.id).toBe(logId)
+      expect(result.version).toBe(1)
     })
   })
 }

@@ -2,6 +2,7 @@ import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { buildSummaryLog } from './test-data.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { waitForVersion } from './test-helpers.js'
 
 const generateOrgReg = () => ({
   organisationId: `org-${randomUUID()}`,
@@ -168,11 +169,8 @@ export const testTransitionToSubmittingExclusive = (it) => {
       expect(result.success).toBe(true)
       expect(result.version).toBe(2)
 
-      // Allow staleCache to sync before reading (eventual consistency)
-      await new Promise((resolve) => setImmediate(resolve))
-
-      // Verify persisted version
-      const updated = await repository.findById(logId)
+      // Verify persisted version (waitForVersion handles eventual consistency)
+      const updated = await waitForVersion(repository, logId, 2)
       expect(updated.version).toBe(2)
     })
 
@@ -244,8 +242,11 @@ export const testTransitionToSubmittingExclusive = (it) => {
           repository.transitionToSubmittingExclusive(logId2)
         ])
 
-        // Allow staleCache to sync before reading (eventual consistency)
-        await new Promise((resolve) => setImmediate(resolve))
+        // Wait for eventual consistency - exactly one log will reach version 2
+        await Promise.any([
+          waitForVersion(repository, logId1, 2),
+          waitForVersion(repository, logId2, 2)
+        ])
 
         // Verify end state: exactly one submitting, one validated
         const log1 = await repository.findById(logId1)
