@@ -325,6 +325,21 @@ describe('status', () => {
       })
     })
 
+    it('returns updated summary log for submitting -> superseded transition (stale preview)', () => {
+      const summaryLog = {
+        id: 'log-stale-preview',
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
+        file: { id: 'file-stale' }
+      }
+      const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+
+      expect(result).toEqual({
+        id: 'log-stale-preview',
+        status: SUMMARY_LOG_STATUS.SUPERSEDED,
+        file: { id: 'file-stale' }
+      })
+    })
+
     it('throws error for submitting -> validated transition', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTING }
 
@@ -345,26 +360,15 @@ describe('status', () => {
       SUMMARY_LOG_STATUS.PREPROCESSING,
       SUMMARY_LOG_STATUS.VALIDATING,
       SUMMARY_LOG_STATUS.VALIDATED
-    ])(
-      'returns updated summary log for %s -> superseded transition',
-      (fromStatus) => {
-        const summaryLog = {
-          id: 'log-supersede',
-          status: fromStatus,
-          file: { id: 'file-supersede' }
-        }
-        const result = transitionStatus(
-          summaryLog,
-          SUMMARY_LOG_STATUS.SUPERSEDED
-        )
+    ])('throws error for %s -> superseded transition', (fromStatus) => {
+      const summaryLog = { status: fromStatus }
 
-        expect(result).toEqual({
-          id: 'log-supersede',
-          status: SUMMARY_LOG_STATUS.SUPERSEDED,
-          file: { id: 'file-supersede' }
-        })
-      }
-    )
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+      ).toThrow(
+        `Cannot transition summary log from ${fromStatus} to superseded`
+      )
+    })
 
     it('throws error for superseded -> any transition (terminal state)', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.SUPERSEDED }
@@ -376,18 +380,13 @@ describe('status', () => {
       )
     })
 
-    it.each([SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED])(
-      'throws error for %s -> superseded transition',
-      (fromStatus) => {
-        const summaryLog = { status: fromStatus }
+    it('throws error for submitted -> superseded transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTED }
 
-        expect(() =>
-          transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
-        ).toThrow(
-          `Cannot transition summary log from ${fromStatus} to superseded`
-        )
-      }
-    )
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+      ).toThrow('Cannot transition summary log from submitted to superseded')
+    })
 
     it('throws error for preprocessing -> submitting transition', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.PREPROCESSING }

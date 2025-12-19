@@ -2,6 +2,7 @@ import { ObjectId } from 'mongodb'
 
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import {
+  NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
@@ -290,7 +291,8 @@ describe('CDP status check for stale preprocessing status', () => {
           name: 'test.xlsx',
           status: UPLOAD_STATUS.COMPLETE,
           uri: 's3://test-bucket/test.xlsx'
-        }
+        },
+        validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
       })
 
       await server.inject({

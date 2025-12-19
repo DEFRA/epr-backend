@@ -1,3 +1,4 @@
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import {
   vi,
@@ -9,11 +10,9 @@ import {
   afterEach
 } from 'vitest'
 
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { buildSummaryLog } from '#repositories/summary-logs/contract/test-data.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -139,18 +138,18 @@ describe(`${summaryLogsCreatePath} route`, () => {
     })
   })
 
-  describe('submission in progress', () => {
+  describe('error handling', () => {
     let server
-    let summaryLogsRepository
+    let uploadsRepository
 
     beforeAll(async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
-      summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      uploadsRepository = createInMemoryUploadsRepository()
 
       server = await createTestServer({
         repositories: {
-          summaryLogsRepository: () => summaryLogsRepository,
-          uploadsRepository: createInMemoryUploadsRepository()
+          summaryLogsRepository: () =>
+            createInMemorySummaryLogsRepository()(mockLogger),
+          uploadsRepository
         },
         featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
       })
@@ -160,105 +159,17 @@ describe(`${summaryLogsCreatePath} route`, () => {
 
     afterAll(async () => {
       await server.stop()
-    })
-
-    it('returns 409 when a submission is in progress for same org/reg', async () => {
-      const testOrgId = 'org-conflict-test'
-      const testRegId = 'reg-conflict-test'
-
-      // Create a summary log in submitting status
-      const existingLogId = 'existing-submitting-log'
-      await summaryLogsRepository.insert(
-        existingLogId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.SUBMITTING,
-          organisationId: testOrgId,
-          registrationId: testRegId
-        })
-      )
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${testOrgId}/registrations/${testRegId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: testOrgId }),
-        payload: {
-          redirectUrl: 'https://frontend.test/redirect'
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.CONFLICT)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toBe('A submission is in progress. Please wait.')
-    })
-
-    it('allows upload when submitting log is for different registration', async () => {
-      const testOrgId = 'org-different-reg-test'
-      const testRegId = 'reg-different-reg-test'
-      const otherRegId = 'different-registration'
-
-      // Create a summary log in submitting status for different registration
-      const existingLogId = 'existing-submitting-log-different-reg'
-      await summaryLogsRepository.insert(
-        existingLogId,
-        buildSummaryLog({
-          status: SUMMARY_LOG_STATUS.SUBMITTING,
-          organisationId: testOrgId,
-          registrationId: otherRegId
-        })
-      )
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${testOrgId}/registrations/${testRegId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: testOrgId }),
-        payload: {
-          redirectUrl: 'https://frontend.test/redirect'
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.CREATED)
-    })
-  })
-
-  describe('error handling', () => {
-    let server
-    let summaryLogsRepository
-
-    beforeAll(async () => {
-      summaryLogsRepository = {
-        insert: vi.fn().mockResolvedValue(undefined),
-        update: vi.fn().mockResolvedValue(undefined),
-        findById: vi.fn().mockResolvedValue(null),
-        checkForSubmittingLog: vi.fn().mockResolvedValue(undefined)
-      }
-
-      server = await createTestServer({
-        repositories: {
-          summaryLogsRepository: () => summaryLogsRepository,
-          uploadsRepository: createInMemoryUploadsRepository()
-        },
-        featureFlags: createInMemoryFeatureFlags({ summaryLogs: true })
-      })
-
-      await server.initialize()
     })
 
     afterEach(() => {
-      vi.resetAllMocks()
+      uploadsRepository.initiateSummaryLogUpload = uploadsRepository.initiate
     })
 
-    afterAll(async () => {
-      await server.stop()
-    })
-
-    it('returns 500 when checkForSubmittingLog fails with non-Boom error', async () => {
-      summaryLogsRepository.checkForSubmittingLog.mockRejectedValue(
-        new Error('Database error')
-      )
-
-      const consoleErrorSpy = vi
-        .spyOn(console, 'error')
-        .mockImplementation(() => {})
+    it('re-throws Boom errors from uploads repository', async () => {
+      const boomError = Boom.badGateway('CDP Uploader is down')
+      uploadsRepository.initiateSummaryLogUpload = vi
+        .fn()
+        .mockRejectedValue(boomError)
 
       const response = await server.inject({
         method: 'POST',
@@ -269,27 +180,25 @@ describe(`${summaryLogsCreatePath} route`, () => {
         }
       })
 
-      consoleErrorSpy.mockRestore()
+      expect(response.statusCode).toBe(StatusCodes.BAD_GATEWAY)
+    })
+
+    it('wraps non-Boom errors in badImplementation', async () => {
+      const genericError = new Error('Network failure')
+      uploadsRepository.initiateSummaryLogUpload = vi
+        .fn()
+        .mockRejectedValue(genericError)
+
+      const response = await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
+        ...asStandardUser({ linkedOrgId: organisationId }),
+        payload: {
+          redirectUrl: 'https://frontend.test/redirect'
+        }
+      })
 
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
-    })
-
-    it('re-throws Boom errors with original status', async () => {
-      const Boom = await import('@hapi/boom')
-      summaryLogsRepository.checkForSubmittingLog.mockRejectedValue(
-        Boom.default.forbidden('Access denied')
-      )
-
-      const response = await server.inject({
-        method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs`,
-        ...asStandardUser({ linkedOrgId: organisationId }),
-        payload: {
-          redirectUrl: 'https://frontend.test/redirect'
-        }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
   })
 
