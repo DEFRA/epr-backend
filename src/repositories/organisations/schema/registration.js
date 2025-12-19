@@ -45,8 +45,12 @@ const siteCapacitySchema = Joi.object({
     .required()
 })
 
+const siteAddressSchema = addressSchema.fork(['line1', 'postcode'], (schema) =>
+  schema.required()
+)
+
 const registrationSiteSchema = Joi.object({
-  address: addressSchema.required(),
+  address: siteAddressSchema.required(),
   gridReference: Joi.string().required(),
   siteCapacity: Joi.array().items(siteCapacitySchema).required().min(1)
 })
