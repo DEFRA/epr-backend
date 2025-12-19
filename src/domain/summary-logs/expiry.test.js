@@ -4,10 +4,9 @@ import { calculateExpiresAt } from './expiry.js'
 
 describe('calculateExpiresAt', () => {
   const FIXED_NOW = new Date('2024-12-19T12:00:00.000Z')
-
-  const MILLISECONDS_PER_MINUTE = 60_000
-  const MILLISECONDS_PER_DAY = 86_400_000
-  const MILLISECONDS_PER_WEEK = 604_800_000
+  const TWENTY_MINUTES_LATER = new Date('2024-12-19T12:20:00.000Z')
+  const ONE_DAY_LATER = new Date('2024-12-20T12:00:00.000Z')
+  const ONE_WEEK_LATER = new Date('2024-12-26T12:00:00.000Z')
 
   beforeEach(() => {
     vi.useFakeTimers()
@@ -18,7 +17,7 @@ describe('calculateExpiresAt', () => {
     vi.useRealTimers()
   })
 
-  describe('24-hour TTL statuses', () => {
+  describe('1-day TTL statuses', () => {
     const oneDayStatuses = [
       SUMMARY_LOG_STATUS.PREPROCESSING,
       SUMMARY_LOG_STATUS.VALIDATING,
@@ -31,13 +30,12 @@ describe('calculateExpiresAt', () => {
       'returns expiry 1 day from now for %s status',
       (status) => {
         const result = calculateExpiresAt(status)
-        const expected = new Date(FIXED_NOW.getTime() + MILLISECONDS_PER_DAY)
-        expect(result).toEqual(expected)
+        expect(result).toEqual(ONE_DAY_LATER)
       }
     )
   })
 
-  describe('7-day TTL statuses', () => {
+  describe('1-week TTL statuses', () => {
     const oneWeekStatuses = [
       SUMMARY_LOG_STATUS.VALIDATED,
       SUMMARY_LOG_STATUS.INVALID
@@ -47,8 +45,7 @@ describe('calculateExpiresAt', () => {
       'returns expiry 1 week from now for %s status',
       (status) => {
         const result = calculateExpiresAt(status)
-        const expected = new Date(FIXED_NOW.getTime() + MILLISECONDS_PER_WEEK)
-        expect(result).toEqual(expected)
+        expect(result).toEqual(ONE_WEEK_LATER)
       }
     )
   })
@@ -56,10 +53,7 @@ describe('calculateExpiresAt', () => {
   describe('20-minute TTL statuses', () => {
     it('returns expiry 20 minutes from now for submitting status', () => {
       const result = calculateExpiresAt(SUMMARY_LOG_STATUS.SUBMITTING)
-      const expected = new Date(
-        FIXED_NOW.getTime() + 20 * MILLISECONDS_PER_MINUTE
-      )
-      expect(result).toEqual(expected)
+      expect(result).toEqual(TWENTY_MINUTES_LATER)
     })
   })
 
