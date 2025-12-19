@@ -5,7 +5,23 @@ import { StatusCodes } from 'http-status-codes'
 import { STATUS } from '#domain/organisations/model.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/**
+ * @typedef {{
+ *   id: string;
+ *   name: string;
+ *   linkedAt: string;
+ *   linkedBy: {
+ *     email: string
+ *     id: string
+ *   }
+ * }} LinkedDefraOrganisationResponse
+ */
+
+/**
+ * @typedef {Object} LinkedOrganisationResponse
+ * @property {string} status
+ * @property {LinkedDefraOrganisationResponse} linked
+ */
 
 export const organisationsLink = {
   method: 'POST',
@@ -15,9 +31,11 @@ export const organisationsLink = {
       scope: [ROLES.linker]
     }
   },
+
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
-   * @param {Object} h - Hapi response toolkit
+   * @param {import('#common/hapi-types.js').HapiRequest & { params: { organisationId: string } }} request
+   * @param {import('@hapi/hapi').ResponseToolkit} h
+   * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
   handler: async (request, h) => {
     // TODO: `orgInToken`, `organisationId` and `organisation` are guaranteed to exist here
@@ -74,10 +92,17 @@ export const organisationsLink = {
       currentVersion + 1
     )
 
-    return h
-      .response({
-        status: updatedOrganisation.status
-      })
-      .code(StatusCodes.OK)
+    /** @type {LinkedOrganisationResponse} */
+    const payload = {
+      status: updatedOrganisation.status,
+      linked: {
+        id: linkedDefraOrg.orgId,
+        name: linkedDefraOrg.orgName,
+        linkedAt: linkedDefraOrg.linkedAt,
+        linkedBy: linkedDefraOrg.linkedBy
+      }
+    }
+
+    return h.response(payload).code(StatusCodes.OK)
   }
 }

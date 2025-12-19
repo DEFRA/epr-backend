@@ -21,6 +21,8 @@ import { StatusCodes } from 'http-status-codes'
 
 const { validToken } = defraIdMockAuthTokens
 
+const ISO_DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
+
 describe('POST /v1/organisations/{organisationId}/link', () => {
   setupAuthContext()
   let server
@@ -192,9 +194,21 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(response.statusCode).toBe(StatusCodes.OK)
         })
 
-        it('returns a payload with `{status: active}`', async () => {
+        it('returns the expected payload', async () => {
           const result = JSON.parse(response.payload)
-          expect(result).toEqual({ status: 'active' })
+
+          expect(result).toEqual({
+            status: 'active',
+            linked: {
+              id: COMPANY_1_ID,
+              name: COMPANY_1_NAME,
+              linkedAt: expect.stringMatching(ISO_DATE_STRING_REGEX),
+              linkedBy: {
+                email: USER_PRESENT_IN_ORG1_EMAIL,
+                id: VALID_TOKEN_CONTACT_ID
+              }
+            }
+          })
         })
 
         it('leaves the organisation in the database with status: "active"', async () => {
@@ -205,11 +219,11 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(finalOrgVersion.linkedDefraOrganisation).toEqual({
             orgId: COMPANY_1_ID,
             orgName: COMPANY_1_NAME,
+            linkedAt: expect.any(Date),
             linkedBy: {
               email: USER_PRESENT_IN_ORG1_EMAIL,
               id: VALID_TOKEN_CONTACT_ID
-            },
-            linkedAt: expect.any(Date)
+            }
           })
         })
 
