@@ -3,6 +3,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/event.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   validateId,
   validateSummaryLogInsert,
@@ -15,22 +16,6 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 const insert = (db) => async (id, summaryLog) => {
   const validatedId = validateId(id)
   const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
-  const { organisationId, registrationId } = validatedSummaryLog
-
-  // Check for existing submitting log for same org/reg
-  /** @type {any} */
-  const submittingFilter = {
-    organisationId,
-    registrationId,
-    status: 'submitting'
-  }
-  const existingSubmitting = await db
-    .collection(COLLECTION_NAME)
-    .findOne(submittingFilter)
-
-  if (existingSubmitting) {
-    throw Boom.conflict('A submission is in progress. Please wait.')
-  }
 
   try {
     await db
@@ -91,51 +76,104 @@ const findById = (db) => async (id) => {
   return { version, summaryLog }
 }
 
-const checkForSubmittingLog =
+const findLatestSubmittedForOrgReg =
   (db) => async (organisationId, registrationId) => {
     /** @type {any} */
-    const submittingFilter = {
-      organisationId,
-      registrationId,
-      status: 'submitting'
-    }
-    const existingSubmitting = await db
-      .collection(COLLECTION_NAME)
-      .findOne(submittingFilter)
-
-    if (existingSubmitting) {
-      throw Boom.conflict('A submission is in progress. Please wait.')
-    }
-  }
-
-const supersedePendingLogs =
-  (db) => async (organisationId, registrationId, excludeId) => {
-    /** @type {any} */
     const filter = {
-      _id: { $ne: excludeId },
       organisationId,
       registrationId,
-      status: { $in: ['preprocessing', 'validating', 'validated'] }
+      status: SUMMARY_LOG_STATUS.SUBMITTED
     }
 
-    // Find all matching documents with their versions
-    const docs = await db.collection(COLLECTION_NAME).find(filter).toArray()
+    const doc = await db
+      .collection(COLLECTION_NAME)
+      .findOne(filter, { sort: { submittedAt: -1 } })
 
-    if (docs.length === 0) {
-      return 0
+    if (!doc) {
+      return null
     }
 
-    // Build bulk operations with optimistic concurrency (version checking)
-    const bulkOps = docs.map((doc) => ({
-      updateOne: {
-        filter: { _id: doc._id, version: doc.version },
-        update: { $set: { status: 'superseded' }, $inc: { version: 1 } }
-      }
-    }))
-
-    const result = await db.collection(COLLECTION_NAME).bulkWrite(bulkOps)
-    return result.modifiedCount
+    const { _id, version, ...summaryLog } = doc
+    return { id: _id, version, summaryLog }
   }
+
+const transitionToSubmittingExclusive = (db) => async (logId) => {
+  const validatedId = validateId(logId)
+
+  // First, verify the document exists and check its current state
+  /** @type {any} */
+  const findFilter = { _id: validatedId }
+  const existing = await db.collection(COLLECTION_NAME).findOne(findFilter)
+
+  if (!existing) {
+    throw Boom.notFound(`Summary log with id ${validatedId} not found`)
+  }
+
+  if (existing.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+    throw Boom.conflict(
+      `Summary log must be validated before submission. Current status: ${existing.status}`
+    )
+  }
+
+  const { organisationId, registrationId } = existing
+
+  // Check if another log for same org/reg is already submitting (fast path)
+  /** @type {any} */
+  const submittingFilter = {
+    _id: { $ne: validatedId },
+    organisationId,
+    registrationId,
+    status: SUMMARY_LOG_STATUS.SUBMITTING
+  }
+  const existingSubmitting = await db
+    .collection(COLLECTION_NAME)
+    .findOne(submittingFilter)
+
+  if (existingSubmitting) {
+    return { success: false }
+  }
+
+  // Atomically transition to submitting
+  // The unique partial index on (organisationId, registrationId) where status='submitting'
+  // ensures only one document can be in submitting status per org/reg at a time
+  const submittedAt = new Date().toISOString()
+  /** @type {any} */
+  const updateFilter = {
+    _id: validatedId,
+    status: SUMMARY_LOG_STATUS.VALIDATED
+  }
+
+  try {
+    const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+      updateFilter,
+      {
+        $set: { status: SUMMARY_LOG_STATUS.SUBMITTING, submittedAt },
+        $inc: { version: 1 }
+      },
+      { returnDocument: 'after' }
+    )
+
+    // If update failed due to status mismatch, another transaction beat us
+    if (!result) {
+      return { success: false }
+    }
+
+    // Extract summaryLog from result (remove _id and version)
+    const { _id, version: newVersion, ...summaryLog } = result
+    return {
+      success: true,
+      summaryLog,
+      version: newVersion
+    }
+  } catch (error) {
+    // Unique index violation means another document for same org/reg is already submitting
+    // This can happen in a race even if the pre-check passed
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      return { success: false }
+    }
+    throw error
+  }
+}
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
@@ -145,6 +183,6 @@ export const createSummaryLogsRepository = (db) => (logger) => ({
   insert: insert(db),
   update: update(db, logger),
   findById: findById(db),
-  supersedePendingLogs: supersedePendingLogs(db),
-  checkForSubmittingLog: checkForSubmittingLog(db)
+  findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
+  transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
 })

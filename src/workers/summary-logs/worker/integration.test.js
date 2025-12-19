@@ -9,6 +9,7 @@ import { createEmptyLoads } from '#application/summary-logs/classify-loads.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
+  NO_PRIOR_SUBMISSION,
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
@@ -78,7 +79,8 @@ describe('SummaryLogsValidator integration', () => {
         name: 'test.xlsx',
         status: UPLOAD_STATUS.COMPLETE,
         uri: 's3://test-bucket/path/to/summary-log.xlsx'
-      }
+      },
+      validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
     }
   }
 

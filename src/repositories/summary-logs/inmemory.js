@@ -19,35 +19,12 @@ const scheduleStaleCacheSync = (storage, staleCache) => {
   })
 }
 
-const hasSubmittingLogForOrgReg = (
-  staleCache,
-  organisationId,
-  registrationId
-) => {
-  for (const [, doc] of staleCache) {
-    if (
-      doc.summaryLog.organisationId === organisationId &&
-      doc.summaryLog.registrationId === registrationId &&
-      doc.summaryLog.status === 'submitting'
-    ) {
-      return true
-    }
-  }
-  return false
-}
-
 const insert = (storage, staleCache) => async (id, summaryLog) => {
   const validatedId = validateId(id)
   const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
 
   if (storage.has(validatedId)) {
     throw Boom.conflict(`Summary log with id ${validatedId} already exists`)
-  }
-
-  // Check for existing submitting log for same org/reg (read from staleCache for eventual consistency)
-  const { organisationId, registrationId } = validatedSummaryLog
-  if (hasSubmittingLogForOrgReg(staleCache, organisationId, registrationId)) {
-    throw Boom.conflict('A submission is in progress. Please wait.')
   }
 
   const newDoc = {
@@ -105,84 +82,94 @@ const findById = (staleCache) => async (id) => {
   return { version: doc.version, summaryLog: structuredClone(doc.summaryLog) }
 }
 
-const PENDING_STATUSES = new Set(['preprocessing', 'validating', 'validated'])
-
-const isPendingLogForOrgReg = (
-  id,
-  doc,
-  organisationId,
-  registrationId,
-  excludeId
-) =>
-  id !== excludeId &&
-  doc.summaryLog.organisationId === organisationId &&
-  doc.summaryLog.registrationId === registrationId &&
-  PENDING_STATUSES.has(doc.summaryLog.status)
-
-const findPendingLogs = (
-  staleCache,
-  organisationId,
-  registrationId,
-  excludeId
-) => {
-  const docs = []
-  for (const [id, doc] of staleCache) {
-    if (
-      isPendingLogForOrgReg(id, doc, organisationId, registrationId, excludeId)
-    ) {
-      docs.push({ id, version: doc.version })
-    }
-  }
-  return docs
-}
-
-const applySupersede = (storage, docsToSupersede) => {
-  let count = 0
-  for (const { id, version } of docsToSupersede) {
-    const current = storage.get(id)
-    if (current && current.version === version) {
-      storage.set(id, {
-        version: current.version + 1,
-        summaryLog: structuredClone({
-          ...current.summaryLog,
-          status: 'superseded'
-        })
-      })
-      count++
-    }
-  }
-  return count
-}
-
-const checkForSubmittingLog =
+const findLatestSubmittedForOrgReg =
   (staleCache) => async (organisationId, registrationId) => {
-    if (hasSubmittingLogForOrgReg(staleCache, organisationId, registrationId)) {
-      throw Boom.conflict('A submission is in progress. Please wait.')
+    let latestId = null
+    let latestDoc = null
+    let latestSubmittedAt = null
+
+    for (const [id, doc] of staleCache) {
+      if (
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        doc.summaryLog.status === 'submitted'
+      ) {
+        const { submittedAt } = doc.summaryLog
+
+        // Return the most recently submitted summary log
+        if (latestDoc === null || submittedAt > latestSubmittedAt) {
+          latestId = id
+          latestDoc = doc
+          latestSubmittedAt = submittedAt
+        }
+      }
+    }
+
+    if (!latestDoc) {
+      return null
+    }
+
+    return {
+      id: latestId,
+      version: latestDoc.version,
+      summaryLog: structuredClone(latestDoc.summaryLog)
     }
   }
 
-const supersedePendingLogs =
-  (storage, staleCache) =>
-  async (organisationId, registrationId, excludeId) => {
-    // Find from staleCache (replica) to provide weaker consistency guarantees
-    const docsToSupersede = findPendingLogs(
-      staleCache,
-      organisationId,
-      registrationId,
-      excludeId
-    )
+const transitionToSubmittingExclusive =
+  (storage, staleCache) => async (logId) => {
+    const validatedId = validateId(logId)
+    const existing = storage.get(validatedId)
 
-    if (docsToSupersede.length === 0) {
-      return 0
+    // Verify summary log exists
+    if (!existing) {
+      throw Boom.notFound(`Summary log with id ${validatedId} not found`)
     }
 
-    // Update with optimistic concurrency (version checking)
-    const count = applySupersede(storage, docsToSupersede)
-
-    if (count > 0) {
-      scheduleStaleCacheSync(storage, staleCache)
+    // Verify summary log is in validated status
+    if (existing.summaryLog.status !== 'validated') {
+      throw Boom.conflict(
+        `Summary log must be validated before submission. Current status: ${existing.summaryLog.status}`
+      )
     }
-    return count
+
+    const { organisationId, registrationId } = existing.summaryLog
+
+    // Pre-check: is another log for same org/reg already submitting?
+    // Read from storage (strong consistency) - in single-threaded JS,
+    // true race conditions can't occur like they can in MongoDB with
+    // network I/O interleaving.
+    for (const [id, doc] of storage) {
+      if (
+        id !== validatedId &&
+        doc.summaryLog.organisationId === organisationId &&
+        doc.summaryLog.registrationId === registrationId &&
+        doc.summaryLog.status === 'submitting'
+      ) {
+        return { success: false }
+      }
+    }
+
+    // Transition to submitting
+    const updatedSummaryLog = {
+      ...existing.summaryLog,
+      status: 'submitting',
+      submittedAt: new Date().toISOString()
+    }
+    const newVersion = existing.version + 1
+
+    const newDoc = {
+      version: newVersion,
+      summaryLog: structuredClone(updatedSummaryLog)
+    }
+    storage.set(validatedId, newDoc)
+    scheduleStaleCacheSync(storage, staleCache)
+
+    return {
+      success: true,
+      summaryLog: structuredClone(updatedSummaryLog),
+      version: newVersion
+    }
   }
 
 /**
@@ -200,7 +187,10 @@ export const createInMemorySummaryLogsRepository = () => {
     insert: insert(storage, staleCache),
     update: update(storage, staleCache, logger),
     findById: findById(staleCache),
-    supersedePendingLogs: supersedePendingLogs(storage, staleCache),
-    checkForSubmittingLog: checkForSubmittingLog(staleCache)
+    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(staleCache),
+    transitionToSubmittingExclusive: transitionToSubmittingExclusive(
+      storage,
+      staleCache
+    )
   })
 }

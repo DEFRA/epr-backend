@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import { NO_PRIOR_SUBMISSION } from '#domain/summary-logs/status.js'
 import {
   generateFileId,
   buildFile,
@@ -98,108 +98,6 @@ export const testInsertBehaviour = (it) => {
       })
     })
 
-    describe('org/reg submission constraint', () => {
-      it('throws 409 when inserting if a submitting log exists for same org/reg', async () => {
-        const organisationId = `org-constraint-${randomUUID()}`
-        const registrationId = `reg-constraint-${randomUUID()}`
-
-        // Insert a log in submitting status
-        const existingId = `existing-submitting-${randomUUID()}`
-        await repository.insert(
-          existingId,
-          buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.SUBMITTING,
-            organisationId,
-            registrationId
-          })
-        )
-
-        // Attempt to insert a new log for same org/reg
-        const newId = `new-log-${randomUUID()}`
-        const newLog = {
-          status: SUMMARY_LOG_STATUS.PREPROCESSING,
-          organisationId,
-          registrationId
-        }
-
-        await expect(repository.insert(newId, newLog)).rejects.toMatchObject({
-          isBoom: true,
-          output: { statusCode: 409 },
-          message: 'A submission is in progress. Please wait.'
-        })
-
-        // Verify the new log was not inserted
-        const notFound = await repository.findById(newId)
-        expect(notFound).toBeNull()
-      })
-
-      it('allows insert when submitting log is for different registration', async () => {
-        const organisationId = `org-shared-${randomUUID()}`
-
-        // Insert a log in submitting status for reg-A
-        const existingId = `existing-reg-a-${randomUUID()}`
-        await repository.insert(
-          existingId,
-          buildSummaryLog({
-            status: SUMMARY_LOG_STATUS.SUBMITTING,
-            organisationId,
-            registrationId: `reg-A-${randomUUID()}`
-          })
-        )
-
-        // Insert a new log for reg-B (same org, different registration)
-        const newId = `new-reg-b-${randomUUID()}`
-        const newLog = {
-          status: SUMMARY_LOG_STATUS.PREPROCESSING,
-          organisationId,
-          registrationId: `reg-B-${randomUUID()}`
-        }
-
-        await repository.insert(newId, newLog)
-
-        const found = await repository.findById(newId)
-        expect(found).toBeTruthy()
-      })
-
-      it('allows insert when existing log for same org/reg is not submitting', async () => {
-        const organisationId = `org-non-submitting-${randomUUID()}`
-        const registrationId = `reg-non-submitting-${randomUUID()}`
-
-        // Insert logs in various non-submitting statuses
-        const statuses = [
-          SUMMARY_LOG_STATUS.PREPROCESSING,
-          SUMMARY_LOG_STATUS.VALIDATING,
-          SUMMARY_LOG_STATUS.VALIDATED,
-          SUMMARY_LOG_STATUS.SUBMITTED,
-          SUMMARY_LOG_STATUS.SUPERSEDED,
-          SUMMARY_LOG_STATUS.REJECTED
-        ]
-
-        for (const status of statuses) {
-          const existingId = `existing-${status}-${randomUUID()}`
-          const existingLog =
-            status === SUMMARY_LOG_STATUS.PREPROCESSING
-              ? { status, organisationId, registrationId }
-              : buildSummaryLog({ status, organisationId, registrationId })
-
-          await repository.insert(existingId, existingLog)
-        }
-
-        // Insert a new log - should succeed
-        const newId = `new-after-non-submitting-${randomUUID()}`
-        const newLog = {
-          status: SUMMARY_LOG_STATUS.PREPROCESSING,
-          organisationId,
-          registrationId
-        }
-
-        await repository.insert(newId, newLog)
-
-        const found = await repository.findById(newId)
-        expect(found).toBeTruthy()
-      })
-    })
-
     describe('validation', () => {
       describe('required fields', () => {
         it('rejects insert with missing file.id', async () => {
@@ -268,6 +166,35 @@ export const testInsertBehaviour = (it) => {
 
           const found = await repository.findById(id)
           expect(found).toBeTruthy()
+        })
+
+        it('preserves validatedAgainstSummaryLogId on insert', async () => {
+          const id = `contract-baseline-${randomUUID()}`
+          const baselineSummaryLogId = `previous-submitted-${randomUUID()}`
+          const summaryLog = buildSummaryLog({
+            validatedAgainstSummaryLogId: baselineSummaryLogId
+          })
+
+          await repository.insert(id, summaryLog)
+
+          const found = await repository.findById(id)
+          expect(found.summaryLog.validatedAgainstSummaryLogId).toBe(
+            baselineSummaryLogId
+          )
+        })
+
+        it('preserves NO_PRIOR_SUBMISSION validatedAgainstSummaryLogId on insert', async () => {
+          const id = `contract-no-prior-baseline-${randomUUID()}`
+          const summaryLog = buildSummaryLog({
+            validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
+          })
+
+          await repository.insert(id, summaryLog)
+
+          const found = await repository.findById(id)
+          expect(found.summaryLog.validatedAgainstSummaryLogId).toBe(
+            NO_PRIOR_SUBMISSION
+          )
         })
 
         it('accepts valid file.status values', async () => {
