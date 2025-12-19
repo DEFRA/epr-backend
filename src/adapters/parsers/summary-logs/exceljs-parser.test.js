@@ -1200,7 +1200,7 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   describe('date cells', () => {
-    it('should extract date as ISO string from metadata value', async () => {
+    it('should extract date as date-only string from metadata value', async () => {
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Test')
 
@@ -1213,12 +1213,12 @@ describe('ExcelJSSummaryLogsParser', () => {
       const result = await parse(buffer)
 
       expect(result.meta.SUBMISSION_DATE).toEqual({
-        value: '2025-05-25T00:00:00.000Z',
+        value: '2025-05-25',
         location: { sheet: 'Test', row: 1, column: 'B' }
       })
     })
 
-    it('should extract dates as ISO strings from data rows', async () => {
+    it('should extract dates as date-only strings from data rows', async () => {
       const workbook = new ExcelJS.Workbook()
       const worksheet = workbook.addWorksheet('Test')
 
@@ -1242,8 +1242,8 @@ describe('ExcelJSSummaryLogsParser', () => {
         location: { sheet: 'Test', row: 1, column: 'B' },
         headers: ['ROW_ID', 'DATE_RECEIVED'],
         rows: [
-          { rowNumber: 2, values: [12345678910, '2025-05-25T00:00:00.000Z'] },
-          { rowNumber: 3, values: [98765432100, '2025-06-15T00:00:00.000Z'] }
+          { rowNumber: 2, values: [12345678910, '2025-05-25'] },
+          { rowNumber: 3, values: [98765432100, '2025-06-15'] }
         ]
       })
     })
@@ -1272,7 +1272,7 @@ describe('ExcelJSSummaryLogsParser', () => {
         rows: [
           {
             rowNumber: 2,
-            values: ['some text', '2025-05-25T00:00:00.000Z', 42]
+            values: ['some text', '2025-05-25', 42]
           }
         ]
       })
@@ -2066,14 +2066,14 @@ describe('extractCellValue', () => {
     ).toBe('Click here')
   })
 
-  it('converts Date objects to ISO strings', () => {
+  it('converts Date objects to date-only strings', () => {
     const date = new Date('2025-08-01T00:00:00.000Z')
-    expect(extractCellValue(date)).toBe('2025-08-01T00:00:00.000Z')
+    expect(extractCellValue(date)).toBe('2025-08-01')
   })
 
-  it('converts Date objects with time to ISO strings', () => {
+  it('strips time component from Date objects', () => {
     const date = new Date('2025-12-25T14:30:00.000Z')
-    expect(extractCellValue(date)).toBe('2025-12-25T14:30:00.000Z')
+    expect(extractCellValue(date)).toBe('2025-12-25')
   })
 
   describe('boolean values', () => {
@@ -2190,14 +2190,14 @@ describe('extractCellValue', () => {
   })
 
   describe('formula with date result', () => {
-    it('extracts date result from formula and converts to ISO string', () => {
+    it('extracts date result from formula and converts to date-only string', () => {
       const dateResult = new Date('2025-06-15T00:00:00.000Z')
       expect(
         extractCellValue({
           formula: '=TODAY()',
           result: dateResult
         })
-      ).toBe('2025-06-15T00:00:00.000Z')
+      ).toBe('2025-06-15')
     })
   })
 })

@@ -106,9 +106,10 @@ const validateWorkbookStructure = (workbook, options) => {
 
 const extractCellValue = (cellValue) => {
   if (cellValue && typeof cellValue === 'object') {
-    // Handle Date objects - convert to ISO string for consistent comparison
+    // Handle Date objects - extract date-only (YYYY-MM-DD) for consistent comparison
+    // We only care about dates, not times, in this system
     if (cellValue instanceof Date) {
-      return cellValue.toISOString()
+      return cellValue.toISOString().slice(0, 10)
     }
     // Handle formula cells (both regular and shared formulas)
     if (

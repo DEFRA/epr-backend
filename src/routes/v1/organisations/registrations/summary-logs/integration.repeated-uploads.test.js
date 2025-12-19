@@ -183,7 +183,7 @@ describe('Repeated uploads of identical data', () => {
           rowNumber: 8,
           values: [
             1001,
-            '2025-01-15T00:00:00.000Z',
+            '2025-01-15',
             '03 03 08',
             'Glass - pre-sorted',
             'No',
@@ -214,7 +214,7 @@ describe('Repeated uploads of identical data', () => {
           rowNumber: 9,
           values: [
             1002,
-            '2025-01-16T00:00:00.000Z',
+            '2025-01-16',
             '03 03 08',
             'Glass - pre-sorted',
             'No',
