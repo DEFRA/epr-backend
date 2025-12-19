@@ -53,6 +53,7 @@ export const summaryLogInsertSchema = Joi.object({
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
   meta: metaSchema.optional(),
+  expiresAt: Joi.date().allow(null).optional(),
   submittedAt: Joi.when('status', {
     is: Joi.valid(SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED),
     then: Joi.string().isoDate().required(),
@@ -76,6 +77,7 @@ export const summaryLogUpdateSchema = Joi.object({
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
   meta: metaSchema.optional(),
+  expiresAt: Joi.date().allow(null).optional(),
   submittedAt: Joi.string().isoDate().optional(),
   // Set once at insert time - must not be included in updates
   validatedAgainstSummaryLogId: Joi.forbidden()
