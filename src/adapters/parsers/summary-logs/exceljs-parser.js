@@ -131,7 +131,7 @@ const isErrorCell = (cellValue) => 'error' in cellValue
  * Extracts value from an object cell type.
  * Returns undefined if not a recognised object type.
  */
-const extractObjectCellValue = (cellValue, extractCellValue) => {
+const extractObjectCellValue = (cellValue, recursiveExtract) => {
   // Date objects - extract date-only (YYYY-MM-DD)
   // We only care about dates, not times, in this system
   if (cellValue instanceof Date) {
@@ -140,7 +140,7 @@ const extractObjectCellValue = (cellValue, extractCellValue) => {
 
   // Formula cells with result - recursively extract
   if ('result' in cellValue && isFormulaCell(cellValue)) {
-    return extractCellValue(cellValue.result)
+    return recursiveExtract(cellValue.result)
   }
 
   // Formula cells without result
