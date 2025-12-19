@@ -4,7 +4,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
-import { NO_PRIOR_SUBMISSION } from '#domain/summary-logs/status.js'
+import { summaryLogFactory } from './contract/test-data.js'
 import { createIndexes } from '#common/helpers/collections/create-update.js'
 
 const DATABASE_NAME = 'epr-backend'
@@ -61,17 +61,10 @@ describe('MongoDB summary logs repository', () => {
       const repository = repositoryFactory(mockLogger)
 
       await expect(
-        repository.insert(`test-${randomUUID()}`, {
-          status: 'validating',
-          expiresAt: new Date('2025-01-01T00:00:00.000Z'),
-          file: {
-            id: `file-${randomUUID()}`,
-            name: 'test.xlsx',
-            status: 'complete',
-            uri: 's3://bucket/key'
-          },
-          validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
-        })
+        repository.insert(
+          `test-${randomUUID()}`,
+          summaryLogFactory.validating()
+        )
       ).rejects.toThrow('Connection timeout')
     })
   })

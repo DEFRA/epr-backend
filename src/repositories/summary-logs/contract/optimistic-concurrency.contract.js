@@ -4,16 +4,11 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
-import { buildFile, buildPendingFile, buildSummaryLog } from './test-data.js'
+import { buildFile, buildPendingFile, summaryLogFactory } from './test-data.js'
 import { waitForVersion } from './test-helpers.js'
 
-const createAndInsertSummaryLog = async (
-  repository,
-  idPrefix,
-  overrides = {}
-) => {
+const createAndInsertSummaryLog = async (repository, idPrefix, summaryLog) => {
   const id = `${idPrefix}-${randomUUID()}`
-  const summaryLog = buildSummaryLog(overrides)
   await repository.insert(id, summaryLog)
   return { id, initial: await repository.findById(id) }
 }
@@ -35,7 +30,8 @@ export const testOptimisticConcurrency = (it) => {
       it('initializes version to 1 on insert', async () => {
         const { initial } = await createAndInsertSummaryLog(
           repository,
-          'contract-version-init'
+          'contract-version-init',
+          summaryLogFactory.validating()
         )
 
         expect(initial.version).toBe(1)
@@ -45,7 +41,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-version-increment',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         const updated = await updateAndFetch(
@@ -63,7 +59,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-stale-version',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         await repository.update(
@@ -92,7 +88,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-sequential-updates',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         expect(initial.version).toBe(1)
@@ -120,12 +116,11 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-version-integrity',
-          {
-            status: SUMMARY_LOG_STATUS.PREPROCESSING,
+          summaryLogFactory.preprocessing({
             organisationId: 'org-123',
             registrationId: 'reg-456',
             file: buildPendingFile()
-          }
+          })
         )
 
         const updated = await updateAndFetch(repository, id, initial.version, {
@@ -148,7 +143,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-conflict-message',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         await repository.update(
@@ -185,7 +180,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-concurrent',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         const results = await Promise.allSettled([
@@ -235,7 +230,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-logging',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         await repository.update(
@@ -282,7 +277,7 @@ export const testOptimisticConcurrency = (it) => {
         const { id, initial } = await createAndInsertSummaryLog(
           repository,
           'contract-logging-details',
-          { status: SUMMARY_LOG_STATUS.PREPROCESSING, file: buildPendingFile() }
+          summaryLogFactory.preprocessing({ file: buildPendingFile() })
         )
 
         await repository.update(

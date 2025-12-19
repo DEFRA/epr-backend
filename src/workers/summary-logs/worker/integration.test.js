@@ -7,15 +7,11 @@ import { randomUUID } from 'crypto'
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  NO_PRIOR_SUBMISSION,
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
-} from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
-import { buildSummaryLog } from '#repositories/summary-logs/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 
@@ -69,20 +65,11 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createSummaryLog = (testOrg) => {
-    return buildSummaryLog({
-      status: SUMMARY_LOG_STATUS.VALIDATING,
+  const createSummaryLog = (testOrg) =>
+    summaryLogFactory.validating({
       organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id,
-      file: {
-        id: `file-${randomUUID()}`,
-        name: 'test.xlsx',
-        status: UPLOAD_STATUS.COMPLETE,
-        uri: 's3://test-bucket/path/to/summary-log.xlsx'
-      },
-      validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
+      registrationId: testOrg.registrations[0].id
     })
-  }
 
   /**
    * @typedef {{
