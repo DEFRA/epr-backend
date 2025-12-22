@@ -117,33 +117,19 @@ export const findOrCreateWasteBalance = async ({
 }
 
 /**
- * Filters waste records to include only those that pass validation.
- * Reads processingType from the first record's data.processingType.
+ * Filters waste records to include only those that pass schema validation.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @returns {import('#domain/waste-records/model.js').WasteRecord[]}
  */
 export const filterValidRecords = (wasteRecords) => {
-  if (wasteRecords.length === 0) {
-    return []
-  }
-
-  // Get processingType from the first record - all records in a batch share the same type
-  const processingType = wasteRecords[0].data?.processingType
+  const processingType = wasteRecords[0]?.data?.processingType
 
   const getTableSchema = processingType
     ? createTableSchemaGetter(processingType, PROCESSING_TYPE_TABLES)
     : null
 
-  const validRecords = []
-
-  for (const record of wasteRecords) {
-    if (isRecordValid(record, getTableSchema)) {
-      validRecords.push(record)
-    }
-  }
-
-  return validRecords
+  return wasteRecords.filter((record) => isRecordValid(record, getTableSchema))
 }
 
 /**
