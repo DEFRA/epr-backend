@@ -3,7 +3,8 @@ import {
   PARTNERSHIP_TYPE,
   REPROCESSING_TYPE,
   STATUS,
-  USER_ROLES
+  USER_ROLES,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
@@ -112,7 +113,11 @@ export const formFileUploadSchema = Joi.object({
   s3Uri: Joi.string().optional()
 })
 
-export const reprocessingTypeSchema = Joi.string()
-  .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
-  .when('status', requiredWhenApprovedOrSuspended)
-  .default(null)
+export const reprocessingTypeSchema = Joi.when('wasteProcessingType', {
+  is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  then: Joi.string()
+    .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null),
+  otherwise: Joi.forbidden()
+})
