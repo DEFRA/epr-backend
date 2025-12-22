@@ -54,23 +54,19 @@ const isRecordValidBySchema = (
  * Determines if a single record should be included in the valid records list.
  *
  * @param {import('#domain/waste-records/model.js').WasteRecord} record - The waste record
- * @param {string} processingType - The processing type for the batch
  * @param {Function|null} getTableSchema - Function to get table schema, or null
- * @returns {{actualRecord: import('#domain/waste-records/model.js').WasteRecord, isValid: boolean}}
+ * @returns {boolean}
  */
-const evaluateRecord = (record, processingType, getTableSchema) => {
-  const recordProcessingType = record.data?.processingType || processingType
-
-  if (getTableSchema) {
-    const isValid = isRecordValidBySchema(
-      record,
-      recordProcessingType,
-      getTableSchema
-    )
-    return { actualRecord: record, isValid }
+const isRecordValid = (record, getTableSchema) => {
+  if (!getTableSchema) {
+    return true
   }
 
-  return { actualRecord: record, isValid: true }
+  return isRecordValidBySchema(
+    record,
+    record.data?.processingType,
+    getTableSchema
+  )
 }
 
 /**
@@ -142,14 +138,8 @@ export const filterValidRecords = (wasteRecords) => {
   const validRecords = []
 
   for (const record of wasteRecords) {
-    const { actualRecord, isValid } = evaluateRecord(
-      record,
-      processingType,
-      getTableSchema
-    )
-
-    if (isValid) {
-      validRecords.push(actualRecord)
+    if (isRecordValid(record, getTableSchema)) {
+      validRecords.push(record)
     }
   }
 
