@@ -1,4 +1,8 @@
-import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import {
+  REPROCESSING_TYPE,
+  STATUS,
+  USER_ROLES
+} from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildOrganisation,
@@ -145,7 +149,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                   cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
                   registrationNumber: 'REG1',
                   validFrom: now,
-                  validTo: oneYearFromNow
+                  validTo: oneYearFromNow,
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             })

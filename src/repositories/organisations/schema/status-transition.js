@@ -43,7 +43,9 @@ const requireLinkedDefraOrg = (updated) => {
  */
 export const assertOrgStatusTransition = (existing, updated) => {
   // If no status change requested (undefined or same), skip validation
-  if (!updated.status || existing.status === updated.status) return
+  if (!updated.status || existing.status === updated.status) {
+    return
+  }
 
   assertOrgStatusTransitionValid(existing.status, updated.status)
 

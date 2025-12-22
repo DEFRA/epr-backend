@@ -1,4 +1,8 @@
-import { ORGANISATION_STATUS, STATUS } from '#domain/organisations/model.js'
+import {
+  ORGANISATION_STATUS,
+  REPROCESSING_TYPE,
+  STATUS
+} from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
 
@@ -69,7 +73,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })
@@ -87,7 +92,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })
@@ -121,7 +127,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })
@@ -144,7 +151,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })
@@ -171,7 +179,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })

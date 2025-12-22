@@ -1,5 +1,8 @@
-import { ORGANISATION_STATUS, STATUS } from '#domain/organisations/model.js'
-import { REPROCESSING_TYPE, STATUS } from '#domain/organisations/model.js'
+import {
+  ORGANISATION_STATUS,
+  REPROCESSING_TYPE,
+  STATUS
+} from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildOrganisation,
@@ -495,7 +498,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 registrationNumber: 'REG12345',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
           })
@@ -533,7 +537,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 registrationNumber: 'REG12345',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
           })
@@ -548,7 +553,11 @@ export const testReplaceBehaviour = (it) => {
           })
 
           const registration = {
-            ...organisation.registrations[0],
+            ...organisation.registrations[1],
+            status: STATUS.APPROVED,
+            registrationNumber: 'REG12345',
+            validFrom: new Date('2025-01-01'),
+            validTo: new Date('2025-12-31'),
             submitterContactDetails: {
               fullName: 'Different Submitter Name',
               email: 'SUBMITTER@EXAMPLE.COM',
@@ -569,13 +578,7 @@ export const testReplaceBehaviour = (it) => {
           const orgUpdate2 = prepareOrgUpdate(org2, {
             registrations: [
               {
-                ...registration,
-                status: STATUS.APPROVED,
-                cbduNumber: 'CBDU12345',
-                registrationNumber: 'REG12345',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
-                reprocessingType: REPROCESSING_TYPE.INPUT
+                ...registration
               }
             ]
           })
