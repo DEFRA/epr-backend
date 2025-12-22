@@ -79,6 +79,7 @@ describe('Submission and placeholder tests', () => {
             status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             validFrom: new Date('2025-01-01'),
@@ -694,6 +695,7 @@ describe('Submission and placeholder tests', () => {
             registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea'
           }

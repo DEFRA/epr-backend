@@ -76,6 +76,7 @@ describe('Repeated uploads of identical data', () => {
             status: 'approved',
             material: 'glass',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             validFrom: new Date('2025-01-01'),

@@ -138,7 +138,8 @@ export const createStandardMeta = (processingType) => ({
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,
-  extractorData
+  extractorData,
+  { reprocessingType = 'input' } = {}
 ) => {
   const mockLogger = {
     info: vi.fn(),
@@ -158,6 +159,7 @@ export const createTestInfrastructure = async (
         registrationNumber: 'REG-123',
         material: 'paper',
         wasteProcessingType: 'reprocessor',
+        reprocessingType,
         formSubmissionTime: new Date(),
         submittedToRegulator: 'ea',
         accreditation: {

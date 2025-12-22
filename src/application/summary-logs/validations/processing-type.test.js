@@ -86,12 +86,12 @@ describe('validateProcessingType', () => {
   })
 
   it.each([
-    ['REPROCESSOR_INPUT', 'reprocessor'],
-    ['REPROCESSOR_OUTPUT', 'reprocessor'],
-    ['EXPORTER', 'exporter']
+    ['REPROCESSOR_INPUT', 'reprocessor', 'input'],
+    ['REPROCESSOR_OUTPUT', 'reprocessor', 'output'],
+    ['EXPORTER', 'exporter', undefined]
   ])(
     'returns valid result when types match - %s',
-    (spreadsheetType, registrationType) => {
+    (spreadsheetType, wasteProcessingType, reprocessingType) => {
       const parsed = {
         meta: {
           REGISTRATION_NUMBER: { value: 'REG12345' },
@@ -99,7 +99,8 @@ describe('validateProcessingType', () => {
         }
       }
       const registration = {
-        wasteProcessingType: registrationType
+        wasteProcessingType,
+        reprocessingType
       }
 
       const result = validateProcessingType({
@@ -112,6 +113,46 @@ describe('validateProcessingType', () => {
       expect(result.isFatal()).toBe(false)
       expect(result.hasIssues()).toBe(false)
       expect(mockLoggerInfo).toHaveBeenCalled()
+    }
+  )
+
+  it.each([
+    ['REPROCESSOR_INPUT', 'output'],
+    ['REPROCESSOR_OUTPUT', 'input']
+  ])(
+    'returns fatal error when reprocessingType does not match - %s with %s',
+    (spreadsheetType, reprocessingType) => {
+      const parsed = {
+        meta: {
+          REGISTRATION_NUMBER: { value: 'REG12345' },
+          PROCESSING_TYPE: {
+            value: spreadsheetType,
+            location: { sheet: 'Cover', row: 5, column: 'B' }
+          }
+        }
+      }
+      const registration = {
+        wasteProcessingType: 'reprocessor',
+        reprocessingType
+      }
+
+      const result = validateProcessingType({
+        parsed,
+        registration,
+        loggingContext: 'test'
+      })
+
+      expect(result.isValid()).toBe(false)
+      expect(result.isFatal()).toBe(true)
+
+      const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+      expect(fatals).toHaveLength(1)
+      expect(fatals[0].message).toBe(
+        'Summary log processing type does not match registration reprocessing type'
+      )
+      expect(fatals[0].category).toBe(VALIDATION_CATEGORY.BUSINESS)
+      expect(fatals[0].context.expected).toBe(reprocessingType)
+      expect(fatals[0].context.actual).toBe(spreadsheetType)
     }
   )
 
