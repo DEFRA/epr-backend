@@ -125,7 +125,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         osrId: null,
         exportTonnage: 100,
         exportDate: '2025-01-20T00:00:00.000Z',
-        exportControls: 'Article 18 (green list)',
+        exportControls: 'Article 18 (Green list)',
         baselCode: 'B3020',
         customsCode: '123456',
         containerNumber: 'CONT123456'
