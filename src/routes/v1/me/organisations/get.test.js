@@ -1,7 +1,6 @@
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { config } from '#root/config.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import {
@@ -13,14 +12,10 @@ import {
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
-import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 
 describe('GET /v1/me/organisations', () => {
   setupAuthContext()
-
-  beforeAll(() => {
-    config.set('featureFlags.defraIdAuth', true)
-  })
 
   let email
   let token
@@ -29,10 +24,6 @@ describe('GET /v1/me/organisations', () => {
     token = generateValidTokenWith({
       email
     })
-  })
-
-  afterAll(() => {
-    config.reset('featureFlags.defraIdAuth')
   })
 
   it('should return current, linked, and unlinked organisations for the user', async () => {
