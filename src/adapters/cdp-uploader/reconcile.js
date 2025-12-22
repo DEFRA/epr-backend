@@ -1,6 +1,7 @@
 import {
   createRejectedValidation,
-  SUMMARY_LOG_STATUS
+  SUMMARY_LOG_STATUS,
+  transitionStatus
 } from '#domain/summary-logs/status.js'
 import { CDP_FILE_STATUS, CDP_UPLOAD_STATUS } from './status.js'
 
@@ -55,22 +56,16 @@ export const getCdpUploaderState = async (uploadId, cdpUploader) => {
 }
 
 /**
- * Creates a reconciled summary log based on CDP Uploader state.
+ * Determines the target status based on CDP Uploader state.
  *
  * @param {CdpUploaderState} cdpUploaderState
- * @returns {{ status: string, validation?: Object }}
+ * @returns {string}
  */
-const createReconciledSummaryLog = (cdpUploaderState) => {
+const determineTargetStatus = (cdpUploaderState) => {
   if (cdpUploaderState.fileStatus === CDP_FILE_STATUS.REJECTED) {
-    return {
-      status: SUMMARY_LOG_STATUS.REJECTED,
-      validation: createRejectedValidation(cdpUploaderState.errorMessage)
-    }
+    return SUMMARY_LOG_STATUS.REJECTED
   }
-
-  return {
-    status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
-  }
+  return SUMMARY_LOG_STATUS.VALIDATION_FAILED
 }
 
 /**
@@ -82,7 +77,7 @@ const createReconciledSummaryLog = (cdpUploaderState) => {
  * @param {string} options.uploadId
  * @param {SummaryLogsRepository} options.summaryLogsRepository
  * @param {CdpUploader} options.cdpUploader
- * @returns {Promise<{ status: string, validation?: Object } | null>} Updated summary log data, or null if no update needed
+ * @returns {Promise<{ status: string, expiresAt: Date|null, validation?: Object } | null>} Updated summary log data, or null if no update needed
  */
 export const reconcileWithCdpUploader = async ({
   summaryLogId,
@@ -114,7 +109,16 @@ export const reconcileWithCdpUploader = async ({
     return currentSummaryLog
   }
 
-  const reconciledSummaryLog = createReconciledSummaryLog(cdpUploaderState)
+  const targetStatus = determineTargetStatus(cdpUploaderState)
+  const statusUpdate = transitionStatus(currentSummaryLog, targetStatus)
+
+  const reconciledSummaryLog =
+    cdpUploaderState.fileStatus === CDP_FILE_STATUS.REJECTED
+      ? {
+          ...statusUpdate,
+          validation: createRejectedValidation(cdpUploaderState.errorMessage)
+        }
+      : statusUpdate
 
   await summaryLogsRepository.update(
     summaryLogId,

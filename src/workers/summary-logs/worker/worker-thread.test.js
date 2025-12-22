@@ -319,7 +319,8 @@ describe('summaryLogsWorkerThread', () => {
         summaryLogId,
         1,
         {
-          status: SUMMARY_LOG_STATUS.SUBMITTED
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          expiresAt: null
         }
       )
     })

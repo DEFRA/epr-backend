@@ -5,7 +5,10 @@ import {
   VALIDATION_CODE
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  transitionStatus
+} from '#domain/summary-logs/status.js'
 import { createValidationIssues } from '#common/validation/validation-issues.js'
 import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/exceljs-parser.js'
 
@@ -331,7 +334,7 @@ export const createSummaryLogsValidator = ({
         : null
 
     await summaryLogsRepository.update(summaryLogId, version, {
-      status,
+      ...transitionStatus(summaryLog, status),
       validation: {
         issues: issues.getAllIssues()
       },

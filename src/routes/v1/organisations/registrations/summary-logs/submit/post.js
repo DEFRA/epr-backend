@@ -7,7 +7,8 @@ import {
 } from '#common/enums/index.js'
 import {
   SUMMARY_LOG_STATUS,
-  NO_PRIOR_SUBMISSION
+  NO_PRIOR_SUBMISSION,
+  transitionStatus
 } from '#domain/summary-logs/status.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
@@ -65,9 +66,11 @@ export const summaryLogsSubmit = {
 
       if (baseline !== current) {
         // Mark as superseded - stale preview cannot be resubmitted
-        await summaryLogsRepository.update(summaryLogId, newVersion, {
-          status: SUMMARY_LOG_STATUS.SUPERSEDED
-        })
+        await summaryLogsRepository.update(
+          summaryLogId,
+          newVersion,
+          transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+        )
         throw Boom.conflict(
           'Waste records have changed since preview was generated. Please re-upload.'
         )

@@ -10,7 +10,8 @@ import {
 import {
   PROCESSING_STATUSES,
   SUMMARY_LOG_COMMAND,
-  SUMMARY_LOG_STATUS
+  SUMMARY_LOG_STATUS,
+  transitionStatus
 } from '#domain/summary-logs/status.js'
 
 const filename = fileURLToPath(import.meta.url)
@@ -90,9 +91,11 @@ const markAsValidationFailed = async (summaryLogId, repository, logger) => {
       return
     }
 
-    await repository.update(summaryLogId, version, {
-      status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
-    })
+    await repository.update(
+      summaryLogId,
+      version,
+      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+    )
   } catch (err) {
     logger.error({
       error: err,
