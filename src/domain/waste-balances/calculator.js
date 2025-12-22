@@ -65,6 +65,46 @@ export const buildTransaction = (
 }
 
 /**
+ * Updates the credited amount map with the transaction amount for each entity.
+ * Credits increase the credited amount, Debits decrease it.
+ * @param {Map<string, number>} creditedAmountMap
+ * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
+ */
+const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
+  const sign =
+    transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
+  const netAmount = transaction.amount * sign
+
+  const entityIds = (transaction.entities || []).map((e) => String(e.id))
+  const uniqueEntityIds = new Set(entityIds)
+
+  for (const id of uniqueEntityIds) {
+    const currentCreditedAmount = creditedAmountMap.get(id) || 0
+    creditedAmountMap.set(id, currentCreditedAmount + netAmount)
+  }
+}
+
+/**
+ * Calculates the target amount for a waste record based on accreditation.
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {Object} accreditation
+ * @returns {number}
+ */
+const getTargetAmount = (record, accreditation) => {
+  const fields = extractWasteBalanceFields(record)
+  if (!fields) {
+    return 0
+  }
+
+  const isWithinRange = isWithinAccreditationDateRange(
+    fields.dispatchDate,
+    accreditation
+  )
+
+  return isWithinRange && !fields.prnIssued ? fields.transactionAmount : 0
+}
+
+/**
  * Calculates new transactions and updated balance amounts based on waste records.
  * Implements a pipeline pattern to process each record through a series of steps.
  *
@@ -91,41 +131,13 @@ export const calculateWasteBalanceUpdates = ({
   // Optimization: Pre-calculate credited amounts to avoid O(N*M) complexity
   const creditedAmountMap = new Map()
 
-  /**
-   * Updates the credited amount map with the transaction amount for each entity.
-   * Credits increase the credited amount, Debits decrease it.
-   * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
-   */
-  const updateCreditedAmountMap = (transaction) => {
-    const sign =
-      transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
-    const netAmount = transaction.amount * sign
-
-    const entityIds = (transaction.entities || []).map((e) => String(e.id))
-    const uniqueEntityIds = new Set(entityIds)
-
-    for (const id of uniqueEntityIds) {
-      const currentCreditedAmount = creditedAmountMap.get(id) || 0
-      creditedAmountMap.set(id, currentCreditedAmount + netAmount)
-    }
-  }
-
   // Initialize map with existing transactions
-  ;(currentBalance.transactions || []).forEach(updateCreditedAmountMap)
+  ;(currentBalance.transactions || []).forEach((transaction) =>
+    updateCreditedAmountMap(creditedAmountMap, transaction)
+  )
 
   for (const record of wasteRecords) {
-    const fields = extractWasteBalanceFields(record)
-
-    const isWithinRange = fields
-      ? isWithinAccreditationDateRange(fields.dispatchDate, accreditation)
-      : false
-
-    // Calculate Target Amount
-    // A record only contributes if it's within range AND PRN is NOT issued
-    const targetAmount =
-      isWithinRange && fields && !fields.prnIssued
-        ? fields.transactionAmount
-        : 0
+    const targetAmount = getTargetAmount(record, accreditation)
 
     // Calculate Already Credited Amount
     const alreadyCreditedAmount =
@@ -139,12 +151,11 @@ export const calculateWasteBalanceUpdates = ({
         delta > 0
           ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
           : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
-      const amount = Math.abs(delta)
 
       // Create Transaction
       const transaction = buildTransaction(
         record,
-        amount,
+        Math.abs(delta),
         currentAmount,
         currentAvailableAmount,
         type
@@ -156,7 +167,7 @@ export const calculateWasteBalanceUpdates = ({
       newTransactions.push(transaction)
 
       // Update map for next iteration
-      updateCreditedAmountMap(transaction)
+      updateCreditedAmountMap(creditedAmountMap, transaction)
     }
   }
 
