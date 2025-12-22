@@ -27,3 +27,12 @@ export const PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE = Object.freeze({
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: 'reprocessor',
   [PROCESSING_TYPES.EXPORTER]: 'exporter'
 })
+
+/**
+ * Mapping from spreadsheet PROCESSING_TYPE values to registration reprocessingType values
+ * Only applicable for reprocessors (REPROCESSOR_INPUT and REPROCESSOR_OUTPUT)
+ */
+export const PROCESSING_TYPE_TO_REPROCESSING_TYPE = Object.freeze({
+  [PROCESSING_TYPES.REPROCESSOR_INPUT]: 'input',
+  [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: 'output'
+})

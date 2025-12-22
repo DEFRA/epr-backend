@@ -13,6 +13,7 @@ describe('validateMetaBusiness', () => {
     id: 'reg-123',
     registrationNumber: 'WRN12345',
     wasteProcessingType: 'reprocessor',
+    reprocessingType: 'input',
     material: 'aluminium',
     accreditation: {
       id: 'acc-456',
