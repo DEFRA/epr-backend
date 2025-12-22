@@ -131,6 +131,27 @@ describe('auditSummaryLogUpload', () => {
       }
     })
   })
+
+  it('skips system log recording when systemLogsRepository is not available', async () => {
+    const request = {
+      auth: {
+        credentials: {
+          id: userId,
+          email: userEmail,
+          scope: userScope
+        }
+      }
+    }
+
+    await auditSummaryLogUpload(request, {
+      summaryLogId,
+      organisationId,
+      registrationId
+    })
+
+    expect(mockAudit).toHaveBeenCalled()
+    expect(mockInsert).not.toHaveBeenCalled()
+  })
 })
 
 describe('auditSummaryLogSubmit', () => {

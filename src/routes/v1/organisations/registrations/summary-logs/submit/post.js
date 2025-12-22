@@ -13,6 +13,8 @@ import {
 import { summaryLogResponseSchema } from '../response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
+import { auditSummaryLogSubmit } from '#root/auditing/summary-logs.js'
+import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
@@ -71,6 +73,9 @@ export const summaryLogsSubmit = {
           newVersion,
           transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
         )
+        await summaryLogMetrics.recordStatusTransition(
+          SUMMARY_LOG_STATUS.SUPERSEDED
+        )
         throw Boom.conflict(
           'Waste records have changed since preview was generated. Please re-upload.'
         )
@@ -78,6 +83,15 @@ export const summaryLogsSubmit = {
 
       // Trigger async submission worker (fire-and-forget)
       await summaryLogsWorker.submit(summaryLogId)
+
+      await summaryLogMetrics.recordStatusTransition(
+        SUMMARY_LOG_STATUS.SUBMITTING
+      )
+      await auditSummaryLogSubmit(request, {
+        summaryLogId,
+        organisationId,
+        registrationId
+      })
 
       logger.info({
         message: `Summary log submission initiated: summaryLogId=${summaryLogId}, organisationId=${organisationId}, registrationId=${registrationId}`,
