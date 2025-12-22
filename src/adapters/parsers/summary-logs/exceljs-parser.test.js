@@ -2051,10 +2051,10 @@ describe('extractCellValue', () => {
   it('extracts text from hyperlink cell', () => {
     expect(
       extractCellValue({
-        text: 'webuy@boomerang.co.uk',
-        hyperlink: 'mailto:webuy@boomerang.co.uk'
+        text: 'supplier@example.com',
+        hyperlink: 'mailto:supplier@example.com'
       })
-    ).toBe('webuy@boomerang.co.uk')
+    ).toBe('supplier@example.com')
   })
 
   it('extracts text from hyperlink cell with URL', () => {
