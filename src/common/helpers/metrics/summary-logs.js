@@ -1,13 +1,11 @@
-import { Unit } from 'aws-embedded-metrics'
-
-import { metricsCounter } from '#common/helpers/metrics.js'
+import { incrementCounter, recordDuration } from '#common/helpers/metrics.js'
 
 /**
  * Records a summary log status transition metric
  * @param {string} status - The status transitioned to
  */
 async function recordStatusTransition(status) {
-  await metricsCounter(`summaryLog.status.${status}`)
+  await incrementCounter(`summaryLog.status.${status}`)
 }
 
 /**
@@ -15,7 +13,7 @@ async function recordStatusTransition(status) {
  * @param {number} count - The number of records created
  */
 async function recordWasteRecordsCreated(count) {
-  await metricsCounter('summaryLog.wasteRecords.created', count)
+  await incrementCounter('summaryLog.wasteRecords.created', count)
 }
 
 /**
@@ -23,7 +21,7 @@ async function recordWasteRecordsCreated(count) {
  * @param {number} count - The number of records updated
  */
 async function recordWasteRecordsUpdated(count) {
-  await metricsCounter('summaryLog.wasteRecords.updated', count)
+  await incrementCounter('summaryLog.wasteRecords.updated', count)
 }
 
 /**
@@ -31,11 +29,7 @@ async function recordWasteRecordsUpdated(count) {
  * @param {number} durationMs - The duration in milliseconds
  */
 async function recordValidationDuration(durationMs) {
-  await metricsCounter(
-    'summaryLog.validation.duration',
-    durationMs,
-    Unit.Milliseconds
-  )
+  await recordDuration('summaryLog.validation.duration', durationMs)
 }
 
 /**
@@ -43,11 +37,7 @@ async function recordValidationDuration(durationMs) {
  * @param {number} durationMs - The duration in milliseconds
  */
 async function recordSubmissionDuration(durationMs) {
-  await metricsCounter(
-    'summaryLog.submission.duration',
-    durationMs,
-    Unit.Milliseconds
-  )
+  await recordDuration('summaryLog.submission.duration', durationMs)
 }
 
 export const summaryLogMetrics = {

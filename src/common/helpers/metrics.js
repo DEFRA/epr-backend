@@ -9,10 +9,10 @@ import { logger } from './logging/logger.js'
 /**
  * Records a metric to AWS CloudWatch
  * @param {string} metricName - The name of the metric
- * @param {number} [value=1] - The value to record
- * @param {import('aws-embedded-metrics').Unit} [unit=Unit.Count] - The AWS CloudWatch unit
+ * @param {number} value - The value to record
+ * @param {import('aws-embedded-metrics').Unit} unit - The AWS CloudWatch unit
  */
-const metricsCounter = async (metricName, value = 1, unit = Unit.Count) => {
+const recordMetric = async (metricName, value, unit) => {
   if (!config.get('isMetricsEnabled')) {
     return
   }
@@ -26,4 +26,22 @@ const metricsCounter = async (metricName, value = 1, unit = Unit.Count) => {
   }
 }
 
-export { metricsCounter }
+/**
+ * Increments a counter metric
+ * @param {string} metricName - The name of the metric
+ * @param {number} [value=1] - The amount to increment by
+ */
+const incrementCounter = async (metricName, value = 1) => {
+  await recordMetric(metricName, value, Unit.Count)
+}
+
+/**
+ * Records a duration metric in milliseconds
+ * @param {string} metricName - The name of the metric
+ * @param {number} durationMs - The duration in milliseconds
+ */
+const recordDuration = async (metricName, durationMs) => {
+  await recordMetric(metricName, durationMs, Unit.Milliseconds)
+}
+
+export { incrementCounter, recordDuration }
