@@ -54,10 +54,6 @@ function extractUserDetails(request) {
  * @param {object} payload
  */
 async function recordSystemLog(request, { user, ...restPayload }) {
-  if (!request.systemLogsRepository) {
-    return
-  }
-
   return request.systemLogsRepository.insert({
     createdAt: new Date(),
     createdBy: user,
