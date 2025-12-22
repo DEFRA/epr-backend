@@ -3,6 +3,7 @@ import { createSummaryLogExtractor } from '#application/summary-logs/extractor.j
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
@@ -72,7 +73,14 @@ const handleSubmitCommand = async ({
     featureFlags
   })
 
-  await sync(summaryLog)
+  const startTime = Date.now()
+  const { created, updated } = await sync(summaryLog)
+  const durationMs = Date.now() - startTime
+
+  // Record submission metrics
+  await summaryLogMetrics.recordSubmissionDuration(durationMs)
+  await summaryLogMetrics.recordWasteRecordsCreated(created)
+  await summaryLogMetrics.recordWasteRecordsUpdated(updated)
 
   // Update status to SUBMITTED
   await summaryLogsRepository.update(
@@ -80,6 +88,8 @@ const handleSubmitCommand = async ({
     version,
     transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
   )
+
+  await summaryLogMetrics.recordStatusTransition(SUMMARY_LOG_STATUS.SUBMITTED)
 
   logger.info({
     message: `Summary log submitted: summaryLogId=${summaryLogId}`

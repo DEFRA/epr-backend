@@ -210,5 +210,12 @@ export const syncFromSummaryLog = (dependencies) => {
       wasteBalancesRepository,
       wasteRecords
     })
+
+    // 9. Count created/updated records for metrics
+    // The change property is set by transformFromSummaryLog
+    const created = wasteRecords.filter((wr) => wr.change === 'created').length
+    const updated = wasteRecords.filter((wr) => wr.change === 'updated').length
+
+    return { created, updated }
   }
 }
