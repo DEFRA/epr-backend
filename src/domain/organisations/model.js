@@ -38,6 +38,15 @@ export const WASTE_PROCESSING_TYPE = Object.freeze({
   EXPORTER: 'exporter'
 })
 
+/**
+ * @typedef {'input' | 'output'} ReprocessingType
+ */
+
+export const REPROCESSING_TYPE = Object.freeze({
+  INPUT: 'input',
+  OUTPUT: 'output'
+})
+
 export const NATION = Object.freeze({
   ENGLAND: 'england',
   WALES: 'wales',

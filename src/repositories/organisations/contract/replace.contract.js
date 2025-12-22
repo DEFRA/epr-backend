@@ -1,4 +1,4 @@
-import { STATUS } from '#domain/organisations/model.js'
+import { REPROCESSING_TYPE, STATUS } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
   buildOrganisation,
@@ -349,7 +349,8 @@ export const testReplaceBehaviour = (it) => {
           status: STATUS.APPROVED,
           registrationNumber: 'REG12345',
           validFrom: new Date('2025-01-01'),
-          validTo: new Date('2025-12-31')
+          validTo: new Date('2025-12-31'),
+          reprocessingType: REPROCESSING_TYPE.INPUT
         }
         const updatePayload = prepareOrgUpdate(organisation, {
           registrations: [registrationToUpdate]
@@ -380,7 +381,8 @@ export const testReplaceBehaviour = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })
@@ -411,7 +413,8 @@ export const testReplaceBehaviour = (it) => {
           status: STATUS.SUSPENDED,
           accreditationNumber: 'ACC12345',
           validFrom: new Date('2025-01-01'),
-          validTo: new Date('2025-12-31')
+          validTo: new Date('2025-12-31'),
+          reprocessingType: REPROCESSING_TYPE.INPUT
         }
         const updatePayload = prepareOrgUpdate(organisation, {
           accreditations: [accreditationToUpdate]
@@ -442,7 +445,8 @@ export const testReplaceBehaviour = (it) => {
               status: STATUS.SUSPENDED,
               accreditationNumber: 'ACC12345',
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              validTo: new Date('2025-12-31'),
+              reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
         })
@@ -558,7 +562,8 @@ export const testReplaceBehaviour = (it) => {
                 cbduNumber: 'CBDU12345',
                 registrationNumber: 'REG12345',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
           })
@@ -623,7 +628,8 @@ export const testReplaceBehaviour = (it) => {
                 cbduNumber: 'CBDU12345',
                 registrationNumber: 'REG123',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
           })
@@ -678,7 +684,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               },
               {
                 ...reg2,
@@ -756,7 +763,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
             accreditations: [
@@ -765,7 +773,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 accreditationNumber: 'ACC123',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
           })
@@ -827,7 +836,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 registrationNumber: 'REG123',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
             accreditations: [
@@ -836,7 +846,8 @@ export const testReplaceBehaviour = (it) => {
                 status: STATUS.APPROVED,
                 accreditationNumber: 'ACC123',
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31')
+                validTo: new Date('2025-12-31'),
+                reprocessingType: REPROCESSING_TYPE.INPUT
               },
               acc2
             ]
