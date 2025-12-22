@@ -21,6 +21,15 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     error: vi.fn()
   }
 }))
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: vi.fn(),
+    recordValidationDuration: vi.fn(),
+    recordSubmissionDuration: vi.fn(),
+    recordWasteRecordsCreated: vi.fn(),
+    recordWasteRecordsUpdated: vi.fn()
+  }
+}))
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
