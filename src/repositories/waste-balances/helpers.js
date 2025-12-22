@@ -51,41 +51,26 @@ const isRecordValidBySchema = (
 }
 
 /**
- * Determines if a record should be included based on pre-calculated outcome.
- *
- * @param {Object} record - The wrapped record with outcome property
- * @returns {boolean} Whether the record should be included
- */
-const isRecordValidByOutcome = (record) => {
-  if (!record.outcome) {
-    return true
-  }
-  return record.outcome === ROW_OUTCOME.INCLUDED
-}
-
-/**
  * Determines if a single record should be included in the valid records list.
  *
- * @param {Object} record - The wrapped or unwrapped record
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record - The waste record
  * @param {string} processingType - The processing type for the batch
  * @param {Function|null} getTableSchema - Function to get table schema, or null
- * @returns {{actualRecord: Object, isValid: boolean}}
+ * @returns {{actualRecord: import('#domain/waste-records/model.js').WasteRecord, isValid: boolean}}
  */
 const evaluateRecord = (record, processingType, getTableSchema) => {
-  const actualRecord = record.record || record
-  const recordProcessingType =
-    actualRecord.data?.processingType || processingType
+  const recordProcessingType = record.data?.processingType || processingType
 
   if (getTableSchema) {
     const isValid = isRecordValidBySchema(
-      actualRecord,
+      record,
       recordProcessingType,
       getTableSchema
     )
-    return { actualRecord, isValid }
+    return { actualRecord: record, isValid }
   }
 
-  return { actualRecord, isValid: isRecordValidByOutcome(record) }
+  return { actualRecord: record, isValid: true }
 }
 
 /**
@@ -139,7 +124,7 @@ export const findOrCreateWasteBalance = async ({
  * Filters waste records to include only those that pass validation.
  * Reads processingType from the first record's data.processingType.
  *
- * @param {Array<{record: import('#domain/waste-records/model.js').WasteRecord, outcome?: string}>} wasteRecords
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} wasteRecords
  * @returns {import('#domain/waste-records/model.js').WasteRecord[]}
  */
 export const filterValidRecords = (wasteRecords) => {
@@ -148,8 +133,7 @@ export const filterValidRecords = (wasteRecords) => {
   }
 
   // Get processingType from the first record - all records in a batch share the same type
-  const firstRecord = wasteRecords[0].record || wasteRecords[0]
-  const processingType = firstRecord.data?.processingType
+  const processingType = wasteRecords[0].data?.processingType
 
   const getTableSchema = processingType
     ? createTableSchemaGetter(processingType, PROCESSING_TYPE_TABLES)
@@ -176,7 +160,7 @@ export const filterValidRecords = (wasteRecords) => {
  * Shared logic for updating waste balance transactions.
  *
  * @param {Object} params
- * @param {Array<{record: import('#domain/waste-records/model.js').WasteRecord, outcome?: string}>} params.wasteRecords
+ * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.accreditationId
  * @param {Object} params.dependencies
  * @param {Object} [params.dependencies.organisationsRepository]
