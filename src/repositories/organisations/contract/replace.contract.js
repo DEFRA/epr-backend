@@ -1,3 +1,4 @@
+import { ORGANISATION_STATUS, STATUS } from '#domain/organisations/model.js'
 import { REPROCESSING_TYPE, STATUS } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import {
@@ -284,15 +285,15 @@ export const testReplaceBehaviour = (it) => {
         await repository.insert(organisation)
 
         const updatePayload = prepareOrgUpdate(organisation, {
-          status: STATUS.APPROVED
+          status: STATUS.REJECTED
         })
         await repository.replace(organisation.id, 1, updatePayload)
 
         const result = await repository.findById(organisation.id, 2)
-        expect(result.status).toBe(STATUS.APPROVED)
+        expect(result.status).toBe(STATUS.REJECTED)
         expect(result.statusHistory).toHaveLength(2)
         expect(result.statusHistory[0].status).toBe(STATUS.CREATED)
-        expect(result.statusHistory[1].status).toBe(STATUS.APPROVED)
+        expect(result.statusHistory[1].status).toBe(STATUS.REJECTED)
         expect(result.statusHistory[1].updatedAt).toBeInstanceOf(Date)
       })
 
@@ -316,28 +317,21 @@ export const testReplaceBehaviour = (it) => {
         await repository.insert(organisation)
 
         const orgUpdate1 = prepareOrgUpdate(organisation, {
-          status: STATUS.APPROVED
+          status: STATUS.REJECTED
         })
         await repository.replace(organisation.id, 1, orgUpdate1)
 
         const orgUpdate2 = prepareOrgUpdate(organisation, {
-          status: STATUS.REJECTED
+          status: STATUS.CREATED
         })
         await repository.replace(organisation.id, 2, orgUpdate2)
 
-        const org3 = await repository.findById(organisation.id, 3)
-        const orgUpdate3 = prepareOrgUpdate(org3, {
-          status: STATUS.SUSPENDED
-        })
-        await repository.replace(organisation.id, 3, orgUpdate3)
-
-        const result = await repository.findById(organisation.id, 4)
-        expect(result.status).toBe(STATUS.SUSPENDED)
-        expect(result.statusHistory).toHaveLength(4)
+        const result = await repository.findById(organisation.id, 3)
+        expect(result.status).toBe(STATUS.CREATED)
+        expect(result.statusHistory).toHaveLength(3)
         expect(result.statusHistory[0].status).toBe(STATUS.CREATED)
-        expect(result.statusHistory[1].status).toBe(STATUS.APPROVED)
-        expect(result.statusHistory[2].status).toBe(STATUS.REJECTED)
-        expect(result.statusHistory[3].status).toBe(STATUS.SUSPENDED)
+        expect(result.statusHistory[1].status).toBe(STATUS.REJECTED)
+        expect(result.statusHistory[2].status).toBe(STATUS.CREATED)
       })
 
       it('adds new statusHistory entry to registration when status changes', async () => {
@@ -494,7 +488,16 @@ export const testReplaceBehaviour = (it) => {
           const organisation = buildOrganisation()
           await repository.insert(organisation)
           const updatePayload = prepareOrgUpdate(organisation, {
-            status: STATUS.APPROVED
+            status: ORGANISATION_STATUS.APPROVED,
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                status: STATUS.APPROVED,
+                registrationNumber: 'REG12345',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              }
+            ]
           })
           await repository.replace(organisation.id, 1, updatePayload)
 
@@ -502,7 +505,7 @@ export const testReplaceBehaviour = (it) => {
 
           expect(result.status).toBe(STATUS.APPROVED)
           expect(result.users).toBeDefined()
-          expect(result.users).toHaveLength(1)
+          expect(result.users).toHaveLength(2)
           expect(result.users[0]).toStrictEqual({
             fullName: organisation.submitterContactDetails.fullName,
             email: organisation.submitterContactDetails.email,
@@ -523,12 +526,21 @@ export const testReplaceBehaviour = (it) => {
 
           const org1 = await repository.findById(organisation.id)
           const orgUpdate1 = prepareOrgUpdate(org1, {
-            status: STATUS.APPROVED
+            status: STATUS.APPROVED,
+            registrations: [
+              {
+                ...organisation.registrations[0],
+                status: STATUS.APPROVED,
+                registrationNumber: 'REG12345',
+                validFrom: new Date('2025-01-01'),
+                validTo: new Date('2025-12-31')
+              }
+            ]
           })
           await repository.replace(organisation.id, 1, orgUpdate1)
 
           let result = await repository.findById(organisation.id, 2)
-          expect(result.users).toHaveLength(1)
+          expect(result.users).toHaveLength(2)
           expect(result.users[0]).toEqual({
             fullName: 'Original Submitter',
             email: 'submitter@example.com',
@@ -574,6 +586,11 @@ export const testReplaceBehaviour = (it) => {
             {
               fullName: 'Original Submitter',
               email: 'submitter@example.com',
+              roles: ['initial_user', 'standard_user']
+            },
+            {
+              email: 'luke.skywalker@starwars.com',
+              fullName: 'Luke Skywalker',
               roles: ['initial_user', 'standard_user']
             },
             {

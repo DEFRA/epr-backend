@@ -5,12 +5,10 @@ import {
   validateOrganisationUpdate
 } from './schema/index.js'
 import {
-  collateUsers,
   createInitialStatusHistory,
-  getCurrentStatus,
+  mapDocumentWithCurrentStatuses,
   SCHEMA_VERSION,
-  statusHistoryWithChanges,
-  updateStatusHistoryForItems
+  prepareForReplace
 } from './helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -20,20 +18,6 @@ const CONSISTENCY_RETRY_DELAY_MS = 5
 /**
  * @typedef {{ id: string, [key: string]: any }} Organisation
  */
-
-const enrichWithCurrentStatus = (org) => {
-  org.status = getCurrentStatus(org)
-
-  for (const item of org.registrations) {
-    item.status = getCurrentStatus(item)
-  }
-
-  for (const item of org.accreditations) {
-    item.status = getCurrentStatus(item)
-  }
-
-  return org
-}
 
 const initializeItems = (items) =>
   items?.map((item) => ({
@@ -60,7 +44,7 @@ const performInsert = (storage, staleCache) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
   const { id, ...orgFields } = validated
 
-  const existing = storage.find((o) => o.id === id)
+  const existing = storage.find((o) => o._id === id)
   if (existing) {
     throw Boom.conflict(`Organisation with ${id} already exists`)
   }
@@ -69,7 +53,7 @@ const performInsert = (storage, staleCache) => async (organisation) => {
   const accreditations = initializeItems(orgFields.accreditations)
 
   const newOrg = structuredClone({
-    id,
+    _id: id,
     version: 1,
     schemaVersion: SCHEMA_VERSION,
     statusHistory: createInitialStatusHistory(),
@@ -89,14 +73,14 @@ const performReplace =
   (storage, staleCache, pendingSyncRef) => async (id, version, updates) => {
     const validatedId = validateId(id)
 
-    const existingIndex = storage.findIndex((o) => o.id === validatedId)
+    const existingIndex = storage.findIndex((o) => o._id === validatedId)
+    const existing = storage[existingIndex]
+
     if (existingIndex === -1) {
       throw Boom.notFound(`Organisation with id ${validatedId} not found`)
     }
 
     const validatedUpdates = validateOrganisationUpdate(updates)
-
-    const existing = storage[existingIndex]
 
     if (existing.version !== version) {
       throw Boom.conflict(
@@ -104,42 +88,12 @@ const performReplace =
       )
     }
 
-    const { status: _, ...validatedUpdatesWithoutStatus } = {
-      ...validatedUpdates
-    }
-
-    const registrations = updateStatusHistoryForItems(
-      existing.registrations,
-      validatedUpdates.registrations
-    )
-    const accreditations = updateStatusHistoryForItems(
-      existing.accreditations,
-      validatedUpdates.accreditations
+    const replaced = prepareForReplace(
+      mapDocumentWithCurrentStatuses(existing),
+      validatedUpdates
     )
 
-    const updatedStatusHistory = statusHistoryWithChanges(
-      validatedUpdates,
-      existing
-    )
-
-    const users = collateUsers(existing, {
-      ...validatedUpdatesWithoutStatus,
-      statusHistory: updatedStatusHistory,
-      registrations,
-      accreditations
-    })
-
-    const updatePayload = {
-      id: existing.id,
-      ...validatedUpdatesWithoutStatus,
-      statusHistory: updatedStatusHistory,
-      registrations,
-      accreditations,
-      users,
-      version: existing.version + 1
-    }
-
-    storage[existingIndex] = updatePayload
+    storage[existingIndex] = { _id: existing._id, ...replaced }
 
     // Schedule async staleCache update
     scheduleStaleCacheSync(storage, staleCache, pendingSyncRef)
@@ -154,12 +108,12 @@ const performFindById = (staleCache) => (id) => {
     })
   }
 
-  const found = staleCache.find((o) => o.id === id)
+  const found = staleCache.find((o) => o._id === id)
   if (!found) {
     throw Boom.notFound(`Organisation with id ${id} not found`)
   }
 
-  return enrichWithCurrentStatus(structuredClone(found))
+  return mapDocumentWithCurrentStatuses(structuredClone(found))
 }
 
 const performFindByIdWithRetry =
@@ -198,7 +152,7 @@ const performFindByIdWithRetry =
 
 const performFindAll = (staleCache) => async () => {
   return structuredClone(staleCache).map((org) =>
-    enrichWithCurrentStatus({ ...org })
+    mapDocumentWithCurrentStatuses({ ...org })
   )
 }
 
@@ -207,7 +161,7 @@ const performFindAllIds = (staleCache) => async () => {
 
   return orgs.reduce(
     (acc, org) => {
-      acc.organisations.add(org.id)
+      acc.organisations.add(org._id)
       for (const r of org.registrations) {
         acc.registrations.add(r.id)
       }
@@ -274,7 +228,11 @@ const performFindAccreditationById =
 export const createInMemoryOrganisationsRepository = (
   initialOrganisations = []
 ) => {
-  const storage = structuredClone(initialOrganisations)
+  const storage = initialOrganisations.map(({ id, ...rest }) => ({
+    _id: id,
+    ...rest
+  }))
+
   const staleCache = structuredClone(storage)
   const pendingSyncRef = { current: null }
 

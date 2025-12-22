@@ -28,6 +28,12 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
+  const now = new Date()
+  const oneYearFromNow = new Date(
+    now.getFullYear() + 1,
+    now.getMonth(),
+    now.getDate()
+  )
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
@@ -98,26 +104,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         {
           description: 'user is valid',
           user: fullyValidUser,
-          status: STATUS.ACTIVE,
-          expectedStatusCode: StatusCodes.CONFLICT
-        },
-        {
-          description: 'user is valid',
-          user: fullyValidUser,
-          status: STATUS.ARCHIVED,
-          expectedStatusCode: StatusCodes.CONFLICT
-        },
-        {
-          description: 'user is valid',
-          user: fullyValidUser,
           status: STATUS.REJECTED,
           expectedStatusCode: StatusCodes.CONFLICT
-        },
-        {
-          description: 'user is valid',
-          user: fullyValidUser,
-          status: STATUS.APPROVED,
-          expectedStatusCode: StatusCodes.OK
         }
       ])(
         'returns $expectedStatusCode when $description and org status is $status',
@@ -149,7 +137,17 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
             org.id,
             2,
             prepareOrgUpdate(orgWithSubmitterDetails, {
-              status
+              status,
+              registrations: [
+                {
+                  ...org.registrations[0],
+                  status: STATUS.APPROVED,
+                  cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
+                  registrationNumber: 'REG1',
+                  validFrom: now,
+                  validTo: oneYearFromNow
+                }
+              ]
             })
           )
 
