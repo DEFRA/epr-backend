@@ -9,12 +9,29 @@ import { audit } from '@defra/cdp-auditing'
  * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
  */
 async function auditSummaryLogUpload(request, context) {
+  await auditSummaryLog(request, context, 'upload')
+}
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
+ */
+async function auditSummaryLogSubmit(request, context) {
+  await auditSummaryLog(request, context, 'submit')
+}
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
+ * @param {'upload' | 'submit'} action
+ */
+async function auditSummaryLog(request, context, action) {
   const user = extractUserDetails(request)
   const payload = {
     event: {
       category: 'waste-reporting',
       subCategory: 'summary-log',
-      action: 'upload'
+      action
     },
     context,
     user
@@ -44,4 +61,4 @@ async function recordSystemLog(request, { user, ...restPayload }) {
   })
 }
 
-export { auditSummaryLogUpload }
+export { auditSummaryLogUpload, auditSummaryLogSubmit }
