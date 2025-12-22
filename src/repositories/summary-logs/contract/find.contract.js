@@ -1,6 +1,6 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { buildFile, buildSummaryLog } from './test-data.js'
+import { summaryLogFactory } from './test-data.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -21,11 +21,11 @@ export const testFindBehaviour = (it) => {
       it('retrieves a log by ID after insert', async () => {
         const id = `contract-summary-${randomUUID()}`
         const fileId = `contract-file-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          file: buildFile({ id: fileId })
-        })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(
+          id,
+          summaryLogFactory.validating({ file: { id: fileId } })
+        )
 
         const result = await repository.findById(id)
 
@@ -42,14 +42,14 @@ export const testFindBehaviour = (it) => {
 
         await repository.insert(
           idA,
-          buildSummaryLog({
+          summaryLogFactory.validating({
             organisationId: 'org-1',
             registrationId: 'reg-1'
           })
         )
         await repository.insert(
           idB,
-          buildSummaryLog({
+          summaryLogFactory.validating({
             organisationId: 'org-2',
             registrationId: 'reg-2'
           })

@@ -61,10 +61,7 @@ export function getJwtStrategyConfig(oidcConfigs) {
         }
       }
 
-      if (
-        config.get('featureFlags.defraIdAuth') &&
-        issuer === defraIdOidcConfig.issuer
-      ) {
+      if (issuer === defraIdOidcConfig.issuer) {
         const clientId = config.get('oidc.defraId.clientId')
         if (audience !== clientId) {
           throw Boom.forbidden('Invalid audience for Defra Id token')

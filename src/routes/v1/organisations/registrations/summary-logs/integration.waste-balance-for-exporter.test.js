@@ -5,7 +5,8 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
+  UPLOAD_STATUS,
+  transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
@@ -124,7 +125,7 @@ describe('Submission and placeholder tests (Exporter)', () => {
         osrId: null,
         exportTonnage: 100,
         exportDate: '2025-01-20T00:00:00.000Z',
-        exportControls: 'Article 18 (green list)',
+        exportControls: 'Article 18 (Green list)',
         baselCode: 'B3020',
         customsCode: '123456',
         containerNumber: 'CONT123456'
@@ -265,9 +266,11 @@ describe('Submission and placeholder tests (Exporter)', () => {
 
           await syncWasteRecords(summaryLog)
 
-          await summaryLogsRepository.update(summaryLogId, version, {
-            status: SUMMARY_LOG_STATUS.SUBMITTED
-          })
+          await summaryLogsRepository.update(
+            summaryLogId,
+            version,
+            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+          )
         }
       }
 

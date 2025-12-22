@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { describe, vi, expect, it as base } from 'vitest'
 import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
-import { buildSummaryLog, buildFile } from './contract/test-data.js'
+import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
 
 const it = base.extend({
@@ -35,11 +35,11 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog({
-        file: buildFile({ name: 'original.xlsx' })
-      })
 
-      await repository.insert(id, summaryLog)
+      await repository.insert(
+        id,
+        summaryLogFactory.validating({ file: { name: 'original.xlsx' } })
+      )
 
       const retrieved = await repository.findById(id)
       retrieved.summaryLog.file.name = 'modified.xlsx'
@@ -57,8 +57,8 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog({
-        file: buildFile({ name: 'original.xlsx' })
+      const summaryLog = summaryLogFactory.validating({
+        file: { name: 'original.xlsx' }
       })
 
       await repository.insert(id, summaryLog)
@@ -76,14 +76,12 @@ describe('In-memory summary logs repository', () => {
       const repositoryFactory = createInMemorySummaryLogsRepository()
       const repository = repositoryFactory(mockLogger)
       const id = `isolation-test-${randomUUID()}`
-      const summaryLog = buildSummaryLog()
 
-      await repository.insert(id, summaryLog)
+      await repository.insert(id, summaryLogFactory.validating())
 
-      const updates = {
-        status: 'validating',
-        file: buildFile({ name: 'updated.xlsx' })
-      }
+      const updates = summaryLogFactory.validated({
+        file: { name: 'updated.xlsx' }
+      })
       await repository.update(id, 1, updates)
 
       updates.file.name = 'mutated.xlsx'

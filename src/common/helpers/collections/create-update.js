@@ -96,6 +96,13 @@ export async function createIndexes(db) {
       partialFilterExpression: { status: 'submitting' }
     }
   )
+
+  // TTL index for automatic cleanup of non-submitted summary logs
+  // Documents are deleted when current time exceeds their expiresAt value
+  // SUBMITTED status has expiresAt: null, so those documents are never deleted
+  await db
+    .collection('summary-logs')
+    .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
 }
 
 /**

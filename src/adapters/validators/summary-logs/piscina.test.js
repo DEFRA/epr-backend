@@ -254,7 +254,10 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(mainThreadRepository.update).toHaveBeenCalledWith(
           summaryLogId,
           1,
-          { status: SUMMARY_LOG_STATUS.VALIDATION_FAILED }
+          {
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            expiresAt: expect.any(Date)
+          }
         )
       })
 
@@ -384,7 +387,10 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(mainThreadRepository.update).toHaveBeenCalledWith(
           summaryLogId,
           1,
-          { status: SUMMARY_LOG_STATUS.VALIDATION_FAILED }
+          {
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            expiresAt: expect.any(Date)
+          }
         )
       })
 
@@ -448,7 +454,10 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(mainThreadRepository.update).toHaveBeenCalledWith(
           summaryLogId,
           1,
-          { status: SUMMARY_LOG_STATUS.VALIDATION_FAILED }
+          {
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            expiresAt: expect.any(Date)
+          }
         )
       })
     })
@@ -518,7 +527,10 @@ describe('createSummaryLogsCommandExecutor', () => {
         expect(mainThreadRepository.update).toHaveBeenCalledWith(
           summaryLogId1,
           1,
-          { status: SUMMARY_LOG_STATUS.VALIDATION_FAILED }
+          {
+            status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+            expiresAt: expect.any(Date)
+          }
         )
       })
     })
