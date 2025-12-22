@@ -1,7 +1,7 @@
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 
 import { config } from '#root/config.js'
-import { incrementCounter, recordDuration } from './metrics.js'
+import { incrementCounter, recordDuration, timed } from './metrics.js'
 
 const mockPutMetric = vi.fn()
 const mockFlush = vi.fn()
@@ -150,6 +150,59 @@ describe('#metrics', () => {
           mockError
         )
       })
+    })
+  })
+
+  describe('#timed', () => {
+    beforeEach(() => {
+      config.set('isMetricsEnabled', true)
+      vi.clearAllMocks()
+    })
+
+    test('Should return the result of the function', async () => {
+      const expectedResult = { foo: 'bar' }
+      const fn = vi.fn().mockResolvedValue(expectedResult)
+
+      const result = await timed(mockMetricsName, fn)
+
+      expect(result).toEqual(expectedResult)
+    })
+
+    test('Should record duration metric', async () => {
+      const fn = vi.fn().mockResolvedValue('result')
+
+      await timed(mockMetricsName, fn)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        mockMetricsName,
+        expect.any(Number),
+        Unit.Milliseconds,
+        StorageResolution.Standard
+      )
+    })
+
+    test('Should record duration even when function throws', async () => {
+      const error = new Error('test error')
+      const fn = vi.fn().mockRejectedValue(error)
+
+      await expect(timed(mockMetricsName, fn)).rejects.toThrow('test error')
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        mockMetricsName,
+        expect.any(Number),
+        Unit.Milliseconds,
+        StorageResolution.Standard
+      )
+    })
+
+    test('Should work with synchronous functions', async () => {
+      const expectedResult = 'sync result'
+      const fn = vi.fn().mockReturnValue(expectedResult)
+
+      const result = await timed(mockMetricsName, fn)
+
+      expect(result).toEqual(expectedResult)
+      expect(mockPutMetric).toHaveBeenCalled()
     })
   })
 })

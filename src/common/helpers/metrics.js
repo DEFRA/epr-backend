@@ -44,4 +44,20 @@ const recordDuration = async (metricName, durationMs) => {
   await recordMetric(metricName, durationMs, Unit.Milliseconds)
 }
 
-export { incrementCounter, recordDuration }
+/**
+ * Executes a function and records its duration as a metric
+ * @template T
+ * @param {string} metricName - The name of the metric
+ * @param {() => Promise<T> | T} fn - The function to execute
+ * @returns {Promise<T>} The result of the function
+ */
+const timed = async (metricName, fn) => {
+  const start = Date.now()
+  try {
+    return await fn()
+  } finally {
+    await recordDuration(metricName, Date.now() - start)
+  }
+}
+
+export { incrementCounter, recordDuration, timed }
