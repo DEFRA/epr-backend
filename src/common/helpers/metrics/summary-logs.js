@@ -1,8 +1,4 @@
-import {
-  incrementCounter,
-  recordDuration,
-  timed
-} from '#common/helpers/metrics.js'
+import { incrementCounter, timed } from '#common/helpers/metrics.js'
 
 /**
  * Records a summary log status transition metric
@@ -39,11 +35,13 @@ async function timedValidation(fn) {
 }
 
 /**
- * Records the duration of submission processing
- * @param {number} durationMs - The duration in milliseconds
+ * Executes a function and records its duration as the submission metric
+ * @template T
+ * @param {() => Promise<T> | T} fn - The function to execute
+ * @returns {Promise<T>} The result of the function
  */
-async function recordSubmissionDuration(durationMs) {
-  await recordDuration('summaryLog.submission.duration', durationMs)
+async function timedSubmission(fn) {
+  return timed('summaryLog.submission.duration', fn)
 }
 
 export const summaryLogMetrics = {
@@ -51,5 +49,5 @@ export const summaryLogMetrics = {
   recordWasteRecordsCreated,
   recordWasteRecordsUpdated,
   timedValidation,
-  recordSubmissionDuration
+  timedSubmission
 }

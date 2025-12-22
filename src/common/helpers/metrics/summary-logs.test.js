@@ -211,25 +211,25 @@ describe('summaryLogMetrics', () => {
     })
   })
 
-  describe('recordSubmissionDuration', () => {
-    it('records metric with duration in milliseconds', async () => {
-      await summaryLogMetrics.recordSubmissionDuration(3200)
+  describe('timedSubmission', () => {
+    it('calls timed with the correct metric name', async () => {
+      const fn = vi.fn().mockResolvedValue('result')
 
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      await summaryLogMetrics.timedSubmission(fn)
+
+      expect(mockTimed).toHaveBeenCalledWith(
         'summaryLog.submission.duration',
-        3200,
-        Unit.Milliseconds,
-        StorageResolution.Standard
+        fn
       )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
+    it('returns the result of the wrapped function', async () => {
+      const expectedResult = { foo: 'bar' }
+      const fn = vi.fn().mockResolvedValue(expectedResult)
 
-      await summaryLogMetrics.recordSubmissionDuration(3200)
+      const result = await summaryLogMetrics.timedSubmission(fn)
 
-      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(result).toEqual(expectedResult)
     })
   })
 })
