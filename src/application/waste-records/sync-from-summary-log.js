@@ -125,7 +125,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - Optional accreditation ID
-   * @returns {Promise<void>}
+   * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
   return async (summaryLog) => {
     // Capture timestamp at start of submission for consistent versioning
