@@ -1,47 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { getFieldValue } from './field-mappings.js'
-import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
+import {
+  extractWasteBalanceFields,
+  isWithinAccreditationDateRange
+} from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
 
 const FLOAT_PRECISION_THRESHOLD = 0.000001
-
-/**
- * Filter by Accreditation Date Range (AC03)
- */
-export const isWithinAccreditationDateRange = (record, accreditation) => {
-  const recordDateStr = getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)
-  if (!recordDateStr) {
-    return false
-  }
-
-  const recordDate = new Date(recordDateStr)
-  const validFrom = new Date(accreditation.validFrom)
-  const validTo = new Date(accreditation.validTo)
-
-  return recordDate >= validFrom && recordDate <= validTo
-}
-
-/**
- * Filter by PRN Status (AC02)
- */
-export const hasPrnBeenIssued = (record) => {
-  const prnIssued = getFieldValue(record, COMMON_FIELD.PRN_ISSUED)
-  return prnIssued && prnIssued.toLowerCase() === 'yes'
-}
-
-/**
- * Calculate Transaction Amount (AC01a, AC01b)
- */
-export const getTransactionAmount = (record) => {
-  const interimSite = getFieldValue(record, COMMON_FIELD.INTERIM_SITE)
-  if (interimSite && interimSite.toLowerCase() === 'yes') {
-    return Number(getFieldValue(record, COMMON_FIELD.INTERIM_TONNAGE) || 0)
-  }
-  return Number(getFieldValue(record, COMMON_FIELD.EXPORT_TONNAGE) || 0)
-}
 
 /**
  * Create Transaction Object
@@ -98,6 +65,46 @@ export const buildTransaction = (
 }
 
 /**
+ * Updates the credited amount map with the transaction amount for each entity.
+ * Credits increase the credited amount, Debits decrease it.
+ * @param {Map<string, number>} creditedAmountMap
+ * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
+ */
+const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
+  const sign =
+    transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
+  const netAmount = transaction.amount * sign
+
+  const entityIds = (transaction.entities || []).map((e) => String(e.id))
+  const uniqueEntityIds = new Set(entityIds)
+
+  for (const id of uniqueEntityIds) {
+    const currentCreditedAmount = creditedAmountMap.get(id) || 0
+    creditedAmountMap.set(id, currentCreditedAmount + netAmount)
+  }
+}
+
+/**
+ * Calculates the target amount for a waste record based on accreditation.
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @param {Object} accreditation
+ * @returns {number}
+ */
+const getTargetAmount = (record, accreditation) => {
+  const fields = extractWasteBalanceFields(record)
+  if (!fields) {
+    return 0
+  }
+
+  const isWithinRange = isWithinAccreditationDateRange(
+    fields.dispatchDate,
+    accreditation
+  )
+
+  return isWithinRange && !fields.prnIssued ? fields.transactionAmount : 0
+}
+
+/**
  * Calculates new transactions and updated balance amounts based on waste records.
  * Implements a pipeline pattern to process each record through a series of steps.
  *
@@ -124,36 +131,13 @@ export const calculateWasteBalanceUpdates = ({
   // Optimization: Pre-calculate credited amounts to avoid O(N*M) complexity
   const creditedAmountMap = new Map()
 
-  /**
-   * Updates the credited amount map with the transaction amount for each entity.
-   * Credits increase the credited amount, Debits decrease it.
-   * @param {import('#domain/waste-balances/model.js').WasteBalanceTransaction} transaction
-   */
-  const updateCreditedAmountMap = (transaction) => {
-    const sign =
-      transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
-    const netAmount = transaction.amount * sign
-
-    const entityIds = (transaction.entities || []).map((e) => String(e.id))
-    const uniqueEntityIds = new Set(entityIds)
-
-    for (const id of uniqueEntityIds) {
-      const currentCreditedAmount = creditedAmountMap.get(id) || 0
-      creditedAmountMap.set(id, currentCreditedAmount + netAmount)
-    }
-  }
-
   // Initialize map with existing transactions
-  ;(currentBalance.transactions || []).forEach(updateCreditedAmountMap)
+  ;(currentBalance.transactions || []).forEach((transaction) =>
+    updateCreditedAmountMap(creditedAmountMap, transaction)
+  )
 
   for (const record of wasteRecords) {
-    const isWithinRange = isWithinAccreditationDateRange(record, accreditation)
-    const prnIssued = hasPrnBeenIssued(record)
-
-    // Calculate Target Amount
-    // A record only contributes if it's within range AND PRN is NOT issued
-    const targetAmount =
-      isWithinRange && !prnIssued ? getTransactionAmount(record) : 0
+    const targetAmount = getTargetAmount(record, accreditation)
 
     // Calculate Already Credited Amount
     const alreadyCreditedAmount =
@@ -167,12 +151,11 @@ export const calculateWasteBalanceUpdates = ({
         delta > 0
           ? WASTE_BALANCE_TRANSACTION_TYPE.CREDIT
           : WASTE_BALANCE_TRANSACTION_TYPE.DEBIT
-      const amount = Math.abs(delta)
 
       // Create Transaction
       const transaction = buildTransaction(
         record,
-        amount,
+        Math.abs(delta),
         currentAmount,
         currentAvailableAmount,
         type
@@ -184,7 +167,7 @@ export const calculateWasteBalanceUpdates = ({
       newTransactions.push(transaction)
 
       // Update map for next iteration
-      updateCreditedAmountMap(transaction)
+      updateCreditedAmountMap(creditedAmountMap, transaction)
     }
   }
 
