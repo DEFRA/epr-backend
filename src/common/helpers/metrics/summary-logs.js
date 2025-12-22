@@ -7,27 +7,32 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 
 /**
- * Records a count metric
+ * Records a metric with the specified unit
  * @param {string} metricName - The name of the metric
- * @param {number} count - The count to record
+ * @param {number} value - The value to record
+ * @param {string} unit - The AWS CloudWatch unit (e.g. Unit.Count, Unit.Milliseconds)
  */
-async function recordCountMetric(metricName, count) {
+async function recordMetric(metricName, value, unit) {
   if (!config.get('isMetricsEnabled')) {
     return
   }
 
   try {
     const metricsLogger = createMetricsLogger()
-    metricsLogger.putMetric(
-      metricName,
-      count,
-      Unit.Count,
-      StorageResolution.Standard
-    )
+    metricsLogger.putMetric(metricName, value, unit, StorageResolution.Standard)
     await metricsLogger.flush()
   } catch (error) {
     logger.error(error, error.message)
   }
+}
+
+/**
+ * Records a count metric
+ * @param {string} metricName - The name of the metric
+ * @param {number} count - The count to record
+ */
+async function recordCountMetric(metricName, count) {
+  await recordMetric(metricName, count, Unit.Count)
 }
 
 /**
@@ -54,8 +59,34 @@ async function recordWasteRecordsUpdated(count) {
   await recordCountMetric('summaryLog.wasteRecords.updated', count)
 }
 
+/**
+ * Records the duration of validation processing
+ * @param {number} durationMs - The duration in milliseconds
+ */
+async function recordValidationDuration(durationMs) {
+  await recordMetric(
+    'summaryLog.validation.duration',
+    durationMs,
+    Unit.Milliseconds
+  )
+}
+
+/**
+ * Records the duration of submission processing
+ * @param {number} durationMs - The duration in milliseconds
+ */
+async function recordSubmissionDuration(durationMs) {
+  await recordMetric(
+    'summaryLog.submission.duration',
+    durationMs,
+    Unit.Milliseconds
+  )
+}
+
 export const summaryLogMetrics = {
   recordStatusTransition,
   recordWasteRecordsCreated,
-  recordWasteRecordsUpdated
+  recordWasteRecordsUpdated,
+  recordValidationDuration,
+  recordSubmissionDuration
 }

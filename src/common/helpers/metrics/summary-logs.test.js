@@ -179,4 +179,48 @@ describe('summaryLogMetrics', () => {
       expect(mockPutMetric).not.toHaveBeenCalled()
     })
   })
+
+  describe('recordValidationDuration', () => {
+    it('records metric with duration in milliseconds', async () => {
+      await summaryLogMetrics.recordValidationDuration(1500)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.validation.duration',
+        1500,
+        Unit.Milliseconds,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordValidationDuration(1500)
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('recordSubmissionDuration', () => {
+    it('records metric with duration in milliseconds', async () => {
+      await summaryLogMetrics.recordSubmissionDuration(3200)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.submission.duration',
+        3200,
+        Unit.Milliseconds,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordSubmissionDuration(3200)
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+    })
+  })
 })
