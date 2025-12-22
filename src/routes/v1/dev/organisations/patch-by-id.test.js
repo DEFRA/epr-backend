@@ -529,8 +529,7 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST002',
-                  reprocessingType: REPROCESSING_TYPE.INPUT
+                  registrationNumber: 'R25TEST002'
                 }
               ],
               accreditations: [

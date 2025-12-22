@@ -261,8 +261,7 @@ export const testRegAccApprovalValidation = (it) => {
                 status: STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
-                reprocessingType: REPROCESSING_TYPE.INPUT
+                validTo: new Date('2025-12-31')
               }
             }),
             registrations: inserted.registrations.map((reg) => ({
@@ -270,8 +269,7 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
-              reprocessingType: REPROCESSING_TYPE.INPUT
+              validTo: new Date('2025-12-31')
             }))
           }
 
@@ -324,7 +322,10 @@ export const testRegAccApprovalValidation = (it) => {
               ...acc,
               status: STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
-              reprocessingType: REPROCESSING_TYPE.INPUT,
+              ...(acc.wasteProcessingType ===
+                WASTE_PROCESSING_TYPE.REPROCESSOR && {
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }),
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
             })),
@@ -332,7 +333,10 @@ export const testRegAccApprovalValidation = (it) => {
               ...reg,
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
-              reprocessingType: REPROCESSING_TYPE.INPUT,
+              ...(reg.wasteProcessingType ===
+                WASTE_PROCESSING_TYPE.REPROCESSOR && {
+                reprocessingType: REPROCESSING_TYPE.INPUT
+              }),
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
             }))
@@ -400,14 +404,13 @@ export const testRegAccApprovalValidation = (it) => {
                 ...acc,
                 status: STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
-                reprocessingType: REPROCESSING_TYPE.INPUT,
                 validFrom: new Date('2025-01-01'),
                 validTo: new Date('2025-12-31')
               }
             })
           }
 
-          const duplicateKey = `exporter::paper::input`
+          const duplicateKey = `exporter::paper`
           const expectedError =
             `Accreditations with id ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id} are approved but not linked to an approved registration; ` +
             `Multiple approved accreditations found with duplicate keys [${duplicateKey}]: ${inserted.accreditations[0].id}, ${inserted.accreditations[1].id}`
@@ -586,8 +589,7 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
-              reprocessingType: REPROCESSING_TYPE.INPUT
+              validTo: new Date('2025-12-31')
             }))
           }
 
@@ -633,12 +635,11 @@ export const testRegAccApprovalValidation = (it) => {
               status: STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
-              reprocessingType: REPROCESSING_TYPE.INPUT
+              validTo: new Date('2025-12-31')
             }))
           }
 
-          const duplicateKey = 'exporter::paper::input'
+          const duplicateKey = 'exporter::paper'
           const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
 
           await expect(
