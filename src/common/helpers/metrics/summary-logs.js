@@ -1,46 +1,13 @@
-import { config } from '#root/config.js'
-import {
-  createMetricsLogger,
-  StorageResolution,
-  Unit
-} from 'aws-embedded-metrics'
-import { logger } from '#common/helpers/logging/logger.js'
+import { Unit } from 'aws-embedded-metrics'
 
-/**
- * Records a metric with the specified unit
- * @param {string} metricName - The name of the metric
- * @param {number} value - The value to record
- * @param {string} unit - The AWS CloudWatch unit (e.g. Unit.Count, Unit.Milliseconds)
- */
-async function recordMetric(metricName, value, unit) {
-  if (!config.get('isMetricsEnabled')) {
-    return
-  }
-
-  try {
-    const metricsLogger = createMetricsLogger()
-    metricsLogger.putMetric(metricName, value, unit, StorageResolution.Standard)
-    await metricsLogger.flush()
-  } catch (error) {
-    logger.error(error, error.message)
-  }
-}
-
-/**
- * Records a count metric
- * @param {string} metricName - The name of the metric
- * @param {number} count - The count to record
- */
-async function recordCountMetric(metricName, count) {
-  await recordMetric(metricName, count, Unit.Count)
-}
+import { metricsCounter } from '#common/helpers/metrics.js'
 
 /**
  * Records a summary log status transition metric
  * @param {string} status - The status transitioned to
  */
 async function recordStatusTransition(status) {
-  await recordCountMetric(`summaryLog.status.${status}`, 1)
+  await metricsCounter(`summaryLog.status.${status}`)
 }
 
 /**
@@ -48,7 +15,7 @@ async function recordStatusTransition(status) {
  * @param {number} count - The number of records created
  */
 async function recordWasteRecordsCreated(count) {
-  await recordCountMetric('summaryLog.wasteRecords.created', count)
+  await metricsCounter('summaryLog.wasteRecords.created', count)
 }
 
 /**
@@ -56,7 +23,7 @@ async function recordWasteRecordsCreated(count) {
  * @param {number} count - The number of records updated
  */
 async function recordWasteRecordsUpdated(count) {
-  await recordCountMetric('summaryLog.wasteRecords.updated', count)
+  await metricsCounter('summaryLog.wasteRecords.updated', count)
 }
 
 /**
@@ -64,7 +31,7 @@ async function recordWasteRecordsUpdated(count) {
  * @param {number} durationMs - The duration in milliseconds
  */
 async function recordValidationDuration(durationMs) {
-  await recordMetric(
+  await metricsCounter(
     'summaryLog.validation.duration',
     durationMs,
     Unit.Milliseconds
@@ -76,7 +43,7 @@ async function recordValidationDuration(durationMs) {
  * @param {number} durationMs - The duration in milliseconds
  */
 async function recordSubmissionDuration(durationMs) {
-  await recordMetric(
+  await metricsCounter(
     'summaryLog.submission.duration',
     durationMs,
     Unit.Milliseconds

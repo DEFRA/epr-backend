@@ -72,6 +72,17 @@ describe('#metrics', () => {
       )
     })
 
+    test('Should send metric with custom unit', async () => {
+      await metricsCounter(mockMetricsName, mockValue, Unit.Milliseconds)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        mockMetricsName,
+        mockValue,
+        Unit.Milliseconds,
+        StorageResolution.Standard
+      )
+    })
+
     test('Should not call flush', async () => {
       await metricsCounter(mockMetricsName, mockValue)
       expect(mockFlush).toHaveBeenCalled()
