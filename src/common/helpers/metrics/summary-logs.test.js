@@ -113,4 +113,70 @@ describe('summaryLogMetrics', () => {
       expect(mockLoggerError).toHaveBeenCalledWith(mockError, 'flush failed')
     })
   })
+
+  describe('recordWasteRecordsCreated', () => {
+    it('records metric with count', async () => {
+      await summaryLogMetrics.recordWasteRecordsCreated(42)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.wasteRecords.created',
+        42,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records zero when no records created', async () => {
+      await summaryLogMetrics.recordWasteRecordsCreated(0)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.wasteRecords.created',
+        0,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordWasteRecordsCreated(10)
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('recordWasteRecordsUpdated', () => {
+    it('records metric with count', async () => {
+      await summaryLogMetrics.recordWasteRecordsUpdated(15)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.wasteRecords.updated',
+        15,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records zero when no records updated', async () => {
+      await summaryLogMetrics.recordWasteRecordsUpdated(0)
+
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.wasteRecords.updated',
+        0,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordWasteRecordsUpdated(5)
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+    })
+  })
 })
