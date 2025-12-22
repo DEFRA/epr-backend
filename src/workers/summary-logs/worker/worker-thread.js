@@ -73,12 +73,11 @@ const handleSubmitCommand = async ({
     featureFlags
   })
 
-  const startTime = Date.now()
-  const { created, updated } = await sync(summaryLog)
-  const durationMs = Date.now() - startTime
+  const { created, updated } = await summaryLogMetrics.timedSubmission(() =>
+    sync(summaryLog)
+  )
 
   // Record submission metrics
-  await summaryLogMetrics.recordSubmissionDuration(durationMs)
   await summaryLogMetrics.recordWasteRecordsCreated(created)
   await summaryLogMetrics.recordWasteRecordsUpdated(updated)
 

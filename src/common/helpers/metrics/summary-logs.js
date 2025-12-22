@@ -44,6 +44,16 @@ async function timedSubmission(fn) {
   return timed('summaryLog.submission.duration', fn)
 }
 
+/**
+ * @typedef {Object} SummaryLogMetrics
+ * @property {(status: string) => Promise<void>} recordStatusTransition - Records a status transition metric
+ * @property {(count: number) => Promise<void>} recordWasteRecordsCreated - Records count of waste records created
+ * @property {(count: number) => Promise<void>} recordWasteRecordsUpdated - Records count of waste records updated
+ * @property {<T>(fn: () => Promise<T> | T) => Promise<T>} timedValidation - Executes function and records validation duration
+ * @property {<T>(fn: () => Promise<T> | T) => Promise<T>} timedSubmission - Executes function and records submission duration
+ */
+
+/** @type {SummaryLogMetrics} */
 export const summaryLogMetrics = {
   recordStatusTransition,
   recordWasteRecordsCreated,

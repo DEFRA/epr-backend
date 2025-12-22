@@ -25,8 +25,8 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: vi.fn(),
-    recordValidationDuration: vi.fn(),
-    recordSubmissionDuration: vi.fn(),
+    timedValidation: vi.fn((fn) => fn()),
+    timedSubmission: vi.fn((fn) => fn()),
     recordWasteRecordsCreated: vi.fn(),
     recordWasteRecordsUpdated: vi.fn()
   }
@@ -463,7 +463,7 @@ describe('summaryLogsWorkerThread', () => {
         )
       })
 
-      it('should record submission duration metric', async () => {
+      it('should record submission duration via timedSubmission', async () => {
         const summaryLog = {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId: 'org-123',
@@ -482,8 +482,8 @@ describe('summaryLogsWorkerThread', () => {
           summaryLogId
         })
 
-        expect(summaryLogMetrics.recordSubmissionDuration).toHaveBeenCalledWith(
-          expect.any(Number)
+        expect(summaryLogMetrics.timedSubmission).toHaveBeenCalledWith(
+          expect.any(Function)
         )
       })
 
