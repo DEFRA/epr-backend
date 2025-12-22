@@ -5,6 +5,7 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import {
+  calculateExpiresAt,
   createRejectedValidation,
   determineStatusFromUpload,
   NO_PRIOR_SUBMISSION,
@@ -44,6 +45,7 @@ const buildSummaryLogData = (
 
   const data = {
     status,
+    expiresAt: calculateExpiresAt(status),
     file: buildFileData(upload, existingFile),
     organisationId,
     registrationId

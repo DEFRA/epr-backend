@@ -1,12 +1,14 @@
 import { describe, beforeEach, expect } from 'vitest'
 import { randomUUID } from 'node:crypto'
-import { NO_PRIOR_SUBMISSION } from '#domain/summary-logs/status.js'
+import {
+  calculateExpiresAt,
+  NO_PRIOR_SUBMISSION,
+  SUMMARY_LOG_STATUS
+} from '#domain/summary-logs/status.js'
 import {
   generateFileId,
-  buildFile,
   buildPendingFile,
-  buildRejectedFile,
-  buildSummaryLog
+  summaryLogFactory
 } from './test-data.js'
 
 export const testInsertBehaviour = (it) => {
@@ -20,12 +22,14 @@ export const testInsertBehaviour = (it) => {
     describe('basic behaviour', () => {
       it('inserts a summary log without error', async () => {
         const id = `contract-insert-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          organisationId: 'org-123',
-          registrationId: 'reg-456'
-        })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(
+          id,
+          summaryLogFactory.validating({
+            organisationId: 'org-123',
+            registrationId: 'reg-456'
+          })
+        )
 
         const found = await repository.findById(id)
         expect(found).toBeTruthy()
@@ -33,12 +37,14 @@ export const testInsertBehaviour = (it) => {
 
       it('stores the summary log so it can be retrieved', async () => {
         const id = `contract-retrievable-${randomUUID()}`
-        const summaryLog = buildSummaryLog({
-          organisationId: 'org-456',
-          registrationId: 'reg-789'
-        })
 
-        await repository.insert(id, summaryLog)
+        await repository.insert(
+          id,
+          summaryLogFactory.validating({
+            organisationId: 'org-456',
+            registrationId: 'reg-789'
+          })
+        )
         const found = await repository.findById(id)
 
         expect(found).toBeTruthy()
@@ -48,7 +54,7 @@ export const testInsertBehaviour = (it) => {
 
       it('throws conflict error when inserting duplicate ID', async () => {
         const id = `contract-duplicate-${randomUUID()}`
-        const summaryLog = buildSummaryLog()
+        const summaryLog = summaryLogFactory.validating()
 
         await repository.insert(id, summaryLog)
 
@@ -62,19 +68,11 @@ export const testInsertBehaviour = (it) => {
     describe('concurrent insert race conditions', () => {
       it('rejects one of two concurrent inserts with same ID', async () => {
         const id = `contract-concurrent-insert-${randomUUID()}`
-        const summaryLogA = buildSummaryLog({
-          organisationId: 'org-A',
-          file: buildFile({
-            name: 'testA.xlsx',
-            uri: 's3://test-bucket/test-key-A'
-          })
+        const summaryLogA = summaryLogFactory.validating({
+          organisationId: 'org-A'
         })
-        const summaryLogB = buildSummaryLog({
-          organisationId: 'org-B',
-          file: buildFile({
-            name: 'testB.xlsx',
-            uri: 's3://test-bucket/test-key-B'
-          })
+        const summaryLogB = summaryLogFactory.validating({
+          organisationId: 'org-B'
         })
 
         const results = await Promise.allSettled([
@@ -102,31 +100,31 @@ export const testInsertBehaviour = (it) => {
       describe('required fields', () => {
         it('rejects insert with missing file.id', async () => {
           const id = `contract-validation-${randomUUID()}`
-          const logWithMissingId = buildSummaryLog({
-            file: buildFile({ id: null })
-          })
-          await expect(repository.insert(id, logWithMissingId)).rejects.toThrow(
-            /Invalid summary log data.*id/
-          )
+          await expect(
+            repository.insert(
+              id,
+              summaryLogFactory.validating({ file: { id: null } })
+            )
+          ).rejects.toThrow(/Invalid summary log data.*id/)
         })
 
         it('rejects insert with missing file.name', async () => {
           const id = `contract-validation-${randomUUID()}`
-          const logWithMissingName = buildSummaryLog({
-            file: buildFile({ name: null })
-          })
           await expect(
-            repository.insert(id, logWithMissingName)
+            repository.insert(
+              id,
+              summaryLogFactory.validating({ file: { name: null } })
+            )
           ).rejects.toThrow(/Invalid summary log data.*name/)
         })
 
         it('rejects insert with missing URI when file status is complete', async () => {
           const id = `contract-validation-${randomUUID()}`
-          const logWithMissingUri = buildSummaryLog({
-            file: buildFile({ uri: undefined })
-          })
           await expect(
-            repository.insert(id, logWithMissingUri)
+            repository.insert(
+              id,
+              summaryLogFactory.validating({ file: { uri: undefined } })
+            )
           ).rejects.toThrow(/Invalid summary log data.*uri/)
         })
       })
@@ -134,24 +132,28 @@ export const testInsertBehaviour = (it) => {
       describe('field handling', () => {
         it('rejects insert with invalid file.status', async () => {
           const id = `contract-invalid-status-${randomUUID()}`
-          const logWithInvalidStatus = buildSummaryLog({
-            file: buildFile({ status: 'invalid-status' })
-          })
           await expect(
-            repository.insert(id, logWithInvalidStatus)
+            repository.insert(
+              id,
+              summaryLogFactory.validating({
+                file: { status: 'invalid-status' }
+              })
+            )
           ).rejects.toThrow(/Invalid summary log data.*status/)
         })
 
         it('strips unknown fields from insert', async () => {
           const id = `contract-strip-${randomUUID()}`
-          const logWithUnknownFields = buildSummaryLog({
-            file: buildFile({
-              hackerField: 'DROP TABLE users;',
-              anotherBadField: 'rm -rf /'
-            })
-          })
 
-          await repository.insert(id, logWithUnknownFields)
+          await repository.insert(
+            id,
+            summaryLogFactory.validating({
+              file: {
+                hackerField: 'DROP TABLE users;',
+                anotherBadField: 'rm -rf /'
+              }
+            })
+          )
           const found = await repository.findById(id)
 
           expect(found.summaryLog.hackerField).toBeUndefined()
@@ -160,9 +162,8 @@ export const testInsertBehaviour = (it) => {
 
         it('allows optional fields to be omitted', async () => {
           const id = `contract-minimal-${randomUUID()}`
-          const minimalLog = buildSummaryLog()
 
-          await repository.insert(id, minimalLog)
+          await repository.insert(id, summaryLogFactory.validating())
 
           const found = await repository.findById(id)
           expect(found).toBeTruthy()
@@ -171,11 +172,13 @@ export const testInsertBehaviour = (it) => {
         it('preserves validatedAgainstSummaryLogId on insert', async () => {
           const id = `contract-baseline-${randomUUID()}`
           const baselineSummaryLogId = `previous-submitted-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            validatedAgainstSummaryLogId: baselineSummaryLogId
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(
+            id,
+            summaryLogFactory.validating({
+              validatedAgainstSummaryLogId: baselineSummaryLogId
+            })
+          )
 
           const found = await repository.findById(id)
           expect(found.summaryLog.validatedAgainstSummaryLogId).toBe(
@@ -185,11 +188,8 @@ export const testInsertBehaviour = (it) => {
 
         it('preserves NO_PRIOR_SUBMISSION validatedAgainstSummaryLogId on insert', async () => {
           const id = `contract-no-prior-baseline-${randomUUID()}`
-          const summaryLog = buildSummaryLog({
-            validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
-          })
 
-          await repository.insert(id, summaryLog)
+          await repository.insert(id, summaryLogFactory.validating())
 
           const found = await repository.findById(id)
           expect(found.summaryLog.validatedAgainstSummaryLogId).toBe(
@@ -200,16 +200,12 @@ export const testInsertBehaviour = (it) => {
         it('accepts valid file.status values', async () => {
           const id1 = `contract-complete-${randomUUID()}`
           const id2 = `contract-rejected-${randomUUID()}`
-          const completeLog = buildSummaryLog({
-            file: buildFile({ name: 'complete.xlsx' })
-          })
-          const rejectedLog = buildSummaryLog({
-            status: 'rejected',
-            file: buildRejectedFile({ name: 'rejected.xlsx' })
-          })
 
-          await repository.insert(id1, completeLog)
-          await repository.insert(id2, rejectedLog)
+          await repository.insert(
+            id1,
+            summaryLogFactory.validating({ file: { name: 'complete.xlsx' } })
+          )
+          await repository.insert(id2, summaryLogFactory.rejected())
 
           const found1 = await repository.findById(id1)
           const found2 = await repository.findById(id2)
@@ -221,23 +217,26 @@ export const testInsertBehaviour = (it) => {
       describe('preprocessing status without file', () => {
         it('accepts preprocessing status without file data', async () => {
           const id = `contract-preprocessing-no-file-${randomUUID()}`
-          const preprocessingLog = {
-            status: 'preprocessing',
-            organisationId: 'org-123',
-            registrationId: 'reg-456'
-          }
 
-          await repository.insert(id, preprocessingLog)
+          await repository.insert(
+            id,
+            summaryLogFactory.preprocessing({
+              organisationId: 'org-123',
+              registrationId: 'reg-456'
+            })
+          )
 
           const found = await repository.findById(id)
-          expect(found.summaryLog.status).toBe('preprocessing')
+          expect(found.summaryLog.status).toBe(SUMMARY_LOG_STATUS.PREPROCESSING)
           expect(found.summaryLog.file).toBeUndefined()
         })
 
         it('rejects non-preprocessing status without file data', async () => {
           const id = `contract-validating-no-file-${randomUUID()}`
+          // Inline object needed to test schema rejection - factory would auto-add file
           const validatingLogWithoutFile = {
-            status: 'validating',
+            status: SUMMARY_LOG_STATUS.VALIDATING,
+            expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
             organisationId: 'org-123',
             registrationId: 'reg-456'
           }
@@ -251,12 +250,8 @@ export const testInsertBehaviour = (it) => {
       describe('status-based S3 requirements', () => {
         it('accepts rejected file without S3 info', async () => {
           const id = `contract-rejected-no-s3-${randomUUID()}`
-          const rejectedLog = buildSummaryLog({
-            status: 'rejected',
-            file: buildRejectedFile({ name: 'virus.xlsx' })
-          })
 
-          await repository.insert(id, rejectedLog)
+          await repository.insert(id, summaryLogFactory.rejected())
 
           const found = await repository.findById(id)
           expect(found.summaryLog.file.status).toBe('rejected')
@@ -265,13 +260,17 @@ export const testInsertBehaviour = (it) => {
 
         it('requires URI when file status is complete', async () => {
           const id = `contract-complete-no-uri-${randomUUID()}`
-          const completeLogWithoutUri = buildSummaryLog({
+          // Inline object needed to test schema rejection - factory would auto-add URI
+          const completeLogWithoutUri = {
+            status: SUMMARY_LOG_STATUS.VALIDATING,
+            expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
+            validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION,
             file: {
               id: generateFileId(),
               name: 'test.xlsx',
               status: 'complete'
             }
-          })
+          }
 
           await expect(
             repository.insert(id, completeLogWithoutUri)
@@ -280,12 +279,11 @@ export const testInsertBehaviour = (it) => {
 
         it('accepts pending file without S3 info', async () => {
           const id = `contract-pending-no-s3-${randomUUID()}`
-          const pendingLog = buildSummaryLog({
-            status: 'preprocessing',
-            file: buildPendingFile({ name: 'scanning.xlsx' })
-          })
 
-          await repository.insert(id, pendingLog)
+          await repository.insert(
+            id,
+            summaryLogFactory.preprocessing({ file: buildPendingFile() })
+          )
 
           const found = await repository.findById(id)
           expect(found.summaryLog.file.status).toBe('pending')

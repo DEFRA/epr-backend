@@ -212,6 +212,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
       status: SUMMARY_LOG_STATUS.VALIDATING,
+      expiresAt: expect.any(Date),
       organisationId,
       registrationId,
       file: {
@@ -238,6 +239,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
     expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
       status: SUMMARY_LOG_STATUS.REJECTED,
+      expiresAt: expect.any(Date),
       organisationId,
       registrationId,
       file: {
@@ -463,6 +465,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
 
       expect(summaryLogsRepository.insert).toHaveBeenCalledWith(summaryLogId, {
         status: SUMMARY_LOG_STATUS.REJECTED,
+        expiresAt: expect.any(Date),
         organisationId,
         registrationId,
         file: {

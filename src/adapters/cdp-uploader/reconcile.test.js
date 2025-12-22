@@ -219,12 +219,16 @@ describe('reconcileWithCdpUploader', () => {
       })
 
       expect(result).toEqual({
-        status: SUMMARY_LOG_STATUS.VALIDATION_FAILED
+        status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+        expiresAt: expect.any(Date)
       })
       expect(mockSummaryLogsRepository.update).toHaveBeenCalledWith(
         summaryLogId,
         1,
-        { status: SUMMARY_LOG_STATUS.VALIDATION_FAILED }
+        {
+          status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+          expiresAt: expect.any(Date)
+        }
       )
     })
 

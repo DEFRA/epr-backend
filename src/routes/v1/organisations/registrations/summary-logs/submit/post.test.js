@@ -322,7 +322,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       expect(summaryLogsRepository.update).toHaveBeenCalledWith(
         summaryLogId,
         2,
-        { status: SUMMARY_LOG_STATUS.SUPERSEDED }
+        { status: SUMMARY_LOG_STATUS.SUPERSEDED, expiresAt: expect.any(Date) }
       )
     })
 
