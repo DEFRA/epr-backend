@@ -309,19 +309,18 @@ export const createSummaryLogsValidator = ({
       }
     })
 
-    const startTime = Date.now()
-    const { issues, wasteRecords, meta } = await performValidationChecks({
-      summaryLogId,
-      summaryLog,
-      loggingContext,
-      summaryLogExtractor,
-      organisationsRepository,
-      wasteRecordsRepository,
-      validateDataSyntax
-    })
-    const durationMs = Date.now() - startTime
-
-    await summaryLogMetrics.recordValidationDuration(durationMs)
+    const { issues, wasteRecords, meta } =
+      await summaryLogMetrics.timedValidation(() =>
+        performValidationChecks({
+          summaryLogId,
+          summaryLog,
+          loggingContext,
+          summaryLogExtractor,
+          organisationsRepository,
+          wasteRecordsRepository,
+          validateDataSyntax
+        })
+      )
 
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID

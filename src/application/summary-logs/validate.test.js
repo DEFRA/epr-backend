@@ -139,12 +139,12 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 const mockRecordStatusTransition = vi.fn()
-const mockRecordValidationDuration = vi.fn()
+const mockTimedValidation = vi.fn(async (fn) => fn())
 
 vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
-    recordValidationDuration: (...args) => mockRecordValidationDuration(...args)
+    timedValidation: (fn) => mockTimedValidation(fn)
   }
 }))
 
@@ -227,7 +227,6 @@ describe('SummaryLogsValidator', () => {
 
   afterEach(() => {
     mockRecordStatusTransition.mockClear()
-    mockRecordValidationDuration.mockClear()
     vi.resetAllMocks()
   })
 
@@ -821,26 +820,6 @@ describe('SummaryLogsValidator', () => {
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith(
         SUMMARY_LOG_STATUS.INVALID
-      )
-    })
-
-    it('should record validation duration metric', async () => {
-      await validateSummaryLog(summaryLogId)
-
-      expect(mockRecordValidationDuration).toHaveBeenCalledWith(
-        expect.any(Number)
-      )
-    })
-
-    it('should record validation duration metric even when validation fails', async () => {
-      summaryLogExtractor.extract.mockRejectedValue(
-        new Error('S3 access denied')
-      )
-
-      await validateSummaryLog(summaryLogId)
-
-      expect(mockRecordValidationDuration).toHaveBeenCalledWith(
-        expect.any(Number)
       )
     })
   })

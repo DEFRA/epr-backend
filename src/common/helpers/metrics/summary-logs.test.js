@@ -5,6 +5,7 @@ import { config } from '#root/config.js'
 const mockPutMetric = vi.fn()
 const mockFlush = vi.fn()
 const mockLoggerError = vi.fn()
+const mockTimed = vi.fn(async (_name, fn) => fn())
 
 vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
   const original = await importOriginal()
@@ -21,6 +22,14 @@ vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: { error: (...args) => mockLoggerError(...args) }
 }))
+
+vi.mock('#common/helpers/metrics.js', async (importOriginal) => {
+  const original = await importOriginal()
+  return {
+    ...original,
+    timed: (...args) => mockTimed(...args)
+  }
+})
 
 const { summaryLogMetrics } = await import('./summary-logs.js')
 
@@ -180,25 +189,25 @@ describe('summaryLogMetrics', () => {
     })
   })
 
-  describe('recordValidationDuration', () => {
-    it('records metric with duration in milliseconds', async () => {
-      await summaryLogMetrics.recordValidationDuration(1500)
+  describe('timedValidation', () => {
+    it('calls timed with the correct metric name', async () => {
+      const fn = vi.fn().mockResolvedValue('result')
 
-      expect(mockPutMetric).toHaveBeenCalledWith(
+      await summaryLogMetrics.timedValidation(fn)
+
+      expect(mockTimed).toHaveBeenCalledWith(
         'summaryLog.validation.duration',
-        1500,
-        Unit.Milliseconds,
-        StorageResolution.Standard
+        fn
       )
-      expect(mockFlush).toHaveBeenCalled()
     })
 
-    it('does not record metric when metrics disabled', async () => {
-      config.set('isMetricsEnabled', false)
+    it('returns the result of the wrapped function', async () => {
+      const expectedResult = { foo: 'bar' }
+      const fn = vi.fn().mockResolvedValue(expectedResult)
 
-      await summaryLogMetrics.recordValidationDuration(1500)
+      const result = await summaryLogMetrics.timedValidation(fn)
 
-      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(result).toEqual(expectedResult)
     })
   })
 
