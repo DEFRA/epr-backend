@@ -1,47 +1,14 @@
 import { randomUUID } from 'node:crypto'
-import { getFieldValue } from './field-mappings.js'
-import { COMMON_FIELD } from '#domain/summary-logs/constants.js'
+import {
+  extractWasteBalanceFields,
+  isWithinAccreditationDateRange
+} from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
 } from '#domain/waste-balances/model.js'
 
 const FLOAT_PRECISION_THRESHOLD = 0.000001
-
-/**
- * Filter by Accreditation Date Range (AC03)
- */
-export const isWithinAccreditationDateRange = (record, accreditation) => {
-  const recordDateStr = getFieldValue(record, COMMON_FIELD.DISPATCH_DATE)
-  if (!recordDateStr) {
-    return false
-  }
-
-  const recordDate = new Date(recordDateStr)
-  const validFrom = new Date(accreditation.validFrom)
-  const validTo = new Date(accreditation.validTo)
-
-  return recordDate >= validFrom && recordDate <= validTo
-}
-
-/**
- * Filter by PRN Status (AC02)
- */
-export const hasPrnBeenIssued = (record) => {
-  const prnIssued = getFieldValue(record, COMMON_FIELD.PRN_ISSUED)
-  return prnIssued && prnIssued.toLowerCase() === 'yes'
-}
-
-/**
- * Calculate Transaction Amount (AC01a, AC01b)
- */
-export const getTransactionAmount = (record) => {
-  const interimSite = getFieldValue(record, COMMON_FIELD.INTERIM_SITE)
-  if (interimSite && interimSite.toLowerCase() === 'yes') {
-    return Number(getFieldValue(record, COMMON_FIELD.INTERIM_TONNAGE) || 0)
-  }
-  return Number(getFieldValue(record, COMMON_FIELD.EXPORT_TONNAGE) || 0)
-}
 
 /**
  * Create Transaction Object
@@ -147,13 +114,18 @@ export const calculateWasteBalanceUpdates = ({
   ;(currentBalance.transactions || []).forEach(updateCreditedAmountMap)
 
   for (const record of wasteRecords) {
-    const isWithinRange = isWithinAccreditationDateRange(record, accreditation)
-    const prnIssued = hasPrnBeenIssued(record)
+    const fields = extractWasteBalanceFields(record)
+
+    const isWithinRange = fields
+      ? isWithinAccreditationDateRange(fields.dispatchDate, accreditation)
+      : false
 
     // Calculate Target Amount
     // A record only contributes if it's within range AND PRN is NOT issued
     const targetAmount =
-      isWithinRange && !prnIssued ? getTransactionAmount(record) : 0
+      isWithinRange && fields && !fields.prnIssued
+        ? fields.transactionAmount
+        : 0
 
     // Calculate Already Credited Amount
     const alreadyCreditedAmount =
