@@ -3,9 +3,10 @@ import { StorageResolution, Unit } from 'aws-embedded-metrics'
 import { config } from '#root/config.js'
 
 const mockPutMetric = vi.fn()
+const mockPutDimensions = vi.fn()
 const mockFlush = vi.fn()
 const mockLoggerError = vi.fn()
-const mockTimed = vi.fn(async (_name, fn) => fn())
+const mockTimed = vi.fn(async (_name, fn, _dimensions) => fn())
 
 vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
   const original = await importOriginal()
@@ -14,6 +15,7 @@ vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
     ...original,
     createMetricsLogger: () => ({
       putMetric: mockPutMetric,
+      putDimensions: mockPutDimensions,
       flush: mockFlush
     })
   }
@@ -44,11 +46,14 @@ describe('summaryLogMetrics', () => {
   })
 
   describe('recordStatusTransition', () => {
-    it('records metric for preprocessing status', async () => {
+    it('records metric with status dimension for preprocessing', async () => {
       await summaryLogMetrics.recordStatusTransition('preprocessing')
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'preprocessing'
+      })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.status.preprocessing',
+        'summaryLog.statusTransition',
         1,
         Unit.Count,
         StorageResolution.Standard
@@ -56,29 +61,31 @@ describe('summaryLogMetrics', () => {
       expect(mockFlush).toHaveBeenCalled()
     })
 
-    it('records metric for validated status', async () => {
+    it('records metric with status dimension for validated', async () => {
       await summaryLogMetrics.recordStatusTransition('validated')
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({ status: 'validated' })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.status.validated',
+        'summaryLog.statusTransition',
         1,
         Unit.Count,
         StorageResolution.Standard
       )
     })
 
-    it('records metric for submitted status', async () => {
+    it('records metric with status dimension for submitted', async () => {
       await summaryLogMetrics.recordStatusTransition('submitted')
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({ status: 'submitted' })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.status.submitted',
+        'summaryLog.statusTransition',
         1,
         Unit.Count,
         StorageResolution.Standard
       )
     })
 
-    it('records metric for all valid statuses', async () => {
+    it('records metric with correct dimension for all valid statuses', async () => {
       const statuses = [
         'preprocessing',
         'rejected',
@@ -95,8 +102,9 @@ describe('summaryLogMetrics', () => {
         vi.clearAllMocks()
         await summaryLogMetrics.recordStatusTransition(status)
 
+        expect(mockPutDimensions).toHaveBeenCalledWith({ status })
         expect(mockPutMetric).toHaveBeenCalledWith(
-          `summaryLog.status.${status}`,
+          'summaryLog.statusTransition',
           1,
           Unit.Count,
           StorageResolution.Standard
@@ -110,6 +118,7 @@ describe('summaryLogMetrics', () => {
       await summaryLogMetrics.recordStatusTransition('validated')
 
       expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
       expect(mockFlush).not.toHaveBeenCalled()
     })
 
@@ -124,11 +133,12 @@ describe('summaryLogMetrics', () => {
   })
 
   describe('recordWasteRecordsCreated', () => {
-    it('records metric with count', async () => {
+    it('records metric with count and operation dimension', async () => {
       await summaryLogMetrics.recordWasteRecordsCreated(42)
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'created' })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords.created',
+        'summaryLog.wasteRecords',
         42,
         Unit.Count,
         StorageResolution.Standard
@@ -139,8 +149,9 @@ describe('summaryLogMetrics', () => {
     it('records zero when no records created', async () => {
       await summaryLogMetrics.recordWasteRecordsCreated(0)
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'created' })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords.created',
+        'summaryLog.wasteRecords',
         0,
         Unit.Count,
         StorageResolution.Standard
@@ -153,15 +164,17 @@ describe('summaryLogMetrics', () => {
       await summaryLogMetrics.recordWasteRecordsCreated(10)
 
       expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 
   describe('recordWasteRecordsUpdated', () => {
-    it('records metric with count', async () => {
+    it('records metric with count and operation dimension', async () => {
       await summaryLogMetrics.recordWasteRecordsUpdated(15)
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'updated' })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords.updated',
+        'summaryLog.wasteRecords',
         15,
         Unit.Count,
         StorageResolution.Standard
@@ -172,8 +185,9 @@ describe('summaryLogMetrics', () => {
     it('records zero when no records updated', async () => {
       await summaryLogMetrics.recordWasteRecordsUpdated(0)
 
+      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'updated' })
       expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.wasteRecords.updated',
+        'summaryLog.wasteRecords',
         0,
         Unit.Count,
         StorageResolution.Standard
@@ -186,6 +200,7 @@ describe('summaryLogMetrics', () => {
       await summaryLogMetrics.recordWasteRecordsUpdated(5)
 
       expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 

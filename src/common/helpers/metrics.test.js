@@ -4,6 +4,7 @@ import { config } from '#root/config.js'
 import { incrementCounter, recordDuration, timed } from './metrics.js'
 
 const mockPutMetric = vi.fn()
+const mockPutDimensions = vi.fn()
 const mockFlush = vi.fn()
 const mockLoggerError = vi.fn()
 
@@ -14,6 +15,7 @@ vi.mock('aws-embedded-metrics', async (importOriginal) => {
     ...awsEmbeddedMetrics,
     createMetricsLogger: () => ({
       putMetric: mockPutMetric,
+      putDimensions: mockPutDimensions,
       flush: mockFlush
     })
   }
@@ -75,6 +77,19 @@ describe('#metrics', () => {
         await incrementCounter(mockMetricsName)
         expect(mockFlush).toHaveBeenCalled()
       })
+
+      test('Should set dimensions when provided', async () => {
+        const dimensions = { status: 'validated' }
+        await incrementCounter(mockMetricsName, 1, dimensions)
+
+        expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
+      })
+
+      test('Should not call putDimensions when dimensions not provided', async () => {
+        await incrementCounter(mockMetricsName)
+
+        expect(mockPutDimensions).not.toHaveBeenCalled()
+      })
     })
 
     describe('When metrics throws', () => {
@@ -131,6 +146,19 @@ describe('#metrics', () => {
       test('Should call flush', async () => {
         await recordDuration(mockMetricsName, 100)
         expect(mockFlush).toHaveBeenCalled()
+      })
+
+      test('Should set dimensions when provided', async () => {
+        const dimensions = { stage: 'validation' }
+        await recordDuration(mockMetricsName, 100, dimensions)
+
+        expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
+      })
+
+      test('Should not call putDimensions when dimensions not provided', async () => {
+        await recordDuration(mockMetricsName, 100)
+
+        expect(mockPutDimensions).not.toHaveBeenCalled()
       })
     })
 
@@ -203,6 +231,23 @@ describe('#metrics', () => {
 
       expect(result).toEqual(expectedResult)
       expect(mockPutMetric).toHaveBeenCalled()
+    })
+
+    test('Should set dimensions when provided', async () => {
+      const dimensions = { stage: 'validation' }
+      const fn = vi.fn().mockResolvedValue('result')
+
+      await timed(mockMetricsName, fn, dimensions)
+
+      expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
+    })
+
+    test('Should not call putDimensions when dimensions not provided', async () => {
+      const fn = vi.fn().mockResolvedValue('result')
+
+      await timed(mockMetricsName, fn)
+
+      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 })

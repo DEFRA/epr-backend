@@ -5,7 +5,7 @@ import { incrementCounter, timed } from '#common/helpers/metrics.js'
  * @param {string} status - The status transitioned to
  */
 async function recordStatusTransition(status) {
-  await incrementCounter(`summaryLog.status.${status}`)
+  await incrementCounter('summaryLog.statusTransition', 1, { status })
 }
 
 /**
@@ -13,7 +13,9 @@ async function recordStatusTransition(status) {
  * @param {number} count - The number of records created
  */
 async function recordWasteRecordsCreated(count) {
-  await incrementCounter('summaryLog.wasteRecords.created', count)
+  await incrementCounter('summaryLog.wasteRecords', count, {
+    operation: 'created'
+  })
 }
 
 /**
@@ -21,7 +23,9 @@ async function recordWasteRecordsCreated(count) {
  * @param {number} count - The number of records updated
  */
 async function recordWasteRecordsUpdated(count) {
-  await incrementCounter('summaryLog.wasteRecords.updated', count)
+  await incrementCounter('summaryLog.wasteRecords', count, {
+    operation: 'updated'
+  })
 }
 
 /**
