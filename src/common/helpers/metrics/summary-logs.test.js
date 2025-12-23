@@ -6,7 +6,7 @@ const mockPutMetric = vi.fn()
 const mockPutDimensions = vi.fn()
 const mockFlush = vi.fn()
 const mockLoggerError = vi.fn()
-const mockTimed = vi.fn(async (_name, fn, _dimensions) => fn())
+const mockTimed = vi.fn(async (_name, _dimensions, fn) => fn())
 
 vi.mock(import('aws-embedded-metrics'), async (importOriginal) => {
   const original = await importOriginal()
@@ -212,6 +212,7 @@ describe('summaryLogMetrics', () => {
 
       expect(mockTimed).toHaveBeenCalledWith(
         'summaryLog.validation.duration',
+        {},
         fn
       )
     })
@@ -234,6 +235,7 @@ describe('summaryLogMetrics', () => {
 
       expect(mockTimed).toHaveBeenCalledWith(
         'summaryLog.submission.duration',
+        {},
         fn
       )
     })

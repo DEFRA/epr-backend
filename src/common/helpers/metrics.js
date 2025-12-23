@@ -24,9 +24,7 @@ const recordMetric = async (metricName, value, unit, dimensions) => {
 
   try {
     const metricsLogger = createMetricsLogger()
-    if (dimensions) {
-      metricsLogger.putDimensions(dimensions)
-    }
+    metricsLogger.putDimensions(dimensions)
     metricsLogger.putMetric(metricName, value, unit, StorageResolution.Standard)
     await metricsLogger.flush()
   } catch (error) {
@@ -37,7 +35,7 @@ const recordMetric = async (metricName, value, unit, dimensions) => {
 /**
  * Increments a counter metric
  * @param {string} metricName - The name of the metric
- * @param {Dimensions} [dimensions] - Optional dimensions for the metric
+ * @param {Dimensions} dimensions - Dimensions for the metric
  * @param {number} [value=1] - The amount to increment by
  */
 const incrementCounter = async (metricName, dimensions, value = 1) => {
@@ -47,10 +45,10 @@ const incrementCounter = async (metricName, dimensions, value = 1) => {
 /**
  * Records a duration metric in milliseconds
  * @param {string} metricName - The name of the metric
+ * @param {Dimensions} dimensions - Dimensions for the metric
  * @param {number} durationMs - The duration in milliseconds
- * @param {Dimensions} [dimensions] - Optional dimensions for the metric
  */
-const recordDuration = async (metricName, durationMs, dimensions) => {
+const recordDuration = async (metricName, dimensions, durationMs) => {
   await recordMetric(metricName, durationMs, Unit.Milliseconds, dimensions)
 }
 
@@ -58,16 +56,16 @@ const recordDuration = async (metricName, durationMs, dimensions) => {
  * Executes a function and records its duration as a metric
  * @template T
  * @param {string} metricName - The name of the metric
+ * @param {Dimensions} dimensions - Dimensions for the metric
  * @param {() => Promise<T> | T} fn - The function to execute
- * @param {Dimensions} [dimensions] - Optional dimensions for the metric
  * @returns {Promise<T>} The result of the function
  */
-const timed = async (metricName, fn, dimensions) => {
+const timed = async (metricName, dimensions, fn) => {
   const start = Date.now()
   try {
     return await fn()
   } finally {
-    await recordDuration(metricName, Date.now() - start, dimensions)
+    await recordDuration(metricName, dimensions, Date.now() - start)
   }
 }
 

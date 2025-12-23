@@ -39,7 +39,7 @@ async function recordWasteRecordsUpdated(count) {
  * @returns {Promise<T>} The result of the function
  */
 async function timedValidation(fn) {
-  return timed('summaryLog.validation.duration', fn)
+  return timed('summaryLog.validation.duration', {}, fn)
 }
 
 /**
@@ -49,7 +49,7 @@ async function timedValidation(fn) {
  * @returns {Promise<T>} The result of the function
  */
 async function timedSubmission(fn) {
-  return timed('summaryLog.submission.duration', fn)
+  return timed('summaryLog.submission.duration', {}, fn)
 }
 
 /**
