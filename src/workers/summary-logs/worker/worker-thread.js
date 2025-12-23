@@ -78,13 +78,13 @@ const handleSubmitCommand = async ({
   })
 
   const { created, updated } = await summaryLogMetrics.timedSubmission(
-    processingType,
+    { processingType },
     () => sync(summaryLog)
   )
 
   // Record submission metrics
-  await summaryLogMetrics.recordWasteRecordsCreated(processingType, created)
-  await summaryLogMetrics.recordWasteRecordsUpdated(processingType, updated)
+  await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
+  await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
 
   // Update status to SUBMITTED
   await summaryLogsRepository.update(
@@ -93,10 +93,10 @@ const handleSubmitCommand = async ({
     transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
   )
 
-  await summaryLogMetrics.recordStatusTransition(
-    SUMMARY_LOG_STATUS.SUBMITTED,
+  await summaryLogMetrics.recordStatusTransition({
+    status: SUMMARY_LOG_STATUS.SUBMITTED,
     processingType
-  )
+  })
 
   logger.info({
     message: `Summary log submitted: summaryLogId=${summaryLogId}`

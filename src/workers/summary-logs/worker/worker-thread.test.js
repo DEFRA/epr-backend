@@ -486,10 +486,10 @@ describe('summaryLogsWorkerThread', () => {
           summaryLogId
         })
 
-        expect(summaryLogMetrics.recordStatusTransition).toHaveBeenCalledWith(
-          SUMMARY_LOG_STATUS.SUBMITTED,
-          PROCESSING_TYPES.REPROCESSOR_INPUT
-        )
+        expect(summaryLogMetrics.recordStatusTransition).toHaveBeenCalledWith({
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        })
       })
 
       it('should record submission duration via timedSubmission', async () => {
@@ -516,7 +516,7 @@ describe('summaryLogsWorkerThread', () => {
         })
 
         expect(summaryLogMetrics.timedSubmission).toHaveBeenCalledWith(
-          PROCESSING_TYPES.REPROCESSOR_INPUT,
+          { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
           expect.any(Function)
         )
       })
@@ -546,7 +546,10 @@ describe('summaryLogsWorkerThread', () => {
 
         expect(
           summaryLogMetrics.recordWasteRecordsCreated
-        ).toHaveBeenCalledWith(PROCESSING_TYPES.REPROCESSOR_INPUT, 5)
+        ).toHaveBeenCalledWith(
+          { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+          5
+        )
       })
 
       it('should record waste records updated count', async () => {
@@ -574,7 +577,10 @@ describe('summaryLogsWorkerThread', () => {
 
         expect(
           summaryLogMetrics.recordWasteRecordsUpdated
-        ).toHaveBeenCalledWith(PROCESSING_TYPES.REPROCESSOR_INPUT, 3)
+        ).toHaveBeenCalledWith(
+          { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+          3
+        )
       })
     })
   })

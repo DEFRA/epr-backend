@@ -480,10 +480,10 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.SUBMITTING,
-        PROCESSING_TYPES.REPROCESSOR_INPUT
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      })
     })
 
     it('records status transition metric for superseded when preview is stale', async () => {
@@ -517,10 +517,10 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.SUPERSEDED,
-        PROCESSING_TYPES.EXPORTER
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.SUPERSEDED,
+        processingType: PROCESSING_TYPES.EXPORTER
+      })
     })
 
     it('does not record submitting metric when another submission is in progress', async () => {

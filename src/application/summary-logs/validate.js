@@ -294,9 +294,7 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
   for (const [key, count] of counts) {
     const [severity, category] = key.split(':')
     await summaryLogMetrics.recordValidationIssues(
-      severity,
-      category,
-      processingType,
+      { severity, category, processingType },
       count
     )
   }
@@ -327,7 +325,10 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
   // Record metrics for each outcome with non-zero count
   for (const [outcome, count] of Object.entries(counts)) {
     if (count > 0) {
-      await summaryLogMetrics.recordRowOutcome(outcome, processingType, count)
+      await summaryLogMetrics.recordRowOutcome(
+        { outcome, processingType },
+        count
+      )
     }
   }
 }
@@ -387,7 +388,7 @@ export const createSummaryLogsValidator = ({
     const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 
     await summaryLogMetrics.recordValidationDuration(
-      processingType,
+      { processingType },
       validationDurationMs
     )
 
@@ -395,7 +396,7 @@ export const createSummaryLogsValidator = ({
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    await summaryLogMetrics.recordStatusTransition(status, processingType)
+    await summaryLogMetrics.recordStatusTransition({ status, processingType })
 
     // Record validation issue metrics (if any issues exist)
     await recordValidationIssueMetrics(issues, processingType)

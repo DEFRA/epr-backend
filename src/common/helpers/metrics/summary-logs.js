@@ -13,32 +13,71 @@ import {
  */
 
 /**
+ * @typedef {Object} StatusTransitionDimensions
+ * @property {SummaryLogStatus} status
+ * @property {ProcessingType} [processingType]
+ */
+
+/**
+ * @typedef {Object} ProcessingTypeDimensions
+ * @property {ProcessingType} processingType
+ */
+
+/**
+ * @typedef {Object} ValidationIssueDimensions
+ * @property {ValidationSeverity} severity
+ * @property {ValidationCategory} category
+ * @property {ProcessingType} processingType
+ */
+
+/**
+ * @typedef {Object} RowOutcomeDimensions
+ * @property {RowOutcome} outcome
+ * @property {ProcessingType} processingType
+ */
+
+/**
  * Maps enum values to lowercase dimension values
- * @param {ProcessingType|null|undefined} value
+ * @param {string|null|undefined} value
  * @returns {string|undefined}
  */
 const toDimension = (value) => value?.toLowerCase()
 
 /**
- * Records a summary log status transition metric
- * @param {SummaryLogStatus} status - The status transitioned to
- * @param {ProcessingType} [processingType] - Optional for early lifecycle states
+ * Builds CloudWatch dimensions object, converting values to lowercase
+ * and omitting undefined values
+ * @param {Record<string, string|undefined>} dimensions
+ * @returns {Record<string, string>}
  */
-async function recordStatusTransition(status, processingType) {
-  const dimensions = { status }
-  const processingTypeDimension = toDimension(processingType)
-  if (processingTypeDimension) {
-    dimensions.processingType = processingTypeDimension
+const buildDimensions = (dimensions) => {
+  /** @type {Record<string, string>} */
+  const result = {}
+  for (const [key, value] of Object.entries(dimensions)) {
+    const dimensionValue = toDimension(value)
+    if (dimensionValue) {
+      result[key] = dimensionValue
+    }
   }
-  await incrementCounter('summaryLog.statusTransition', dimensions)
+  return result
+}
+
+/**
+ * Records a summary log status transition metric
+ * @param {StatusTransitionDimensions} dimensions
+ */
+async function recordStatusTransition({ status, processingType }) {
+  await incrementCounter(
+    'summaryLog.statusTransition',
+    buildDimensions({ status, processingType })
+  )
 }
 
 /**
  * Records the count of waste records created during submission
- * @param {ProcessingType} processingType
+ * @param {ProcessingTypeDimensions} dimensions
  * @param {number} count - The number of records created
  */
-async function recordWasteRecordsCreated(processingType, count) {
+async function recordWasteRecordsCreated({ processingType }, count) {
   await incrementCounter(
     'summaryLog.wasteRecords',
     { operation: 'created', processingType: toDimension(processingType) },
@@ -48,10 +87,10 @@ async function recordWasteRecordsCreated(processingType, count) {
 
 /**
  * Records the count of waste records updated during submission
- * @param {ProcessingType} processingType
+ * @param {ProcessingTypeDimensions} dimensions
  * @param {number} count - The number of records updated
  */
-async function recordWasteRecordsUpdated(processingType, count) {
+async function recordWasteRecordsUpdated({ processingType }, count) {
   await incrementCounter(
     'summaryLog.wasteRecords',
     { operation: 'updated', processingType: toDimension(processingType) },
@@ -61,13 +100,13 @@ async function recordWasteRecordsUpdated(processingType, count) {
 
 /**
  * Records the duration of a validation operation
- * @param {ProcessingType} processingType
+ * @param {ProcessingTypeDimensions} dimensions
  * @param {number} durationMs - The duration in milliseconds
  */
-async function recordValidationDuration(processingType, durationMs) {
+async function recordValidationDuration({ processingType }, durationMs) {
   await recordDuration(
     'summaryLog.validation.duration',
-    { processingType: toDimension(processingType) },
+    buildDimensions({ processingType }),
     durationMs
   )
 }
@@ -75,70 +114,56 @@ async function recordValidationDuration(processingType, durationMs) {
 /**
  * Executes a function and records its duration as the submission metric
  * @template T
- * @param {ProcessingType} processingType
+ * @param {ProcessingTypeDimensions} dimensions
  * @param {() => Promise<T> | T} fn - The function to execute
  * @returns {Promise<T>} The result of the function
  */
-async function timedSubmission(processingType, fn) {
+async function timedSubmission({ processingType }, fn) {
   return timed(
     'summaryLog.submission.duration',
-    {
-      processingType: toDimension(processingType)
-    },
+    buildDimensions({ processingType }),
     fn
   )
 }
 
 /**
  * Records a validation issue metric
- * @param {ValidationSeverity} severity - The severity of the issue
- * @param {ValidationCategory} category - The category of the issue
- * @param {ProcessingType} processingType - The processing type
+ * @param {ValidationIssueDimensions} dimensions
  * @param {number} count - The number of issues
  */
 async function recordValidationIssues(
-  severity,
-  category,
-  processingType,
+  { severity, category, processingType },
   count
 ) {
   await incrementCounter(
     'summaryLog.validation.issues',
-    {
-      severity: toDimension(severity),
-      category: toDimension(category),
-      processingType: toDimension(processingType)
-    },
+    buildDimensions({ severity, category, processingType }),
     count
   )
 }
 
 /**
  * Records a row outcome metric
- * @param {RowOutcome} outcome - The row classification outcome
- * @param {ProcessingType} processingType - The processing type
+ * @param {RowOutcomeDimensions} dimensions
  * @param {number} count - The number of rows
  */
-async function recordRowOutcome(outcome, processingType, count) {
+async function recordRowOutcome({ outcome, processingType }, count) {
   await incrementCounter(
     'summaryLog.rows.outcome',
-    {
-      outcome: toDimension(outcome),
-      processingType: toDimension(processingType)
-    },
+    buildDimensions({ outcome, processingType }),
     count
   )
 }
 
 /**
  * @typedef {Object} SummaryLogMetrics
- * @property {(status: SummaryLogStatus, processingType?: ProcessingType) => Promise<void>} recordStatusTransition - Records a status transition metric
- * @property {(processingType: ProcessingType, count: number) => Promise<void>} recordWasteRecordsCreated - Records count of waste records created
- * @property {(processingType: ProcessingType, count: number) => Promise<void>} recordWasteRecordsUpdated - Records count of waste records updated
- * @property {(processingType: ProcessingType, durationMs: number) => Promise<void>} recordValidationDuration - Records validation duration metric
- * @property {<T>(processingType: ProcessingType, fn: () => Promise<T> | T) => Promise<T>} timedSubmission - Executes function and records submission duration
- * @property {(severity: ValidationSeverity, category: ValidationCategory, processingType: ProcessingType, count: number) => Promise<void>} recordValidationIssues - Records validation issues metric
- * @property {(outcome: RowOutcome, processingType: ProcessingType, count: number) => Promise<void>} recordRowOutcome - Records row outcome metric
+ * @property {(dimensions: StatusTransitionDimensions) => Promise<void>} recordStatusTransition - Records a status transition metric
+ * @property {(dimensions: ProcessingTypeDimensions, count: number) => Promise<void>} recordWasteRecordsCreated - Records count of waste records created
+ * @property {(dimensions: ProcessingTypeDimensions, count: number) => Promise<void>} recordWasteRecordsUpdated - Records count of waste records updated
+ * @property {(dimensions: ProcessingTypeDimensions, durationMs: number) => Promise<void>} recordValidationDuration - Records validation duration metric
+ * @property {<T>(dimensions: ProcessingTypeDimensions, fn: () => Promise<T> | T) => Promise<T>} timedSubmission - Executes function and records submission duration
+ * @property {(dimensions: ValidationIssueDimensions, count: number) => Promise<void>} recordValidationIssues - Records validation issues metric
+ * @property {(dimensions: RowOutcomeDimensions, count: number) => Promise<void>} recordRowOutcome - Records row outcome metric
  */
 
 /** @type {SummaryLogMetrics} */

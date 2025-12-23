@@ -56,10 +56,10 @@ async function handleStalenessCheck(
     )
     const processingType =
       summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-    await summaryLogMetrics.recordStatusTransition(
-      SUMMARY_LOG_STATUS.SUPERSEDED,
+    await summaryLogMetrics.recordStatusTransition({
+      status: SUMMARY_LOG_STATUS.SUPERSEDED,
       processingType
-    )
+    })
     return true
   }
 
@@ -122,10 +122,10 @@ export const summaryLogsSubmit = {
 
       const processingType =
         summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
-      await summaryLogMetrics.recordStatusTransition(
-        SUMMARY_LOG_STATUS.SUBMITTING,
+      await summaryLogMetrics.recordStatusTransition({
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
         processingType
-      )
+      })
       await auditSummaryLogSubmit(request, {
         summaryLogId,
         organisationId,

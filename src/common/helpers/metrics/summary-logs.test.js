@@ -53,10 +53,10 @@ describe('summaryLogMetrics', () => {
 
   describe('recordStatusTransition', () => {
     it('records metric with status and processingType dimensions', async () => {
-      await summaryLogMetrics.recordStatusTransition(
-        'preprocessing',
-        PROCESSING_TYPES.REPROCESSOR_INPUT
-      )
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'preprocessing',
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         status: 'preprocessing',
@@ -72,10 +72,10 @@ describe('summaryLogMetrics', () => {
     })
 
     it('lowercases processingType enum values', async () => {
-      await summaryLogMetrics.recordStatusTransition(
-        'validated',
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT
-      )
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'validated',
+        processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         status: 'validated',
@@ -84,10 +84,10 @@ describe('summaryLogMetrics', () => {
     })
 
     it('handles exporter processingType', async () => {
-      await summaryLogMetrics.recordStatusTransition(
-        'submitted',
-        PROCESSING_TYPES.EXPORTER
-      )
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'submitted',
+        processingType: PROCESSING_TYPES.EXPORTER
+      })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         status: 'submitted',
@@ -96,7 +96,7 @@ describe('summaryLogMetrics', () => {
     })
 
     it('omits processingType dimension for early lifecycle states', async () => {
-      await summaryLogMetrics.recordStatusTransition('validating')
+      await summaryLogMetrics.recordStatusTransition({ status: 'validating' })
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
         status: 'validating'
@@ -124,10 +124,10 @@ describe('summaryLogMetrics', () => {
 
       for (const status of statuses) {
         vi.clearAllMocks()
-        await summaryLogMetrics.recordStatusTransition(
+        await summaryLogMetrics.recordStatusTransition({
           status,
-          PROCESSING_TYPES.EXPORTER
-        )
+          processingType: PROCESSING_TYPES.EXPORTER
+        })
 
         expect(mockPutDimensions).toHaveBeenCalledWith({
           status,
@@ -145,10 +145,10 @@ describe('summaryLogMetrics', () => {
     it('does not record metric when metrics disabled', async () => {
       config.set('isMetricsEnabled', false)
 
-      await summaryLogMetrics.recordStatusTransition(
-        'validated',
-        PROCESSING_TYPES.REPROCESSOR_INPUT
-      )
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'validated',
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      })
 
       expect(mockPutMetric).not.toHaveBeenCalled()
       expect(mockPutDimensions).not.toHaveBeenCalled()
@@ -159,10 +159,10 @@ describe('summaryLogMetrics', () => {
       const mockError = new Error('flush failed')
       mockFlush.mockRejectedValue(mockError)
 
-      await summaryLogMetrics.recordStatusTransition(
-        'validated',
-        PROCESSING_TYPES.REPROCESSOR_INPUT
-      )
+      await summaryLogMetrics.recordStatusTransition({
+        status: 'validated',
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      })
 
       expect(mockLoggerError).toHaveBeenCalledWith(mockError, 'flush failed')
     })
@@ -171,7 +171,7 @@ describe('summaryLogMetrics', () => {
   describe('recordWasteRecordsCreated', () => {
     it('records metric with count, operation and processingType dimensions', async () => {
       await summaryLogMetrics.recordWasteRecordsCreated(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
         42
       )
 
@@ -190,7 +190,7 @@ describe('summaryLogMetrics', () => {
 
     it('records zero when no records created', async () => {
       await summaryLogMetrics.recordWasteRecordsCreated(
-        PROCESSING_TYPES.EXPORTER,
+        { processingType: PROCESSING_TYPES.EXPORTER },
         0
       )
 
@@ -210,7 +210,7 @@ describe('summaryLogMetrics', () => {
       config.set('isMetricsEnabled', false)
 
       await summaryLogMetrics.recordWasteRecordsCreated(
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT },
         10
       )
 
@@ -222,7 +222,7 @@ describe('summaryLogMetrics', () => {
   describe('recordWasteRecordsUpdated', () => {
     it('records metric with count, operation and processingType dimensions', async () => {
       await summaryLogMetrics.recordWasteRecordsUpdated(
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT },
         15
       )
 
@@ -241,7 +241,7 @@ describe('summaryLogMetrics', () => {
 
     it('records zero when no records updated', async () => {
       await summaryLogMetrics.recordWasteRecordsUpdated(
-        PROCESSING_TYPES.EXPORTER,
+        { processingType: PROCESSING_TYPES.EXPORTER },
         0
       )
 
@@ -261,7 +261,7 @@ describe('summaryLogMetrics', () => {
       config.set('isMetricsEnabled', false)
 
       await summaryLogMetrics.recordWasteRecordsUpdated(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
         5
       )
 
@@ -273,7 +273,7 @@ describe('summaryLogMetrics', () => {
   describe('recordValidationDuration', () => {
     it('records duration with processingType dimension', async () => {
       await summaryLogMetrics.recordValidationDuration(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
         1500
       )
 
@@ -291,7 +291,7 @@ describe('summaryLogMetrics', () => {
 
     it('lowercases processingType for all values', async () => {
       await summaryLogMetrics.recordValidationDuration(
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT },
         2000
       )
 
@@ -304,7 +304,7 @@ describe('summaryLogMetrics', () => {
       config.set('isMetricsEnabled', false)
 
       await summaryLogMetrics.recordValidationDuration(
-        PROCESSING_TYPES.EXPORTER,
+        { processingType: PROCESSING_TYPES.EXPORTER },
         1000
       )
 
@@ -317,7 +317,10 @@ describe('summaryLogMetrics', () => {
     it('calls timed with metric name and processingType dimension', async () => {
       const fn = vi.fn().mockResolvedValue('result')
 
-      await summaryLogMetrics.timedSubmission(PROCESSING_TYPES.EXPORTER, fn)
+      await summaryLogMetrics.timedSubmission(
+        { processingType: PROCESSING_TYPES.EXPORTER },
+        fn
+      )
 
       expect(mockTimed).toHaveBeenCalledWith(
         'summaryLog.submission.duration',
@@ -330,7 +333,7 @@ describe('summaryLogMetrics', () => {
       const fn = vi.fn().mockResolvedValue('result')
 
       await summaryLogMetrics.timedSubmission(
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
         fn
       )
 
@@ -346,7 +349,7 @@ describe('summaryLogMetrics', () => {
       const fn = vi.fn().mockResolvedValue(expectedResult)
 
       const result = await summaryLogMetrics.timedSubmission(
-        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        { processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT },
         fn
       )
 
@@ -357,9 +360,11 @@ describe('summaryLogMetrics', () => {
   describe('recordValidationIssues', () => {
     it('records metric with severity, category and processingType dimensions', async () => {
       await summaryLogMetrics.recordValidationIssues(
-        VALIDATION_SEVERITY.ERROR,
-        VALIDATION_CATEGORY.BUSINESS,
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        {
+          severity: VALIDATION_SEVERITY.ERROR,
+          category: VALIDATION_CATEGORY.BUSINESS,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        },
         3
       )
 
@@ -379,9 +384,11 @@ describe('summaryLogMetrics', () => {
 
     it('records metric with specified count', async () => {
       await summaryLogMetrics.recordValidationIssues(
-        VALIDATION_SEVERITY.FATAL,
-        VALIDATION_CATEGORY.TECHNICAL,
-        PROCESSING_TYPES.EXPORTER,
+        {
+          severity: VALIDATION_SEVERITY.FATAL,
+          category: VALIDATION_CATEGORY.TECHNICAL,
+          processingType: PROCESSING_TYPES.EXPORTER
+        },
         5
       )
 
@@ -408,9 +415,11 @@ describe('summaryLogMetrics', () => {
       for (const severity of severities) {
         vi.clearAllMocks()
         await summaryLogMetrics.recordValidationIssues(
-          severity,
-          VALIDATION_CATEGORY.TECHNICAL,
-          PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+          {
+            severity,
+            category: VALIDATION_CATEGORY.TECHNICAL,
+            processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+          },
           1
         )
 
@@ -431,9 +440,11 @@ describe('summaryLogMetrics', () => {
       for (const category of categories) {
         vi.clearAllMocks()
         await summaryLogMetrics.recordValidationIssues(
-          VALIDATION_SEVERITY.ERROR,
-          category,
-          PROCESSING_TYPES.EXPORTER,
+          {
+            severity: VALIDATION_SEVERITY.ERROR,
+            category,
+            processingType: PROCESSING_TYPES.EXPORTER
+          },
           1
         )
 
@@ -449,9 +460,11 @@ describe('summaryLogMetrics', () => {
       config.set('isMetricsEnabled', false)
 
       await summaryLogMetrics.recordValidationIssues(
-        VALIDATION_SEVERITY.ERROR,
-        VALIDATION_CATEGORY.BUSINESS,
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        {
+          severity: VALIDATION_SEVERITY.ERROR,
+          category: VALIDATION_CATEGORY.BUSINESS,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        },
         1
       )
 
@@ -464,8 +477,10 @@ describe('summaryLogMetrics', () => {
   describe('recordRowOutcome', () => {
     it('records metric with outcome and processingType dimensions', async () => {
       await summaryLogMetrics.recordRowOutcome(
-        ROW_OUTCOME.INCLUDED,
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        {
+          outcome: ROW_OUTCOME.INCLUDED,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        },
         10
       )
 
@@ -484,8 +499,10 @@ describe('summaryLogMetrics', () => {
 
     it('records metric with specified count', async () => {
       await summaryLogMetrics.recordRowOutcome(
-        ROW_OUTCOME.REJECTED,
-        PROCESSING_TYPES.EXPORTER,
+        {
+          outcome: ROW_OUTCOME.REJECTED,
+          processingType: PROCESSING_TYPES.EXPORTER
+        },
         25
       )
 
@@ -511,8 +528,10 @@ describe('summaryLogMetrics', () => {
       for (const { input, expected } of outcomes) {
         vi.clearAllMocks()
         await summaryLogMetrics.recordRowOutcome(
-          input,
-          PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+          {
+            outcome: input,
+            processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+          },
           1
         )
 
@@ -527,8 +546,10 @@ describe('summaryLogMetrics', () => {
       config.set('isMetricsEnabled', false)
 
       await summaryLogMetrics.recordRowOutcome(
-        ROW_OUTCOME.INCLUDED,
-        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        {
+          outcome: ROW_OUTCOME.INCLUDED,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        },
         1
       )
 

@@ -184,117 +184,122 @@ This is well within CloudWatch's acceptable range and keeps costs predictable.
 
 ## Implementation Notes
 
-### API Design: Accept Enums, Map Internally
+### API Design: Dimensions Object + Value Pattern
 
-The metrics helper functions should:
+The metrics helper functions use a consistent pattern:
 
-1. Accept domain enum types in their public API (type-safe, IDE-friendly)
-2. Map to lowercase dimension values internally (consistent CloudWatch queries)
+1. **Dimensions object first** - Contains all CloudWatch dimensions as named properties
+2. **Value second** - The metric value (count, duration, etc.)
 
-This keeps callers working with proper domain types while ensuring consistent metric dimensions.
+This approach provides:
+
+- **Self-documenting call sites** - Clear what each dimension is
+- **Consistent ordering** - Always `(dimensions, value)` regardless of function
+- **Extensible** - Add new dimensions without breaking existing callers
+- **Type-safe** - IDE-friendly with JSDoc typedefs
+
+All enum values are mapped to lowercase internally for consistent CloudWatch queries.
 
 ### Metric Helper Implementation
 
 ```javascript
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 import {
-  VALIDATION_SEVERITY,
-  VALIDATION_CATEGORY
-} from '#common/enums/validation.js'
-import { incrementCounter, timed } from '#common/helpers/metrics.js'
+  incrementCounter,
+  recordDuration,
+  timed
+} from '#common/helpers/metrics.js'
 
 /**
- * Maps enum values to lowercase dimension values
- * @param {string} value
- * @returns {string}
+ * @typedef {Object} StatusTransitionDimensions
+ * @property {string} status
+ * @property {string} [processingType]
  */
-const toDimension = (value) => value.toLowerCase()
 
 /**
- * @param {typeof SUMMARY_LOG_STATUS[keyof typeof SUMMARY_LOG_STATUS]} status
- * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
+ * @typedef {Object} ProcessingTypeDimensions
+ * @property {string} processingType
  */
-async function recordStatusTransition(status, processingType) {
-  await incrementCounter('summaryLog.statusTransition', {
-    status: toDimension(status),
-    processingType: toDimension(processingType)
-  })
+
+/**
+ * @typedef {Object} ValidationIssueDimensions
+ * @property {string} severity
+ * @property {string} category
+ * @property {string} processingType
+ */
+
+/**
+ * @typedef {Object} RowOutcomeDimensions
+ * @property {string} outcome
+ * @property {string} processingType
+ */
+
+const toDimension = (value) => value?.toLowerCase()
+
+const buildDimensions = (dimensions) => {
+  const result = {}
+  for (const [key, value] of Object.entries(dimensions)) {
+    const dimensionValue = toDimension(value)
+    if (dimensionValue) {
+      result[key] = dimensionValue
+    }
+  }
+  return result
 }
 
-/**
- * @template T
- * @param {() => Promise<T> | T} fn
- * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @returns {Promise<T>}
- */
-async function timedValidation(fn, processingType) {
-  return timed('summaryLog.validation.duration', fn, {
-    processingType: toDimension(processingType)
-  })
+async function recordStatusTransition({ status, processingType }) {
+  await incrementCounter(
+    'summaryLog.statusTransition',
+    buildDimensions({ status, processingType })
+  )
 }
 
-/**
- * @template T
- * @param {() => Promise<T> | T} fn
- * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @returns {Promise<T>}
- */
-async function timedSubmission(fn, processingType) {
-  return timed('summaryLog.submission.duration', fn, {
-    processingType: toDimension(processingType)
-  })
+async function recordValidationDuration({ processingType }, durationMs) {
+  await recordDuration(
+    'summaryLog.validation.duration',
+    buildDimensions({ processingType }),
+    durationMs
+  )
 }
 
-/**
- * @param {'created' | 'updated'} operation
- * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @param {number} count
- */
-async function recordWasteRecords(operation, processingType, count) {
+async function timedSubmission({ processingType }, fn) {
+  return timed(
+    'summaryLog.submission.duration',
+    buildDimensions({ processingType }),
+    fn
+  )
+}
+
+async function recordWasteRecordsCreated({ processingType }, count) {
   await incrementCounter(
     'summaryLog.wasteRecords',
-    { operation, processingType: toDimension(processingType) },
+    { operation: 'created', processingType: toDimension(processingType) },
     count
   )
 }
 
-/**
- * @param {typeof VALIDATION_SEVERITY[keyof typeof VALIDATION_SEVERITY]} severity
- * @param {typeof VALIDATION_CATEGORY[keyof typeof VALIDATION_CATEGORY]} category
- * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @param {number} count
- */
+async function recordWasteRecordsUpdated({ processingType }, count) {
+  await incrementCounter(
+    'summaryLog.wasteRecords',
+    { operation: 'updated', processingType: toDimension(processingType) },
+    count
+  )
+}
+
 async function recordValidationIssues(
-  severity,
-  category,
-  processingType,
+  { severity, category, processingType },
   count
 ) {
   await incrementCounter(
     'summaryLog.validation.issues',
-    {
-      severity: toDimension(severity),
-      category: toDimension(category),
-      processingType: toDimension(processingType)
-    },
+    buildDimensions({ severity, category, processingType }),
     count
   )
 }
 
-/**
- * @param {typeof ROW_OUTCOME[keyof typeof ROW_OUTCOME]} outcome
- * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @param {number} count
- */
-async function recordRowOutcome(outcome, processingType, count) {
+async function recordRowOutcome({ outcome, processingType }, count) {
   await incrementCounter(
     'summaryLog.rows.outcome',
-    {
-      outcome: toDimension(outcome),
-      processingType: toDimension(processingType)
-    },
+    buildDimensions({ outcome, processingType }),
     count
   )
 }
@@ -303,19 +308,27 @@ async function recordRowOutcome(outcome, processingType, count) {
 ### Usage Example
 
 ```javascript
-import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
-// Callers use proper enum types
-const processingType = parsedData.meta.PROCESSING_TYPE.value // 'REPROCESSOR_INPUT'
-
-await summaryLogMetrics.recordStatusTransition(
-  SUMMARY_LOG_STATUS.VALIDATED,
+// Status transition - dimensions object contains all context
+await summaryLogMetrics.recordStatusTransition({
+  status: SUMMARY_LOG_STATUS.VALIDATED,
   processingType
+})
+
+// Validation issues - dimensions object makes parameter order irrelevant
+await summaryLogMetrics.recordValidationIssues(
+  { severity, category, processingType },
+  count
 )
 
-// Internally mapped to: { status: 'validated', processingType: 'reprocessor_input' }
+// Timed operations - dimensions first, function second
+const result = await summaryLogMetrics.timedSubmission({ processingType }, () =>
+  sync(summaryLog)
+)
+
+// Internally mapped to lowercase: { status: 'validated', processingType: 'reprocessor_input' }
 ```
 
 ---

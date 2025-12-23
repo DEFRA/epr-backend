@@ -812,10 +812,10 @@ describe('SummaryLogsValidator', () => {
     it('should record VALIDATED status transition metric when validation succeeds', async () => {
       await validateSummaryLog(summaryLogId)
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.VALIDATED,
-        'REPROCESSOR_INPUT'
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        processingType: 'REPROCESSOR_INPUT'
+      })
     })
 
     it('should record INVALID status transition metric when validation fails', async () => {
@@ -827,17 +827,17 @@ describe('SummaryLogsValidator', () => {
 
       await validateSummaryLog(summaryLogId)
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.INVALID,
-        'REPROCESSOR_INPUT'
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        processingType: 'REPROCESSOR_INPUT'
+      })
     })
 
     it('should record validation duration metric', async () => {
       await validateSummaryLog(summaryLogId)
 
       expect(mockRecordValidationDuration).toHaveBeenCalledWith(
-        'REPROCESSOR_INPUT',
+        { processingType: 'REPROCESSOR_INPUT' },
         expect.any(Number)
       )
     })
