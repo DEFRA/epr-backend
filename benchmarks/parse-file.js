@@ -2,12 +2,13 @@
  * Diagnostic script to measure Excel parse time for a specific file.
  *
  * Usage:
- *   npm run benchmark:file <path-to-xlsx-file>
+ *   npm run benchmark:parse <path-to-xlsx-file>
  *
  * Example:
- *   npm run benchmark:file ./test-data/large-file.xlsx
+ *   npm run benchmark:parse ./test-data/large-file.xlsx
  *
  * Useful for debugging performance issues with user-submitted files.
+ * For parse + validation benchmarking, use benchmark:validate instead.
  */
 import { readFile, stat } from 'node:fs/promises'
 import {
@@ -18,7 +19,7 @@ import {
 const filePath = process.argv[2]
 
 if (!filePath) {
-  throw new Error('Usage: npm run benchmark:file <path-to-xlsx-file>')
+  throw new Error('Usage: npm run benchmark:parse <path-to-xlsx-file>')
 }
 
 const fileStats = await stat(filePath)
