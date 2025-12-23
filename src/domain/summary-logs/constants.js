@@ -3,7 +3,5 @@ export const COMMON_FIELD = Object.freeze({
   PRN_ISSUED: 'prnIssued',
   INTERIM_SITE: 'interimSite',
   INTERIM_TONNAGE: 'interimTonnage',
-  EXPORT_TONNAGE: 'exportTonnage',
-  RECEIVED_TONNAGE: 'receivedTonnage',
-  SENT_ON_TONNAGE: 'sentOnTonnage'
+  EXPORT_TONNAGE: 'exportTonnage'
 })

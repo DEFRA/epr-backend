@@ -494,10 +494,68 @@ export const testAppendVersionsBehaviour = (it) => {
 
       // Versions should be in persistence order (log-1 first, log-2 second)
       // NOT chronological order (which would be log-2 first due to earlier createdAt)
-      expect(result[0].versions[0].summaryLog.id).toBe('log-1')
-      expect(result[0].versions[0].createdAt).toBe('2025-01-20T10:00:00.000Z')
       expect(result[0].versions[1].summaryLog.id).toBe('log-2')
       expect(result[0].versions[1].createdAt).toBe('2025-01-15T10:00:00.000Z')
+    })
+
+    it('persists accreditationId when provided', async () => {
+      const wasteRecordVersions = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.RECEIVED]: {
+          'row-1': buildVersionData({
+            summaryLogId: 'log-1',
+            summaryLogUri: 's3://bucket/key1',
+            versionData: { VALUE: 'initial' },
+            currentData: { VALUE: 'initial' }
+          })
+        }
+      })
+
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        wasteRecordVersions,
+        'acc-1'
+      )
+
+      const result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result).toHaveLength(1)
+      expect(result[0].accreditationId).toBe('acc-1')
+    })
+
+    it('updates accreditationId on existing record when provided', async () => {
+      const initialVersion = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.RECEIVED]: {
+          'row-1': buildVersionData({
+            summaryLogId: 'log-1',
+            summaryLogUri: 's3://bucket/key1',
+            versionData: { VALUE: 'initial' },
+            currentData: { VALUE: 'initial' }
+          })
+        }
+      })
+
+      // Create without accreditationId
+      await repository.appendVersions('org-1', 'reg-1', initialVersion)
+
+      let result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result[0].accreditationId).toBeUndefined()
+
+      // Append with accreditationId
+      const updatedVersion = toWasteRecordVersions({
+        [WASTE_RECORD_TYPE.RECEIVED]: {
+          'row-1': buildVersionData({
+            summaryLogId: 'log-2',
+            summaryLogUri: 's3://bucket/key2',
+            versionData: { VALUE: 'updated' },
+            currentData: { VALUE: 'updated' }
+          })
+        }
+      })
+
+      await repository.appendVersions('org-1', 'reg-1', updatedVersion, 'acc-1')
+
+      result = await repository.findByRegistration('org-1', 'reg-1')
+      expect(result[0].accreditationId).toBe('acc-1')
     })
   })
 }

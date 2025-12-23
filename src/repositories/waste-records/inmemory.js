@@ -24,8 +24,9 @@ const findRecordIndex = (
  * @param {Array} storage - Storage array
  * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
  * @param {Object} versionData
+ * @param {string} [accreditationId]
  */
-const appendVersionToRecord = (storage, key, versionData) => {
+const appendVersionToRecord = (storage, key, versionData, accreditationId) => {
   const existingIndex = findRecordIndex(storage, key)
 
   if (existingIndex >= 0) {
@@ -40,15 +41,26 @@ const appendVersionToRecord = (storage, key, versionData) => {
       // Append new version and update data
       existing.versions.push(structuredClone(versionData.version))
       existing.data = structuredClone(versionData.data)
+
+      // Update accreditationId if provided
+      if (accreditationId) {
+        existing.accreditationId = accreditationId
+      }
     }
     // If version exists, preserve existing data (idempotent - no changes)
   } else {
     // Create new record with first version
-    storage.push({
+    const newRecord = {
       ...key,
       data: structuredClone(versionData.data),
       versions: [structuredClone(versionData.version)]
-    })
+    }
+
+    if (accreditationId) {
+      newRecord.accreditationId = accreditationId
+    }
+
+    storage.push(newRecord)
   }
 }
 
@@ -76,7 +88,12 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
       )
     },
 
-    async appendVersions(organisationId, registrationId, wasteRecordVersions) {
+    async appendVersions(
+      organisationId,
+      registrationId,
+      wasteRecordVersions,
+      accreditationId
+    ) {
       const validatedOrgId = validateOrganisationId(organisationId)
       const validatedRegId = validateRegistrationId(registrationId)
 
@@ -90,7 +107,8 @@ export const createInMemoryWasteRecordsRepository = (initialRecords = []) => {
               type,
               rowId
             },
-            versionData
+            versionData,
+            accreditationId
           )
         }
       }

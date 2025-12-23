@@ -199,7 +199,8 @@ export const syncFromSummaryLog = (dependencies) => {
     await wasteRecordRepository.appendVersions(
       summaryLog.organisationId,
       summaryLog.registrationId,
-      wasteRecordVersions
+      wasteRecordVersions,
+      accreditationId
     )
 
     // 8. Update waste balances if accreditation ID exists

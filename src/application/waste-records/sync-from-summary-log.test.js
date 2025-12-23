@@ -836,4 +836,125 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).not.toHaveBeenCalled()
   })
+
+  it('looks up accreditationId from organisationsRepository if missing from summaryLog', async () => {
+    const fileId = 'test-file-123'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+      // accreditationId is missing
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'REPROCESSOR_INPUT'
+        }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING'],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-123', TEST_DATE_2025_01_15]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    organisationsRepository.findRegistrationById = vi.fn().mockResolvedValue({
+      accreditationId: 'acc-123'
+    })
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository,
+      organisationsRepository
+    })
+
+    await sync(summaryLog)
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords[0].accreditationId).toBe('acc-123')
+    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
+      'org-1',
+      'reg-1'
+    )
+  })
+
+  it('updates accreditationId on existing record if provided', async () => {
+    const fileId = 'test-file-123'
+    const summaryLog = {
+      file: { id: fileId, uri: 's3://uri' },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      accreditationId: 'new-acc'
+    }
+
+    // Pre-seed with a record that has no accreditationId
+    await wasteRecordRepository.appendVersions(
+      'org-1',
+      'reg-1',
+      new Map([
+        [
+          WASTE_RECORD_TYPE.RECEIVED,
+          new Map([
+            [
+              'row-1',
+              {
+                version: {
+                  id: 'v1',
+                  createdAt: '2025-01-01T00:00:00Z',
+                  status: VERSION_STATUS.CREATED,
+                  summaryLog: { id: 'old-log', uri: 'old-uri' },
+                  data: { VALUE: 'old' }
+                },
+                data: { VALUE: 'old' }
+              }
+            ]
+          ])
+        ]
+      ])
+    )
+
+    const parsedData = {
+      meta: { PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'VALUE'],
+          rows: [
+            { rowNumber: 2, values: ['row-1', TEST_DATE_2025_01_15, 'new'] }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+    const sync = syncFromSummaryLog({ extractor, wasteRecordRepository })
+
+    await sync(summaryLog)
+
+    const savedRecords = await wasteRecordRepository.findByRegistration(
+      'org-1',
+      'reg-1'
+    )
+    expect(savedRecords[0].accreditationId).toBe('new-acc')
+  })
 })

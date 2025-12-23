@@ -38,6 +38,28 @@ const RECEIVED_LOADS_HEADERS = [
 ]
 
 describe('transformFromSummaryLog', () => {
+  it('throws error for unknown PROCESSING_TYPE', () => {
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: {
+          value: 'UNKNOWN_TYPE'
+        }
+      },
+      data: {}
+    }
+
+    const summaryLogContext = {
+      summaryLog: { id: '1', uri: 'uri' },
+      organisationId: 'org-1',
+      registrationId: 'reg-1',
+      timestamp: SUBMISSION_TIMESTAMP
+    }
+
+    expect(() =>
+      transformFromSummaryLog(parsedData, summaryLogContext, new Map())
+    ).toThrow('Unknown PROCESSING_TYPE: UNKNOWN_TYPE')
+  })
+
   it('transforms parsed RECEIVED_LOADS data into waste records', () => {
     const parsedData = {
       meta: {
