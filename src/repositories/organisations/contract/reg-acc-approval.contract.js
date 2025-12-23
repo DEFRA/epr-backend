@@ -8,8 +8,8 @@ import {
 } from './test-data.js'
 import {
   MATERIAL,
+  REG_ACC_STATUS,
   REPROCESSING_TYPE,
-  STATUS,
   TIME_SCALE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -34,7 +34,7 @@ export const testRegAccApprovalValidation = (it) => {
 
         const accreditationToUpdate = {
           ...inserted.accreditations[0],
-          status: STATUS.APPROVED,
+          status: REG_ACC_STATUS.APPROVED,
           accreditationNumber: 'ACC12345',
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31'),
@@ -61,7 +61,7 @@ export const testRegAccApprovalValidation = (it) => {
 
         const accreditationToUpdate = {
           ...inserted.accreditations[0],
-          status: STATUS.APPROVED,
+          status: REG_ACC_STATUS.APPROVED,
           accreditationNumber: 'ACC12345',
           validFrom: new Date('2025-01-01'),
           validTo: new Date('2025-12-31'),
@@ -70,7 +70,7 @@ export const testRegAccApprovalValidation = (it) => {
 
         const registrationToUpdate = {
           ...inserted.registrations[0],
-          status: STATUS.APPROVED,
+          status: REG_ACC_STATUS.APPROVED,
           validFrom: new Date('2025-01-01'),
           registrationNumber: 'REG12345',
           validTo: new Date('2025-12-31'),
@@ -91,7 +91,7 @@ export const testRegAccApprovalValidation = (it) => {
         const updatedAcc = updated.accreditations.find(
           (a) => a.id === accreditationToUpdate.id
         )
-        expect(updatedAcc.status).toBe(STATUS.APPROVED)
+        expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
         expect(updatedAcc.accreditationNumber).toBe('ACC12345')
       })
     })
@@ -169,7 +169,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             accreditations: inserted.accreditations.map((acc) => ({
               ...acc,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -177,7 +177,7 @@ export const testRegAccApprovalValidation = (it) => {
             })),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -194,7 +194,9 @@ export const testRegAccApprovalValidation = (it) => {
           const saved = await repository.findById(organisation.id, 2)
           expect(saved.accreditations).toHaveLength(2)
           expect(
-            saved.accreditations.every((a) => a.status === STATUS.APPROVED)
+            saved.accreditations.every(
+              (a) => a.status === REG_ACC_STATUS.APPROVED
+            )
           ).toBe(true)
         })
 
@@ -258,7 +260,7 @@ export const testRegAccApprovalValidation = (it) => {
             accreditations: inserted.accreditations.map((acc) => {
               return {
                 ...acc,
-                status: STATUS.APPROVED,
+                status: REG_ACC_STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: new Date('2025-01-01'),
                 validTo: new Date('2025-12-31')
@@ -266,7 +268,7 @@ export const testRegAccApprovalValidation = (it) => {
             }),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
@@ -320,7 +322,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             accreditations: inserted.accreditations.map((acc) => ({
               ...acc,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               accreditationNumber: `ACC-${acc.id}`,
               ...(acc.wasteProcessingType ===
                 WASTE_PROCESSING_TYPE.REPROCESSOR && {
@@ -331,7 +333,7 @@ export const testRegAccApprovalValidation = (it) => {
             })),
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               ...(reg.wasteProcessingType ===
                 WASTE_PROCESSING_TYPE.REPROCESSOR && {
@@ -402,7 +404,7 @@ export const testRegAccApprovalValidation = (it) => {
             accreditations: inserted.accreditations.map((acc) => {
               return {
                 ...acc,
-                status: STATUS.APPROVED,
+                status: REG_ACC_STATUS.APPROVED,
                 accreditationNumber: `ACC-${acc.id}`,
                 validFrom: new Date('2025-01-01'),
                 validTo: new Date('2025-12-31')
@@ -474,7 +476,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -541,7 +543,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -586,7 +588,7 @@ export const testRegAccApprovalValidation = (it) => {
           const validUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
@@ -632,7 +634,7 @@ export const testRegAccApprovalValidation = (it) => {
           const invalidUpdates = {
             registrations: inserted.registrations.map((reg) => ({
               ...reg,
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: `REG-${reg.id}`,
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31')
@@ -662,7 +664,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
@@ -688,7 +690,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC123',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
@@ -716,7 +718,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             registrationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
@@ -742,7 +744,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31'),
@@ -762,7 +764,7 @@ export const testRegAccApprovalValidation = (it) => {
             (r) => r.id === registrationToUpdate.id
           )
 
-          expect(updatedReg.status).toBe(STATUS.APPROVED)
+          expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedReg.registrationNumber).toBe('REG12345')
         })
 
@@ -773,7 +775,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.SUSPENDED,
+            status: REG_ACC_STATUS.SUSPENDED,
             registrationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
@@ -801,7 +803,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: null,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
@@ -827,7 +829,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31'),
@@ -842,7 +844,7 @@ export const testRegAccApprovalValidation = (it) => {
               registrations: [
                 {
                   ...inserted.registrations[0],
-                  status: STATUS.APPROVED,
+                  status: REG_ACC_STATUS.APPROVED,
                   validFrom: new Date('2025-01-01'),
                   registrationNumber: 'REG12345',
                   validTo: new Date('2025-12-31'),
@@ -858,7 +860,7 @@ export const testRegAccApprovalValidation = (it) => {
             (a) => a.id === accreditationToUpdate.id
           )
 
-          expect(updatedAcc.status).toBe(STATUS.APPROVED)
+          expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedAcc.accreditationNumber).toBe('ACC12345')
         })
 
@@ -869,8 +871,9 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.SUSPENDED,
+            status: REG_ACC_STATUS.SUSPENDED,
             accreditationNumber: null,
+            reprocessingType: REPROCESSING_TYPE.INPUT,
             validFrom: new Date('2025-01-01'),
             validTo: new Date('2025-12-31')
           }
@@ -886,37 +889,6 @@ export const testRegAccApprovalValidation = (it) => {
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.accreditationNumber: any.invalid'
           )
-        })
-
-        it('allows update when accreditation status changes to suspended with accreditationNumber', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const accreditationToUpdate = {
-            ...inserted.accreditations[0],
-            status: STATUS.SUSPENDED,
-            accreditationNumber: 'ACC12345',
-            validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31'),
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await repository.replace(
-            organisation.id,
-            1,
-            prepareOrgUpdate(inserted, {
-              accreditations: [accreditationToUpdate]
-            })
-          )
-
-          const result = await repository.findById(organisation.id, 2)
-          const updatedAcc = result.accreditations.find(
-            (a) => a.id === accreditationToUpdate.id
-          )
-
-          expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
-          expect(updatedAcc.accreditationNumber).toBe('ACC12345')
         })
 
         it('allows update when accreditation status is not approved or suspended without accreditationNumber', async () => {
@@ -957,7 +929,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: null,
             validTo: new Date('2025-12-31'),
@@ -984,7 +956,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
             reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -1014,7 +986,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
             validFrom,
             validTo,
@@ -1034,7 +1006,7 @@ export const testRegAccApprovalValidation = (it) => {
             (r) => r.id === registrationToUpdate.id
           )
 
-          expect(updatedReg.status).toBe(STATUS.APPROVED)
+          expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedReg.validFrom).toEqual(validFrom)
           expect(updatedReg.validTo).toEqual(validTo)
         })
@@ -1046,7 +1018,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.SUSPENDED,
+            status: REG_ACC_STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: null,
             validTo: new Date('2025-12-31'),
@@ -1073,7 +1045,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const registrationToUpdate = {
             ...inserted.registrations[0],
-            status: STATUS.SUSPENDED,
+            status: REG_ACC_STATUS.SUSPENDED,
             registrationNumber: 'REG12345',
             validFrom: new Date('2025-01-01'),
             validTo: null,
@@ -1091,41 +1063,6 @@ export const testRegAccApprovalValidation = (it) => {
           ).rejects.toThrow(
             'Invalid organisation data: registrations.0.validTo: any.invalid'
           )
-        })
-
-        it('allows update when registration status changes to suspended with validFrom and validTo', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const validFrom = new Date('2025-01-01')
-          const validTo = new Date('2025-12-31')
-
-          const registrationToUpdate = {
-            ...inserted.registrations[0],
-            status: STATUS.SUSPENDED,
-            registrationNumber: 'REG12345',
-            validFrom,
-            validTo,
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await repository.replace(
-            organisation.id,
-            1,
-            prepareOrgUpdate(inserted, {
-              registrations: [registrationToUpdate]
-            })
-          )
-
-          const result = await repository.findById(organisation.id, 2)
-          const updatedReg = result.registrations.find(
-            (r) => r.id === registrationToUpdate.id
-          )
-
-          expect(updatedReg.status).toBe(STATUS.SUSPENDED)
-          expect(updatedReg.validFrom).toEqual(validFrom)
-          expect(updatedReg.validTo).toEqual(validTo)
         })
 
         it('allows update when registration status is not approved or suspended without validFrom and validTo', async () => {
@@ -1168,7 +1105,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: null,
             validTo: new Date('2025-12-31')
@@ -1194,7 +1131,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
             validTo: null
@@ -1223,7 +1160,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.APPROVED,
+            status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
             validFrom,
             validTo,
@@ -1238,7 +1175,7 @@ export const testRegAccApprovalValidation = (it) => {
               registrations: [
                 {
                   ...inserted.registrations[0],
-                  status: STATUS.APPROVED,
+                  status: REG_ACC_STATUS.APPROVED,
                   validFrom: new Date('2025-01-01'),
                   registrationNumber: 'REG12345',
                   validTo: new Date('2025-12-31'),
@@ -1254,7 +1191,7 @@ export const testRegAccApprovalValidation = (it) => {
             (a) => a.id === accreditationToUpdate.id
           )
 
-          expect(updatedAcc.status).toBe(STATUS.APPROVED)
+          expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedAcc.validFrom).toEqual(validFrom)
           expect(updatedAcc.validTo).toEqual(validTo)
         })
@@ -1266,7 +1203,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.SUSPENDED,
+            status: REG_ACC_STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom: null,
             validTo: new Date('2025-12-31')
@@ -1292,7 +1229,7 @@ export const testRegAccApprovalValidation = (it) => {
 
           const accreditationToUpdate = {
             ...inserted.accreditations[0],
-            status: STATUS.SUSPENDED,
+            status: REG_ACC_STATUS.SUSPENDED,
             accreditationNumber: 'ACC12345',
             validFrom: new Date('2025-01-01'),
             validTo: null
@@ -1309,41 +1246,6 @@ export const testRegAccApprovalValidation = (it) => {
           ).rejects.toThrow(
             'Invalid organisation data: accreditations.0.validTo: any.invalid'
           )
-        })
-
-        it('allows update when accreditation status changes to suspended with validFrom and validTo', async () => {
-          const organisation = buildOrganisation()
-          await repository.insert(organisation)
-          const inserted = await repository.findById(organisation.id)
-
-          const validFrom = new Date('2025-01-01')
-          const validTo = new Date('2025-12-31')
-
-          const accreditationToUpdate = {
-            ...inserted.accreditations[0],
-            status: STATUS.SUSPENDED,
-            accreditationNumber: 'ACC12345',
-            validFrom,
-            validTo,
-            reprocessingType: REPROCESSING_TYPE.INPUT
-          }
-
-          await repository.replace(
-            organisation.id,
-            1,
-            prepareOrgUpdate(inserted, {
-              accreditations: [accreditationToUpdate]
-            })
-          )
-
-          const result = await repository.findById(organisation.id, 2)
-          const updatedAcc = result.accreditations.find(
-            (a) => a.id === accreditationToUpdate.id
-          )
-
-          expect(updatedAcc.status).toBe(STATUS.SUSPENDED)
-          expect(updatedAcc.validFrom).toEqual(validFrom)
-          expect(updatedAcc.validTo).toEqual(validTo)
         })
 
         it('allows update when accreditation status is not approved or suspended without validFrom and validTo', async () => {

@@ -1,8 +1,11 @@
-import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
+import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateStatusHistory } from './schema/index.js'
-import { assertOrgStatusTransition } from '#repositories/organisations/schema/status-transition.js'
+import {
+  assertAndHandleItemStateTransition,
+  assertOrgStatusTransition
+} from '#repositories/organisations/schema/status-transition.js'
 
-/** @import {CollatedUser, Organisation, Status, UserRoles} from '#domain/organisations/model.js' */
+/** @import {CollatedUser, Organisation, RegAccStatus, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Accreditation, Registration} from './port.js' */
 
 export const SCHEMA_VERSION = 1
@@ -48,6 +51,8 @@ export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
     const existingItem = existingItemsById.get(updatedItem.id)
     if (existingItem) {
       existingItemsById.delete(updatedItem.id)
+      // Validate status transition for registrations/accreditations
+      assertAndHandleItemStateTransition(existingItem, updatedItem)
       return {
         ...updatedItem,
         statusHistory: statusHistoryWithChanges(updatedItem, existingItem)
@@ -71,11 +76,11 @@ export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
 /**
  * get user roles for the provided status
  *
- * @param {Status} status
+ * @param {RegAccStatus} status
  * @returns {UserRoles[]}
  */
 const getUserRolesForStatus = (status) => {
-  if (status === STATUS.CREATED || status === STATUS.APPROVED) {
+  if (status === REG_ACC_STATUS.CREATED || status === REG_ACC_STATUS.APPROVED) {
     return [USER_ROLES.INITIAL, USER_ROLES.STANDARD]
   }
   return [USER_ROLES.STANDARD]
@@ -105,8 +110,8 @@ const collateItems = (
       : null
 
     if (
-      itemStatus === STATUS.APPROVED &&
-      existingItemStatus !== STATUS.APPROVED
+      itemStatus === REG_ACC_STATUS.APPROVED &&
+      existingItemStatus !== REG_ACC_STATUS.APPROVED
     ) {
       users.push(
         {

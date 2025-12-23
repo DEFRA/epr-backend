@@ -2,7 +2,7 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
-import { STATUS } from '#domain/organisations/model.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
 
 /**
@@ -53,7 +53,7 @@ export const organisationsLink = {
       ...organisation
     } = await organisationsRepository.findById(organisationId)
 
-    if (organisation?.status !== STATUS.APPROVED) {
+    if (organisation?.status !== ORGANISATION_STATUS.APPROVED) {
       throw Boom.conflict('Organisation is not in an approvable state')
     }
 
@@ -69,22 +69,8 @@ export const organisationsLink = {
 
     await organisationsRepository.replace(id, currentVersion, {
       ...organisation,
-      status: STATUS.ACTIVE,
-      linkedDefraOrganisation: linkedDefraOrg,
-      registrations: organisation.registrations.reduce(
-        (prev, registration) =>
-          registration.status === STATUS.APPROVED
-            ? [...prev, { ...registration, status: STATUS.ACTIVE }]
-            : prev,
-        []
-      ),
-      accreditations: organisation.accreditations.reduce(
-        (prev, accreditation) =>
-          accreditation.status === STATUS.APPROVED
-            ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
-            : prev,
-        []
-      )
+      status: ORGANISATION_STATUS.ACTIVE,
+      linkedDefraOrganisation: linkedDefraOrg
     })
 
     const updatedOrganisation = await organisationsRepository.findById(

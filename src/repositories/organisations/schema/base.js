@@ -1,8 +1,9 @@
 import {
+  ORGANISATION_STATUS,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
+  REG_ACC_STATUS,
   REPROCESSING_TYPE,
-  STATUS,
   USER_ROLES,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
@@ -67,12 +68,12 @@ export const linkedDefraOrganisationSchema = Joi.object({
 export const statusHistoryItemSchema = Joi.object({
   status: Joi.string()
     .valid(
-      STATUS.CREATED,
-      STATUS.APPROVED,
-      STATUS.ACTIVE,
-      STATUS.REJECTED,
-      STATUS.SUSPENDED,
-      STATUS.ARCHIVED
+      REG_ACC_STATUS.CREATED,
+      REG_ACC_STATUS.APPROVED,
+      ORGANISATION_STATUS.ACTIVE,
+      REG_ACC_STATUS.CANCELLED,
+      REG_ACC_STATUS.REJECTED,
+      REG_ACC_STATUS.SUSPENDED
     )
     .required(),
   updatedAt: Joi.date().iso().required(),

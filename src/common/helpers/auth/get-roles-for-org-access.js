@@ -1,5 +1,5 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import Boom from '@hapi/boom'
 import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.js'
 
@@ -31,7 +31,7 @@ export const getRolesForOrganisationAccess = async (
 
   const organisationById =
     await request.organisationsRepository.findById(organisationId)
-  const orgStatusIsAccessible = [STATUS.ACTIVE, STATUS.SUSPENDED].includes(
+  const orgStatusIsAccessible = [ORGANISATION_STATUS.ACTIVE].includes(
     organisationById.status
   )
 
