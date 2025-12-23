@@ -8,14 +8,6 @@ import { audit } from '@defra/cdp-auditing'
  * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
  * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
  */
-async function auditSummaryLogUpload(request, context) {
-  await auditSummaryLog(request, context, 'upload')
-}
-
-/**
- * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
- * @param {{summaryLogId: string, organisationId: string, registrationId: string}} context
- */
 async function auditSummaryLogSubmit(request, context) {
   await auditSummaryLog(request, context, 'submit')
 }
@@ -61,4 +53,4 @@ async function recordSystemLog(request, { user, ...restPayload }) {
   })
 }
 
-export { auditSummaryLogUpload, auditSummaryLogSubmit }
+export { auditSummaryLogSubmit }
