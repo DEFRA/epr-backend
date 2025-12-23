@@ -6,6 +6,7 @@ import { testDataIsolationBehaviour } from './contract/data-isolation.contract.j
 import { testFindRegistrationByIdBehaviour } from './contract/find-registration-by-id.contract.js'
 import { testFindAccreditationByIdBehaviour } from './contract/find-accreditation-by-id.contract.js'
 import { testRegAccApprovalValidation } from './contract/reg-acc-approval.contract.js'
+import { testOrgStatusTransitionBehaviour } from './contract/org-status.contract.js'
 
 export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testInsertBehaviour(repositoryFactory)
@@ -16,4 +17,5 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testFindAccreditationByIdBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)
   testRegAccApprovalValidation(repositoryFactory)
+  testOrgStatusTransitionBehaviour(repositoryFactory)
 }

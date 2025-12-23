@@ -1,5 +1,6 @@
 import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateStatusHistory } from './schema/index.js'
+import { assertOrgStatusTransition } from '#repositories/organisations/schema/status-transition.js'
 
 /** @import {CollatedUser, Organisation, Status, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Accreditation, Registration} from './port.js' */
@@ -220,4 +221,56 @@ export const collateUsers = (existing, updated) => {
   ]
 
   return deduplicateUsers(users)
+}
+
+export const mapDocumentWithCurrentStatuses = (org) => {
+  const { _id, ...rest } = org
+
+  rest.status = getCurrentStatus(rest)
+
+  for (const item of rest.registrations) {
+    item.status = getCurrentStatus(item)
+  }
+
+  for (const item of rest.accreditations) {
+    item.status = getCurrentStatus(item)
+  }
+
+  return { id: _id.toString(), ...rest }
+}
+
+export const prepareForReplace = (existing, updated) => {
+  const registrations = updateStatusHistoryForItems(
+    existing.registrations,
+    updated.registrations
+  )
+
+  const accreditations = updateStatusHistoryForItems(
+    existing.accreditations,
+    updated.accreditations
+  )
+
+  const updatedStatusHistory = statusHistoryWithChanges(updated, existing)
+
+  const users = collateUsers(existing, {
+    ...updated,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations
+  })
+
+  const { status: _, ...updatesWithoutStatus } = {
+    ...updated
+  }
+
+  assertOrgStatusTransition(existing, updated)
+
+  return {
+    ...updatesWithoutStatus,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations,
+    users,
+    version: existing.version + 1
+  }
 }

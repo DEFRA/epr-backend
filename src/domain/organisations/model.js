@@ -12,6 +12,13 @@ export const STATUS = Object.freeze({
   ARCHIVED: 'archived'
 })
 
+export const ORGANISATION_STATUS = Object.freeze({
+  CREATED: 'created',
+  APPROVED: 'approved',
+  ACTIVE: 'active',
+  REJECTED: 'rejected'
+})
+
 export const REGULATOR = Object.freeze({
   EA: 'ea',
   NRW: 'nrw',

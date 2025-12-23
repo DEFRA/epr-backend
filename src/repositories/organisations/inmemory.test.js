@@ -47,7 +47,7 @@ describe('In-memory organisations repository', () => {
 
       // Read directly from storage (bypassing repository enrichment)
       const storage = repository._getStorageForTesting()
-      const storedOrg = storage.find((o) => o.id === organisation.id)
+      const storedOrg = storage.find((o) => o._id === organisation.id)
 
       expect(storedOrg.status).toBeUndefined()
       expect(storedOrg.registrations[0].status).toBeUndefined()
