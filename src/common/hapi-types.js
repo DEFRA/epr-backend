@@ -7,12 +7,14 @@
  */
 
 /**
+ * @template [T=unknown]
  * @typedef {import('@hapi/hapi').Request & {
  *  auth: *
  *  db: Db,
  *  locker: LockManager,
  *  logger: TypedLogger,
  *  organisationsRepository: OrganisationsRepository
+ *  payload: T,
  *  server: HapiServer,
  * }} HapiRequest
  */

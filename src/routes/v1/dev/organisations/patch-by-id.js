@@ -12,6 +12,10 @@ import mergeWith from 'lodash.mergewith'
  * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationUpdateFragment
  */
 
+/**
+ * @typedef {{organisation: object}} PatchByIdPayload
+ */
+
 export const devOrganisationsPatchByIdPath = '/v1/dev/organisations/{id}'
 
 const params = Joi.object({
@@ -62,7 +66,7 @@ export const devOrganisationsPatchById = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<PatchByIdPayload> & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
