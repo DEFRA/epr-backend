@@ -38,6 +38,7 @@
     "lint:fix": "npm run lint -- --fix",
     "postversion": "git add package.json package-lock.json && git commit -m $npm_package_version",
     "benchmark:file": "node benchmarks/parse-file.js",
+    "benchmark:generate": "node benchmarks/generate-test-file.js",
     "test": "TZ=UTC vitest run --coverage",
     "test:watch": "TZ=UTC vitest --coverage",
     "server:watch": "nodemon --inspect=0.0.0.0 --ext js,json --legacy-watch ./src",

@@ -48,4 +48,10 @@ console.log(`  Parse time: ${(elapsed / 1000).toFixed(2)}s`)
 console.log(`  Metadata fields: ${metaCount}`)
 console.log(`  Data tables: ${dataTableCount}`)
 console.log(`  Total rows: ${totalRows}`)
+
+// Per-table breakdown
+for (const [tableName, table] of Object.entries(result.data)) {
+  console.log(`    ${tableName}: ${table.rows.length} rows`)
+}
+
 console.log('\n✅ Parse completed')
