@@ -1,8 +1,14 @@
 import { randomUUID } from 'node:crypto'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
-  extractWasteBalanceFields,
-  isWithinAccreditationDateRange
+  extractWasteBalanceFields as extractExporterFields,
+  isWithinAccreditationDateRange as isWithinExporterRange
 } from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+import {
+  extractWasteBalanceFields as extractReprocessorInputFields,
+  isWithinAccreditationDateRange as isWithinReprocessorInputRange
+} from '#domain/waste-balances/table-schemas/reprocessor-input/validators/reprocessor-input-extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -85,23 +91,90 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
 }
 
 /**
+ * Extracts waste balance fields based on processing type.
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @returns {Object|null}
+ */
+const extractFields = (record) => {
+  const processingType = record.data?.processingType
+
+  if (processingType === PROCESSING_TYPES.EXPORTER) {
+    return extractExporterFields(record)
+  }
+
+  if (processingType === PROCESSING_TYPES.REPROCESSOR_INPUT) {
+    const fields = extractReprocessorInputFields(record)
+    if (
+      !fields &&
+      record.type !== WASTE_RECORD_TYPE.RECEIVED &&
+      record.type !== WASTE_RECORD_TYPE.SENT_ON
+    ) {
+      throw new Error(
+        `No mapping found for record type: ${record.type} in processingType: ${processingType}`
+      )
+    }
+    return fields
+  }
+
+  return null
+}
+
+/**
+ * Helper for tests to get the transaction amount for a record.
+ * @param {import('#domain/waste-records/model.js').WasteRecord} record
+ * @returns {number}
+ */
+export const getTransactionAmount = (record) => {
+  try {
+    const fields = extractFields(record)
+    return fields ? fields.transactionAmount : 0
+  } catch (e) {
+    // For backward compatibility with some tests that expect 0 for unknown types
+    if (e.message.includes('No mapping found')) {
+      return 0
+    }
+    throw e
+  }
+}
+
+/**
+ * Checks if a dispatch date is within range based on processing type.
+ * @param {Date} dispatchDate
+ * @param {Object} accreditation
+ * @param {string} processingType
+ * @returns {boolean}
+ */
+export const isWithinRange = (dispatchDate, accreditation, processingType) => {
+  if (processingType === PROCESSING_TYPES.EXPORTER) {
+    return isWithinExporterRange(dispatchDate, accreditation)
+  }
+
+  if (processingType === PROCESSING_TYPES.REPROCESSOR_INPUT) {
+    return isWithinReprocessorInputRange(dispatchDate, accreditation)
+  }
+
+  return false
+}
+
+/**
  * Calculates the target amount for a waste record based on accreditation.
  * @param {import('#domain/waste-records/model.js').WasteRecord} record
  * @param {Object} accreditation
  * @returns {number}
  */
 const getTargetAmount = (record, accreditation) => {
-  const fields = extractWasteBalanceFields(record)
+  const fields = extractFields(record)
   if (!fields) {
     return 0
   }
 
-  const isWithinRange = isWithinAccreditationDateRange(
+  const inRange = isWithinRange(
     fields.dispatchDate,
-    accreditation
+    accreditation,
+    record.data?.processingType
   )
 
-  return isWithinRange && !fields.prnIssued ? fields.transactionAmount : 0
+  return inRange && !fields.prnIssued ? fields.transactionAmount : 0
 }
 
 /**

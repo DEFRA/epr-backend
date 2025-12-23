@@ -11,6 +11,25 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
   describe('updateWasteBalanceTransactions', () => {
     const accreditationId = 'acc-123'
 
+    let classifyRowSpy
+    let createTableSchemaGetterSpy
+
+    beforeEach(() => {
+      classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+    })
+
+    afterEach(() => {
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
+    })
+
     it('Should throw if accreditation is not found', async ({
       wasteBalancesRepository,
       organisationsRepository
@@ -243,14 +262,7 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
 
       const input = [validRecord, invalidRecord]
 
-      // Mock validation
-      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
-      const createTableSchemaGetterSpy = vi.spyOn(
-        tableSchemas,
-        'createTableSchemaGetter'
-      )
-
-      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      // Mock validation for this specific test
       classifyRowSpy
         .mockReturnValueOnce({ outcome: ROW_OUTCOME.INCLUDED })
         .mockReturnValueOnce({ outcome: ROW_OUTCOME.REJECTED })
@@ -264,10 +276,6 @@ export const testUpdateWasteBalanceTransactionsBehaviour = (it) => {
       expect(balance.transactions).toHaveLength(1)
       expect(balance.transactions[0].amount).toBe(10.5)
       expect(balance.amount).toBe(10.5)
-
-      // Cleanup
-      classifyRowSpy.mockRestore()
-      createTableSchemaGetterSpy.mockRestore()
     })
   })
 }

@@ -14,15 +14,25 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const getTableName = (recordType, processingType) => {
-  if (processingType !== PROCESSING_TYPES.EXPORTER) {
-    return null
-  }
-  if (recordType === WASTE_RECORD_TYPE.EXPORTED) {
-    return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
-  }
   if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
     return TABLE_NAMES.SENT_ON_LOADS
   }
+
+  if (
+    processingType === PROCESSING_TYPES.EXPORTER &&
+    recordType === WASTE_RECORD_TYPE.EXPORTED
+  ) {
+    return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
+  }
+
+  if (
+    (processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
+      processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT) &&
+    recordType === WASTE_RECORD_TYPE.RECEIVED
+  ) {
+    return TABLE_NAMES.RECEIVED_LOADS_FOR_REPROCESSING
+  }
+
   return null
 }
 
@@ -148,7 +158,8 @@ export const filterValidRecords = (wasteRecords) => {
   }
 
   // Get processingType from the first record - all records in a batch share the same type
-  const firstRecord = wasteRecords[0].record || wasteRecords[0]
+  const firstItem = wasteRecords[0]
+  const firstRecord = 'record' in firstItem ? firstItem.record : firstItem
   const processingType = firstRecord.data?.processingType
 
   const getTableSchema = processingType

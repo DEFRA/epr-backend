@@ -5,7 +5,7 @@ import {
 } from '#domain/summary-logs/table-schemas/index.js'
 
 /**
- * Transforms a row from RECEIVED_LOADS_FOR_REPROCESSING table into waste record metadata
+ * Transforms a row from SENT_ON_LOADS table into waste record metadata
  *
  * @param {Record<string, any>} rowData - Row data mapped from headers
  * @param {number} rowIndex - Row index for error messages
@@ -13,26 +13,20 @@ import {
  * @returns {{wasteRecordType: string, rowId: string, data: Record<string, any>}}
  * @throws {Error} If required fields are missing
  */
-export const transformReceivedLoadsRow = (
-  rowData,
-  rowIndex,
-  processingType
-) => {
+export const transformSentOnLoadsRow = (rowData, rowIndex, processingType) => {
   const { rowIdField } =
-    PROCESSING_TYPE_TABLES[processingType][
-      TABLE_NAMES.RECEIVED_LOADS_FOR_REPROCESSING
-    ]
+    PROCESSING_TYPE_TABLES[processingType][TABLE_NAMES.SENT_ON_LOADS]
 
   if (!rowData[rowIdField]) {
     throw new Error(`Missing ${rowIdField} at row ${rowIndex}`)
   }
 
-  if (!rowData.DATE_RECEIVED_FOR_REPROCESSING) {
-    throw new Error(`Missing DATE_RECEIVED_FOR_REPROCESSING at row ${rowIndex}`)
+  if (!rowData.DATE_LOAD_LEFT_SITE) {
+    throw new Error(`Missing DATE_LOAD_LEFT_SITE at row ${rowIndex}`)
   }
 
   return {
-    wasteRecordType: WASTE_RECORD_TYPE.RECEIVED,
+    wasteRecordType: WASTE_RECORD_TYPE.SENT_ON,
     rowId: rowData[rowIdField],
     data: {
       ...rowData,

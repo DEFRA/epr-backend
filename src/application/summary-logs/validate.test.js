@@ -104,25 +104,31 @@ const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
   data
 })
 
-const buildExistingWasteRecord = (rowData, overrides = {}) => ({
-  type: 'received',
-  rowId: String(rowData.ROW_ID),
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  data: rowData,
-  versions: [
-    {
-      createdAt: '2025-01-01T00:00:00.000Z',
-      status: 'created',
-      summaryLog: {
-        id: 'previous-summary-log',
-        uri: 's3://bucket/old-key'
-      },
-      data: rowData
-    }
-  ],
-  ...overrides
-})
+const buildExistingWasteRecord = (rowData, overrides = {}) => {
+  const data = {
+    ...rowData,
+    processingType: overrides.processingType || 'REPROCESSOR_INPUT'
+  }
+  return {
+    type: 'received',
+    rowId: String(rowData.ROW_ID),
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    data,
+    versions: [
+      {
+        createdAt: '2025-01-01T00:00:00.000Z',
+        status: 'created',
+        summaryLog: {
+          id: 'previous-summary-log',
+          uri: 's3://bucket/old-key'
+        },
+        data
+      }
+    ],
+    ...overrides
+  }
+}
 
 // ============================================================================
 
