@@ -27,7 +27,12 @@ export const testFindByRegistrationBehaviour = (createTest) => {
             'row-2': { version: version2, data: data2 }
           }
         })
-        await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+        await repository.appendVersions(
+          'org-1',
+          'reg-1',
+          undefined,
+          wasteRecordVersions
+        )
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
 
@@ -50,7 +55,12 @@ export const testFindByRegistrationBehaviour = (createTest) => {
             'row-1': { version: org1Version, data: org1Data }
           }
         })
-        await repository.appendVersions('org-1', 'reg-1', org1VersionsByType)
+        await repository.appendVersions(
+          'org-1',
+          'reg-1',
+          undefined,
+          org1VersionsByType
+        )
 
         // Insert org2 record
         const org2VersionsByType = toWasteRecordVersions({
@@ -58,7 +68,12 @@ export const testFindByRegistrationBehaviour = (createTest) => {
             'row-2': { version: org2Version, data: org2Data }
           }
         })
-        await repository.appendVersions('org-2', 'reg-1', org2VersionsByType)
+        await repository.appendVersions(
+          'org-2',
+          'reg-1',
+          undefined,
+          org2VersionsByType
+        )
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
 
@@ -80,7 +95,12 @@ export const testFindByRegistrationBehaviour = (createTest) => {
             'row-1': { version: reg1Version, data: reg1Data }
           }
         })
-        await repository.appendVersions('org-1', 'reg-1', reg1VersionsByType)
+        await repository.appendVersions(
+          'org-1',
+          'reg-1',
+          undefined,
+          reg1VersionsByType
+        )
 
         // Insert reg2 record
         const reg2VersionsByType = toWasteRecordVersions({
@@ -88,7 +108,12 @@ export const testFindByRegistrationBehaviour = (createTest) => {
             'row-2': { version: reg2Version, data: reg2Data }
           }
         })
-        await repository.appendVersions('org-1', 'reg-2', reg2VersionsByType)
+        await repository.appendVersions(
+          'org-1',
+          'reg-2',
+          undefined,
+          reg2VersionsByType
+        )
 
         const result = await repository.findByRegistration('org-1', 'reg-1')
 
