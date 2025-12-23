@@ -71,10 +71,20 @@ const validateElapsed = performance.now() - validateStart
 console.log(`  Validation time: ${(validateElapsed / 1000).toFixed(2)}s`)
 console.log('')
 
+// Issue summary first (affects interpretation of results)
+const counts = issues.getCounts()
+const hasFatalErrors = counts.fatal > 0
+
+if (hasFatalErrors) {
+  console.log('⚠️  FATAL VALIDATION ERRORS - table validation blocked')
+  console.log('')
+}
+
 // Per-table breakdown with outcomes
 console.log('Results by table:')
 for (const [tableName, table] of Object.entries(validatedData.data)) {
-  const rows = table.rows || []
+  const parsedRows = parsed.data[tableName]?.rows?.length || 0
+  const validatedRows = table.rows || []
 
   // Count outcomes
   const outcomes = {
@@ -83,7 +93,7 @@ for (const [tableName, table] of Object.entries(validatedData.data)) {
     [ROW_OUTCOME.REJECTED]: 0
   }
 
-  for (const row of rows) {
+  for (const row of validatedRows) {
     if (row.outcome) {
       outcomes[row.outcome] = (outcomes[row.outcome] || 0) + 1
     }
@@ -93,20 +103,42 @@ for (const [tableName, table] of Object.entries(validatedData.data)) {
   const excluded = outcomes[ROW_OUTCOME.EXCLUDED]
   const rejected = outcomes[ROW_OUTCOME.REJECTED]
 
-  console.log(`  ${tableName}: ${rows.length} rows`)
-  console.log(
-    `    ${included} INCLUDED, ${excluded} EXCLUDED, ${rejected} REJECTED`
-  )
-}
+  console.log(`  ${tableName}:`)
+  console.log(`    Parsed: ${parsedRows} rows`)
 
-// Issue summary
-const counts = issues.getCounts()
+  if (hasFatalErrors && validatedRows.length === 0 && parsedRows > 0) {
+    console.log(`    Validated: blocked by fatal errors`)
+  } else {
+    console.log(
+      `    Validated: ${included} INCLUDED, ${excluded} EXCLUDED, ${rejected} REJECTED`
+    )
+  }
+}
 
 console.log('')
 console.log('Validation issues:')
 console.log(
   `  ${counts.fatal} fatal, ${counts.error} errors, ${counts.warning} warnings`
 )
+
+// Show issue details if there are any
+if (counts.total > 0) {
+  const allIssues = issues.getAllIssues()
+  const maxToShow = 5
+  console.log('')
+  console.log(`Issue details (first ${Math.min(maxToShow, allIssues.length)}):`)
+  allIssues.slice(0, maxToShow).forEach((issue) => {
+    const location = issue.context?.location
+    const where = location?.column
+      ? `${location.table} row ${location.row} col ${location.column}`
+      : location?.table || 'unknown'
+    console.log(`  - [${issue.severity}] ${issue.code}: ${where}`)
+    console.log(`    ${issue.message}`)
+  })
+  if (allIssues.length > maxToShow) {
+    console.log(`  ... and ${allIssues.length - maxToShow} more`)
+  }
+}
 
 // Summary
 console.log('')
