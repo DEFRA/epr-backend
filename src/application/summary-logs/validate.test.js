@@ -140,11 +140,16 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 
 const mockRecordStatusTransition = vi.fn()
 const mockRecordValidationDuration = vi.fn()
+const mockRecordValidationIssues = vi.fn()
+const mockRecordRowOutcome = vi.fn()
 
 vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
-    recordValidationDuration: (...args) => mockRecordValidationDuration(...args)
+    recordValidationDuration: (...args) =>
+      mockRecordValidationDuration(...args),
+    recordValidationIssues: (...args) => mockRecordValidationIssues(...args),
+    recordRowOutcome: (...args) => mockRecordRowOutcome(...args)
   }
 }))
 
@@ -228,6 +233,8 @@ describe('SummaryLogsValidator', () => {
   afterEach(() => {
     mockRecordStatusTransition.mockClear()
     mockRecordValidationDuration.mockClear()
+    mockRecordValidationIssues.mockClear()
+    mockRecordRowOutcome.mockClear()
     vi.resetAllMocks()
   })
 
