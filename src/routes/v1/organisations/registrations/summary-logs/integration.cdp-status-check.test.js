@@ -3,8 +3,10 @@ import { ObjectId } from 'mongodb'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
+  UPLOAD_STATUS,
+  calculateExpiresAt
 } from '#domain/summary-logs/status.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
@@ -55,11 +57,10 @@ describe('CDP status check for stale preprocessing status', () => {
 
     beforeEach(async () => {
       // Create a summary log stuck in preprocessing (simulating missed callback)
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.PREPROCESSING,
-        organisationId,
-        registrationId
-      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.preprocessing({ organisationId, registrationId })
+      )
     })
 
     it('queries CDP status when uploadId is provided', async () => {
@@ -208,6 +209,7 @@ describe('CDP status check for stale preprocessing status', () => {
         const { version } = await summaryLogsRepository.findById(summaryLogId)
         await summaryLogsRepository.update(summaryLogId, version, {
           status: SUMMARY_LOG_STATUS.VALIDATING,
+          expiresAt: calculateExpiresAt(SUMMARY_LOG_STATUS.VALIDATING),
           file: {
             id: 'file-123',
             name: 'test.xlsx',
@@ -258,17 +260,14 @@ describe('CDP status check for stale preprocessing status', () => {
     const uploadId = 'cdp-upload-456'
 
     it('does not query CDP when status is validated', async () => {
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'file-123',
-          name: 'test.xlsx',
-          status: UPLOAD_STATUS.COMPLETE,
-          uri: 's3://test-bucket/test.xlsx'
-        }
-      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          file: { id: 'file-123' }
+        })
+      )
 
       await server.inject({
         method: 'GET',
@@ -281,17 +280,10 @@ describe('CDP status check for stale preprocessing status', () => {
 
     it('does not query CDP when status is validating', async () => {
       // validating means the callback was received, so no need to check CDP
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.VALIDATING,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'file-123',
-          name: 'test.xlsx',
-          status: UPLOAD_STATUS.COMPLETE,
-          uri: 's3://test-bucket/test.xlsx'
-        }
-      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validating({ organisationId, registrationId })
+      )
 
       await server.inject({
         method: 'GET',
@@ -303,16 +295,10 @@ describe('CDP status check for stale preprocessing status', () => {
     })
 
     it('does not query CDP when status is rejected', async () => {
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.REJECTED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'file-123',
-          name: 'test.xlsx',
-          status: UPLOAD_STATUS.REJECTED
-        }
-      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.rejected({ organisationId, registrationId })
+      )
 
       await server.inject({
         method: 'GET',
@@ -361,17 +347,10 @@ describe('retrieving summary log with validation_failed status', () => {
     summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
     // Create a summary log with validation_failed status (simulating worker crash/timeout)
-    await summaryLogsRepository.insert(summaryLogId, {
-      status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
-      organisationId,
-      registrationId,
-      file: {
-        id: 'file-validation-failed-123',
-        name: 'large-file.xlsx',
-        status: UPLOAD_STATUS.COMPLETE,
-        uri: 's3://test-bucket/large-file.xlsx'
-      }
-    })
+    await summaryLogsRepository.insert(
+      summaryLogId,
+      summaryLogFactory.validationFailed({ organisationId, registrationId })
+    )
 
     const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 

@@ -48,7 +48,6 @@ export const buildAccreditation = (overrides = {}) => {
   const accreditation = {
     ...baseAccreditation,
     id: new ObjectId().toString(),
-    accreditationNumber: '87654321',
     ...overrides
   }
 

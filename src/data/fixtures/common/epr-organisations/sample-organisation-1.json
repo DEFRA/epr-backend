@@ -28,7 +28,7 @@
   "submittedToRegulator": "ea",
   "formSubmissionTime": "2025-08-22T19:34:44.944Z",
   "submitterContactDetails": {
-    "fullName": "Luke Skywalker",
+    "fullName": "Anakin Skywalker",
     "email": "anakin.skywalker@starwars.com",
     "jobTitle": "Partner",
     "phone": "823456789"
@@ -159,7 +159,7 @@
       "cbduNumber": "CBDU123456",
       "approvedPersons": [
         {
-          "fullName": "Luke Skywalker",
+          "fullName": "Anakin Skywalker",
           "email": "anakin.skywalker@starwars.com",
           "jobTitle": "Partner",
           "phone": "823456789"
@@ -168,7 +168,7 @@
       "suppliers": "Plastic packaging suppliers",
       "exportPorts": ["Dover", "Southampton"],
       "submitterContactDetails": {
-        "fullName": "Luke Skywalker",
+        "fullName": "Anakin Skywalker",
         "email": "anakin.skywalker@starwars.com",
         "jobTitle": "Partner",
         "phone": "823456789"

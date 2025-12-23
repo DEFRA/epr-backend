@@ -1,11 +1,14 @@
 import {
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
+  REPROCESSING_TYPE,
   STATUS,
-  USER_ROLES
+  USER_ROLES,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
+import { requiredWhenApprovedOrSuspended } from '#repositories/organisations/schema/helpers.js'
 
 export const idSchema = Joi.string()
   .required()
@@ -44,6 +47,7 @@ export const userSchema = baseUserSchema.keys({
 })
 
 export const collatedUserSchema = baseUserSchema.keys({
+  contactId: Joi.string().trim().empty('').min(1).optional(),
   roles: Joi.array()
     .items(Joi.string().valid(USER_ROLES.INITIAL, USER_ROLES.STANDARD))
     .min(1)
@@ -107,4 +111,13 @@ export const formFileUploadSchema = Joi.object({
   defraFormUploadedFileId: Joi.string().required(),
   defraFormUserDownloadLink: Joi.string().uri().required(),
   s3Uri: Joi.string().optional()
+})
+
+export const reprocessingTypeSchema = Joi.when('wasteProcessingType', {
+  is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  then: Joi.string()
+    .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null),
+  otherwise: Joi.forbidden()
 })

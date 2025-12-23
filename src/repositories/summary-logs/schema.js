@@ -52,7 +52,18 @@ export const summaryLogInsertSchema = Joi.object({
   }),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
-  meta: metaSchema.optional()
+  meta: metaSchema.optional(),
+  expiresAt: Joi.date().allow(null).required(),
+  submittedAt: Joi.when('status', {
+    is: Joi.valid(SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED),
+    then: Joi.string().isoDate().required(),
+    otherwise: Joi.forbidden()
+  }),
+  validatedAgainstSummaryLogId: Joi.when('status', {
+    is: SUMMARY_LOG_STATUS.VALIDATING,
+    then: Joi.string().required(),
+    otherwise: Joi.forbidden()
+  })
 }).messages(commonMessages)
 
 export const summaryLogUpdateSchema = Joi.object({
@@ -65,10 +76,18 @@ export const summaryLogUpdateSchema = Joi.object({
   file: fileSchema.optional(),
   organisationId: Joi.string().optional(),
   registrationId: Joi.string().optional(),
-  meta: metaSchema.optional()
+  meta: metaSchema.optional(),
+  expiresAt: Joi.date().allow(null).optional(),
+  submittedAt: Joi.string().isoDate().optional(),
+  // Set once at insert time - must not be included in updates
+  validatedAgainstSummaryLogId: Joi.forbidden()
 })
+  .with('status', 'expiresAt')
+  .with('expiresAt', 'status')
   .min(1)
   .messages({
     ...commonMessages,
-    'object.min': 'updates must contain at least one field'
+    'object.min': 'updates must contain at least one field',
+    'object.with':
+      'status and expiresAt must be updated together (use transitionStatus)'
   })

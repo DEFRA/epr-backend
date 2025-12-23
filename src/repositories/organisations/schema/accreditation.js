@@ -7,7 +7,12 @@ import {
   TONNAGE_BAND,
   GLASS_RECYCLING_PROCESS
 } from '#domain/organisations/model.js'
-import { idSchema, userSchema, formFileUploadSchema } from './base.js'
+import {
+  idSchema,
+  userSchema,
+  formFileUploadSchema,
+  reprocessingTypeSchema
+} from './base.js'
 import {
   whenReprocessor,
   whenExporter,
@@ -48,10 +53,6 @@ const prnIssuanceSchema = Joi.object({
 
 export const accreditationSchema = Joi.object({
   id: idSchema,
-  accreditationNumber: Joi.string()
-    .allow(null)
-    .when('status', requiredWhenApprovedOrSuspended)
-    .default(null),
   status: Joi.string()
     .valid(
       STATUS.CREATED,
@@ -64,6 +65,10 @@ export const accreditationSchema = Joi.object({
     .forbidden(),
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
+  accreditationNumber: Joi.string()
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null),
+  reprocessingType: reprocessingTypeSchema,
   formSubmissionTime: Joi.date().iso().required(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)

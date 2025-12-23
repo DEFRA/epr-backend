@@ -5,7 +5,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_STATUS,
+  NO_PRIOR_SUBMISSION,
+  transitionStatus
+} from '#domain/summary-logs/status.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -36,26 +40,41 @@ export const summaryLogsSubmit = {
     const { summaryLogId, organisationId, registrationId } = params
 
     try {
-      // Load the summary log
-      const existing = await summaryLogsRepository.findById(summaryLogId)
+      // Atomically transition to submitting - fails if another submission in progress
+      const result =
+        await summaryLogsRepository.transitionToSubmittingExclusive(
+          summaryLogId
+        )
 
-      if (!existing) {
-        throw Boom.notFound(`Summary log ${summaryLogId} not found`)
-      }
-
-      const { summaryLog, version } = existing
-
-      // Verify status is VALIDATED
-      if (summaryLog.status !== SUMMARY_LOG_STATUS.VALIDATED) {
+      if (!result.success) {
         throw Boom.conflict(
-          `Summary log must be validated before submission. Current status: ${summaryLog.status}`
+          'Another submission is in progress. Please try again.'
         )
       }
 
-      await summaryLogsRepository.update(summaryLogId, version, {
-        ...summaryLog,
-        status: SUMMARY_LOG_STATUS.SUBMITTING
-      })
+      const { summaryLog, version: newVersion } = result
+
+      // Check staleness - compare baseline to current latest submitted
+      const currentLatest =
+        await summaryLogsRepository.findLatestSubmittedForOrgReg(
+          organisationId,
+          registrationId
+        )
+
+      const baseline = summaryLog.validatedAgainstSummaryLogId
+      const current = currentLatest?.id ?? NO_PRIOR_SUBMISSION
+
+      if (baseline !== current) {
+        // Mark as superseded - stale preview cannot be resubmitted
+        await summaryLogsRepository.update(
+          summaryLogId,
+          newVersion,
+          transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+        )
+        throw Boom.conflict(
+          'Waste records have changed since preview was generated. Please re-upload.'
+        )
+      }
 
       // Trigger async submission worker (fire-and-forget)
       await summaryLogsWorker.submit(summaryLogId)

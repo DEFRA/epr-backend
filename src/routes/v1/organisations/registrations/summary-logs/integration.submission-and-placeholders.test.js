@@ -9,7 +9,8 @@ import { createSummaryLogsValidator } from '#application/summary-logs/validate.j
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import {
   SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
+  UPLOAD_STATUS,
+  transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
@@ -78,6 +79,7 @@ describe('Submission and placeholder tests', () => {
             status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
             validFrom: new Date('2025-01-01'),
@@ -356,9 +358,11 @@ describe('Submission and placeholder tests', () => {
 
           await syncWasteRecords(summaryLog)
 
-          await summaryLogsRepository.update(summaryLogId, version, {
-            status: SUMMARY_LOG_STATUS.SUBMITTED
-          })
+          await summaryLogsRepository.update(
+            summaryLogId,
+            version,
+            transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+          )
         }
       }
 
@@ -691,6 +695,7 @@ describe('Submission and placeholder tests', () => {
             registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea'
           }

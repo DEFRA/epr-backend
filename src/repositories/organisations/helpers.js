@@ -1,5 +1,6 @@
 import { STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateStatusHistory } from './schema/index.js'
+import { assertOrgStatusTransition } from '#repositories/organisations/schema/status-transition.js'
 
 /** @import {CollatedUser, Organisation, Status, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Accreditation, Registration} from './port.js' */
@@ -158,25 +159,39 @@ const collateAccreditationUsers = (existing, updated) =>
   )
 
 /**
- * Deduplicates users by email address (case-insensitive)
+ * Deduplicates users by contact-id / email address
  *
- * @param {SlimUser[]} users
+ * @param {CollatedUser[]} users
  * @returns {CollatedUser[]}
  */
 const deduplicateUsers = (users) => {
-  const userMap = new Map()
+  const seenEmails = new Set()
+  const seenContactIds = new Set()
+
+  const result = []
 
   for (const user of users) {
-    const key = user.email.toLowerCase()
+    const emailKey = user.email.toLowerCase()
+    const contactKey = user.contactId
 
-    if (!userMap.has(key)) {
-      userMap.set(key, {
-        ...user
-      })
+    const emailSeen = seenEmails.has(emailKey)
+    const contactSeen = contactKey && seenContactIds.has(contactKey)
+
+    // skip if either key was already seen
+    if (emailSeen || contactSeen) {
+      continue
+    }
+
+    // keep first occurrence
+    result.push(user)
+    seenEmails.add(emailKey)
+
+    if (contactKey !== undefined) {
+      seenContactIds.add(contactKey)
     }
   }
 
-  return Array.from(userMap.values())
+  return result
 }
 
 /**
@@ -198,11 +213,64 @@ export const collateUsers = (existing, updated) => {
   }
 
   const users = [
-    ...existing.users,
+    /* v8 ignore next */
+    ...(updated.users ?? []),
     ...root,
     ...collateRegistrationUsers(existing, updated),
     ...collateAccreditationUsers(existing, updated)
   ]
 
   return deduplicateUsers(users)
+}
+
+export const mapDocumentWithCurrentStatuses = (org) => {
+  const { _id, ...rest } = org
+
+  rest.status = getCurrentStatus(rest)
+
+  for (const item of rest.registrations) {
+    item.status = getCurrentStatus(item)
+  }
+
+  for (const item of rest.accreditations) {
+    item.status = getCurrentStatus(item)
+  }
+
+  return { id: _id.toString(), ...rest }
+}
+
+export const prepareForReplace = (existing, updated) => {
+  const registrations = updateStatusHistoryForItems(
+    existing.registrations,
+    updated.registrations
+  )
+
+  const accreditations = updateStatusHistoryForItems(
+    existing.accreditations,
+    updated.accreditations
+  )
+
+  const updatedStatusHistory = statusHistoryWithChanges(updated, existing)
+
+  const users = collateUsers(existing, {
+    ...updated,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations
+  })
+
+  const { status: _, ...updatesWithoutStatus } = {
+    ...updated
+  }
+
+  assertOrgStatusTransition(existing, updated)
+
+  return {
+    ...updatesWithoutStatus,
+    statusHistory: updatedStatusHistory,
+    registrations,
+    accreditations,
+    users,
+    version: existing.version + 1
+  }
 }

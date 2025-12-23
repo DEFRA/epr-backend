@@ -1,12 +1,10 @@
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 import {
-  collateUsers,
   createInitialStatusHistory,
-  getCurrentStatus,
-  updateStatusHistoryForItems,
-  SCHEMA_VERSION,
-  statusHistoryWithChanges
+  mapDocumentWithCurrentStatuses,
+  prepareForReplace,
+  SCHEMA_VERSION
 } from './helpers.js'
 import {
   validateId,
@@ -19,21 +17,6 @@ const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 // Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
 const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
 const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
-
-const mapDocumentWithCurrentStatuses = (org) => {
-  const { _id, ...rest } = org
-
-  rest.status = getCurrentStatus(rest)
-
-  for (const item of rest.registrations) {
-    item.status = getCurrentStatus(item)
-  }
-
-  for (const item of rest.accreditations) {
-    item.status = getCurrentStatus(item)
-  }
-  return { id: _id.toString(), ...rest }
-}
 
 const performInsert = (db) => async (organisation) => {
   const validated = validateOrganisationInsert(organisation)
@@ -82,46 +65,14 @@ const performReplace = (db) => async (id, version, updates) => {
 
   const validatedUpdates = validateOrganisationUpdate(updates)
 
-  const { status: _, ...validatedUpdatesWithoutStatus } = {
-    ...validatedUpdates
-  }
-
-  const registrations = updateStatusHistoryForItems(
-    existing.registrations,
-    validatedUpdates.registrations
-  )
-
-  const accreditations = updateStatusHistoryForItems(
-    existing.accreditations,
-    validatedUpdates.accreditations
-  )
-
-  const updatedStatusHistory = statusHistoryWithChanges(
-    validatedUpdates,
-    existing
-  )
-
-  const users = collateUsers(existing, {
-    ...validatedUpdatesWithoutStatus,
-    statusHistory: updatedStatusHistory,
-    registrations,
-    accreditations
-  })
-
-  const updatePayload = {
-    ...validatedUpdatesWithoutStatus,
-    statusHistory: updatedStatusHistory,
-    registrations,
-    accreditations,
-    users,
-    version: existing.version + 1
-  }
-
   const result = await db
     .collection(COLLECTION_NAME)
     .replaceOne(
       { _id: ObjectId.createFromHexString(validatedId), version },
-      updatePayload
+      prepareForReplace(
+        mapDocumentWithCurrentStatuses(existing),
+        validatedUpdates
+      )
     )
 
   if (result.matchedCount === 0) {

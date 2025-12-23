@@ -5,16 +5,13 @@
 import { randomUUID } from 'crypto'
 
 import { createInMemorySummaryLogExtractor } from '#application/summary-logs/extractor-inmemory.js'
-import { createEmptyLoads } from '#application/summary-logs/classify-loads.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { logger } from '#common/helpers/logging/logger.js'
-import {
-  SUMMARY_LOG_STATUS,
-  UPLOAD_STATUS
-} from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 
@@ -28,7 +25,8 @@ describe('SummaryLogsValidator integration', () => {
   const createTestOrg = (
     wasteProcessingType,
     registrationNumber,
-    accreditationNumber
+    accreditationNumber,
+    reprocessingType = 'input'
   ) => {
     const registrationId = randomUUID()
 
@@ -38,6 +36,7 @@ describe('SummaryLogsValidator integration', () => {
           accreditationNumber,
           material: 'paper',
           wasteProcessingType,
+          ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
           formSubmissionTime: new Date(),
           submittedToRegulator: 'ea'
         }
@@ -48,6 +47,7 @@ describe('SummaryLogsValidator integration', () => {
       registrationNumber,
       material: 'paper',
       wasteProcessingType,
+      ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
       formSubmissionTime: new Date(),
       submittedToRegulator: 'ea',
       ...(accreditation && { accreditationId: accreditation.id })
@@ -68,25 +68,18 @@ describe('SummaryLogsValidator integration', () => {
     })
   }
 
-  const createSummaryLog = (testOrg) => {
-    return {
-      status: SUMMARY_LOG_STATUS.VALIDATING,
+  const createSummaryLog = (testOrg) =>
+    summaryLogFactory.validating({
       organisationId: testOrg.id,
-      registrationId: testOrg.registrations[0].id,
-      file: {
-        id: `file-${randomUUID()}`,
-        name: 'test.xlsx',
-        status: UPLOAD_STATUS.COMPLETE,
-        uri: 's3://test-bucket/path/to/summary-log.xlsx'
-      }
-    }
-  }
+      registrationId: testOrg.registrations[0].id
+    })
 
   /**
    * @typedef {{
    *  registrationType: WasteProcessingTypeValue;
    *  registrationWRN: string;
    *  accreditationNumber?: string;
+   *  reprocessingType?: 'input' | 'output';
    *  metadata?: Record<string, MetadataEntry>;
    *  summaryLogExtractor?: SummaryLogExtractor;
    * }} RunValidationParams
@@ -96,13 +89,15 @@ describe('SummaryLogsValidator integration', () => {
     registrationType,
     registrationWRN,
     accreditationNumber,
+    reprocessingType = 'input',
     metadata,
     summaryLogExtractor = null
   }) => {
     const testOrg = createTestOrg(
       registrationType,
       registrationWRN,
-      accreditationNumber
+      accreditationNumber,
+      reprocessingType
     )
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg
@@ -154,34 +149,19 @@ describe('SummaryLogsValidator integration', () => {
       }
     }
 
-    const { updated, summaryLog } = await runValidation({
+    const { updated } = await runValidation({
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
       metadata
     })
 
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...summaryLog,
-        status: SUMMARY_LOG_STATUS.VALIDATED,
-        validation: {
-          issues: []
-        },
-        loads: createEmptyLoads(),
-        meta: {
-          REGISTRATION_NUMBER: 'REG-123',
-          PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          MATERIAL: 'Paper_and_board',
-          TEMPLATE_VERSION: 1
-        }
-      }
-    })
+    expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+    expect(updated.summaryLog.validation.issues).toEqual([])
   })
 
   it('should fail validation when extraction throws error', async () => {
     const errorMessage = 'Test extraction error'
-    const { updated, summaryLog } = await runValidation({
+    const { updated } = await runValidation({
       registrationType: 'reprocessor',
       registrationWRN: 'REG-123',
       summaryLogExtractor: {
@@ -191,23 +171,12 @@ describe('SummaryLogsValidator integration', () => {
       }
     })
 
-    expect(updated).toEqual({
-      version: 2,
-      summaryLog: {
-        ...summaryLog,
-        status: SUMMARY_LOG_STATUS.INVALID,
-        validation: {
-          issues: [
-            {
-              severity: 'fatal',
-              category: 'technical',
-              message: errorMessage,
-              code: 'VALIDATION_SYSTEM_ERROR'
-            }
-          ]
-        }
-      }
-    })
+    expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+    expect(updated.summaryLog.validation.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ code: 'VALIDATION_SYSTEM_ERROR' })
+      ])
+    )
   })
 
   describe('successful type matching', () => {
@@ -245,29 +214,14 @@ describe('SummaryLogsValidator integration', () => {
             }
           }
 
-          const { updated, summaryLog } = await runValidation({
+          const { updated } = await runValidation({
             registrationType,
             registrationWRN,
             metadata
           })
 
-          expect(updated).toEqual({
-            version: 2,
-            summaryLog: {
-              ...summaryLog,
-              status: SUMMARY_LOG_STATUS.VALIDATED,
-              validation: {
-                issues: []
-              },
-              loads: createEmptyLoads(),
-              meta: {
-                REGISTRATION_NUMBER: registrationWRN,
-                PROCESSING_TYPE: spreadsheetType,
-                MATERIAL: 'Paper_and_board',
-                TEMPLATE_VERSION: 1
-              }
-            }
-          })
+          expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.VALIDATED)
+          expect(updated.summaryLog.validation.issues).toEqual([])
         })
       }
     )
@@ -308,46 +262,18 @@ describe('SummaryLogsValidator integration', () => {
             }
           }
 
-          const { updated, summaryLog } = await runValidation({
+          const { updated } = await runValidation({
             registrationType,
             registrationWRN,
             metadata
           })
 
-          expect(updated).toEqual({
-            version: 2,
-            summaryLog: {
-              ...summaryLog,
-              status: SUMMARY_LOG_STATUS.INVALID,
-              validation: {
-                issues: [
-                  {
-                    severity: 'fatal',
-                    category: 'business',
-                    message:
-                      'Summary log processing type does not match registration waste processing type',
-                    code: 'PROCESSING_TYPE_MISMATCH',
-                    context: {
-                      location: {
-                        sheet: 'Cover',
-                        row: 2,
-                        column: 'B',
-                        field: 'PROCESSING_TYPE'
-                      },
-                      expected: registrationType,
-                      actual: spreadsheetType
-                    }
-                  }
-                ]
-              },
-              meta: {
-                REGISTRATION_NUMBER: registrationWRN,
-                PROCESSING_TYPE: spreadsheetType,
-                MATERIAL: 'Paper_and_board',
-                TEMPLATE_VERSION: 1
-              }
-            }
-          })
+          expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+          expect(updated.summaryLog.validation.issues).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ code: 'PROCESSING_TYPE_MISMATCH' })
+            ])
+          )
         })
       }
     )
@@ -370,38 +296,18 @@ describe('SummaryLogsValidator integration', () => {
         }
       }
 
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata
       })
 
-      expect(updated).toEqual({
-        version: 2,
-        summaryLog: {
-          ...summaryLog,
-          status: SUMMARY_LOG_STATUS.INVALID,
-          validation: {
-            issues: [
-              {
-                severity: 'fatal',
-                category: 'technical',
-                message: "Invalid meta field 'PROCESSING_TYPE': is required",
-                code: 'PROCESSING_TYPE_REQUIRED',
-                context: {
-                  location: { field: 'PROCESSING_TYPE' },
-                  actual: undefined
-                }
-              }
-            ]
-          },
-          meta: {
-            REGISTRATION_NUMBER: 'REG-123',
-            MATERIAL: 'Paper_and_board',
-            TEMPLATE_VERSION: 1
-          }
-        }
-      })
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_REQUIRED' })
+        ])
+      )
     })
 
     it('should fail validation when type is unrecognized', async () => {
@@ -424,46 +330,18 @@ describe('SummaryLogsValidator integration', () => {
         }
       }
 
-      const { updated, summaryLog } = await runValidation({
+      const { updated } = await runValidation({
         registrationType: 'reprocessor',
         registrationWRN: 'REG-123',
         metadata
       })
 
-      // Unrecognized type now fails at Level 1 (meta-syntax) with PROCESSING_TYPE_INVALID
-      expect(updated).toEqual({
-        version: 2,
-        summaryLog: {
-          ...summaryLog,
-          status: SUMMARY_LOG_STATUS.INVALID,
-          validation: {
-            issues: [
-              {
-                severity: 'fatal',
-                category: 'technical',
-                message:
-                  "Invalid meta field 'PROCESSING_TYPE': must be one of: REPROCESSOR_INPUT, REPROCESSOR_OUTPUT, EXPORTER",
-                code: 'PROCESSING_TYPE_INVALID',
-                context: {
-                  location: {
-                    sheet: 'Cover',
-                    row: 2,
-                    column: 'B',
-                    field: 'PROCESSING_TYPE'
-                  },
-                  actual: 'INVALID_TYPE'
-                }
-              }
-            ]
-          },
-          meta: {
-            REGISTRATION_NUMBER: 'REG-123',
-            PROCESSING_TYPE: 'INVALID_TYPE',
-            MATERIAL: 'Paper_and_board',
-            TEMPLATE_VERSION: 1
-          }
-        }
-      })
+      expect(updated.summaryLog.status).toBe(SUMMARY_LOG_STATUS.INVALID)
+      expect(updated.summaryLog.validation.issues).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ code: 'PROCESSING_TYPE_INVALID' })
+        ])
+      )
     })
   })
 

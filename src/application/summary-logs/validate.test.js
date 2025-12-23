@@ -179,6 +179,7 @@ describe('SummaryLogsValidator', () => {
         id: 'reg-123',
         registrationNumber: 'REG12345',
         wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
         material: 'aluminium'
       })
     }
@@ -302,6 +303,7 @@ describe('SummaryLogsValidator', () => {
       id: 'reg-123',
       registrationNumber: 'REG12345',
       wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
       material: 'aluminium',
       accreditation: {
         accreditationNumber: 'ACC12345'

@@ -1,8 +1,9 @@
+import { REPROCESSING_TYPE, STATUS } from '#domain/organisations/model.js'
 import {
   buildOrganisation,
   prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
 export async function buildApprovedOrg(organisationsRepository, overrides) {
   const org = buildOrganisation(overrides)
@@ -25,6 +26,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
       status: STATUS.APPROVED,
       accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
       validFrom: now,
+      reprocessingType: REPROCESSING_TYPE.INPUT,
       validTo: oneYearFromNow
     }
   ]
@@ -34,6 +36,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
       status: STATUS.APPROVED,
       cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
       registrationNumber: 'REG1',
+      reprocessingType: REPROCESSING_TYPE.INPUT,
       validFrom: now,
       validTo: oneYearFromNow
     })
@@ -48,11 +51,6 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
       registrations: approvedRegistrations
     })
   )
-  // TODO: For some reason, without this request tests fail
-  const updatedOrg = await organisationsRepository.findById(
-    org.id,
-    INITIAL_VERSION + 1
-  )
 
-  return updatedOrg
+  return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
 }

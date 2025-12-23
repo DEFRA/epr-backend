@@ -9,6 +9,7 @@ import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 
 describe('PATCH /v1/dev/organisations/{id}', () => {
   setupAuthContext()
@@ -364,7 +365,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -409,7 +411,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -448,7 +451,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ],
               accreditations: [
@@ -457,7 +461,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  accreditationNumber: 'ACC25TEST001'
+                  accreditationNumber: 'ACC25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -516,7 +521,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 },
                 {
                   id: org.registrations[1].id,
@@ -532,7 +538,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  accreditationNumber: 'ACC25TEST001'
+                  accreditationNumber: 'ACC25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -585,7 +592,8 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                   status: 'approved',
                   validFrom: '2025-01-01T00:00:00.000Z',
                   validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }

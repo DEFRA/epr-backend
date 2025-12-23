@@ -59,22 +59,35 @@ export const buildPostUrl = (organisationId, registrationId, summaryLogId) =>
 export const buildSubmitUrl = (organisationId, registrationId, summaryLogId) =>
   `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`
 
-const VALIDATION_TIMEOUT_IN_MS = 50
+const POLL_INTERVAL_MS = 50
+const DEFAULT_MAX_ATTEMPTS = 20
 
-export const pollForValidation = async (
+/**
+ * Poll until summary log status changes from the specified status.
+ * @param {object} server - Test server instance
+ * @param {string} organisationId - Organisation ID
+ * @param {string} registrationId - Registration ID
+ * @param {string} summaryLogId - Summary log ID
+ * @param {object} options - Polling options
+ * @param {string} options.waitWhile - Status to wait while (defaults to VALIDATING)
+ * @param {number} options.maxAttempts - Maximum poll attempts (defaults to 20)
+ * @returns {Promise<string>} Final status after polling
+ */
+export const pollWhileStatus = async (
   server,
   organisationId,
   registrationId,
-  summaryLogId
+  summaryLogId,
+  {
+    waitWhile = SUMMARY_LOG_STATUS.VALIDATING,
+    maxAttempts = DEFAULT_MAX_ATTEMPTS
+  } = {}
 ) => {
   let attempts = 0
-  const maxAttempts = 10
-  let status = SUMMARY_LOG_STATUS.VALIDATING
+  let status = waitWhile
 
-  while (status === SUMMARY_LOG_STATUS.VALIDATING && attempts < maxAttempts) {
-    await new Promise((resolve) =>
-      setTimeout(resolve, VALIDATION_TIMEOUT_IN_MS)
-    )
+  while (status === waitWhile && attempts < maxAttempts) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
 
     const checkResponse = await server.inject({
       method: 'GET',
@@ -85,7 +98,19 @@ export const pollForValidation = async (
     status = JSON.parse(checkResponse.payload).status
     attempts++
   }
+
+  return status
 }
+
+export const pollForValidation = (
+  server,
+  organisationId,
+  registrationId,
+  summaryLogId
+) =>
+  pollWhileStatus(server, organisationId, registrationId, summaryLogId, {
+    waitWhile: SUMMARY_LOG_STATUS.VALIDATING
+  })
 
 export const createStandardMeta = (processingType) => ({
   REGISTRATION_NUMBER: {
@@ -113,7 +138,8 @@ export const createStandardMeta = (processingType) => ({
 export const createTestInfrastructure = async (
   organisationId,
   registrationId,
-  extractorData
+  extractorData,
+  { reprocessingType = 'input' } = {}
 ) => {
   const mockLogger = {
     info: vi.fn(),
@@ -133,6 +159,7 @@ export const createTestInfrastructure = async (
         registrationNumber: 'REG-123',
         material: 'paper',
         wasteProcessingType: 'reprocessor',
+        reprocessingType,
         formSubmissionTime: new Date(),
         submittedToRegulator: 'ea',
         accreditation: {

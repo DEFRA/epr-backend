@@ -337,16 +337,16 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
     })
 
     describe('EXPORT_CONTROLS validation', () => {
-      it('accepts "Article 18 (green list)"', () => {
+      it('accepts "Article 18 (Green list)"', () => {
         const { error } = validationSchema.validate({
-          EXPORT_CONTROLS: 'Article 18 (green list)'
+          EXPORT_CONTROLS: 'Article 18 (Green list)'
         })
         expect(error).toBeUndefined()
       })
 
-      it('accepts "Prior Informed Consent (notification controls)"', () => {
+      it('accepts "Prior informed consent (notification controls)"', () => {
         const { error } = validationSchema.validate({
-          EXPORT_CONTROLS: 'Prior Informed Consent (notification controls)'
+          EXPORT_CONTROLS: 'Prior informed consent (notification controls)'
         })
         expect(error).toBeUndefined()
       })

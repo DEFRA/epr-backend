@@ -1,6 +1,7 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { STATUS, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { compareSite, siteInfoToLog } from './parsing-common/site.js'
+import { siteInfoToLog } from './parsing-common/site.js'
+import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 
 /**
  * @import {Organisation, OrganisationWithRegistrations} from './types.js'
@@ -134,26 +135,6 @@ export function linkItemsToOrganisations(
   logOrganisationsWithoutItems(organisations, propertyName)
 
   return organisations
-}
-
-/**
- * Check if an accreditation matches a registration based on type, material, and site
- * @param {Accreditation} accreditation - The accreditation to check
- * @param {Registration} registration - The registration to match against
- * @returns {boolean} True if the accreditation matches the registration
- */
-export function isAccreditationForRegistration(accreditation, registration) {
-  const typeAndMaterialMatch =
-    registration.wasteProcessingType === accreditation.wasteProcessingType &&
-    registration.material === accreditation.material
-
-  if (!typeAndMaterialMatch) {
-    return false
-  }
-
-  return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-    ? compareSite(registration.site, accreditation.site)
-    : true
 }
 
 /**

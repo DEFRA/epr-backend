@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   createRejectedValidation,
   determineStatusFromUpload,
@@ -8,6 +8,11 @@ import {
   transitionStatus,
   UPLOAD_STATUS
 } from './status.js'
+
+const FIXED_NOW = new Date('2024-12-19T12:00:00.000Z')
+const TWENTY_MINUTES_LATER = new Date('2024-12-19T12:20:00.000Z')
+const ONE_DAY_LATER = new Date('2024-12-20T12:00:00.000Z')
+const ONE_WEEK_LATER = new Date('2024-12-26T12:00:00.000Z')
 
 describe('status', () => {
   describe('determineStatusFromUpload', () => {
@@ -114,7 +119,16 @@ describe('status', () => {
   })
 
   describe('transitionStatus', () => {
-    it('returns updated summary log when fromStatus is null (initial insert)', () => {
+    beforeEach(() => {
+      vi.useFakeTimers()
+      vi.setSystemTime(FIXED_NOW)
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('returns status update when fromStatus is null (initial insert)', () => {
       const summaryLog = { id: 'log-123', file: { id: 'file-1' } }
       const result = transitionStatus(
         summaryLog,
@@ -122,13 +136,12 @@ describe('status', () => {
       )
 
       expect(result).toEqual({
-        id: 'log-123',
-        file: { id: 'file-1' },
-        status: SUMMARY_LOG_STATUS.PREPROCESSING
+        status: SUMMARY_LOG_STATUS.PREPROCESSING,
+        expiresAt: ONE_DAY_LATER
       })
     })
 
-    it('returns updated summary log when fromStatus is undefined (initial insert)', () => {
+    it('returns status update when fromStatus is undefined (initial insert)', () => {
       const summaryLog = { id: 'log-456', file: { id: 'file-2' } }
       const result = transitionStatus(
         summaryLog,
@@ -136,13 +149,12 @@ describe('status', () => {
       )
 
       expect(result).toEqual({
-        id: 'log-456',
-        file: { id: 'file-2' },
-        status: SUMMARY_LOG_STATUS.PREPROCESSING
+        status: SUMMARY_LOG_STATUS.PREPROCESSING,
+        expiresAt: ONE_DAY_LATER
       })
     })
 
-    it('returns updated summary log for preprocessing -> preprocessing transition', () => {
+    it('returns status update for preprocessing -> preprocessing transition', () => {
       const summaryLog = {
         id: 'log-789',
         status: SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -154,13 +166,12 @@ describe('status', () => {
       )
 
       expect(result).toEqual({
-        id: 'log-789',
         status: SUMMARY_LOG_STATUS.PREPROCESSING,
-        file: { id: 'file-3' }
+        expiresAt: ONE_DAY_LATER
       })
     })
 
-    it('returns updated summary log for preprocessing -> rejected transition', () => {
+    it('returns status update for preprocessing -> rejected transition', () => {
       const summaryLog = {
         id: 'log-101',
         status: SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -169,13 +180,12 @@ describe('status', () => {
       const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.REJECTED)
 
       expect(result).toEqual({
-        id: 'log-101',
         status: SUMMARY_LOG_STATUS.REJECTED,
-        file: { id: 'file-4' }
+        expiresAt: ONE_DAY_LATER
       })
     })
 
-    it('returns updated summary log for preprocessing -> validating transition', () => {
+    it('returns status update for preprocessing -> validating transition', () => {
       const summaryLog = {
         id: 'log-202',
         status: SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -184,9 +194,8 @@ describe('status', () => {
       const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATING)
 
       expect(result).toEqual({
-        id: 'log-202',
         status: SUMMARY_LOG_STATUS.VALIDATING,
-        file: { id: 'file-5' }
+        expiresAt: ONE_DAY_LATER
       })
     })
 
@@ -241,7 +250,7 @@ describe('status', () => {
       )
     })
 
-    it('returns updated summary log for validating -> validated transition', () => {
+    it('returns status update for validating -> validated transition', () => {
       const summaryLog = {
         id: 'log-303',
         status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -250,13 +259,12 @@ describe('status', () => {
       const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATED)
 
       expect(result).toEqual({
-        id: 'log-303',
         status: SUMMARY_LOG_STATUS.VALIDATED,
-        file: { id: 'file-6' }
+        expiresAt: ONE_WEEK_LATER
       })
     })
 
-    it('returns updated summary log for validating -> invalid transition', () => {
+    it('returns status update for validating -> invalid transition', () => {
       const summaryLog = {
         id: 'log-404',
         status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -265,9 +273,8 @@ describe('status', () => {
       const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.INVALID)
 
       expect(result).toEqual({
-        id: 'log-404',
         status: SUMMARY_LOG_STATUS.INVALID,
-        file: { id: 'file-7' }
+        expiresAt: ONE_WEEK_LATER
       })
     })
 
@@ -295,7 +302,7 @@ describe('status', () => {
       ).toThrow('Cannot transition summary log from invalid to submitted')
     })
 
-    it('returns updated summary log for validated -> submitting transition', () => {
+    it('returns status update for validated -> submitting transition', () => {
       const summaryLog = {
         id: 'log-606',
         status: SUMMARY_LOG_STATUS.VALIDATED,
@@ -304,13 +311,12 @@ describe('status', () => {
       const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTING)
 
       expect(result).toEqual({
-        id: 'log-606',
         status: SUMMARY_LOG_STATUS.SUBMITTING,
-        file: { id: 'file-9' }
+        expiresAt: TWENTY_MINUTES_LATER
       })
     })
 
-    it('returns updated summary log for submitting -> submitted transition', () => {
+    it('returns status update for submitting -> submitted transition', () => {
       const summaryLog = {
         id: 'log-707',
         status: SUMMARY_LOG_STATUS.SUBMITTING,
@@ -319,9 +325,22 @@ describe('status', () => {
       const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
 
       expect(result).toEqual({
-        id: 'log-707',
         status: SUMMARY_LOG_STATUS.SUBMITTED,
-        file: { id: 'file-10' }
+        expiresAt: null
+      })
+    })
+
+    it('returns status update for submitting -> superseded transition (stale preview)', () => {
+      const summaryLog = {
+        id: 'log-stale-preview',
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
+        file: { id: 'file-stale' }
+      }
+      const result = transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+
+      expect(result).toEqual({
+        status: SUMMARY_LOG_STATUS.SUPERSEDED,
+        expiresAt: ONE_DAY_LATER
       })
     })
 
@@ -345,26 +364,15 @@ describe('status', () => {
       SUMMARY_LOG_STATUS.PREPROCESSING,
       SUMMARY_LOG_STATUS.VALIDATING,
       SUMMARY_LOG_STATUS.VALIDATED
-    ])(
-      'returns updated summary log for %s -> superseded transition',
-      (fromStatus) => {
-        const summaryLog = {
-          id: 'log-supersede',
-          status: fromStatus,
-          file: { id: 'file-supersede' }
-        }
-        const result = transitionStatus(
-          summaryLog,
-          SUMMARY_LOG_STATUS.SUPERSEDED
-        )
+    ])('throws error for %s -> superseded transition', (fromStatus) => {
+      const summaryLog = { status: fromStatus }
 
-        expect(result).toEqual({
-          id: 'log-supersede',
-          status: SUMMARY_LOG_STATUS.SUPERSEDED,
-          file: { id: 'file-supersede' }
-        })
-      }
-    )
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+      ).toThrow(
+        `Cannot transition summary log from ${fromStatus} to superseded`
+      )
+    })
 
     it('throws error for superseded -> any transition (terminal state)', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.SUPERSEDED }
@@ -376,18 +384,13 @@ describe('status', () => {
       )
     })
 
-    it.each([SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED])(
-      'throws error for %s -> superseded transition',
-      (fromStatus) => {
-        const summaryLog = { status: fromStatus }
+    it('throws error for submitted -> superseded transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTED }
 
-        expect(() =>
-          transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
-        ).toThrow(
-          `Cannot transition summary log from ${fromStatus} to superseded`
-        )
-      }
-    )
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
+      ).toThrow('Cannot transition summary log from submitted to superseded')
+    })
 
     it('throws error for preprocessing -> submitting transition', () => {
       const summaryLog = { status: SUMMARY_LOG_STATUS.PREPROCESSING }
@@ -400,7 +403,7 @@ describe('status', () => {
     })
 
     // VALIDATION_FAILED status transitions
-    it('returns updated summary log for preprocessing -> validation_failed transition', () => {
+    it('returns status update for preprocessing -> validation_failed transition', () => {
       const summaryLog = {
         id: 'log-validation-failed-1',
         status: SUMMARY_LOG_STATUS.PREPROCESSING,
@@ -412,13 +415,12 @@ describe('status', () => {
       )
 
       expect(result).toEqual({
-        id: 'log-validation-failed-1',
         status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
-        file: { id: 'file-11' }
+        expiresAt: ONE_DAY_LATER
       })
     })
 
-    it('returns updated summary log for validating -> validation_failed transition', () => {
+    it('returns status update for validating -> validation_failed transition', () => {
       const summaryLog = {
         id: 'log-validation-failed-2',
         status: SUMMARY_LOG_STATUS.VALIDATING,
@@ -430,9 +432,8 @@ describe('status', () => {
       )
 
       expect(result).toEqual({
-        id: 'log-validation-failed-2',
         status: SUMMARY_LOG_STATUS.VALIDATION_FAILED,
-        file: { id: 'file-12' }
+        expiresAt: ONE_DAY_LATER
       })
     })
 

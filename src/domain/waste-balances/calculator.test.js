@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   calculateWasteBalanceUpdates,
-  getTransactionAmount
+  getTransactionAmount,
+  isWithinRange
 } from './calculator.js'
 import { EXPORTER_FIELD, REPROCESSOR_INPUT_FIELD } from './constants.js'
 import {
@@ -842,7 +843,7 @@ describe('Waste Balance Calculator', () => {
         }
       }
       expect(getTransactionAmount(receivedRecord)).toBe(0)
-      expect(getTransactionAmount(sentOnRecord)).toBe(-0)
+      expect(getTransactionAmount(sentOnRecord)).toBe(0)
     })
 
     it('should handle missing entities in existing transactions', () => {
@@ -876,6 +877,28 @@ describe('Waste Balance Calculator', () => {
       // So the delta for 'row-1' is 100 - 0 = 100
       expect(result.newTransactions).toHaveLength(1)
       expect(result.newTransactions[0].amount).toBe(100)
+    })
+  })
+
+  describe('Coverage Tests', () => {
+    it('getTransactionAmount should throw if extractFields throws a non-mapping error', () => {
+      // Passing null will cause record.data?.processingType to throw TypeError
+      expect(() => getTransactionAmount(null)).toThrow()
+    })
+
+    it('isWithinRange should return false for unknown processing type', () => {
+      const result = isWithinRange(new Date(), {}, 'UNKNOWN_TYPE')
+      expect(result).toBe(false)
+    })
+
+    it('getTransactionAmount should return amount for valid record', () => {
+      const record = buildWasteRecord({
+        data: {
+          [EXPORTER_FIELD.DATE_OF_EXPORT]: '2023-06-01',
+          [EXPORTER_FIELD.EXPORT_TONNAGE]: '10.5'
+        }
+      })
+      expect(getTransactionAmount(record)).toBe(10.5)
     })
   })
 })

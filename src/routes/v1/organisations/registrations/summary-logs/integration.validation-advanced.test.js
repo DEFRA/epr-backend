@@ -3,6 +3,7 @@ import {
   SUMMARY_LOG_STATUS,
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
@@ -82,7 +83,8 @@ describe('Advanced validation scenarios', () => {
                   }
                 }
               }
-            }
+            },
+            { reprocessingType: 'output' }
           )
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository
@@ -767,22 +769,14 @@ describe('Advanced validation scenarios', () => {
       }
       summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
 
-      await summaryLogsRepository.insert(summaryLogId, {
-        status: SUMMARY_LOG_STATUS.VALIDATED,
-        organisationId,
-        registrationId,
-        file: {
-          id: 'file-123',
-          name: 'test.xlsx',
-          status: UPLOAD_STATUS.COMPLETE,
-          uri: '/uploads/file-123',
-          s3: {
-            bucket: 'test-bucket',
-            key: 'test-key'
-          }
-        },
-        validation: {}
-      })
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validated({
+          organisationId,
+          registrationId,
+          validation: {}
+        })
+      )
 
       const featureFlags = createInMemoryFeatureFlags({ summaryLogs: true })
 

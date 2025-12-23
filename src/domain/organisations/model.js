@@ -12,6 +12,13 @@ export const STATUS = Object.freeze({
   ARCHIVED: 'archived'
 })
 
+export const ORGANISATION_STATUS = Object.freeze({
+  CREATED: 'created',
+  APPROVED: 'approved',
+  ACTIVE: 'active',
+  REJECTED: 'rejected'
+})
+
 export const REGULATOR = Object.freeze({
   EA: 'ea',
   NRW: 'nrw',
@@ -36,6 +43,15 @@ export const MATERIAL = Object.freeze({
 export const WASTE_PROCESSING_TYPE = Object.freeze({
   REPROCESSOR: 'reprocessor',
   EXPORTER: 'exporter'
+})
+
+/**
+ * @typedef {'input' | 'output'} ReprocessingType
+ */
+
+export const REPROCESSING_TYPE = Object.freeze({
+  INPUT: 'input',
+  OUTPUT: 'output'
 })
 
 export const NATION = Object.freeze({
@@ -134,6 +150,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
+ *   contactId?: string;
  *   fullName: string;
  *   email: string;
  *   roles: UserRoles[];
@@ -144,8 +161,11 @@ export const USER_ROLES = Object.freeze({
  * @typedef {{
  *   orgId: string;
  *   orgName: string;
- *   linkedBy: {email: string; id: string};
  *   linkedAt: Date;
+ *   linkedBy: {
+ *     email: string
+ *     id: string
+ *   }
  * }} LinkedDefraOrganisation
  */
 

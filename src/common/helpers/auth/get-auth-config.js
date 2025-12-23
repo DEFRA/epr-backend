@@ -1,5 +1,3 @@
-import { config } from '#root/config.js'
-
 /**
  * Returns auth configuration based on the defraIdAuth feature flag.
  * When the flag is enabled, returns scope-based auth config.
@@ -9,5 +7,5 @@ import { config } from '#root/config.js'
  * @returns {{ scope: string[] } | false}
  */
 export function getAuthConfig(scopes) {
-  return config.get('featureFlags.defraIdAuth') ? { scope: scopes } : false
+  return { scope: scopes }
 }

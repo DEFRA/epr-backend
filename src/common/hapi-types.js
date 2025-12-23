@@ -1,23 +1,21 @@
 /**
  * @typedef {import('./helpers/logging/logger.js').TypedLogger} TypedLogger
  * @typedef {import('./helpers/logging/logger.js').IndexedLogProperties} IndexedLogProperties
+ * @import {Db} from 'mongodb'
+ * @import {LockManager} from 'mongo-locks'
+ * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  */
 
 /**
- * @typedef {Object} HapiRequest
- * @property {TypedLogger} logger - CDP-compliant typed logger
- * @property {HapiServer} server - Reference to the server object
- * @property {*} [db] - MongoDB database (added by mongoDb plugin)
- * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
- * @property {*} [payload] - Request payload
- * @property {*} [params] - Route parameters
- * @property {*} [query] - Query string parameters
- * @property {*} [headers] - Request headers
- * @property {*} [auth] - Authentication credentials
- * @property {string} [path] - Request path
- * @property {string} [method] - HTTP method
+ * @typedef {import('@hapi/hapi').Request & {
+ *  auth: *
+ *  db: Db,
+ *  locker: LockManager,
+ *  logger: TypedLogger,
+ *  organisationsRepository: OrganisationsRepository
+ *  server: HapiServer,
+ * }} HapiRequest
  */
-
 /**
  * @typedef {{
  *   code: (statusCode: number) => HapiResponseObject,

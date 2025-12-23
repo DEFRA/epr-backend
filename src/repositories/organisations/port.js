@@ -135,6 +135,15 @@
  */
 
 /**
+ * @typedef {Object} Organisation
+ * @property {string} id
+ * @property {string} status
+ * @property {Registration[]} registrations
+ * @property {Accreditation[]} [accreditations]
+ * @property {Object} [linkedDefraOrganisation]
+ */
+
+/**
  * @typedef {Object} OrganisationIds
  * @property {Set<string>} organisations - Set of organisation IDs
  * @property {Set<string>} registrations - Set of registration IDs

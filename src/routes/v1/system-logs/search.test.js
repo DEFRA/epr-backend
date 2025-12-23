@@ -75,12 +75,12 @@ describe('GET /v1/system-logs', () => {
       const organisationId = randomUUID()
 
       await addSystemLog({
-        organisationId: organisationId,
+        organisationId,
         createdAt: new Date('2025-01-01'),
         id: 'id1'
       })
       await addSystemLog({
-        organisationId: organisationId,
+        organisationId,
         createdAt: new Date('2025-01-02'),
         id: 'id2'
       })
