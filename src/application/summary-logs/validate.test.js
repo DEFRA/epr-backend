@@ -139,12 +139,17 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 const mockRecordStatusTransition = vi.fn()
-const mockTimedValidation = vi.fn(async (fn) => fn())
+const mockRecordValidationDuration = vi.fn()
+const mockRecordValidationIssues = vi.fn()
+const mockRecordRowOutcome = vi.fn()
 
 vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
-    timedValidation: (fn) => mockTimedValidation(fn)
+    recordValidationDuration: (...args) =>
+      mockRecordValidationDuration(...args),
+    recordValidationIssues: (...args) => mockRecordValidationIssues(...args),
+    recordRowOutcome: (...args) => mockRecordRowOutcome(...args)
   }
 }))
 
@@ -227,6 +232,9 @@ describe('SummaryLogsValidator', () => {
 
   afterEach(() => {
     mockRecordStatusTransition.mockClear()
+    mockRecordValidationDuration.mockClear()
+    mockRecordValidationIssues.mockClear()
+    mockRecordRowOutcome.mockClear()
     vi.resetAllMocks()
   })
 
@@ -804,9 +812,10 @@ describe('SummaryLogsValidator', () => {
     it('should record VALIDATED status transition metric when validation succeeds', async () => {
       await validateSummaryLog(summaryLogId)
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.VALIDATED
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        processingType: 'REPROCESSOR_INPUT'
+      })
     })
 
     it('should record INVALID status transition metric when validation fails', async () => {
@@ -818,8 +827,18 @@ describe('SummaryLogsValidator', () => {
 
       await validateSummaryLog(summaryLogId)
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.INVALID
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        processingType: 'REPROCESSOR_INPUT'
+      })
+    })
+
+    it('should record validation duration metric', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordValidationDuration).toHaveBeenCalledWith(
+        { processingType: 'REPROCESSOR_INPUT' },
+        expect.any(Number)
       )
     })
   })

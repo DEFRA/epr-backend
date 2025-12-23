@@ -17,9 +17,11 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -270,6 +272,68 @@ const performValidationChecks = async ({
 }
 
 /**
+ * Records validation issue metrics grouped by severity × category
+ *
+ * @param {ReturnType<typeof createValidationIssues>} issues - Validation issues object
+ * @param {string} processingType - The processing type for the metric dimension
+ */
+const recordValidationIssueMetrics = async (issues, processingType) => {
+  const allIssues = issues.getAllIssues()
+  if (allIssues.length === 0) {
+    return
+  }
+
+  // Count issues by severity × category
+  const counts = new Map()
+  for (const issue of allIssues) {
+    const key = `${issue.severity}:${issue.category}`
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+
+  // Record metrics for each combination
+  for (const [key, count] of counts) {
+    const [severity, category] = key.split(':')
+    await summaryLogMetrics.recordValidationIssues(
+      { severity, category, processingType },
+      count
+    )
+  }
+}
+
+/**
+ * Records row outcome metrics grouped by outcome
+ *
+ * @param {ValidatedWasteRecord[]} wasteRecords - Waste records with outcomes
+ * @param {string} processingType - The processing type for the metric dimension
+ */
+const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
+  if (!wasteRecords || wasteRecords.length === 0) {
+    return
+  }
+
+  // Count by outcome
+  const counts = {
+    [ROW_OUTCOME.INCLUDED]: 0,
+    [ROW_OUTCOME.EXCLUDED]: 0,
+    [ROW_OUTCOME.REJECTED]: 0
+  }
+
+  for (const { outcome } of wasteRecords) {
+    counts[outcome]++
+  }
+
+  // Record metrics for each outcome with non-zero count
+  for (const [outcome, count] of Object.entries(counts)) {
+    if (count > 0) {
+      await summaryLogMetrics.recordRowOutcome(
+        { outcome, processingType },
+        count
+      )
+    }
+  }
+}
+
+/**
  * Creates a summary logs validator function
  *
  * @param {Object} params
@@ -309,24 +373,33 @@ export const createSummaryLogsValidator = ({
       }
     })
 
-    const { issues, wasteRecords, meta } =
-      await summaryLogMetrics.timedValidation(() =>
-        performValidationChecks({
-          summaryLogId,
-          summaryLog,
-          loggingContext,
-          summaryLogExtractor,
-          organisationsRepository,
-          wasteRecordsRepository,
-          validateDataSyntax
-        })
-      )
+    const validationStart = Date.now()
+    const { issues, wasteRecords, meta } = await performValidationChecks({
+      summaryLogId,
+      summaryLog,
+      loggingContext,
+      summaryLogExtractor,
+      organisationsRepository,
+      wasteRecordsRepository,
+      validateDataSyntax
+    })
+    const validationDurationMs = Date.now() - validationStart
+
+    const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+
+    await summaryLogMetrics.recordValidationDuration(
+      { processingType },
+      validationDurationMs
+    )
 
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    await summaryLogMetrics.recordStatusTransition(status)
+    await summaryLogMetrics.recordStatusTransition({ status, processingType })
+
+    // Record validation issue metrics (if any issues exist)
+    await recordValidationIssueMetrics(issues, processingType)
 
     // Classify loads only for validated summary logs
     // wasteRecords is guaranteed to be non-null when status is VALIDATED
@@ -338,6 +411,9 @@ export const createSummaryLogsValidator = ({
             summaryLogId
           })
         : null
+
+    // Record row outcome metrics (if we have waste records)
+    await recordRowOutcomeMetrics(wasteRecords, processingType)
 
     await summaryLogsRepository.update(summaryLogId, version, {
       ...transitionStatus(summaryLog, status),
