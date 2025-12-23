@@ -16,6 +16,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -373,7 +374,8 @@ describe('Submission and placeholder tests', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
           summaryLogsWorker: submitterWorker

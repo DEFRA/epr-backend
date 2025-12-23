@@ -5,6 +5,7 @@ import {
   VALIDATION_CODE
 } from '#common/enums/index.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
@@ -308,19 +309,24 @@ export const createSummaryLogsValidator = ({
       }
     })
 
-    const { issues, wasteRecords, meta } = await performValidationChecks({
-      summaryLogId,
-      summaryLog,
-      loggingContext,
-      summaryLogExtractor,
-      organisationsRepository,
-      wasteRecordsRepository,
-      validateDataSyntax
-    })
+    const { issues, wasteRecords, meta } =
+      await summaryLogMetrics.timedValidation(() =>
+        performValidationChecks({
+          summaryLogId,
+          summaryLog,
+          loggingContext,
+          summaryLogExtractor,
+          organisationsRepository,
+          wasteRecordsRepository,
+          validateDataSyntax
+        })
+      )
 
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
+
+    await summaryLogMetrics.recordStatusTransition(status)
 
     // Classify loads only for validated summary logs
     // wasteRecords is guaranteed to be non-null when status is VALIDATED

@@ -138,6 +138,16 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
+const mockRecordStatusTransition = vi.fn()
+const mockTimedValidation = vi.fn(async (fn) => fn())
+
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
+    timedValidation: (fn) => mockTimedValidation(fn)
+  }
+}))
+
 describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
@@ -216,6 +226,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   afterEach(() => {
+    mockRecordStatusTransition.mockClear()
     vi.resetAllMocks()
   })
 
@@ -786,6 +797,30 @@ describe('SummaryLogsValidator', () => {
 
       // Reset the mock for other tests
       wasteRecordsRepository.findByRegistration.mockResolvedValue([])
+    })
+  })
+
+  describe('metrics', () => {
+    it('should record VALIDATED status transition metric when validation succeeds', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+        SUMMARY_LOG_STATUS.VALIDATED
+      )
+    })
+
+    it('should record INVALID status transition metric when validation fails', async () => {
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal business error
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+        SUMMARY_LOG_STATUS.INVALID
+      )
     })
   })
 })
