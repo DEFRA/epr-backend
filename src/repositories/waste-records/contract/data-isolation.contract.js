@@ -27,7 +27,12 @@ export const testDataIsolationBehaviour = (createTest) => {
             }
           })
 
-          await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+          await repository.appendVersions(
+            'org-1',
+            'reg-1',
+            undefined,
+            wasteRecordVersions
+          )
 
           const firstRead = await repository.findByRegistration(
             'org-1',
@@ -61,7 +66,12 @@ export const testDataIsolationBehaviour = (createTest) => {
             }
           })
 
-          await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+          await repository.appendVersions(
+            'org-1',
+            'reg-1',
+            undefined,
+            wasteRecordVersions
+          )
 
           // mutate input after save
           data.GROSS_WEIGHT = 999.99
