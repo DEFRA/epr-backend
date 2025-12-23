@@ -37,10 +37,10 @@ const recordMetric = async (metricName, value, unit, dimensions) => {
 /**
  * Increments a counter metric
  * @param {string} metricName - The name of the metric
- * @param {number} [value=1] - The amount to increment by
  * @param {Dimensions} [dimensions] - Optional dimensions for the metric
+ * @param {number} [value=1] - The amount to increment by
  */
-const incrementCounter = async (metricName, value = 1, dimensions) => {
+const incrementCounter = async (metricName, dimensions, value = 1) => {
   await recordMetric(metricName, value, Unit.Count, dimensions)
 }
 

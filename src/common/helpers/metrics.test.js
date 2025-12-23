@@ -34,7 +34,7 @@ describe('#metrics', () => {
     describe('When metrics is not enabled', () => {
       beforeEach(async () => {
         config.set('isMetricsEnabled', false)
-        await incrementCounter(mockMetricsName, 5)
+        await incrementCounter(mockMetricsName)
       })
 
       test('Should not call metric', () => {
@@ -62,8 +62,9 @@ describe('#metrics', () => {
         )
       })
 
-      test('Should send metric with specified value', async () => {
-        await incrementCounter(mockMetricsName, 42)
+      test('Should send metric with specified value and dimensions', async () => {
+        const dimensions = { operation: 'test' }
+        await incrementCounter(mockMetricsName, dimensions, 42)
 
         expect(mockPutMetric).toHaveBeenCalledWith(
           mockMetricsName,
@@ -71,6 +72,7 @@ describe('#metrics', () => {
           Unit.Count,
           StorageResolution.Standard
         )
+        expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
       })
 
       test('Should call flush', async () => {
@@ -80,7 +82,7 @@ describe('#metrics', () => {
 
       test('Should set dimensions when provided', async () => {
         const dimensions = { status: 'validated' }
-        await incrementCounter(mockMetricsName, 1, dimensions)
+        await incrementCounter(mockMetricsName, dimensions)
 
         expect(mockPutDimensions).toHaveBeenCalledWith(dimensions)
       })
