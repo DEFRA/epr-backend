@@ -2,6 +2,11 @@ import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 import { config } from '#root/config.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
+import {
+  VALIDATION_SEVERITY,
+  VALIDATION_CATEGORY
+} from '#common/enums/validation.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 const mockPutMetric = vi.fn()
 const mockPutDimensions = vi.fn()
@@ -346,6 +351,190 @@ describe('summaryLogMetrics', () => {
       )
 
       expect(result).toEqual(expectedResult)
+    })
+  })
+
+  describe('recordValidationIssues', () => {
+    it('records metric with severity, category and processingType dimensions', async () => {
+      await summaryLogMetrics.recordValidationIssues(
+        VALIDATION_SEVERITY.ERROR,
+        VALIDATION_CATEGORY.BUSINESS,
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        3
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        severity: 'error',
+        category: 'business',
+        processingType: 'reprocessor_input'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.validation.issues',
+        3,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records metric with specified count', async () => {
+      await summaryLogMetrics.recordValidationIssues(
+        VALIDATION_SEVERITY.FATAL,
+        VALIDATION_CATEGORY.TECHNICAL,
+        PROCESSING_TYPES.EXPORTER,
+        5
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        severity: 'fatal',
+        category: 'technical',
+        processingType: 'exporter'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.validation.issues',
+        5,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+    })
+
+    it('handles all severity values', async () => {
+      const severities = [
+        VALIDATION_SEVERITY.FATAL,
+        VALIDATION_SEVERITY.ERROR,
+        VALIDATION_SEVERITY.WARNING
+      ]
+
+      for (const severity of severities) {
+        vi.clearAllMocks()
+        await summaryLogMetrics.recordValidationIssues(
+          severity,
+          VALIDATION_CATEGORY.TECHNICAL,
+          PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+          1
+        )
+
+        expect(mockPutDimensions).toHaveBeenCalledWith({
+          severity,
+          category: 'technical',
+          processingType: 'reprocessor_output'
+        })
+      }
+    })
+
+    it('handles all category values', async () => {
+      const categories = [
+        VALIDATION_CATEGORY.TECHNICAL,
+        VALIDATION_CATEGORY.BUSINESS
+      ]
+
+      for (const category of categories) {
+        vi.clearAllMocks()
+        await summaryLogMetrics.recordValidationIssues(
+          VALIDATION_SEVERITY.ERROR,
+          category,
+          PROCESSING_TYPES.EXPORTER,
+          1
+        )
+
+        expect(mockPutDimensions).toHaveBeenCalledWith({
+          severity: 'error',
+          category,
+          processingType: 'exporter'
+        })
+      }
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordValidationIssues(
+        VALIDATION_SEVERITY.ERROR,
+        VALIDATION_CATEGORY.BUSINESS,
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        1
+      )
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
+      expect(mockFlush).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('recordRowOutcome', () => {
+    it('records metric with outcome and processingType dimensions', async () => {
+      await summaryLogMetrics.recordRowOutcome(
+        ROW_OUTCOME.INCLUDED,
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        10
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        outcome: 'included',
+        processingType: 'reprocessor_input'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.rows.outcome',
+        10,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
+    })
+
+    it('records metric with specified count', async () => {
+      await summaryLogMetrics.recordRowOutcome(
+        ROW_OUTCOME.REJECTED,
+        PROCESSING_TYPES.EXPORTER,
+        25
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        outcome: 'rejected',
+        processingType: 'exporter'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.rows.outcome',
+        25,
+        Unit.Count,
+        StorageResolution.Standard
+      )
+    })
+
+    it('lowercases outcome enum values', async () => {
+      const outcomes = [
+        { input: ROW_OUTCOME.INCLUDED, expected: 'included' },
+        { input: ROW_OUTCOME.EXCLUDED, expected: 'excluded' },
+        { input: ROW_OUTCOME.REJECTED, expected: 'rejected' }
+      ]
+
+      for (const { input, expected } of outcomes) {
+        vi.clearAllMocks()
+        await summaryLogMetrics.recordRowOutcome(
+          input,
+          PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+          1
+        )
+
+        expect(mockPutDimensions).toHaveBeenCalledWith({
+          outcome: expected,
+          processingType: 'reprocessor_output'
+        })
+      }
+    })
+
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordRowOutcome(
+        ROW_OUTCOME.INCLUDED,
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        1
+      )
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
+      expect(mockFlush).not.toHaveBeenCalled()
     })
   })
 })

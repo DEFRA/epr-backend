@@ -264,13 +264,13 @@ async function recordWasteRecords(operation, processingType, count) {
  * @param {typeof VALIDATION_SEVERITY[keyof typeof VALIDATION_SEVERITY]} severity
  * @param {typeof VALIDATION_CATEGORY[keyof typeof VALIDATION_CATEGORY]} category
  * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @param {number} [count=1]
+ * @param {number} count
  */
 async function recordValidationIssues(
   severity,
   category,
   processingType,
-  count = 1
+  count
 ) {
   await incrementCounter(
     'summaryLog.validation.issues',
@@ -286,9 +286,9 @@ async function recordValidationIssues(
 /**
  * @param {typeof ROW_OUTCOME[keyof typeof ROW_OUTCOME]} outcome
  * @param {typeof PROCESSING_TYPES[keyof typeof PROCESSING_TYPES]} processingType
- * @param {number} [count=1]
+ * @param {number} count
  */
-async function recordRowOutcome(outcome, processingType, count = 1) {
+async function recordRowOutcome(outcome, processingType, count) {
   await incrementCounter(
     'summaryLog.rows.outcome',
     {

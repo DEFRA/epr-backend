@@ -7,6 +7,9 @@ import {
 /**
  * @typedef {'REPROCESSOR_INPUT'|'REPROCESSOR_OUTPUT'|'EXPORTER'} ProcessingType
  * @typedef {string} SummaryLogStatus
+ * @typedef {'fatal'|'error'|'warning'} ValidationSeverity
+ * @typedef {'technical'|'business'} ValidationCategory
+ * @typedef {'REJECTED'|'EXCLUDED'|'INCLUDED'} RowOutcome
  */
 
 /**
@@ -87,12 +90,55 @@ async function timedSubmission(processingType, fn) {
 }
 
 /**
+ * Records a validation issue metric
+ * @param {ValidationSeverity} severity - The severity of the issue
+ * @param {ValidationCategory} category - The category of the issue
+ * @param {ProcessingType} processingType - The processing type
+ * @param {number} count - The number of issues
+ */
+async function recordValidationIssues(
+  severity,
+  category,
+  processingType,
+  count
+) {
+  await incrementCounter(
+    'summaryLog.validation.issues',
+    {
+      severity: toDimension(severity),
+      category: toDimension(category),
+      processingType: toDimension(processingType)
+    },
+    count
+  )
+}
+
+/**
+ * Records a row outcome metric
+ * @param {RowOutcome} outcome - The row classification outcome
+ * @param {ProcessingType} processingType - The processing type
+ * @param {number} count - The number of rows
+ */
+async function recordRowOutcome(outcome, processingType, count) {
+  await incrementCounter(
+    'summaryLog.rows.outcome',
+    {
+      outcome: toDimension(outcome),
+      processingType: toDimension(processingType)
+    },
+    count
+  )
+}
+
+/**
  * @typedef {Object} SummaryLogMetrics
  * @property {(status: SummaryLogStatus, processingType?: ProcessingType) => Promise<void>} recordStatusTransition - Records a status transition metric
  * @property {(processingType: ProcessingType, count: number) => Promise<void>} recordWasteRecordsCreated - Records count of waste records created
  * @property {(processingType: ProcessingType, count: number) => Promise<void>} recordWasteRecordsUpdated - Records count of waste records updated
  * @property {(processingType: ProcessingType, durationMs: number) => Promise<void>} recordValidationDuration - Records validation duration metric
  * @property {<T>(processingType: ProcessingType, fn: () => Promise<T> | T) => Promise<T>} timedSubmission - Executes function and records submission duration
+ * @property {(severity: ValidationSeverity, category: ValidationCategory, processingType: ProcessingType, count: number) => Promise<void>} recordValidationIssues - Records validation issues metric
+ * @property {(outcome: RowOutcome, processingType: ProcessingType, count: number) => Promise<void>} recordRowOutcome - Records row outcome metric
  */
 
 /** @type {SummaryLogMetrics} */
@@ -101,5 +147,7 @@ export const summaryLogMetrics = {
   recordWasteRecordsCreated,
   recordWasteRecordsUpdated,
   recordValidationDuration,
-  timedSubmission
+  timedSubmission,
+  recordValidationIssues,
+  recordRowOutcome
 }
