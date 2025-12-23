@@ -139,12 +139,12 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 }))
 
 const mockRecordStatusTransition = vi.fn()
-const mockTimedValidation = vi.fn(async (fn) => fn())
+const mockRecordValidationDuration = vi.fn()
 
 vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
-    timedValidation: (fn) => mockTimedValidation(fn)
+    recordValidationDuration: (...args) => mockRecordValidationDuration(...args)
   }
 }))
 
@@ -227,6 +227,7 @@ describe('SummaryLogsValidator', () => {
 
   afterEach(() => {
     mockRecordStatusTransition.mockClear()
+    mockRecordValidationDuration.mockClear()
     vi.resetAllMocks()
   })
 
@@ -805,7 +806,8 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.VALIDATED
+        SUMMARY_LOG_STATUS.VALIDATED,
+        'REPROCESSOR_INPUT'
       )
     })
 
@@ -819,7 +821,17 @@ describe('SummaryLogsValidator', () => {
       await validateSummaryLog(summaryLogId)
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.INVALID
+        SUMMARY_LOG_STATUS.INVALID,
+        'REPROCESSOR_INPUT'
+      )
+    })
+
+    it('should record validation duration metric', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordValidationDuration).toHaveBeenCalledWith(
+        'REPROCESSOR_INPUT',
+        expect.any(Number)
       )
     })
   })

@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { StorageResolution, Unit } from 'aws-embedded-metrics'
 import { config } from '#root/config.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const mockPutMetric = vi.fn()
 const mockPutDimensions = vi.fn()
@@ -46,11 +47,15 @@ describe('summaryLogMetrics', () => {
   })
 
   describe('recordStatusTransition', () => {
-    it('records metric with status dimension for preprocessing', async () => {
-      await summaryLogMetrics.recordStatusTransition('preprocessing')
+    it('records metric with status and processingType dimensions', async () => {
+      await summaryLogMetrics.recordStatusTransition(
+        'preprocessing',
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+      )
 
       expect(mockPutDimensions).toHaveBeenCalledWith({
-        status: 'preprocessing'
+        status: 'preprocessing',
+        processingType: 'reprocessor_input'
       })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'summaryLog.statusTransition',
@@ -61,10 +66,36 @@ describe('summaryLogMetrics', () => {
       expect(mockFlush).toHaveBeenCalled()
     })
 
-    it('records metric with status dimension for validated', async () => {
-      await summaryLogMetrics.recordStatusTransition('validated')
+    it('lowercases processingType enum values', async () => {
+      await summaryLogMetrics.recordStatusTransition(
+        'validated',
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT
+      )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({ status: 'validated' })
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'validated',
+        processingType: 'reprocessor_output'
+      })
+    })
+
+    it('handles exporter processingType', async () => {
+      await summaryLogMetrics.recordStatusTransition(
+        'submitted',
+        PROCESSING_TYPES.EXPORTER
+      )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'submitted',
+        processingType: 'exporter'
+      })
+    })
+
+    it('omits processingType dimension for early lifecycle states', async () => {
+      await summaryLogMetrics.recordStatusTransition('validating')
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        status: 'validating'
+      })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'summaryLog.statusTransition',
         1,
@@ -73,19 +104,7 @@ describe('summaryLogMetrics', () => {
       )
     })
 
-    it('records metric with status dimension for submitted', async () => {
-      await summaryLogMetrics.recordStatusTransition('submitted')
-
-      expect(mockPutDimensions).toHaveBeenCalledWith({ status: 'submitted' })
-      expect(mockPutMetric).toHaveBeenCalledWith(
-        'summaryLog.statusTransition',
-        1,
-        Unit.Count,
-        StorageResolution.Standard
-      )
-    })
-
-    it('records metric with correct dimension for all valid statuses', async () => {
+    it('records metric with correct dimensions for all valid statuses', async () => {
       const statuses = [
         'preprocessing',
         'rejected',
@@ -100,9 +119,15 @@ describe('summaryLogMetrics', () => {
 
       for (const status of statuses) {
         vi.clearAllMocks()
-        await summaryLogMetrics.recordStatusTransition(status)
+        await summaryLogMetrics.recordStatusTransition(
+          status,
+          PROCESSING_TYPES.EXPORTER
+        )
 
-        expect(mockPutDimensions).toHaveBeenCalledWith({ status })
+        expect(mockPutDimensions).toHaveBeenCalledWith({
+          status,
+          processingType: 'exporter'
+        })
         expect(mockPutMetric).toHaveBeenCalledWith(
           'summaryLog.statusTransition',
           1,
@@ -115,7 +140,10 @@ describe('summaryLogMetrics', () => {
     it('does not record metric when metrics disabled', async () => {
       config.set('isMetricsEnabled', false)
 
-      await summaryLogMetrics.recordStatusTransition('validated')
+      await summaryLogMetrics.recordStatusTransition(
+        'validated',
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+      )
 
       expect(mockPutMetric).not.toHaveBeenCalled()
       expect(mockPutDimensions).not.toHaveBeenCalled()
@@ -126,17 +154,26 @@ describe('summaryLogMetrics', () => {
       const mockError = new Error('flush failed')
       mockFlush.mockRejectedValue(mockError)
 
-      await summaryLogMetrics.recordStatusTransition('validated')
+      await summaryLogMetrics.recordStatusTransition(
+        'validated',
+        PROCESSING_TYPES.REPROCESSOR_INPUT
+      )
 
       expect(mockLoggerError).toHaveBeenCalledWith(mockError, 'flush failed')
     })
   })
 
   describe('recordWasteRecordsCreated', () => {
-    it('records metric with count and operation dimension', async () => {
-      await summaryLogMetrics.recordWasteRecordsCreated(42)
+    it('records metric with count, operation and processingType dimensions', async () => {
+      await summaryLogMetrics.recordWasteRecordsCreated(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        42
+      )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'created' })
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        operation: 'created',
+        processingType: 'reprocessor_input'
+      })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'summaryLog.wasteRecords',
         42,
@@ -147,9 +184,15 @@ describe('summaryLogMetrics', () => {
     })
 
     it('records zero when no records created', async () => {
-      await summaryLogMetrics.recordWasteRecordsCreated(0)
+      await summaryLogMetrics.recordWasteRecordsCreated(
+        PROCESSING_TYPES.EXPORTER,
+        0
+      )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'created' })
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        operation: 'created',
+        processingType: 'exporter'
+      })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'summaryLog.wasteRecords',
         0,
@@ -161,7 +204,10 @@ describe('summaryLogMetrics', () => {
     it('does not record metric when metrics disabled', async () => {
       config.set('isMetricsEnabled', false)
 
-      await summaryLogMetrics.recordWasteRecordsCreated(10)
+      await summaryLogMetrics.recordWasteRecordsCreated(
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        10
+      )
 
       expect(mockPutMetric).not.toHaveBeenCalled()
       expect(mockPutDimensions).not.toHaveBeenCalled()
@@ -169,10 +215,16 @@ describe('summaryLogMetrics', () => {
   })
 
   describe('recordWasteRecordsUpdated', () => {
-    it('records metric with count and operation dimension', async () => {
-      await summaryLogMetrics.recordWasteRecordsUpdated(15)
+    it('records metric with count, operation and processingType dimensions', async () => {
+      await summaryLogMetrics.recordWasteRecordsUpdated(
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        15
+      )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'updated' })
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        operation: 'updated',
+        processingType: 'reprocessor_output'
+      })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'summaryLog.wasteRecords',
         15,
@@ -183,9 +235,15 @@ describe('summaryLogMetrics', () => {
     })
 
     it('records zero when no records updated', async () => {
-      await summaryLogMetrics.recordWasteRecordsUpdated(0)
+      await summaryLogMetrics.recordWasteRecordsUpdated(
+        PROCESSING_TYPES.EXPORTER,
+        0
+      )
 
-      expect(mockPutDimensions).toHaveBeenCalledWith({ operation: 'updated' })
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        operation: 'updated',
+        processingType: 'exporter'
+      })
       expect(mockPutMetric).toHaveBeenCalledWith(
         'summaryLog.wasteRecords',
         0,
@@ -197,45 +255,83 @@ describe('summaryLogMetrics', () => {
     it('does not record metric when metrics disabled', async () => {
       config.set('isMetricsEnabled', false)
 
-      await summaryLogMetrics.recordWasteRecordsUpdated(5)
+      await summaryLogMetrics.recordWasteRecordsUpdated(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        5
+      )
 
       expect(mockPutMetric).not.toHaveBeenCalled()
       expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 
-  describe('timedValidation', () => {
-    it('calls timed with the correct metric name', async () => {
-      const fn = vi.fn().mockResolvedValue('result')
-
-      await summaryLogMetrics.timedValidation(fn)
-
-      expect(mockTimed).toHaveBeenCalledWith(
-        'summaryLog.validation.duration',
-        {},
-        fn
+  describe('recordValidationDuration', () => {
+    it('records duration with processingType dimension', async () => {
+      await summaryLogMetrics.recordValidationDuration(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        1500
       )
+
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        processingType: 'reprocessor_input'
+      })
+      expect(mockPutMetric).toHaveBeenCalledWith(
+        'summaryLog.validation.duration',
+        1500,
+        Unit.Milliseconds,
+        StorageResolution.Standard
+      )
+      expect(mockFlush).toHaveBeenCalled()
     })
 
-    it('returns the result of the wrapped function', async () => {
-      const expectedResult = { foo: 'bar' }
-      const fn = vi.fn().mockResolvedValue(expectedResult)
+    it('lowercases processingType for all values', async () => {
+      await summaryLogMetrics.recordValidationDuration(
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        2000
+      )
 
-      const result = await summaryLogMetrics.timedValidation(fn)
+      expect(mockPutDimensions).toHaveBeenCalledWith({
+        processingType: 'reprocessor_output'
+      })
+    })
 
-      expect(result).toEqual(expectedResult)
+    it('does not record metric when metrics disabled', async () => {
+      config.set('isMetricsEnabled', false)
+
+      await summaryLogMetrics.recordValidationDuration(
+        PROCESSING_TYPES.EXPORTER,
+        1000
+      )
+
+      expect(mockPutMetric).not.toHaveBeenCalled()
+      expect(mockPutDimensions).not.toHaveBeenCalled()
     })
   })
 
   describe('timedSubmission', () => {
-    it('calls timed with the correct metric name', async () => {
+    it('calls timed with metric name and processingType dimension', async () => {
       const fn = vi.fn().mockResolvedValue('result')
 
-      await summaryLogMetrics.timedSubmission(fn)
+      await summaryLogMetrics.timedSubmission(PROCESSING_TYPES.EXPORTER, fn)
 
       expect(mockTimed).toHaveBeenCalledWith(
         'summaryLog.submission.duration',
-        {},
+        { processingType: 'exporter' },
+        fn
+      )
+    })
+
+    it('lowercases processingType for all values', async () => {
+      const fn = vi.fn().mockResolvedValue('result')
+
+      await summaryLogMetrics.timedSubmission(
+        PROCESSING_TYPES.REPROCESSOR_INPUT,
+        fn
+      )
+
+      expect(mockTimed).toHaveBeenCalledWith(
+        'summaryLog.submission.duration',
+        { processingType: 'reprocessor_input' },
         fn
       )
     })
@@ -244,7 +340,10 @@ describe('summaryLogMetrics', () => {
       const expectedResult = { foo: 'bar' }
       const fn = vi.fn().mockResolvedValue(expectedResult)
 
-      const result = await summaryLogMetrics.timedSubmission(fn)
+      const result = await summaryLogMetrics.timedSubmission(
+        PROCESSING_TYPES.REPROCESSOR_OUTPUT,
+        fn
+      )
 
       expect(result).toEqual(expectedResult)
     })

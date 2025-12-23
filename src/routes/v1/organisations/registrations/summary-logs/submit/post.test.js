@@ -9,6 +9,10 @@ import {
   SUMMARY_LOG_STATUS,
   NO_PRIOR_SUBMISSION
 } from '#domain/summary-logs/status.js'
+import {
+  PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
@@ -74,7 +78,11 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId,
         registrationId,
-        validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
+        validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION,
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       },
       version: 2
     })
@@ -473,7 +481,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       })
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.SUBMITTING
+        SUMMARY_LOG_STATUS.SUBMITTING,
+        PROCESSING_TYPES.REPROCESSOR_INPUT
       )
     })
 
@@ -484,7 +493,10 @@ describe(`${summaryLogsSubmitPath} route`, () => {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId,
           registrationId,
-          validatedAgainstSummaryLogId: 'old-submission-id'
+          validatedAgainstSummaryLogId: 'old-submission-id',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]: PROCESSING_TYPES.EXPORTER
+          }
         },
         version: 2
       })
@@ -506,7 +518,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       })
 
       expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.SUPERSEDED
+        SUMMARY_LOG_STATUS.SUPERSEDED,
+        PROCESSING_TYPES.EXPORTER
       )
     })
 

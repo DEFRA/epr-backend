@@ -10,6 +10,7 @@ import {
   NO_PRIOR_SUBMISSION,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { summaryLogResponseSchema } from '../response.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
@@ -53,8 +54,11 @@ async function handleStalenessCheck(
       version,
       transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUPERSEDED)
     )
+    const processingType =
+      summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
     await summaryLogMetrics.recordStatusTransition(
-      SUMMARY_LOG_STATUS.SUPERSEDED
+      SUMMARY_LOG_STATUS.SUPERSEDED,
+      processingType
     )
     return true
   }
@@ -116,8 +120,11 @@ export const summaryLogsSubmit = {
       // Trigger async submission worker (fire-and-forget)
       await summaryLogsWorker.submit(summaryLogId)
 
+      const processingType =
+        summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
       await summaryLogMetrics.recordStatusTransition(
-        SUMMARY_LOG_STATUS.SUBMITTING
+        SUMMARY_LOG_STATUS.SUBMITTING,
+        processingType
       )
       await auditSummaryLogSubmit(request, {
         summaryLogId,

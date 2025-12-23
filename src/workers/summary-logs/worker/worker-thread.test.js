@@ -10,6 +10,10 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_META_FIELDS,
+  PROCESSING_TYPES
+} from '#domain/summary-logs/meta-fields.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
@@ -25,8 +29,8 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
 vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   summaryLogMetrics: {
     recordStatusTransition: vi.fn(),
-    timedValidation: vi.fn((fn) => fn()),
-    timedSubmission: vi.fn((fn) => fn()),
+    recordValidationDuration: vi.fn(),
+    timedSubmission: vi.fn((_processingType, fn) => fn()),
     recordWasteRecordsCreated: vi.fn(),
     recordWasteRecordsUpdated: vi.fn()
   }
@@ -294,7 +298,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -314,7 +322,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -341,7 +353,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -394,7 +410,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -414,7 +434,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -443,7 +467,11 @@ describe('summaryLogsWorkerThread', () => {
         const summaryLog = {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId: 'org-123',
-          registrationId: 'reg-456'
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
         }
 
         mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -459,7 +487,8 @@ describe('summaryLogsWorkerThread', () => {
         })
 
         expect(summaryLogMetrics.recordStatusTransition).toHaveBeenCalledWith(
-          SUMMARY_LOG_STATUS.SUBMITTED
+          SUMMARY_LOG_STATUS.SUBMITTED,
+          PROCESSING_TYPES.REPROCESSOR_INPUT
         )
       })
 
@@ -467,7 +496,11 @@ describe('summaryLogsWorkerThread', () => {
         const summaryLog = {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId: 'org-123',
-          registrationId: 'reg-456'
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
         }
 
         mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -483,6 +516,7 @@ describe('summaryLogsWorkerThread', () => {
         })
 
         expect(summaryLogMetrics.timedSubmission).toHaveBeenCalledWith(
+          PROCESSING_TYPES.REPROCESSOR_INPUT,
           expect.any(Function)
         )
       })
@@ -491,7 +525,11 @@ describe('summaryLogsWorkerThread', () => {
         const summaryLog = {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId: 'org-123',
-          registrationId: 'reg-456'
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
         }
 
         mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -508,14 +546,18 @@ describe('summaryLogsWorkerThread', () => {
 
         expect(
           summaryLogMetrics.recordWasteRecordsCreated
-        ).toHaveBeenCalledWith(5)
+        ).toHaveBeenCalledWith(PROCESSING_TYPES.REPROCESSOR_INPUT, 5)
       })
 
       it('should record waste records updated count', async () => {
         const summaryLog = {
           status: SUMMARY_LOG_STATUS.SUBMITTING,
           organisationId: 'org-123',
-          registrationId: 'reg-456'
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
         }
 
         mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -532,7 +574,7 @@ describe('summaryLogsWorkerThread', () => {
 
         expect(
           summaryLogMetrics.recordWasteRecordsUpdated
-        ).toHaveBeenCalledWith(3)
+        ).toHaveBeenCalledWith(PROCESSING_TYPES.REPROCESSOR_INPUT, 3)
       })
     })
   })

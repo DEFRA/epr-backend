@@ -17,6 +17,7 @@ import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
@@ -309,24 +310,30 @@ export const createSummaryLogsValidator = ({
       }
     })
 
-    const { issues, wasteRecords, meta } =
-      await summaryLogMetrics.timedValidation(() =>
-        performValidationChecks({
-          summaryLogId,
-          summaryLog,
-          loggingContext,
-          summaryLogExtractor,
-          organisationsRepository,
-          wasteRecordsRepository,
-          validateDataSyntax
-        })
-      )
+    const validationStart = Date.now()
+    const { issues, wasteRecords, meta } = await performValidationChecks({
+      summaryLogId,
+      summaryLog,
+      loggingContext,
+      summaryLogExtractor,
+      organisationsRepository,
+      wasteRecordsRepository,
+      validateDataSyntax
+    })
+    const validationDurationMs = Date.now() - validationStart
+
+    const processingType = meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+
+    await summaryLogMetrics.recordValidationDuration(
+      processingType,
+      validationDurationMs
+    )
 
     const status = issues.isFatal()
       ? SUMMARY_LOG_STATUS.INVALID
       : SUMMARY_LOG_STATUS.VALIDATED
 
-    await summaryLogMetrics.recordStatusTransition(status)
+    await summaryLogMetrics.recordStatusTransition(status, processingType)
 
     // Classify loads only for validated summary logs
     // wasteRecords is guaranteed to be non-null when status is VALIDATED
