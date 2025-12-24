@@ -355,7 +355,7 @@ export const testRegAccApprovalValidation = (it) => {
               1,
               prepareOrgUpdate(inserted, invalidUpdates)
             )
-          ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
+          ).rejects.toThrow(expectedError)
         })
 
         it('rejects duplicate approved exporter accreditations with same key', async () => {
@@ -422,7 +422,7 @@ export const testRegAccApprovalValidation = (it) => {
               1,
               prepareOrgUpdate(inserted, invalidUpdates)
             )
-          ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
+          ).rejects.toThrow(expectedError)
         })
       })
 
@@ -493,7 +493,7 @@ export const testRegAccApprovalValidation = (it) => {
               1,
               prepareOrgUpdate(inserted, invalidUpdates)
             )
-          ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
+          ).rejects.toThrow(expectedError)
         })
 
         it('accepts approved reprocessor registrations with different keys', async () => {
@@ -650,7 +650,7 @@ export const testRegAccApprovalValidation = (it) => {
               1,
               prepareOrgUpdate(inserted, invalidUpdates)
             )
-          ).rejects.toThrow(`Invalid organisation data: ${expectedError}`)
+          ).rejects.toThrow(expectedError)
         })
       })
     })

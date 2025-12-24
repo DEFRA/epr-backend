@@ -8,6 +8,7 @@ import {
   getRegAccKey,
   isAccreditationForRegistration
 } from '#formsubmission/submission-keys.js'
+import Boom from '@hapi/boom'
 
 export const whenReprocessor = (schema) =>
   Joi.when('wasteProcessingType', {
@@ -121,13 +122,13 @@ function formatDuplicateError(duplicates, itemType) {
   return `Multiple approved ${itemType} found with duplicate keys [${keys}]: ${ids}`
 }
 
-export function validateApprovals(value, helpers) {
+export function validateApprovals(registrations, accreditations) {
   const errorMessages = []
 
   // Check if approved accreditations have linked registrations
   const accWithoutReg = findAccreditationsWithoutApprovedRegistration(
-    value.accreditations,
-    value.registrations
+    accreditations,
+    registrations
   )
 
   if (accWithoutReg.length > 0) {
@@ -138,26 +139,18 @@ export function validateApprovals(value, helpers) {
   }
 
   // Check for duplicate approved accreditations
-  const accDuplicates = findDuplicateApprovals(value.accreditations)
+  const accDuplicates = findDuplicateApprovals(accreditations)
   if (accDuplicates.length > 0) {
     errorMessages.push(formatDuplicateError(accDuplicates, 'accreditations'))
   }
 
   // Check for duplicate approved registrations
-  const regDuplicates = findDuplicateApprovals(value.registrations)
+  const regDuplicates = findDuplicateApprovals(registrations)
   if (regDuplicates.length > 0) {
     errorMessages.push(formatDuplicateError(regDuplicates, 'registrations'))
   }
 
   if (errorMessages.length > 0) {
-    return helpers.error('organisation.validationErrors', {
-      message: errorMessages.join('; ')
-    })
+    throw Boom.badData(errorMessages.join('; '))
   }
-
-  return value
-}
-
-export const approvalValidationMessages = {
-  'organisation.validationErrors': '{{#message}}'
 }

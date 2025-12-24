@@ -1,9 +1,14 @@
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
-import { validateStatusHistory } from './schema/index.js'
 import {
+  validateOrganisationUpdate,
+  validateStatusHistory
+} from './schema/index.js'
+import {
+  applyRegistrationStatusToLinkedAccreditations,
   assertAndHandleItemStateTransition,
   assertOrgStatusTransition
 } from '#repositories/organisations/schema/status-transition.js'
+import { validateApprovals } from './schema/helpers.js'
 
 /** @import {CollatedUser, Organisation, RegAccStatus, UserRoles} from '#domain/organisations/model.js' */
 /** @import {Accreditation, Registration} from './port.js' */
@@ -244,31 +249,46 @@ export const mapDocumentWithCurrentStatuses = (org) => {
   return { id: _id.toString(), ...rest }
 }
 
-export const prepareForReplace = (existing, updated) => {
+function prepareRegAccForReplace(validated, existing) {
+  const accreditationsAfterUpdate =
+    applyRegistrationStatusToLinkedAccreditations(
+      validated.registrations,
+      validated.accreditations
+    )
+  validateApprovals(validated.registrations, accreditationsAfterUpdate)
   const registrations = updateStatusHistoryForItems(
     existing.registrations,
-    updated.registrations
+    validated.registrations
   )
 
   const accreditations = updateStatusHistoryForItems(
     existing.accreditations,
-    updated.accreditations
+    accreditationsAfterUpdate
+  )
+  return { registrations, accreditations }
+}
+
+export const prepareForReplace = (existing, updates) => {
+  const validated = validateOrganisationUpdate(updates)
+  const { registrations, accreditations } = prepareRegAccForReplace(
+    validated,
+    existing
   )
 
-  const updatedStatusHistory = statusHistoryWithChanges(updated, existing)
+  const updatedStatusHistory = statusHistoryWithChanges(validated, existing)
 
   const users = collateUsers(existing, {
-    ...updated,
+    ...validated,
     statusHistory: updatedStatusHistory,
     registrations,
     accreditations
   })
 
   const { status: _, ...updatesWithoutStatus } = {
-    ...updated
+    ...validated
   }
 
-  assertOrgStatusTransition(existing, updated)
+  assertOrgStatusTransition(existing, validated)
 
   return {
     ...updatesWithoutStatus,

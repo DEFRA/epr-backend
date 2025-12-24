@@ -71,3 +71,29 @@ export const assertAndHandleItemStateTransition = (existing, updated) => {
   }
   assertRegAccStatusTransitionValid(existing.status, updated.status)
 }
+
+const isRegistrationCancelledOrSuspended = (registration) => {
+  return [REG_ACC_STATUS.SUSPENDED, REG_ACC_STATUS.CANCELLED].includes(
+    registration.status
+  )
+}
+
+export const applyRegistrationStatusToLinkedAccreditations = (
+  registrations,
+  accreditations
+) => {
+  const statusUpdates = new Map()
+
+  for (const reg of registrations) {
+    if (reg.accreditationId && isRegistrationCancelledOrSuspended(reg)) {
+      statusUpdates.set(reg.accreditationId, reg.status)
+    }
+  }
+
+  return accreditations.map((acc) => {
+    if (statusUpdates.has(acc.id)) {
+      return { ...acc, status: statusUpdates.get(acc.id) }
+    }
+    return acc
+  })
+}
