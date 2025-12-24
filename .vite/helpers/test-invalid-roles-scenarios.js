@@ -27,7 +27,7 @@ export function testOnlyServiceMaintainerCanAccess({
         expectedStatus: StatusCodes.FORBIDDEN
       },
       {
-        token: defraIdMockAuthTokens.unknownUserToken,
+        token: defraIdMockAuthTokens.unknownUnauthorisedUserToken,
         description:
           'a valid Defra Id token but with an unknown email and contactId',
         expectedStatus: StatusCodes.UNAUTHORIZED
@@ -35,6 +35,12 @@ export function testOnlyServiceMaintainerCanAccess({
       {
         token: defraIdMockAuthTokens.validToken,
         description: 'a valid Defra Id token for a known public user',
+        expectedStatus: StatusCodes.UNAUTHORIZED
+      },
+      {
+        token: defraIdMockAuthTokens.unknownButAuthorisedUserToken,
+        description:
+          'a valid Defra Id token for an unknown user with a relationshipId pointing at the org',
         expectedStatus: StatusCodes.UNAUTHORIZED
       }
     ]
@@ -86,7 +92,7 @@ export function testOnlyStandardUserCanAccess({
         expectedStatus: StatusCodes.FORBIDDEN
       },
       {
-        token: defraIdMockAuthTokens.unknownUserToken,
+        token: defraIdMockAuthTokens.unknownUnauthorisedUserToken,
         description:
           'a valid Defra Id token but with an unknown email and contactId',
         expectedStatus: StatusCodes.UNAUTHORIZED
@@ -94,6 +100,12 @@ export function testOnlyStandardUserCanAccess({
       {
         token: defraIdMockAuthTokens.validToken,
         description: 'a valid Defra Id token for a known public user',
+        expectedStatus: StatusCodes.OK
+      },
+      {
+        token: defraIdMockAuthTokens.unknownButAuthorisedUserToken,
+        description:
+          'a valid Defra Id token for an unknown user with a relationshipId pointing at the org',
         expectedStatus: StatusCodes.OK
       }
     ]
@@ -145,7 +157,7 @@ export function testStandardUserAndServiceMaintainerCanAccess({
         expectedStatus: StatusCodes.FORBIDDEN
       },
       {
-        token: defraIdMockAuthTokens.unknownUserToken,
+        token: defraIdMockAuthTokens.unknownUnauthorisedUserToken,
         description:
           'a valid Defra Id token but with an unknown email and contactId',
         expectedStatus: StatusCodes.UNAUTHORIZED
@@ -153,6 +165,12 @@ export function testStandardUserAndServiceMaintainerCanAccess({
       {
         token: defraIdMockAuthTokens.validToken,
         description: 'a valid Defra Id token for a known public user',
+        expectedStatus: StatusCodes.OK
+      },
+      {
+        token: defraIdMockAuthTokens.unknownButAuthorisedUserToken,
+        description:
+          'a valid Defra Id token for an unknown user with a relationshipId pointing at the org',
         expectedStatus: StatusCodes.OK
       }
     ]

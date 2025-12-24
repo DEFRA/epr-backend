@@ -7,6 +7,7 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { testStandardUserAndServiceMaintainerCanAccess } from '#vite/helpers/test-invalid-roles-scenarios.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+import { buildActiveOrg } from '#vite/helpers/build-active-org.js'
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -128,8 +129,7 @@ describe('GET /v1/organisations/{id}', () => {
   testStandardUserAndServiceMaintainerCanAccess({
     server: () => server,
     makeRequest: async () => {
-      const org1 = buildOrganisation()
-      await organisationsRepository.insert(org1)
+      const org1 = await buildActiveOrg(organisationsRepository)
       return {
         method: 'GET',
         url: `/v1/organisations/${org1.id}`

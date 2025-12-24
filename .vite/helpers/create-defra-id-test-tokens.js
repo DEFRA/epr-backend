@@ -15,6 +15,9 @@ export const VALID_TOKEN_RELATIONSHIPS = [
   `${VALID_TOKEN_CURRENT_RELATIONSHIP}:${COMPANY_1_ID}:${COMPANY_1_NAME}`,
   `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
 ]
+export const INVALID_TOKEN_RELATIONSHIPS = [
+  `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
+]
 export const FIXTURE_ORG_1_ID = org1.id
 
 // Generate key pair once at module load time
@@ -139,12 +142,30 @@ const generateDefraIdTokenWithWrongIssuer = () => {
   return mockDefraIdToken
 }
 
+const generateDefraIdTokenForUnknownButAuthorisedUser = () => {
+  const mockDefraIdToken = Jwt.token.generate(
+    {
+      ...userPresentInOrg1DefraIdTokenPayload,
+      id: 'unknownId',
+      email: 'unknown.email@example.com',
+      currentRelationshipId: DEFRA_TOKEN_SECOND_RELATIONSHIP_ID,
+      relationships: INVALID_TOKEN_RELATIONSHIPS
+    },
+    validJwtSecretObject,
+    validGenerateTokenOptions
+  )
+
+  return mockDefraIdToken
+}
+
 const generateDefraIdTokenForUnauthorisedUser = () => {
   const mockDefraIdToken = Jwt.token.generate(
     {
       ...userPresentInOrg1DefraIdTokenPayload,
       id: 'unknownId',
-      email: 'unknown.email@example.com'
+      email: 'unknown.email@example.com',
+      currentRelationshipId: DEFRA_TOKEN_SECOND_RELATIONSHIP_ID,
+      relationships: INVALID_TOKEN_RELATIONSHIPS
     },
     validJwtSecretObject,
     validGenerateTokenOptions
@@ -180,5 +201,7 @@ export const defraIdMockAuthTokens = {
   wrongIssuerToken: generateDefraIdTokenWithWrongIssuer(),
   wrongAudienceToken: generateDefraIdTokenWithWrongAudience(),
   missingRelationshipToken: generateDefraIdTokenWithoutRelationship(),
-  unknownUserToken: generateDefraIdTokenForUnauthorisedUser()
+  unknownUnauthorisedUserToken: generateDefraIdTokenForUnauthorisedUser(),
+  unknownButAuthorisedUserToken:
+    generateDefraIdTokenForUnknownButAuthorisedUser()
 }
