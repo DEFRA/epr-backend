@@ -1,24 +1,24 @@
 import Joi from 'joi'
 import {
-  STATUS,
-  REGULATOR,
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
-  WASTE_PROCESSING_TYPE,
+  REG_ACC_STATUS,
+  REGULATOR,
   TONNAGE_BAND,
-  GLASS_RECYCLING_PROCESS
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  idSchema,
-  userSchema,
   formFileUploadSchema,
-  reprocessingTypeSchema
+  idSchema,
+  reprocessingTypeSchema,
+  userSchema
 } from './base.js'
 import {
-  whenReprocessor,
-  whenExporter,
+  dateRequiredWhenApprovedOrSuspended,
   requiredWhenApprovedOrSuspended,
+  whenExporter,
   whenMaterial,
-  dateRequiredWhenApprovedOrSuspended
+  whenReprocessor
 } from './helpers.js'
 
 const accreditationSiteSchema = Joi.object({
@@ -55,12 +55,11 @@ export const accreditationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
     .valid(
-      STATUS.CREATED,
-      STATUS.APPROVED,
-      STATUS.ACTIVE,
-      STATUS.REJECTED,
-      STATUS.SUSPENDED,
-      STATUS.ARCHIVED
+      REG_ACC_STATUS.CREATED,
+      REG_ACC_STATUS.APPROVED,
+      REG_ACC_STATUS.CANCELLED,
+      REG_ACC_STATUS.REJECTED,
+      REG_ACC_STATUS.SUSPENDED
     )
     .forbidden(),
   validFrom: dateRequiredWhenApprovedOrSuspended(),

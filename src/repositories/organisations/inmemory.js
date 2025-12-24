@@ -1,14 +1,10 @@
 import Boom from '@hapi/boom'
-import {
-  validateId,
-  validateOrganisationInsert,
-  validateOrganisationUpdate
-} from './schema/index.js'
+import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
   mapDocumentWithCurrentStatuses,
-  SCHEMA_VERSION,
-  prepareForReplace
+  prepareForReplace,
+  SCHEMA_VERSION
 } from './helpers.js'
 
 // Aggressive retry settings for in-memory testing (setImmediate() is microseconds)
@@ -80,8 +76,6 @@ const performReplace =
       throw Boom.notFound(`Organisation with id ${validatedId} not found`)
     }
 
-    const validatedUpdates = validateOrganisationUpdate(updates)
-
     if (existing.version !== version) {
       throw Boom.conflict(
         `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
@@ -90,7 +84,7 @@ const performReplace =
 
     const replaced = prepareForReplace(
       mapDocumentWithCurrentStatuses(existing),
-      validatedUpdates
+      updates
     )
 
     storage[existingIndex] = { _id: existing._id, ...replaced }

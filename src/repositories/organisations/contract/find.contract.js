@@ -1,6 +1,6 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -38,7 +38,7 @@ export const testFindBehaviour = (it) => {
           wasteProcessingTypes: orgData.wasteProcessingTypes,
           reprocessingNations: orgData.reprocessingNations,
           businessType: orgData.businessType,
-          status: STATUS.CREATED,
+          status: REG_ACC_STATUS.CREATED,
           submittedToRegulator: orgData.submittedToRegulator,
           submitterContactDetails: orgData.submitterContactDetails,
           companyDetails: orgData.companyDetails

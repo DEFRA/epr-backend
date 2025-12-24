@@ -1,7 +1,7 @@
 import {
   ORGANISATION_STATUS,
-  REPROCESSING_TYPE,
-  STATUS
+  REG_ACC_STATUS,
+  REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
 import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
@@ -70,7 +70,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -89,7 +89,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -124,7 +124,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -148,7 +148,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),
@@ -176,7 +176,7 @@ export const testOrgStatusTransitionBehaviour = (it) => {
           registrations: [
             {
               ...orgData.registrations[0],
-              status: STATUS.APPROVED,
+              status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
               validFrom: new Date('2025-01-01'),
               validTo: new Date('2025-12-31'),

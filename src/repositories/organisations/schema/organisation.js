@@ -19,7 +19,6 @@ import {
   userSchema
 } from './base.js'
 import { registrationSchema, registrationUpdateSchema } from './registration.js'
-import { approvalValidationMessages, validateApprovals } from './helpers.js'
 
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
@@ -83,5 +82,3 @@ export const organisationReplaceSchema = organisationInsertSchema
     registrations: Joi.array().items(registrationUpdateSchema).default([]),
     accreditations: Joi.array().items(accreditationUpdateSchema).default([])
   })
-  .custom(validateApprovals)
-  .messages(approvalValidationMessages)

@@ -5,7 +5,11 @@ import {
   validateRegistration,
   validateStatusHistory
 } from './validation.js'
-import { MATERIAL, REGULATOR, STATUS } from '#domain/organisations/model.js'
+import {
+  MATERIAL,
+  REG_ACC_STATUS,
+  REGULATOR
+} from '#domain/organisations/model.js'
 import {
   buildAccreditation,
   buildRegistration
@@ -21,7 +25,7 @@ describe('validateStatusHistory', () => {
   })
 
   it('throws badImplementation when statusHistory item missing updatedAt', () => {
-    const statusHistory = [{ status: STATUS.CREATED }]
+    const statusHistory = [{ status: REG_ACC_STATUS.CREATED }]
 
     expect(() => validateStatusHistory(statusHistory)).toThrow(
       /Invalid statusHistory.*updatedAt.*required.*This is a system error/
@@ -31,7 +35,7 @@ describe('validateStatusHistory', () => {
   it('validates statusHistory with optional updatedBy field', () => {
     const statusHistory = [
       {
-        status: STATUS.CREATED,
+        status: REG_ACC_STATUS.CREATED,
         updatedAt: new Date(),
         updatedBy: new ObjectId().toString()
       }

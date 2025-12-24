@@ -1,9 +1,9 @@
-import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
 
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { userPresentInOrg1DefraIdTokenPayload } from '#vite/helpers/create-defra-id-test-tokens.js'
 
@@ -35,10 +35,7 @@ describe('#getRolesForOrganisationAccess', () => {
   })
 
   describe('happy path', () => {
-    test.each([
-      ['ACTIVE', STATUS.ACTIVE],
-      ['SUSPENDED', STATUS.SUSPENDED]
-    ])(
+    test.each([['ACTIVE', ORGANISATION_STATUS.ACTIVE]])(
       'returns standard_user role when organisation is %s',
       async (statusName, status) => {
         const mockOrganisation = {
@@ -69,7 +66,7 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const mockOrganisation = {
         id: customOrgId,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         users: [],
         version: 1
       }
@@ -158,7 +155,7 @@ describe('#getRolesForOrganisationAccess', () => {
       const differentOrgId = new ObjectId().toString()
       mockOrganisationsRepository.findById.mockResolvedValue({
         id: mockOrganisationId,
-        status: STATUS.ACTIVE
+        status: ORGANISATION_STATUS.ACTIVE
       })
 
       await expect(
@@ -176,10 +173,9 @@ describe('#getRolesForOrganisationAccess', () => {
 
   describe('organisation status not accessible', () => {
     test.each([
-      ['CREATED', STATUS.CREATED],
-      ['APPROVED', STATUS.APPROVED],
-      ['REJECTED', STATUS.REJECTED],
-      ['ARCHIVED', STATUS.ARCHIVED],
+      ['CREATED', ORGANISATION_STATUS.CREATED],
+      ['APPROVED', ORGANISATION_STATUS.APPROVED],
+      ['REJECTED', ORGANISATION_STATUS.REJECTED],
       ['undefined', undefined],
       ['null', null]
     ])(
@@ -209,7 +205,7 @@ describe('#getRolesForOrganisationAccess', () => {
     test('throws forbidden error with exact message format for non-accessible status', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.REJECTED,
+        status: ORGANISATION_STATUS.REJECTED,
         users: [],
         version: 1
       }
@@ -279,7 +275,7 @@ describe('#getRolesForOrganisationAccess', () => {
     test('handles organisation with additional fields', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         name: 'Test Organisation',
         users: [{ email: 'test@example.com' }],
         version: 1,
@@ -305,7 +301,7 @@ describe('#getRolesForOrganisationAccess', () => {
 
       const mockOrganisation = {
         id: objectIdFormat,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         users: [],
         version: 1
       }
@@ -322,7 +318,7 @@ describe('#getRolesForOrganisationAccess', () => {
     })
 
     test('handles case where status matches by reference', async () => {
-      const activeStatus = STATUS.ACTIVE
+      const activeStatus = ORGANISATION_STATUS.ACTIVE
       const mockOrganisation = {
         id: mockOrganisationId,
         status: activeStatus,
@@ -344,7 +340,7 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns array with single role, not just the role string', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         users: [],
         version: 1
       }
@@ -394,7 +390,7 @@ describe('#getRolesForOrganisationAccess', () => {
     test('fetches organisation only after validation passes', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         users: [],
         version: 1
       }
@@ -421,7 +417,7 @@ describe('#getRolesForOrganisationAccess', () => {
           callOrder.push(`findById:${id}`)
           return {
             id: mockOrganisationId,
-            status: STATUS.ACTIVE,
+            status: ORGANISATION_STATUS.ACTIVE,
             users: [],
             version: 1
           }
@@ -440,13 +436,12 @@ describe('#getRolesForOrganisationAccess', () => {
   })
 
   describe('status comparison', () => {
-    test('only ACTIVE and SUSPENDED statuses are accessible', async () => {
-      const accessibleStatuses = [STATUS.ACTIVE, STATUS.SUSPENDED]
+    test('only ACTIVE status is accessible', async () => {
+      const accessibleStatuses = [ORGANISATION_STATUS.ACTIVE]
       const nonAccessibleStatuses = [
-        STATUS.CREATED,
-        STATUS.APPROVED,
-        STATUS.REJECTED,
-        STATUS.ARCHIVED
+        ORGANISATION_STATUS.CREATED,
+        ORGANISATION_STATUS.APPROVED,
+        ORGANISATION_STATUS.REJECTED
       ]
 
       // Test accessible statuses
@@ -527,7 +522,7 @@ describe('#getRolesForOrganisationAccess', () => {
       mockRequest.params.organisationId = mockOrganisationId
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         users: [],
         version: 1
       }
@@ -544,7 +539,7 @@ describe('#getRolesForOrganisationAccess', () => {
     test('returns array containing only standard_user role constant', async () => {
       const mockOrganisation = {
         id: mockOrganisationId,
-        status: STATUS.ACTIVE,
+        status: ORGANISATION_STATUS.ACTIVE,
         users: [],
         version: 1
       }

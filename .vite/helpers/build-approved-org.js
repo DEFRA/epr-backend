@@ -1,4 +1,8 @@
-import { REPROCESSING_TYPE, STATUS } from '#domain/organisations/model.js'
+import {
+  ORGANISATION_STATUS,
+  REG_ACC_STATUS,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import {
   buildOrganisation,
   prepareOrgUpdate
@@ -23,7 +27,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
   const approvedAccreditations = [
     {
       ...org.accreditations[0],
-      status: STATUS.APPROVED,
+      status: REG_ACC_STATUS.APPROVED,
       accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
       validFrom: now,
       reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -33,7 +37,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
 
   const approvedRegistrations = [
     Object.assign({}, org.registrations[0], {
-      status: STATUS.APPROVED,
+      status: REG_ACC_STATUS.APPROVED,
       cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
       registrationNumber: 'REG1',
       reprocessingType: REPROCESSING_TYPE.INPUT,
@@ -46,7 +50,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
     org.id,
     INITIAL_VERSION,
     prepareOrgUpdate(org, {
-      status: STATUS.APPROVED,
+      status: ORGANISATION_STATUS.APPROVED,
       accreditations: approvedAccreditations,
       registrations: approvedRegistrations
     })
