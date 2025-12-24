@@ -147,9 +147,7 @@ const generateDefraIdTokenForUnknownButAuthorisedUser = () => {
     {
       ...userPresentInOrg1DefraIdTokenPayload,
       id: 'unknownId',
-      email: 'unknown.email@example.com',
-      currentRelationshipId: DEFRA_TOKEN_SECOND_RELATIONSHIP_ID,
-      relationships: INVALID_TOKEN_RELATIONSHIPS
+      email: 'unknown.email@example.com'
     },
     validJwtSecretObject,
     validGenerateTokenOptions
