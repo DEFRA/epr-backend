@@ -4,14 +4,14 @@ import { ROLES } from '#common/helpers/auth/constants.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
-export const organisationsGetByIdPath = '/v1/organisations/{id}'
+export const organisationsGetByIdPath = '/v1/organisations/{organisationId}'
 
 export const organisationsGetById = {
   method: 'GET',
   path: organisationsGetByIdPath,
   options: {
     auth: {
-      scope: [ROLES.serviceMaintainer]
+      scope: [ROLES.serviceMaintainer, ROLES.standardUser]
     }
   },
   /**
@@ -21,13 +21,13 @@ export const organisationsGetById = {
   handler: async (request, h) => {
     const { organisationsRepository } = request
 
-    const id = request.params.id.trim()
+    const organisationId = request.params.organisationId.trim()
 
-    if (!id) {
+    if (!organisationId) {
       throw Boom.notFound('Organisation not found')
     }
 
-    const organisation = await organisationsRepository.findById(id)
+    const organisation = await organisationsRepository.findById(organisationId)
 
     return h.response(organisation).code(StatusCodes.OK)
   }
