@@ -138,6 +138,21 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 
+const mockRecordStatusTransition = vi.fn()
+const mockRecordValidationDuration = vi.fn()
+const mockRecordValidationIssues = vi.fn()
+const mockRecordRowOutcome = vi.fn()
+
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
+    recordValidationDuration: (...args) =>
+      mockRecordValidationDuration(...args),
+    recordValidationIssues: (...args) => mockRecordValidationIssues(...args),
+    recordRowOutcome: (...args) => mockRecordRowOutcome(...args)
+  }
+}))
+
 describe('SummaryLogsValidator', () => {
   let summaryLogExtractor
   let summaryLogsRepository
@@ -173,6 +188,7 @@ describe('SummaryLogsValidator', () => {
         id: 'reg-123',
         registrationNumber: 'REG12345',
         wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
         material: 'aluminium'
       })
     }
@@ -215,6 +231,10 @@ describe('SummaryLogsValidator', () => {
   })
 
   afterEach(() => {
+    mockRecordStatusTransition.mockClear()
+    mockRecordValidationDuration.mockClear()
+    mockRecordValidationIssues.mockClear()
+    mockRecordRowOutcome.mockClear()
     vi.resetAllMocks()
   })
 
@@ -296,6 +316,7 @@ describe('SummaryLogsValidator', () => {
       id: 'reg-123',
       registrationNumber: 'REG12345',
       wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
       material: 'aluminium',
       accreditation: {
         accreditationNumber: 'ACC12345'
@@ -784,6 +805,41 @@ describe('SummaryLogsValidator', () => {
 
       // Reset the mock for other tests
       wasteRecordsRepository.findByRegistration.mockResolvedValue([])
+    })
+  })
+
+  describe('metrics', () => {
+    it('should record VALIDATED status transition metric when validation succeeds', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        processingType: 'REPROCESSOR_INPUT'
+      })
+    })
+
+    it('should record INVALID status transition metric when validation fails', async () => {
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal business error
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        processingType: 'REPROCESSOR_INPUT'
+      })
+    })
+
+    it('should record validation duration metric', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordValidationDuration).toHaveBeenCalledWith(
+        { processingType: 'REPROCESSOR_INPUT' },
+        expect.any(Number)
+      )
     })
   })
 })

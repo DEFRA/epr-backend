@@ -55,7 +55,7 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
-  describe('handling missing registrations/accreditations', () => {
+  describe('status field storage', () => {
     it('does not persist status field to database ', async ({
       organisationsRepository,
       mongoClient

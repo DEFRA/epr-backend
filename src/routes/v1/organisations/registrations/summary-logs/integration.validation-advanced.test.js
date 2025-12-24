@@ -83,7 +83,8 @@ describe('Advanced validation scenarios', () => {
                   }
                 }
               }
-            }
+            },
+            { reprocessingType: 'output' }
           )
           server = result.server
           summaryLogsRepository = result.summaryLogsRepository

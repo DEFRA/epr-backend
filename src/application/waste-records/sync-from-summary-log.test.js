@@ -833,4 +833,229 @@ describe('syncFromSummaryLog', () => {
       wasteBalancesRepository.updateWasteBalanceTransactions
     ).not.toHaveBeenCalled()
   })
+
+  describe('return value', () => {
+    it('returns counts of created and updated waste records', async () => {
+      const fileId = 'test-file-counts'
+      const summaryLog = {
+        file: {
+          id: fileId,
+          uri: 's3://test-bucket/test-key'
+        },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+
+      const parsedData = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'REPROCESSOR_INPUT'
+          }
+        },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
+              FIELD_GROSS_WEIGHT
+            ],
+            rows: [
+              {
+                rowNumber: 2,
+                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+              },
+              {
+                rowNumber: 3,
+                values: ['row-456', '2025-01-16', TEST_WEIGHT_200_75]
+              }
+            ]
+          }
+        }
+      }
+
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: parsedData
+      })
+
+      const sync = syncFromSummaryLog({
+        extractor,
+        wasteRecordRepository
+      })
+
+      const result = await sync(summaryLog)
+
+      expect(result).toEqual({
+        created: 2,
+        updated: 0
+      })
+    })
+
+    it('returns correct counts when updating existing records', async () => {
+      // First, create an initial record
+      const initialData = {
+        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+        GROSS_WEIGHT: TEST_WEIGHT_100_5
+      }
+
+      const { version, data } = buildVersionData({
+        summaryLogId: 'test-file-initial',
+        summaryLogUri: 's3://bucket/key',
+        createdAt: '2025-01-15T10:00:00.000Z',
+        status: VERSION_STATUS.CREATED,
+        versionData: initialData,
+        currentData: initialData
+      })
+
+      const wasteRecordVersions = toWasteRecordVersions({
+        received: {
+          'row-123': { version, data }
+        }
+      })
+
+      await wasteRecordRepository.appendVersions(
+        'org-1',
+        'reg-1',
+        wasteRecordVersions
+      )
+
+      // Now submit with one updated and one new
+      const fileId = 'test-file-mixed'
+      const summaryLog = {
+        file: {
+          id: fileId,
+          uri: 's3://test-bucket/test-key-mixed'
+        },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+
+      const parsedData = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'REPROCESSOR_INPUT'
+          }
+        },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
+              FIELD_GROSS_WEIGHT
+            ],
+            rows: [
+              // Updated record (weight changed)
+              {
+                rowNumber: 2,
+                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_200_75]
+              },
+              // New record
+              {
+                rowNumber: 3,
+                values: ['row-456', '2025-01-16', TEST_WEIGHT_250_5]
+              }
+            ]
+          }
+        }
+      }
+
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: parsedData
+      })
+
+      const sync = syncFromSummaryLog({
+        extractor,
+        wasteRecordRepository
+      })
+
+      const result = await sync(summaryLog)
+
+      expect(result).toEqual({
+        created: 1,
+        updated: 1
+      })
+    })
+
+    it('does not count unchanged records', async () => {
+      // First, create an initial record
+      const initialData = {
+        DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
+        GROSS_WEIGHT: TEST_WEIGHT_100_5
+      }
+
+      const { version, data } = buildVersionData({
+        summaryLogId: 'test-file-initial',
+        summaryLogUri: 's3://bucket/key',
+        createdAt: '2025-01-15T10:00:00.000Z',
+        status: VERSION_STATUS.CREATED,
+        versionData: initialData,
+        currentData: initialData
+      })
+
+      const wasteRecordVersions = toWasteRecordVersions({
+        received: {
+          'row-123': { version, data }
+        }
+      })
+
+      await wasteRecordRepository.appendVersions(
+        'org-1',
+        'reg-1',
+        wasteRecordVersions
+      )
+
+      // Submit same data (unchanged)
+      const fileId = 'test-file-unchanged-counts'
+      const summaryLog = {
+        file: {
+          id: fileId,
+          uri: 's3://test-bucket/test-key-unchanged'
+        },
+        organisationId: 'org-1',
+        registrationId: 'reg-1'
+      }
+
+      const parsedData = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'REPROCESSOR_INPUT'
+          }
+        },
+        data: {
+          RECEIVED_LOADS_FOR_REPROCESSING: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: [
+              'ROW_ID',
+              'DATE_RECEIVED_FOR_REPROCESSING',
+              FIELD_GROSS_WEIGHT
+            ],
+            rows: [
+              // Same data as existing
+              {
+                rowNumber: 2,
+                values: ['row-123', TEST_DATE_2025_01_15, TEST_WEIGHT_100_5]
+              }
+            ]
+          }
+        }
+      }
+
+      const extractor = createInMemorySummaryLogExtractor({
+        [fileId]: parsedData
+      })
+
+      const sync = syncFromSummaryLog({
+        extractor,
+        wasteRecordRepository
+      })
+
+      const result = await sync(summaryLog)
+
+      expect(result).toEqual({
+        created: 0,
+        updated: 0
+      })
+    })
+  })
 })

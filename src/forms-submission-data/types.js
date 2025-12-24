@@ -65,6 +65,7 @@
  *   orgName: string
  *   orsFileUploads?: object[]
  *   plantEquipmentDetails?: string
+ *   reprocessingType?: string
  *   samplingInspectionPlanPart1FileUploads?: object[]
  *   site?: object
  *   submitterContactDetails: User
@@ -87,12 +88,20 @@
  *   orgName: string
  *   orsFileUploads?: object[]
  *   prnIssuance?: {signatories?: User[]}
+ *   reprocessingType?: string
  *   samplingInspectionPlanPart2FileUploads?: object[]
+ *   site?: object
  *   submitterContactDetails: User
  *   submittedToRegulator: string
  *   systemReference: string
  *   wasteProcessingType: string
  * }} Accreditation
+ */
+
+/**
+ * Union type for Registration or Accreditation
+ *
+ * @typedef {Registration | Accreditation} RegistrationOrAccreditation
  */
 
 /**

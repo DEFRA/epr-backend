@@ -9,12 +9,29 @@ import {
   SUMMARY_LOG_STATUS,
   NO_PRIOR_SUBMISSION
 } from '#domain/summary-logs/status.js'
+import {
+  PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsSubmitPath } from './post.js'
+
+const mockAuditSummaryLogSubmit = vi.fn()
+const mockRecordStatusTransition = vi.fn()
+
+vi.mock('#root/auditing/summary-logs.js', () => ({
+  auditSummaryLogSubmit: (...args) => mockAuditSummaryLogSubmit(...args)
+}))
+
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: (...args) => mockRecordStatusTransition(...args)
+  }
+}))
 
 const summaryLogId = 'summary-log-123'
 const organisationId = 'org-123'
@@ -61,7 +78,11 @@ describe(`${summaryLogsSubmitPath} route`, () => {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId,
         registrationId,
-        validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION
+        validatedAgainstSummaryLogId: NO_PRIOR_SUBMISSION,
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       },
       version: 2
     })
@@ -72,6 +93,8 @@ describe(`${summaryLogsSubmitPath} route`, () => {
     server.loggerMocks.info.mockClear()
     server.loggerMocks.error.mockClear()
     server.loggerMocks.warn.mockClear()
+    mockAuditSummaryLogSubmit.mockClear()
+    mockRecordStatusTransition.mockClear()
 
     vi.resetAllMocks()
   })
@@ -376,6 +399,142 @@ describe(`${summaryLogsSubmitPath} route`, () => {
           }
         }
       })
+    })
+  })
+
+  describe('auditing', () => {
+    it('records audit event on successful submit', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(mockAuditSummaryLogSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          auth: expect.objectContaining({
+            credentials: expect.objectContaining({
+              linkedOrgId: organisationId
+            })
+          })
+        }),
+        {
+          summaryLogId,
+          organisationId,
+          registrationId
+        }
+      )
+    })
+
+    it('does not record audit event when submission is in progress (409)', async () => {
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: false
+      })
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(mockAuditSummaryLogSubmit).not.toHaveBeenCalled()
+    })
+
+    it('does not record audit event when preview is stale', async () => {
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: true,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId,
+          registrationId,
+          validatedAgainstSummaryLogId: 'old-submission-id'
+        },
+        version: 2
+      })
+
+      summaryLogsRepository.findLatestSubmittedForOrgReg.mockResolvedValue({
+        id: 'new-submission-id',
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          organisationId,
+          registrationId
+        }
+      })
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(mockAuditSummaryLogSubmit).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('metrics', () => {
+    it('records status transition metric for submitting on successful submit', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
+        processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+      })
+    })
+
+    it('records status transition metric for superseded when preview is stale', async () => {
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: true,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId,
+          registrationId,
+          validatedAgainstSummaryLogId: 'old-submission-id',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]: PROCESSING_TYPES.EXPORTER
+          }
+        },
+        version: 2
+      })
+
+      summaryLogsRepository.findLatestSubmittedForOrgReg.mockResolvedValue({
+        id: 'new-submission-id',
+        version: 1,
+        summaryLog: {
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          organisationId,
+          registrationId
+        }
+      })
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.SUPERSEDED,
+        processingType: PROCESSING_TYPES.EXPORTER
+      })
+    })
+
+    it('does not record submitting metric when another submission is in progress', async () => {
+      summaryLogsRepository.transitionToSubmittingExclusive.mockResolvedValue({
+        success: false
+      })
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/submit`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(mockRecordStatusTransition).not.toHaveBeenCalled()
     })
   })
 })

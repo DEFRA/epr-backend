@@ -40,12 +40,17 @@ import { transformExportLoadsRow } from './row-transformers/received-loads-expor
  */
 
 /**
+ * @typedef {'created' | 'updated' | 'unchanged'} WasteRecordChange
+ */
+
+/**
  * A waste record bundled with its validation issues and outcome
  *
  * @typedef {Object} ValidatedWasteRecord
  * @property {WasteRecord} record - The waste record
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
+ * @property {WasteRecordChange} change - What happened to this record: created, updated, or unchanged
  */
 
 /**
@@ -122,7 +127,7 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, issues, outcome }
+        return { record: existingRecord, issues, outcome, change: 'unchanged' }
       }
 
       // Add new version with only changed fields
@@ -141,7 +146,8 @@ const transformTable = (
           versions: [...existingRecord.versions, newVersion]
         },
         issues,
-        outcome
+        outcome,
+        change: 'updated'
       }
     }
 
@@ -168,7 +174,7 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, issues, outcome }
+    return { record: wasteRecord, issues, outcome, change: 'created' }
   })
 }
 
