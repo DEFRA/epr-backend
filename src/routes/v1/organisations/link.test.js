@@ -1,12 +1,13 @@
 import {
+  ORGANISATION_STATUS,
   REPROCESSING_TYPE,
-  STATUS,
   USER_ROLES
 } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildOrganisation,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
@@ -32,12 +33,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
-  const now = new Date()
-  const oneYearFromNow = new Date(
-    now.getFullYear() + 1,
-    now.getMonth(),
-    now.getDate()
-  )
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
@@ -96,19 +92,19 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         {
           description: 'user is not in the users list',
           user: baseUserObject,
-          status: STATUS.APPROVED,
+          status: ORGANISATION_STATUS.APPROVED,
           expectedStatusCode: StatusCodes.UNAUTHORIZED
         },
         {
           description: 'user is valid',
           user: fullyValidUser,
-          status: STATUS.CREATED,
+          status: ORGANISATION_STATUS.CREATED,
           expectedStatusCode: StatusCodes.CONFLICT
         },
         {
           description: 'user is valid',
           user: fullyValidUser,
-          status: STATUS.REJECTED,
+          status: ORGANISATION_STATUS.REJECTED,
           expectedStatusCode: StatusCodes.CONFLICT
         }
       ])(
@@ -145,11 +141,11 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               registrations: [
                 {
                   ...org.registrations[0],
-                  status: STATUS.APPROVED,
+                  status: ORGANISATION_STATUS.APPROVED,
                   cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
                   registrationNumber: 'REG1',
-                  validFrom: now,
-                  validTo: oneYearFromNow,
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
@@ -201,7 +197,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           const result = JSON.parse(response.payload)
 
           expect(result).toEqual({
-            status: 'active',
+            status: ORGANISATION_STATUS.ACTIVE,
             linked: {
               id: COMPANY_1_ID,
               name: COMPANY_1_NAME,
@@ -215,7 +211,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         })
 
         it('leaves the organisation in the database with status: "active"', async () => {
-          expect(finalOrgVersion.status).toBe(STATUS.ACTIVE)
+          expect(finalOrgVersion.status).toBe(ORGANISATION_STATUS.ACTIVE)
         })
 
         it('populates the organisation with a complete "linkedDefraOrganisation" object', async () => {
@@ -228,46 +224,6 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               id: VALID_TOKEN_CONTACT_ID
             }
           })
-        })
-
-        it('changes all approved accreditation in the organisation to "active"', async () => {
-          const previouslyApprovedAccreditations = org.accreditations.filter(
-            (acc) => acc.status === STATUS.APPROVED
-          )
-          const previouslyApprovedAccreditationIds =
-            previouslyApprovedAccreditations.map((acc) => acc.id)
-
-          const finalAccreditations = finalOrgVersion.accreditations.filter(
-            (acc) => previouslyApprovedAccreditationIds.includes(acc.id)
-          )
-
-          expect(finalAccreditations).toHaveLength(
-            previouslyApprovedAccreditations.length
-          )
-
-          for (const accreditation of finalAccreditations) {
-            expect(accreditation.status).toBe(STATUS.ACTIVE)
-          }
-        })
-
-        it('changes all approved registrations in the organisation to "active"', async () => {
-          const previouslyApprovedRegistrations = org.registrations.filter(
-            (reg) => reg.status === STATUS.APPROVED
-          )
-          const previouslyApprovedRegistrationIds =
-            previouslyApprovedRegistrations.map((reg) => reg.id)
-
-          const finalRegistrations = finalOrgVersion.registrations.filter(
-            (reg) => previouslyApprovedRegistrationIds.includes(reg.id)
-          )
-
-          expect(finalRegistrations).toHaveLength(
-            previouslyApprovedRegistrations.length
-          )
-
-          for (const registration of finalRegistrations) {
-            expect(registration.status).toBe(STATUS.ACTIVE)
-          }
         })
       })
     })

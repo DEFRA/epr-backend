@@ -6,6 +6,23 @@ import { createInitialStatusHistory } from '../helpers.js'
 const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
 
+/**
+ * Generates date constants for validFrom/validTo in YYYY-MM-DD format
+ * @returns {Object} Object with VALID_FROM (today) and VALID_TO (one year from now)
+ */
+export const getValidDateRange = () => {
+  const now = new Date()
+  const oneYearFromNow = new Date(
+    now.getFullYear() + 1,
+    now.getMonth(),
+    now.getDate()
+  )
+  return {
+    VALID_FROM: now.toISOString().slice(0, 10),
+    VALID_TO: oneYearFromNow.toISOString().slice(0, 10)
+  }
+}
+
 function initializeStatusForItems(items) {
   if (Array.isArray(items)) {
     for (const item of items) {

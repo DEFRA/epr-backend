@@ -195,8 +195,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
             wasteProcessingType: 'exporter',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
-            validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31'),
+            validFrom: '2025-01-01',
+            validTo: '2025-12-31',
             accreditationId
           }
         ],
@@ -204,8 +204,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
           {
             id: accreditationId,
             accreditationNumber: 'ACC-2025-001',
-            validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31')
+            validFrom: '2025-01-01',
+            validTo: '2025-12-31'
           }
         ]
       })

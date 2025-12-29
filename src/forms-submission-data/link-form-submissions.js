@@ -1,5 +1,8 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { STATUS, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  REG_ACC_STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import { siteInfoToLog } from './parsing-common/site.js'
 import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 
@@ -143,7 +146,7 @@ export function linkItemsToOrganisations(
  */
 function findEligibleAccreditations(registration, accreditations) {
   return accreditations
-    .filter((acc) => acc.status !== STATUS.APPROVED)
+    .filter((acc) => acc.status !== REG_ACC_STATUS.APPROVED)
     .filter((acc) => isAccreditationForRegistration(acc, registration))
 }
 
@@ -163,7 +166,7 @@ function isLinkedToApprovedAccreditation(registration, accreditations) {
   const linkedAccreditation = accreditations.find(
     (acc) => acc.id === registration.accreditationId
   )
-  return linkedAccreditation?.status === STATUS.APPROVED
+  return linkedAccreditation?.status === REG_ACC_STATUS.APPROVED
 }
 
 /**

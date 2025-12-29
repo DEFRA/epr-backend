@@ -7,7 +7,7 @@ import {
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   MATERIAL,
-  STATUS,
+  ORGANISATION_STATUS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
@@ -685,7 +685,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo,
@@ -695,14 +695,14 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
           },
           {
             id: accId2,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: new Date()
@@ -731,7 +731,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
@@ -740,7 +740,7 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: new Date()
@@ -767,7 +767,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo,
@@ -777,14 +777,14 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
           },
           {
             id: accId2,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: new Date()
@@ -811,7 +811,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             accreditationId: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
@@ -819,7 +819,7 @@ describe('linkRegistrationToAccreditations', () => {
           },
           {
             id: reg2Id,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
@@ -828,7 +828,7 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo

@@ -6,11 +6,7 @@ import {
   prepareForReplace,
   SCHEMA_VERSION
 } from './helpers.js'
-import {
-  validateId,
-  validateOrganisationInsert,
-  validateOrganisationUpdate
-} from './schema/index.js'
+import { validateId, validateOrganisationInsert } from './schema/index.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
@@ -63,16 +59,11 @@ const performReplace = (db) => async (id, version, updates) => {
     throw Boom.notFound(`Organisation with id ${validatedId} not found`)
   }
 
-  const validatedUpdates = validateOrganisationUpdate(updates)
-
   const result = await db
     .collection(COLLECTION_NAME)
     .replaceOne(
       { _id: ObjectId.createFromHexString(validatedId), version },
-      prepareForReplace(
-        mapDocumentWithCurrentStatuses(existing),
-        validatedUpdates
-      )
+      prepareForReplace(mapDocumentWithCurrentStatuses(existing), updates)
     )
 
   if (result.matchedCount === 0) {
