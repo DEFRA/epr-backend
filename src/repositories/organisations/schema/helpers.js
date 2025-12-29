@@ -89,12 +89,9 @@ export const dateRequiredWhenApprovedOrSuspended = () =>
   Joi.date()
     .iso()
     .custom((value) => {
-      if (value) {
-        const truncated = new Date(value)
-        truncated.setUTCHours(0, 0, 0, 0)
-        return truncated
-      }
-      return value
+      const truncated = new Date(value)
+      truncated.setUTCHours(0, 0, 0, 0)
+      return truncated
     })
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null)
