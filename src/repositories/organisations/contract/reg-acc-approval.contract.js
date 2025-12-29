@@ -766,6 +766,12 @@ export const testRegAccApprovalValidation = (it) => {
 
           expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedReg.registrationNumber).toBe('REG12345')
+          expect(updatedReg.validFrom.toISOString()).toBe(
+            '2025-01-01T00:00:00.000Z'
+          )
+          expect(updatedReg.validTo.toISOString()).toBe(
+            '2025-12-31T00:00:00.000Z'
+          )
         })
 
         it('rejects update when registration status changes to suspended without registrationNumber', async () => {
@@ -862,6 +868,12 @@ export const testRegAccApprovalValidation = (it) => {
 
           expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedAcc.accreditationNumber).toBe('ACC12345')
+          expect(updatedAcc.validFrom.toISOString()).toBe(
+            '2025-01-01T00:00:00.000Z'
+          )
+          expect(updatedAcc.validTo.toISOString()).toBe(
+            '2025-12-31T00:00:00.000Z'
+          )
         })
 
         it('rejects update when accreditation status changes to suspended without accreditationNumber', async () => {
@@ -1009,6 +1021,12 @@ export const testRegAccApprovalValidation = (it) => {
           expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedReg.validFrom).toEqual(validFrom)
           expect(updatedReg.validTo).toEqual(validTo)
+          expect(updatedReg.validFrom.toISOString()).toBe(
+            '2025-01-01T00:00:00.000Z'
+          )
+          expect(updatedReg.validTo.toISOString()).toBe(
+            '2025-12-31T00:00:00.000Z'
+          )
         })
 
         it('rejects update when registration status changes to suspended without validFrom', async () => {
@@ -1194,6 +1212,12 @@ export const testRegAccApprovalValidation = (it) => {
           expect(updatedAcc.status).toBe(REG_ACC_STATUS.APPROVED)
           expect(updatedAcc.validFrom).toEqual(validFrom)
           expect(updatedAcc.validTo).toEqual(validTo)
+          expect(updatedAcc.validFrom.toISOString()).toBe(
+            '2025-01-01T00:00:00.000Z'
+          )
+          expect(updatedAcc.validTo.toISOString()).toBe(
+            '2025-12-31T00:00:00.000Z'
+          )
         })
 
         it('rejects update when accreditation status changes to suspended without validFrom', async () => {

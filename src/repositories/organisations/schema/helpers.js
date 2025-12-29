@@ -86,7 +86,18 @@ export const requiredWhenApprovedOrSuspended = {
 }
 
 export const dateRequiredWhenApprovedOrSuspended = () =>
-  Joi.date().iso().when('status', requiredWhenApprovedOrSuspended).default(null)
+  Joi.date()
+    .iso()
+    .custom((value) => {
+      if (value) {
+        const truncated = new Date(value)
+        truncated.setUTCHours(0, 0, 0, 0)
+        return truncated
+      }
+      return value
+    })
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null)
 
 function findAccreditationsWithoutApprovedRegistration(
   accreditations,
