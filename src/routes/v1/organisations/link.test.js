@@ -6,7 +6,8 @@ import {
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildOrganisation,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
@@ -32,12 +33,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
-  const now = new Date()
-  const oneYearFromNow = new Date(
-    now.getFullYear() + 1,
-    now.getMonth(),
-    now.getDate()
-  )
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
@@ -148,8 +144,8 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
                   status: ORGANISATION_STATUS.APPROVED,
                   cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
                   registrationNumber: 'REG1',
-                  validFrom: now,
-                  validTo: oneYearFromNow,
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
                   reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]

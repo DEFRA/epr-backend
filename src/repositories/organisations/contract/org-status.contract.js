@@ -4,11 +4,16 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
+import {
+  buildOrganisation,
+  prepareOrgUpdate,
+  getValidDateRange
+} from './test-data.js'
 
 export const testOrgStatusTransitionBehaviour = (it) => {
   describe('organisation status transitions', () => {
     let repository
+    const { VALID_FROM, VALID_TO } = getValidDateRange()
 
     beforeEach(async ({ organisationsRepository }) => {
       repository = await organisationsRepository()
@@ -72,8 +77,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               ...orgData.registrations[0],
               status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -91,8 +96,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               ...orgData.registrations[0],
               status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -126,8 +131,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               ...orgData.registrations[0],
               status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -150,8 +155,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               ...orgData.registrations[0],
               status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -178,8 +183,8 @@ export const testOrgStatusTransitionBehaviour = (it) => {
               ...orgData.registrations[0],
               status: REG_ACC_STATUS.APPROVED,
               registrationNumber: 'REG12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]

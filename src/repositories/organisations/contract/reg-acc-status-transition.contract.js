@@ -3,9 +3,16 @@ import {
   REPROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { beforeEach, describe, expect } from 'vitest'
-import { buildOrganisation, prepareOrgUpdate } from './test-data.js'
+import {
+  buildOrganisation,
+  prepareOrgUpdate,
+  getValidDateRange
+} from './test-data.js'
 
 export const testRegAccStatusTransitionBehaviour = (it) => {
+  // Date strings for validFrom/validTo
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
+
   describe('registration/accreditation status transitions', () => {
     let repository
 
@@ -25,8 +32,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
                 ...orgData.registrations[0],
                 status: REG_ACC_STATUS.SUSPENDED,
                 registrationNumber: 'REG12345',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -54,8 +61,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
         let registration2
         let accreditation1
         let accreditation2
-        let validFrom
-        let validTo
         let afterApproval
 
         beforeEach(async () => {
@@ -65,16 +70,13 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)
 
-          validFrom = new Date('2025-01-01')
-          validTo = new Date('2025-12-31')
-
           // Link registrations to accreditations and approve both
           const approvedReg1 = {
             ...inserted.registrations[0],
             status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG1',
-            validFrom,
-            validTo,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT,
             accreditationId: inserted.accreditations[0].id // Link to first accreditation (reprocessor)
           }
@@ -83,8 +85,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             ...inserted.registrations[1],
             status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG2',
-            validFrom,
-            validTo,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             accreditationId: inserted.accreditations[2].id // Link to third accreditation (exporter)
           }
 
@@ -93,8 +95,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             ...inserted.accreditations[0],
             status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC1',
-            validFrom,
-            validTo,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -102,8 +104,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             ...inserted.accreditations[2],
             status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC2',
-            validFrom,
-            validTo
+            validFrom: VALID_FROM,
+            validTo: VALID_TO
           }
 
           await repository.replace(
@@ -316,8 +318,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
                 ...orgData.accreditations[0],
                 status: REG_ACC_STATUS.SUSPENDED,
                 accreditationNumber: 'ACC12345',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -342,8 +344,6 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
       describe('transition from APPROVED', () => {
         let organisation
         let accreditation
-        let validFrom
-        let validTo
         let afterApproval
 
         beforeEach(async () => {
@@ -351,16 +351,13 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
           await repository.insert(organisation)
           const inserted = await repository.findById(organisation.id)
 
-          validFrom = new Date('2025-01-01')
-          validTo = new Date('2025-12-31')
-
           // Approve registration and accreditation
           const approvedRegistration = {
             ...inserted.registrations[0],
             status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
-            validFrom,
-            validTo,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 
@@ -368,8 +365,8 @@ export const testRegAccStatusTransitionBehaviour = (it) => {
             ...inserted.accreditations[0],
             status: REG_ACC_STATUS.APPROVED,
             accreditationNumber: 'ACC12345',
-            validFrom,
-            validTo,
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             reprocessingType: REPROCESSING_TYPE.INPUT
           }
 

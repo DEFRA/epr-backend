@@ -7,12 +7,16 @@ import { beforeEach, describe, expect } from 'vitest'
 import {
   buildOrganisation,
   buildRegistration,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  getValidDateRange
 } from './test-data.js'
 
 export const testReplaceBehaviour = (it) => {
   describe('replace', () => {
     let repository
+
+    // Date strings for validFrom/validTo
+    const { VALID_FROM, VALID_TO } = getValidDateRange()
 
     beforeEach(async ({ organisationsRepository }) => {
       repository = await organisationsRepository()
@@ -343,10 +347,7 @@ export const testReplaceBehaviour = (it) => {
 
         const registrationToUpdate = {
           ...organisation.registrations[0],
-          status: REG_ACC_STATUS.APPROVED,
-          registrationNumber: 'REG12345',
-          validFrom: new Date('2025-01-01'),
-          validTo: new Date('2025-12-31'),
+          status: REG_ACC_STATUS.REJECTED,
           reprocessingType: REPROCESSING_TYPE.INPUT
         }
         const updatePayload = prepareOrgUpdate(organisation, {
@@ -358,10 +359,10 @@ export const testReplaceBehaviour = (it) => {
         const updatedReg = result.registrations.find(
           (r) => r.id === registrationToUpdate.id
         )
-        expect(updatedReg.status).toBe(REG_ACC_STATUS.APPROVED)
+        expect(updatedReg.status).toBe(REG_ACC_STATUS.REJECTED)
         expect(updatedReg.statusHistory).toHaveLength(2)
         expect(updatedReg.statusHistory[0].status).toBe(REG_ACC_STATUS.CREATED)
-        expect(updatedReg.statusHistory[1].status).toBe(REG_ACC_STATUS.APPROVED)
+        expect(updatedReg.statusHistory[1].status).toBe(REG_ACC_STATUS.REJECTED)
         expect(updatedReg.statusHistory[1].updatedAt).toBeInstanceOf(Date)
       })
 
@@ -377,8 +378,8 @@ export const testReplaceBehaviour = (it) => {
               ...organisation.registrations[0],
               status: REG_ACC_STATUS.REJECTED,
               registrationNumber: 'REG12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
+              validFrom: VALID_FROM,
+              validTo: VALID_TO,
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -436,9 +437,6 @@ export const testReplaceBehaviour = (it) => {
             {
               ...organisation.accreditations[0],
               status: REG_ACC_STATUS.REJECTED,
-              accreditationNumber: 'ACC12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31'),
               reprocessingType: REPROCESSING_TYPE.INPUT
             }
           ]
@@ -450,9 +448,7 @@ export const testReplaceBehaviour = (it) => {
             {
               ...organisation.accreditations[0],
               status: REG_ACC_STATUS.CREATED,
-              accreditationNumber: 'ACC12345',
-              validFrom: new Date('2025-01-01'),
-              validTo: new Date('2025-12-31')
+              accreditationNumber: 'ACC12345'
             }
           ]
         })
@@ -493,8 +489,8 @@ export const testReplaceBehaviour = (it) => {
                 ...organisation.registrations[0],
                 status: REG_ACC_STATUS.APPROVED,
                 registrationNumber: 'REG12345',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -532,8 +528,8 @@ export const testReplaceBehaviour = (it) => {
                 ...organisation.registrations[0],
                 status: REG_ACC_STATUS.APPROVED,
                 registrationNumber: 'REG12345',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -552,8 +548,8 @@ export const testReplaceBehaviour = (it) => {
             ...organisation.registrations[1],
             status: REG_ACC_STATUS.APPROVED,
             registrationNumber: 'REG12345',
-            validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31'),
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             submitterContactDetails: {
               fullName: 'Different Submitter Name',
               email: 'SUBMITTER@EXAMPLE.COM',
@@ -643,8 +639,8 @@ export const testReplaceBehaviour = (it) => {
                 status: REG_ACC_STATUS.APPROVED,
                 cbduNumber: 'CBDU12345',
                 registrationNumber: 'REG123',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -699,8 +695,8 @@ export const testReplaceBehaviour = (it) => {
                 ...reg1,
                 status: REG_ACC_STATUS.APPROVED,
                 registrationNumber: 'REG123',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               },
               {
@@ -778,8 +774,8 @@ export const testReplaceBehaviour = (it) => {
                 ...registration,
                 status: REG_ACC_STATUS.APPROVED,
                 registrationNumber: 'REG123',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -788,8 +784,8 @@ export const testReplaceBehaviour = (it) => {
                 ...accreditation,
                 status: REG_ACC_STATUS.APPROVED,
                 accreditationNumber: 'ACC123',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ]
@@ -851,8 +847,8 @@ export const testReplaceBehaviour = (it) => {
                 ...registration,
                 status: REG_ACC_STATUS.APPROVED,
                 registrationNumber: 'REG123',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               }
             ],
@@ -861,8 +857,8 @@ export const testReplaceBehaviour = (it) => {
                 ...acc1,
                 status: REG_ACC_STATUS.APPROVED,
                 accreditationNumber: 'ACC123',
-                validFrom: new Date('2025-01-01'),
-                validTo: new Date('2025-12-31'),
+                validFrom: VALID_FROM,
+                validTo: VALID_TO,
                 reprocessingType: REPROCESSING_TYPE.INPUT
               },
               acc2

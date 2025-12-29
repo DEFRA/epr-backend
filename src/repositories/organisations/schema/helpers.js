@@ -86,13 +86,16 @@ export const requiredWhenApprovedOrSuspended = {
 }
 
 export const dateRequiredWhenApprovedOrSuspended = () =>
-  Joi.date()
-    .iso()
-    .custom((value) => {
-      const truncated = new Date(value)
-      truncated.setUTCHours(0, 0, 0, 0)
-      return truncated
+  Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .custom((value, helpers) => {
+      const date = new Date(value + 'T00:00:00.000Z')
+      if (isNaN(date.getTime())) {
+        return helpers.error('string.pattern.base')
+      }
+      return value
     })
+    .messages({ 'string.pattern.base': 'Date must be in YYYY-MM-DD format' })
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null)
 
