@@ -104,6 +104,8 @@ describe('seed-scenarios', () => {
           (a) => a.status === REG_ACC_STATUS.APPROVED
         )
       ).toBe(true)
+      // Users are collated automatically by the repository when status changes
+      expect(approvedOrg.users.length).toBeGreaterThan(0)
     })
 
     it('creates an active organisation with approved registration and accreditation', async () => {
