@@ -22,7 +22,7 @@ import {
   getValidDateRange,
   prepareOrgUpdate
 } from '#repositories/organisations/contract/test-data.js'
-import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
+import { waitForVersion } from '#common/helpers/polling/wait-for-version.js'
 
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {Db} from 'mongodb' */
