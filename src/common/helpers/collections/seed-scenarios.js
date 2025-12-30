@@ -40,10 +40,19 @@ export const SCENARIO_ORG_IDS = Object.freeze({
 })
 
 /**
- * Tester email - can be overridden via environment variable
+ * Tester email for active org - can be overridden via environment variable.
+ * This user is added when the organisation is linked to DefraId.
  */
 const getTesterEmail = () =>
   process.env.SEED_TESTER_EMAIL || 'tester@example.com'
+
+/**
+ * Tester email for approved org - can be overridden via environment variable.
+ * This user is added as an approved person on the registration, simulating
+ * a user who came through the form submission process.
+ */
+const getApprovedTesterEmail = () =>
+  process.env.SEED_APPROVED_TESTER_EMAIL || 'approved-tester@example.com'
 
 /**
  * Creates an approved organisation with approved registration and accreditation
@@ -67,6 +76,8 @@ async function buildApprovedOrgForSeed(
 
   const { VALID_FROM, VALID_TO } = getValidDateRange()
 
+  const approvedTesterEmail = getApprovedTesterEmail()
+
   const approvedRegistrations = [
     {
       ...org.registrations[0],
@@ -75,7 +86,16 @@ async function buildApprovedOrgForSeed(
       cbduNumber: `CBDU${org.orgId}`,
       reprocessingType: REPROCESSING_TYPE.INPUT,
       validFrom: VALID_FROM,
-      validTo: VALID_TO
+      validTo: VALID_TO,
+      approvedPersons: [
+        ...org.registrations[0].approvedPersons,
+        {
+          fullName: 'Approved Tester',
+          email: approvedTesterEmail,
+          phone: '0123456789',
+          jobTitle: 'Tester'
+        }
+      ]
     }
   ]
 

@@ -113,6 +113,10 @@ describe('seed-scenarios', () => {
       ).toBe(true)
       // Users are collated automatically by the repository when status changes
       expect(approvedOrg.users.length).toBeGreaterThan(0)
+      // The approved tester should be included via approvedPersons
+      expect(
+        approvedOrg.users.some((u) => u.email === 'approved-tester@example.com')
+      ).toBe(true)
     })
 
     it('creates an active organisation with approved registration and accreditation', async () => {
@@ -162,7 +166,7 @@ describe('seed-scenarios', () => {
       ).toBe(true)
     })
 
-    it('uses tester email from environment variable when set', async () => {
+    it('uses tester email from environment variable for active org', async () => {
       const originalEnv = process.env.SEED_TESTER_EMAIL
       process.env.SEED_TESTER_EMAIL = 'custom-tester@example.com'
 
@@ -183,6 +187,34 @@ describe('seed-scenarios', () => {
           delete process.env.SEED_TESTER_EMAIL
         } else {
           process.env.SEED_TESTER_EMAIL = originalEnv
+        }
+      }
+    })
+
+    it('uses approved tester email from environment variable for approved org', async () => {
+      const originalEnv = process.env.SEED_APPROVED_TESTER_EMAIL
+      process.env.SEED_APPROVED_TESTER_EMAIL =
+        'custom-approved-tester@example.com'
+
+      try {
+        await createEprOrganisationScenarios(mockDb, repository)
+        await waitForCacheSync()
+
+        const orgs = await repository.findAll()
+        const approvedOrg = orgs.find(
+          (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
+        )
+
+        expect(
+          approvedOrg.users.some(
+            (u) => u.email === 'custom-approved-tester@example.com'
+          )
+        ).toBe(true)
+      } finally {
+        if (originalEnv === undefined) {
+          delete process.env.SEED_APPROVED_TESTER_EMAIL
+        } else {
+          process.env.SEED_APPROVED_TESTER_EMAIL = originalEnv
         }
       }
     })
