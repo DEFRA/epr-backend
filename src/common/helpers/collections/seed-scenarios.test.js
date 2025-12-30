@@ -14,6 +14,10 @@ import {
 /**
  * Wait for the inmemory repository's stale cache to sync.
  * The repository uses setImmediate for cache updates.
+ *
+ * Note: We can't use waitForVersion here because createEprOrganisationScenarios
+ * doesn't return the created org IDs, and we query using findAll() with orgId
+ * filtering rather than findById().
  */
 const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
 
