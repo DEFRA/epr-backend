@@ -25,7 +25,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -49,7 +54,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', initialVersion)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        initialVersion
+      )
 
       // Now append a new version
       const updatedVersion = toWasteRecordVersions({
@@ -65,7 +75,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', updatedVersion)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        updatedVersion
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -88,10 +103,20 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       // Retry same submission (e.g. after failure recovery)
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -125,7 +150,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(3)
@@ -135,7 +165,12 @@ export const testAppendVersionsBehaviour = (it) => {
       const wasteRecordVersions = new Map()
 
       await expect(
-        repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+        repository.appendVersions(
+          'org-1',
+          'reg-1',
+          undefined,
+          wasteRecordVersions
+        )
       ).resolves.not.toThrow()
     })
 
@@ -159,7 +194,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(2)
@@ -194,7 +234,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', firstSubmission)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        firstSubmission
+      )
 
       // Simulate partial failure - only row-1 was persisted, now retry with both
       const retrySubmission = toWasteRecordVersions({
@@ -214,7 +259,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', retrySubmission)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        retrySubmission
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(2)
@@ -235,7 +285,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       // Retry same submission but with different data (simulating replay with corrupted/modified data)
       const retryWithDifferentData = toWasteRecordVersions({
@@ -249,7 +304,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', retryWithDifferentData)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        retryWithDifferentData
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -270,12 +330,13 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', initialSetup)
+      await repository.appendVersions('org-1', 'reg-1', undefined, initialSetup)
 
       // First create row-2 with log-1 so it can get an append
       await repository.appendVersions(
         'org-1',
         'reg-1',
+        undefined,
         toWasteRecordVersions({
           [WASTE_RECORD_TYPE.RECEIVED]: {
             'row-2': buildVersionData({
@@ -320,7 +381,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', mixedOperations)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        mixedOperations
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(3)
@@ -365,7 +431,12 @@ export const testAppendVersionsBehaviour = (it) => {
       })
 
       // Create same rowId and type for two different organisations
-      await repository.appendVersions('org-1', 'reg-1', wasteRecordVersions)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        wasteRecordVersions
+      )
 
       const org2VersionsByType = toWasteRecordVersions({
         [WASTE_RECORD_TYPE.RECEIVED]: {
@@ -378,7 +449,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-2', 'reg-1', org2VersionsByType)
+      await repository.appendVersions(
+        'org-2',
+        'reg-1',
+        undefined,
+        org2VersionsByType
+      )
 
       // Verify org-1 only sees its own data
       const org1Result = await repository.findByRegistration('org-1', 'reg-1')
@@ -406,7 +482,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', initialVersion)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        initialVersion
+      )
 
       // Verify initial state
       const initialResult = await repository.findByRegistration(
@@ -432,7 +513,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', updatedVersion)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        updatedVersion
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
@@ -470,7 +556,7 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', firstVersion)
+      await repository.appendVersions('org-1', 'reg-1', undefined, firstVersion)
 
       // Second submission with later timestamp but earlier createdAt
       const secondVersion = toWasteRecordVersions({
@@ -486,7 +572,12 @@ export const testAppendVersionsBehaviour = (it) => {
         }
       })
 
-      await repository.appendVersions('org-1', 'reg-1', secondVersion)
+      await repository.appendVersions(
+        'org-1',
+        'reg-1',
+        undefined,
+        secondVersion
+      )
 
       const result = await repository.findByRegistration('org-1', 'reg-1')
       expect(result).toHaveLength(1)
