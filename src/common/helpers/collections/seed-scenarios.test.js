@@ -12,6 +12,12 @@ import {
 /** @import {Db} from 'mongodb' */
 
 /**
+ * Wait for the inmemory repository's stale cache to sync.
+ * The repository uses setImmediate for cache updates.
+ */
+const waitForCacheSync = () => new Promise((resolve) => setImmediate(resolve))
+
+/**
  * @param {{ find?: () => { toArray: () => Promise<object[]> } }} options
  * @returns {Db}
  */
@@ -61,7 +67,7 @@ describe('seed-scenarios', () => {
       ).resolves.not.toThrow()
 
       // Verify all scenarios were created successfully
-      await new Promise((resolve) => setTimeout(resolve, 50))
+      await waitForCacheSync()
       const orgs = await repository.findAll()
       const orgIds = Object.values(SCENARIO_ORG_IDS)
       const scenarioOrgs = orgs.filter((org) => orgIds.includes(org.orgId))
@@ -82,11 +88,8 @@ describe('seed-scenarios', () => {
 
     it('creates an approved organisation with approved registration and accreditation', async () => {
       await createEprOrganisationScenarios(mockDb, repository)
+      await waitForCacheSync()
 
-      // Wait for inmemory repository's stale cache to sync (uses setImmediate)
-      await new Promise((resolve) => setImmediate(resolve))
-
-      // Find the org by querying all orgs
       const orgs = await repository.findAll()
       const approvedOrg = orgs.find(
         (org) => org.orgId === SCENARIO_ORG_IDS.APPROVED
@@ -110,9 +113,7 @@ describe('seed-scenarios', () => {
 
     it('creates an active organisation with approved registration and accreditation', async () => {
       await createEprOrganisationScenarios(mockDb, repository)
-
-      // Wait for inmemory repository's stale cache to sync (uses setImmediate)
-      await new Promise((resolve) => setImmediate(resolve))
+      await waitForCacheSync()
 
       const orgs = await repository.findAll()
       const activeOrg = orgs.find(
@@ -137,9 +138,7 @@ describe('seed-scenarios', () => {
 
     it('creates an active organisation with suspended accreditation', async () => {
       await createEprOrganisationScenarios(mockDb, repository)
-
-      // Wait for inmemory repository's stale cache to sync (uses setImmediate)
-      await new Promise((resolve) => setTimeout(resolve, 100))
+      await waitForCacheSync()
 
       const orgs = await repository.findAll()
       const mixedOrg = orgs.find(
@@ -165,9 +164,7 @@ describe('seed-scenarios', () => {
 
       try {
         await createEprOrganisationScenarios(mockDb, repository)
-
-        // Wait for inmemory repository's stale cache to sync
-        await new Promise((resolve) => setTimeout(resolve, 100))
+        await waitForCacheSync()
 
         const orgs = await repository.findAll()
         const activeOrg = orgs.find(
