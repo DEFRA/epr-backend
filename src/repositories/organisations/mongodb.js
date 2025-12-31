@@ -43,7 +43,9 @@ const performInsert = (db) => async (organisation) => {
     })
   } catch (error) {
     if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
-      throw Boom.conflict(`Organisation with ${id} already exists`)
+      throw Boom.conflict(
+        `Organisation with ${id} already exists - ${error.message}`
+      )
     }
     throw error
   }
