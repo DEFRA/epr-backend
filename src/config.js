@@ -122,7 +122,7 @@ const baseConfig = {
       format: Array,
       default: isProduction
         ? ['req.headers.authorization', 'req.headers.cookie', 'res.headers']
-        : ['req', 'res', 'responseTime']
+        : ['req.headers.authorization', 'req.headers.cookie']
     }
   },
   mongo: {
