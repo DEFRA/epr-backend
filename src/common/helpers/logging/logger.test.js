@@ -1,6 +1,7 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
+import { loggerOptions } from './logger-options.js'
 
-// Must mock config before importing logger-options
+// vi.mock is hoisted by vitest, so this runs before the import above
 vi.mock('#root/config.js', () => ({
   config: {
     get: vi.fn((key) => {
@@ -19,8 +20,6 @@ vi.mock('#root/config.js', () => ({
     })
   }
 }))
-
-import { loggerOptions } from './logger-options.js'
 
 describe('loggerOptions.serializers.error', () => {
   const { error: errorSerializer } = loggerOptions.serializers
