@@ -630,5 +630,73 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(debitTx.entities[0].id).toBe('1001')
       expect(debitTx.amount).toBeCloseTo(100)
     })
+
+    it('should not create transaction if mandatory fields are missing (AC01d)', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData([
+        {
+          rowId: 1001,
+          tonnageReceived: 100,
+          ewcCode: '' // Missing mandatory field
+        },
+        {
+          rowId: 1002,
+          tonnageReceived: 200,
+          ewcCode: '15 01 01' // All mandatory fields present
+        }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-mandatory-check',
+        'file-mandatory-check',
+        'waste-data-mandatory.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Only row 1002 should contribute
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.transactions[0].entities[0].id).toBe('1002')
+    })
+
+    it('should correctly calculate tonnage with bailing wire deduction (Requirement Note)', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      // (1000 gross - 100 tare - 50 pallet) = 850 net
+      // 850 net * 0.9985 (bailing wire) = 848.725
+      const uploadData = createUploadData([
+        {
+          rowId: 1001,
+          grossWeight: 1000,
+          tareWeight: 100,
+          palletWeight: 50,
+          netWeight: 850,
+          bailingWire: 'Yes',
+          nonTargetWeight: 0,
+          recyclablePropPct: 1,
+          tonnageReceived: 848.725
+        }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-bailing-check',
+        'file-bailing-check',
+        'waste-data-bailing.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      expect(balance.amount).toBeCloseTo(848.725)
+    })
   })
 })
