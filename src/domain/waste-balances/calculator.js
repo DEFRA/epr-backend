@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import {
-  extractWasteBalanceFields,
+  extractWasteBalanceFields as extractExporterFields,
   isWithinAccreditationDateRange
-} from '#domain/waste-balances/extractor.js'
+} from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+import { extractWasteBalanceFields as extractReprocessorInputFields } from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -91,7 +92,8 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  * @returns {number}
  */
 const getTargetAmount = (record, accreditation) => {
-  const fields = extractWasteBalanceFields(record)
+  const fields =
+    extractExporterFields(record) || extractReprocessorInputFields(record)
   if (!fields) {
     return 0
   }
