@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { vi } from 'vitest'
+import { ObjectId } from 'mongodb'
 
 import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
@@ -18,16 +19,59 @@ import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balan
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
-import { ObjectId } from 'mongodb'
-
 import {
   asStandardUser,
   buildGetUrl,
   buildPostUrl,
   buildSubmitUrl,
   createUploadPayload,
-  pollForValidation
+  pollForValidation,
+  pollWhileStatus
 } from './integration-test-helpers.js'
+
+const RECEIVED_HEADERS = [
+  'ROW_ID',
+  'DATE_RECEIVED_FOR_REPROCESSING',
+  'EWC_CODE',
+  'DESCRIPTION_WASTE',
+  'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+  'GROSS_WEIGHT',
+  'TARE_WEIGHT',
+  'PALLET_WEIGHT',
+  'NET_WEIGHT',
+  'BAILING_WIRE_PROTOCOL',
+  'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+  'WEIGHT_OF_NON_TARGET_MATERIALS',
+  'RECYCLABLE_PROPORTION_PERCENTAGE',
+  'TONNAGE_RECEIVED_FOR_RECYCLING',
+  'SUPPLIER_NAME',
+  'SUPPLIER_ADDRESS',
+  'SUPPLIER_POSTCODE',
+  'SUPPLIER_EMAIL',
+  'SUPPLIER_PHONE_NUMBER',
+  'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
+  'YOUR_REFERENCE',
+  'WEIGHBRIDGE_TICKET',
+  'CARRIER_NAME',
+  'CBD_REG_NUMBER',
+  'CARRIER_VEHICLE_REGISTRATION_NUMBER'
+]
+
+const SENT_ON_HEADERS = [
+  'ROW_ID',
+  'DATE_LOAD_LEFT_SITE',
+  'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+  'FINAL_DESTINATION_FACILITY_TYPE',
+  'FINAL_DESTINATION_NAME',
+  'FINAL_DESTINATION_ADDRESS',
+  'FINAL_DESTINATION_POSTCODE',
+  'FINAL_DESTINATION_EMAIL',
+  'FINAL_DESTINATION_PHONE',
+  'YOUR_REFERENCE',
+  'DESCRIPTION_WASTE',
+  'EWC_CODE',
+  'WEIGHBRIDGE_TICKET'
+]
 
 describe('Submission and placeholder tests (Reprocessor Input)', () => {
   let organisationId
@@ -75,53 +119,9 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       }
     }
 
-    const receivedHeaders = [
-      'ROW_ID',
-      'DATE_RECEIVED_FOR_REPROCESSING',
-      'EWC_CODE',
-      'DESCRIPTION_WASTE',
-      'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
-      'GROSS_WEIGHT',
-      'TARE_WEIGHT',
-      'PALLET_WEIGHT',
-      'NET_WEIGHT',
-      'BAILING_WIRE_PROTOCOL',
-      'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
-      'WEIGHT_OF_NON_TARGET_MATERIALS',
-      'RECYCLABLE_PROPORTION_PERCENTAGE',
-      'TONNAGE_RECEIVED_FOR_RECYCLING',
-      'SUPPLIER_NAME',
-      'SUPPLIER_ADDRESS',
-      'SUPPLIER_POSTCODE',
-      'SUPPLIER_EMAIL',
-      'SUPPLIER_PHONE_NUMBER',
-      'ACTIVITIES_CARRIED_OUT_BY_SUPPLIER',
-      'YOUR_REFERENCE',
-      'WEIGHBRIDGE_TICKET',
-      'CARRIER_NAME',
-      'CBD_REG_NUMBER',
-      'CARRIER_VEHICLE_REGISTRATION_NUMBER'
-    ]
-
-    const sentOnHeaders = [
-      'ROW_ID',
-      'DATE_LOAD_LEFT_SITE',
-      'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
-      'FINAL_DESTINATION_FACILITY_TYPE',
-      'FINAL_DESTINATION_NAME',
-      'FINAL_DESTINATION_ADDRESS',
-      'FINAL_DESTINATION_POSTCODE',
-      'FINAL_DESTINATION_EMAIL',
-      'FINAL_DESTINATION_PHONE',
-      'YOUR_REFERENCE',
-      'DESCRIPTION_WASTE',
-      'EWC_CODE',
-      'WEIGHBRIDGE_TICKET'
-    ]
-
     const createReceivedRowValues = (overrides = {}) => {
       const tonnage = overrides.tonnageReceived ?? 850
-      const defaults = {
+      const d = {
         rowId: 1001,
         dateReceived: '2025-01-15T00:00:00.000Z',
         ewcCode: '15 01 01',
@@ -145,9 +145,9 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         weighbridgeTicket: 'WB123',
         carrierName: 'Carrier A',
         cbdRegNumber: 'CBD123',
-        carrierVehicleReg: 'AB12 CDE'
+        carrierVehicleReg: 'AB12 CDE',
+        ...overrides
       }
-      const d = { ...defaults, ...overrides }
       return [
         d.rowId,
         d.dateReceived,
@@ -178,7 +178,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     }
 
     const createSentOnRowValues = (overrides = {}) => {
-      const defaults = {
+      const d = {
         rowId: 5001,
         dateLeft: '2025-01-20T00:00:00.000Z',
         tonnageSent: 100,
@@ -191,9 +191,9 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         yourReference: 'REF456',
         wasteDescription: 'Paper',
         ewcCode: '15 01 01',
-        weighbridgeTicket: 'WB456'
+        weighbridgeTicket: 'WB456',
+        ...overrides
       }
-      const d = { ...defaults, ...overrides }
       return [
         d.rowId,
         d.dateLeft,
@@ -214,7 +214,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     const createUploadData = (receivedRows = [], sentOnRows = []) => ({
       RECEIVED_LOADS_FOR_REPROCESSING: {
         location: { sheet: 'Received', row: 7, column: 'A' },
-        headers: receivedHeaders,
+        headers: RECEIVED_HEADERS,
         rows: receivedRows.map((row, index) => ({
           rowNumber: 8 + index,
           values: createReceivedRowValues(row)
@@ -222,7 +222,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       },
       SENT_ON_LOADS: {
         location: { sheet: 'Sent', row: 7, column: 'A' },
-        headers: sentOnHeaders,
+        headers: SENT_ON_HEADERS,
         rows: sentOnRows.map((row, index) => ({
           rowNumber: 8 + index,
           values: createSentOnRowValues(row)
@@ -231,7 +231,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
     })
 
     const setupIntegrationEnvironment = async () => {
-      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const mockLogger = {
         info: vi.fn(),
         error: vi.fn(),
@@ -240,8 +239,13 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         trace: vi.fn(),
         fatal: vi.fn()
       }
-      const uploadsRepository = createInMemoryUploadsRepository()
+
+      const summaryLogsRepositoryFactory = createInMemorySummaryLogsRepository()
       const summaryLogsRepository = summaryLogsRepositoryFactory(mockLogger)
+      const uploadsRepository = createInMemoryUploadsRepository()
+      const wasteRecordsRepositoryFactory =
+        createInMemoryWasteRecordsRepository()
+      const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
       const accreditationId = new ObjectId().toString()
       const testOrg = buildOrganisation({
@@ -275,10 +279,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         testOrg
       ])()
 
-      const wasteRecordsRepositoryFactory =
-        createInMemoryWasteRecordsRepository()
-      const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
       const wasteBalancesRepositoryFactory =
         createInMemoryWasteBalancesRepository([], { organisationsRepository })
       const wasteBalancesRepository = wasteBalancesRepositoryFactory()
@@ -294,16 +294,16 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         }
       }
 
+      const featureFlags = createInMemoryFeatureFlags({
+        summaryLogs: true,
+        calculateWasteBalanceOnImport: true
+      })
+
       const validateSummaryLog = createSummaryLogsValidator({
         summaryLogsRepository,
         organisationsRepository,
         wasteRecordsRepository,
         summaryLogExtractor: dynamicExtractor
-      })
-
-      const featureFlags = createInMemoryFeatureFlags({
-        summaryLogs: true,
-        calculateWasteBalanceOnImport: true
       })
 
       const syncWasteRecords = syncFromSummaryLog({
@@ -318,13 +318,9 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         validate: validateSummaryLog,
         submit: async (summaryLogId) => {
           await new Promise((resolve) => setImmediate(resolve))
-
           const existing = await summaryLogsRepository.findById(summaryLogId)
-
           const { version, summaryLog } = existing
-
           await syncWasteRecords(summaryLog)
-
           await summaryLogsRepository.update(
             summaryLogId,
             version,
@@ -351,8 +347,7 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         server,
         wasteBalancesRepository,
         accreditationId,
-        fileDataMap,
-        submitterWorker
+        fileDataMap
       }
     }
 
@@ -402,26 +397,15 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      let attempts = 0
-      const maxAttempts = 10
-      let status = SUMMARY_LOG_STATUS.SUBMITTING
-
-      while (
-        status === SUMMARY_LOG_STATUS.SUBMITTING &&
-        attempts < maxAttempts
-      ) {
-        await new Promise((resolve) => setTimeout(resolve, 50))
-
-        const checkResponse = await server.inject({
-          method: 'GET',
-          url: buildGetUrl(organisationId, registrationId, summaryLogId),
-          ...asStandardUser({ linkedOrgId: organisationId })
-        })
-
-        status = JSON.parse(checkResponse.payload).status
-        attempts++
-      }
-      return status
+      return pollWhileStatus(
+        server,
+        organisationId,
+        registrationId,
+        summaryLogId,
+        {
+          waitWhile: SUMMARY_LOG_STATUS.SUBMITTING
+        }
+      )
     }
 
     const performSubmission = async (
@@ -461,11 +445,11 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
       expect(balance.availableAmount).toBeCloseTo(300)
 
       const transaction1 = balance.transactions.find(
-        (t) => Math.abs(t.amount - 100) < 0.001
+        (t) => t.entities[0].id === '1001'
       )
       expect(transaction1).toBeDefined()
       expect(transaction1.type).toBe('credit')
-      expect(transaction1.entities[0].id).toBe('1001')
+      expect(transaction1.amount).toBeCloseTo(100)
     })
 
     it('should update waste balance with debits from sent on loads', async () => {
@@ -499,36 +483,6 @@ describe('Submission and placeholder tests (Reprocessor Input)', () => {
         (t) => t.entities[0].id === '5001'
       )
       expect(debitTx).toBeDefined()
-      // The transaction amount is stored as positive, but type is 'credit' (negative value logic is in extractor/calculator)
-      // Wait, let's check the calculator logic.
-      // In calculator.js:
-      // const sign = transaction.type === WASTE_BALANCE_TRANSACTION_TYPE.CREDIT ? 1 : -1
-      // const netAmount = transaction.amount * sign
-      //
-      // In extractor.js (reprocessor input):
-      // transactionAmount: (value[...] || 0) * -1
-      //
-      // So the extractor returns a negative amount.
-      // The calculator `buildTransaction` takes `amount`.
-      // If `amount` is negative, does it set type to DEBIT?
-      // No, `buildTransaction` takes `type` as argument, defaulting to CREDIT.
-      //
-      // Let's check `sync-from-summary-log.js` or wherever `buildTransaction` is called.
-      // It's likely in `src/domain/waste-balances/calculator.js` or `src/application/waste-records/sync-from-summary-log.js`.
-      //
-      // Actually, `sync-from-summary-log.js` calls `updateWasteBalanceTransactions`.
-      // `updateWasteBalanceTransactions` calls `calculator.calculateNewTransactions`.
-      //
-      // In `calculator.js`:
-      // const targetAmount = getTargetAmount(record, accreditation)
-      // const diff = targetAmount - currentAmount
-      // if (diff > 0) -> CREDIT
-      // if (diff < 0) -> DEBIT
-      //
-      // So if `targetAmount` is negative (from extractor), and `currentAmount` is 0.
-      // diff = -100 - 0 = -100.
-      // diff < 0, so it creates a DEBIT transaction with amount = Math.abs(-100) = 100.
-
       expect(debitTx.type).toBe('debit')
       expect(debitTx.amount).toBeCloseTo(100)
     })
