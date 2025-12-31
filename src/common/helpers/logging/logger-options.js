@@ -8,6 +8,8 @@ const serviceVersion = config.get('serviceVersion')
 const cdpEnvironment = config.get('cdpEnvironment')
 const isProductionEnvironment = cdpEnvironment === 'prod'
 
+const HTTP_STATUS_BAD_REQUEST = 400
+
 const formatters = {
   ecs: {
     ...ecsFormat({
@@ -69,7 +71,7 @@ export const loggerOptions = {
       return {
         statusCode: res.statusCode,
         // Include error payload for 4xx/5xx responses (non-prod only)
-        ...(res.statusCode >= 400 &&
+        ...(res.statusCode >= HTTP_STATUS_BAD_REQUEST &&
           res.source && {
             error: res.source.error,
             message: res.source.message,
