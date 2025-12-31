@@ -75,11 +75,36 @@ export const buildAccreditation = (overrides = {}) => {
 }
 
 export const buildOrganisation = (overrides = {}) => {
+  // Build a mapping from old accreditation IDs to new ones
+  // This ensures registration.accreditationId links are preserved
+  const accreditationIdMap = new Map()
+  for (const acc of org1.accreditations) {
+    accreditationIdMap.set(acc.id, new ObjectId().toString())
+  }
+
+  // Deep clone accreditations with new IDs
+  const accreditations = org1.accreditations.map((acc) => ({
+    ...acc,
+    id: accreditationIdMap.get(acc.id)
+  }))
+
+  // Deep clone registrations with new IDs, updating accreditationId links
+  const registrations = org1.registrations.map((reg) => ({
+    ...reg,
+    id: new ObjectId().toString(),
+    // Update accreditationId to point to the new accreditation ID
+    ...(reg.accreditationId && {
+      accreditationId: accreditationIdMap.get(reg.accreditationId)
+    })
+  }))
+
   const org = {
     ...org1,
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
     statusHistory: createInitialStatusHistory(),
+    registrations,
+    accreditations,
     ...overrides
   }
 
