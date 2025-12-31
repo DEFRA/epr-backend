@@ -1,7 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest'
 
-import { loggerOptions } from './logger-options.js'
-
 // Must mock config before importing logger-options
 vi.mock('#root/config.js', () => ({
   config: {
@@ -21,6 +19,8 @@ vi.mock('#root/config.js', () => ({
     })
   }
 }))
+
+import { loggerOptions } from './logger-options.js'
 
 describe('loggerOptions.serializers.error', () => {
   const { error: errorSerializer } = loggerOptions.serializers
@@ -107,72 +107,31 @@ describe('loggerOptions.serializers.res', () => {
     expect(resSerializer(undefined)).toBeUndefined()
   })
 
-  test('returns statusCode for successful responses', () => {
+  test('returns only statusCode for responses', () => {
+    // Note: res serializer only returns statusCode because hapi-pino passes
+    // request.raw.res (Node's raw response), not Hapi's response with source.
+    // Error details for 4xx are logged via log4xxResponseErrors option instead.
     const res = { statusCode: 200 }
     const result = resSerializer(res)
 
     expect(result).toEqual({ statusCode: 200 })
   })
 
-  test('includes error details for 4xx responses in non-prod', () => {
-    const res = {
-      statusCode: 422,
-      source: {
-        error: 'Unprocessable Entity',
-        message: 'Invalid data',
-        validation: { source: 'payload', keys: ['field'] }
-      }
-    }
-
+  test('returns only statusCode for error responses', () => {
+    const res = { statusCode: 422 }
     const result = resSerializer(res)
 
-    expect(result).toEqual({
-      statusCode: 422,
-      error: 'Unprocessable Entity',
-      message: 'Invalid data',
-      validation: { source: 'payload', keys: ['field'] }
-    })
-  })
-
-  test('includes error details for 5xx responses in non-prod', () => {
-    const res = {
-      statusCode: 500,
-      source: {
-        error: 'Internal Server Error',
-        message: 'Something went wrong'
-      }
-    }
-
-    const result = resSerializer(res)
-
-    expect(result).toEqual({
-      statusCode: 500,
-      error: 'Internal Server Error',
-      message: 'Something went wrong'
-    })
-  })
-
-  test('does not include error details for successful responses', () => {
-    const res = {
-      statusCode: 200,
-      source: { data: 'some data' }
-    }
-
-    const result = resSerializer(res)
-
-    expect(result).toEqual({ statusCode: 200 })
-  })
-
-  test('handles 4xx response without source', () => {
-    const res = { statusCode: 404 }
-
-    const result = resSerializer(res)
-
-    expect(result).toEqual({ statusCode: 404 })
+    expect(result).toEqual({ statusCode: 422 })
   })
 })
 
-describe('loggerOptions.serializers in production environment', () => {
+describe('loggerOptions.log4xxResponseErrors', () => {
+  test('is enabled in non-prod environment', () => {
+    expect(loggerOptions.log4xxResponseErrors).toBe(true)
+  })
+})
+
+describe('loggerOptions in production environment', () => {
   beforeEach(() => {
     vi.resetModules()
   })
@@ -219,7 +178,7 @@ describe('loggerOptions.serializers in production environment', () => {
     expect(result.payload).toBeUndefined()
   })
 
-  test('only returns statusCode for responses in prod environment', async () => {
+  test('log4xxResponseErrors is disabled in prod environment', async () => {
     vi.doMock('#root/config.js', () => ({
       config: {
         get: vi.fn((key) => {
@@ -241,22 +200,7 @@ describe('loggerOptions.serializers in production environment', () => {
 
     const { loggerOptions: prodLoggerOptions } =
       await import('./logger-options.js')
-    const { res: resSerializer } = prodLoggerOptions.serializers
 
-    const res = {
-      statusCode: 422,
-      source: {
-        error: 'Unprocessable Entity',
-        message: 'Sensitive validation details',
-        validation: { source: 'payload', keys: ['password'] }
-      }
-    }
-
-    const result = resSerializer(res)
-
-    expect(result).toEqual({ statusCode: 422 })
-    expect(result.error).toBeUndefined()
-    expect(result.message).toBeUndefined()
-    expect(result.validation).toBeUndefined()
+    expect(prodLoggerOptions.log4xxResponseErrors).toBe(false)
   })
 })
