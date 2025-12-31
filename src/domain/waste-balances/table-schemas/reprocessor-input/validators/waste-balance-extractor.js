@@ -104,7 +104,7 @@ export const extractWasteBalanceFields = (record) => {
         (value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON] ||
           0) * -1
     }
+  } else {
+    return null
   }
-
-  return null
 }
