@@ -534,7 +534,8 @@ function createExistingWasteRecord() {
     data: {
       ROW_ID: FIRST_ROW_ID,
       DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
-      GROSS_WEIGHT: FIRST_WEIGHT
+      GROSS_WEIGHT: FIRST_WEIGHT,
+      processingType: 'REPROCESSOR_INPUT'
     },
     versions: [
       {
@@ -547,7 +548,8 @@ function createExistingWasteRecord() {
         data: {
           ROW_ID: FIRST_ROW_ID,
           DATE_RECEIVED_FOR_REPROCESSING: FIRST_DATE,
-          GROSS_WEIGHT: FIRST_WEIGHT
+          GROSS_WEIGHT: FIRST_WEIGHT,
+          processingType: 'REPROCESSOR_INPUT'
         }
       }
     ]

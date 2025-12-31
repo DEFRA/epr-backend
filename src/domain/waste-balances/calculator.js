@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 import {
   extractWasteBalanceFields,
   isWithinAccreditationDateRange
-} from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+} from '#domain/waste-balances/extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE

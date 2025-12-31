@@ -2,7 +2,10 @@ import { describe, it, expect } from 'vitest'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { YES_NO_VALUES } from '#domain/summary-logs/table-schemas/shared/index.js'
-import { extractWasteBalanceFields } from './waste-balance-extractor.js'
+import {
+  extractWasteBalanceFields,
+  isWithinAccreditationDateRange
+} from './waste-balance-extractor.js'
 
 describe('extractWasteBalanceFields', () => {
   const validData = {
@@ -76,5 +79,37 @@ describe('extractWasteBalanceFields', () => {
     const result = extractWasteBalanceFields(record)
 
     expect(result.prnIssued).toBe(true)
+  })
+})
+
+describe('isWithinAccreditationDateRange', () => {
+  const accreditation = {
+    validFrom: '2025-01-01T00:00:00.000Z',
+    validTo: '2025-12-31T23:59:59.999Z'
+  }
+
+  it('should return true if date is within range', () => {
+    const date = new Date('2025-06-15T12:00:00.000Z')
+    expect(isWithinAccreditationDateRange(date, accreditation)).toBe(true)
+  })
+
+  it('should return true if date is exactly start date', () => {
+    const date = new Date('2025-01-01T00:00:00.000Z')
+    expect(isWithinAccreditationDateRange(date, accreditation)).toBe(true)
+  })
+
+  it('should return true if date is exactly end date', () => {
+    const date = new Date('2025-12-31T23:59:59.999Z')
+    expect(isWithinAccreditationDateRange(date, accreditation)).toBe(true)
+  })
+
+  it('should return false if date is before start date', () => {
+    const date = new Date('2024-12-31T23:59:59.999Z')
+    expect(isWithinAccreditationDateRange(date, accreditation)).toBe(false)
+  })
+
+  it('should return false if date is after end date', () => {
+    const date = new Date('2026-01-01T00:00:00.000Z')
+    expect(isWithinAccreditationDateRange(date, accreditation)).toBe(false)
   })
 })

@@ -81,13 +81,15 @@ const updateWasteBalances = async ({
   wasteBalancesRepository,
   wasteRecords
 }) => {
-  // We only calculate waste balance for exporters currently
-  const isExporter =
-    parsedData?.meta?.PROCESSING_TYPE?.value === PROCESSING_TYPES.EXPORTER
+  // We only calculate waste balance for exporters and reprocessor inputs currently
+  const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
+  const shouldCalculateWasteBalance =
+    processingType === PROCESSING_TYPES.EXPORTER ||
+    processingType === PROCESSING_TYPES.REPROCESSOR_INPUT
 
   if (
     accreditationId &&
-    isExporter &&
+    shouldCalculateWasteBalance &&
     featureFlags?.isCalculateWasteBalanceOnImportEnabled()
   ) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(

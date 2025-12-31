@@ -100,11 +100,77 @@ describe('syncFromSummaryLog', () => {
     })
   })
 
+  it('fetches accreditationId from registration if missing in summary log', async () => {
+    const fileId = 'test-file-accred'
+    const summaryLog = {
+      file: {
+        id: fileId,
+        uri: 's3://test-bucket/test-key'
+      },
+      organisationId: 'org-1',
+      registrationId: 'reg-1'
+      // accreditationId missing
+    }
+
+    const parsedData = {
+      meta: {
+        PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
+      },
+      data: {
+        RECEIVED_LOADS_FOR_REPROCESSING: {
+          location: { sheet: 'Sheet1', row: 1, column: 'A' },
+          headers: ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING', 'GROSS_WEIGHT'],
+          rows: [
+            {
+              rowNumber: 2,
+              values: ['row-1', '2025-01-15', 100]
+            }
+          ]
+        }
+      }
+    }
+
+    const extractor = createInMemorySummaryLogExtractor({
+      [fileId]: parsedData
+    })
+
+    organisationsRepository = {
+      findRegistrationById: vi.fn().mockResolvedValue({
+        id: 'reg-1',
+        accreditationId: 'accred-123'
+      })
+    }
+
+    const featureFlags = {
+      isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(true)
+    }
+
+    const sync = syncFromSummaryLog({
+      extractor,
+      wasteRecordRepository,
+      wasteBalancesRepository,
+      organisationsRepository,
+      featureFlags
+    })
+
+    await sync(summaryLog)
+
+    expect(organisationsRepository.findRegistrationById).toHaveBeenCalledWith(
+      'org-1',
+      'reg-1'
+    )
+
+    expect(
+      wasteBalancesRepository.updateWasteBalanceTransactions
+    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123')
+  })
+
   it('updates existing waste records when rowId already exists', async () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({
@@ -188,7 +254,8 @@ describe('syncFromSummaryLog', () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({
@@ -273,7 +340,8 @@ describe('syncFromSummaryLog', () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({
@@ -367,7 +435,8 @@ describe('syncFromSummaryLog', () => {
     // First, save an initial record
     const initialData = {
       DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-      GROSS_WEIGHT: TEST_WEIGHT_100_5
+      GROSS_WEIGHT: TEST_WEIGHT_100_5,
+      processingType: 'REPROCESSOR_INPUT'
     }
 
     const { version, data } = buildVersionData({
@@ -895,7 +964,8 @@ describe('syncFromSummaryLog', () => {
       // First, create an initial record
       const initialData = {
         DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5
+        GROSS_WEIGHT: TEST_WEIGHT_100_5,
+        processingType: 'REPROCESSOR_INPUT'
       }
 
       const { version, data } = buildVersionData({
@@ -981,7 +1051,8 @@ describe('syncFromSummaryLog', () => {
       // First, create an initial record
       const initialData = {
         DATE_RECEIVED_FOR_REPROCESSING: TEST_DATE_2025_01_15,
-        GROSS_WEIGHT: TEST_WEIGHT_100_5
+        GROSS_WEIGHT: TEST_WEIGHT_100_5,
+        processingType: 'REPROCESSOR_INPUT'
       }
 
       const { version, data } = buildVersionData({
