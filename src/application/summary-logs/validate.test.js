@@ -104,25 +104,31 @@ const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
   data
 })
 
-const buildExistingWasteRecord = (rowData, overrides = {}) => ({
-  type: 'received',
-  rowId: String(rowData.ROW_ID),
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  data: rowData,
-  versions: [
-    {
-      createdAt: '2025-01-01T00:00:00.000Z',
-      status: 'created',
-      summaryLog: {
-        id: 'previous-summary-log',
-        uri: 's3://bucket/old-key'
-      },
-      data: rowData
-    }
-  ],
-  ...overrides
-})
+const buildExistingWasteRecord = (rowData, overrides = {}) => {
+  const dataWithProcessingType = {
+    ...rowData,
+    processingType: 'REPROCESSOR_INPUT'
+  }
+  return {
+    type: 'received',
+    rowId: String(rowData.ROW_ID),
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    data: dataWithProcessingType,
+    versions: [
+      {
+        createdAt: '2025-01-01T00:00:00.000Z',
+        status: 'created',
+        summaryLog: {
+          id: 'previous-summary-log',
+          uri: 's3://bucket/old-key'
+        },
+        data: dataWithProcessingType
+      }
+    ],
+    ...overrides
+  }
+}
 
 // ============================================================================
 
@@ -214,6 +220,7 @@ describe('SummaryLogsValidator', () => {
       }
     }
 
+    /** @type {any} */
     summaryLogsRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -223,9 +230,9 @@ describe('SummaryLogsValidator', () => {
     }
 
     validateSummaryLog = createSummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
+      summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogExtractor
     })
   })
@@ -541,6 +548,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should throw error if repository update fails during success handler without marking as invalid', async () => {
+    /** @type {any} */
     const brokenRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -551,8 +559,8 @@ describe('SummaryLogsValidator', () => {
 
     const brokenValidate = createSummaryLogsValidator({
       summaryLogsRepository: brokenRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogExtractor
     })
 
