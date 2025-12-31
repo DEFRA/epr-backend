@@ -8,8 +8,6 @@ const serviceVersion = config.get('serviceVersion')
 const cdpEnvironment = config.get('cdpEnvironment')
 const isProductionEnvironment = cdpEnvironment === 'prod'
 
-const HTTP_STATUS_BAD_REQUEST = 400
-
 const formatters = {
   ecs: {
     ...ecsFormat({
@@ -55,31 +53,21 @@ export const loggerOptions = {
       }
       return err
     },
-    // Custom serializer for Hapi response errors (non-prod only)
+    // Note: Custom res serializer removed - hapi-pino passes request.raw.res
+    // (Node's raw response) to serializers, not Hapi's response with source.
+    // Use log4xxResponseErrors option instead for error response details.
     res: (res) => {
       if (!res) {
         return res
       }
-
-      // In production, only log status code to avoid leaking sensitive details
-      if (isProductionEnvironment) {
-        return {
-          statusCode: res.statusCode
-        }
-      }
-
       return {
-        statusCode: res.statusCode,
-        // Include error payload for 4xx/5xx responses (non-prod only)
-        ...(res.statusCode >= HTTP_STATUS_BAD_REQUEST &&
-          res.source && {
-            error: res.source.error,
-            message: res.source.message,
-            validation: res.source.validation
-          })
+        statusCode: res.statusCode
       }
     }
   },
+  // Log 4xx response bodies as 'err' field in non-prod environments
+  // This properly accesses request.response.source which contains error details
+  log4xxResponseErrors: !isProductionEnvironment,
   // @fixme: add coverage
   /* v8 ignore next 8 */
   mixin() {
