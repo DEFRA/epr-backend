@@ -220,6 +220,7 @@ describe('SummaryLogsValidator', () => {
       }
     }
 
+    /** @type {any} */
     summaryLogsRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -229,9 +230,9 @@ describe('SummaryLogsValidator', () => {
     }
 
     validateSummaryLog = createSummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
+      summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogExtractor
     })
   })
@@ -547,6 +548,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should throw error if repository update fails during success handler without marking as invalid', async () => {
+    /** @type {any} */
     const brokenRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -557,8 +559,8 @@ describe('SummaryLogsValidator', () => {
 
     const brokenValidate = createSummaryLogsValidator({
       summaryLogsRepository: brokenRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogExtractor
     })
 

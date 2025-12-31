@@ -39,7 +39,7 @@ const RECEIVED_LOADS_HEADERS = [
 
 describe('transformFromSummaryLog', () => {
   it('transforms parsed RECEIVED_LOADS data into waste records', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -87,7 +87,7 @@ describe('transformFromSummaryLog', () => {
   })
 
   it('returns empty array when no RECEIVED_LOADS data present', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -117,7 +117,7 @@ describe('transformFromSummaryLog', () => {
 
   it('includes optional accreditationId when provided', () => {
     const headers = ['ROW_ID', 'DATE_RECEIVED_FOR_REPROCESSING']
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -153,7 +153,7 @@ describe('transformFromSummaryLog', () => {
   })
 
   it('adds new version to existing waste record when rowId already exists', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -185,7 +185,7 @@ describe('transformFromSummaryLog', () => {
     }
 
     const existingWasteRecord = createExistingWasteRecord()
-    const existingRecords = new Map([
+    /** @type {any} */ const existingRecords = new Map([
       [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
     ])
 
@@ -222,7 +222,7 @@ describe('transformFromSummaryLog', () => {
   })
 
   it('throws error for unknown processing type', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'UNKNOWN_TYPE'
@@ -247,7 +247,7 @@ describe('transformFromSummaryLog', () => {
   })
 
   it('returns empty array when no processing type is specified', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {},
       data: {
         RECEIVED_LOADS_FOR_REPROCESSING: {
@@ -284,7 +284,7 @@ describe('transformFromSummaryLog', () => {
   })
 
   it('uses timestamp from context for all waste record versions', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -339,7 +339,7 @@ describe('transformFromSummaryLog', () => {
   })
 
   it('uses timestamp from context when updating existing records', () => {
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -371,7 +371,7 @@ describe('transformFromSummaryLog', () => {
     }
 
     const existingWasteRecord = createExistingWasteRecord()
-    const existingRecords = new Map([
+    /** @type {any} */ const existingRecords = new Map([
       [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
     ])
 
@@ -389,7 +389,7 @@ describe('transformFromSummaryLog', () => {
 
   describe('change property', () => {
     it('returns change: created for new waste records', () => {
-      const parsedData = {
+      /** @type {any} */ const parsedData = {
         meta: {
           PROCESSING_TYPE: {
             value: 'REPROCESSOR_INPUT'
@@ -430,7 +430,7 @@ describe('transformFromSummaryLog', () => {
     })
 
     it('returns change: updated when existing record has changes', () => {
-      const parsedData = {
+      /** @type {any} */ const parsedData = {
         meta: {
           PROCESSING_TYPE: {
             value: 'REPROCESSOR_INPUT'
@@ -462,7 +462,7 @@ describe('transformFromSummaryLog', () => {
       }
 
       const existingWasteRecord = createExistingWasteRecord()
-      const existingRecords = new Map([
+      /** @type {any} */ const existingRecords = new Map([
         [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
       ])
 
@@ -476,7 +476,7 @@ describe('transformFromSummaryLog', () => {
     })
 
     it('returns change: unchanged when existing record has no changes', () => {
-      const parsedData = {
+      /** @type {any} */ const parsedData = {
         meta: {
           PROCESSING_TYPE: {
             value: 'REPROCESSOR_INPUT'
@@ -508,7 +508,7 @@ describe('transformFromSummaryLog', () => {
       }
 
       const existingWasteRecord = createExistingWasteRecord()
-      const existingRecords = new Map([
+      /** @type {any} */ const existingRecords = new Map([
         [`${WASTE_RECORD_TYPE.RECEIVED}:${FIRST_ROW_ID}`, existingWasteRecord]
       ])
 

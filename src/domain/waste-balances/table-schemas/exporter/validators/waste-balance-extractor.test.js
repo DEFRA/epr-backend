@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { YES_NO_VALUES } from '#domain/summary-logs/table-schemas/shared/index.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import {
   extractWasteBalanceFields,
   isWithinAccreditationDateRange
@@ -19,8 +20,19 @@ describe('extractWasteBalanceFields', () => {
     [RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]: null
   }
 
+  const baseRecord = {
+    organisationId: 'org-id',
+    registrationId: 'reg-id',
+    rowId: 'row-id',
+    versions: []
+  }
+
   it('should extract fields from valid exporter record', () => {
-    const record = { data: validData }
+    const record = {
+      ...baseRecord,
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: validData
+    }
     const result = extractWasteBalanceFields(record)
 
     expect(result).toEqual({
@@ -31,7 +43,11 @@ describe('extractWasteBalanceFields', () => {
   })
 
   it('should return null if processing type is not EXPORTER', () => {
-    const record = { data: { ...validData, processingType: 'REPROCESSOR' } }
+    const record = {
+      ...baseRecord,
+      type: WASTE_RECORD_TYPE.RECEIVED,
+      data: { ...validData, processingType: 'REPROCESSOR' }
+    }
     const result = extractWasteBalanceFields(record)
     expect(result).toBeNull()
   })
@@ -39,7 +55,7 @@ describe('extractWasteBalanceFields', () => {
   it('should return null if DATE_OF_EXPORT is missing', () => {
     const data = { ...validData }
     delete data[RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]
-    const record = { data }
+    const record = { ...baseRecord, type: WASTE_RECORD_TYPE.RECEIVED, data }
     const result = extractWasteBalanceFields(record)
     expect(result).toBeNull()
   })
@@ -52,7 +68,7 @@ describe('extractWasteBalanceFields', () => {
       [RECEIVED_LOADS_FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR]: 150,
       [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: null
     }
-    const record = { data }
+    const record = { ...baseRecord, type: WASTE_RECORD_TYPE.RECEIVED, data }
     const result = extractWasteBalanceFields(record)
 
     expect(result.transactionAmount).toBe(150)
@@ -63,7 +79,7 @@ describe('extractWasteBalanceFields', () => {
       ...validData,
       [RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED]: null
     }
-    const record = { data }
+    const record = { ...baseRecord, type: WASTE_RECORD_TYPE.RECEIVED, data }
     const result = extractWasteBalanceFields(record)
 
     expect(result.transactionAmount).toBe(0)
@@ -75,7 +91,7 @@ describe('extractWasteBalanceFields', () => {
       [RECEIVED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]:
         YES_NO_VALUES.YES
     }
-    const record = { data }
+    const record = { ...baseRecord, type: WASTE_RECORD_TYPE.RECEIVED, data }
     const result = extractWasteBalanceFields(record)
 
     expect(result.prnIssued).toBe(true)

@@ -41,7 +41,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -73,7 +73,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -112,7 +112,7 @@ describe('syncFromSummaryLog', () => {
       // accreditationId missing
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' }
       },
@@ -145,7 +145,7 @@ describe('syncFromSummaryLog', () => {
       isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(true)
     }
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
@@ -182,7 +182,7 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const wasteRecordVersions = toWasteRecordVersions({
+    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
       received: {
         'row-123': { version, data }
       }
@@ -204,7 +204,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -232,7 +232,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -267,7 +267,7 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const wasteRecordVersions = toWasteRecordVersions({
+    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
       received: {
         'row-123': { version, data }
       }
@@ -290,7 +290,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -319,7 +319,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -353,7 +353,7 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const wasteRecordVersions = toWasteRecordVersions({
+    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
       received: {
         'row-123': { version, data }
       }
@@ -376,7 +376,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -404,7 +404,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -448,7 +448,7 @@ describe('syncFromSummaryLog', () => {
       currentData: initialData
     })
 
-    const wasteRecordVersions = toWasteRecordVersions({
+    const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
       received: {
         'row-123': { version, data }
       }
@@ -471,7 +471,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -499,7 +499,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -536,7 +536,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -572,7 +572,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -598,7 +598,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -631,7 +631,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -658,7 +658,7 @@ describe('syncFromSummaryLog', () => {
       registrationId: 'reg-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'REPROCESSOR_INPUT'
@@ -694,7 +694,7 @@ describe('syncFromSummaryLog', () => {
       [fileId]: parsedData
     })
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository
     })
@@ -730,7 +730,7 @@ describe('syncFromSummaryLog', () => {
       accreditationId: 'acc-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'EXPORTER'
@@ -762,7 +762,7 @@ describe('syncFromSummaryLog', () => {
       isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(true)
     }
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
@@ -800,7 +800,7 @@ describe('syncFromSummaryLog', () => {
       })
     }
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
@@ -832,7 +832,7 @@ describe('syncFromSummaryLog', () => {
       findRegistrationById: vi.fn().mockResolvedValue(null)
     }
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
@@ -856,7 +856,7 @@ describe('syncFromSummaryLog', () => {
       accreditationId: 'acc-1'
     }
 
-    const parsedData = {
+    /** @type {any} */ const parsedData = {
       meta: {
         PROCESSING_TYPE: {
           value: 'EXPORTER'
@@ -888,7 +888,7 @@ describe('syncFromSummaryLog', () => {
       isCalculateWasteBalanceOnImportEnabled: vi.fn().mockReturnValue(false)
     }
 
-    const sync = syncFromSummaryLog({
+    const sync = /** @type {any} */ (syncFromSummaryLog)({
       extractor,
       wasteRecordRepository,
       wasteBalancesRepository,
@@ -915,7 +915,7 @@ describe('syncFromSummaryLog', () => {
         registrationId: 'reg-1'
       }
 
-      const parsedData = {
+      /** @type {any} */ const parsedData = {
         meta: {
           PROCESSING_TYPE: {
             value: 'REPROCESSOR_INPUT'
@@ -947,7 +947,7 @@ describe('syncFromSummaryLog', () => {
         [fileId]: parsedData
       })
 
-      const sync = syncFromSummaryLog({
+      const sync = /** @type {any} */ (syncFromSummaryLog)({
         extractor,
         wasteRecordRepository
       })
@@ -977,7 +977,7 @@ describe('syncFromSummaryLog', () => {
         currentData: initialData
       })
 
-      const wasteRecordVersions = toWasteRecordVersions({
+      const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
         received: {
           'row-123': { version, data }
         }
@@ -1000,7 +1000,7 @@ describe('syncFromSummaryLog', () => {
         registrationId: 'reg-1'
       }
 
-      const parsedData = {
+      /** @type {any} */ const parsedData = {
         meta: {
           PROCESSING_TYPE: {
             value: 'REPROCESSOR_INPUT'
@@ -1034,7 +1034,7 @@ describe('syncFromSummaryLog', () => {
         [fileId]: parsedData
       })
 
-      const sync = syncFromSummaryLog({
+      const sync = /** @type {any} */ (syncFromSummaryLog)({
         extractor,
         wasteRecordRepository
       })
@@ -1064,7 +1064,7 @@ describe('syncFromSummaryLog', () => {
         currentData: initialData
       })
 
-      const wasteRecordVersions = toWasteRecordVersions({
+      const wasteRecordVersions = /** @type {any} */ (toWasteRecordVersions)({
         received: {
           'row-123': { version, data }
         }
@@ -1087,7 +1087,7 @@ describe('syncFromSummaryLog', () => {
         registrationId: 'reg-1'
       }
 
-      const parsedData = {
+      /** @type {any} */ const parsedData = {
         meta: {
           PROCESSING_TYPE: {
             value: 'REPROCESSOR_INPUT'
@@ -1116,7 +1116,7 @@ describe('syncFromSummaryLog', () => {
         [fileId]: parsedData
       })
 
-      const sync = syncFromSummaryLog({
+      const sync = /** @type {any} */ (syncFromSummaryLog)({
         extractor,
         wasteRecordRepository
       })

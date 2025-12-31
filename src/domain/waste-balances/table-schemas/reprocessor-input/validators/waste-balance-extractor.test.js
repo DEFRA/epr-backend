@@ -18,8 +18,16 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
     TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 50.25
   }
 
+  const baseRecord = {
+    organisationId: 'org-id',
+    registrationId: 'reg-id',
+    rowId: 'row-id',
+    versions: []
+  }
+
   it('returns null if processing type is not REPROCESSOR_INPUT', () => {
     const record = {
+      ...baseRecord,
       type: WASTE_RECORD_TYPE.RECEIVED,
       data: {
         ...validReceivedData,
@@ -32,6 +40,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
   describe('RECEIVED records', () => {
     it('extracts fields correctly for valid received record', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: validReceivedData
       }
@@ -47,6 +56,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('sets prnIssued to true when YES', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           ...validReceivedData,
@@ -60,6 +70,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('defaults transactionAmount to 0 if missing', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           ...validReceivedData,
@@ -73,6 +84,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('returns null if DATE_RECEIVED_FOR_REPROCESSING is missing', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           ...validReceivedData,
@@ -85,6 +97,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('returns null if validation fails (e.g. invalid date)', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.RECEIVED,
         data: {
           ...validReceivedData,
@@ -99,6 +112,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
   describe('SENT_ON records', () => {
     it('extracts fields correctly for valid sent on record', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: validSentOnData
       }
@@ -114,6 +128,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('defaults transactionAmount to 0 if missing', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           ...validSentOnData,
@@ -127,6 +142,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('returns null if DATE_LOAD_LEFT_SITE is missing', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           ...validSentOnData,
@@ -139,6 +155,7 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
 
     it('returns null if validation fails', () => {
       const record = {
+        ...baseRecord,
         type: WASTE_RECORD_TYPE.SENT_ON,
         data: {
           ...validSentOnData,
@@ -151,7 +168,9 @@ describe('extractWasteBalanceFields (REPROCESSOR_INPUT)', () => {
   })
 
   it('returns null for unknown record type', () => {
+    /** @type {any} */
     const record = {
+      ...baseRecord,
       type: 'UNKNOWN_TYPE',
       data: validReceivedData
     }

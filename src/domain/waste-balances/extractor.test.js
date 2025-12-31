@@ -6,11 +6,27 @@ import {
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import * as exporterExtractor from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
 import * as reprocessorInputExtractor from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
 describe('extractWasteBalanceFields', () => {
+  const baseRecord = {
+    organisationId: 'org-id',
+    registrationId: 'reg-id',
+    rowId: 'row-id',
+    versions: [],
+    type: WASTE_RECORD_TYPE.RECEIVED
+  }
+
   it('delegates to exporter extractor for EXPORTER processing type', () => {
-    const record = { data: { processingType: PROCESSING_TYPES.EXPORTER } }
-    const expectedResult = { some: 'result' }
+    const record = {
+      ...baseRecord,
+      data: { processingType: PROCESSING_TYPES.EXPORTER }
+    }
+    const expectedResult = {
+      dispatchDate: new Date(),
+      prnIssued: false,
+      transactionAmount: 100
+    }
 
     const spy = vi
       .spyOn(exporterExtractor, 'extractWasteBalanceFields')
@@ -25,9 +41,14 @@ describe('extractWasteBalanceFields', () => {
 
   it('delegates to reprocessor input extractor for REPROCESSOR_INPUT processing type', () => {
     const record = {
+      ...baseRecord,
       data: { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT }
     }
-    const expectedResult = { some: 'result' }
+    const expectedResult = {
+      dispatchDate: new Date(),
+      prnIssued: false,
+      transactionAmount: 100
+    }
 
     const spy = vi
       .spyOn(reprocessorInputExtractor, 'extractWasteBalanceFields')
@@ -41,13 +62,16 @@ describe('extractWasteBalanceFields', () => {
   })
 
   it('returns null for unknown processing type', () => {
-    const record = { data: { processingType: 'UNKNOWN' } }
+    const record = {
+      ...baseRecord,
+      data: { processingType: 'UNKNOWN' }
+    }
     const result = extractWasteBalanceFields(record)
     expect(result).toBeNull()
   })
 
   it('returns null when processing type is missing', () => {
-    const record = { data: {} }
+    const record = { ...baseRecord, data: {} }
     const result = extractWasteBalanceFields(record)
     expect(result).toBeNull()
   })
