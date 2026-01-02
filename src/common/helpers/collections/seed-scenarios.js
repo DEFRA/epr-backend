@@ -54,6 +54,103 @@ const getTesterEmail = () =>
 const getApprovedTesterEmail = () =>
   process.env.SEED_APPROVED_TESTER_EMAIL || 'approved-tester@example.com'
 
+// Constants for CBDU number formatting
+const CBDU_PREFIX = 'CBDU'
+const CBDU_ORG_ID_DIGITS = 4
+const SUFFIX_LENGTH = 3
+
+/**
+ * Creates approved registrations with unique numbers for all items
+ *
+ * @param {object} org - Organisation data
+ * @param {string} approvedTesterEmail - Email for approved tester
+ * @param {object} dateRange - Valid date range
+ * @returns {object[]} Approved registrations
+ */
+function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
+  const { VALID_FROM, VALID_TO } = dateRange
+
+  return org.registrations.map((reg, index) => {
+    const isReprocessor = reg.wasteProcessingType === 'reprocessor'
+    const isExporter = reg.wasteProcessingType === 'exporter'
+
+    // Link exporter registration to exporter accreditation if not already linked
+    let accreditationId = reg.accreditationId
+    if (isExporter && !accreditationId) {
+      const exporterAcc = org.accreditations.find(
+        (a) =>
+          a.wasteProcessingType === 'exporter' && a.material === reg.material
+      )
+      accreditationId = exporterAcc?.id
+    }
+
+    const orgIdSuffix = String(org.orgId).slice(-CBDU_ORG_ID_DIGITS)
+    const sequenceNumber = index + 1
+
+    return {
+      ...reg,
+      ...(accreditationId && { accreditationId }),
+      status: REG_ACC_STATUS.APPROVED,
+      registrationNumber: `REG-${org.orgId}-${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`,
+      cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
+      ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
+      validFrom: VALID_FROM,
+      validTo: VALID_TO,
+      ...(index === 0 && {
+        approvedPersons: [
+          ...reg.approvedPersons,
+          {
+            fullName: 'Approved Tester',
+            email: approvedTesterEmail,
+            phone: '0123456789',
+            jobTitle: 'Tester'
+          }
+        ]
+      })
+    }
+  })
+}
+
+/**
+ * Creates approved accreditations with unique numbers for all items
+ *
+ * @param {object} org - Organisation data
+ * @param {Set<string>} linkedAccreditationIds - IDs of linked accreditations
+ * @param {object} dateRange - Valid date range
+ * @returns {object[]} Approved accreditations
+ */
+function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
+  const { VALID_FROM, VALID_TO } = dateRange
+  const SECOND_GLASS_INDEX = 1
+
+  return org.accreditations.map((acc, index) => {
+    const isReprocessor = acc.wasteProcessingType === 'reprocessor'
+    const isLinked = linkedAccreditationIds.has(acc.id)
+    const needsUniquePostcode =
+      index === SECOND_GLASS_INDEX && acc.material === 'glass' && isReprocessor
+
+    return {
+      ...acc,
+      status: isLinked ? REG_ACC_STATUS.APPROVED : REG_ACC_STATUS.CREATED,
+      accreditationNumber: `ACC-${org.orgId}-${String(index + 1).padStart(SUFFIX_LENGTH, '0')}`,
+      ...(isReprocessor &&
+        isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
+      validFrom: isLinked ? VALID_FROM : null,
+      validTo: isLinked ? VALID_TO : null,
+      ...(needsUniquePostcode &&
+        acc.site && {
+          site: {
+            ...acc.site,
+            address: {
+              ...acc.site.address,
+              postcode: `SW2B 0AA`
+            }
+          }
+        })
+    }
+  })
+}
+
 /**
  * Creates an approved organisation with approved registration and accreditation
  *
@@ -71,98 +168,28 @@ async function buildApprovedOrgForSeed(
   })
 
   const INITIAL_VERSION = 1
-
   await organisationsRepository.insert(org)
 
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
-
+  const dateRange = getValidDateRange()
   const approvedTesterEmail = getApprovedTesterEmail()
 
-  // Assign unique registration numbers to ALL registrations to avoid
-  // MongoDB unique index conflicts. When a document contains at least one
-  // string value in an array field with a partial unique index, MongoDB includes
-  // ALL array elements (including nulls) in the uniqueness check.
-  //
-  // Also ensure exporter registrations are linked to their corresponding accreditations
-  const approvedRegistrations = org.registrations.map((reg, index) => {
-    const isReprocessor = reg.wasteProcessingType === 'reprocessor'
-    const isExporter = reg.wasteProcessingType === 'exporter'
+  const approvedRegistrations = createApprovedRegistrations(
+    org,
+    approvedTesterEmail,
+    dateRange
+  )
 
-    // Link exporter registration to exporter accreditation if not already linked
-    let accreditationId = reg.accreditationId
-    if (isExporter && !accreditationId) {
-      const exporterAcc = org.accreditations.find(
-        (a) =>
-          a.wasteProcessingType === 'exporter' && a.material === reg.material
-      )
-      accreditationId = exporterAcc?.id
-    }
-
-    return {
-      ...reg,
-      ...(accreditationId && { accreditationId }),
-      status: REG_ACC_STATUS.APPROVED,
-      registrationNumber: `REG-${org.orgId}-${String(index + 1).padStart(3, '0')}`,
-      // CBDU number format: CBDU + 4-6 digits (8-10 chars total for EA)
-      cbduNumber: `CBDU${String(org.orgId).slice(-4)}${index + 1}`,
-      // reprocessingType only valid for reprocessors, not exporters
-      ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
-      validFrom: VALID_FROM,
-      validTo: VALID_TO,
-      ...(index === 0 && {
-        approvedPersons: [
-          ...reg.approvedPersons,
-          {
-            fullName: 'Approved Tester',
-            email: approvedTesterEmail,
-            phone: '0123456789',
-            jobTitle: 'Tester'
-          }
-        ]
-      })
-    }
-  })
-
-  // Get IDs of accreditations that are linked to approved registrations
   const linkedAccreditationIds = new Set(
     approvedRegistrations
       .map((r) => r.accreditationId)
       .filter((id) => id != null)
   )
 
-  // Assign unique accreditation numbers to ALL accreditations to avoid MongoDB index conflicts
-  // Only approve those that are linked to a registration to satisfy validation rules
-  const approvedAccreditations = org.accreditations.map((acc, index) => {
-    const isReprocessor = acc.wasteProcessingType === 'reprocessor'
-    const isLinked = linkedAccreditationIds.has(acc.id)
-
-    // For duplicate glass reprocessors, modify the postcode to make them unique
-    const needsUniquePostcode =
-      index === 1 && acc.material === 'glass' && isReprocessor
-    return {
-      ...acc,
-      // Only approve accreditations that are linked to a registration
-      status: isLinked ? REG_ACC_STATUS.APPROVED : REG_ACC_STATUS.CREATED,
-      // Assign number to ALL accreditations (even CREATED ones) to avoid null conflicts
-      accreditationNumber: `ACC-${org.orgId}-${String(index + 1).padStart(3, '0')}`,
-      // reprocessingType only valid for reprocessors, not exporters
-      ...(isReprocessor &&
-        isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
-      validFrom: isLinked ? VALID_FROM : null,
-      validTo: isLinked ? VALID_TO : null,
-      // Modify postcode for duplicates to satisfy uniqueness constraint
-      ...(needsUniquePostcode &&
-        acc.site && {
-          site: {
-            ...acc.site,
-            address: {
-              ...acc.site.address,
-              postcode: `SW2B 0AA` // Different postcode for second glass accreditation
-            }
-          }
-        })
-    }
-  })
+  const approvedAccreditations = createApprovedAccreditations(
+    org,
+    linkedAccreditationIds,
+    dateRange
+  )
 
   await organisationsRepository.replace(
     org.id,
