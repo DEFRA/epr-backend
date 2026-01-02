@@ -1,4 +1,5 @@
 export const LOGGING_EVENT_CATEGORIES = {
+  AUTH: 'authentication',
   CONFIG: 'configuration',
   DB: 'database',
   HTTP: 'http',
@@ -8,6 +9,7 @@ export const LOGGING_EVENT_CATEGORIES = {
 }
 
 export const LOGGING_EVENT_ACTIONS = {
+  AUTH_FAILED: 'auth_failed',
   LOCK_ACQUISITION_FAILED: 'lock_acquisition_failed',
   CONNECTION_FAILURE: 'connection_failure',
   CONNECTION_INITIALISING: 'connection_initialising',
