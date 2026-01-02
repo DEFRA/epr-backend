@@ -54,6 +54,103 @@ const getTesterEmail = () =>
 const getApprovedTesterEmail = () =>
   process.env.SEED_APPROVED_TESTER_EMAIL || 'approved-tester@example.com'
 
+// Constants for CBDU number formatting
+const CBDU_PREFIX = 'CBDU'
+const CBDU_ORG_ID_DIGITS = 4
+const SUFFIX_LENGTH = 3
+
+/**
+ * Creates approved registrations with unique numbers for all items
+ *
+ * @param {object} org - Organisation data
+ * @param {string} approvedTesterEmail - Email for approved tester
+ * @param {object} dateRange - Valid date range
+ * @returns {object[]} Approved registrations
+ */
+function createApprovedRegistrations(org, approvedTesterEmail, dateRange) {
+  const { VALID_FROM, VALID_TO } = dateRange
+
+  return org.registrations.map((reg, index) => {
+    const isReprocessor = reg.wasteProcessingType === 'reprocessor'
+    const isExporter = reg.wasteProcessingType === 'exporter'
+
+    // Link exporter registration to exporter accreditation if not already linked
+    let accreditationId = reg.accreditationId
+    if (isExporter && !accreditationId) {
+      const exporterAcc = org.accreditations.find(
+        (a) =>
+          a.wasteProcessingType === 'exporter' && a.material === reg.material
+      )
+      accreditationId = exporterAcc?.id
+    }
+
+    const orgIdSuffix = String(org.orgId).slice(-CBDU_ORG_ID_DIGITS)
+    const sequenceNumber = index + 1
+
+    return {
+      ...reg,
+      ...(accreditationId && { accreditationId }),
+      status: REG_ACC_STATUS.APPROVED,
+      registrationNumber: `REG-${org.orgId}-${String(sequenceNumber).padStart(SUFFIX_LENGTH, '0')}`,
+      cbduNumber: `${CBDU_PREFIX}${orgIdSuffix}${sequenceNumber}`,
+      ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
+      validFrom: VALID_FROM,
+      validTo: VALID_TO,
+      ...(index === 0 && {
+        approvedPersons: [
+          ...reg.approvedPersons,
+          {
+            fullName: 'Approved Tester',
+            email: approvedTesterEmail,
+            phone: '0123456789',
+            jobTitle: 'Tester'
+          }
+        ]
+      })
+    }
+  })
+}
+
+/**
+ * Creates approved accreditations with unique numbers for all items
+ *
+ * @param {object} org - Organisation data
+ * @param {Set<string>} linkedAccreditationIds - IDs of linked accreditations
+ * @param {object} dateRange - Valid date range
+ * @returns {object[]} Approved accreditations
+ */
+function createApprovedAccreditations(org, linkedAccreditationIds, dateRange) {
+  const { VALID_FROM, VALID_TO } = dateRange
+  const SECOND_GLASS_INDEX = 1
+
+  return org.accreditations.map((acc, index) => {
+    const isReprocessor = acc.wasteProcessingType === 'reprocessor'
+    const isLinked = linkedAccreditationIds.has(acc.id)
+    const needsUniquePostcode =
+      index === SECOND_GLASS_INDEX && acc.material === 'glass' && isReprocessor
+
+    return {
+      ...acc,
+      status: isLinked ? REG_ACC_STATUS.APPROVED : REG_ACC_STATUS.CREATED,
+      accreditationNumber: `ACC-${org.orgId}-${String(index + 1).padStart(SUFFIX_LENGTH, '0')}`,
+      ...(isReprocessor &&
+        isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
+      validFrom: isLinked ? VALID_FROM : null,
+      validTo: isLinked ? VALID_TO : null,
+      ...(needsUniquePostcode &&
+        acc.site && {
+          site: {
+            ...acc.site,
+            address: {
+              ...acc.site.address,
+              postcode: `SW2B 0AA`
+            }
+          }
+        })
+    }
+  })
+}
+
 /**
  * Creates an approved organisation with approved registration and accreditation
  *
@@ -71,44 +168,28 @@ async function buildApprovedOrgForSeed(
   })
 
   const INITIAL_VERSION = 1
-
   await organisationsRepository.insert(org)
 
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
-
+  const dateRange = getValidDateRange()
   const approvedTesterEmail = getApprovedTesterEmail()
 
-  const approvedRegistrations = [
-    {
-      ...org.registrations[0],
-      status: REG_ACC_STATUS.APPROVED,
-      registrationNumber: `REG-${org.orgId}-001`,
-      cbduNumber: `CBDU${org.orgId}`,
-      reprocessingType: REPROCESSING_TYPE.INPUT,
-      validFrom: VALID_FROM,
-      validTo: VALID_TO,
-      approvedPersons: [
-        ...org.registrations[0].approvedPersons,
-        {
-          fullName: 'Approved Tester',
-          email: approvedTesterEmail,
-          phone: '0123456789',
-          jobTitle: 'Tester'
-        }
-      ]
-    }
-  ]
+  const approvedRegistrations = createApprovedRegistrations(
+    org,
+    approvedTesterEmail,
+    dateRange
+  )
 
-  const approvedAccreditations = [
-    {
-      ...org.accreditations[0],
-      status: REG_ACC_STATUS.APPROVED,
-      accreditationNumber: `ACC-${org.orgId}-001`,
-      reprocessingType: REPROCESSING_TYPE.INPUT,
-      validFrom: VALID_FROM,
-      validTo: VALID_TO
-    }
-  ]
+  const linkedAccreditationIds = new Set(
+    approvedRegistrations
+      .map((r) => r.accreditationId)
+      .filter((id) => id != null)
+  )
+
+  const approvedAccreditations = createApprovedAccreditations(
+    org,
+    linkedAccreditationIds,
+    dateRange
+  )
 
   await organisationsRepository.replace(
     org.id,
