@@ -78,37 +78,91 @@ async function buildApprovedOrgForSeed(
 
   const approvedTesterEmail = getApprovedTesterEmail()
 
-  const approvedRegistrations = [
-    {
-      ...org.registrations[0],
+  // Assign unique registration numbers to ALL registrations to avoid
+  // MongoDB unique index conflicts. When a document contains at least one
+  // string value in an array field with a partial unique index, MongoDB includes
+  // ALL array elements (including nulls) in the uniqueness check.
+  //
+  // Also ensure exporter registrations are linked to their corresponding accreditations
+  const approvedRegistrations = org.registrations.map((reg, index) => {
+    const isReprocessor = reg.wasteProcessingType === 'reprocessor'
+    const isExporter = reg.wasteProcessingType === 'exporter'
+
+    // Link exporter registration to exporter accreditation if not already linked
+    let accreditationId = reg.accreditationId
+    if (isExporter && !accreditationId) {
+      const exporterAcc = org.accreditations.find(
+        (a) =>
+          a.wasteProcessingType === 'exporter' && a.material === reg.material
+      )
+      accreditationId = exporterAcc?.id
+    }
+
+    return {
+      ...reg,
+      ...(accreditationId && { accreditationId }),
       status: REG_ACC_STATUS.APPROVED,
-      registrationNumber: `REG-${org.orgId}-001`,
-      cbduNumber: `CBDU${org.orgId}`,
-      reprocessingType: REPROCESSING_TYPE.INPUT,
+      registrationNumber: `REG-${org.orgId}-${String(index + 1).padStart(3, '0')}`,
+      // CBDU number format: CBDU + 4-6 digits (8-10 chars total for EA)
+      cbduNumber: `CBDU${String(org.orgId).slice(-4)}${index + 1}`,
+      // reprocessingType only valid for reprocessors, not exporters
+      ...(isReprocessor && { reprocessingType: REPROCESSING_TYPE.INPUT }),
       validFrom: VALID_FROM,
       validTo: VALID_TO,
-      approvedPersons: [
-        ...org.registrations[0].approvedPersons,
-        {
-          fullName: 'Approved Tester',
-          email: approvedTesterEmail,
-          phone: '0123456789',
-          jobTitle: 'Tester'
-        }
-      ]
+      ...(index === 0 && {
+        approvedPersons: [
+          ...reg.approvedPersons,
+          {
+            fullName: 'Approved Tester',
+            email: approvedTesterEmail,
+            phone: '0123456789',
+            jobTitle: 'Tester'
+          }
+        ]
+      })
     }
-  ]
+  })
 
-  const approvedAccreditations = [
-    {
-      ...org.accreditations[0],
-      status: REG_ACC_STATUS.APPROVED,
-      accreditationNumber: `ACC-${org.orgId}-001`,
-      reprocessingType: REPROCESSING_TYPE.INPUT,
-      validFrom: VALID_FROM,
-      validTo: VALID_TO
+  // Get IDs of accreditations that are linked to approved registrations
+  const linkedAccreditationIds = new Set(
+    approvedRegistrations
+      .map((r) => r.accreditationId)
+      .filter((id) => id != null)
+  )
+
+  // Assign unique accreditation numbers to ALL accreditations to avoid MongoDB index conflicts
+  // Only approve those that are linked to a registration to satisfy validation rules
+  const approvedAccreditations = org.accreditations.map((acc, index) => {
+    const isReprocessor = acc.wasteProcessingType === 'reprocessor'
+    const isLinked = linkedAccreditationIds.has(acc.id)
+
+    // For duplicate glass reprocessors, modify the postcode to make them unique
+    const needsUniquePostcode =
+      index === 1 && acc.material === 'glass' && isReprocessor
+    return {
+      ...acc,
+      // Only approve accreditations that are linked to a registration
+      status: isLinked ? REG_ACC_STATUS.APPROVED : REG_ACC_STATUS.CREATED,
+      // Assign number to ALL accreditations (even CREATED ones) to avoid null conflicts
+      accreditationNumber: `ACC-${org.orgId}-${String(index + 1).padStart(3, '0')}`,
+      // reprocessingType only valid for reprocessors, not exporters
+      ...(isReprocessor &&
+        isLinked && { reprocessingType: REPROCESSING_TYPE.INPUT }),
+      validFrom: isLinked ? VALID_FROM : null,
+      validTo: isLinked ? VALID_TO : null,
+      // Modify postcode for duplicates to satisfy uniqueness constraint
+      ...(needsUniquePostcode &&
+        acc.site && {
+          site: {
+            ...acc.site,
+            address: {
+              ...acc.site.address,
+              postcode: `SW2B 0AA` // Different postcode for second glass accreditation
+            }
+          }
+        })
     }
-  ]
+  })
 
   await organisationsRepository.replace(
     org.id,
