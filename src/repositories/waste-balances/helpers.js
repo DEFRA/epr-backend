@@ -14,15 +14,24 @@ import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 
 const getTableName = (recordType, processingType) => {
-  if (processingType !== PROCESSING_TYPES.EXPORTER) {
-    return null
+  if (processingType === PROCESSING_TYPES.EXPORTER) {
+    if (recordType === WASTE_RECORD_TYPE.EXPORTED) {
+      return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
+    }
+    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
+      return TABLE_NAMES.SENT_ON_LOADS
+    }
   }
-  if (recordType === WASTE_RECORD_TYPE.EXPORTED) {
-    return TABLE_NAMES.RECEIVED_LOADS_FOR_EXPORT
+
+  if (processingType === PROCESSING_TYPES.REPROCESSOR_INPUT) {
+    if (recordType === WASTE_RECORD_TYPE.RECEIVED) {
+      return TABLE_NAMES.RECEIVED_LOADS_FOR_REPROCESSING
+    }
+    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
+      return TABLE_NAMES.SENT_ON_LOADS
+    }
   }
-  if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
-    return TABLE_NAMES.SENT_ON_LOADS
-  }
+
   return null
 }
 
