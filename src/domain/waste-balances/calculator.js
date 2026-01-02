@@ -4,6 +4,7 @@ import {
   isWithinAccreditationDateRange
 } from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
 import { extractWasteBalanceFields as extractReprocessorInputFields } from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
+import { extractWasteBalanceFields as extractReprocessorOutputFields } from '#domain/waste-balances/table-schemas/reprocessor-output/validators/waste-balance-extractor.js'
 import {
   WASTE_BALANCE_TRANSACTION_TYPE,
   WASTE_BALANCE_TRANSACTION_ENTITY_TYPE
@@ -93,7 +94,9 @@ const updateCreditedAmountMap = (creditedAmountMap, transaction) => {
  */
 const getTargetAmount = (record, accreditation) => {
   const fields =
-    extractExporterFields(record) || extractReprocessorInputFields(record)
+    extractExporterFields(record) ||
+    extractReprocessorInputFields(record) ||
+    extractReprocessorOutputFields(record)
   if (!fields) {
     return 0
   }

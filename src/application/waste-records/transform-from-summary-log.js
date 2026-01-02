@@ -4,6 +4,9 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 import { transformExportLoadsRow } from './row-transformers/received-loads-export.js'
 import { transformSentOnLoadsRow } from './row-transformers/sent-on-loads.js'
+import { transformReprocessedLoadsRow } from './row-transformers/reprocessed-loads.js'
+import { transformSentOnLoadsRowReprocessorOutput } from './row-transformers/sent-on-loads-reprocessor-output.js'
+import { transformReceivedLoadsRowReprocessorOutput } from './row-transformers/received-loads-reprocessing-output.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -64,7 +67,9 @@ const TABLE_TRANSFORMERS = {
     SENT_ON_LOADS: transformSentOnLoadsRow
   },
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
-    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
+    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRowReprocessorOutput,
+    REPROCESSED_LOADS: transformReprocessedLoadsRow,
+    SENT_ON_LOADS: transformSentOnLoadsRowReprocessorOutput
   },
   [PROCESSING_TYPES.EXPORTER]: {
     RECEIVED_LOADS_FOR_EXPORT: transformExportLoadsRow
