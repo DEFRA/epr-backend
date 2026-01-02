@@ -13,6 +13,7 @@ const registration = {
   path: registrationPath,
   options: {
     auth: false,
+    tags: ['api'],
     validate: {
       payload: registrationAndAccreditationPayload
     }

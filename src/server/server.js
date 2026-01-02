@@ -1,4 +1,7 @@
 import Hapi from '@hapi/hapi'
+import Inert from '@hapi/inert'
+import Vision from '@hapi/vision'
+import HapiSwagger from 'hapi-swagger'
 import Jwt from '@hapi/jwt'
 
 import { secureContext } from '@defra/hapi-secure-context'
@@ -71,6 +74,20 @@ async function createServer(options = {}) {
     Jwt,
     authPlugin
   ]
+
+  /* istanbul ignore next */
+  if (config.get('isSwaggerEnabled')) {
+    plugins.push(Inert, Vision, {
+      plugin: HapiSwagger,
+      options: {
+        info: {
+          title: 'API Documentation',
+          version: '1'
+        },
+        documentationPath: '/swagger'
+      }
+    })
+  }
 
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
   if (!options.skipMongoDb) {

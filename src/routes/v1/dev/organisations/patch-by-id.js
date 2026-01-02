@@ -52,6 +52,7 @@ export const devOrganisationsPatchById = {
   path: devOrganisationsPatchByIdPath,
   options: {
     auth: false,
+    tags: ['api'],
     validate: {
       params,
       payload,

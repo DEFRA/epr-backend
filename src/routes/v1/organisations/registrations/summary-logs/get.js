@@ -23,13 +23,14 @@ export const summaryLogsGet = {
   path: summaryLogsGetPath,
   options: {
     auth: getAuthConfig([ROLES.standardUser]),
+    tags: ['api'],
+    response: {
+      schema: summaryLogResponseSchema
+    },
     validate: {
       query: Joi.object({
         uploadId: Joi.string().optional()
       })
-    },
-    response: {
-      schema: summaryLogResponseSchema
     }
   },
   /**

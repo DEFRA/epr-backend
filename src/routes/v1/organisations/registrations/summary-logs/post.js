@@ -21,6 +21,7 @@ export const summaryLogsCreate = {
   path: summaryLogsCreatePath,
   options: {
     auth: getAuthConfig([ROLES.standardUser]),
+    tags: ['api'],
     validate: {
       payload: summaryLogsCreatePayloadSchema,
       failAction: (_request, _h, err) => {

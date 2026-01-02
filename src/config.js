@@ -188,6 +188,12 @@ const baseConfig = {
     default: isProduction,
     env: 'ENABLE_METRICS'
   },
+  isSwaggerEnabled: {
+    doc: 'Enable swagger documentation',
+    format: Boolean,
+    default: isDevelopment,
+    env: 'ENABLE_SWAGGER'
+  },
   tracing: {
     header: {
       doc: 'CDP tracing header name',

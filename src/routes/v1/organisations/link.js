@@ -29,7 +29,8 @@ export const organisationsLink = {
   options: {
     auth: {
       scope: [ROLES.linker]
-    }
+    },
+    tags: ['api']
   },
 
   /**
