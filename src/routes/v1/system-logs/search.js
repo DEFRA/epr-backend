@@ -9,7 +9,8 @@ export const systemLogsGet = {
   options: {
     auth: {
       scope: [ROLES.serviceMaintainer]
-    }
+    },
+    tags: ['api']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request

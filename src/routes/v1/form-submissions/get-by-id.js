@@ -9,7 +9,8 @@ export const formSubmissionsDataGet = {
   options: {
     auth: {
       scope: [ROLES.serviceMaintainer]
-    }
+    },
+    tags: ['api']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {formSubmissionsRepository: FormSubmissionsRepository}} request

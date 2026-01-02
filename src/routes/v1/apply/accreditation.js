@@ -13,6 +13,7 @@ export const accreditation = {
   path: accreditationPath,
   options: {
     auth: false,
+    tags: ['api'],
     validate: {
       payload: registrationAndAccreditationPayload
     }

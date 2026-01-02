@@ -21,12 +21,7 @@ Backend APIs for: Packaging Extended Producer Responsibilities
 
 ## API endpoints
 
-| Endpoint                        | Description                   |
-| :------------------------------ | :---------------------------- |
-| `GET: /health`                  | Health                        |
-| `POST: /v1/apply/organisation`  | Organisation data submission  |
-| `POST: /v1/apply/registration`  | Registration data submission  |
-| `POST: /v1/apply/accreditation` | Accreditation data submission |
+Swagger documentation is available by running this application locally and navigating to `/swagger`. A static copy may also be found [here](https://github.com/DEFRA/epr-re-ex-service/blob/main/docs/architecture/api-definitions/internal-api.yaml).
 
 _The application runs at `https://epr-backend.{env}.cdp-int.defra.cloud`, where `{env}` is one of `dev|test|prod`_
 
