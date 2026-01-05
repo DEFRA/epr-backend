@@ -76,7 +76,8 @@ export const summaryLogsSubmit = {
     auth: getAuthConfig([ROLES.standardUser]),
     response: {
       schema: summaryLogResponseSchema
-    }
+    },
+    tags: ['api']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request

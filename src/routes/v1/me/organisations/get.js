@@ -70,7 +70,8 @@ export const organisationsLinkedGetAll = {
   options: {
     auth: {
       scope: [ROLES.inquirer]
-    }
+    },
+    tags: ['api']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest} request
