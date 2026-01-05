@@ -81,7 +81,22 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       'PRODUCT_TONNAGE',
       'UK_PACKAGING_WEIGHT_PERCENTAGE',
       'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-      'ADD_PRODUCT_WEIGHT'
+      'ADD_PRODUCT_WEIGHT',
+      'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+    ]
+
+    const sentOnHeaders = [
+      'ROW_ID',
+      'DATE_LOAD_LEFT_SITE',
+      'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+      'FINAL_DESTINATION_FACILITY_TYPE',
+      'FINAL_DESTINATION_NAME',
+      'FINAL_DESTINATION_ADDRESS',
+      'FINAL_DESTINATION_POSTCODE',
+      'FINAL_DESTINATION_EMAIL',
+      'FINAL_DESTINATION_PHONE',
+      'YOUR_REFERENCE',
+      'DESCRIPTION_WASTE'
     ]
 
     const createReprocessedRowValues = (overrides = {}) => {
@@ -91,7 +106,8 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         productTonnage: 100,
         ukPackagingWeightPercentage: 1,
         productUkPackagingWeightProportion: 100,
-        addProductWeight: 'Yes'
+        addProductWeight: 'Yes',
+        prnIssued: 'No'
       }
       const d = { ...defaults, ...overrides }
       return [
@@ -100,17 +116,56 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
         d.productTonnage,
         d.ukPackagingWeightPercentage,
         d.productUkPackagingWeightProportion,
-        d.addProductWeight
+        d.addProductWeight,
+        d.prnIssued
       ]
     }
 
-    const createUploadData = (reprocessedRows = []) => ({
+    const createSentOnRowValues = (overrides = {}) => {
+      const defaults = {
+        rowId: 5001,
+        dateLeft: '2025-01-15T00:00:00.000Z',
+        tonnageSentOn: 50,
+        facilityType: 'Reprocessor',
+        name: 'Dest Name',
+        address: 'Dest Address',
+        postcode: 'SW1A 1AA',
+        email: 'dest@example.com',
+        phone: '01234567890',
+        ref: 'REF123',
+        desc: 'Waste Desc'
+      }
+      const d = { ...defaults, ...overrides }
+      return [
+        d.rowId,
+        d.dateLeft,
+        d.tonnageSentOn,
+        d.facilityType,
+        d.name,
+        d.address,
+        d.postcode,
+        d.email,
+        d.phone,
+        d.ref,
+        d.desc
+      ]
+    }
+
+    const createUploadData = (reprocessedRows = [], sentOnRows = []) => ({
       REPROCESSED_LOADS: {
         location: { sheet: 'Reprocessed', row: 7, column: 'A' },
         headers: reprocessedHeaders,
         rows: reprocessedRows.map((row, index) => ({
           rowNumber: 8 + index,
           values: createReprocessedRowValues(row)
+        }))
+      },
+      SENT_ON_LOADS: {
+        location: { sheet: 'SentOn', row: 7, column: 'A' },
+        headers: sentOnHeaders,
+        rows: sentOnRows.map((row, index) => ({
+          rowNumber: 8 + index,
+          values: createSentOnRowValues(row)
         }))
       }
     })
@@ -207,7 +262,12 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
           const existing = await summaryLogsRepository.findById(summaryLogId)
           const { version, summaryLog } = existing
 
-          await syncWasteRecords(summaryLog)
+          try {
+            await syncWasteRecords(summaryLog)
+          } catch (err) {
+            console.error('SUBMIT ERROR:', err)
+            throw err
+          }
 
           await summaryLogsRepository.update(
             summaryLogId,
@@ -319,7 +379,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       await submitAndPoll(env, summaryLogId)
     }
 
-    it('should update waste balance with credits from reprocessed loads', async () => {
+    it('should update waste balance with credits from reprocessed loads (AC05)', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -353,7 +413,7 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       expect(transaction1.entities[0].id).toBe('3001')
     })
 
-    it('should not create transaction if ADD_PRODUCT_WEIGHT is No', async () => {
+    it('should not create transaction if ADD_PRODUCT_WEIGHT is No (AC04)', async () => {
       const env = await setupIntegrationEnvironment()
       const { wasteBalancesRepository, accreditationId } = env
 
@@ -419,6 +479,12 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       expect(balance.transactions).toHaveLength(1)
       expect(balance.amount).toBeCloseTo(200)
       expect(balance.transactions[0].entities[0].id).toBe('3002')
+
+      // Verify no transaction exists for row 3001
+      const row3001Transaction = balance.transactions.find((t) =>
+        t.entities.some((e) => e.id === '3001')
+      )
+      expect(row3001Transaction).toBeUndefined()
     })
 
     it('should update waste balance correctly when a reprocessed load is updated', async () => {
@@ -496,6 +562,113 @@ describe('Submission and placeholder tests (Reprocessor Output)', () => {
       const debitTransaction = balance.transactions[2]
       expect(debitTransaction.amount).toBeCloseTo(30)
       expect(debitTransaction.type).toBe('debit')
+    })
+
+    it('should update waste balance with debits from sent on loads', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData(
+        [], // No reprocessed loads
+        [{ rowId: 5001, tonnageSentOn: 50 }] // One sent on load
+      )
+
+      await performSubmission(
+        env,
+        'summary-sent-on-check',
+        'file-sent-on-check',
+        'waste-data-sent-on.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      expect(balance).toBeDefined()
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBeCloseTo(-50)
+      expect(balance.availableAmount).toBeCloseTo(-50)
+      expect(balance.transactions[0].type).toBe('debit')
+      expect(balance.transactions[0].amount).toBeCloseTo(50)
+    })
+
+    it('should not create transaction for a row where PRN was already issued', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData([
+        {
+          rowId: 3001,
+          productTonnage: 100,
+          ukPackagingWeightPercentage: 1,
+          productUkPackagingWeightProportion: 100,
+          prnIssued: 'Yes'
+        },
+        {
+          rowId: 3002,
+          productTonnage: 50,
+          ukPackagingWeightPercentage: 1,
+          productUkPackagingWeightProportion: 50,
+          prnIssued: 'No'
+        }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-prn-check',
+        'file-prn-check',
+        'waste-data-prn.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      expect(balance).toBeDefined()
+      // Only row 3002 should contribute (50)
+      expect(balance.amount).toBeCloseTo(50)
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.transactions[0].amount).toBeCloseTo(50)
+    })
+
+    it('should not create transaction for reprocessed load with missing mandatory fields', async () => {
+      const env = await setupIntegrationEnvironment()
+      const { wasteBalancesRepository, accreditationId } = env
+
+      const uploadData = createUploadData([
+        {
+          rowId: 3001,
+          productTonnage: null, // Missing mandatory field
+          productUkPackagingWeightProportion: 100
+        },
+        {
+          rowId: 3002,
+          productTonnage: 200,
+          productUkPackagingWeightProportion: 200
+        }
+      ])
+
+      await performSubmission(
+        env,
+        'summary-missing-fields',
+        'file-missing-fields',
+        'waste-data-missing.xlsx',
+        uploadData
+      )
+
+      const balance =
+        await wasteBalancesRepository.findByAccreditationId(accreditationId)
+
+      // Only row 3002 should contribute
+      expect(balance.transactions).toHaveLength(1)
+      expect(balance.amount).toBeCloseTo(200)
+      expect(balance.transactions[0].entities[0].id).toBe('3002')
+
+      // Verify no transaction exists for row 3001
+      const row3001Transaction = balance.transactions.find((t) =>
+        t.entities.some((e) => e.id === '3001')
+      )
+      expect(row3001Transaction).toBeUndefined()
     })
   })
 })

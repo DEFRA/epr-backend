@@ -7,7 +7,10 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
-import { REPROCESSED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
+import {
+  REPROCESSED_LOADS_FIELDS,
+  SENT_ON_LOADS_FIELDS
+} from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 
 /**
  * Extracted waste balance fields.
@@ -23,6 +26,15 @@ const reprocessedLoadsSchema = Joi.object({
   [REPROCESSED_LOADS_FIELDS.ADD_PRODUCT_WEIGHT]:
     createYesNoFieldSchema().allow(null),
   [REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]:
+    createWeightFieldSchema().allow(null),
+  [REPROCESSED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]:
+    createYesNoFieldSchema().allow(null)
+})
+
+const sentOnLoadsSchema = Joi.object({
+  [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]:
+    createDateFieldSchema().allow(null),
+  [SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
     createWeightFieldSchema().allow(null)
 })
 
@@ -60,11 +72,33 @@ export const extractWasteBalanceFields = (record) => {
       dispatchDate: new Date(
         value[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
       ),
-      prnIssued: false,
+      prnIssued:
+        value[
+          REPROCESSED_LOADS_FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
+        ] === YES_NO_VALUES.YES,
       transactionAmount:
         value[
           REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION
         ] || 0
+    }
+  }
+
+  if (type === WASTE_RECORD_TYPE.SENT_ON) {
+    const { error, value } = sentOnLoadsSchema.validate(data, {
+      stripUnknown: true,
+      abortEarly: false
+    })
+
+    if (error || !value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]) {
+      return null
+    }
+
+    return {
+      dispatchDate: new Date(value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
+      prnIssued: false,
+      transactionAmount: -(
+        value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON] || 0
+      )
     }
   }
 
