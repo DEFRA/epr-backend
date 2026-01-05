@@ -85,7 +85,8 @@ const updateWasteBalances = async ({
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
   const shouldCalculateWasteBalance =
     processingType === PROCESSING_TYPES.EXPORTER ||
-    processingType === PROCESSING_TYPES.REPROCESSOR_INPUT
+    processingType === PROCESSING_TYPES.REPROCESSOR_INPUT ||
+    processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT
 
   if (
     accreditationId &&
