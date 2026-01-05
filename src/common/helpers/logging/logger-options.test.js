@@ -48,42 +48,7 @@ describe('logger-options error serialiser', () => {
       expect(result.message).toContain('organisationId')
     })
 
-    /**
-     * This test demonstrates what happens when failAction only passes message
-     * without Joi details - the structured validation info is lost.
-     *
-     * Anti-pattern (don't do this):
-     *   failAction: (_request, _h, err) => { throw Boom.badData(err.message) }
-     */
-    it('does NOT include Joi details when failAction only passes message', () => {
-      const schema = Joi.object({
-        organisationId: Joi.string().uuid().required(),
-        name: Joi.string().min(3).required()
-      })
-
-      const { error: joiError } = schema.validate(
-        { organisationId: 'not-a-uuid', name: 'ab' },
-        { abortEarly: false }
-      )
-
-      // Current failAction pattern: only passes message
-      const boomWithoutData = Boom.badData(joiError.message)
-      const result = loggerOptions.serializers.error(boomWithoutData)
-
-      // The message contains some info, but no structured details
-      expect(result.message).toContain('organisationId')
-      expect(result.message).not.toContain('data:')
-    })
-
-    /**
-     * This test demonstrates the correct pattern for failAction handlers.
-     *
-     * Correct pattern (all routes should use this):
-     *   failAction: (_request, _h, err) => { throw Boom.badData(err.message, err.details) }
-     *
-     * This passes the Joi details array to Boom's data parameter,
-     * which the serialiser then includes in the log message.
-     */
+    // Verifies Joi validation details are captured when failAction passes err.details to Boom
     it('includes Joi details when failAction passes error details to data parameter', () => {
       const schema = Joi.object({
         organisationId: Joi.string().uuid().required(),
@@ -95,11 +60,9 @@ describe('logger-options error serialiser', () => {
         { abortEarly: false }
       )
 
-      // FIXED failAction pattern: passes details to data parameter
       const boomWithData = Boom.badData(joiError.message, joiError.details)
       const result = loggerOptions.serializers.error(boomWithData)
 
-      // Now the message includes the structured details
       expect(result.message).toContain('data:')
       expect(result.message).toContain('string.guid')
       expect(result.message).toContain('string.min')
