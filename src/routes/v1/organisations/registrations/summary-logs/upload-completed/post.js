@@ -151,7 +151,7 @@ export const summaryLogsUploadCompleted = {
     validate: {
       payload: uploadCompletedPayloadSchema,
       failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message)
+        throw Boom.badData(err.message, err.details)
       }
     }
   },

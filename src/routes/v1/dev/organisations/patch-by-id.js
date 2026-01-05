@@ -57,7 +57,7 @@ export const devOrganisationsPatchById = {
       params,
       payload,
       failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message)
+        throw Boom.badData(err.message, err.details)
       }
     }
   },

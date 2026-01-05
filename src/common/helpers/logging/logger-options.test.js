@@ -49,20 +49,13 @@ describe('logger-options error serialiser', () => {
     })
 
     /**
-     * CURRENT BEHAVIOUR (routes using failAction)
+     * This test demonstrates what happens when failAction only passes message
+     * without Joi details - the structured validation info is lost.
      *
-     * Routes with validation use failAction handlers like:
+     * Anti-pattern (don't do this):
      *   failAction: (_request, _h, err) => { throw Boom.badData(err.message) }
-     *
-     * This pattern LOSES the Joi validation details because only the message
-     * is passed to Boom, not the structured error details.
-     *
-     * Affected routes:
-     * - src/routes/v1/dev/organisations/patch-by-id.js:59
-     * - src/routes/v1/organisations/registrations/summary-logs/upload-completed/post.js:153
-     * - src/routes/v1/organisations/registrations/summary-logs/post.js:27
      */
-    it('does NOT include Joi details when failAction only passes message (current behaviour)', () => {
+    it('does NOT include Joi details when failAction only passes message', () => {
       const schema = Joi.object({
         organisationId: Joi.string().uuid().required(),
         name: Joi.string().min(3).required()
@@ -83,15 +76,15 @@ describe('logger-options error serialiser', () => {
     })
 
     /**
-     * RECOMMENDED FIX
+     * This test demonstrates the correct pattern for failAction handlers.
      *
-     * To include Joi validation details in logs, update failAction handlers:
+     * Correct pattern (all routes should use this):
      *   failAction: (_request, _h, err) => { throw Boom.badData(err.message, err.details) }
      *
      * This passes the Joi details array to Boom's data parameter,
      * which the serialiser then includes in the log message.
      */
-    it('DOES include Joi details when failAction passes error details to data parameter', () => {
+    it('includes Joi details when failAction passes error details to data parameter', () => {
       const schema = Joi.object({
         organisationId: Joi.string().uuid().required(),
         name: Joi.string().min(3).required()
