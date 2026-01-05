@@ -2,6 +2,10 @@ import { config } from '#root/config.js'
 import { getTraceId } from '@defra/hapi-tracing'
 import { ecsFormat } from '@elastic/ecs-pino-format'
 
+/**
+ * @typedef {Error & {isBoom: true, output: {statusCode: number, payload: object}, data?: object}} BoomError
+ */
+
 const logConfig = config.get('log')
 const serviceName = config.get('serviceName')
 const serviceVersion = config.get('serviceVersion')
@@ -31,27 +35,32 @@ export const loggerOptions = {
   // Log request errors - includes validation errors, Boom errors, etc.
   logEvents: ['onPostStart', 'onPostStop', 'response', 'request-error'],
   serializers: {
-    /** @param {Error & {isBoom?: boolean, output?: {statusCode: number, payload: object}, data?: object}} err */
+    /** @param {unknown} err */
     error: (err) => {
-      if (err instanceof Error) {
-        const errorObj = {
-          message: err.message,
-          stack_trace: err.stack,
-          type: err.name
-        }
-
-        if (!isProductionEnvironment && err.isBoom && err.output) {
-          errorObj.statusCode = err.output.statusCode
-          errorObj.payload = err.output.payload
-
-          if (err.data) {
-            errorObj.message = `${err.message} | data: ${JSON.stringify(err.data)}`
-          }
-        }
-
-        return errorObj
+      if (!(err instanceof Error)) {
+        return err
       }
-      return err
+
+      const errorObj = {
+        message: err.message,
+        stack_trace: err.stack,
+        type: err.name
+      }
+
+      // Include Boom error details for better debugging (non-prod only)
+      // @ts-ignore - check for Boom error before casting
+      if (!isProductionEnvironment && err.isBoom && err.output) {
+        /** @type {BoomError} */
+        const boomErr = /** @type {BoomError} */ (err)
+        errorObj.statusCode = boomErr.output.statusCode
+        errorObj.payload = boomErr.output.payload
+
+        if (boomErr.data) {
+          errorObj.message = `${err.message} | data: ${JSON.stringify(boomErr.data)}`
+        }
+      }
+
+      return errorObj
     },
     // Note: Custom res serializer simplified - hapi-pino passes request.raw.res
     // (Node's raw response) to serializers, not Hapi's response with source.
