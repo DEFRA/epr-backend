@@ -24,8 +24,22 @@ export const summaryLogsCreate = {
     tags: ['api'],
     validate: {
       payload: summaryLogsCreatePayloadSchema,
-      failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message, err.details)
+      failAction: (request, _h, err) => {
+        const boomError = Boom.badData(err.message, err.details)
+        request.logger.error({
+          err: boomError,
+          message: `${boomError.message} | data: ${JSON.stringify(err.details)}`,
+          event: {
+            category: LOGGING_EVENT_CATEGORIES.SERVER,
+            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
+          },
+          http: {
+            response: {
+              status_code: boomError.output.statusCode
+            }
+          }
+        })
+        throw boomError
       }
     }
   },
