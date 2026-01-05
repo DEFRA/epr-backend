@@ -10,7 +10,12 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createMockConfig } from '#vite/helpers/mock-config.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
+import {
+  SUMMARY_LOG_META_FIELDS,
+  PROCESSING_TYPES
+} from '#domain/summary-logs/meta-fields.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 import summaryLogsWorkerThread from './worker-thread.js'
 
@@ -19,6 +24,15 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     info: vi.fn(),
     warn: vi.fn(),
     error: vi.fn()
+  }
+}))
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: vi.fn(),
+    recordValidationDuration: vi.fn(),
+    timedSubmission: vi.fn((_processingType, fn) => fn()),
+    recordWasteRecordsCreated: vi.fn(),
+    recordWasteRecordsUpdated: vi.fn()
   }
 }))
 vi.mock('#application/summary-logs/extractor.js')
@@ -90,7 +104,9 @@ describe('summaryLogsWorkerThread', () => {
 
     mockSummaryLogsValidator = vi.fn().mockResolvedValue(undefined)
 
-    mockSyncFromSummaryLog = vi.fn().mockResolvedValue(undefined)
+    mockSyncFromSummaryLog = vi
+      .fn()
+      .mockResolvedValue({ created: 0, updated: 0 })
 
     summaryLogId = 'summary-log-123'
 
@@ -282,7 +298,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -302,7 +322,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -329,7 +353,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -382,7 +410,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -402,7 +434,11 @@ describe('summaryLogsWorkerThread', () => {
       const summaryLog = {
         status: SUMMARY_LOG_STATUS.SUBMITTING,
         organisationId: 'org-123',
-        registrationId: 'reg-456'
+        registrationId: 'reg-456',
+        meta: {
+          [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+            PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
       }
 
       mockSummaryLogsRepository.findById.mockResolvedValue({
@@ -423,6 +459,128 @@ describe('summaryLogsWorkerThread', () => {
         featureFlags: expect.objectContaining({
           isCalculateWasteBalanceOnImportEnabled: expect.any(Function)
         })
+      })
+    })
+
+    describe('metrics', () => {
+      it('should record SUBMITTED status transition metric', async () => {
+        const summaryLog = {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId: 'org-123',
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
+        }
+
+        mockSummaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog
+        })
+
+        mockSyncFromSummaryLog.mockResolvedValue({ created: 0, updated: 0 })
+
+        await summaryLogsWorkerThread({
+          command: 'submit',
+          summaryLogId
+        })
+
+        expect(summaryLogMetrics.recordStatusTransition).toHaveBeenCalledWith({
+          status: SUMMARY_LOG_STATUS.SUBMITTED,
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        })
+      })
+
+      it('should record submission duration via timedSubmission', async () => {
+        const summaryLog = {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId: 'org-123',
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
+        }
+
+        mockSummaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog
+        })
+
+        mockSyncFromSummaryLog.mockResolvedValue({ created: 0, updated: 0 })
+
+        await summaryLogsWorkerThread({
+          command: 'submit',
+          summaryLogId
+        })
+
+        expect(summaryLogMetrics.timedSubmission).toHaveBeenCalledWith(
+          { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+          expect.any(Function)
+        )
+      })
+
+      it('should record waste records created count', async () => {
+        const summaryLog = {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId: 'org-123',
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
+        }
+
+        mockSummaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog
+        })
+
+        mockSyncFromSummaryLog.mockResolvedValue({ created: 5, updated: 3 })
+
+        await summaryLogsWorkerThread({
+          command: 'submit',
+          summaryLogId
+        })
+
+        expect(
+          summaryLogMetrics.recordWasteRecordsCreated
+        ).toHaveBeenCalledWith(
+          { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+          5
+        )
+      })
+
+      it('should record waste records updated count', async () => {
+        const summaryLog = {
+          status: SUMMARY_LOG_STATUS.SUBMITTING,
+          organisationId: 'org-123',
+          registrationId: 'reg-456',
+          meta: {
+            [SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]:
+              PROCESSING_TYPES.REPROCESSOR_INPUT
+          }
+        }
+
+        mockSummaryLogsRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog
+        })
+
+        mockSyncFromSummaryLog.mockResolvedValue({ created: 5, updated: 3 })
+
+        await summaryLogsWorkerThread({
+          command: 'submit',
+          summaryLogId
+        })
+
+        expect(
+          summaryLogMetrics.recordWasteRecordsUpdated
+        ).toHaveBeenCalledWith(
+          { processingType: PROCESSING_TYPES.REPROCESSOR_INPUT },
+          3
+        )
       })
     })
   })

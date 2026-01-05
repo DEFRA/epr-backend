@@ -1,15 +1,22 @@
 /** @import {Accreditation, Registration} from '#repositories/organisations/port.js' */
 
 /**
- * @typedef {typeof STATUS[keyof typeof STATUS]} Status
+ * Status values for registrations and accreditations
+ * @typedef {typeof REG_ACC_STATUS[keyof typeof REG_ACC_STATUS]} RegAccStatus
  */
-export const STATUS = Object.freeze({
+export const REG_ACC_STATUS = Object.freeze({
+  CREATED: 'created',
+  APPROVED: 'approved',
+  CANCELLED: 'cancelled',
+  REJECTED: 'rejected',
+  SUSPENDED: 'suspended'
+})
+
+export const ORGANISATION_STATUS = Object.freeze({
   CREATED: 'created',
   APPROVED: 'approved',
   ACTIVE: 'active',
-  REJECTED: 'rejected',
-  SUSPENDED: 'suspended',
-  ARCHIVED: 'archived'
+  REJECTED: 'rejected'
 })
 
 export const REGULATOR = Object.freeze({
@@ -36,6 +43,15 @@ export const MATERIAL = Object.freeze({
 export const WASTE_PROCESSING_TYPE = Object.freeze({
   REPROCESSOR: 'reprocessor',
   EXPORTER: 'exporter'
+})
+
+/**
+ * @typedef {'input' | 'output'} ReprocessingType
+ */
+
+export const REPROCESSING_TYPE = Object.freeze({
+  INPUT: 'input',
+  OUTPUT: 'output'
 })
 
 export const NATION = Object.freeze({
@@ -167,7 +183,7 @@ export const USER_ROLES = Object.freeze({
 
 /**
  * @typedef {{
- *   status: Status;
+ *   status: RegAccStatus;
  *   updatedAt: Date;
  *   updatedBy?: string;
  * }} StatusHistoryItem

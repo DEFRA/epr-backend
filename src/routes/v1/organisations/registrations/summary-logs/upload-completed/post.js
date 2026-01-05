@@ -4,6 +4,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import {
   calculateExpiresAt,
   createRejectedValidation,
@@ -183,6 +184,8 @@ export const summaryLogsUploadCompleted = {
         organisationId,
         registrationId
       )
+
+      await summaryLogMetrics.recordStatusTransition(status)
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
         await summaryLogsWorker.validate(summaryLogId)

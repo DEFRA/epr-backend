@@ -2,19 +2,22 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import {
   buildAccreditation,
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
+import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 
 describe('PATCH /v1/dev/organisations/{id}', () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
   let organisationsRepository
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   beforeEach(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
@@ -362,9 +365,10 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                 {
                   id: registrationId,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -407,9 +411,10 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                 {
                   id: registrationId,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -446,18 +451,20 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                 {
                   id: linkedRegistrationId,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ],
               accreditations: [
                 {
                   id: accreditationId,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  accreditationNumber: 'ACC25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  accreditationNumber: 'ACC25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -514,15 +521,16 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                 {
                   id: org.registrations[0].id,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 },
                 {
                   id: org.registrations[1].id,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
                   registrationNumber: 'R25TEST002'
                 }
               ],
@@ -530,9 +538,10 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                 {
                   id: org.accreditations[0].id,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  accreditationNumber: 'ACC25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  accreditationNumber: 'ACC25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }
@@ -583,9 +592,10 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
                 {
                   id: registrationId,
                   status: 'approved',
-                  validFrom: '2025-01-01T00:00:00.000Z',
-                  validTo: '2026-01-01T00:00:00.000Z',
-                  registrationNumber: 'R25TEST001'
+                  validFrom: VALID_FROM,
+                  validTo: VALID_TO,
+                  registrationNumber: 'R25TEST001',
+                  reprocessingType: REPROCESSING_TYPE.INPUT
                 }
               ]
             }

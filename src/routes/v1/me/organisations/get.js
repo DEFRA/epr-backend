@@ -3,7 +3,7 @@ import {
   getOrgDataFromDefraIdToken,
   isInitialUser
 } from '#common/helpers/auth/roles/helpers.js'
-import { STATUS } from '#domain/organisations/model.js'
+import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -45,7 +45,7 @@ export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 const isNotALinkedOrg = () => (org) => !org.linkedDefraOrganisation
 const isNotOurLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
-const isApproved = () => (org) => org.status === STATUS.APPROVED
+const isApproved = () => (org) => org.status === REG_ACC_STATUS.APPROVED
 
 /**
  * Get current Defra ID details from token
@@ -70,7 +70,8 @@ export const organisationsLinkedGetAll = {
   options: {
     auth: {
       scope: [ROLES.inquirer]
-    }
+    },
+    tags: ['api']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest} request

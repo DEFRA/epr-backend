@@ -1,10 +1,14 @@
 import Joi from 'joi'
 import {
-  STATUS,
-  WASTE_PROCESSING_TYPE,
-  WASTE_PERMIT_TYPE
+  REG_ACC_STATUS,
+  WASTE_PERMIT_TYPE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { isAccreditationForRegistration } from '#formsubmission/link-form-submissions.js'
+import {
+  getRegAccKey,
+  isAccreditationForRegistration
+} from '#formsubmission/submission-keys.js'
+import Boom from '@hapi/boom'
 
 export const whenReprocessor = (schema) =>
   Joi.when('wasteProcessingType', {
@@ -75,34 +79,37 @@ export const requiredForWasteExemptionAndReprocessor = (schema) =>
 
 export const requiredWhenApprovedOrSuspended = {
   switch: [
-    { is: STATUS.APPROVED, then: Joi.required().invalid(null) },
-    { is: STATUS.SUSPENDED, then: Joi.required().invalid(null) }
+    { is: REG_ACC_STATUS.APPROVED, then: Joi.required().invalid(null) },
+    { is: REG_ACC_STATUS.SUSPENDED, then: Joi.required().invalid(null) }
   ],
   otherwise: Joi.optional().allow(null)
 }
 
 export const dateRequiredWhenApprovedOrSuspended = () =>
-  Joi.date().iso().when('status', requiredWhenApprovedOrSuspended).default(null)
-
-export function uniqueKeyForRegAcc(item) {
-  const site =
-    item.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-      ? `::${item.site.address.postcode}`
-      : ''
-  return `${item.wasteProcessingType}::${item.material}${site}`
-}
+  Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .custom((value, helpers) => {
+      const date = new Date(value + 'T00:00:00.000Z')
+      if (Number.isNaN(date.getTime())) {
+        return helpers.error('string.pattern.base')
+      }
+      return value
+    })
+    .messages({ 'string.pattern.base': 'Date must be in YYYY-MM-DD format' })
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null)
 
 function findAccreditationsWithoutApprovedRegistration(
   accreditations,
   registrations
 ) {
   return accreditations
-    .filter((acc) => acc.status === STATUS.APPROVED)
+    .filter((acc) => acc.status === REG_ACC_STATUS.APPROVED)
     .filter((acc) => {
       const hasApprovedRegistration = registrations.some(
         (reg) =>
           reg.accreditationId === acc.id &&
-          reg.status === STATUS.APPROVED &&
+          reg.status === REG_ACC_STATUS.APPROVED &&
           isAccreditationForRegistration(acc, reg)
       )
       return !hasApprovedRegistration
@@ -111,8 +118,8 @@ function findAccreditationsWithoutApprovedRegistration(
 
 function findDuplicateApprovals(items) {
   const grouped = Object.groupBy(
-    items.filter((item) => item.status === STATUS.APPROVED),
-    (item) => uniqueKeyForRegAcc(item)
+    items.filter((item) => item.status === REG_ACC_STATUS.APPROVED),
+    (item) => getRegAccKey(item)
   )
 
   return Object.entries(grouped).filter(([_key, group]) => group.length > 1)
@@ -126,13 +133,13 @@ function formatDuplicateError(duplicates, itemType) {
   return `Multiple approved ${itemType} found with duplicate keys [${keys}]: ${ids}`
 }
 
-export function validateApprovals(value, helpers) {
+export function validateApprovals(registrations, accreditations) {
   const errorMessages = []
 
   // Check if approved accreditations have linked registrations
   const accWithoutReg = findAccreditationsWithoutApprovedRegistration(
-    value.accreditations,
-    value.registrations
+    accreditations,
+    registrations
   )
 
   if (accWithoutReg.length > 0) {
@@ -143,26 +150,18 @@ export function validateApprovals(value, helpers) {
   }
 
   // Check for duplicate approved accreditations
-  const accDuplicates = findDuplicateApprovals(value.accreditations)
+  const accDuplicates = findDuplicateApprovals(accreditations)
   if (accDuplicates.length > 0) {
     errorMessages.push(formatDuplicateError(accDuplicates, 'accreditations'))
   }
 
   // Check for duplicate approved registrations
-  const regDuplicates = findDuplicateApprovals(value.registrations)
+  const regDuplicates = findDuplicateApprovals(registrations)
   if (regDuplicates.length > 0) {
     errorMessages.push(formatDuplicateError(regDuplicates, 'registrations'))
   }
 
   if (errorMessages.length > 0) {
-    return helpers.error('organisation.validationErrors', {
-      message: errorMessages.join('; ')
-    })
+    throw Boom.badData(errorMessages.join('; '))
   }
-
-  return value
-}
-
-export const approvalValidationMessages = {
-  'organisation.validationErrors': '{{#message}}'
 }

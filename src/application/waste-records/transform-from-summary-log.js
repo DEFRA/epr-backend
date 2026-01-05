@@ -3,6 +3,7 @@ import { VERSION_STATUS } from '#domain/waste-records/model.js'
 import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { transformReceivedLoadsRow } from './row-transformers/received-loads-reprocessing.js'
 import { transformExportLoadsRow } from './row-transformers/received-loads-export.js'
+import { transformSentOnLoadsRow } from './row-transformers/sent-on-loads.js'
 
 /**
  * @typedef {import('#domain/waste-records/model.js').WasteRecord} WasteRecord
@@ -40,12 +41,17 @@ import { transformExportLoadsRow } from './row-transformers/received-loads-expor
  */
 
 /**
+ * @typedef {'created' | 'updated' | 'unchanged'} WasteRecordChange
+ */
+
+/**
  * A waste record bundled with its validation issues and outcome
  *
  * @typedef {Object} ValidatedWasteRecord
  * @property {WasteRecord} record - The waste record
  * @property {ValidationIssue[]} [issues] - Validation issues (present from validation pipeline)
  * @property {RowOutcome} [outcome] - Classification outcome (present from validation pipeline)
+ * @property {WasteRecordChange} change - What happened to this record: created, updated, or unchanged
  */
 
 /**
@@ -54,7 +60,8 @@ import { transformExportLoadsRow } from './row-transformers/received-loads-expor
  */
 const TABLE_TRANSFORMERS = {
   [PROCESSING_TYPES.REPROCESSOR_INPUT]: {
-    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
+    RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow,
+    SENT_ON_LOADS: transformSentOnLoadsRow
   },
   [PROCESSING_TYPES.REPROCESSOR_OUTPUT]: {
     RECEIVED_LOADS_FOR_REPROCESSING: transformReceivedLoadsRow
@@ -122,7 +129,7 @@ const transformTable = (
 
       // If nothing changed, return existing record unchanged
       if (Object.keys(delta).length === 0) {
-        return { record: existingRecord, issues, outcome }
+        return { record: existingRecord, issues, outcome, change: 'unchanged' }
       }
 
       // Add new version with only changed fields
@@ -141,7 +148,8 @@ const transformTable = (
           versions: [...existingRecord.versions, newVersion]
         },
         issues,
-        outcome
+        outcome,
+        change: 'updated'
       }
     }
 
@@ -168,7 +176,7 @@ const transformTable = (
       wasteRecord.accreditationId = accreditationId
     }
 
-    return { record: wasteRecord, issues, outcome }
+    return { record: wasteRecord, issues, outcome, change: 'created' }
   })
 }
 

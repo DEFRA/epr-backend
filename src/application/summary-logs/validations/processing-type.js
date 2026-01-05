@@ -4,6 +4,7 @@ import {
   VALIDATION_CODE
 } from '#common/enums/validation.js'
 import {
+  PROCESSING_TYPE_TO_REPROCESSING_TYPE,
   PROCESSING_TYPE_TO_WASTE_PROCESSING_TYPE,
   SUMMARY_LOG_META_FIELDS
 } from '#domain/summary-logs/meta-fields.js'
@@ -76,6 +77,28 @@ export const validateProcessingType = ({
       }
     )
     return issues
+  }
+
+  // For reprocessors, also validate that reprocessingType (input/output) matches
+  const expectedReprocessingType =
+    PROCESSING_TYPE_TO_REPROCESSING_TYPE[spreadsheetProcessingType]
+
+  if (expectedReprocessingType) {
+    const { reprocessingType } = registration
+
+    if (expectedReprocessingType !== reprocessingType) {
+      issues.addFatal(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Summary log processing type does not match registration reprocessing type',
+        VALIDATION_CODE.PROCESSING_TYPE_MISMATCH,
+        {
+          location,
+          expected: reprocessingType,
+          actual: spreadsheetProcessingType
+        }
+      )
+      return issues
+    }
   }
 
   logValidationSuccess(

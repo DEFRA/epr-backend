@@ -1,8 +1,8 @@
 import {
   BUSINESS_TYPE,
   NATION,
+  ORGANISATION_STATUS,
   REGULATOR,
-  STATUS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import Joi from 'joi'
@@ -19,7 +19,6 @@ import {
   userSchema
 } from './base.js'
 import { registrationSchema, registrationUpdateSchema } from './registration.js'
-import { validateApprovals, approvalValidationMessages } from './helpers.js'
 
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
@@ -52,14 +51,7 @@ export const organisationInsertSchema = Joi.object({
     )
     .optional(),
   status: Joi.string()
-    .valid(
-      STATUS.CREATED,
-      STATUS.APPROVED,
-      STATUS.ACTIVE,
-      STATUS.REJECTED,
-      STATUS.SUSPENDED,
-      STATUS.ARCHIVED
-    )
+    .valid(...Object.values(ORGANISATION_STATUS))
     .forbidden(),
   submittedToRegulator: Joi.string()
     .valid(REGULATOR.EA, REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA)
@@ -90,5 +82,3 @@ export const organisationReplaceSchema = organisationInsertSchema
     registrations: Joi.array().items(registrationUpdateSchema).default([]),
     accreditations: Joi.array().items(accreditationUpdateSchema).default([])
   })
-  .custom(validateApprovals)
-  .messages(approvalValidationMessages)

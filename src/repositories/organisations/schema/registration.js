@@ -1,29 +1,30 @@
 import Joi from 'joi'
 import {
-  STATUS,
-  REGULATOR,
-  MATERIAL,
-  WASTE_PROCESSING_TYPE,
   GLASS_RECYCLING_PROCESS,
-  TIME_SCALE
+  MATERIAL,
+  REG_ACC_STATUS,
+  REGULATOR,
+  TIME_SCALE,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
-  idSchema,
   addressSchema,
-  userSchema,
-  formFileUploadSchema
+  formFileUploadSchema,
+  idSchema,
+  reprocessingTypeSchema,
+  userSchema
 } from './base.js'
 import { wasteManagementPermitSchema } from './waste-permits.js'
 import { yearlyMetricsSchema } from './metrics.js'
 import {
-  whenReprocessor,
-  whenExporter,
+  dateRequiredWhenApprovedOrSuspended,
+  requiredForExporterOptionalForReprocessor,
   requiredForReprocessor,
   requiredForReprocessorOptionalForExporter,
-  requiredForExporterOptionalForReprocessor,
-  whenMaterial,
   requiredWhenApprovedOrSuspended,
-  dateRequiredWhenApprovedOrSuspended
+  whenExporter,
+  whenMaterial,
+  whenReprocessor
 } from './helpers.js'
 
 const siteCapacitySchema = Joi.object({
@@ -44,8 +45,12 @@ const siteCapacitySchema = Joi.object({
     .required()
 })
 
+const siteAddressSchema = addressSchema.fork(['line1', 'postcode'], (schema) =>
+  schema.required()
+)
+
 const registrationSiteSchema = Joi.object({
-  address: addressSchema.required(),
+  address: siteAddressSchema.required(),
   gridReference: Joi.string().required(),
   siteCapacity: Joi.array().items(siteCapacitySchema).required().min(1)
 })
@@ -54,18 +59,17 @@ export const registrationSchema = Joi.object({
   id: idSchema,
   status: Joi.string()
     .valid(
-      STATUS.CREATED,
-      STATUS.APPROVED,
-      STATUS.ACTIVE,
-      STATUS.REJECTED,
-      STATUS.SUSPENDED,
-      STATUS.ARCHIVED
+      REG_ACC_STATUS.CREATED,
+      REG_ACC_STATUS.APPROVED,
+      REG_ACC_STATUS.CANCELLED,
+      REG_ACC_STATUS.REJECTED,
+      REG_ACC_STATUS.SUSPENDED
     )
     .forbidden(),
   registrationNumber: Joi.string()
-    .allow(null)
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null),
+  reprocessingType: reprocessingTypeSchema,
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
   formSubmissionTime: Joi.date().iso().required(),

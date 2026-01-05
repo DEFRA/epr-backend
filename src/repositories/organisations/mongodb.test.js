@@ -1,9 +1,13 @@
-import { describe, beforeEach, expect } from 'vitest'
+import { beforeEach, describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
 import { createOrganisationsRepository } from './mongodb.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation, prepareOrgUpdate } from './contract/test-data.js'
+import {
+  ORGANISATION_STATUS,
+  REG_ACC_STATUS
+} from '#domain/organisations/model.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const DATABASE_NAME = 'epr-backend'
@@ -55,7 +59,7 @@ describe('MongoDB organisations repository', () => {
     })
   })
 
-  describe('handling missing registrations/accreditations', () => {
+  describe('status field storage', () => {
     it('does not persist status field to database ', async ({
       organisationsRepository,
       mongoClient
@@ -70,17 +74,17 @@ describe('MongoDB organisations repository', () => {
         organisation.id,
         1,
         prepareOrgUpdate(orgAfterInsert, {
-          status: 'rejected',
+          status: ORGANISATION_STATUS.REJECTED,
           registrations: [
             {
               ...organisation.registrations[0],
-              status: 'rejected'
+              status: REG_ACC_STATUS.REJECTED
             }
           ],
           accreditations: [
             {
               ...organisation.accreditations[0],
-              status: 'archived'
+              status: REG_ACC_STATUS.REJECTED
             }
           ]
         })

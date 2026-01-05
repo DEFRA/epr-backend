@@ -81,13 +81,15 @@ const updateWasteBalances = async ({
   wasteBalancesRepository,
   wasteRecords
 }) => {
-  // We only calculate waste balance for exporters currently
-  const isExporter =
-    parsedData?.meta?.PROCESSING_TYPE?.value === PROCESSING_TYPES.EXPORTER
+  // We only calculate waste balance for exporters and reprocessor inputs currently
+  const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
+  const shouldCalculateWasteBalance =
+    processingType === PROCESSING_TYPES.EXPORTER ||
+    processingType === PROCESSING_TYPES.REPROCESSOR_INPUT
 
   if (
     accreditationId &&
-    isExporter &&
+    shouldCalculateWasteBalance &&
     featureFlags?.isCalculateWasteBalanceOnImportEnabled()
   ) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
@@ -125,7 +127,7 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
    * @param {string} [summaryLog.accreditationId] - Optional accreditation ID
-   * @returns {Promise<void>}
+   * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
    */
   return async (summaryLog) => {
     // Capture timestamp at start of submission for consistent versioning
@@ -210,5 +212,12 @@ export const syncFromSummaryLog = (dependencies) => {
       wasteBalancesRepository,
       wasteRecords
     })
+
+    // 9. Count created/updated records for metrics
+    // The change property is set by transformFromSummaryLog
+    const created = wasteRecords.filter((wr) => wr.change === 'created').length
+    const updated = wasteRecords.filter((wr) => wr.change === 'updated').length
+
+    return { created, updated }
   }
 }

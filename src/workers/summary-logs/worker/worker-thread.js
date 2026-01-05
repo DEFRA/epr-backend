@@ -3,6 +3,7 @@ import { createSummaryLogExtractor } from '#application/summary-logs/extractor.j
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { logger } from '#common/helpers/logging/logger.js'
+import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import { createMongoClient } from '#common/helpers/mongo-client.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { patchTlsSecureContext } from '#common/helpers/secure-context.js'
@@ -11,6 +12,7 @@ import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
@@ -62,6 +64,9 @@ const handleSubmitCommand = async ({
     )
   }
 
+  const processingType =
+    summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
+
   // Sync waste records from summary log
   const featureFlags = createConfigFeatureFlags(config)
   const sync = syncFromSummaryLog({
@@ -72,7 +77,14 @@ const handleSubmitCommand = async ({
     featureFlags
   })
 
-  await sync(summaryLog)
+  const { created, updated } = await summaryLogMetrics.timedSubmission(
+    { processingType },
+    () => sync(summaryLog)
+  )
+
+  // Record submission metrics
+  await summaryLogMetrics.recordWasteRecordsCreated({ processingType }, created)
+  await summaryLogMetrics.recordWasteRecordsUpdated({ processingType }, updated)
 
   // Update status to SUBMITTED
   await summaryLogsRepository.update(
@@ -80,6 +92,11 @@ const handleSubmitCommand = async ({
     version,
     transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
   )
+
+  await summaryLogMetrics.recordStatusTransition({
+    status: SUMMARY_LOG_STATUS.SUBMITTED,
+    processingType
+  })
 
   logger.info({
     message: `Summary log submitted: summaryLogId=${summaryLogId}`

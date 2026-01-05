@@ -79,8 +79,8 @@
  * @typedef {AccreditationBase & {
  *  accreditationNumber: string;
  *  status: 'approved'|'suspended';
- *  validFrom: Date;
- *  validTo: Date
+ *  validFrom: string;
+ *  validTo: string
  * }} AccreditationApproved
  */
 
@@ -88,8 +88,8 @@
  * @typedef {AccreditationBase & {
  *  accreditationNumber?: string;
  *  status: 'created'|'rejected'|'archived';
- *  validFrom?: Date;
- *  validTo?: Date
+ *  validFrom?: string;
+ *  validTo?: string
  * }} AccreditationOther
  */
 
@@ -116,8 +116,8 @@
  * @typedef {RegistrationBase & {
  *  cbduNumber: string;
  *  status: 'approved'|'suspended';
- *  validFrom: Date;
- *  validTo: Date;
+ *  validFrom: string;
+ *  validTo: string;
  * }} RegistrationApproved
  */
 
@@ -125,13 +125,22 @@
  * @typedef {RegistrationBase & {
  *  cbduNumber?: string;
  *  status: 'created'|'rejected'|'archived';
- *  validFrom?: Date;
- *  validTo?: Date
+ *  validFrom?: string;
+ *  validTo?: string
  * }} RegistrationOther
  */
 
 /**
  * @typedef {RegistrationApproved | RegistrationOther} Registration
+ */
+
+/**
+ * @typedef {Object} Organisation
+ * @property {string} id
+ * @property {string} status
+ * @property {Registration[]} registrations
+ * @property {Accreditation[]} [accreditations]
+ * @property {Object} [linkedDefraOrganisation]
  */
 
 /**

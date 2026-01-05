@@ -10,7 +10,10 @@ import {
   UPLOAD_STATUS
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  getValidDateRange
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
@@ -30,6 +33,7 @@ import {
 describe('Repeated uploads of identical data', () => {
   let organisationId
   let registrationId
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   const { getServer } = setupAuthContext()
 
@@ -76,10 +80,11 @@ describe('Repeated uploads of identical data', () => {
             status: 'approved',
             material: 'glass',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
-            validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31'),
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             accreditation: {
               accreditationNumber: 'ACC-2025-001'
             }

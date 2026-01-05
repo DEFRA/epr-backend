@@ -12,6 +12,14 @@ import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 
 import { summaryLogsUploadCompletedPath } from './post.js'
 
+const mockRecordStatusTransition = vi.fn()
+
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: (...args) => mockRecordStatusTransition(...args)
+  }
+}))
+
 const summaryLogId = 'summary-log-123'
 
 const organisationId = 'org-123'
@@ -168,6 +176,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
     server.loggerMocks.info.mockClear()
     server.loggerMocks.error.mockClear()
     server.loggerMocks.warn.mockClear()
+    mockRecordStatusTransition.mockClear()
 
     vi.resetAllMocks()
   })
@@ -554,6 +563,53 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
             }
           }
         })
+      )
+    })
+  })
+
+  describe('metrics', () => {
+    it('should record status transition metric when file upload completes with validating status', async () => {
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+        payload
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+        SUMMARY_LOG_STATUS.VALIDATING
+      )
+    })
+
+    it('should record status transition metric when file upload completes with rejected status', async () => {
+      payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.REJECTED
+      delete payload.form.summaryLogUpload.s3Bucket
+      delete payload.form.summaryLogUpload.s3Key
+      payload.numberOfRejectedFiles = 1
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/${summaryLogId}/upload-completed`,
+        payload
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+        SUMMARY_LOG_STATUS.REJECTED
+      )
+    })
+
+    it('should record status transition metric when file upload completes with preprocessing status', async () => {
+      payload.form.summaryLogUpload.fileStatus = UPLOAD_STATUS.PENDING
+      delete payload.form.summaryLogUpload.s3Bucket
+      delete payload.form.summaryLogUpload.s3Key
+
+      await server.inject({
+        method: 'POST',
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/summary-logs/pending-${summaryLogId}/upload-completed`,
+        payload
+      })
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
+        SUMMARY_LOG_STATUS.PREPROCESSING
       )
     })
   })

@@ -122,7 +122,7 @@ const baseConfig = {
       format: Array,
       default: isProduction
         ? ['req.headers.authorization', 'req.headers.cookie', 'res.headers']
-        : ['req', 'res', 'responseTime']
+        : ['req.headers.authorization', 'req.headers.cookie']
     }
   },
   mongo: {
@@ -187,6 +187,12 @@ const baseConfig = {
     format: Boolean,
     default: isProduction,
     env: 'ENABLE_METRICS'
+  },
+  isSwaggerEnabled: {
+    doc: 'Enable swagger documentation',
+    format: Boolean,
+    default: isDevelopment,
+    env: 'ENABLE_SWAGGER'
   },
   tracing: {
     header: {

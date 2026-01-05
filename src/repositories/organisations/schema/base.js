@@ -1,11 +1,15 @@
 import {
+  ORGANISATION_STATUS,
   PARTNER_TYPE,
   PARTNERSHIP_TYPE,
-  STATUS,
-  USER_ROLES
+  REG_ACC_STATUS,
+  REPROCESSING_TYPE,
+  USER_ROLES,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import Joi from 'joi'
 import { ObjectId } from 'mongodb'
+import { requiredWhenApprovedOrSuspended } from '#repositories/organisations/schema/helpers.js'
 
 export const idSchema = Joi.string()
   .required()
@@ -64,12 +68,12 @@ export const linkedDefraOrganisationSchema = Joi.object({
 export const statusHistoryItemSchema = Joi.object({
   status: Joi.string()
     .valid(
-      STATUS.CREATED,
-      STATUS.APPROVED,
-      STATUS.ACTIVE,
-      STATUS.REJECTED,
-      STATUS.SUSPENDED,
-      STATUS.ARCHIVED
+      REG_ACC_STATUS.CREATED,
+      REG_ACC_STATUS.APPROVED,
+      ORGANISATION_STATUS.ACTIVE,
+      REG_ACC_STATUS.CANCELLED,
+      REG_ACC_STATUS.REJECTED,
+      REG_ACC_STATUS.SUSPENDED
     )
     .required(),
   updatedAt: Joi.date().iso().required(),
@@ -108,4 +112,13 @@ export const formFileUploadSchema = Joi.object({
   defraFormUploadedFileId: Joi.string().required(),
   defraFormUserDownloadLink: Joi.string().uri().required(),
   s3Uri: Joi.string().optional()
+})
+
+export const reprocessingTypeSchema = Joi.when('wasteProcessingType', {
+  is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+  then: Joi.string()
+    .valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+    .when('status', requiredWhenApprovedOrSuspended)
+    .default(null),
+  otherwise: Joi.forbidden()
 })

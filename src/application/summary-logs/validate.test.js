@@ -104,25 +104,31 @@ const buildExtractedData = ({ meta = {}, data = {} } = {}) => ({
   data
 })
 
-const buildExistingWasteRecord = (rowData, overrides = {}) => ({
-  type: 'received',
-  rowId: String(rowData.ROW_ID),
-  organisationId: 'org-1',
-  registrationId: 'reg-1',
-  data: rowData,
-  versions: [
-    {
-      createdAt: '2025-01-01T00:00:00.000Z',
-      status: 'created',
-      summaryLog: {
-        id: 'previous-summary-log',
-        uri: 's3://bucket/old-key'
-      },
-      data: rowData
-    }
-  ],
-  ...overrides
-})
+const buildExistingWasteRecord = (rowData, overrides = {}) => {
+  const dataWithProcessingType = {
+    ...rowData,
+    processingType: 'REPROCESSOR_INPUT'
+  }
+  return {
+    type: 'received',
+    rowId: String(rowData.ROW_ID),
+    organisationId: 'org-1',
+    registrationId: 'reg-1',
+    data: dataWithProcessingType,
+    versions: [
+      {
+        createdAt: '2025-01-01T00:00:00.000Z',
+        status: 'created',
+        summaryLog: {
+          id: 'previous-summary-log',
+          uri: 's3://bucket/old-key'
+        },
+        data: dataWithProcessingType
+      }
+    ],
+    ...overrides
+  }
+}
 
 // ============================================================================
 
@@ -135,6 +141,21 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
     info: (...args) => mockLoggerInfo(...args),
     warn: (...args) => mockLoggerWarn(...args),
     error: (...args) => mockLoggerError(...args)
+  }
+}))
+
+const mockRecordStatusTransition = vi.fn()
+const mockRecordValidationDuration = vi.fn()
+const mockRecordValidationIssues = vi.fn()
+const mockRecordRowOutcome = vi.fn()
+
+vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
+  summaryLogMetrics: {
+    recordStatusTransition: (...args) => mockRecordStatusTransition(...args),
+    recordValidationDuration: (...args) =>
+      mockRecordValidationDuration(...args),
+    recordValidationIssues: (...args) => mockRecordValidationIssues(...args),
+    recordRowOutcome: (...args) => mockRecordRowOutcome(...args)
   }
 }))
 
@@ -173,6 +194,7 @@ describe('SummaryLogsValidator', () => {
         id: 'reg-123',
         registrationNumber: 'REG12345',
         wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
         material: 'aluminium'
       })
     }
@@ -198,6 +220,7 @@ describe('SummaryLogsValidator', () => {
       }
     }
 
+    /** @type {any} */
     summaryLogsRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -207,14 +230,18 @@ describe('SummaryLogsValidator', () => {
     }
 
     validateSummaryLog = createSummaryLogsValidator({
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
+      summaryLogsRepository: /** @type {any} */ (summaryLogsRepository),
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogExtractor
     })
   })
 
   afterEach(() => {
+    mockRecordStatusTransition.mockClear()
+    mockRecordValidationDuration.mockClear()
+    mockRecordValidationIssues.mockClear()
+    mockRecordRowOutcome.mockClear()
     vi.resetAllMocks()
   })
 
@@ -296,6 +323,7 @@ describe('SummaryLogsValidator', () => {
       id: 'reg-123',
       registrationNumber: 'REG12345',
       wasteProcessingType: 'reprocessor',
+      reprocessingType: 'input',
       material: 'aluminium',
       accreditation: {
         accreditationNumber: 'ACC12345'
@@ -520,6 +548,7 @@ describe('SummaryLogsValidator', () => {
   })
 
   it('should throw error if repository update fails during success handler without marking as invalid', async () => {
+    /** @type {any} */
     const brokenRepository = {
       findById: vi.fn().mockResolvedValue({
         version: 1,
@@ -530,8 +559,8 @@ describe('SummaryLogsValidator', () => {
 
     const brokenValidate = createSummaryLogsValidator({
       summaryLogsRepository: brokenRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
+      organisationsRepository: /** @type {any} */ (organisationsRepository),
+      wasteRecordsRepository: /** @type {any} */ (wasteRecordsRepository),
       summaryLogExtractor
     })
 
@@ -784,6 +813,41 @@ describe('SummaryLogsValidator', () => {
 
       // Reset the mock for other tests
       wasteRecordsRepository.findByRegistration.mockResolvedValue([])
+    })
+  })
+
+  describe('metrics', () => {
+    it('should record VALIDATED status transition metric when validation succeeds', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.VALIDATED,
+        processingType: 'REPROCESSOR_INPUT'
+      })
+    })
+
+    it('should record INVALID status transition metric when validation fails', async () => {
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: { REGISTRATION_NUMBER: { value: 'REG99999' } } // Wrong - fatal business error
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        processingType: 'REPROCESSOR_INPUT'
+      })
+    })
+
+    it('should record validation duration metric', async () => {
+      await validateSummaryLog(summaryLogId)
+
+      expect(mockRecordValidationDuration).toHaveBeenCalledWith(
+        { processingType: 'REPROCESSOR_INPUT' },
+        expect.any(Number)
+      )
     })
   })
 })

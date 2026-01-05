@@ -1,6 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
-import { STATUS, WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
-import { compareSite, siteInfoToLog } from './parsing-common/site.js'
+import {
+  REG_ACC_STATUS,
+  WASTE_PROCESSING_TYPE
+} from '#domain/organisations/model.js'
+import { siteInfoToLog } from './parsing-common/site.js'
+import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 
 /**
  * @import {Organisation, OrganisationWithRegistrations} from './types.js'
@@ -137,32 +141,12 @@ export function linkItemsToOrganisations(
 }
 
 /**
- * Check if an accreditation matches a registration based on type, material, and site
- * @param {Accreditation} accreditation - The accreditation to check
- * @param {Registration} registration - The registration to match against
- * @returns {boolean} True if the accreditation matches the registration
- */
-export function isAccreditationForRegistration(accreditation, registration) {
-  const typeAndMaterialMatch =
-    registration.wasteProcessingType === accreditation.wasteProcessingType &&
-    registration.material === accreditation.material
-
-  if (!typeAndMaterialMatch) {
-    return false
-  }
-
-  return registration.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR
-    ? compareSite(registration.site, accreditation.site)
-    : true
-}
-
-/**
  * Finds accreditations eligible for linking to a registration
  * Filters out approved accreditations to prevent linking to locked records
  */
 function findEligibleAccreditations(registration, accreditations) {
   return accreditations
-    .filter((acc) => acc.status !== STATUS.APPROVED)
+    .filter((acc) => acc.status !== REG_ACC_STATUS.APPROVED)
     .filter((acc) => isAccreditationForRegistration(acc, registration))
 }
 
@@ -182,7 +166,7 @@ function isLinkedToApprovedAccreditation(registration, accreditations) {
   const linkedAccreditation = accreditations.find(
     (acc) => acc.id === registration.accreditationId
   )
-  return linkedAccreditation?.status === STATUS.APPROVED
+  return linkedAccreditation?.status === REG_ACC_STATUS.APPROVED
 }
 
 /**

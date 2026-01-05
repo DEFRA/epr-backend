@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { compareSite, siteInfoToLog } from './site.js'
+import { compareSite, siteInfoToLog, siteKey } from './site.js'
 
 describe('compareSite', () => {
   it('returns true when both postcode match after normalization', () => {
@@ -61,5 +61,28 @@ describe('siteInfoToLog', () => {
     expect(
       siteInfoToLog({ address: { line1: '78 Portland Place' } })
     ).toContain('postcode=undefined')
+  })
+})
+
+describe('siteKey', () => {
+  it('should return postcode as key', () => {
+    const site = {
+      address: { line1: '78 Portland Place', postcode: 'W1B 1NT' }
+    }
+    expect(siteKey(site)).toEqual('W1B1NT')
+  })
+
+  it('should return undefined when postcode is missing', () => {
+    const site = {
+      address: { line1: '78 Portland Place' }
+    }
+    expect(siteKey(site)).toBeUndefined()
+  })
+
+  it('should return undefined when address is missing', () => {
+    const site = {
+      address: undefined
+    }
+    expect(siteKey(site)).toBeUndefined()
   })
 })

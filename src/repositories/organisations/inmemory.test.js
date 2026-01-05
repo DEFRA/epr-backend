@@ -1,7 +1,11 @@
-import { describe, it as base, expect, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it as base } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
 import { buildOrganisation, prepareOrgUpdate } from './contract/test-data.js'
+import {
+  ORGANISATION_STATUS,
+  REG_ACC_STATUS
+} from '#domain/organisations/model.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -29,17 +33,17 @@ describe('In-memory organisations repository', () => {
       await repository.insert(organisation)
 
       const orgReplacement = prepareOrgUpdate(organisation, {
-        status: 'rejected',
+        status: ORGANISATION_STATUS.REJECTED,
         registrations: [
           {
             ...organisation.registrations[0],
-            status: 'rejected'
+            status: REG_ACC_STATUS.REJECTED
           }
         ],
         accreditations: [
           {
             ...organisation.accreditations[0],
-            status: 'archived'
+            status: REG_ACC_STATUS.REJECTED
           }
         ]
       })
@@ -47,7 +51,7 @@ describe('In-memory organisations repository', () => {
 
       // Read directly from storage (bypassing repository enrichment)
       const storage = repository._getStorageForTesting()
-      const storedOrg = storage.find((o) => o.id === organisation.id)
+      const storedOrg = storage.find((o) => o._id === organisation.id)
 
       expect(storedOrg.status).toBeUndefined()
       expect(storedOrg.registrations[0].status).toBeUndefined()

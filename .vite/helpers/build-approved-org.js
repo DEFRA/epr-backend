@@ -1,7 +1,12 @@
-import { STATUS } from '#domain/organisations/model.js'
+import {
+  ORGANISATION_STATUS,
+  REG_ACC_STATUS,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import {
   buildOrganisation,
-  prepareOrgUpdate
+  prepareOrgUpdate,
+  getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 
@@ -12,31 +17,28 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
 
   await organisationsRepository.insert(org)
 
-  const now = new Date()
-  const oneYearFromNow = new Date(
-    now.getFullYear() + 1,
-    now.getMonth(),
-    now.getDate()
-  )
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   // Only approve the first accreditation (which is already linked to the first registration)
   const approvedAccreditations = [
     {
       ...org.accreditations[0],
-      status: STATUS.APPROVED,
+      status: REG_ACC_STATUS.APPROVED,
       accreditationNumber: org.accreditations[0].accreditationNumber || 'ACC1',
-      validFrom: now,
-      validTo: oneYearFromNow
+      validFrom: VALID_FROM,
+      reprocessingType: REPROCESSING_TYPE.INPUT,
+      validTo: VALID_TO
     }
   ]
 
   const approvedRegistrations = [
     Object.assign({}, org.registrations[0], {
-      status: STATUS.APPROVED,
+      status: REG_ACC_STATUS.APPROVED,
       cbduNumber: org.registrations[0].cbduNumber || 'CBDU123456',
       registrationNumber: 'REG1',
-      validFrom: now,
-      validTo: oneYearFromNow
+      reprocessingType: REPROCESSING_TYPE.INPUT,
+      validFrom: VALID_FROM,
+      validTo: VALID_TO
     })
   ]
 
@@ -44,7 +46,7 @@ export async function buildApprovedOrg(organisationsRepository, overrides) {
     org.id,
     INITIAL_VERSION,
     prepareOrgUpdate(org, {
-      status: STATUS.APPROVED,
+      status: ORGANISATION_STATUS.APPROVED,
       accreditations: approvedAccreditations,
       registrations: approvedRegistrations
     })

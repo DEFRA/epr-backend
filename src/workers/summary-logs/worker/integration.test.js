@@ -25,7 +25,8 @@ describe('SummaryLogsValidator integration', () => {
   const createTestOrg = (
     wasteProcessingType,
     registrationNumber,
-    accreditationNumber
+    accreditationNumber,
+    reprocessingType = 'input'
   ) => {
     const registrationId = randomUUID()
 
@@ -35,6 +36,7 @@ describe('SummaryLogsValidator integration', () => {
           accreditationNumber,
           material: 'paper',
           wasteProcessingType,
+          ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
           formSubmissionTime: new Date(),
           submittedToRegulator: 'ea'
         }
@@ -45,6 +47,7 @@ describe('SummaryLogsValidator integration', () => {
       registrationNumber,
       material: 'paper',
       wasteProcessingType,
+      ...(wasteProcessingType === 'reprocessor' && { reprocessingType }),
       formSubmissionTime: new Date(),
       submittedToRegulator: 'ea',
       ...(accreditation && { accreditationId: accreditation.id })
@@ -76,6 +79,7 @@ describe('SummaryLogsValidator integration', () => {
    *  registrationType: WasteProcessingTypeValue;
    *  registrationWRN: string;
    *  accreditationNumber?: string;
+   *  reprocessingType?: 'input' | 'output';
    *  metadata?: Record<string, MetadataEntry>;
    *  summaryLogExtractor?: SummaryLogExtractor;
    * }} RunValidationParams
@@ -85,13 +89,15 @@ describe('SummaryLogsValidator integration', () => {
     registrationType,
     registrationWRN,
     accreditationNumber,
+    reprocessingType = 'input',
     metadata,
     summaryLogExtractor = null
   }) => {
     const testOrg = createTestOrg(
       registrationType,
       registrationWRN,
-      accreditationNumber
+      accreditationNumber,
+      reprocessingType
     )
     const organisationsRepository = createInMemoryOrganisationsRepository([
       testOrg

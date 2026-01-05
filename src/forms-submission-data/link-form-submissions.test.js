@@ -1,14 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   linkItemsToOrganisations,
-  linkRegistrationToAccreditations,
-  isAccreditationForRegistration
+  linkRegistrationToAccreditations
 } from './link-form-submissions.js'
 import { logger } from '#common/helpers/logging/logger.js'
 import {
   MATERIAL,
-  STATUS,
+  ORGANISATION_STATUS,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { siteInfoToLog } from '#formsubmission/parsing-common/site.js'
@@ -686,7 +685,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo,
@@ -696,14 +695,14 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
           },
           {
             id: accId2,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: new Date()
@@ -732,7 +731,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
@@ -741,7 +740,7 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: new Date()
@@ -768,7 +767,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo,
@@ -778,14 +777,14 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
           },
           {
             id: accId2,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: new Date()
@@ -812,7 +811,7 @@ describe('linkRegistrationToAccreditations', () => {
         registrations: [
           {
             id: reg1Id,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             accreditationId: accId1,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
@@ -820,7 +819,7 @@ describe('linkRegistrationToAccreditations', () => {
           },
           {
             id: reg2Id,
-            status: STATUS.CREATED,
+            status: ORGANISATION_STATUS.CREATED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
@@ -829,7 +828,7 @@ describe('linkRegistrationToAccreditations', () => {
         accreditations: [
           {
             id: accId1,
-            status: STATUS.APPROVED,
+            status: ORGANISATION_STATUS.APPROVED,
             wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
             material: MATERIAL.WOOD,
             formSubmissionTime: oneDayAgo
@@ -843,87 +842,5 @@ describe('linkRegistrationToAccreditations', () => {
     expect(result[0].registrations[0].accreditationId).toBe(accId1)
     expect(result[0].registrations[1].accreditationId).toBeUndefined()
     expect(logger.warn).not.toHaveBeenCalled()
-  })
-})
-
-describe('isAccreditationForRegistration', () => {
-  describe('exporter', () => {
-    it('matches when type and material are the same', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.PLASTIC
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.PLASTIC
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        true
-      )
-    })
-
-    it('does not match when material differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.PLASTIC
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
-  })
-
-  describe('reprocessor', () => {
-    it('matches when type, material and site postcode are the same', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.ALUMINIUM,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.ALUMINIUM,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        true
-      )
-    })
-
-    it('does not match when material differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.STEEL,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.ALUMINIUM,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
-
-    it('does not match when site postcode differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.PLASTIC,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
-        material: MATERIAL.PLASTIC,
-        site: { address: { postcode: 'W1C 2AA' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
   })
 })

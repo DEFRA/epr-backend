@@ -26,6 +26,7 @@ import exporterRecords from '#data/fixtures/common/waste-records/exporter-record
 
 import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
 import { createSystemLogsCollection } from '#common/helpers/collections/create-system-logs.js'
+import { createEprOrganisationScenarios } from '#common/helpers/collections/seed-scenarios.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { toWasteRecordVersions } from '#repositories/waste-records/contract/test-data.js'
@@ -126,6 +127,7 @@ export async function createSeedData(
 
     await createOrgRegAccFixtures(db)
     await createEprOrganisationFixtures(db, organisationsRepository)
+    await createEprOrganisationScenarios(db, organisationsRepository)
     await createWasteRecordsFixtures(db, wasteRecordsRepository)
   }
 }

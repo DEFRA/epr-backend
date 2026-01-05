@@ -1,4 +1,5 @@
-import { STATUS } from '#domain/organisations/model.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { prepareOrgUpdate } from '#repositories/organisations/contract/test-data.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { buildApprovedOrg } from './build-approved-org.js'
 import {
@@ -22,24 +23,14 @@ export async function buildActiveOrg(organisationsRepository, overrides) {
     linkedAt: new Date().toISOString()
   }
 
-  await organisationsRepository.update(org.id, org.version, {
-    status: STATUS.ACTIVE,
-    linkedDefraOrganisation: linkedDefraOrg,
-    registrations: org.registrations.reduce(
-      (prev, registration) =>
-        registration.status === STATUS.APPROVED
-          ? [...prev, { ...registration, status: STATUS.ACTIVE }]
-          : prev,
-      []
-    ),
-    accreditations: org.accreditations.reduce(
-      (prev, accreditation) =>
-        accreditation.status === STATUS.APPROVED
-          ? [...prev, { ...accreditation, status: STATUS.ACTIVE }]
-          : prev,
-      []
-    )
-  })
+  await organisationsRepository.replace(
+    org.id,
+    INITIAL_VERSION,
+    prepareOrgUpdate(org, {
+      status: ORGANISATION_STATUS.ACTIVE,
+      linkedDefraOrganisation: linkedDefraOrg
+    })
+  )
 
   return waitForVersion(organisationsRepository, org.id, INITIAL_VERSION + 1)
 }

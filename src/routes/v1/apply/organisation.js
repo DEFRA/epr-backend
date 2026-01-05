@@ -59,6 +59,7 @@ export const organisation = {
   path: organisationPath,
   options: {
     auth: false,
+    tags: ['api'],
     validate: {
       payload: (data, _options) => {
         if (!data || typeof data !== 'object') {

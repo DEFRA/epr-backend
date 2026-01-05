@@ -13,9 +13,13 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import {
+  buildOrganisation,
+  getValidDateRange
+} from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
@@ -34,6 +38,7 @@ import {
 describe('Submission and placeholder tests', () => {
   let organisationId
   let registrationId
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   const { getServer } = setupAuthContext()
 
@@ -79,10 +84,11 @@ describe('Submission and placeholder tests', () => {
             status: 'approved',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea',
-            validFrom: new Date('2025-01-01'),
-            validTo: new Date('2025-12-31'),
+            validFrom: VALID_FROM,
+            validTo: VALID_TO,
             accreditation: {
               accreditationNumber: 'ACC-2025-001'
             }
@@ -372,7 +378,8 @@ describe('Submission and placeholder tests', () => {
           summaryLogsRepository: summaryLogsRepositoryFactory,
           uploadsRepository,
           wasteRecordsRepository: wasteRecordsRepositoryFactory,
-          organisationsRepository: () => organisationsRepository
+          organisationsRepository: () => organisationsRepository,
+          systemLogsRepository: createSystemLogsRepository()
         },
         workers: {
           summaryLogsWorker: submitterWorker
@@ -647,7 +654,7 @@ describe('Submission and placeholder tests', () => {
 
       // Row 10: another valid row after terminator row (should be excluded)
       worksheet.getCell('B10').value = 99999999999
-      worksheet.getCell('C10').value = new Date('2025-12-31')
+      worksheet.getCell('C10').value = new Date(VALID_TO)
       worksheet.getCell('D10').value = '03 03 08'
       worksheet.getCell('E10').value = 'Glass - pre-sorted'
       worksheet.getCell('F10').value = 'No'
@@ -694,6 +701,7 @@ describe('Submission and placeholder tests', () => {
             registrationNumber: 'REG-123',
             material: 'paper',
             wasteProcessingType: 'reprocessor',
+            reprocessingType: 'input',
             formSubmissionTime: new Date(),
             submittedToRegulator: 'ea'
           }

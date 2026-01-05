@@ -6,6 +6,23 @@ import { createInitialStatusHistory } from '../helpers.js'
 const ORG_ID_START = 500000
 export const generateOrgId = () => ORG_ID_START + crypto.randomInt(0, 100000)
 
+/**
+ * Generates date constants for validFrom/validTo in YYYY-MM-DD format
+ * @returns {Object} Object with VALID_FROM (today) and VALID_TO (one year from now)
+ */
+export const getValidDateRange = () => {
+  const now = new Date()
+  const oneYearFromNow = new Date(
+    now.getFullYear() + 1,
+    now.getMonth(),
+    now.getDate()
+  )
+  return {
+    VALID_FROM: now.toISOString().slice(0, 10),
+    VALID_TO: oneYearFromNow.toISOString().slice(0, 10)
+  }
+}
+
 function initializeStatusForItems(items) {
   if (Array.isArray(items)) {
     for (const item of items) {
@@ -48,7 +65,6 @@ export const buildAccreditation = (overrides = {}) => {
   const accreditation = {
     ...baseAccreditation,
     id: new ObjectId().toString(),
-    accreditationNumber: '87654321',
     ...overrides
   }
 
@@ -59,11 +75,36 @@ export const buildAccreditation = (overrides = {}) => {
 }
 
 export const buildOrganisation = (overrides = {}) => {
+  // Build a mapping from old accreditation IDs to new ones
+  // This ensures registration.accreditationId links are preserved
+  const accreditationIdMap = new Map()
+  for (const acc of org1.accreditations) {
+    accreditationIdMap.set(acc.id, new ObjectId().toString())
+  }
+
+  // Deep clone accreditations with new IDs
+  const accreditations = org1.accreditations.map((acc) => ({
+    ...acc,
+    id: accreditationIdMap.get(acc.id)
+  }))
+
+  // Deep clone registrations with new IDs, updating accreditationId links
+  const registrations = org1.registrations.map((reg) => ({
+    ...reg,
+    id: new ObjectId().toString(),
+    // Update accreditationId to point to the new accreditation ID
+    ...(reg.accreditationId && {
+      accreditationId: accreditationIdMap.get(reg.accreditationId)
+    })
+  }))
+
   const org = {
     ...org1,
     orgId: generateOrgId(),
     id: new ObjectId().toString(),
     statusHistory: createInitialStatusHistory(),
+    registrations,
+    accreditations,
     ...overrides
   }
 

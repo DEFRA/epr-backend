@@ -1,4 +1,7 @@
 import Hapi from '@hapi/hapi'
+import Inert from '@hapi/inert'
+import Vision from '@hapi/vision'
+import HapiSwagger from 'hapi-swagger'
 import Jwt from '@hapi/jwt'
 
 import { secureContext } from '@defra/hapi-secure-context'
@@ -9,6 +12,7 @@ import { mongoDbPlugin } from '#common/helpers/plugins/mongo-db-plugin.js'
 import { setupProxy } from '#common/helpers/proxy/setup-proxy.js'
 import { pulse } from '#common/helpers/pulse.js'
 import { requestTracing } from '#common/helpers/request-tracing.js'
+import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags } from '#plugins/feature-flags.js'
@@ -19,10 +23,8 @@ import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
 
-async function createServer(options = {}) {
-  setupProxy()
-  const config = getConfig()
-  const server = Hapi.server({
+function getServerConfig(config) {
+  return {
     host: config.get('host'),
     port: config.get('port'),
     debug: config.get('debug'),
@@ -47,7 +49,13 @@ async function createServer(options = {}) {
     router: {
       stripTrailingSlash: true
     }
-  })
+  }
+}
+
+async function createServer(options = {}) {
+  setupProxy()
+  const config = getConfig()
+  const server = Hapi.server(getServerConfig(config))
 
   // Hapi Plugins:
   // requestLogger  - automatically logs incoming requests
@@ -62,6 +70,7 @@ async function createServer(options = {}) {
   // router         - routes used in the app
   // Jwt            - JWT authentication plugin
   // authPlugin     - sets up authentication strategies
+  // authFailureLogger - logs 401 authentication failures
   const plugins = [
     requestLogger,
     requestTracing,
@@ -69,8 +78,23 @@ async function createServer(options = {}) {
     secureContext,
     pulse,
     Jwt,
-    authPlugin
+    authPlugin,
+    authFailureLogger
   ]
+
+  /* istanbul ignore next */
+  if (config.get('isSwaggerEnabled')) {
+    plugins.push(Inert, Vision, {
+      plugin: HapiSwagger,
+      options: {
+        info: {
+          title: 'API Documentation',
+          version: '1'
+        },
+        documentationPath: '/swagger'
+      }
+    })
+  }
 
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
   if (!options.skipMongoDb) {

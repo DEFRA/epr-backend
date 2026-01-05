@@ -12,10 +12,7 @@ import { accreditationSchema } from './accreditation.js'
 const formatValidationErrorDetails = (error) => {
   return error.details
     .map((d) => {
-      // For custom errors, use the message directly
-      return d.type.startsWith('organisation.')
-        ? d.message
-        : `${d.path.join('.')}: ${d.type}`
+      return `${d.path.join('.')}: ${d.type}`
     })
     .join('; ')
 }
