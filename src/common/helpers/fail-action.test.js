@@ -1,6 +1,25 @@
+import Boom from '@hapi/boom'
 import { failAction } from './fail-action.js'
 
 describe('#fail-action', () => {
+  test('passes error to logger under err key for serialisation', () => {
+    const mockRequest = {
+      logger: {
+        warn: vi.fn()
+      }
+    }
+    const mockToolkit = {}
+    const boomError = Boom.badRequest('Validation failed', { field: 'email' })
+
+    expect(() => failAction(mockRequest, mockToolkit, boomError)).toThrow()
+
+    expect(mockRequest.logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        err: boomError
+      })
+    )
+  })
+
   test('Should throw expected error object', () => {
     const mockRequest = {
       logger: {

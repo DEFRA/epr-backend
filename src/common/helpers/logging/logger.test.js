@@ -21,8 +21,8 @@ vi.mock('#root/config.js', () => ({
   }
 }))
 
-describe('loggerOptions.serializers.error', () => {
-  const { error: errorSerializer } = loggerOptions.serializers
+describe('loggerOptions.serializers.err', () => {
+  const { err: errorSerializer } = loggerOptions.serializers
 
   test('formats Error instance correctly', () => {
     const error = new Error('Something went wrong')
@@ -178,7 +178,7 @@ describe('loggerOptions in production environment', () => {
 
     const { loggerOptions: prodLoggerOptions } =
       await import('./logger-options.js')
-    const { error: errorSerializer } = prodLoggerOptions.serializers
+    const { err: errorSerializer } = prodLoggerOptions.serializers
 
     const boomError = new Error('Validation failed')
     boomError.isBoom = true

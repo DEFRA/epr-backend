@@ -36,7 +36,7 @@ export const loggerOptions = {
   logEvents: ['onPostStart', 'onPostStop', 'response', 'request-error'],
   serializers: {
     /** @param {unknown} err */
-    error: (err) => {
+    err: (err) => {
       if (!(err instanceof Error)) {
         return err
       }

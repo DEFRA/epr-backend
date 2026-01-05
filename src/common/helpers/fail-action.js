@@ -10,6 +10,7 @@ import {
  */
 export function failAction(request, _h, error) {
   request.logger.warn({
+    err: error,
     message: error?.message ?? error.toString(),
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,

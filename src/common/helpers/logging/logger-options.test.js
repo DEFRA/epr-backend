@@ -4,10 +4,15 @@ import { describe, expect, it } from 'vitest'
 import { loggerOptions } from './logger-options.js'
 
 describe('logger-options error serialiser', () => {
+  it('is registered under "err" key for hapi-pino compatibility', () => {
+    expect(loggerOptions.serializers).toHaveProperty('err')
+    expect(typeof loggerOptions.serializers.err).toBe('function')
+  })
+
   describe('in non-prod environments', () => {
     it('serialises a standard Error with message and stack', () => {
       const error = new Error('Something went wrong')
-      const result = loggerOptions.serializers.error(error)
+      const result = loggerOptions.serializers.err(error)
 
       expect(result).toEqual({
         message: 'Something went wrong',
@@ -18,7 +23,7 @@ describe('logger-options error serialiser', () => {
 
     it('serialises a Boom error with statusCode and payload', () => {
       const boom = Boom.badRequest('Invalid input')
-      const result = loggerOptions.serializers.error(boom)
+      const result = loggerOptions.serializers.err(boom)
 
       expect(result).toMatchObject({
         message: 'Invalid input',
@@ -38,7 +43,7 @@ describe('logger-options error serialiser', () => {
         source: 'params'
       }
       const boom = Boom.badRequest('Validation failed', validationDetails)
-      const result = loggerOptions.serializers.error(boom)
+      const result = loggerOptions.serializers.err(boom)
 
       expect(result.message).toContain('Validation failed')
       expect(result.message).toContain('data:')
@@ -57,7 +62,7 @@ describe('logger-options error serialiser', () => {
       )
 
       const boomWithData = Boom.badData(joiError.message, joiError.details)
-      const result = loggerOptions.serializers.error(boomWithData)
+      const result = loggerOptions.serializers.err(boomWithData)
 
       expect(result.message).toContain('data:')
       expect(result.message).toContain('string.guid')
@@ -67,11 +72,9 @@ describe('logger-options error serialiser', () => {
 
   describe('non-error values', () => {
     it('returns non-Error values unchanged', () => {
-      expect(loggerOptions.serializers.error('string error')).toBe(
-        'string error'
-      )
-      expect(loggerOptions.serializers.error(null)).toBe(null)
-      expect(loggerOptions.serializers.error({ custom: 'object' })).toEqual({
+      expect(loggerOptions.serializers.err('string error')).toBe('string error')
+      expect(loggerOptions.serializers.err(null)).toBe(null)
+      expect(loggerOptions.serializers.err({ custom: 'object' })).toEqual({
         custom: 'object'
       })
     })
