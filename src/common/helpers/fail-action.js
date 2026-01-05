@@ -42,9 +42,9 @@ export function failAction(request, _h, error) {
   if (isJoiValidationError(error)) {
     const boomError = Boom.badData(error.message, error.details)
 
-    const message = !isProductionEnvironment
-      ? `${error.message} | data: ${JSON.stringify(error.details)}`
-      : error.message
+    const message = isProductionEnvironment
+      ? error.message
+      : `${error.message} | data: ${JSON.stringify(error.details)}`
 
     request.logger.warn({
       err: boomError,
