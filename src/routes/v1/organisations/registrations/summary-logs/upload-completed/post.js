@@ -4,7 +4,6 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { requestValidationFailAction } from '#common/helpers/validation-fail-action.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 import {
   calculateExpiresAt,
@@ -150,8 +149,7 @@ export const summaryLogsUploadCompleted = {
   options: {
     auth: false,
     validate: {
-      payload: uploadCompletedPayloadSchema,
-      failAction: requestValidationFailAction
+      payload: uploadCompletedPayloadSchema
     }
   },
   /**
