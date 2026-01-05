@@ -26,27 +26,7 @@ export async function createOrUpdateEPROrganisationCollection(db, collections) {
     .collection(collectionName)
     .createIndex({ 'registrations.id': 1 }, { unique: true, sparse: true })
 
-  await db.collection(collectionName).createIndex(
-    { 'registrations.registrationNumber': 1 },
-    {
-      unique: true,
-      partialFilterExpression: {
-        'registrations.registrationNumber': { $type: 'string' }
-      }
-    }
-  )
-
   await db
     .collection(collectionName)
     .createIndex({ 'accreditations.id': 1 }, { unique: true, sparse: true })
-
-  await db.collection(collectionName).createIndex(
-    { 'accreditations.accreditationNumber': 1 },
-    {
-      unique: true,
-      partialFilterExpression: {
-        'accreditations.accreditationNumber': { $type: 'string' }
-      }
-    }
-  )
 }
