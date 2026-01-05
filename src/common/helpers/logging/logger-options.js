@@ -31,6 +31,7 @@ export const loggerOptions = {
   // Log request errors - includes validation errors, Boom errors, etc.
   logEvents: ['onPostStart', 'onPostStop', 'response', 'request-error'],
   serializers: {
+    /** @param {Error & {isBoom?: boolean, output?: {statusCode: number, payload: object}, data?: object}} err */
     error: (err) => {
       if (err instanceof Error) {
         const errorObj = {
@@ -39,14 +40,13 @@ export const loggerOptions = {
           type: err.name
         }
 
-        // Include Boom error details for better debugging (non-prod only)
-        // In production, detailed error payloads could expose sensitive information
-        // @ts-ignore - Boom errors have isBoom and output properties
         if (!isProductionEnvironment && err.isBoom && err.output) {
-          // @ts-ignore
           errorObj.statusCode = err.output.statusCode
-          // @ts-ignore
           errorObj.payload = err.output.payload
+
+          if (err.data) {
+            errorObj.message = `${err.message} | data: ${JSON.stringify(err.data)}`
+          }
         }
 
         return errorObj
