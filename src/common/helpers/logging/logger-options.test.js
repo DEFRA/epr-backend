@@ -5,8 +5,6 @@ import { loggerOptions } from './logger-options.js'
 
 describe('logger-options error serialiser', () => {
   describe('in non-prod environments', () => {
-    // Default test environment is non-prod (CDP_ENVIRONMENT != 'prod')
-
     it('serialises a standard Error with message and stack', () => {
       const error = new Error('Something went wrong')
       const result = loggerOptions.serializers.error(error)
@@ -35,7 +33,6 @@ describe('logger-options error serialiser', () => {
     })
 
     it('includes Boom data in message when data property is populated', () => {
-      // When Boom is created with data parameter, it appears in the message
       const validationDetails = {
         keys: ['organisationId'],
         source: 'params'
@@ -48,7 +45,6 @@ describe('logger-options error serialiser', () => {
       expect(result.message).toContain('organisationId')
     })
 
-    // Verifies Joi validation details are captured when failAction passes err.details to Boom
     it('includes Joi details when failAction passes error details to data parameter', () => {
       const schema = Joi.object({
         organisationId: Joi.string().uuid().required(),
@@ -68,11 +64,6 @@ describe('logger-options error serialiser', () => {
       expect(result.message).toContain('string.min')
     })
   })
-
-  // Note: Production environment behavior (suppressing detailed error info)
-  // is tested via the isProductionEnvironment check in the serialiser.
-  // The current test environment is non-prod, so we verify non-prod behavior here.
-  // Production behavior relies on the conditional at line 52 of logger-options.js
 
   describe('non-error values', () => {
     it('returns non-Error values unchanged', () => {
