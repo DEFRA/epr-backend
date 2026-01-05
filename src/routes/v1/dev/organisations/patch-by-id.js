@@ -4,6 +4,8 @@ import Joi from 'joi'
 import keyBy from 'lodash.keyby'
 import mergeWith from 'lodash.mergewith'
 
+import { requestValidationFailAction } from '#common/helpers/validation-fail-action.js'
+
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
@@ -56,9 +58,7 @@ export const devOrganisationsPatchById = {
     validate: {
       params,
       payload,
-      failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message, err.details)
-      }
+      failAction: requestValidationFailAction
     }
   },
 

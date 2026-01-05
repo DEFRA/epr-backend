@@ -6,6 +6,7 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
+import { requestValidationFailAction } from '#common/helpers/validation-fail-action.js'
 import { config } from '#root/config.js'
 import { summaryLogsCreatePayloadSchema } from './post.schema.js'
 import { ROLES } from '#common/helpers/auth/constants.js'
@@ -24,23 +25,7 @@ export const summaryLogsCreate = {
     tags: ['api'],
     validate: {
       payload: summaryLogsCreatePayloadSchema,
-      failAction: (request, _h, err) => {
-        const boomError = Boom.badData(err.message, err.details)
-        request.logger.error({
-          err: boomError,
-          message: `${boomError.message} | data: ${JSON.stringify(err.details)}`,
-          event: {
-            category: LOGGING_EVENT_CATEGORIES.SERVER,
-            action: LOGGING_EVENT_ACTIONS.RESPONSE_FAILURE
-          },
-          http: {
-            response: {
-              status_code: boomError.output.statusCode
-            }
-          }
-        })
-        throw boomError
-      }
+      failAction: requestValidationFailAction
     }
   },
   /**
