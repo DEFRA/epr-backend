@@ -55,10 +55,7 @@ export const devOrganisationsPatchById = {
     tags: ['api'],
     validate: {
       params,
-      payload,
-      failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message)
-      }
+      payload
     }
   },
 

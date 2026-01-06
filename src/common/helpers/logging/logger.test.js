@@ -21,8 +21,8 @@ vi.mock('#root/config.js', () => ({
   }
 }))
 
-describe('loggerOptions.serializers.error', () => {
-  const { error: errorSerializer } = loggerOptions.serializers
+describe('loggerOptions.serializers.err', () => {
+  const { err: errorSerializer } = loggerOptions.serializers
 
   test('formats Error instance correctly', () => {
     const error = new Error('Something went wrong')
@@ -96,6 +96,27 @@ describe('loggerOptions.serializers.error', () => {
       }
     })
   })
+
+  test('enhances message with Boom data details in non-prod environment', () => {
+    const boomError = new Error('Unauthorized')
+    boomError.isBoom = true
+    boomError.output = {
+      statusCode: 401,
+      payload: {
+        error: 'Unauthorized',
+        message: 'Unauthorized'
+      }
+    }
+    boomError.data = {
+      reason: 'Token issuer not recognised',
+      issuer: 'https://unknown-issuer.example.com'
+    }
+
+    const result = errorSerializer(boomError)
+
+    expect(result.message).toContain('Unauthorized')
+    expect(result.message).toContain('Token issuer not recognised')
+  })
 })
 
 describe('loggerOptions.serializers.res', () => {
@@ -157,7 +178,7 @@ describe('loggerOptions in production environment', () => {
 
     const { loggerOptions: prodLoggerOptions } =
       await import('./logger-options.js')
-    const { error: errorSerializer } = prodLoggerOptions.serializers
+    const { err: errorSerializer } = prodLoggerOptions.serializers
 
     const boomError = new Error('Validation failed')
     boomError.isBoom = true
@@ -165,6 +186,7 @@ describe('loggerOptions in production environment', () => {
       statusCode: 422,
       payload: { error: 'Unprocessable Entity', message: 'Sensitive details' }
     }
+    boomError.data = { sensitiveInfo: 'should not appear' }
 
     const result = errorSerializer(boomError)
 
@@ -175,6 +197,7 @@ describe('loggerOptions in production environment', () => {
     })
     expect(result.statusCode).toBeUndefined()
     expect(result.payload).toBeUndefined()
+    expect(result.message).not.toContain('sensitiveInfo')
   })
 
   test('log4xxResponseErrors is disabled in prod environment', async () => {
