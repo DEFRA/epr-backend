@@ -30,8 +30,20 @@ async function auditOrganisationUpdate(
     user: extractUserDetails(request)
   }
 
-  audit(payload)
+  audit(
+    modifiedIfTooBig(payload, ({ context, ...restPayload }) => ({
+      ...restPayload,
+      context: { organisationId: context.organisationId }
+    }))
+  )
   await recordSystemLog(request, payload)
+}
+
+// Prevent sending large auditing payloads to CDP library (as this causes an error and the audit event is lost)
+function modifiedIfTooBig(payload, modify) {
+  const payloadSize = Buffer.byteLength(JSON.stringify(payload), 'utf8')
+  const threshold = Math.pow(1024, 2) // 1Mb
+  return payloadSize < threshold ? payload : modify(payload)
 }
 
 function extractUserDetails(request) {
