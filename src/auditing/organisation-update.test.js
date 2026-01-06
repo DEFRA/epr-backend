@@ -65,7 +65,7 @@ describe('auditOrganisationUpdate', () => {
       )
     })
 
-    it('captures context.previous and context.next only in the system log for large payloads', async () => {
+    it('omits context.previous and context.next from the audit event for large payloads', async () => {
       const veryLongString = randomBytes(1e6).toString('hex')
       const previous = { version: '1', veryLongString }
       const next = { version: '2', veryLongString }
