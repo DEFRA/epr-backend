@@ -1,4 +1,5 @@
 import { audit } from '@defra/cdp-auditing'
+import { config } from '#root/config.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -30,20 +31,21 @@ async function auditOrganisationUpdate(
     user: extractUserDetails(request)
   }
 
-  audit(
-    modifiedIfTooBig(payload, ({ context, ...restPayload }) => ({
-      ...restPayload,
-      context: { organisationId: context.organisationId }
-    }))
-  )
+  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
+    ? payload
+    : {
+        ...payload,
+        context: { organisationId }
+      }
+
+  audit(safeAuditingPayload)
   await recordSystemLog(request, payload)
 }
 
 // Prevent sending large auditing payloads to CDP library (as this causes an error and the audit event is lost)
-function modifiedIfTooBig(payload, modify) {
+function isPayloadSmallEnoughToAudit(payload) {
   const payloadSize = Buffer.byteLength(JSON.stringify(payload), 'utf8')
-  const threshold = Math.pow(1024, 2) // 1Mb
-  return payloadSize < threshold ? payload : modify(payload)
+  return payloadSize < config.get('audit.maxPayloadSizeBytes')
 }
 
 function extractUserDetails(request) {
