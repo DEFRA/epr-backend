@@ -1,6 +1,6 @@
 import parse from 'joi-to-json'
-import { organisationReplaceSchema } from '#repositories/organisations/schema/organisation.js'
+import { organisationJSONSchemaOverrides } from '../../src/repositories/organisations/schema/overrides/organisation.json-schema-overrides.js'
 
 export const getOrganisationJSONSchema = () => {
-  return parse(organisationReplaceSchema, 'json-draft-2019-09')
+  return parse(organisationJSONSchemaOverrides, 'json-draft-2019-09')
 }
