@@ -4,12 +4,21 @@ import Joi from 'joi'
 import keyBy from 'lodash.keyby'
 import mergeWith from 'lodash.mergewith'
 
+/** @import {HapiRequest} from '#common/hapi-types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 
 /**
  * Organisation update payload with system fields removed
  * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationUpdateFragment
+ */
+
+/**
+ * @typedef {HapiRequest & {
+ *   organisationsRepository: OrganisationsRepository
+ *   params: { id: string }
+ *   payload: { organisation: OrganisationUpdateFragment }
+ * }} PatchByIdRequest
  */
 
 export const devOrganisationsPatchByIdPath = '/v1/dev/organisations/{id}'
@@ -31,10 +40,16 @@ const payload = Joi.object({
 
 const mergeCollectionById = (existingArray, updatesArray) => {
   const existingById = keyBy(existingArray, 'id')
-  return updatesArray.map((update) => ({
-    ...existingById[update.id],
-    ...update
-  }))
+  const updatesById = keyBy(updatesArray, 'id')
+
+  const merged = existingArray.map((existing) => {
+    const update = updatesById[existing.id]
+    return update ? { ...existing, ...update } : existing
+  })
+
+  const newItems = updatesArray.filter((update) => !existingById[update.id])
+
+  return [...merged, ...newItems]
 }
 
 const customMerger = (objValue, srcValue, key) => {
@@ -60,7 +75,7 @@ export const devOrganisationsPatchById = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request
+   * @param {PatchByIdRequest} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

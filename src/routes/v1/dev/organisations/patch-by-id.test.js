@@ -1,3 +1,4 @@
+import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import {
   buildAccreditation,
@@ -10,7 +11,6 @@ import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { StatusCodes } from 'http-status-codes'
 import { ObjectId } from 'mongodb'
-import { REPROCESSING_TYPE } from '#domain/organisations/model.js'
 
 describe('PATCH /v1/dev/organisations/{id}', () => {
   setupAuthContext()
@@ -345,6 +345,48 @@ describe('PATCH /v1/dev/organisations/{id}', () => {
           glassRecyclingProcess: null
         })
       )
+    })
+
+    it('should preserve registrations that are not included in the update', async () => {
+      const reg1 = buildRegistration({ wasteProcessingType: 'reprocessor' })
+      const reg2 = buildRegistration({ wasteProcessingType: 'exporter' })
+
+      const org = buildOrganisation({
+        registrations: [reg1, reg2],
+        accreditations: []
+      })
+      await organisationsRepository.insert(org)
+
+      const response = await server.inject({
+        method: 'PATCH',
+        url: `/v1/dev/organisations/${org.id}`,
+        payload: {
+          organisation: {
+            registrations: [
+              {
+                id: reg1.id,
+                cbduNumber: 'CBDU77777'
+              }
+            ]
+          }
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+      const body = JSON.parse(response.payload)
+
+      expect(body.organisation.registrations).toHaveLength(2)
+
+      const updatedReg1 = body.organisation.registrations.find(
+        (r) => r.id === reg1.id
+      )
+      const unchangedReg2 = body.organisation.registrations.find(
+        (r) => r.id === reg2.id
+      )
+
+      expect(updatedReg1.cbduNumber).toBe('CBDU77777')
+      expect(unchangedReg2).toBeDefined()
+      expect(unchangedReg2.orgName).toBe(reg2.orgName)
     })
   })
 
