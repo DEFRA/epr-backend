@@ -62,7 +62,7 @@ function updateOrganisation(organisationsRepository, item) {
     item.value
   )
   return organisationsRepository
-    .update(id, version, removeUndefinedValues(orgWithoutIdAndVersion))
+    .replace(id, version, removeUndefinedValues(orgWithoutIdAndVersion))
     .then(
       () =>
         /** @type {import('#formsubmission/types.js').SuccessResult} */ ({
