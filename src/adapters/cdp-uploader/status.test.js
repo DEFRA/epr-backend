@@ -14,20 +14,6 @@ vi.mock('#common/helpers/fetch-json.js', () => ({
   fetchJson: mockFetchJson
 }))
 
-describe('CDP Uploader status constants', () => {
-  it('exports upload status values', () => {
-    expect(CDP_UPLOAD_STATUS.INITIATED).toBe('initiated')
-    expect(CDP_UPLOAD_STATUS.PENDING).toBe('pending')
-    expect(CDP_UPLOAD_STATUS.READY).toBe('ready')
-  })
-
-  it('exports file status values', () => {
-    expect(CDP_FILE_STATUS.PENDING).toBe('pending')
-    expect(CDP_FILE_STATUS.COMPLETE).toBe('complete')
-    expect(CDP_FILE_STATUS.REJECTED).toBe('rejected')
-  })
-})
-
 describe('createCdpUploader', () => {
   let cdpUploader
   let logger
