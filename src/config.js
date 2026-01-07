@@ -96,6 +96,12 @@ const baseConfig = {
       format: Boolean,
       default: true,
       env: 'AUDIT_ENABLED'
+    },
+    maxPayloadSizeBytes: {
+      doc: 'Is auditing enabled',
+      format: Number,
+      default: 1000000, // 1MB
+      env: 'AUDIT_MAX_PAYLOAD_SIZE_BYTES'
     }
   },
   log: {
