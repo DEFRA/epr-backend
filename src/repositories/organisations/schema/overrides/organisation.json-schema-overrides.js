@@ -61,11 +61,8 @@ const fixedWasteManagementPermitSchema = wasteManagementPermitSchema.fork(
   (s) => nullable(s.optional())
 )
 
-const fixRegistration = (schema) => {
-  let fixed = fixIdFields(schema)
-  fixed = fixDateFields(fixed)
-
-  return fixed
+const applyRegistrationForks = (schema) =>
+  schema
     .fork(['registrationNumber', 'validFrom', 'validTo'], () =>
       nullable(Joi.string()).optional()
     )
@@ -92,6 +89,9 @@ const fixRegistration = (schema) => {
     .fork(['glassRecyclingProcess'], () =>
       nullable(Joi.array().items(Joi.string())).optional()
     )
+
+const applyRegistrationConditions = (schema) =>
+  schema
     .when('wasteProcessingType', {
       is: WASTE_PROCESSING_TYPE.REPROCESSOR,
       then: Joi.object({
@@ -141,6 +141,13 @@ const fixRegistration = (schema) => {
         validTo: Joi.string().required()
       })
     })
+
+const fixRegistration = (schema) => {
+  let fixed = fixIdFields(schema)
+  fixed = fixDateFields(fixed)
+  fixed = applyRegistrationForks(fixed)
+
+  return applyRegistrationConditions(fixed)
 }
 
 const fixAccreditation = (schema) => {
