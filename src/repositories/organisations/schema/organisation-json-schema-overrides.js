@@ -15,7 +15,7 @@ import { wasteManagementPermitSchema } from './waste-permits.js'
 /**
  * Joi schema overrides for JSON Schema compatibility.
  * These overrides fork the original domain schemas to resolve issues during
- * conversion up to JSON Schema, such as incompatible types or complex
+ * conversion to JSON Schema, such as incompatible types or complex
  * conditional logic that does not translate directly.
  */
 
