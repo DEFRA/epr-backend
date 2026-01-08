@@ -9,7 +9,7 @@ import {
 import { FORM_FIELDS_SHORT_DESCRIPTIONS } from '#common/enums/index.js'
 import accreditationFixture from '#data/fixtures/accreditation.json'
 import { accreditationPath } from './accreditation.js'
-import { it } from './test-fixtures.js'
+import { it } from '#vite/fixtures/server-with-mock-db.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn()
