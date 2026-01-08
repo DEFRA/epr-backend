@@ -9,5 +9,5 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir)
 }
 
-const outputPath = path.join(outputDir, 'organisation.json')
+const outputPath = path.join(outputDir, 'organisation.update.json')
 fs.writeFileSync(outputPath, JSON.stringify(organisation, null, 2))
