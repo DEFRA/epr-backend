@@ -5,6 +5,7 @@ import { fetchJson } from '#common/helpers/fetch-json.js'
  * @see https://github.com/DEFRA/cdp-uploader
  */
 export const CDP_UPLOAD_STATUS = Object.freeze({
+  INITIATED: 'initiated',
   PENDING: 'pending',
   READY: 'ready'
 })
@@ -14,13 +15,14 @@ export const CDP_UPLOAD_STATUS = Object.freeze({
  * @see https://github.com/DEFRA/cdp-uploader
  */
 export const CDP_FILE_STATUS = Object.freeze({
+  PENDING: 'pending',
   COMPLETE: 'complete',
   REJECTED: 'rejected'
 })
 
 /**
  * @typedef {Object} CdpUploadStatusResponse
- * @property {'pending' | 'ready'} uploadStatus
+ * @property {'initiated' | 'pending' | 'ready'} uploadStatus
  * @property {Object} [form]
  * @property {number} [numberOfRejectedFiles]
  */

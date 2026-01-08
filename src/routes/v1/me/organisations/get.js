@@ -24,7 +24,7 @@ import { StatusCodes } from 'http-status-codes'
  */
 
 /**
- * @typedef {DefraOrgSummary & {
+ * @typedef {EprOrganisationSummary & {
  *   linkedBy: {
  *     email: string
  *     id: string
@@ -93,8 +93,9 @@ export const organisationsLinkedGetAll = {
 
     const linked = linkedOrg
       ? {
-          id: linkedOrg.linkedDefraOrganisation.orgId,
+          id: linkedOrg.id,
           name: linkedOrg.linkedDefraOrganisation.orgName,
+          orgId: linkedOrg.linkedDefraOrganisation.orgId,
           linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
           linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt
         }
