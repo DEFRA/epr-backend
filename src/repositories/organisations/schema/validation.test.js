@@ -8,12 +8,15 @@ import {
 import {
   MATERIAL,
   REG_ACC_STATUS,
-  REGULATOR
+  REGULATOR,
+  WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import {
   buildAccreditation,
+  buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
+import { organisationJSONSchemaOverrides } from './overrides/organisation.json-schema-overrides.js'
 
 describe('validateStatusHistory', () => {
   it('throws badImplementation when statusHistory item has invalid status', () => {
@@ -526,6 +529,224 @@ describe('validateAccreditation', () => {
       expect(() => validateAccreditation(accreditation)).toThrow(
         /Invalid accreditation data.*incomeBusinessPlan.*array.length/
       )
+    })
+  })
+})
+
+describe('organisationJSONSchemaOverrides', () => {
+  const validate = (data, options = {}) =>
+    organisationJSONSchemaOverrides.validate(data, {
+      abortEarly: false,
+      stripUnknown: true,
+      ...options
+    })
+
+  it('validates a complete organisation with registrations and accreditations', () => {
+    const registration = buildRegistration({
+      material: MATERIAL.ALUMINIUM,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+    })
+    delete registration.glassRecyclingProcess
+    const accreditation = buildAccreditation({
+      material: MATERIAL.ALUMINIUM,
+      wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+    })
+    delete accreditation.glassRecyclingProcess
+
+    const organisation = buildOrganisation({
+      schemaVersion: 1,
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+    delete organisation.id
+
+    const { error } = validate(organisation)
+    expect(error).toBeUndefined()
+  })
+
+  describe('fixIdFields', () => {
+    it('allows registration and accreditation id to be optional', () => {
+      const registration = buildRegistration({
+        material: MATERIAL.ALUMINIUM,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+      delete registration.id
+      delete registration.glassRecyclingProcess
+      const accreditation = buildAccreditation({
+        material: MATERIAL.ALUMINIUM,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+      delete accreditation.id
+      delete accreditation.glassRecyclingProcess
+
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [registration],
+        accreditations: [accreditation]
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error).toBeUndefined()
+    })
+  })
+
+  describe('fixRegistration', () => {
+    it('allows null for optional registration number', () => {
+      const registration = buildRegistration({
+        status: REG_ACC_STATUS.CREATED,
+        registrationNumber: null,
+        material: MATERIAL.ALUMINIUM,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+      delete registration.glassRecyclingProcess
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [registration],
+        accreditations: []
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error).toBeUndefined()
+    })
+
+    it('requires registration number when status is APPROVED', () => {
+      const registration = buildRegistration({
+        status: REG_ACC_STATUS.APPROVED,
+        registrationNumber: undefined,
+        material: MATERIAL.ALUMINIUM,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+      delete registration.glassRecyclingProcess
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [registration],
+        accreditations: []
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error.message).toContain(
+        '"registrations[0].registrationNumber" is required'
+      )
+    })
+
+    it('reprocessor: requires site, wasteManagementPermits, yearlyMetrics, and plantEquipmentDetails', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM // avoid glass requirements
+      })
+      delete registration.site
+      delete registration.wasteManagementPermits
+      delete registration.yearlyMetrics
+      delete registration.plantEquipmentDetails
+
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [registration],
+        accreditations: []
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error.message).toContain('"registrations[0].site" is required')
+      expect(error.message).toContain(
+        '"registrations[0].wasteManagementPermits" is required'
+      )
+      expect(error.message).toContain(
+        '"registrations[0].yearlyMetrics" is required'
+      )
+      expect(error.message).toContain(
+        '"registrations[0].plantEquipmentDetails" is required'
+      )
+    })
+
+    it('exporter: requires noticeAddress, exportPorts, and orsFileUploads', () => {
+      const registration = buildRegistration({
+        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+        material: MATERIAL.ALUMINIUM // avoid glass requirements
+      })
+      delete registration.noticeAddress
+      delete registration.exportPorts
+      delete registration.orsFileUploads
+
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [registration],
+        accreditations: []
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error.message).toContain(
+        '"registrations[0].noticeAddress" is required'
+      )
+      expect(error.message).toContain(
+        '"registrations[0].exportPorts" is required'
+      )
+      expect(error.message).toContain(
+        '"registrations[0].orsFileUploads" is required'
+      )
+    })
+
+    it('glass: requires glassRecyclingProcess', () => {
+      const registration = buildRegistration({
+        material: MATERIAL.GLASS
+      })
+      delete registration.glassRecyclingProcess
+
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [registration],
+        accreditations: []
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error.message).toContain(
+        '"registrations[0].glassRecyclingProcess" is required'
+      )
+    })
+  })
+
+  describe('fixAccreditation', () => {
+    it('allows null for accreditation number when not approved', () => {
+      const accreditation = buildAccreditation({
+        status: REG_ACC_STATUS.CREATED,
+        accreditationNumber: null,
+        material: MATERIAL.ALUMINIUM,
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
+      })
+      delete accreditation.glassRecyclingProcess
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [],
+        accreditations: [accreditation]
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error).toBeUndefined()
+    })
+
+    it('requires site for reprocessor', () => {
+      const accreditation = buildAccreditation({
+        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        material: MATERIAL.ALUMINIUM
+      })
+      delete accreditation.site
+      delete accreditation.glassRecyclingProcess
+
+      const organisation = buildOrganisation({
+        schemaVersion: 1,
+        registrations: [],
+        accreditations: [accreditation]
+      })
+      delete organisation.id
+
+      const { error } = validate(organisation)
+      expect(error.message).toContain('"accreditations[0].site" is required')
     })
   })
 })
