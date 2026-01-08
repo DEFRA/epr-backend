@@ -57,7 +57,7 @@ describe('sendEmail', () => {
   it('calls notifyClient with apiKey from getLocalSecret in NODE_ENV=development', async () => {
     vi.stubEnv('NODE_ENV', 'development')
     await sendEmail(templateId, emailAddress, personalisation)
-    expect(getLocalSecret).toHaveBeenCalledWith('GOVUK_NOTIFY_API_KEY')
+    expect(getLocalSecret).toHaveBeenCalledWith('govukNotifyApiKeyPath')
   })
 
   it('calls logger.warn if apiKey is not set', async () => {
