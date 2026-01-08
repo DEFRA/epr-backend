@@ -365,7 +365,7 @@ const baseConfig = {
       format: String,
       nullable: true,
       default: null,
-      env: 'GOVUK_NOTIFY_API_KEY_PATH'
+      env: 'GOVUK_NOTIFY_API_KEY'
     }
   }
 }
