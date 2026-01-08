@@ -16,7 +16,7 @@ import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
-import { organisationJSONSchemaOverrides } from './overrides/organisation.json-schema-overrides.js'
+import { organisationJSONSchemaOverrides } from './organisation-json-schema-overrides.js'
 
 describe('validateStatusHistory', () => {
   it('throws badImplementation when statusHistory item has invalid status', () => {

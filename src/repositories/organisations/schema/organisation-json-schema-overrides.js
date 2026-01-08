@@ -5,10 +5,10 @@ import {
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { accreditationUpdateSchema } from '../accreditation.js'
-import { addressSchema, formFileUploadSchema } from '../base.js'
-import { organisationReplaceSchema } from '../organisation.js'
-import { registrationUpdateSchema } from '../registration.js'
+import { accreditationUpdateSchema } from './accreditation.js'
+import { addressSchema, formFileUploadSchema } from './base.js'
+import { organisationReplaceSchema } from './organisation.js'
+import { registrationUpdateSchema } from './registration.js'
 
 /**
  * Joi schema overrides for JSON Schema compatibility.
