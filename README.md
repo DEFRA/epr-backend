@@ -1,5 +1,9 @@
 # pEPR Backend
 
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_epr-backend&metric=security_rating&token=26969f137977ed508a71e4ded70d645a6821f4ff)](https://sonarcloud.io/summary/new_code?id=DEFRA_epr-backend)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_epr-backend&metric=alert_status&token=26969f137977ed508a71e4ded70d645a6821f4ff)](https://sonarcloud.io/summary/new_code?id=DEFRA_epr-backend)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=DEFRA_epr-backend&metric=coverage&token=26969f137977ed508a71e4ded70d645a6821f4ff)](https://sonarcloud.io/summary/new_code?id=DEFRA_epr-backend)
+
 Backend APIs for: Packaging Extended Producer Responsibilities
 
 <!-- prettier-ignore-start -->
