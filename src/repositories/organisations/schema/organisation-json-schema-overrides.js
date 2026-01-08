@@ -1,12 +1,15 @@
 import Joi from 'joi'
 import {
   MATERIAL,
-  REG_ACC_STATUS,
   REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { accreditationUpdateSchema } from './accreditation.js'
-import { addressSchema, formFileUploadSchema } from './base.js'
+import { addressSchema, reprocessingTypeSchema } from './base.js'
+import {
+  dateRequiredWhenApprovedOrSuspended,
+  requiredWhenApprovedOrSuspended
+} from './helpers.js'
 import { organisationReplaceSchema } from './organisation.js'
 import { registrationUpdateSchema } from './registration.js'
 
@@ -24,25 +27,14 @@ const fixIdFields = (schema) => {
   return schema.fork(paths, () => Joi.string().optional())
 }
 
-const nullable = (schema) => schema.allow(null)
-
-const fixDateFields = (schema) =>
-  schema.fork(['validFrom', 'validTo'], () =>
-    nullable(Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)).optional()
-  )
-
 const siteCapacitySchema = Joi.object({
   material: Joi.string().required(),
   siteCapacityInTonnes: Joi.number().required(),
   siteCapacityTimescale: Joi.string().required()
 })
 
-const siteAddressSchema = addressSchema.fork(['line1', 'postcode'], (schema) =>
-  schema.required()
-)
-
 const registrationSiteSchema = Joi.object({
-  address: siteAddressSchema.required(),
+  address: addressSchema.required(),
   gridReference: Joi.string().required(),
   siteCapacity: Joi.array().items(siteCapacitySchema).required().min(1)
 })
@@ -54,127 +46,128 @@ const accreditationSiteSchema = Joi.object({
   })
 })
 
-const applyRegistrationForks = (schema) =>
-  schema
-    .fork(['registrationNumber', 'validFrom', 'validTo'], (s) =>
-      nullable(s).optional()
-    )
-    .fork(['cbduNumber', 'plantEquipmentDetails'], (s) =>
-      nullable(s).optional()
-    )
-    .fork(['reprocessingType'], (s) => nullable(s).optional())
-    .fork(['site'], () => nullable(registrationSiteSchema).optional())
-    .fork(['noticeAddress'], () => nullable(addressSchema).optional())
-    .fork(['wasteManagementPermits'], (s) => nullable(s).optional())
-    .fork(['yearlyMetrics'], (s) => nullable(s).optional())
-    .fork(['exportPorts'], (s) => nullable(s).optional())
-    .fork(['orsFileUploads', 'samplingInspectionPlanPart1FileUploads'], (s) =>
-      nullable(s).optional()
-    )
-    .fork(['glassRecyclingProcess'], (s) => nullable(s).optional())
+const applyRegistrationOverrides = (schema) => {
+  return schema.keys({
+    registrationNumber: Joi.string()
+      .allow(null)
+      .default(null)
+      .when('status', requiredWhenApprovedOrSuspended),
+    validFrom: dateRequiredWhenApprovedOrSuspended(),
+    validTo: dateRequiredWhenApprovedOrSuspended(),
+    cbduNumber: Joi.string()
+      .allow(null)
+      .when('submittedToRegulator', {
+        is: Joi.valid(REGULATOR.EA, REGULATOR.SEPA, REGULATOR.NRW),
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+    reprocessingType: reprocessingTypeSchema,
+    site: registrationSiteSchema.allow(null).when('wasteProcessingType', {
+      is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    }),
+    noticeAddress: addressSchema.allow(null).when('wasteProcessingType', {
+      is: WASTE_PROCESSING_TYPE.EXPORTER,
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    }),
+    wasteManagementPermits: Joi.array()
+      .items(Joi.any())
+      .allow(null)
+      .when('wasteProcessingType', {
+        is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+    yearlyMetrics: Joi.array()
+      .items(Joi.any())
+      .allow(null)
+      .when('wasteProcessingType', {
+        is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+    plantEquipmentDetails: Joi.string()
+      .allow(null)
+      .when('wasteProcessingType', {
+        is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+    exportPorts: Joi.array()
+      .items(Joi.string())
+      .allow(null)
+      .when('wasteProcessingType', {
+        is: WASTE_PROCESSING_TYPE.EXPORTER,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+    orsFileUploads: Joi.array()
+      .items(Joi.any())
+      .allow(null)
+      .when('wasteProcessingType', {
+        is: WASTE_PROCESSING_TYPE.EXPORTER,
+        then: Joi.required(),
+        otherwise: Joi.optional()
+      }),
+    glassRecyclingProcess: Joi.any().allow(null).when('material', {
+      is: MATERIAL.GLASS,
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    }),
+    samplingInspectionPlanPart1FileUploads: Joi.array()
+      .items(Joi.any())
+      .optional()
+      .allow(null),
+    wasteProcessingType: Joi.string().required(),
+    material: Joi.string().required(),
+    status: Joi.string().optional(),
+    submittedToRegulator: Joi.string().required()
+  })
+}
 
-const applyRegistrationConditions = (schema) =>
-  schema
-    .when('wasteProcessingType', {
-      is: Joi.valid(WASTE_PROCESSING_TYPE.REPROCESSOR),
-      then: Joi.object({
-        site: Joi.required(),
-        wasteManagementPermits: Joi.required(),
-        yearlyMetrics: Joi.required(),
-        plantEquipmentDetails: Joi.required()
+const applyAccreditationOverrides = (schema) => {
+  return schema.keys({
+    accreditationNumber: Joi.string()
+      .allow(null)
+      .default(null)
+      .when('status', requiredWhenApprovedOrSuspended),
+    validFrom: dateRequiredWhenApprovedOrSuspended(),
+    validTo: dateRequiredWhenApprovedOrSuspended(),
+    reprocessingType: reprocessingTypeSchema,
+    site: accreditationSiteSchema.allow(null).when('wasteProcessingType', {
+      is: WASTE_PROCESSING_TYPE.REPROCESSOR,
+      then: Joi.required(),
+      otherwise: Joi.optional()
+    }),
+    glassRecyclingProcess: Joi.array()
+      .items(Joi.string())
+      .allow(null)
+      .when('material', {
+        is: MATERIAL.GLASS,
+        then: Joi.required(),
+        otherwise: Joi.optional()
       }),
-      otherwise: Joi.object({
-        yearlyMetrics: Joi.optional(),
-        plantEquipmentDetails: Joi.optional()
-      })
-    })
-    .when('wasteProcessingType', {
-      is: Joi.valid(WASTE_PROCESSING_TYPE.EXPORTER),
-      then: Joi.object({
-        noticeAddress: Joi.required(),
-        exportPorts: Joi.required(),
-        orsFileUploads: Joi.required()
-      }),
-      otherwise: Joi.object({
-        exportPorts: Joi.optional(),
-        orsFileUploads: Joi.optional()
-      })
-    })
-    .when('material', {
-      is: Joi.valid(MATERIAL.GLASS),
-      then: Joi.object({
-        glassRecyclingProcess: Joi.required()
-      }),
-      otherwise: Joi.object({
-        glassRecyclingProcess: Joi.optional()
-      })
-    })
-    .when('submittedToRegulator', {
-      is: Joi.valid(REGULATOR.EA, REGULATOR.SEPA, REGULATOR.NRW),
-      then: Joi.object({
-        cbduNumber: Joi.required()
-      })
-    })
-    .when('status', {
-      is: Joi.valid(REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED),
-      then: Joi.object({
-        registrationNumber: Joi.required(),
-        validFrom: Joi.required(),
-        validTo: Joi.required()
-      })
-    })
+    orsFileUploads: Joi.array().items(Joi.any()).allow(null).optional(),
+    samplingInspectionPlanPart2FileUploads: Joi.array()
+      .items(Joi.any())
+      .allow(null)
+      .optional(),
+    wasteProcessingType: Joi.string().required(),
+    material: Joi.string().required(),
+    status: Joi.string().optional()
+  })
+}
 
 const fixRegistration = (schema) => {
-  let fixed = fixIdFields(schema)
-  fixed = fixDateFields(fixed)
-  fixed = applyRegistrationForks(fixed)
-
-  return applyRegistrationConditions(fixed)
+  const fixed = fixIdFields(schema)
+  return applyRegistrationOverrides(fixed)
 }
 
 const fixAccreditation = (schema) => {
-  let fixed = fixIdFields(schema)
-  fixed = fixDateFields(fixed)
-
-  return fixed
-    .fork(['accreditationNumber', 'validFrom', 'validTo'], () =>
-      nullable(Joi.string()).optional()
-    )
-    .fork(['reprocessingType'], () =>
-      nullable(Joi.string().valid('input', 'output')).optional()
-    )
-    .fork(['glassRecyclingProcess'], () =>
-      nullable(Joi.array().items(Joi.string())).optional()
-    )
-    .fork(['orsFileUploads', 'samplingInspectionPlanPart2FileUploads'], () =>
-      nullable(Joi.array().items(formFileUploadSchema)).optional()
-    )
-    .fork(['site'], () => nullable(accreditationSiteSchema).optional())
-    .when('wasteProcessingType', {
-      is: Joi.valid(WASTE_PROCESSING_TYPE.REPROCESSOR),
-      then: Joi.object({
-        site: Joi.required()
-      }).when('status', {
-        is: Joi.valid(REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED),
-        then: Joi.object({
-          reprocessingType: Joi.required()
-        })
-      })
-    })
-    .when('wasteProcessingType', {
-      is: Joi.valid(WASTE_PROCESSING_TYPE.EXPORTER),
-      then: Joi.object({
-        reprocessingType: Joi.forbidden()
-      })
-    })
-    .when('status', {
-      is: Joi.valid(REG_ACC_STATUS.APPROVED, REG_ACC_STATUS.SUSPENDED),
-      then: Joi.object({
-        accreditationNumber: Joi.required(),
-        validFrom: Joi.required(),
-        validTo: Joi.required()
-      })
-    })
+  const fixed = fixIdFields(schema)
+  return applyAccreditationOverrides(fixed)
 }
 
 export const organisationJSONSchemaOverrides = organisationReplaceSchema.keys({
