@@ -1,5 +1,6 @@
 import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -20,17 +21,13 @@ vi.mock('notifications-node-client', () => ({
   })
 }))
 
-vi.mock('./logging/logger.js', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    logger: {
-      info: (...args) => mockLoggerInfo(...args),
-      error: (...args) => mockLoggerError(...args),
-      warn: (...args) => mockLoggerWarn(...args)
-    }
+vi.mock('./logging/logger.js', () => ({
+  logger: {
+    info: (...args) => mockLoggerInfo(...args),
+    error: (...args) => mockLoggerError(...args),
+    warn: (...args) => mockLoggerWarn(...args)
   }
-})
+}))
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -38,14 +35,23 @@ vi.mock('@defra/cdp-auditing', () => ({
 
 vi.mock('./get-local-secret.js')
 
+vi.mock('#root/config.js', () => ({
+  config: {
+    get: vi.fn((key) => {
+      if (key === 'govukNotifyApiKeyPath') {
+        return 'dummy-key'
+      }
+      return null
+    })
+  }
+}))
+
 describe('sendEmail', () => {
   const templateId = 'template-id'
   const emailAddress = 'testing@example.com'
   const personalisation = { name: 'Test' }
 
   beforeEach(() => {
-    vi.resetModules()
-    vi.stubEnv('GOVUK_NOTIFY_API_KEY', 'dummy-key')
     mockSendEmail.mockResolvedValue({})
   })
 
@@ -60,8 +66,13 @@ describe('sendEmail', () => {
     expect(getLocalSecret).toHaveBeenCalledWith('govukNotifyApiKeyPath')
   })
 
+  it('calls config.get for apiKey in non-development mode', async () => {
+    await sendEmail(templateId, emailAddress, personalisation)
+    expect(config.get).toHaveBeenCalledWith('govukNotifyApiKeyPath')
+  })
+
   it('calls logger.warn if apiKey is not set', async () => {
-    vi.stubEnv('GOVUK_NOTIFY_API_KEY', undefined)
+    config.get.mockReturnValueOnce(null)
     await sendEmail(templateId, emailAddress, personalisation)
     expect(mockLoggerWarn).toHaveBeenCalledWith({
       message: expect.any(String),
