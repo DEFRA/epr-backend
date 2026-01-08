@@ -351,6 +351,22 @@ const baseConfig = {
     format: Boolean,
     default: false,
     env: 'TRUNCATE_EPR_ORGANISATIONS'
+  },
+  govukNotify: {
+    apiKey: {
+      doc: 'GOV.UK Notify API key (used directly in non-development environments)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'GOVUK_NOTIFY_API_KEY'
+    },
+    apiKeyPath: {
+      doc: 'Path to file containing GOV.UK Notify API key (used in development to read secret from file)',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'GOVUK_NOTIFY_API_KEY_PATH'
+    }
   }
 }
 
