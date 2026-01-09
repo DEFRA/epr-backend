@@ -1,6 +1,7 @@
 import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
 import { config } from '#root/config.js'
+import { NotifyClient } from 'notifications-node-client'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -67,19 +68,24 @@ describe('sendEmail', () => {
     vi.clearAllMocks()
   })
 
-  it('calls getLocalSecret for apiKey when isDevelopment is true', async () => {
+  it('initialises NotifyClient with key from getLocalSecret in development', async () => {
+    getLocalSecret.mockReturnValue('dev-secret-key')
     config.get.mockImplementation((key) => {
       if (key === 'isDevelopment') return true
-      if (key === 'govukNotifyApiKeyPath') return 'dummy-key'
       return null
     })
     await sendEmail(templateId, emailAddress, personalisation)
-    expect(getLocalSecret).toHaveBeenCalledWith('govukNotifyApiKeyPath')
+    expect(NotifyClient).toHaveBeenCalledWith('dev-secret-key')
   })
 
-  it('calls config.get for apiKey in non-development mode', async () => {
+  it('initialises NotifyClient with key from config in production', async () => {
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return false
+      if (key === 'govukNotifyApiKeyPath') return 'prod-config-key'
+      return null
+    })
     await sendEmail(templateId, emailAddress, personalisation)
-    expect(config.get).toHaveBeenCalledWith('govukNotifyApiKeyPath')
+    expect(NotifyClient).toHaveBeenCalledWith('prod-config-key')
   })
 
   it('calls logger.warn if apiKey is not set', async () => {
