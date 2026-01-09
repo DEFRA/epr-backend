@@ -49,11 +49,13 @@ const siteAddressSchema = addressSchema.fork(['line1', 'postcode'], (schema) =>
   schema.required()
 )
 
-const registrationSiteSchema = Joi.object({
+export const registrationSiteSchema = Joi.object({
   address: siteAddressSchema.required(),
   gridReference: Joi.string().required(),
   siteCapacity: Joi.array().items(siteCapacitySchema).required().min(1)
 })
+
+export const exportPortsSchema = Joi.array().items(Joi.string())
 
 export const registrationSchema = Joi.object({
   id: idSchema,
@@ -131,7 +133,7 @@ export const registrationSchema = Joi.object({
   }),
   approvedPersons: Joi.array().items(userSchema).required().min(1),
   suppliers: Joi.string().required(),
-  exportPorts: whenExporter(Joi.array().items(Joi.string()).required().min(1)),
+  exportPorts: whenExporter(exportPortsSchema.required().min(1)),
   yearlyMetrics: whenReprocessor(
     Joi.array().items(yearlyMetricsSchema).required().min(1)
   ),
