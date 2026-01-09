@@ -14,7 +14,7 @@ import {
 async function sendEmail(templateId, emailAddress, personalisation = {}) {
   const apiKey =
     process.env.NODE_ENV === 'development'
-      ? getLocalSecret('GOVUK_NOTIFY_API_KEY')
+      ? getLocalSecret('govukNotifyApiKeyPath')
       : process.env.GOVUK_NOTIFY_API_KEY
 
   let notifyClient = {}
