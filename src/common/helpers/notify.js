@@ -13,10 +13,9 @@ import {
 } from '../enums/event.js'
 
 async function sendEmail(templateId, emailAddress, personalisation = {}) {
-  const apiKey =
-    process.env.NODE_ENV === 'development'
-      ? getLocalSecret('govukNotifyApiKeyPath')
-      : config.get('govukNotifyApiKeyPath')
+  const apiKey = config.get('isDevelopment')
+    ? getLocalSecret('govukNotifyApiKeyPath')
+    : config.get('govukNotifyApiKeyPath')
 
   let notifyClient = {}
 

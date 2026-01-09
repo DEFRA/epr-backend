@@ -41,6 +41,9 @@ vi.mock('#root/config.js', () => ({
       if (key === 'govukNotifyApiKeyPath') {
         return 'dummy-key'
       }
+      if (key === 'isDevelopment') {
+        return false
+      }
       return null
     })
   }
@@ -53,15 +56,23 @@ describe('sendEmail', () => {
 
   beforeEach(() => {
     mockSendEmail.mockResolvedValue({})
+    config.get.mockImplementation((key) => {
+      if (key === 'govukNotifyApiKeyPath') return 'dummy-key'
+      if (key === 'isDevelopment') return false
+      return null
+    })
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-    vi.unstubAllEnvs()
   })
 
-  it('calls notifyClient with apiKey from getLocalSecret in NODE_ENV=development', async () => {
-    vi.stubEnv('NODE_ENV', 'development')
+  it('calls getLocalSecret for apiKey when isDevelopment is true', async () => {
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return true
+      if (key === 'govukNotifyApiKeyPath') return 'dummy-key'
+      return null
+    })
     await sendEmail(templateId, emailAddress, personalisation)
     expect(getLocalSecret).toHaveBeenCalledWith('govukNotifyApiKeyPath')
   })
@@ -72,7 +83,10 @@ describe('sendEmail', () => {
   })
 
   it('calls logger.warn if apiKey is not set', async () => {
-    config.get.mockReturnValueOnce(null)
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return false
+      return null
+    })
     await sendEmail(templateId, emailAddress, personalisation)
     expect(mockLoggerWarn).toHaveBeenCalledWith({
       message: expect.any(String),
