@@ -4,6 +4,7 @@ import { NotifyClient } from 'notifications-node-client'
 import { audit } from '@defra/cdp-auditing'
 import { logger } from './logging/logger.js'
 import { getLocalSecret } from './get-local-secret.js'
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -12,10 +13,9 @@ import {
 } from '../enums/event.js'
 
 async function sendEmail(templateId, emailAddress, personalisation = {}) {
-  const apiKey =
-    process.env.NODE_ENV === 'development'
-      ? getLocalSecret('govukNotifyApiKeyPath')
-      : process.env.GOVUK_NOTIFY_API_KEY
+  const apiKey = config.get('isDevelopment')
+    ? getLocalSecret('govukNotifyApiKeyPath')
+    : config.get('govukNotifyApiKeyPath')
 
   let notifyClient = {}
 
