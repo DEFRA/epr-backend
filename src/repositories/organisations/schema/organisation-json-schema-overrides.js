@@ -1,15 +1,24 @@
 import Joi from 'joi'
 import {
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REG_ACC_STATUS,
   REGULATOR,
+  REPROCESSING_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
-import { accreditationUpdateSchema } from './accreditation.js'
+import {
+  accreditationUpdateSchema,
+  accreditationSiteSchema
+} from './accreditation.js'
 import { addressSchema, formFileUploadSchema } from './base.js'
 import { yearlyMetricsSchema } from './metrics.js'
 import { organisationReplaceSchema } from './organisation.js'
-import { registrationUpdateSchema } from './registration.js'
+import {
+  registrationUpdateSchema,
+  registrationSiteSchema,
+  exportPortsSchema
+} from './registration.js'
 import { wasteManagementPermitSchema } from './waste-permits.js'
 
 /**
@@ -23,7 +32,7 @@ const fixIdFields = (schema) => {
   const paths = ['id', 'accreditationId'].filter((p) =>
     schema.$_terms.keys?.some((k) => k.key === p)
   )
-  return schema.fork(paths, () => Joi.string().optional())
+  return schema.fork(paths, () => Joi.string().required())
 }
 
 const nullable = (schema) => schema.allow(null)
@@ -32,29 +41,6 @@ const fixDateFields = (schema) =>
   schema.fork(['validFrom', 'validTo'], () =>
     nullable(Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/)).optional()
   )
-
-const siteCapacitySchema = Joi.object({
-  material: Joi.string().required(),
-  siteCapacityInTonnes: Joi.number().required(),
-  siteCapacityTimescale: Joi.string().required()
-})
-
-const siteAddressSchema = addressSchema.fork(['line1', 'postcode'], (schema) =>
-  schema.required()
-)
-
-const registrationSiteSchema = Joi.object({
-  address: siteAddressSchema.required(),
-  gridReference: Joi.string().required(),
-  siteCapacity: Joi.array().items(siteCapacitySchema).required().min(1)
-})
-
-const accreditationSiteSchema = Joi.object({
-  address: Joi.object({
-    line1: Joi.string().required(),
-    postcode: Joi.string().required()
-  })
-})
 
 const fixedWasteManagementPermitSchema = wasteManagementPermitSchema.fork(
   ['permitNumber', 'exemptions', 'authorisedMaterials'],
@@ -70,7 +56,9 @@ const applyRegistrationForks = (schema) =>
       nullable(Joi.string()).optional()
     )
     .fork(['reprocessingType'], () =>
-      nullable(Joi.string().valid('input', 'output')).optional()
+      nullable(
+        Joi.string().valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+      ).optional()
     )
     .fork(['site'], () => nullable(registrationSiteSchema).optional())
     .fork(['noticeAddress'], () => nullable(addressSchema).optional())
@@ -80,14 +68,19 @@ const applyRegistrationForks = (schema) =>
     .fork(['yearlyMetrics'], () =>
       nullable(Joi.array().items(yearlyMetricsSchema)).optional()
     )
-    .fork(['exportPorts'], () =>
-      nullable(Joi.array().items(Joi.string())).optional()
-    )
+    .fork(['exportPorts'], () => nullable(exportPortsSchema).optional())
     .fork(['orsFileUploads', 'samplingInspectionPlanPart1FileUploads'], () =>
       nullable(Joi.array().items(formFileUploadSchema)).optional()
     )
     .fork(['glassRecyclingProcess'], () =>
-      nullable(Joi.array().items(Joi.string())).optional()
+      nullable(
+        Joi.array().items(
+          Joi.string().valid(
+            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+            GLASS_RECYCLING_PROCESS.GLASS_OTHER
+          )
+        )
+      ).optional()
     )
 
 const applyRegistrationConditions = (schema) =>
@@ -164,10 +157,19 @@ const applyAccreditationForks = (schema) =>
       nullable(Joi.string()).optional()
     )
     .fork(['reprocessingType'], () =>
-      nullable(Joi.string().valid('input', 'output')).optional()
+      nullable(
+        Joi.string().valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
+      ).optional()
     )
     .fork(['glassRecyclingProcess'], () =>
-      nullable(Joi.array().items(Joi.string())).optional()
+      nullable(
+        Joi.array().items(
+          Joi.string().valid(
+            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+            GLASS_RECYCLING_PROCESS.GLASS_OTHER
+          )
+        )
+      ).optional()
     )
     .fork(['orsFileUploads', 'samplingInspectionPlanPart2FileUploads'], () =>
       nullable(Joi.array().items(formFileUploadSchema)).optional()

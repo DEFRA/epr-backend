@@ -21,7 +21,7 @@ import {
   whenReprocessor
 } from './helpers.js'
 
-const accreditationSiteSchema = Joi.object({
+export const accreditationSiteSchema = Joi.object({
   address: Joi.object({
     line1: Joi.string().required(),
     postcode: Joi.string().required()

@@ -564,33 +564,6 @@ describe('organisationJSONSchemaOverrides', () => {
     expect(error).toBeUndefined()
   })
 
-  describe('fixIdFields', () => {
-    it('allows registration and accreditation id to be optional', () => {
-      const registration = buildRegistration({
-        material: MATERIAL.ALUMINIUM,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
-      })
-      delete registration.id
-      delete registration.glassRecyclingProcess
-      const accreditation = buildAccreditation({
-        material: MATERIAL.ALUMINIUM,
-        wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR
-      })
-      delete accreditation.id
-      delete accreditation.glassRecyclingProcess
-
-      const organisation = buildOrganisation({
-        schemaVersion: 1,
-        registrations: [registration],
-        accreditations: [accreditation]
-      })
-      delete organisation.id
-
-      const { error } = validate(organisation)
-      expect(error).toBeUndefined()
-    })
-  })
-
   describe('fixRegistration', () => {
     it('allows null for optional registration number', () => {
       const registration = buildRegistration({
