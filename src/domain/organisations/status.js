@@ -4,10 +4,6 @@ import {
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
 
-/**
- * @import {Organisation} from '#repositories/organisations/port.js'
- */
-
 const VALID_ORG_TRANSITIONS = {
   [ORGANISATION_STATUS.CREATED]: [
     ORGANISATION_STATUS.APPROVED,

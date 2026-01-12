@@ -182,7 +182,7 @@ export const summaryLogsUploadCompleted = {
         registrationId
       )
 
-      await summaryLogMetrics.recordStatusTransition(status)
+      await summaryLogMetrics.recordStatusTransition({ status })
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
         await summaryLogsWorker.validate(summaryLogId)

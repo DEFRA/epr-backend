@@ -294,7 +294,20 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
   for (const [key, count] of counts) {
     const [severity, category] = key.split(':')
     await summaryLogMetrics.recordValidationIssues(
-      { severity, category, processingType },
+      {
+        severity:
+          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationSeverity} */ (
+            severity
+          ),
+        category:
+          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationCategory} */ (
+            category
+          ),
+        processingType:
+          /** @type {import('#common/helpers/metrics/summary-logs.js').ProcessingType} */ (
+            processingType
+          )
+      },
       count
     )
   }
@@ -326,7 +339,16 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
   for (const [outcome, count] of Object.entries(counts)) {
     if (count > 0) {
       await summaryLogMetrics.recordRowOutcome(
-        { outcome, processingType },
+        {
+          outcome:
+            /** @type {import('#common/helpers/metrics/summary-logs.js').RowOutcome} */ (
+              outcome
+            ),
+          processingType:
+            /** @type {import('#common/helpers/metrics/summary-logs.js').ProcessingType} */ (
+              processingType
+            )
+        },
         count
       )
     }
