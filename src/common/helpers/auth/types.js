@@ -47,7 +47,6 @@
  * Parsed organization data extracted from Defra ID token relationships
  *
  * @typedef {{
- *   defraIdRelationshipId: string
  *   defraIdOrgId: string
  *   defraIdOrgName: string
  *   isCurrent: boolean

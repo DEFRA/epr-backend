@@ -27,19 +27,16 @@ describe('getOrgDataFromDefraIdToken', () => {
 
     expect(result).toEqual([
       {
-        defraIdRelationshipId: 'rel-1',
         defraIdOrgId: 'org-1',
         defraIdOrgName: 'Organisation One',
         isCurrent: false
       },
       {
-        defraIdRelationshipId: 'rel-2',
         defraIdOrgId: 'org-2',
         defraIdOrgName: 'Organisation Two',
         isCurrent: true
       },
       {
-        defraIdRelationshipId: 'rel-3',
         defraIdOrgId: 'org-3',
         defraIdOrgName: 'Organisation Three',
         isCurrent: false
@@ -101,7 +98,6 @@ describe('getOrgDataFromDefraIdToken', () => {
 
     // The split(':') method splits on ALL colons, so names with colons get truncated
     // This documents the actual behavior - relationship format should avoid colons in names
-    expect(result[0].defraIdRelationshipId).toBe('rel-1')
     expect(result[0].defraIdOrgId).toBe('org-1')
     expect(result[0].defraIdOrgName).toBe('Organisation')
   })
@@ -118,25 +114,39 @@ describe('getOrgDataFromDefraIdToken', () => {
 
     expect(result[0].defraIdOrgName).toBeUndefined()
   })
+
+  it('should match currentRelationshipId case-insensitively with GUID format', () => {
+    const tokenPayload = {
+      id: 'user-id',
+      email: 'user@example.com',
+      currentRelationshipId: 'F9490276-09FD-4FD2-95CB-1F9A8ACC63CE', // UPPERCASE
+      relationships: [
+        'f9490276-09fd-4fd2-95cb-1f9a8acc63ce:org-1:Organisation One', // lowercase
+        'a1b2c3d4-e5f6-7890-abcd-ef1234567890:org-2:Organisation Two'
+      ]
+    }
+
+    const result = getOrgDataFromDefraIdToken(tokenPayload)
+
+    expect(result[0].isCurrent).toBe(true)
+    expect(result[1].isCurrent).toBe(false)
+  })
 })
 
 describe('getCurrentRelationship', () => {
   it('should return the relationship marked as current', () => {
     const relationships = [
       {
-        defraIdRelationshipId: 'rel-1',
         defraIdOrgId: 'org-1',
         defraIdOrgName: 'Organisation One',
         isCurrent: false
       },
       {
-        defraIdRelationshipId: 'rel-2',
         defraIdOrgId: 'org-2',
         defraIdOrgName: 'Organisation Two',
         isCurrent: true
       },
       {
-        defraIdRelationshipId: 'rel-3',
         defraIdOrgId: 'org-3',
         defraIdOrgName: 'Organisation Three',
         isCurrent: false
@@ -146,7 +156,6 @@ describe('getCurrentRelationship', () => {
     const result = getCurrentRelationship(relationships)
 
     expect(result).toEqual({
-      defraIdRelationshipId: 'rel-2',
       defraIdOrgId: 'org-2',
       defraIdOrgName: 'Organisation Two',
       isCurrent: true
@@ -156,13 +165,11 @@ describe('getCurrentRelationship', () => {
   it('should return undefined when no relationship is current', () => {
     const relationships = [
       {
-        defraIdRelationshipId: 'rel-1',
         defraIdOrgId: 'org-1',
         defraIdOrgName: 'Organisation One',
         isCurrent: false
       },
       {
-        defraIdRelationshipId: 'rel-2',
         defraIdOrgId: 'org-2',
         defraIdOrgName: 'Organisation Two',
         isCurrent: false
@@ -183,13 +190,11 @@ describe('getCurrentRelationship', () => {
   it('should return the first current relationship when multiple are marked as current', () => {
     const relationships = [
       {
-        defraIdRelationshipId: 'rel-1',
         defraIdOrgId: 'org-1',
         defraIdOrgName: 'Organisation One',
         isCurrent: true
       },
       {
-        defraIdRelationshipId: 'rel-2',
         defraIdOrgId: 'org-2',
         defraIdOrgName: 'Organisation Two',
         isCurrent: true
@@ -198,7 +203,7 @@ describe('getCurrentRelationship', () => {
 
     const result = getCurrentRelationship(relationships)
 
-    expect(result.defraIdRelationshipId).toBe('rel-1')
+    expect(result.defraIdOrgId).toBe('org-1')
   })
 })
 
@@ -222,19 +227,16 @@ describe('getDefraTokenSummary', () => {
       defraIdOrgName: 'Organisation Two',
       defraIdRelationships: [
         {
-          defraIdRelationshipId: 'rel-1',
           defraIdOrgId: 'org-1',
           defraIdOrgName: 'Organisation One',
           isCurrent: false
         },
         {
-          defraIdRelationshipId: 'rel-2',
           defraIdOrgId: 'org-2',
           defraIdOrgName: 'Organisation Two',
           isCurrent: true
         },
         {
-          defraIdRelationshipId: 'rel-3',
           defraIdOrgId: 'org-3',
           defraIdOrgName: 'Organisation Three',
           isCurrent: false
