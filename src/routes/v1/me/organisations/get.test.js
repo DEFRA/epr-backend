@@ -42,7 +42,7 @@ describe('GET /v1/me/organisations', () => {
     const linkedAt = new Date().toISOString()
 
     // Linked organisation (has linkedDefraOrganisation matching current relationship from token)
-    await buildApprovedOrg(organisationsRepository, {
+    const linkedOrg = await buildApprovedOrg(organisationsRepository, {
       users: [
         {
           fullName: 'Test User',
@@ -101,8 +101,9 @@ describe('GET /v1/me/organisations', () => {
           name: COMPANY_1_NAME
         },
         linked: {
-          id: COMPANY_1_ID,
+          id: linkedOrg.id,
           name: COMPANY_1_NAME,
+          orgId: COMPANY_1_ID,
           linkedBy: {
             email,
             id: '550e8400-e29b-41d4-a716-446655440001'

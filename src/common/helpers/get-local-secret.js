@@ -1,21 +1,22 @@
 import fs from 'fs'
+import { config } from '#root/config.js'
 import { logger } from './logging/logger.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '../enums/event.js'
 
-export function getLocalSecret(name) {
+export function getLocalSecret(configKey) {
   try {
-    const path = process.env[name]
+    const path = config.get(configKey)
     if (!path) {
-      throw new Error(`Environment variable ${name} is not set`)
+      throw new Error(`Config key ${configKey} is not set`)
     }
     return fs.readFileSync(path, 'utf8').toString().trim()
   } catch (error) {
     logger.error({
       error,
-      message: `An error occurred while trying to read the secret: ${name}.\n${error}`,
+      message: `An error occurred while trying to read the secret: ${configKey}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,
         action: LOGGING_EVENT_ACTIONS.READ_ERROR

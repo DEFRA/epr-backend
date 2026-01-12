@@ -1,4 +1,3 @@
-// eslint-disable-next-line n/no-unpublished-import
 import { test, vi } from 'vitest'
 import { createMockOidcServers } from '#vite/helpers/mock-oidc-servers.js'
 

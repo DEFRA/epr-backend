@@ -2,8 +2,8 @@ import Boom from '@hapi/boom'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
 import {
-  isOrganisationsDiscoveryReq,
-  getDefraTokenSummary
+  getDefraTokenSummary,
+  isOrganisationsDiscoveryReq
 } from './roles/helpers.js'
 import { getOrgMatchingUsersToken } from './get-users-org-info.js'
 import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
@@ -49,7 +49,7 @@ export async function getDefraUserRoles(tokenPayload, request) {
   )
 
   if (!linkedEprOrg) {
-    throw Boom.unauthorized('User token is not linked to an organisation')
+    throw Boom.forbidden('User is not linked to an organisation')
   }
 
   // Throws error if:

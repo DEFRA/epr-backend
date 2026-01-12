@@ -27,10 +27,7 @@ export const summaryLogsCreate = {
     auth: getAuthConfig([ROLES.standardUser]),
     tags: ['api'],
     validate: {
-      payload: summaryLogsCreatePayloadSchema,
-      failAction: (_request, _h, err) => {
-        throw Boom.badData(err.message)
-      }
+      payload: summaryLogsCreatePayloadSchema
     }
   },
   /**

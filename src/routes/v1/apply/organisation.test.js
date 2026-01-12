@@ -14,7 +14,7 @@ import {
 import { organisationPath } from './organisation.js'
 import { sendEmail } from '#common/helpers/notify.js'
 import organisationFixture from '#data/fixtures/organisation.json'
-import { it } from './test-fixtures.js'
+import { it } from '#vite/fixtures/server-with-mock-db.js'
 
 const mockAudit = vi.fn()
 const mockInsertOne = vi.fn().mockResolvedValue({

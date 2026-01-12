@@ -27,7 +27,7 @@ describe('upsertOrganisations', () => {
   beforeEach(() => {
     organisationsRepository = {
       insert: vi.fn(),
-      update: vi.fn()
+      replace: vi.fn()
     }
     vi.clearAllMocks()
   })
@@ -45,12 +45,12 @@ describe('upsertOrganisations', () => {
         }
       ]
       organisationsRepository.insert.mockResolvedValue()
-      organisationsRepository.update.mockResolvedValue()
+      organisationsRepository.replace.mockResolvedValue()
 
       await upsertOrganisations(organisationsRepository, organisations)
 
       expect(organisationsRepository.insert).toHaveBeenCalledTimes(1)
-      expect(organisationsRepository.update).toHaveBeenCalledTimes(1)
+      expect(organisationsRepository.replace).toHaveBeenCalledTimes(1)
       expect(logger.info).toHaveBeenCalledWith({
         message:
           'Persisted transformed submissions: 2/2 organisations processed (1 inserted, 1 updated, 0 failed)'
@@ -94,7 +94,7 @@ describe('upsertOrganisations', () => {
         }
       ]
       const error = new Error('Version conflict')
-      organisationsRepository.update.mockRejectedValue(error)
+      organisationsRepository.replace.mockRejectedValue(error)
 
       await upsertOrganisations(organisationsRepository, organisations)
 
@@ -127,7 +127,7 @@ describe('upsertOrganisations', () => {
         }
       ]
       organisationsRepository.insert.mockRejectedValue(new Error('Failed'))
-      organisationsRepository.update.mockResolvedValue()
+      organisationsRepository.replace.mockResolvedValue()
 
       await upsertOrganisations(organisationsRepository, organisations)
 

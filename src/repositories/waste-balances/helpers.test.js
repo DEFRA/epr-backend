@@ -100,12 +100,10 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should handle PROCESSED record type for reprocessor output', () => {
       const processedRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.PROCESSED,
-          data: {
-            processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.PROCESSED,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
         }
       }
 
@@ -121,7 +119,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([processedRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(processedRecord.record)
+      expect(result[0]).toBe(processedRecord)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
@@ -129,12 +127,10 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should handle SENT_ON record type for reprocessor output', () => {
       const sentOnRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.SENT_ON,
-          data: {
-            processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
         }
       }
 
@@ -150,7 +146,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([sentOnRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(sentOnRecord.record)
+      expect(result[0]).toBe(sentOnRecord)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
@@ -158,12 +154,10 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should handle RECEIVED record type for reprocessor input', () => {
       const receivedRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.RECEIVED,
-          data: {
-            processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
         }
       }
 
@@ -179,7 +173,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([receivedRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(receivedRecord.record)
+      expect(result[0]).toBe(receivedRecord)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
@@ -187,12 +181,10 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should handle EXPORTED record type for exporters', () => {
       const exportedRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.EXPORTED,
-          data: {
-            processingType: PROCESSING_TYPES.EXPORTER
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER
         }
       }
 
@@ -208,7 +200,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([exportedRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(exportedRecord.record)
+      expect(result[0]).toBe(exportedRecord)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
@@ -216,29 +208,25 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should include record when processingType is completely unknown', () => {
       const unknownProcRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.EXPORTED,
-          data: {
-            processingType: 'completely-unknown'
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: 'completely-unknown'
         }
       }
 
       const result = filterValidRecords([unknownProcRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(unknownProcRecord.record)
+      expect(result[0]).toBe(unknownProcRecord)
     })
 
     it('should handle SENT_ON record type for reprocessor input', () => {
       const sentOnRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.SENT_ON,
-          data: {
-            processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
         }
       }
 
@@ -254,7 +242,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([sentOnRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(sentOnRecord.record)
+      expect(result[0]).toBe(sentOnRecord)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
@@ -262,35 +250,17 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should handle unknown record type for reprocessor output', () => {
       const unknownRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: 'UNKNOWN',
-          data: {
-            processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
-          }
+        organisationId: 'org-1',
+        type: 'UNKNOWN',
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
         }
       }
 
       const result = filterValidRecords([unknownRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(unknownRecord.record)
-    })
-
-    it('should use pre-calculated outcome when outcome is present', () => {
-      const wasteRecords = [
-        {
-          record: { type: 'SOME_TYPE' },
-          outcome: ROW_OUTCOME.INCLUDED
-        },
-        {
-          record: { type: 'SOME_TYPE' },
-          outcome: 'EXCLUDED'
-        }
-      ]
-      const result = filterValidRecords(wasteRecords)
-      expect(result).toHaveLength(1)
-      expect(result[0].type).toBe('SOME_TYPE')
+      expect(result[0]).toBe(unknownRecord)
     })
   })
 

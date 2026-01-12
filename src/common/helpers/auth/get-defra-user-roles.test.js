@@ -1,4 +1,4 @@
-import { vi, describe, test, expect, beforeEach, afterEach } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 import { getDefraUserRoles } from './get-defra-user-roles.js'
 import { ROLES } from './constants.js'
@@ -279,6 +279,45 @@ describe('#getDefraUserRoles', () => {
       const result = await getDefraUserRoles(tokenPayload, mockRequest)
 
       expect(result).toEqual(multipleRoles)
+    })
+  })
+
+  describe('when user is not linked to any organisation', () => {
+    beforeEach(() => {
+      mockIsAuthorisedOrgLinkingReq.mockResolvedValue(false)
+      mockIsOrganisationsDiscoveryReq.mockReturnValue(false)
+      mockGetOrgMatchingUsersToken.mockResolvedValue(null)
+    })
+
+    test('throws forbidden error when user token is not linked to an organisation', async () => {
+      const tokenPayload = {
+        id: 'user-123',
+        email: 'user@example.com'
+      }
+
+      try {
+        await getDefraUserRoles(tokenPayload, mockRequest)
+        expect.fail('Expected error to be thrown')
+      } catch (error) {
+        expect(error.isBoom).toBe(true)
+        expect(error.output.statusCode).toBe(403)
+        expect(error.message).toBe('User is not linked to an organisation')
+      }
+    })
+
+    test('does not call getRolesForOrganisationAccess', async () => {
+      const tokenPayload = {
+        id: 'user-123',
+        email: 'user@example.com'
+      }
+
+      try {
+        await getDefraUserRoles(tokenPayload, mockRequest)
+      } catch {
+        // Expected to throw
+      }
+
+      expect(mockGetRolesForOrganisationAccess).not.toHaveBeenCalled()
     })
   })
 
