@@ -1,7 +1,7 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
-import { auditOrganisationUpdate } from '#root/auditing/index.js'
+import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 
 /** @import {Organisation} from '#domain/organisations/model.js' */
 

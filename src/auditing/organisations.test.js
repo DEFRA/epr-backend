@@ -1,4 +1,4 @@
-import { auditOrganisationUpdate } from './index.js'
+import { auditOrganisationUpdate } from './organisations.js'
 import { vi, describe, it, beforeEach, afterEach } from 'vitest'
 import { randomBytes } from 'crypto'
 
