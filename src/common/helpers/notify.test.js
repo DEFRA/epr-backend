@@ -1,5 +1,7 @@
 import { sendEmail } from './notify.js'
 import { getLocalSecret } from './get-local-secret.js'
+import { config } from '#root/config.js'
+import { NotifyClient } from 'notifications-node-client'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES,
@@ -20,17 +22,13 @@ vi.mock('notifications-node-client', () => ({
   })
 }))
 
-vi.mock('./logging/logger.js', async (importOriginal) => {
-  const actual = await importOriginal()
-  return {
-    ...actual,
-    logger: {
-      info: (...args) => mockLoggerInfo(...args),
-      error: (...args) => mockLoggerError(...args),
-      warn: (...args) => mockLoggerWarn(...args)
-    }
+vi.mock('./logging/logger.js', () => ({
+  logger: {
+    info: (...args) => mockLoggerInfo(...args),
+    error: (...args) => mockLoggerError(...args),
+    warn: (...args) => mockLoggerWarn(...args)
   }
-})
+}))
 
 vi.mock('@defra/cdp-auditing', () => ({
   audit: (...args) => mockAudit(...args)
@@ -38,30 +36,63 @@ vi.mock('@defra/cdp-auditing', () => ({
 
 vi.mock('./get-local-secret.js')
 
+vi.mock('#root/config.js', () => ({
+  config: {
+    get: vi.fn((key) => {
+      if (key === 'govukNotifyApiKeyPath') {
+        return 'dummy-key'
+      }
+      if (key === 'isDevelopment') {
+        return false
+      }
+      return null
+    })
+  }
+}))
+
 describe('sendEmail', () => {
   const templateId = 'template-id'
   const emailAddress = 'testing@example.com'
   const personalisation = { name: 'Test' }
 
   beforeEach(() => {
-    vi.resetModules()
-    vi.stubEnv('GOVUK_NOTIFY_API_KEY', 'dummy-key')
     mockSendEmail.mockResolvedValue({})
+    config.get.mockImplementation((key) => {
+      if (key === 'govukNotifyApiKeyPath') return 'dummy-key'
+      if (key === 'isDevelopment') return false
+      return null
+    })
   })
 
   afterEach(() => {
     vi.clearAllMocks()
-    vi.unstubAllEnvs()
   })
 
-  it('calls notifyClient with apiKey from getLocalSecret in NODE_ENV=development', async () => {
-    vi.stubEnv('NODE_ENV', 'development')
+  it('initialises NotifyClient with key from getLocalSecret in development', async () => {
+    getLocalSecret.mockReturnValue('dev-secret-key')
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return true
+      return null
+    })
     await sendEmail(templateId, emailAddress, personalisation)
-    expect(getLocalSecret).toHaveBeenCalledWith('GOVUK_NOTIFY_API_KEY')
+    expect(NotifyClient).toHaveBeenCalledWith('dev-secret-key')
+  })
+
+  it('initialises NotifyClient with key from config in production', async () => {
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return false
+      if (key === 'govukNotifyApiKeyPath') return 'prod-config-key'
+      return null
+    })
+    await sendEmail(templateId, emailAddress, personalisation)
+    expect(NotifyClient).toHaveBeenCalledWith('prod-config-key')
   })
 
   it('calls logger.warn if apiKey is not set', async () => {
-    vi.stubEnv('GOVUK_NOTIFY_API_KEY', undefined)
+    config.get.mockImplementation((key) => {
+      if (key === 'isDevelopment') return false
+      return null
+    })
     await sendEmail(templateId, emailAddress, personalisation)
     expect(mockLoggerWarn).toHaveBeenCalledWith({
       message: expect.any(String),
