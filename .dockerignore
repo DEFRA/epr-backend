@@ -4,4 +4,12 @@ coverage
 src/test
 **/*.test.js
 **/*.contract.js
+
+# Test helper files and directories
+**/test-helpers/
 **/*test-helpers.js
+**/*-test-helpers.js
+
+# In-memory test doubles (only used in tests)
+**/inmemory.js
+**/*.inmemory.js
