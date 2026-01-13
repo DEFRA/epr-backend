@@ -32,7 +32,7 @@ export const isInitialUser = (email) => (organisation) =>
 
 /**
  * Extracts and parses organization data from a Defra ID token
- * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
+ * @param {Pick<DefraIdTokenPayload, 'currentRelationshipId' | 'relationships'>} tokenPayload - The Defra ID token payload
  * @returns {DefraIdRelationship[]} Array of parsed relationship objects
  */
 export function getOrgDataFromDefraIdToken(tokenPayload) {
@@ -43,10 +43,9 @@ export function getOrgDataFromDefraIdToken(tokenPayload) {
       relationship.split(':')
 
     return {
-      defraIdRelationshipId: relationshipId,
       defraIdOrgId: organisationId,
       defraIdOrgName: organisationName?.trim(),
-      isCurrent: currentRelationshipId === relationshipId
+      isCurrent: stringEquals(currentRelationshipId, relationshipId)
     }
   })
 }
@@ -62,7 +61,7 @@ export function getCurrentRelationship(relationships) {
 
 /**
  * Extracts a summary of organization data from a Defra ID token
- * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
+ * @param {Pick<DefraIdTokenPayload, 'currentRelationshipId' | 'relationships'>} tokenPayload - The Defra ID token payload
  * @returns {{defraIdOrgId?: string, defraIdOrgName?: string, defraIdRelationships: DefraIdRelationship[]}} Summary object containing current org ID, name, and all relationships
  */
 export function getDefraTokenSummary(tokenPayload) {

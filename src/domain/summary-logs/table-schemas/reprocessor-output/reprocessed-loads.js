@@ -1,6 +1,5 @@
 import Joi from 'joi'
 import {
-  DROPDOWN_PLACEHOLDER,
   createRowIdSchema,
   createDateFieldSchema,
   createWeightFieldSchema,
@@ -36,10 +35,7 @@ export const REPROCESSED_LOADS = {
   /**
    * Per-field values that indicate "unfilled"
    */
-  unfilledValues: {
-    [FIELDS.ADD_PRODUCT_WEIGHT]: DROPDOWN_PLACEHOLDER,
-    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: DROPDOWN_PLACEHOLDER
-  },
+  unfilledValues: {},
 
   /**
    * Fields that produce FATAL errors when validation fails
@@ -53,8 +49,7 @@ export const REPROCESSED_LOADS = {
     FIELDS.PRODUCT_TONNAGE,
     FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
     FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
-    FIELDS.ADD_PRODUCT_WEIGHT,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
+    FIELDS.ADD_PRODUCT_WEIGHT
   ],
 
   /**
@@ -70,8 +65,7 @@ export const REPROCESSED_LOADS = {
     [FIELDS.PRODUCT_TONNAGE]: createWeightFieldSchema(),
     [FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE]: createPercentageFieldSchema(),
     [FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION]: createWeightFieldSchema(),
-    [FIELDS.ADD_PRODUCT_WEIGHT]: createYesNoFieldSchema(),
-    [FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE]: createYesNoFieldSchema()
+    [FIELDS.ADD_PRODUCT_WEIGHT]: createYesNoFieldSchema()
   })
     .custom(validateUkPackagingWeightProportion)
     .messages(UK_PACKAGING_WEIGHT_PROPORTION_MESSAGES)
@@ -89,7 +83,6 @@ export const REPROCESSED_LOADS = {
     FIELDS.DATE_LOAD_LEFT_SITE,
     FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,
     FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION,
-    FIELDS.ADD_PRODUCT_WEIGHT,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE
+    FIELDS.ADD_PRODUCT_WEIGHT
   ]
 }
