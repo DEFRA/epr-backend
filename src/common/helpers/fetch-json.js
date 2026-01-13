@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { withTraceId } from '@defra/hapi-tracing'
+import { getTracingHeaderName } from './request-tracing.js'
 
 /**
  * Fetch JSON from a given url
@@ -10,7 +11,7 @@ import { withTraceId } from '@defra/hapi-tracing'
 export const fetchJson = async (url, options) => {
   const completeOptions = {
     ...options,
-    headers: withTraceId('x-cdp-request-id', {
+    headers: withTraceId(getTracingHeaderName(), {
       ...options?.headers,
       'Content-Type': 'application/json'
     })

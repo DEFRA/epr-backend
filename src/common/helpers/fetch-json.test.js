@@ -8,17 +8,12 @@ describe('#fetchJson', () => {
   const url = 'http://mock-url'
   const originalFetch = global.fetch
 
-  vi.mock('@defra/hapi-tracing', async () => {
-    const actual = await vi.importActual('@defra/hapi-tracing')
-
-    return {
-      ...actual,
-      withTraceId: (headerName, headers = {}) => {
-        headers[headerName] = MOCK_TRACE_ID
-        return headers
-      }
-    }
-  })
+  vi.mock(import('@defra/hapi-tracing'), () => ({
+    withTraceId: vi.fn((headerName, headers = {}) => {
+      headers[headerName] = 'mock-trace-id-1'
+      return headers
+    })
+  }))
 
   afterEach(() => {
     global.fetch = originalFetch
