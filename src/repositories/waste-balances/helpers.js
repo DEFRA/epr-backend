@@ -32,15 +32,6 @@ const getTableName = (recordType, processingType) => {
     }
   }
 
-  if (processingType === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
-    if (recordType === WASTE_RECORD_TYPE.PROCESSED) {
-      return TABLE_NAMES.REPROCESSED_LOADS
-    }
-    if (recordType === WASTE_RECORD_TYPE.SENT_ON) {
-      return TABLE_NAMES.SENT_ON_LOADS
-    }
-  }
-
   return null
 }
 

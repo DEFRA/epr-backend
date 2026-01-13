@@ -65,8 +65,7 @@ describe('Advanced validation scenarios', () => {
                       'PRODUCT_TONNAGE',
                       'UK_PACKAGING_WEIGHT_PERCENTAGE',
                       'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
-                      'ADD_PRODUCT_WEIGHT',
-                      'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+                      'ADD_PRODUCT_WEIGHT'
                     ],
                     rows: [
                       {
@@ -77,7 +76,6 @@ describe('Advanced validation scenarios', () => {
                           1001,
                           0.5,
                           500.5,
-                          'Yes',
                           'Yes'
                         ]
                       }
