@@ -12,7 +12,10 @@ describe('#fetchJson', () => {
     withTraceId: vi.fn((headerName, headers = {}) => {
       headers[headerName] = 'mock-trace-id-1'
       return headers
-    })
+    }),
+    tracing: {
+      plugin: {}
+    }
   }))
 
   afterEach(() => {
