@@ -115,7 +115,7 @@ describe('Submission and placeholder tests', () => {
           location: { sheet: 'Data', row: 3, column: 'B' }
         },
         TEMPLATE_VERSION: {
-          value: 1,
+          value: 5,
           location: { sheet: 'Data', row: 4, column: 'B' }
         },
         ACCREDITATION_NUMBER: {
@@ -535,7 +535,7 @@ describe('Submission and placeholder tests', () => {
       worksheet.getCell('B3').value = 'Paper_and_board'
 
       worksheet.getCell('A4').value = '__EPR_META_TEMPLATE_VERSION'
-      worksheet.getCell('B4').value = 1
+      worksheet.getCell('B4').value = 5
 
       worksheet.getCell('A6').value =
         '__EPR_DATA_RECEIVED_LOADS_FOR_REPROCESSING'

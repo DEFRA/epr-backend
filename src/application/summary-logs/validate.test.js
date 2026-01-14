@@ -47,7 +47,7 @@ const RECEIVED_LOADS_HEADERS = [
 const buildMeta = (overrides = {}) => ({
   REGISTRATION_NUMBER: { value: 'REG12345' },
   PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-  TEMPLATE_VERSION: { value: 1 },
+  TEMPLATE_VERSION: { value: 5 },
   MATERIAL: { value: 'Aluminium' },
   ...overrides
 })
@@ -179,7 +179,7 @@ describe('SummaryLogsValidator', () => {
             value: 'REPROCESSOR_INPUT'
           },
           TEMPLATE_VERSION: {
-            value: 1
+            value: 5
           },
           MATERIAL: {
             value: 'Aluminium'
@@ -311,7 +311,7 @@ describe('SummaryLogsValidator', () => {
         meta: {
           REGISTRATION_NUMBER: 'REG12345',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          TEMPLATE_VERSION: 1,
+          TEMPLATE_VERSION: 5,
           MATERIAL: 'Aluminium'
         }
       })
@@ -345,7 +345,7 @@ describe('SummaryLogsValidator', () => {
         meta: {
           REGISTRATION_NUMBER: 'REG12345',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          TEMPLATE_VERSION: 1,
+          TEMPLATE_VERSION: 5,
           MATERIAL: 'Aluminium',
           ACCREDITATION_NUMBER: 'ACC12345'
         }
@@ -370,7 +370,7 @@ describe('SummaryLogsValidator', () => {
         meta: {
           REGISTRATION_NUMBER: 'REG99999',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          TEMPLATE_VERSION: 1,
+          TEMPLATE_VERSION: 5,
           MATERIAL: 'Aluminium'
         }
       })
