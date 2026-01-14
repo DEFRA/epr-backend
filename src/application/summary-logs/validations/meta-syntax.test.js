@@ -134,6 +134,41 @@ describe('validateMetaSyntax', () => {
     expect(fatals[0].message).toContain('at least 5')
   })
 
+  it('accepts major.minor TEMPLATE_VERSION values >= 5', () => {
+    const testCases = [5.0, 5.1, 5.5, 6.0]
+
+    for (const version of testCases) {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          TEMPLATE_VERSION: { value: version }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(true)
+    }
+  })
+
+  it('rejects major.minor TEMPLATE_VERSION values < 5', () => {
+    const parsed = {
+      meta: {
+        ...createValidMeta(),
+        TEMPLATE_VERSION: { value: 4.9 }
+      }
+    }
+
+    const result = validateMetaSyntax({ parsed })
+
+    expect(result.isValid()).toBe(false)
+    expect(result.isFatal()).toBe(true)
+
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals).toHaveLength(1)
+    expect(fatals[0].message).toContain('at least 5')
+  })
+
   it('returns fatal technical error when MATERIAL is missing', () => {
     const parsed = {
       meta: {
