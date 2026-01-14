@@ -62,6 +62,7 @@ export const VALIDATION_CODE = Object.freeze({
 
   // Spreadsheet validation codes
   SPREADSHEET_INVALID_ERROR: 'SPREADSHEET_INVALID_ERROR', // Spreadsheet fails structural validation
+  SPREADSHEET_MALFORMED_MARKERS: 'SPREADSHEET_MALFORMED_MARKERS', // Template markers are duplicated or misplaced
 
   // Generic/fallback codes
   VALIDATION_FALLBACK_ERROR: 'VALIDATION_FALLBACK_ERROR', // Unmapped Joi validation types
