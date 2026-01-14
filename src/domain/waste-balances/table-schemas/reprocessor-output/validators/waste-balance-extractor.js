@@ -7,7 +7,10 @@ import {
   createYesNoFieldSchema,
   createDateFieldSchema
 } from '#domain/summary-logs/table-schemas/shared/index.js'
-import { REPROCESSED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
+import {
+  REPROCESSED_LOADS_FIELDS,
+  SENT_ON_LOADS_FIELDS
+} from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 
 /**
  * Extracted waste balance fields.
@@ -26,6 +29,69 @@ const reprocessedLoadsSchema = Joi.object({
     createWeightFieldSchema().allow(null)
 })
 
+const sentOnLoadsSchema = Joi.object({
+  [SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]:
+    createDateFieldSchema().allow(null),
+  [SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON]:
+    createWeightFieldSchema().allow(null)
+})
+
+/**
+ * Extracts fields for processed records.
+ *
+ * @param {Object} data - Record data
+ * @returns {WasteBalanceFields | null}
+ */
+const extractProcessedFields = (data) => {
+  const { error, value } = reprocessedLoadsSchema.validate(data, {
+    stripUnknown: true,
+    abortEarly: false
+  })
+
+  if (error || !value[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]) {
+    return null
+  }
+
+  if (
+    value[REPROCESSED_LOADS_FIELDS.ADD_PRODUCT_WEIGHT] !== YES_NO_VALUES.YES
+  ) {
+    return null
+  }
+
+  return {
+    dispatchDate: new Date(value[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
+    prnIssued: false,
+    transactionAmount:
+      value[REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION] ||
+      0
+  }
+}
+
+/**
+ * Extracts fields for sent on records.
+ *
+ * @param {Object} data - Record data
+ * @returns {WasteBalanceFields | null}
+ */
+const extractSentOnFields = (data) => {
+  const { error, value } = sentOnLoadsSchema.validate(data, {
+    stripUnknown: true,
+    abortEarly: false
+  })
+
+  if (error || !value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]) {
+    return null
+  }
+
+  return {
+    dispatchDate: new Date(value[SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]),
+    prnIssued: false,
+    transactionAmount: -(
+      value[SENT_ON_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON] || 0
+    )
+  }
+}
+
 /**
  * Extracts and validates waste balance fields from a record.
  *
@@ -41,31 +107,11 @@ export const extractWasteBalanceFields = (record) => {
   }
 
   if (type === WASTE_RECORD_TYPE.PROCESSED) {
-    const { error, value } = reprocessedLoadsSchema.validate(data, {
-      stripUnknown: true,
-      abortEarly: false
-    })
+    return extractProcessedFields(data)
+  }
 
-    if (error || !value[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]) {
-      return null
-    }
-
-    if (
-      value[REPROCESSED_LOADS_FIELDS.ADD_PRODUCT_WEIGHT] !== YES_NO_VALUES.YES
-    ) {
-      return null
-    }
-
-    return {
-      dispatchDate: new Date(
-        value[REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
-      ),
-      prnIssued: false,
-      transactionAmount:
-        value[
-          REPROCESSED_LOADS_FIELDS.PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION
-        ] || 0
-    }
+  if (type === WASTE_RECORD_TYPE.SENT_ON) {
+    return extractSentOnFields(data)
   }
 
   return null
