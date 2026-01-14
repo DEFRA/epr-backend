@@ -254,11 +254,7 @@ const performValidationChecks = async ({
     })
 
     if (error instanceof SpreadsheetValidationError) {
-      issues.addFatal(
-        VALIDATION_CATEGORY.TECHNICAL,
-        error.message,
-        VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
-      )
+      issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
     } else {
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,

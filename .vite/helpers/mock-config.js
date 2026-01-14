@@ -26,6 +26,9 @@ export const createMockConfig = (customConfigMap = {}) => {
     awsRegion: 'eu-west-2',
     s3Endpoint: 'http://localhost:4566',
     isDevelopment: true,
+    tracing: {
+      header: 'x-cdp-request-id'
+    },
     mongo: {
       mongoUrl: 'mongodb://localhost:27017',
       mongoOptions: { maxPoolSize: 10 },
