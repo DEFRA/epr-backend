@@ -2,9 +2,21 @@ import { vi, describe, test, expect, afterEach } from 'vitest'
 
 import { fetchJson } from './fetch-json.js'
 
+const MOCK_TRACE_ID = 'mock-trace-id-1'
+
 describe('#fetchJson', () => {
   const url = 'http://mock-url'
   const originalFetch = global.fetch
+
+  vi.mock(import('@defra/hapi-tracing'), () => ({
+    withTraceId: vi.fn((headerName, headers = {}) => {
+      headers[headerName] = 'mock-trace-id-1'
+      return headers
+    }),
+    tracing: {
+      plugin: {}
+    }
+  }))
 
   afterEach(() => {
     global.fetch = originalFetch
@@ -25,7 +37,8 @@ describe('#fetchJson', () => {
       expect(result).toEqual(mockData)
       expect(global.fetch).toHaveBeenCalledWith(url, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-cdp-request-id': MOCK_TRACE_ID
         }
       })
     })
@@ -50,7 +63,8 @@ describe('#fetchJson', () => {
         headers: {
           Authorization: 'Bearer token123',
           'X-Custom-Header': 'custom-value',
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-cdp-request-id': MOCK_TRACE_ID
         }
       })
     })
@@ -74,7 +88,8 @@ describe('#fetchJson', () => {
         method: 'POST',
         body: JSON.stringify(requestBody),
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-cdp-request-id': MOCK_TRACE_ID
         }
       })
     })
@@ -245,7 +260,8 @@ describe('#fetchJson', () => {
       expect(result).toEqual(mockData)
       expect(global.fetch).toHaveBeenCalledWith(url, {
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'x-cdp-request-id': MOCK_TRACE_ID
         }
       })
     })
