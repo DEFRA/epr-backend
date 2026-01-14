@@ -19,6 +19,7 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
 
 /** @typedef {import('#repositories/summary-logs/port.js').SummaryLogsRepository} SummaryLogsRepository */
 /** @typedef {import('#domain/summary-logs/worker/port.js').SummaryLogsCommandExecutor} SummaryLogsCommandExecutor */
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 /** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
 
 /**
@@ -80,7 +81,7 @@ export const summaryLogsSubmit = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor} & {systemLogsRepository: SystemLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

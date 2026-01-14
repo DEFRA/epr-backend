@@ -12,6 +12,10 @@ export const REG_ACC_STATUS = Object.freeze({
   SUSPENDED: 'suspended'
 })
 
+/**
+ * Status values for organisations
+ * @typedef {typeof ORGANISATION_STATUS[keyof typeof ORGANISATION_STATUS]} OrganisationStatus
+ */
 export const ORGANISATION_STATUS = Object.freeze({
   CREATED: 'created',
   APPROVED: 'approved',
@@ -217,7 +221,7 @@ export const USER_ROLES = Object.freeze({
  *   registrations?: Registration[];
  *   reprocessingNations?: NationValue[];
  *   schemaVersion: number;
- *   status: Status;
+ *   status: OrganisationStatus;
  *   statusHistory: StatusHistoryItem[];
  *   submittedToRegulator: RegulatorValue;
  *   submitterContactDetails: User;

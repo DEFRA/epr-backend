@@ -6,10 +6,7 @@ import {
 import { siteInfoToLog } from './parsing-common/site.js'
 import { isAccreditationForRegistration } from '#formsubmission/submission-keys.js'
 
-/**
- * @import {Organisation, OrganisationWithRegistrations} from './types.js'
- * @import {Accreditation, Registration} from '#repositories/organisations/port.js'
- */
+/** @import {Organisation, OrganisationWithRegistrations} from './types.js' */
 
 function getItemsBySystemReference(items) {
   return items.reduce((itemsMap, item) => {

@@ -575,9 +575,9 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         payload
       })
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.VALIDATING
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.VALIDATING
+      })
     })
 
     it('should record status transition metric when file upload completes with rejected status', async () => {
@@ -592,9 +592,9 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         payload
       })
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.REJECTED
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.REJECTED
+      })
     })
 
     it('should record status transition metric when file upload completes with preprocessing status', async () => {
@@ -608,9 +608,9 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
         payload
       })
 
-      expect(mockRecordStatusTransition).toHaveBeenCalledWith(
-        SUMMARY_LOG_STATUS.PREPROCESSING
-      )
+      expect(mockRecordStatusTransition).toHaveBeenCalledWith({
+        status: SUMMARY_LOG_STATUS.PREPROCESSING
+      })
     })
   })
 

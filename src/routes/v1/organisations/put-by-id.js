@@ -13,6 +13,10 @@ import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
  * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationUpdateFragment
  */
 
+/**
+ * @typedef {{version: number, updateFragment: object}} PutByIdPayload
+ */
+
 export const organisationsPutByIdPath = '/v1/organisations/{id}'
 
 const validateMyPayload = (payload) => {
@@ -44,7 +48,7 @@ export const organisationsPutById = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {
+   * @param {import('#common/hapi-types.js').HapiRequest<PutByIdPayload> & {
    *    organisationsRepository: OrganisationsRepository,
    *    systemLogsRepository: SystemLogsRepository,
    *    params: { id: string }

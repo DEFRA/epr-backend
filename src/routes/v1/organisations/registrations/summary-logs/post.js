@@ -13,6 +13,10 @@ import { getAuthConfig } from '#common/helpers/auth/get-auth-config.js'
 
 /** @typedef {import('#domain/uploads/repository/port.js').UploadsRepository} UploadsRepository */
 
+/**
+ * @typedef {{redirectUrl: string}} SummaryLogsCreatePayload
+ */
+
 export const summaryLogsCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/summary-logs'
 
@@ -27,7 +31,7 @@ export const summaryLogsCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {uploadsRepository: UploadsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<SummaryLogsCreatePayload> & {uploadsRepository: UploadsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

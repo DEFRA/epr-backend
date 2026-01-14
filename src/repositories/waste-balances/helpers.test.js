@@ -17,38 +17,31 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       expect(result).toEqual([])
     })
 
-    it('should use pre-calculated outcome when processingType is not available', () => {
-      const includedRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.EXPORTED,
-          data: {} // no processingType
-        },
-        outcome: ROW_OUTCOME.INCLUDED
+    it('should include all records when processingType is not available', () => {
+      const record1 = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {} // no processingType
       }
-      const excludedRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.EXPORTED,
-          data: {} // no processingType
-        },
-        outcome: ROW_OUTCOME.EXCLUDED
+      const record2 = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {} // no processingType
       }
 
-      const result = filterValidRecords([includedRecord, excludedRecord])
+      const result = filterValidRecords([record1, record2])
 
-      expect(result).toHaveLength(1)
-      expect(result[0]).toBe(includedRecord.record)
+      expect(result).toHaveLength(2)
+      expect(result[0]).toBe(record1)
+      expect(result[1]).toBe(record2)
     })
 
     it('should handle SENT_ON record type for exporters', () => {
       const sentOnRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.SENT_ON,
-          data: {
-            processingType: PROCESSING_TYPES.EXPORTER
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER
         }
       }
 
@@ -65,7 +58,7 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([sentOnRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(sentOnRecord.record)
+      expect(result[0]).toBe(sentOnRecord)
 
       classifyRowSpy.mockRestore()
       createTableSchemaGetterSpy.mockRestore()
@@ -73,12 +66,10 @@ describe('src/repositories/waste-balances/helpers.js', () => {
 
     it('should include record when exporter has unknown record type (no matching schema)', () => {
       const unknownTypeRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: 'unknown-type',
-          data: {
-            processingType: PROCESSING_TYPES.EXPORTER
-          }
+        organisationId: 'org-1',
+        type: 'unknown-type',
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER
         }
       }
 
@@ -87,17 +78,15 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([unknownTypeRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(unknownTypeRecord.record)
+      expect(result[0]).toBe(unknownTypeRecord)
     })
 
     it('should include record when processingType is not EXPORTER (no schema lookup)', () => {
       const reprocessorRecord = {
-        record: {
-          organisationId: 'org-1',
-          type: WASTE_RECORD_TYPE.EXPORTED,
-          data: {
-            processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
-          }
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
         }
       }
 
@@ -106,7 +95,172 @@ describe('src/repositories/waste-balances/helpers.js', () => {
       const result = filterValidRecords([reprocessorRecord])
 
       expect(result).toHaveLength(1)
-      expect(result[0]).toBe(reprocessorRecord.record)
+      expect(result[0]).toBe(reprocessorRecord)
+    })
+
+    it('should handle PROCESSED record type for reprocessor output', () => {
+      const processedRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.PROCESSED,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+        }
+      }
+
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+
+      const result = filterValidRecords([processedRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(processedRecord)
+
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
+    })
+
+    it('should handle SENT_ON record type for reprocessor output', () => {
+      const sentOnRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+        }
+      }
+
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+
+      const result = filterValidRecords([sentOnRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(sentOnRecord)
+
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
+    })
+
+    it('should handle RECEIVED record type for reprocessor input', () => {
+      const receivedRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.RECEIVED,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
+      }
+
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+
+      const result = filterValidRecords([receivedRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(receivedRecord)
+
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
+    })
+
+    it('should handle EXPORTED record type for exporters', () => {
+      const exportedRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: PROCESSING_TYPES.EXPORTER
+        }
+      }
+
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+
+      const result = filterValidRecords([exportedRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(exportedRecord)
+
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
+    })
+
+    it('should include record when processingType is completely unknown', () => {
+      const unknownProcRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.EXPORTED,
+        data: {
+          processingType: 'completely-unknown'
+        }
+      }
+
+      const result = filterValidRecords([unknownProcRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(unknownProcRecord)
+    })
+
+    it('should handle SENT_ON record type for reprocessor input', () => {
+      const sentOnRecord = {
+        organisationId: 'org-1',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_INPUT
+        }
+      }
+
+      const classifyRowSpy = vi.spyOn(validationPipeline, 'classifyRow')
+      const createTableSchemaGetterSpy = vi.spyOn(
+        tableSchemas,
+        'createTableSchemaGetter'
+      )
+
+      createTableSchemaGetterSpy.mockReturnValue(() => ({}))
+      classifyRowSpy.mockReturnValue({ outcome: ROW_OUTCOME.INCLUDED })
+
+      const result = filterValidRecords([sentOnRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(sentOnRecord)
+
+      classifyRowSpy.mockRestore()
+      createTableSchemaGetterSpy.mockRestore()
+    })
+
+    it('should handle unknown record type for reprocessor output', () => {
+      const unknownRecord = {
+        organisationId: 'org-1',
+        type: 'UNKNOWN',
+        data: {
+          processingType: PROCESSING_TYPES.REPROCESSOR_OUTPUT
+        }
+      }
+
+      const result = filterValidRecords([unknownRecord])
+
+      expect(result).toHaveLength(1)
+      expect(result[0]).toBe(unknownRecord)
     })
   })
 
