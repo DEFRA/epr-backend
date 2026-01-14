@@ -355,7 +355,7 @@ describe('SummaryLogsValidator integration', () => {
         accreditationNumber,
         metadata: {
           TEMPLATE_VERSION: {
-            value: 5,
+            value: '5.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION_NUMBER: {
@@ -388,7 +388,7 @@ describe('SummaryLogsValidator integration', () => {
         accreditationNumber: '87654321',
         metadata: {
           TEMPLATE_VERSION: {
-            value: 5,
+            value: '5.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION_NUMBER: {
@@ -426,7 +426,7 @@ describe('SummaryLogsValidator integration', () => {
         accreditationNumber: '87654321',
         metadata: {
           TEMPLATE_VERSION: {
-            value: 5,
+            value: '5.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION_NUMBER: {
@@ -459,7 +459,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationWRN: 'REG-456',
         metadata: {
           TEMPLATE_VERSION: {
-            value: 5,
+            value: '5.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION_NUMBER: {
@@ -487,7 +487,7 @@ describe('SummaryLogsValidator integration', () => {
         registrationWRN: 'REG-456',
         metadata: {
           TEMPLATE_VERSION: {
-            value: 5,
+            value: '5.0',
             location: { sheet: 'Cover', row: 1, column: 'B' }
           },
           REGISTRATION_NUMBER: {
