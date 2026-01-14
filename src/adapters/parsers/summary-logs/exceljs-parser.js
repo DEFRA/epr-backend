@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 import { produce } from 'immer'
 import { columnNumberToLetter } from '#common/helpers/spreadsheet/columns.js'
+import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
   DATA_PREFIX,
   MATERIAL_PLACEHOLDER_TEXT,
@@ -21,9 +22,15 @@ import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
  * This allows callers to distinguish structural issues from other errors.
  */
 export class SpreadsheetValidationError extends Error {
-  constructor(message) {
+  /**
+   * @param {string} message - Error message
+   * @param {string} [code] - Validation code for i18n/translation on the client side
+   */
+  constructor(message, code = VALIDATION_CODE.SPREADSHEET_INVALID_ERROR) {
     super(message)
     this.name = 'SpreadsheetValidationError'
+    /** @type {string} */
+    this.code = code
   }
 }
 
@@ -200,13 +207,17 @@ const processCellForMetadata = (
   if (!draftState.metadataContext && cellValueStr.startsWith(META_PREFIX)) {
     const metadataName = cellValueStr.replace(META_PREFIX, '')
     if (draftState.result.meta[metadataName]) {
-      throw new Error(`Duplicate metadata name: ${metadataName}`)
+      throw new SpreadsheetValidationError(
+        `Duplicate metadata name: ${metadataName}`,
+        VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+      )
     }
     draftState.metadataContext = { metadataName }
   } else if (draftState.metadataContext) {
     if (cellValueStr.startsWith(META_PREFIX)) {
-      throw new Error(
-        'Malformed sheet: metadata marker found in value position'
+      throw new SpreadsheetValidationError(
+        'Malformed sheet: metadata marker found in value position',
+        VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
       )
     }
 
@@ -359,7 +370,10 @@ const finalizeRowForCollection = (draftCollection) => {
 const emitCollectionsToResult = (draftResult, collections) => {
   for (const collection of collections) {
     if (draftResult[collection.sectionName]) {
-      throw new Error(`Duplicate data section name: ${collection.sectionName}`)
+      throw new SpreadsheetValidationError(
+        `Duplicate data section name: ${collection.sectionName}`,
+        VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+      )
     }
     draftResult[collection.sectionName] = {
       location: collection.location,
