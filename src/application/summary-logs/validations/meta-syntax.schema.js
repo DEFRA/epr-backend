@@ -6,7 +6,7 @@ const VALID_PROCESSING_TYPES = Object.values(PROCESSING_TYPES)
 
 const MAX_MATERIAL_LENGTH = 50
 
-const MIN_TEMPLATE_VERSION = 1
+const MIN_TEMPLATE_VERSION = 5
 
 const IS_REQUIRED = 'is required'
 

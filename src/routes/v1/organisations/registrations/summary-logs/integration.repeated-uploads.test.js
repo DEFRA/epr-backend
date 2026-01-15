@@ -112,7 +112,7 @@ describe('Repeated uploads of identical data', () => {
           location: { sheet: 'Data', row: 3, column: 'B' }
         },
         TEMPLATE_VERSION: {
-          value: 1,
+          value: 5,
           location: { sheet: 'Data', row: 4, column: 'B' }
         },
         ACCREDITATION_NUMBER: {
