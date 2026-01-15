@@ -13,17 +13,19 @@ import { MigrationOrchestrator } from '#formsubmission/migration/migration-orche
  * @typedef {HapiRequest & {
  *   formSubmissionsRepository: FormSubmissionsRepository
  *   organisationsRepository: OrganisationsRepository
- *   payload: { organisationId: string }
+ *   params: { id: string }
  * }} MigrateRequest
  */
 
-export const devMigratePath = '/v1/dev/migrate'
+export const devFormSubmissionsMigratePath =
+  '/v1/dev/form-submissions/{id}/migrate'
 
-const payload = Joi.object({
-  organisationId: Joi.string().required()
+const params = Joi.object({
+  id: Joi.string().trim().min(1).required()
 }).messages({
   'any.required': '{#label} is required',
-  'string.empty': '{#label} is not allowed to be empty'
+  'string.empty': '{#label} cannot be empty',
+  'string.min': '{#label} cannot be empty'
 })
 
 /**
@@ -34,35 +36,28 @@ const payload = Joi.object({
  */
 async function handler(request, h) {
   const { formSubmissionsRepository, organisationsRepository } = request
-  const { organisationId } = request.payload
+  const { id } = request.params
 
   // Verify the organisation form submission exists
-  const orgSubmission =
-    await formSubmissionsRepository.findOrganisationById(organisationId)
+  const orgSubmission = await formSubmissionsRepository.findOrganisationById(id)
 
   if (!orgSubmission) {
-    throw Boom.notFound(
-      `Organisation form submission not found: ${organisationId}`
-    )
+    throw Boom.notFound(`Organisation form submission not found: ${id}`)
   }
 
   // Find related registrations and accreditations by referenceNumber
   const [registrations, accreditations] = await Promise.all([
-    formSubmissionsRepository.findRegistrationsBySystemReference(
-      organisationId
-    ),
-    formSubmissionsRepository.findAccreditationsBySystemReference(
-      organisationId
-    )
+    formSubmissionsRepository.findRegistrationsBySystemReference(id),
+    formSubmissionsRepository.findAccreditationsBySystemReference(id)
   ])
 
   logger.info({
-    message: `Migrating organisation ${organisationId} with ${registrations.length} registrations and ${accreditations.length} accreditations`
+    message: `Migrating organisation ${id} with ${registrations.length} registrations and ${accreditations.length} accreditations`
   })
 
   // Build the migration delta for this specific organisation
   const pendingMigration = {
-    organisations: new Set([organisationId]),
+    organisations: new Set([id]),
     registrations: new Set(registrations.map((r) => r.id)),
     accreditations: new Set(accreditations.map((a) => a.id)),
     totalCount: 1 + registrations.length + accreditations.length
@@ -98,7 +93,7 @@ async function handler(request, h) {
   await upsertOrganisations(organisationsRepository, migrationItems)
 
   logger.info({
-    message: `Successfully migrated organisation ${organisationId}`
+    message: `Successfully migrated organisation ${id}`
   })
 
   return h
@@ -112,14 +107,14 @@ async function handler(request, h) {
     .code(StatusCodes.OK)
 }
 
-export const devMigratePost = {
+export const devFormSubmissionsMigratePost = {
   method: 'POST',
-  path: devMigratePath,
+  path: devFormSubmissionsMigratePath,
   options: {
     auth: false,
     tags: ['api'],
     validate: {
-      payload
+      params
     }
   },
   handler

@@ -19,7 +19,7 @@ function loadFixtures(fixtureType) {
   })
 }
 
-describe('POST /v1/dev/migrate', () => {
+describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
   setupAuthContext()
   let server
   let organisationsRepositoryFactory
@@ -90,8 +90,7 @@ describe('POST /v1/dev/migrate', () => {
 
       const response = await testServer.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: 'org-123' }
+        url: '/v1/dev/form-submissions/org-123/migrate'
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -103,28 +102,15 @@ describe('POST /v1/dev/migrate', () => {
       await setupServer(createFormsRepo())
     })
 
-    it('should return 422 when organisationId is missing', async () => {
+    it('should return 422 when id is empty', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: {}
+        url: '/v1/dev/form-submissions/%20/migrate'
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       const body = JSON.parse(response.payload)
-      expect(body.message).toBe('"organisationId" is required')
-    })
-
-    it('should return 422 when organisationId is empty', async () => {
-      const response = await server.inject({
-        method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: '' }
-      })
-
-      expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      const body = JSON.parse(response.payload)
-      expect(body.message).toBe('"organisationId" is not allowed to be empty')
+      expect(body.message).toBe('"id" cannot be empty')
     })
   })
 
@@ -136,8 +122,7 @@ describe('POST /v1/dev/migrate', () => {
     it('should return 404 when organisation submission does not exist', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: 'non-existent-org' }
+        url: '/v1/dev/form-submissions/non-existent-org/migrate'
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
@@ -158,8 +143,7 @@ describe('POST /v1/dev/migrate', () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: orgId }
+        url: `/v1/dev/form-submissions/${orgId}/migrate`
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -183,8 +167,7 @@ describe('POST /v1/dev/migrate', () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: orgFixture._id.$oid }
+        url: `/v1/dev/form-submissions/${orgFixture._id.$oid}/migrate`
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -198,8 +181,7 @@ describe('POST /v1/dev/migrate', () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: orgFixture._id.$oid }
+        url: `/v1/dev/form-submissions/${orgFixture._id.$oid}/migrate`
       })
 
       expect(response.headers['cache-control']).toBe(
@@ -230,8 +212,7 @@ describe('POST /v1/dev/migrate', () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: orgId }
+        url: `/v1/dev/form-submissions/${orgId}/migrate`
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -268,8 +249,7 @@ describe('POST /v1/dev/migrate', () => {
 
       const response = await server.inject({
         method: 'POST',
-        url: '/v1/dev/migrate',
-        payload: { organisationId: orgId }
+        url: `/v1/dev/form-submissions/${orgId}/migrate`
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
