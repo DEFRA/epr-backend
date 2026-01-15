@@ -206,7 +206,7 @@ export const makeEditable = (schema) => {
         // Recurse on the unwrapped schema
         return makeEditable(realSchema)
       }
-      
+
       // If we couldn't find a real schema, strip whens and fallback (likely becomes any)
       delete newSchema.$_terms.whens
     }
