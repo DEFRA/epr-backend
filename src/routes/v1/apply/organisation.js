@@ -22,6 +22,10 @@ import { sendEmail } from '#common/helpers/notify.js'
 
 export const organisationPath = '/v1/apply/organisation'
 
+/**
+ * @typedef {{answers: object, email: string, orgName: string, rawSubmissionData: object, regulatorEmail: string}} OrganisationPayload
+ */
+
 async function getNextOrgId(collection) {
   const count =
     (await collection.countDocuments({
@@ -90,7 +94,7 @@ export const organisation = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest} request
+   * @param {import('#common/hapi-types.js').HapiRequest<OrganisationPayload>} request
    */
   handler: async ({ db, payload, logger }, h) => {
     const collection = db.collection('organisation')

@@ -8,9 +8,13 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
 
+/**
+ * @typedef {{answers: object, orgId: string, rawSubmissionData: object, referenceNumber: string}} RegistrationPayload
+ */
+
 export function registrationAndAccreditationHandler(name, path, factory) {
   /**
-   * @param {import('../../hapi-types.js').HapiRequest} request
+   * @param {import('../../hapi-types.js').HapiRequest<RegistrationPayload>} request
    */
   return async ({ db, payload, logger }, h) => {
     const { answers, orgId, rawSubmissionData, referenceNumber } = payload

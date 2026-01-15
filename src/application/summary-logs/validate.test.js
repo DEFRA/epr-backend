@@ -47,7 +47,7 @@ const RECEIVED_LOADS_HEADERS = [
 const buildMeta = (overrides = {}) => ({
   REGISTRATION_NUMBER: { value: 'REG12345' },
   PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-  TEMPLATE_VERSION: { value: 1 },
+  TEMPLATE_VERSION: { value: 5 },
   MATERIAL: { value: 'Aluminium' },
   ...overrides
 })
@@ -179,7 +179,7 @@ describe('SummaryLogsValidator', () => {
             value: 'REPROCESSOR_INPUT'
           },
           TEMPLATE_VERSION: {
-            value: 1
+            value: 5
           },
           MATERIAL: {
             value: 'Aluminium'
@@ -311,7 +311,7 @@ describe('SummaryLogsValidator', () => {
         meta: {
           REGISTRATION_NUMBER: 'REG12345',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          TEMPLATE_VERSION: 1,
+          TEMPLATE_VERSION: 5,
           MATERIAL: 'Aluminium'
         }
       })
@@ -345,7 +345,7 @@ describe('SummaryLogsValidator', () => {
         meta: {
           REGISTRATION_NUMBER: 'REG12345',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          TEMPLATE_VERSION: 1,
+          TEMPLATE_VERSION: 5,
           MATERIAL: 'Aluminium',
           ACCREDITATION_NUMBER: 'ACC12345'
         }
@@ -370,7 +370,7 @@ describe('SummaryLogsValidator', () => {
         meta: {
           REGISTRATION_NUMBER: 'REG99999',
           PROCESSING_TYPE: 'REPROCESSOR_INPUT',
-          TEMPLATE_VERSION: 1,
+          TEMPLATE_VERSION: 5,
           MATERIAL: 'Aluminium'
         }
       })
@@ -487,7 +487,7 @@ describe('SummaryLogsValidator', () => {
     )
   })
 
-  it('should return SPREADSHEET_STRUCTURE_INVALID code when spreadsheet validation fails', async () => {
+  it('should return SPREADSHEET_INVALID_ERROR code when spreadsheet validation fails with default code', async () => {
     const { SpreadsheetValidationError } =
       await import('#adapters/parsers/summary-logs/exceljs-parser.js')
     summaryLogExtractor.extract.mockRejectedValue(
@@ -508,6 +508,39 @@ describe('SummaryLogsValidator', () => {
               category: 'technical',
               message: "Missing required 'Cover' worksheet",
               code: 'SPREADSHEET_INVALID_ERROR'
+            }
+          ]
+        })
+      })
+    )
+  })
+
+  it('should use error code from SpreadsheetValidationError when provided', async () => {
+    const { SpreadsheetValidationError } =
+      await import('#adapters/parsers/summary-logs/exceljs-parser.js')
+    const { VALIDATION_CODE } = await import('#common/enums/validation.js')
+
+    summaryLogExtractor.extract.mockRejectedValue(
+      new SpreadsheetValidationError(
+        'Duplicate metadata name: MATERIAL',
+        VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+      )
+    )
+
+    await validateSummaryLog(summaryLogId)
+
+    expect(summaryLogsRepository.update).toHaveBeenCalledWith(
+      'summary-log-123',
+      1,
+      expect.objectContaining({
+        status: SUMMARY_LOG_STATUS.INVALID,
+        validation: expect.objectContaining({
+          issues: [
+            {
+              severity: 'fatal',
+              category: 'technical',
+              message: 'Duplicate metadata name: MATERIAL',
+              code: 'SPREADSHEET_MALFORMED_MARKERS'
             }
           ]
         })

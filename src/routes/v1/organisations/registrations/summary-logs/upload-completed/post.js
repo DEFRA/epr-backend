@@ -22,6 +22,10 @@ import { uploadCompletedPayloadSchema } from './post.schema.js'
 /** @typedef {import('#common/hapi-types.js').TypedLogger} TypedLogger */
 /** @typedef {import('./post.schema.js').SummaryLogUpload} SummaryLogUpload */
 
+/**
+ * @typedef {{form: {summaryLogUpload: SummaryLogUpload}}} UploadCompletedPayload
+ */
+
 const buildFileData = (upload, existingFile) => {
   const { fileId, filename, fileStatus, s3Bucket, s3Key } = upload
 
@@ -153,7 +157,7 @@ export const summaryLogsUploadCompleted = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<UploadCompletedPayload> & {summaryLogsRepository: SummaryLogsRepository} & {summaryLogsWorker: SummaryLogsCommandExecutor}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
@@ -178,7 +182,7 @@ export const summaryLogsUploadCompleted = {
         registrationId
       )
 
-      await summaryLogMetrics.recordStatusTransition(status)
+      await summaryLogMetrics.recordStatusTransition({ status })
 
       if (status === SUMMARY_LOG_STATUS.VALIDATING) {
         await summaryLogsWorker.validate(summaryLogId)

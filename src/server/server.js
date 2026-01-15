@@ -41,9 +41,9 @@ function getServerConfig(config) {
           includeSubDomains: true,
           preload: false
         },
-        xss: 'enabled',
+        xss: /** @type {'enabled'} */ ('enabled'),
         noSniff: true,
-        xframe: true
+        xframe: /** @type {true} */ (true)
       }
     },
     router: {

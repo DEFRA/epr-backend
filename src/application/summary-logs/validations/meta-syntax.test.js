@@ -7,7 +7,7 @@ import {
 describe('validateMetaSyntax', () => {
   const createValidMeta = () => ({
     PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-    TEMPLATE_VERSION: { value: 1 },
+    TEMPLATE_VERSION: { value: 5 },
     MATERIAL: { value: 'Aluminium' },
     ACCREDITATION_NUMBER: { value: 'ACC123' },
     REGISTRATION_NUMBER: { value: 'REG12345' }
@@ -29,7 +29,7 @@ describe('validateMetaSyntax', () => {
     const parsed = {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-        TEMPLATE_VERSION: { value: 1 },
+        TEMPLATE_VERSION: { value: 5 },
         MATERIAL: { value: 'Aluminium' },
         REGISTRATION_NUMBER: { value: 'REG12345' }
       }
@@ -58,7 +58,7 @@ describe('validateMetaSyntax', () => {
   it('returns fatal technical error when PROCESSING_TYPE is missing', () => {
     const parsed = {
       meta: {
-        TEMPLATE_VERSION: { value: 1 },
+        TEMPLATE_VERSION: { value: 5 },
         MATERIAL: { value: 'Aluminium' },
         REGISTRATION_NUMBER: { value: 'REG12345' }
       }
@@ -115,11 +115,11 @@ describe('validateMetaSyntax', () => {
     expect(fatals[0].message).toContain('is required')
   })
 
-  it('returns fatal technical error when TEMPLATE_VERSION is less than 1', () => {
+  it('returns fatal technical error when TEMPLATE_VERSION is less than 5', () => {
     const parsed = {
       meta: {
         ...createValidMeta(),
-        TEMPLATE_VERSION: { value: 0 }
+        TEMPLATE_VERSION: { value: 4 }
       }
     }
 
@@ -131,14 +131,49 @@ describe('validateMetaSyntax', () => {
     const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
     expect(fatals).toHaveLength(1)
     expect(fatals[0].message).toContain('TEMPLATE_VERSION')
-    expect(fatals[0].message).toContain('at least 1')
+    expect(fatals[0].message).toContain('at least 5')
+  })
+
+  it('accepts major.minor TEMPLATE_VERSION values >= 5', () => {
+    const testCases = [5.0, 5.1, 5.5, 6.0]
+
+    for (const version of testCases) {
+      const parsed = {
+        meta: {
+          ...createValidMeta(),
+          TEMPLATE_VERSION: { value: version }
+        }
+      }
+
+      const result = validateMetaSyntax({ parsed })
+
+      expect(result.isValid()).toBe(true)
+    }
+  })
+
+  it('rejects major.minor TEMPLATE_VERSION values < 5', () => {
+    const parsed = {
+      meta: {
+        ...createValidMeta(),
+        TEMPLATE_VERSION: { value: 4.9 }
+      }
+    }
+
+    const result = validateMetaSyntax({ parsed })
+
+    expect(result.isValid()).toBe(false)
+    expect(result.isFatal()).toBe(true)
+
+    const fatals = result.getIssuesBySeverity(VALIDATION_SEVERITY.FATAL)
+    expect(fatals).toHaveLength(1)
+    expect(fatals[0].message).toContain('at least 5')
   })
 
   it('returns fatal technical error when MATERIAL is missing', () => {
     const parsed = {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-        TEMPLATE_VERSION: { value: 1 },
+        TEMPLATE_VERSION: { value: 5 },
         REGISTRATION_NUMBER: { value: 'REG12345' }
       }
     }
@@ -177,7 +212,7 @@ describe('validateMetaSyntax', () => {
     const parsed = {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-        TEMPLATE_VERSION: { value: 1 },
+        TEMPLATE_VERSION: { value: 5 },
         MATERIAL: { value: 'Aluminium' }
       }
     }
@@ -309,7 +344,7 @@ describe('validateMetaSyntax', () => {
     const parsed = {
       meta: {
         PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-        TEMPLATE_VERSION: { value: 1 },
+        TEMPLATE_VERSION: { value: 5 },
         // MATERIAL exceeds max length - triggers string.max which is not mapped
         MATERIAL: { value: 'A'.repeat(51) },
         REGISTRATION_NUMBER: { value: 'REG12345' }
@@ -330,7 +365,7 @@ describe('validateMetaSyntax', () => {
       const parsed = {
         meta: {
           PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
+          TEMPLATE_VERSION: { value: 5 },
           MATERIAL: { value: 'Aluminium' },
           REGISTRATION_NUMBER: { value: 12345 } // number instead of string
         }
@@ -347,7 +382,7 @@ describe('validateMetaSyntax', () => {
       const parsed = {
         meta: {
           PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
+          TEMPLATE_VERSION: { value: 5 },
           MATERIAL: { value: 12345 }, // number instead of string
           REGISTRATION_NUMBER: { value: 'REG12345' }
         }
@@ -364,7 +399,7 @@ describe('validateMetaSyntax', () => {
       const parsed = {
         meta: {
           PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: 1 },
+          TEMPLATE_VERSION: { value: 5 },
           MATERIAL: { value: 'Aluminium' },
           REGISTRATION_NUMBER: { value: 'REG12345' },
           ACCREDITATION_NUMBER: { value: 98765 } // number instead of string
@@ -382,7 +417,7 @@ describe('validateMetaSyntax', () => {
       const parsed = {
         meta: {
           PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' },
-          TEMPLATE_VERSION: { value: '1' }, // string instead of number
+          TEMPLATE_VERSION: { value: '5' }, // string instead of number
           MATERIAL: { value: 'Aluminium' },
           REGISTRATION_NUMBER: { value: 'REG12345' }
         }

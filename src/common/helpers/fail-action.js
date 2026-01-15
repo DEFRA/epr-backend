@@ -26,6 +26,20 @@ function isJoiValidationError(error) {
 }
 
 /**
+ * Checks if an error is a Boom error.
+ * @param {unknown} error
+ * @returns {error is import('@hapi/boom').Boom}
+ */
+function isBoomError(error) {
+  return (
+    error !== null &&
+    typeof error === 'object' &&
+    'isBoom' in error &&
+    error.isBoom === true
+  )
+}
+
+/**
  * Server-level failAction for validation errors.
  *
  * - Joi ValidationErrors: Converted to 422 with details logged in non-prod
@@ -64,7 +78,7 @@ export function failAction(request, _h, error) {
   }
 
   // Boom errors (e.g. from custom validate functions) → pass through unchanged
-  if (error.isBoom) {
+  if (isBoomError(error)) {
     request.logger.warn({
       err: error,
       message: error.message,

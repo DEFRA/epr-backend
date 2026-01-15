@@ -254,11 +254,7 @@ const performValidationChecks = async ({
     })
 
     if (error instanceof SpreadsheetValidationError) {
-      issues.addFatal(
-        VALIDATION_CATEGORY.TECHNICAL,
-        error.message,
-        VALIDATION_CODE.SPREADSHEET_INVALID_ERROR
-      )
+      issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
     } else {
       issues.addFatal(
         VALIDATION_CATEGORY.TECHNICAL,
@@ -294,7 +290,20 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
   for (const [key, count] of counts) {
     const [severity, category] = key.split(':')
     await summaryLogMetrics.recordValidationIssues(
-      { severity, category, processingType },
+      {
+        severity:
+          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationSeverity} */ (
+            severity
+          ),
+        category:
+          /** @type {import('#common/helpers/metrics/summary-logs.js').ValidationCategory} */ (
+            category
+          ),
+        processingType:
+          /** @type {import('#common/helpers/metrics/summary-logs.js').ProcessingType} */ (
+            processingType
+          )
+      },
       count
     )
   }
@@ -326,7 +335,16 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
   for (const [outcome, count] of Object.entries(counts)) {
     if (count > 0) {
       await summaryLogMetrics.recordRowOutcome(
-        { outcome, processingType },
+        {
+          outcome:
+            /** @type {import('#common/helpers/metrics/summary-logs.js').RowOutcome} */ (
+              outcome
+            ),
+          processingType:
+            /** @type {import('#common/helpers/metrics/summary-logs.js').ProcessingType} */ (
+              processingType
+            )
+        },
         count
       )
     }

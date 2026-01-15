@@ -330,7 +330,7 @@ describe('Advanced validation scenarios', () => {
               location: { sheet: 'Cover', row: 3, column: 'B' }
             },
             TEMPLATE_VERSION: {
-              value: 1,
+              value: 5,
               location: { sheet: 'Cover', row: 4, column: 'B' }
             }
           },

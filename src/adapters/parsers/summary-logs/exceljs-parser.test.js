@@ -1,6 +1,7 @@
 import ExcelJS from 'exceljs'
 
 import { MATERIAL_PLACEHOLDER_TEXT } from '#domain/summary-logs/markers.js'
+import { VALIDATION_CODE } from '#common/enums/validation.js'
 import {
   extractCellValue,
   parse,
@@ -509,14 +510,26 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   describe('metadata marker in value position', () => {
-    it('should throw error when marker appears where value should be', async () => {
+    it('should throw SpreadsheetValidationError when marker appears where value should be', async () => {
       const result = parseWorkbook({
         Test: [['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']]
       })
 
+      await expect(result).rejects.toThrow(SpreadsheetValidationError)
       await expect(result).rejects.toThrow(
         'Malformed sheet: metadata marker found in value position'
       )
+    })
+
+    it('should use SPREADSHEET_MALFORMED_MARKERS error code', async () => {
+      try {
+        await parseWorkbook({
+          Test: [['__EPR_META_TYPE', '__EPR_META_NAME', 'name value']]
+        })
+        expect.fail('Should have thrown')
+      } catch (error) {
+        expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
+      }
     })
   })
 
@@ -538,7 +551,7 @@ describe('ExcelJSSummaryLogsParser', () => {
   })
 
   describe('multiple data sections with same name', () => {
-    it('should throw error for duplicate data section names', async () => {
+    it('should throw SpreadsheetValidationError for duplicate data section names', async () => {
       const result = parseWorkbook({
         Test: [
           [
@@ -559,14 +572,33 @@ describe('ExcelJSSummaryLogsParser', () => {
         ]
       })
 
+      await expect(result).rejects.toThrow(SpreadsheetValidationError)
       await expect(result).rejects.toThrow(
         'Duplicate data section name: RECEIVED_LOADS_FOR_REPROCESSING'
       )
     })
+
+    it('should use SPREADSHEET_MALFORMED_MARKERS error code', async () => {
+      try {
+        await parseWorkbook({
+          Test: [
+            ['__EPR_DATA_SECTION_ONE', 'HEADER_A'],
+            [null, 'value_a'],
+            [null, ''],
+            [],
+            ['__EPR_DATA_SECTION_ONE', 'HEADER_B'],
+            [null, 'value_b']
+          ]
+        })
+        expect.fail('Should have thrown')
+      } catch (error) {
+        expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
+      }
+    })
   })
 
   describe('duplicate metadata markers', () => {
-    it('should throw error for duplicate metadata marker names', async () => {
+    it('should throw SpreadsheetValidationError for duplicate metadata marker names', async () => {
       const result = parseWorkbook({
         Test: [
           ['__EPR_META_PROCESSING_TYPE', 'REPROCESSOR_INPUT'],
@@ -575,9 +607,24 @@ describe('ExcelJSSummaryLogsParser', () => {
         ]
       })
 
+      await expect(result).rejects.toThrow(SpreadsheetValidationError)
       await expect(result).rejects.toThrow(
         'Duplicate metadata name: PROCESSING_TYPE'
       )
+    })
+
+    it('should use SPREADSHEET_MALFORMED_MARKERS error code', async () => {
+      try {
+        await parseWorkbook({
+          Test: [
+            ['__EPR_META_TYPE', 'value1'],
+            ['__EPR_META_TYPE', 'value2']
+          ]
+        })
+        expect.fail('Should have thrown')
+      } catch (error) {
+        expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
+      }
     })
   })
 
@@ -2199,5 +2246,25 @@ describe('extractCellValue', () => {
         })
       ).toBe('2025-06-15')
     })
+  })
+})
+
+describe('SpreadsheetValidationError', () => {
+  it('should default to SPREADSHEET_INVALID_ERROR code when no code provided', () => {
+    const error = new SpreadsheetValidationError('Some error message')
+
+    expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_INVALID_ERROR)
+    expect(error.message).toBe('Some error message')
+    expect(error.name).toBe('SpreadsheetValidationError')
+  })
+
+  it('should use provided code when specified', () => {
+    const error = new SpreadsheetValidationError(
+      'Duplicate marker',
+      VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS
+    )
+
+    expect(error.code).toBe(VALIDATION_CODE.SPREADSHEET_MALFORMED_MARKERS)
+    expect(error.message).toBe('Duplicate marker')
   })
 })
