@@ -1,11 +1,8 @@
 import Joi from 'joi'
-import {
-  GLASS_RECYCLING_PROCESS,
-  REPROCESSING_TYPE,
-} from '#domain/organisations/model.js'
 import { accreditationUpdateSchema } from './accreditation.js'
 import { organisationReplaceSchema } from './organisation.js'
 import { registrationUpdateSchema } from './registration.js'
+import { makeEditable } from './helpers.js'
 
 /**
  * Joi schema overrides for JSON Schema compatibility.
@@ -14,54 +11,11 @@ import { registrationUpdateSchema } from './registration.js'
  * conditional logic that does not translate directly.
  */
 
-const nullable = (schema) => schema.allow(null)
-
-const applyRegistrationForks = (schema) =>
-  schema
-    .fork(['registrationNumber', 'validFrom', 'validTo'], () =>
-      nullable(Joi.string()).optional()
-    )
-    .fork(['reprocessingType'], () =>
-      nullable(
-        Joi.string().valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
-      ).optional()
-    )
-
-
-const fixRegistration = (schema) => {
-  return applyRegistrationForks(schema)
-}
-
-const applyAccreditationForks = (schema) =>
-  schema
-    .fork(['accreditationNumber', 'validFrom', 'validTo'], () =>
-      nullable(Joi.string()).optional()
-    )
-    .fork(['reprocessingType'], () =>
-      nullable(
-        Joi.string().valid(REPROCESSING_TYPE.INPUT, REPROCESSING_TYPE.OUTPUT)
-      ).optional()
-    )
-    .fork(['glassRecyclingProcess'], () =>
-      nullable(
-        Joi.array().items(
-          Joi.string().valid(
-            GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-            GLASS_RECYCLING_PROCESS.GLASS_OTHER
-          )
-        )
-      ).optional()
-    )
-
-const fixAccreditation = (schema) => {
-  return applyAccreditationForks(schema)
-}
-
 export const organisationJSONSchemaOverrides = organisationReplaceSchema.keys({
   registrations: Joi.array()
-    .items(fixRegistration(registrationUpdateSchema))
+    .items(makeEditable(registrationUpdateSchema))
     .default([]),
   accreditations: Joi.array()
-    .items(fixAccreditation(accreditationUpdateSchema))
+    .items(makeEditable(accreditationUpdateSchema))
     .default([])
 })
