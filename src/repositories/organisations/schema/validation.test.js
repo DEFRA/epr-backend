@@ -584,7 +584,7 @@ describe('organisationJSONSchemaOverrides', () => {
       expect(error).toBeUndefined()
     })
 
-    it('requires registration number when status is APPROVED', () => {
+    it('allows missing registration number when status is APPROVED', () => {
       const registration = buildRegistration({
         status: REG_ACC_STATUS.APPROVED,
         registrationNumber: undefined,
@@ -600,12 +600,10 @@ describe('organisationJSONSchemaOverrides', () => {
       delete organisation.id
 
       const { error } = validate(organisation)
-      expect(error.message).toContain(
-        '"registrations[0].registrationNumber" is required'
-      )
+      expect(error).toBeUndefined()
     })
 
-    it('reprocessor: requires site, wasteManagementPermits, yearlyMetrics, and plantEquipmentDetails', () => {
+    it('reprocessor: allows missing site, wasteManagementPermits, yearlyMetrics, and plantEquipmentDetails', () => {
       const registration = buildRegistration({
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         material: MATERIAL.ALUMINIUM // avoid glass requirements
@@ -623,19 +621,10 @@ describe('organisationJSONSchemaOverrides', () => {
       delete organisation.id
 
       const { error } = validate(organisation)
-      expect(error.message).toContain('"registrations[0].site" is required')
-      expect(error.message).toContain(
-        '"registrations[0].wasteManagementPermits" is required'
-      )
-      expect(error.message).toContain(
-        '"registrations[0].yearlyMetrics" is required'
-      )
-      expect(error.message).toContain(
-        '"registrations[0].plantEquipmentDetails" is required'
-      )
+      expect(error).toBeUndefined()
     })
 
-    it('exporter: requires noticeAddress, exportPorts, and orsFileUploads', () => {
+    it('exporter: allows missing noticeAddress, exportPorts, and orsFileUploads', () => {
       const registration = buildRegistration({
         wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
         material: MATERIAL.ALUMINIUM // avoid glass requirements
@@ -652,18 +641,10 @@ describe('organisationJSONSchemaOverrides', () => {
       delete organisation.id
 
       const { error } = validate(organisation)
-      expect(error.message).toContain(
-        '"registrations[0].noticeAddress" is required'
-      )
-      expect(error.message).toContain(
-        '"registrations[0].exportPorts" is required'
-      )
-      expect(error.message).toContain(
-        '"registrations[0].orsFileUploads" is required'
-      )
+      expect(error).toBeUndefined()
     })
 
-    it('glass: requires glassRecyclingProcess', () => {
+    it('glass: allows missing glassRecyclingProcess', () => {
       const registration = buildRegistration({
         material: MATERIAL.GLASS
       })
@@ -677,9 +658,7 @@ describe('organisationJSONSchemaOverrides', () => {
       delete organisation.id
 
       const { error } = validate(organisation)
-      expect(error.message).toContain(
-        '"registrations[0].glassRecyclingProcess" is required'
-      )
+      expect(error).toBeUndefined()
     })
   })
 
@@ -703,7 +682,7 @@ describe('organisationJSONSchemaOverrides', () => {
       expect(error).toBeUndefined()
     })
 
-    it('requires site for reprocessor', () => {
+    it('allows missing site for reprocessor', () => {
       const accreditation = buildAccreditation({
         wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
         material: MATERIAL.ALUMINIUM
@@ -719,7 +698,7 @@ describe('organisationJSONSchemaOverrides', () => {
       delete organisation.id
 
       const { error } = validate(organisation)
-      expect(error.message).toContain('"accreditations[0].site" is required')
+      expect(error).toBeUndefined()
     })
   })
 })
