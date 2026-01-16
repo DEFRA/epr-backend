@@ -104,6 +104,26 @@ export async function createIndexes(db) {
   await db
     .collection('summary-logs')
     .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
+  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
+  // and sorts by submittedAt descending
+  await db.collection('summary-logs').createIndex({
+    organisationId: 1,
+    registrationId: 1,
+    status: 1,
+    submittedAt: -1
+  })
+
+  // Optimises waste balance lookups by accreditation ID
+  // Each accreditation has at most one balance document
+  await db
+    .collection('waste-balances')
+    .createIndex({ accreditationId: 1 }, { unique: true })
+
+  // Optimises system log queries by organisation ID
+  await db
+    .collection('system-logs')
+    .createIndex({ 'context.organisationId': 1 })
 }
 
 /**
