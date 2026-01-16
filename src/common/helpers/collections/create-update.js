@@ -118,10 +118,9 @@ export async function createIndexes(db) {
   })
 
   // Optimises waste balance lookups by accreditation ID
-  // Each accreditation has at most one balance document
   await db
     .collection(COLLECTION_WASTE_BALANCES)
-    .createIndex({ accreditationId: 1 }, { unique: true })
+    .createIndex({ accreditationId: 1 })
 
   // Optimises system log queries by organisation ID
   await db
