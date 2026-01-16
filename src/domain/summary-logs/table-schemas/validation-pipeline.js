@@ -103,6 +103,15 @@ export const classifyRow = (row, tableSchema) => {
   }
 
   // Step 3: VAL011 - Check required fields are present
+  // If fieldsRequiredForWasteBalance is empty, this table does not contribute
+  // to the waste balance at all - all rows should be EXCLUDED
+  if (fieldsRequiredForWasteBalance.length === 0) {
+    return {
+      outcome: ROW_OUTCOME.EXCLUDED,
+      issues: []
+    }
+  }
+
   const missingRequired = fieldsRequiredForWasteBalance.filter((field) => {
     const fieldUnfilledValues = unfilledValues[field] || []
     return !isFilled(row[field], fieldUnfilledValues)
