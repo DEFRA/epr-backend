@@ -3,6 +3,7 @@ import path from 'node:path'
 
 import { Piscina } from 'piscina'
 
+import { config } from '#root/config.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
@@ -28,25 +29,26 @@ const WORKER_TIMEOUT_MS = WORKER_TIMEOUT_MINUTES * ONE_MINUTE
  * excessive memory and crashing the container. When a worker reaches
  * these limits, it will be terminated with ERR_WORKER_OUT_OF_MEMORY,
  * which is caught and logged rather than crashing the entire service.
- *
- * Values chosen based on:
- * - AWS instance has 2GB memory (after temporary increase from 8GB)
- * - Main thread and Node.js overhead need ~256MB
- * - Leave headroom for concurrent operations
- * - 512MB should be sufficient for most valid summary logs
  */
 const RESOURCE_LIMITS = {
-  maxOldGenerationSizeMb: 512, // Main heap limit (V8 old generation)
-  maxYoungGenerationSizeMb: 64, // Young generation for short-lived objects
+  maxOldGenerationSizeMb: 1024, // Main heap limit (V8 old generation)
+  maxYoungGenerationSizeMb: 128, // Young generation for short-lived objects
   codeRangeSizeMb: 64 // JIT compiled code
 }
+
+/**
+ * Maximum worker threads for validation.
+ * Configure via PISCINA_MAX_THREADS env var.
+ * Default: 2 (suitable for 4 vCPU instances, safe on smaller instances)
+ */
+const maxThreads = config.get('piscina.maxThreads')
 
 const pool = new Piscina({
   filename: path.join(
     dirname,
     '../../../workers/summary-logs/worker/worker-thread.js'
   ),
-  maxThreads: 1, // Match vCPU count on AWS instance
+  maxThreads,
   idleTimeout: ONE_MINUTE,
   resourceLimits: RESOURCE_LIMITS
 })
