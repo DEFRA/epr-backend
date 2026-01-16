@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import Joi from 'joi'
-import { makeEditable } from './helpers.js'
+import { makeEditable } from './organisation-json-schema-overrides.js'
 
 describe('makeEditable', () => {
   it('returns schema as-is if falsy (Line 173)', () => {
