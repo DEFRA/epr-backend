@@ -566,12 +566,12 @@ describe('Piscina configuration', () => {
     expect(constructorArgs.resourceLimits.codeRangeSizeMb).toBeGreaterThan(0)
   })
 
-  it('sets max heap to 512MB to fit within AWS container limits', () => {
-    expect(constructorArgs.resourceLimits.maxOldGenerationSizeMb).toBe(512)
+  it('sets max heap to 1024MB to allow headroom for large files', () => {
+    expect(constructorArgs.resourceLimits.maxOldGenerationSizeMb).toBe(1024)
   })
 
-  it('is configured with single thread to match vCPU allocation', () => {
-    expect(constructorArgs.maxThreads).toBe(1)
+  it('defaults to 2 worker threads', () => {
+    expect(constructorArgs.maxThreads).toBe(2)
   })
 
   it('has idle timeout set to one minute', () => {
