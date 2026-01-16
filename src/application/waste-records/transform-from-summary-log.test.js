@@ -523,6 +523,70 @@ describe('transformFromSummaryLog', () => {
       expect(result[0].record.versions).toHaveLength(1)
     })
   })
+
+  describe('REPROCESSOR_INPUT.REPROCESSED_LOADS', () => {
+    const REPROCESSED_LOADS_HEADERS = [
+      'ROW_ID',
+      'DATE_LOAD_LEFT_SITE',
+      'PRODUCT_DESCRIPTION',
+      'PRODUCT_TONNAGE'
+    ]
+
+    it('transforms REPROCESSED_LOADS data for REPROCESSOR_INPUT into waste records', () => {
+      /** @type {any} */ const parsedData = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'REPROCESSOR_INPUT'
+          }
+        },
+        data: {
+          REPROCESSED_LOADS: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: REPROCESSED_LOADS_HEADERS,
+            rows: [
+              createRow(
+                REPROCESSED_LOADS_HEADERS,
+                ['row-4001', '2025-01-15', 'Recycled plastic pellets', 1500],
+                'row-4001'
+              )
+            ]
+          }
+        }
+      }
+
+      const summaryLogContext = {
+        summaryLog: {
+          id: SUMMARY_LOG_ID,
+          uri: SUMMARY_LOG_URI
+        },
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        timestamp: SUBMISSION_TIMESTAMP
+      }
+
+      const result = transformFromSummaryLog(
+        parsedData,
+        summaryLogContext,
+        new Map()
+      )
+
+      expect(result).toHaveLength(1)
+      const { record } = result[0]
+      expect(record).toMatchObject({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-4001',
+        type: WASTE_RECORD_TYPE.PROCESSED,
+        data: {
+          ROW_ID: 'row-4001',
+          DATE_LOAD_LEFT_SITE: '2025-01-15',
+          PRODUCT_DESCRIPTION: 'Recycled plastic pellets',
+          PRODUCT_TONNAGE: 1500,
+          processingType: 'REPROCESSOR_INPUT'
+        }
+      })
+    })
+  })
 })
 
 function createExistingWasteRecord() {
