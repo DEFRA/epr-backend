@@ -587,6 +587,70 @@ describe('transformFromSummaryLog', () => {
       })
     })
   })
+
+  describe('EXPORTER.SENT_ON_LOADS', () => {
+    const SENT_ON_LOADS_HEADERS = [
+      'ROW_ID',
+      'DATE_LOAD_LEFT_SITE',
+      'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+      'FINAL_DESTINATION_NAME'
+    ]
+
+    it('transforms SENT_ON_LOADS data for EXPORTER into waste records', () => {
+      /** @type {any} */ const parsedData = {
+        meta: {
+          PROCESSING_TYPE: {
+            value: 'EXPORTER'
+          }
+        },
+        data: {
+          SENT_ON_LOADS: {
+            location: { sheet: 'Sheet1', row: 1, column: 'A' },
+            headers: SENT_ON_LOADS_HEADERS,
+            rows: [
+              createRow(
+                SENT_ON_LOADS_HEADERS,
+                ['row-4001', '2025-01-15', 500, 'Green Recycling Ltd'],
+                'row-4001'
+              )
+            ]
+          }
+        }
+      }
+
+      const summaryLogContext = {
+        summaryLog: {
+          id: SUMMARY_LOG_ID,
+          uri: SUMMARY_LOG_URI
+        },
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        timestamp: SUBMISSION_TIMESTAMP
+      }
+
+      const result = transformFromSummaryLog(
+        parsedData,
+        summaryLogContext,
+        new Map()
+      )
+
+      expect(result).toHaveLength(1)
+      const { record } = result[0]
+      expect(record).toMatchObject({
+        organisationId: 'org-1',
+        registrationId: 'reg-1',
+        rowId: 'row-4001',
+        type: WASTE_RECORD_TYPE.SENT_ON,
+        data: {
+          ROW_ID: 'row-4001',
+          DATE_LOAD_LEFT_SITE: '2025-01-15',
+          TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON: 500,
+          FINAL_DESTINATION_NAME: 'Green Recycling Ltd',
+          processingType: 'EXPORTER'
+        }
+      })
+    })
+  })
 })
 
 function createExistingWasteRecord() {
