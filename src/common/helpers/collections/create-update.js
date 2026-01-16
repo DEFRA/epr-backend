@@ -40,6 +40,9 @@ const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 const COLLECTION_WASTE_RECORDS = 'waste-records'
+const COLLECTION_SUMMARY_LOGS = 'summary-logs'
+const COLLECTION_WASTE_BALANCES = 'waste-balances'
+const COLLECTION_SYSTEM_LOGS = 'system-logs'
 
 /**
  * @import {Db} from 'mongodb'
@@ -82,7 +85,7 @@ export async function createIndexes(db) {
     .createIndex({ referenceNumber: 1 })
 
   await db
-    .collection('waste-records')
+    .collection(COLLECTION_WASTE_RECORDS)
     .createIndex(
       { organisationId: 1, registrationId: 1, type: 1, rowId: 1 },
       { unique: true }
@@ -90,7 +93,7 @@ export async function createIndexes(db) {
 
   // Enforces at most one summary log in 'submitting' status per org/reg pair
   // This prevents race conditions when two users try to confirm simultaneously
-  await db.collection('summary-logs').createIndex(
+  await db.collection(COLLECTION_SUMMARY_LOGS).createIndex(
     { organisationId: 1, registrationId: 1 },
     {
       unique: true,
@@ -102,8 +105,28 @@ export async function createIndexes(db) {
   // Documents are deleted when current time exceeds their expiresAt value
   // SUBMITTED status has expiresAt: null, so those documents are never deleted
   await db
-    .collection('summary-logs')
+    .collection(COLLECTION_SUMMARY_LOGS)
     .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
+  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
+  // and sorts by submittedAt descending
+  await db.collection(COLLECTION_SUMMARY_LOGS).createIndex({
+    organisationId: 1,
+    registrationId: 1,
+    status: 1,
+    submittedAt: -1
+  })
+
+  // Optimises waste balance lookups by accreditation ID
+  // Each accreditation has at most one balance document
+  await db
+    .collection(COLLECTION_WASTE_BALANCES)
+    .createIndex({ accreditationId: 1 }, { unique: true })
+
+  // Optimises system log queries by organisation ID
+  await db
+    .collection(COLLECTION_SYSTEM_LOGS)
+    .createIndex({ 'context.organisationId': 1 })
 }
 
 /**
