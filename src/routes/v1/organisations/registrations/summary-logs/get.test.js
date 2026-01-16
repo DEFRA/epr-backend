@@ -230,4 +230,57 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload).not.toHaveProperty('accreditationNumber')
     })
   })
+
+  describe('validation_failed status in response', () => {
+    it('returns OK', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validationFailed({ organisationId, registrationId })
+      )
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns validation_failed status', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validationFailed({ organisationId, registrationId })
+      )
+
+      const response = await makeRequest(server)
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.VALIDATION_FAILED)
+    })
+
+    it('does not include loads for validation_failed status', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validationFailed({ organisationId, registrationId })
+      )
+
+      const response = await makeRequest(server)
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.loads).toBeUndefined()
+    })
+
+    it('does not include accreditationNumber for validation_failed status', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.validationFailed({ organisationId, registrationId })
+      )
+
+      const response = await makeRequest(server)
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.accreditationNumber).toBeUndefined()
+    })
+  })
 })
