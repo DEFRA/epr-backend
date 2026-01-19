@@ -156,7 +156,8 @@
  * @property {(id: string, version: number, replacement: Object) => Promise<void>} replace
  * @property {() => Promise<Object[]>} findAll
  * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
- * @property {(defraOrgId: string) => Promise<Object|undefined>} findByLinkedDefraOrgId - Find organisation by linked Defra organisation ID
+ * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID
+ * @property {(email: string) => Promise<Organisation[]>} findAllLinkableForUser - Find unlinked approved organisations where user is an initial user
  * @property {(organisationId: string, registrationId: string, minimumOrgVersion?: number) => Promise<Registration|null>} findRegistrationById
  * @property {(organisationId: string, accreditationId: string, minimumOrgVersion?: number) => Promise<Accreditation|null>} findAccreditationById
  * @property {() => Promise<OrganisationIds>} findAllIds - Find all organisation, registration, and accreditation IDs

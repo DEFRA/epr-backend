@@ -127,12 +127,6 @@ export async function createIndexes(db) {
   await db
     .collection(COLLECTION_SYSTEM_LOGS)
     .createIndex({ 'context.organisationId': 1 })
-
-  // Optimises findByLinkedDefraOrgId query for auth flow
-  // Allows direct lookup of organisation by linked Defra organisation ID
-  await db
-    .collection(COLLECTION_EPR_ORGANISATIONS)
-    .createIndex({ 'linkedDefraOrganisation.orgId': 1 })
 }
 
 /**

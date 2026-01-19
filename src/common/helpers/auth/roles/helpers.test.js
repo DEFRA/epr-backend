@@ -610,9 +610,9 @@ describe('findOrganisationMatches', () => {
     expect(result).toEqual(mockOrg)
   })
 
-  it('should return undefined when no organisation is linked', async () => {
+  it('should return null when no organisation is linked', async () => {
     const mockRepository = {
-      findByLinkedDefraOrgId: vi.fn().mockResolvedValue(undefined)
+      findByLinkedDefraOrgId: vi.fn().mockResolvedValue(null)
     }
 
     const result = await findOrganisationMatches('non-existent', mockRepository)
@@ -620,6 +620,6 @@ describe('findOrganisationMatches', () => {
     expect(mockRepository.findByLinkedDefraOrgId).toHaveBeenCalledWith(
       'non-existent'
     )
-    expect(result).toBeUndefined()
+    expect(result).toBeNull()
   })
 })

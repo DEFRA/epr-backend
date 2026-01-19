@@ -13,7 +13,7 @@ const collectionName = 'epr-organisations'
  * @type {CreateOrUpdateCollection}
  */
 export async function createOrUpdateEPROrganisationCollection(db, collections) {
-  if (!collections.find(({ name }) => name === collectionName)) {
+  if (!collections.some(({ name }) => name === collectionName)) {
     await db.createCollection(collectionName)
   }
 
@@ -29,4 +29,8 @@ export async function createOrUpdateEPROrganisationCollection(db, collections) {
   await db
     .collection(collectionName)
     .createIndex({ 'accreditations.id': 1 }, { unique: true, sparse: true })
+
+  await db
+    .collection(collectionName)
+    .createIndex({ 'linkedDefraOrganisation.orgId': 1 }, { sparse: true })
 }
