@@ -1,10 +1,10 @@
 import Joi from 'joi'
+import { createRowIdSchema } from './row-id.schema.js'
 import {
-  createRowIdSchema,
   createDateFieldSchema,
-  createWeightFieldSchema,
-  SENT_ON_LOADS_FIELDS as FIELDS
-} from './index.js'
+  createWeightFieldSchema
+} from './field-schemas.js'
+import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
  * Fields required for waste balance calculation.
