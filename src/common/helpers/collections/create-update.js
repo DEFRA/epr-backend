@@ -127,9 +127,6 @@ export async function createIndexes(db) {
   await db
     .collection(COLLECTION_SYSTEM_LOGS)
     .createIndex({ 'context.organisationId': 1 })
-
-  // Note: linkedDefraOrganisation.orgId index is created in create-update-epr-organisation.js
-  // with sparse: true to skip documents without the field
 }
 
 /**
