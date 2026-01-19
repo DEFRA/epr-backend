@@ -1,7 +1,9 @@
 import Boom from '@hapi/boom'
+import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import { validateId, validateOrganisationInsert } from './schema/index.js'
 import {
   createInitialStatusHistory,
+  getCurrentStatus,
   mapDocumentWithCurrentStatuses,
   prepareForReplace,
   SCHEMA_VERSION
@@ -150,6 +152,49 @@ const performFindAll = (staleCache) => async () => {
   )
 }
 
+const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
+  const found = staleCache.find(
+    (o) => o.linkedDefraOrganisation?.orgId === defraOrgId
+  )
+
+  if (!found) {
+    return null
+  }
+
+  return mapDocumentWithCurrentStatuses(structuredClone(found))
+}
+
+const caseInsensitiveEquals = (a, b) =>
+  a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
+
+const performFindAllLinkableForUser =
+  (staleCache) => async (email) => {
+    const matches = staleCache.filter((org) => {
+      // Must not be linked
+      if (org.linkedDefraOrganisation) {
+        return false
+      }
+
+      // Must be approved
+      if (getCurrentStatus(org) !== REG_ACC_STATUS.APPROVED) {
+        return false
+      }
+
+      // User must be an initial user
+      const isInitialUser = org.users?.some(
+        (user) =>
+          caseInsensitiveEquals(user.email, email) &&
+          user.roles?.includes(USER_ROLES.INITIAL)
+      )
+
+      return isInitialUser
+    })
+
+    return matches.map((org) =>
+      mapDocumentWithCurrentStatuses(structuredClone(org))
+    )
+  }
+
 const performFindAllIds = (staleCache) => async () => {
   const orgs = structuredClone(staleCache)
 
@@ -170,18 +215,6 @@ const performFindAllIds = (staleCache) => async () => {
       accreditations: new Set()
     }
   )
-}
-
-const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
-  const found = staleCache.find(
-    (org) => org.linkedDefraOrganisation?.orgId === defraOrgId
-  )
-
-  if (!found) {
-    return undefined
-  }
-
-  return mapDocumentWithCurrentStatuses(structuredClone(found))
 }
 
 const performFindRegistrationById =
@@ -256,6 +289,7 @@ export const createInMemoryOrganisationsRepository = (
       findAllIds: performFindAllIds(staleCache),
       findById,
       findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
+      findAllLinkableForUser: performFindAllLinkableForUser(staleCache),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
       // Test-only method to access internal storage (not part of the port interface)

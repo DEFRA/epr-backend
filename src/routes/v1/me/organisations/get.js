@@ -1,9 +1,5 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import {
-  getOrgDataFromDefraIdToken,
-  isInitialUser
-} from '#common/helpers/auth/roles/helpers.js'
-import { REG_ACC_STATUS } from '#domain/organisations/model.js'
+import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -43,10 +39,6 @@ import { StatusCodes } from 'http-status-codes'
 
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
-const isNotALinkedOrg = () => (org) => !org.linkedDefraOrganisation
-const isNotOurLinkedOrg = (linkedOrg) => (org) => org.id !== linkedOrg?.id
-const isApproved = () => (org) => org.status === REG_ACC_STATUS.APPROVED
-
 /**
  * Get current Defra ID details from token
  *
@@ -85,11 +77,10 @@ export const organisationsLinkedGetAll = {
 
     const current = getCurrentDetailsFromToken(auth)
 
-    const allOrganisations = await organisationsRepository.findAll()
-
-    const linkedOrg = allOrganisations.find(
-      (org) => org.linkedDefraOrganisation?.orgId === current.id
-    )
+    const [linkedOrg, linkableOrgs] = await Promise.all([
+      organisationsRepository.findByLinkedDefraOrgId(current.id),
+      organisationsRepository.findAllLinkableForUser(email)
+    ])
 
     const linked = linkedOrg
       ? {
@@ -101,16 +92,11 @@ export const organisationsLinkedGetAll = {
         }
       : null
 
-    const unlinked = allOrganisations
-      .filter(isNotALinkedOrg())
-      .filter(isNotOurLinkedOrg(linkedOrg))
-      .filter(isInitialUser(email))
-      .filter(isApproved())
-      .map((org) => ({
-        id: org.id,
-        name: org.companyDetails.name,
-        orgId: org.orgId
-      }))
+    const unlinked = linkableOrgs.map((unlinkedOrg) => ({
+      id: unlinkedOrg.id,
+      name: unlinkedOrg.companyDetails.name,
+      orgId: unlinkedOrg.orgId
+    }))
 
     /** @type {{ organisations: UserOrganisationsResponse }} */
     const payload = { organisations: { current, linked, unlinked } }
