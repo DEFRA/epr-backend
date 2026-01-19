@@ -32,5 +32,5 @@ export async function createOrUpdateEPROrganisationCollection(db, collections) {
 
   await db
     .collection(collectionName)
-    .createIndex({ 'linkedDefraOrganisation.orgId': 1 }, { sparse: true })
+    .createIndex({ 'linkedDefraOrganisation.orgId': 1 })
 }
