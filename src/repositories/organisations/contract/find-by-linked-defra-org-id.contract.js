@@ -26,15 +26,15 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
       repository = await organisationsRepository()
     })
 
-    it('returns undefined when no organisation is linked to the Defra org ID', async () => {
+    it('returns null when no organisation is linked to the Defra org ID', async () => {
       const result = await repository.findByLinkedDefraOrgId(
         crypto.randomUUID()
       )
 
-      expect(result).toBeUndefined()
+      expect(result).toBeNull()
     })
 
-    it('returns undefined when organisations exist but none are linked', async () => {
+    it('returns null when organisations exist but none are linked', async () => {
       const org = buildOrganisation()
       await repository.insert(org)
 
@@ -42,7 +42,7 @@ export const testFindByLinkedDefraOrgIdBehaviour = (it) => {
         crypto.randomUUID()
       )
 
-      expect(result).toBeUndefined()
+      expect(result).toBeNull()
     })
 
     it('returns the organisation linked to the specified Defra org ID', async () => {
