@@ -172,6 +172,18 @@ const findAllIds = (db) => async () => {
   )
 }
 
+const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ 'linkedDefraOrganisation.orgId': defraOrgId })
+
+  if (!doc) {
+    return undefined
+  }
+
+  return mapDocumentWithCurrentStatuses(doc)
+}
+
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
@@ -193,6 +205,7 @@ export const createOrganisationsRepository =
       findById,
       findAll: performFindAll(db),
       findAllIds: findAllIds(db),
+      findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
 
       async findRegistrationById(
         organisationId,

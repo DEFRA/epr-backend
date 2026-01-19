@@ -172,6 +172,18 @@ const performFindAllIds = (staleCache) => async () => {
   )
 }
 
+const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
+  const found = staleCache.find(
+    (org) => org.linkedDefraOrganisation?.orgId === defraOrgId
+  )
+
+  if (!found) {
+    return undefined
+  }
+
+  return mapDocumentWithCurrentStatuses(structuredClone(found))
+}
+
 const performFindRegistrationById =
   (findById) => async (organisationId, registrationId, minimumOrgVersion) => {
     const org = await findById(organisationId, minimumOrgVersion)
@@ -243,6 +255,7 @@ export const createInMemoryOrganisationsRepository = (
       findAll: performFindAll(staleCache),
       findAllIds: performFindAllIds(staleCache),
       findById,
+      findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(staleCache),
       findRegistrationById: performFindRegistrationById(findById),
       findAccreditationById: performFindAccreditationById(findById),
       // Test-only method to access internal storage (not part of the port interface)
