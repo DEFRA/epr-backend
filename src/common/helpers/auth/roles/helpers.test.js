@@ -1,8 +1,9 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
 import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   deduplicateOrganisations,
+  findOrganisationMatches,
   getCurrentRelationship,
   getDefraTokenSummary,
   getOrgDataFromDefraIdToken,
@@ -588,5 +589,37 @@ describe('isInitialUser', () => {
     const result = isInitialUser('user@example.com')(organisation)
 
     expect(result).toBe(true)
+  })
+})
+
+describe('findOrganisationMatches', () => {
+  it('should call findByLinkedDefraOrgId with the defra org ID', async () => {
+    const mockOrg = {
+      id: 'org-1',
+      linkedDefraOrganisation: { orgId: 'defra-123' }
+    }
+    const mockRepository = {
+      findByLinkedDefraOrgId: vi.fn().mockResolvedValue(mockOrg)
+    }
+
+    const result = await findOrganisationMatches('defra-123', mockRepository)
+
+    expect(mockRepository.findByLinkedDefraOrgId).toHaveBeenCalledWith(
+      'defra-123'
+    )
+    expect(result).toEqual(mockOrg)
+  })
+
+  it('should return undefined when no organisation is linked', async () => {
+    const mockRepository = {
+      findByLinkedDefraOrgId: vi.fn().mockResolvedValue(undefined)
+    }
+
+    const result = await findOrganisationMatches('non-existent', mockRepository)
+
+    expect(mockRepository.findByLinkedDefraOrgId).toHaveBeenCalledWith(
+      'non-existent'
+    )
+    expect(result).toBeUndefined()
   })
 })
