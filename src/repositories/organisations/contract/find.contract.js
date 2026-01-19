@@ -4,7 +4,10 @@ import {
   getValidDateRange,
   prepareOrgUpdate
 } from './test-data.js'
-import { REG_ACC_STATUS, REPROCESSING_TYPE } from '#domain/organisations/model.js'
+import {
+  REG_ACC_STATUS,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 
 export const testFindBehaviour = (it) => {
   describe('find', () => {
@@ -212,9 +215,11 @@ export const testFindBehaviour = (it) => {
         })
 
         await Promise.all(
-          [unlinkedOrg, orgLinkedToDifferentDefraId, orgLinkedToTargetDefraId].map(
-            (org) => repository.insert(org)
-          )
+          [
+            unlinkedOrg,
+            orgLinkedToDifferentDefraId,
+            orgLinkedToTargetDefraId
+          ].map((org) => repository.insert(org))
         )
 
         const result = await repository.findByLinkedDefraOrgId(DEFRA_ORG_ID_3)
@@ -343,8 +348,9 @@ export const testFindBehaviour = (it) => {
         await repository.insert(matchingOrg)
         await approveOrg(matchingOrg)
 
-        const result =
-          await repository.findAllLinkableForUser('initial.user@example.com')
+        const result = await repository.findAllLinkableForUser(
+          'initial.user@example.com'
+        )
 
         expect(result).toHaveLength(1)
         expect(result[0].id).toBe(matchingOrg.id)

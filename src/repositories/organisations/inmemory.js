@@ -167,33 +167,32 @@ const performFindByLinkedDefraOrgId = (staleCache) => async (defraOrgId) => {
 const caseInsensitiveEquals = (a, b) =>
   a.localeCompare(b, undefined, { sensitivity: 'accent' }) === 0
 
-const performFindAllLinkableForUser =
-  (staleCache) => async (email) => {
-    const matches = staleCache.filter((org) => {
-      // Must not be linked
-      if (org.linkedDefraOrganisation) {
-        return false
-      }
+const performFindAllLinkableForUser = (staleCache) => async (email) => {
+  const matches = staleCache.filter((org) => {
+    // Must not be linked
+    if (org.linkedDefraOrganisation) {
+      return false
+    }
 
-      // Must be approved
-      if (getCurrentStatus(org) !== REG_ACC_STATUS.APPROVED) {
-        return false
-      }
+    // Must be approved
+    if (getCurrentStatus(org) !== REG_ACC_STATUS.APPROVED) {
+      return false
+    }
 
-      // User must be an initial user
-      const isInitialUser = org.users?.some(
-        (user) =>
-          caseInsensitiveEquals(user.email, email) &&
-          user.roles?.includes(USER_ROLES.INITIAL)
-      )
-
-      return isInitialUser
-    })
-
-    return matches.map((org) =>
-      mapDocumentWithCurrentStatuses(structuredClone(org))
+    // User must be an initial user
+    const isInitialUser = org.users?.some(
+      (user) =>
+        caseInsensitiveEquals(user.email, email) &&
+        user.roles?.includes(USER_ROLES.INITIAL)
     )
-  }
+
+    return isInitialUser
+  })
+
+  return matches.map((org) =>
+    mapDocumentWithCurrentStatuses(structuredClone(org))
+  )
+}
 
 const performFindAllIds = (staleCache) => async () => {
   const orgs = structuredClone(staleCache)
