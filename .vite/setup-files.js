@@ -31,6 +31,8 @@ process.env.MONGO_DATABASE = 'epr-backend' // matches config.js default
 
 // Logging - explicitly disable for cleaner test output
 process.env.LOG_ENABLED = 'false'
+// Use ECS log format to avoid pino-pretty transport (adds exit listeners)
+process.env.LOG_FORMAT = 'ecs'
 process.env.AUDIT_ENABLED = 'true'
 
 // HTTP Proxy - not needed in tests
