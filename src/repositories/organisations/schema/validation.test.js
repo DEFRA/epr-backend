@@ -387,16 +387,17 @@ describe('validateRegistration', () => {
       )
     })
 
-    it('glass: accepts glassRecyclingProcess with exactly one valid value', () => {
-      ;['glass_re_melt', 'glass_other'].forEach((process) => {
+    it.each(['glass_re_melt', 'glass_other'])(
+      'glass: accepts glassRecyclingProcess with %s',
+      (process) => {
         const registration = buildRegistration({
           material: MATERIAL.GLASS,
           glassRecyclingProcess: [process]
         })
 
         expect(() => validateRegistration(registration)).not.toThrow()
-      })
-    })
+      }
+    )
 
     it('glass: rejects glassRecyclingProcess with both values', () => {
       const registration = buildRegistration({
@@ -519,16 +520,17 @@ describe('validateAccreditation', () => {
       )
     })
 
-    it('glass: accepts glassRecyclingProcess with exactly one valid value', () => {
-      ;['glass_re_melt', 'glass_other'].forEach((process) => {
+    it.each(['glass_re_melt', 'glass_other'])(
+      'glass: accepts glassRecyclingProcess with %s',
+      (process) => {
         const accreditation = buildAccreditation({
           material: MATERIAL.GLASS,
           glassRecyclingProcess: [process]
         })
 
         expect(() => validateAccreditation(accreditation)).not.toThrow()
-      })
-    })
+      }
+    )
 
     it('glass: rejects glassRecyclingProcess with both values', () => {
       const accreditation = buildAccreditation({
