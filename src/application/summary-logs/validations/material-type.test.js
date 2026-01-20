@@ -143,13 +143,11 @@ describe('validateMaterialType', () => {
   describe('glass material validation', () => {
     describe('registration-only operators', () => {
       it.each([
-        ['Glass_remelt', ['glass_re_melt'], true],
-        ['Glass_remelt', ['glass_other'], false],
-        ['Glass_other', ['glass_re_melt'], false],
-        ['Glass_other', ['glass_other'], true]
+        ['Glass_remelt', ['glass_re_melt']],
+        ['Glass_other', ['glass_other']]
       ])(
-        '%s vs %s → %s',
-        (spreadsheetMaterial, glassRecyclingProcess, shouldPass) => {
+        'passes when %s matches registration glassRecyclingProcess %s',
+        (spreadsheetMaterial, glassRecyclingProcess) => {
           const parsed = {
             meta: {
               MATERIAL: { value: spreadsheetMaterial }
@@ -166,7 +164,33 @@ describe('validateMaterialType', () => {
             loggingContext: 'test'
           })
 
-          expect(result.isValid()).toBe(shouldPass)
+          expect(result.isValid()).toBe(true)
+        }
+      )
+
+      it.each([
+        ['Glass_remelt', ['glass_other']],
+        ['Glass_other', ['glass_re_melt']]
+      ])(
+        'fails when %s does not match registration glassRecyclingProcess %s',
+        (spreadsheetMaterial, glassRecyclingProcess) => {
+          const parsed = {
+            meta: {
+              MATERIAL: { value: spreadsheetMaterial }
+            }
+          }
+          const registration = {
+            material: 'glass',
+            glassRecyclingProcess
+          }
+
+          const result = validateMaterialType({
+            parsed,
+            registration,
+            loggingContext: 'test'
+          })
+
+          expect(result.isValid()).toBe(false)
         }
       )
 
@@ -174,7 +198,7 @@ describe('validateMaterialType', () => {
         ['Glass_remelt', 'plastic'],
         ['Glass_other', 'plastic']
       ])(
-        '%s vs non-glass registration (%s) fails',
+        'fails when %s is uploaded against non-glass registration (%s)',
         (spreadsheetMaterial, registrationMaterial) => {
           const parsed = {
             meta: {
@@ -198,19 +222,16 @@ describe('validateMaterialType', () => {
 
     describe('accredited operators (via associated registration)', () => {
       it.each([
-        ['Glass_remelt', ['glass_re_melt'], true],
-        ['Glass_remelt', ['glass_other'], false],
-        ['Glass_other', ['glass_re_melt'], false],
-        ['Glass_other', ['glass_other'], true]
+        ['Glass_remelt', ['glass_re_melt']],
+        ['Glass_other', ['glass_other']]
       ])(
-        '%s vs %s → %s',
-        (spreadsheetMaterial, glassRecyclingProcess, shouldPass) => {
+        'passes when %s matches registration glassRecyclingProcess %s',
+        (spreadsheetMaterial, glassRecyclingProcess) => {
           const parsed = {
             meta: {
               MATERIAL: { value: spreadsheetMaterial }
             }
           }
-          // Accredited operator - has an accreditationId on registration
           const registration = {
             material: 'glass',
             glassRecyclingProcess,
@@ -223,7 +244,34 @@ describe('validateMaterialType', () => {
             loggingContext: 'test'
           })
 
-          expect(result.isValid()).toBe(shouldPass)
+          expect(result.isValid()).toBe(true)
+        }
+      )
+
+      it.each([
+        ['Glass_remelt', ['glass_other']],
+        ['Glass_other', ['glass_re_melt']]
+      ])(
+        'fails when %s does not match registration glassRecyclingProcess %s',
+        (spreadsheetMaterial, glassRecyclingProcess) => {
+          const parsed = {
+            meta: {
+              MATERIAL: { value: spreadsheetMaterial }
+            }
+          }
+          const registration = {
+            material: 'glass',
+            glassRecyclingProcess,
+            accreditationId: 'acc-123'
+          }
+
+          const result = validateMaterialType({
+            parsed,
+            registration,
+            loggingContext: 'test'
+          })
+
+          expect(result.isValid()).toBe(false)
         }
       )
 
@@ -231,7 +279,7 @@ describe('validateMaterialType', () => {
         ['Glass_remelt', 'aluminium'],
         ['Glass_other', 'aluminium']
       ])(
-        '%s vs non-glass accredited registration (%s) fails',
+        'fails when %s is uploaded against non-glass registration (%s)',
         (spreadsheetMaterial, registrationMaterial) => {
           const parsed = {
             meta: {
