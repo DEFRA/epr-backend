@@ -27,7 +27,7 @@ const it = mongoIt.extend({
     use
   ) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = createWasteBalancesRepository(database, {
+    const factory = await createWasteBalancesRepository(database, {
       organisationsRepository
     })
     await use(factory)
@@ -56,7 +56,7 @@ describe('MongoDB waste balances repository', () => {
   describe('repository creation', () => {
     it('should create repository instance', async ({ mongoClient }) => {
       const database = mongoClient.db(DATABASE_NAME)
-      const repository = createWasteBalancesRepository(database)
+      const repository = await createWasteBalancesRepository(database)
       const instance = repository()
       expect(instance).toBeDefined()
       expect(instance.findByAccreditationId).toBeTypeOf('function')

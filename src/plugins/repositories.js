@@ -109,7 +109,7 @@ export const repositories = {
        * Registers a repository with optional test override.
        *
        * @param {string} name - Repository property name
-       * @param {Function} productionFactoryCreator - Function that creates the production repository factory from db
+       * @param {Function} productionFactoryCreator - Function that creates the production repository factory from db (may be async)
        * @param {Function} [testFactory] - Optional test factory override from options
        */
       const registerRepository = (
@@ -122,8 +122,8 @@ export const repositories = {
         } else if (skipMongoDb) {
           // No repository registered - test is skipping MongoDB and not providing a factory
         } else {
-          server.dependency('mongodb', () => {
-            const productionFactory = productionFactoryCreator(
+          server.dependency('mongodb', async () => {
+            const productionFactory = await productionFactoryCreator(
               /** @type {import('mongodb').Db} */ (server.db)
             )
             registerPerRequest(name, productionFactory)
@@ -138,13 +138,16 @@ export const repositories = {
         formSubmissionsRepository: createFormSubmissionsRepository,
         systemLogsRepository: createSystemLogsRepository,
         wasteRecordsRepository: createWasteRecordsRepository,
-        wasteBalancesRepository: (db) =>
-          createWasteBalancesRepository(db, {
-            organisationsRepository: createOrganisationsRepository(
+        wasteBalancesRepository: async (db) => {
+          const organisationsRepositoryFactory =
+            await createOrganisationsRepository(
               db,
               options?.eventualConsistency
-            )()
-          }),
+            )
+          return await createWasteBalancesRepository(db, {
+            organisationsRepository: organisationsRepositoryFactory()
+          })
+        },
         ...(server.featureFlags?.isCreatePackagingRecyclingNotesEnabled() && {
           packagingRecyclingNotesRepository:
             createPackagingRecyclingNotesRepository

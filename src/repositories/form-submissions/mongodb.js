@@ -4,6 +4,22 @@ const ACCREDITATIONS_COLLECTION = 'accreditation'
 const REGISTRATIONS_COLLECTION = 'registration'
 const ORGANISATION_COLLECTION = 'organisation'
 
+/**
+ * Ensures the collections exist with required indexes.
+ * Safe to call multiple times - MongoDB createIndex is idempotent.
+ *
+ * @param {import('mongodb').Db} db
+ */
+async function ensureCollections(db) {
+  await db.collection(ORGANISATION_COLLECTION).createIndex({ orgId: 1 })
+  await db
+    .collection(REGISTRATIONS_COLLECTION)
+    .createIndex({ referenceNumber: 1 })
+  await db
+    .collection(ACCREDITATIONS_COLLECTION)
+    .createIndex({ referenceNumber: 1 })
+}
+
 const mapDocument = (doc) => {
   const { _id, orgId, referenceNumber, rawSubmissionData } = doc
   return {
@@ -121,20 +137,24 @@ const findAllFormSubmissionIds = (db) => async () => {
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {import('./port.js').FormSubmissionsRepositoryFactory}
+ * @returns {Promise<import('./port.js').FormSubmissionsRepositoryFactory>}
  */
-export const createFormSubmissionsRepository = (db) => () => {
-  return {
-    findAllAccreditations: performFindAllAccreditations(db),
-    findAccreditationsBySystemReference:
-      performFindAccreditationsBySystemReference(db),
-    findAccreditationById: performFindAccreditationById(db),
-    findAllRegistrations: performFindAllRegistrations(db),
-    findRegistrationsBySystemReference:
-      performFindRegistrationsBySystemReference(db),
-    findRegistrationById: performFindRegistrationById(db),
-    findAllOrganisations: performFindAllOrganisations(db),
-    findOrganisationById: performFindOrganisationById(db),
-    findAllFormSubmissionIds: findAllFormSubmissionIds(db)
+export const createFormSubmissionsRepository = async (db) => {
+  await ensureCollections(db)
+
+  return () => {
+    return {
+      findAllAccreditations: performFindAllAccreditations(db),
+      findAccreditationsBySystemReference:
+        performFindAccreditationsBySystemReference(db),
+      findAccreditationById: performFindAccreditationById(db),
+      findAllRegistrations: performFindAllRegistrations(db),
+      findRegistrationsBySystemReference:
+        performFindRegistrationsBySystemReference(db),
+      findRegistrationById: performFindRegistrationById(db),
+      findAllOrganisations: performFindAllOrganisations(db),
+      findOrganisationById: performFindOrganisationById(db),
+      findAllFormSubmissionIds: findAllFormSubmissionIds(db)
+    }
   }
 }

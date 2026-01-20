@@ -5,7 +5,6 @@ import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
-import { createIndexes } from '#common/helpers/collections/create-update.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -18,11 +17,7 @@ const it = mongoIt.extend({
 
   summaryLogsRepositoryFactory: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-
-    // Apply production indexes
-    await createIndexes(database)
-
-    const factory = createSummaryLogsRepository(database)
+    const factory = await createSummaryLogsRepository(database)
     await use(factory)
   },
 
@@ -47,6 +42,7 @@ describe('MongoDB summary logs repository', () => {
     it('re-throws non-duplicate key errors from MongoDB', async () => {
       const mockDb = {
         collection: () => ({
+          createIndex: async () => {},
           findOne: async () => null, // No existing submitting log
           insertOne: async () => {
             const error = new Error('Connection timeout')
@@ -57,7 +53,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(mockDb)
       const repository = repositoryFactory(mockLogger)
 
       await expect(
@@ -76,6 +72,7 @@ describe('MongoDB summary logs repository', () => {
 
       const mockDb = {
         collection: () => ({
+          createIndex: async () => {},
           findOne: async () => {
             findOneCallCount++
             if (findOneCallCount === 1) {
@@ -96,7 +93,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(mockDb)
       const repository = repositoryFactory(mockLogger)
 
       const result = await repository.transitionToSubmittingExclusive(
@@ -115,6 +112,7 @@ describe('MongoDB summary logs repository', () => {
 
       const mockDb = {
         collection: () => ({
+          createIndex: async () => {},
           findOne: async () => {
             findOneCallCount++
             if (findOneCallCount === 1) {
@@ -142,7 +140,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(mockDb)
       const repository = repositoryFactory(mockLogger)
 
       const result = await repository.transitionToSubmittingExclusive(
@@ -161,6 +159,7 @@ describe('MongoDB summary logs repository', () => {
 
       const mockDb = {
         collection: () => ({
+          createIndex: async () => {},
           findOne: async () => {
             findOneCallCount++
             if (findOneCallCount === 1) {
@@ -185,7 +184,7 @@ describe('MongoDB summary logs repository', () => {
       }
 
       const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
-      const repositoryFactory = createSummaryLogsRepository(mockDb)
+      const repositoryFactory = await createSummaryLogsRepository(mockDb)
       const repository = repositoryFactory(mockLogger)
 
       await expect(

@@ -14,7 +14,7 @@ const it = mongoIt.extend({
 
   systemLogsRepository: async ({ mongoClient }, use) => {
     const database = mongoClient.db('epr-backend')
-    const factory = createSystemLogsRepository(database)
+    const factory = await createSystemLogsRepository(database)
     await use(factory)
   }
 })
@@ -34,14 +34,21 @@ describe('Mongo DB system logs repository', () => {
       fatal: vi.fn()
     }
 
+    let callCount = 0
     const mockDb = {
       collection: () => {
+        callCount++
+        // First call is for createIndex during setup - let it pass
+        if (callCount === 1) {
+          return { createIndex: async () => {} }
+        }
+        // Subsequent calls fail
         throw new Error('error accessing db')
       }
     }
     const collectionSpy = vi.spyOn(mockDb, 'collection')
 
-    const repository = createSystemLogsRepository(mockDb)(mockLogger)
+    const repository = (await createSystemLogsRepository(mockDb))(mockLogger)
 
     const payload = {
       createdAt: new Date(),

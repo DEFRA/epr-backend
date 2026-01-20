@@ -29,10 +29,10 @@ export const workers = {
 
       if (hasMongoDb) {
         // Production: wait for mongodb to be available, then create worker with repository
-        server.dependency('mongodb', () => {
-          const summaryLogsRepository = createSummaryLogsRepository(server.db)(
-            server.logger
-          )
+        server.dependency('mongodb', async () => {
+          const summaryLogsRepository = (
+            await createSummaryLogsRepository(server.db)
+          )(server.logger)
           const summaryLogsWorker = createSummaryLogsCommandExecutor(
             server.logger,
             summaryLogsRepository

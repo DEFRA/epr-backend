@@ -31,11 +31,11 @@ export const runFormsDataMigration = async (server, options = {}) => {
       }
       try {
         await truncateEprOrg(options, server)
-        const formSubmissionsRepository = createFormSubmissionsRepository(
-          server.db
+        const formSubmissionsRepository = (
+          await createFormSubmissionsRepository(server.db)
         )()
-        const organisationsRepository = createOrganisationsRepository(
-          server.db
+        const organisationsRepository = (
+          await createOrganisationsRepository(server.db)
         )()
 
         const formsDataMigration = createFormDataMigrator(

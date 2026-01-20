@@ -16,6 +16,41 @@ import {
 const COLLECTION_NAME = 'summary-logs'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
+/**
+ * Ensures the collection exists with required indexes.
+ * Safe to call multiple times - MongoDB createIndex is idempotent.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<import('mongodb').Collection>}
+ */
+async function ensureCollection(db) {
+  const collection = db.collection(COLLECTION_NAME)
+
+  // Enforces at most one summary log in 'submitting' status per org/reg pair
+  // This prevents race conditions when two users try to confirm simultaneously
+  await collection.createIndex(
+    { organisationId: 1, registrationId: 1 },
+    {
+      unique: true,
+      partialFilterExpression: { status: 'submitting' }
+    }
+  )
+
+  // TTL index for automatic cleanup of non-submitted summary logs
+  await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+
+  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
+  // and sorts by submittedAt descending
+  await collection.createIndex({
+    organisationId: 1,
+    registrationId: 1,
+    status: 1,
+    submittedAt: -1
+  })
+
+  return collection
+}
+
 const insert = (db) => async (id, summaryLog) => {
   const validatedId = validateId(id)
   const validatedSummaryLog = validateSummaryLogInsert(summaryLog)
@@ -181,12 +216,16 @@ const transitionToSubmittingExclusive = (db) => async (logId) => {
 
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {import('./port.js').SummaryLogsRepositoryFactory}
+ * @returns {Promise<import('./port.js').SummaryLogsRepositoryFactory>}
  */
-export const createSummaryLogsRepository = (db) => (logger) => ({
-  insert: insert(db),
-  update: update(db, logger),
-  findById: findById(db),
-  findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
-  transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
-})
+export const createSummaryLogsRepository = async (db) => {
+  await ensureCollection(db)
+
+  return (logger) => ({
+    insert: insert(db),
+    update: update(db, logger),
+    findById: findById(db),
+    findLatestSubmittedForOrgReg: findLatestSubmittedForOrgReg(db),
+    transitionToSubmittingExclusive: transitionToSubmittingExclusive(db)
+  })
+}
