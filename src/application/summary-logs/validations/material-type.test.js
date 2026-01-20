@@ -117,7 +117,6 @@ describe('validateMaterialType', () => {
   it.each([
     ['Aluminium', 'aluminium'],
     ['Fibre_based_composite', 'fibre'],
-    ['Glass', 'glass'],
     ['Paper_and_board', 'paper'],
     ['Plastic', 'plastic'],
     ['Steel', 'steel'],
@@ -141,14 +140,197 @@ describe('validateMaterialType', () => {
     expect(result.isValid()).toBe(true)
   })
 
+  describe('glass material validation', () => {
+    describe('registration-only operators', () => {
+      it.each([
+        // AC01: Glass_remelt v Remelt = Pass
+        {
+          spreadsheetMaterial: 'Glass_remelt',
+          glassRecyclingProcess: ['glass_re_melt'],
+          shouldPass: true,
+          ac: 'AC01'
+        },
+        // AC02: Glass_remelt v Other = Fail
+        {
+          spreadsheetMaterial: 'Glass_remelt',
+          glassRecyclingProcess: ['glass_other'],
+          shouldPass: false,
+          ac: 'AC02'
+        },
+        // AC03: Glass_other v Remelt = Fail
+        {
+          spreadsheetMaterial: 'Glass_other',
+          glassRecyclingProcess: ['glass_re_melt'],
+          shouldPass: false,
+          ac: 'AC03'
+        },
+        // AC04: Glass_other v Other = Pass
+        {
+          spreadsheetMaterial: 'Glass_other',
+          glassRecyclingProcess: ['glass_other'],
+          shouldPass: true,
+          ac: 'AC04'
+        }
+      ])(
+        '$ac: $spreadsheetMaterial vs $glassRecyclingProcess → $shouldPass',
+        ({ spreadsheetMaterial, glassRecyclingProcess, shouldPass }) => {
+          const parsed = {
+            meta: {
+              MATERIAL: { value: spreadsheetMaterial }
+            }
+          }
+          const registration = {
+            material: 'glass',
+            glassRecyclingProcess
+          }
+
+          const result = validateMaterialType({
+            parsed,
+            registration,
+            loggingContext: 'test'
+          })
+
+          expect(result.isValid()).toBe(shouldPass)
+        }
+      )
+
+      it.each([
+        // AC05: Glass_remelt v Any non-glass material = Fail
+        {
+          spreadsheetMaterial: 'Glass_remelt',
+          registrationMaterial: 'plastic',
+          ac: 'AC05'
+        },
+        // AC06: Glass_other v Any non-glass material = Fail
+        {
+          spreadsheetMaterial: 'Glass_other',
+          registrationMaterial: 'plastic',
+          ac: 'AC06'
+        }
+      ])(
+        '$ac: $spreadsheetMaterial vs non-glass registration ($registrationMaterial) → Fail',
+        ({ spreadsheetMaterial, registrationMaterial }) => {
+          const parsed = {
+            meta: {
+              MATERIAL: { value: spreadsheetMaterial }
+            }
+          }
+          const registration = {
+            material: registrationMaterial
+          }
+
+          const result = validateMaterialType({
+            parsed,
+            registration,
+            loggingContext: 'test'
+          })
+
+          expect(result.isValid()).toBe(false)
+        }
+      )
+    })
+
+    describe('accredited operators (via associated registration)', () => {
+      it.each([
+        // AC07: Glass_remelt v Remelt = Pass
+        {
+          spreadsheetMaterial: 'Glass_remelt',
+          glassRecyclingProcess: ['glass_re_melt'],
+          shouldPass: true,
+          ac: 'AC07'
+        },
+        // AC08: Glass_remelt v Other = Fail
+        {
+          spreadsheetMaterial: 'Glass_remelt',
+          glassRecyclingProcess: ['glass_other'],
+          shouldPass: false,
+          ac: 'AC08'
+        },
+        // AC09: Glass_other v Remelt = Fail
+        {
+          spreadsheetMaterial: 'Glass_other',
+          glassRecyclingProcess: ['glass_re_melt'],
+          shouldPass: false,
+          ac: 'AC09'
+        },
+        // AC10: Glass_other v Other = Pass
+        {
+          spreadsheetMaterial: 'Glass_other',
+          glassRecyclingProcess: ['glass_other'],
+          shouldPass: true,
+          ac: 'AC10'
+        }
+      ])(
+        '$ac: $spreadsheetMaterial vs $glassRecyclingProcess → $shouldPass',
+        ({ spreadsheetMaterial, glassRecyclingProcess, shouldPass }) => {
+          const parsed = {
+            meta: {
+              MATERIAL: { value: spreadsheetMaterial }
+            }
+          }
+          // Accredited operator - has an accreditationId on registration
+          const registration = {
+            material: 'glass',
+            glassRecyclingProcess,
+            accreditationId: 'acc-123'
+          }
+
+          const result = validateMaterialType({
+            parsed,
+            registration,
+            loggingContext: 'test'
+          })
+
+          expect(result.isValid()).toBe(shouldPass)
+        }
+      )
+
+      it.each([
+        // AC11: Glass_remelt v Any non-glass material = Fail
+        {
+          spreadsheetMaterial: 'Glass_remelt',
+          registrationMaterial: 'aluminium',
+          ac: 'AC11'
+        },
+        // AC12: Glass_other v Any non-glass material = Fail
+        {
+          spreadsheetMaterial: 'Glass_other',
+          registrationMaterial: 'aluminium',
+          ac: 'AC12'
+        }
+      ])(
+        '$ac: $spreadsheetMaterial vs non-glass accredited registration ($registrationMaterial) → Fail',
+        ({ spreadsheetMaterial, registrationMaterial }) => {
+          const parsed = {
+            meta: {
+              MATERIAL: { value: spreadsheetMaterial }
+            }
+          }
+          const registration = {
+            material: registrationMaterial,
+            accreditationId: 'acc-123'
+          }
+
+          const result = validateMaterialType({
+            parsed,
+            registration,
+            loggingContext: 'test'
+          })
+
+          expect(result.isValid()).toBe(false)
+        }
+      )
+    })
+  })
+
   it('categorizes material mismatch as fatal business error', () => {
     const parsed = {
       meta: {
-        MATERIAL: { value: 'Glass' }
+        MATERIAL: { value: 'Plastic' }
       }
     }
     const registration = {
-      material: 'plastic'
+      material: 'aluminium'
     }
 
     const result = validateMaterialType({
@@ -166,11 +348,11 @@ describe('validateMaterialType', () => {
   it('handles missing location gracefully by including only field', () => {
     const parsed = {
       meta: {
-        MATERIAL: { value: 'Glass' } // No location provided
+        MATERIAL: { value: 'Plastic' } // No location provided
       }
     }
     const registration = {
-      material: 'plastic'
+      material: 'steel'
     }
 
     const result = validateMaterialType({
