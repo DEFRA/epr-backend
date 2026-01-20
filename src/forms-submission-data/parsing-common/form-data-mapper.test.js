@@ -308,11 +308,10 @@ describe('mapGlassRecyclingProcess', () => {
     expect(mapGlassRecyclingProcess(input)).toEqual(expected)
   })
 
-  it('should map Both to array of both processes', () => {
-    expect(mapGlassRecyclingProcess('Both')).toEqual([
-      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-      GLASS_RECYCLING_PROCESS.GLASS_OTHER
-    ])
+  it('should throw error for Both', () => {
+    expect(() => mapGlassRecyclingProcess('Both')).toThrow(
+      'Invalid recycling process: "Both"'
+    )
   })
 
   it('should handle whitespace', () => {

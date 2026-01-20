@@ -387,7 +387,7 @@ describe('validateRegistration', () => {
       )
     })
 
-    it('glass: accepts valid glassRecyclingProcess', () => {
+    it('glass: accepts glassRecyclingProcess with only glass_re_melt', () => {
       const registration = buildRegistration({
         material: MATERIAL.GLASS,
         glassRecyclingProcess: ['glass_re_melt']
@@ -396,13 +396,55 @@ describe('validateRegistration', () => {
       expect(() => validateRegistration(registration)).not.toThrow()
     })
 
-    it('non-glass: accepts when glassRecyclingProcess is omitted', () => {
+    it('glass: accepts glassRecyclingProcess with only glass_other', () => {
+      const registration = buildRegistration({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: ['glass_other']
+      })
+
+      expect(() => validateRegistration(registration)).not.toThrow()
+    })
+
+    it('glass: rejects glassRecyclingProcess with both values', () => {
+      const registration = buildRegistration({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*glassRecyclingProcess.*array.max/
+      )
+    })
+
+    it('glass: rejects empty glassRecyclingProcess array', () => {
+      const registration = buildRegistration({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: []
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*glassRecyclingProcess.*array.min/
+      )
+    })
+
+    it('non-glass: accepts when glassRecyclingProcess is null', () => {
       const registration = buildRegistration({
         material: MATERIAL.PAPER,
         glassRecyclingProcess: null
       })
 
       expect(() => validateRegistration(registration)).not.toThrow()
+    })
+
+    it('non-glass: rejects when glassRecyclingProcess has a value', () => {
+      const registration = buildRegistration({
+        material: MATERIAL.PAPER,
+        glassRecyclingProcess: ['glass_re_melt']
+      })
+
+      expect(() => validateRegistration(registration)).toThrow(
+        /Invalid registration data.*glassRecyclingProcess/
+      )
     })
   })
 })
@@ -484,13 +526,44 @@ describe('validateAccreditation', () => {
       )
     })
 
-    it('glass: accepts valid glassRecyclingProcess', () => {
+    it('glass: accepts glassRecyclingProcess with only glass_re_melt', () => {
       const accreditation = buildAccreditation({
         material: MATERIAL.GLASS,
         glassRecyclingProcess: ['glass_re_melt']
       })
 
       expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+
+    it('glass: accepts glassRecyclingProcess with only glass_other', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: ['glass_other']
+      })
+
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+
+    it('glass: rejects glassRecyclingProcess with both values', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*glassRecyclingProcess.*array.max/
+      )
+    })
+
+    it('glass: rejects empty glassRecyclingProcess array', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: []
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*glassRecyclingProcess.*array.min/
+      )
     })
 
     it('non-glass: accepts when glassRecyclingProcess is null', () => {
@@ -500,6 +573,17 @@ describe('validateAccreditation', () => {
       })
 
       expect(() => validateAccreditation(accreditation)).not.toThrow()
+    })
+
+    it('non-glass: rejects when glassRecyclingProcess has a value', () => {
+      const accreditation = buildAccreditation({
+        material: MATERIAL.PAPER,
+        glassRecyclingProcess: ['glass_re_melt']
+      })
+
+      expect(() => validateAccreditation(accreditation)).toThrow(
+        /Invalid accreditation data.*glassRecyclingProcess/
+      )
     })
   })
 
