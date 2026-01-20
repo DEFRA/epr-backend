@@ -143,37 +143,13 @@ describe('validateMaterialType', () => {
   describe('glass material validation', () => {
     describe('registration-only operators', () => {
       it.each([
-        // AC01: Glass_remelt v Remelt = Pass
-        {
-          spreadsheetMaterial: 'Glass_remelt',
-          glassRecyclingProcess: ['glass_re_melt'],
-          shouldPass: true,
-          ac: 'AC01'
-        },
-        // AC02: Glass_remelt v Other = Fail
-        {
-          spreadsheetMaterial: 'Glass_remelt',
-          glassRecyclingProcess: ['glass_other'],
-          shouldPass: false,
-          ac: 'AC02'
-        },
-        // AC03: Glass_other v Remelt = Fail
-        {
-          spreadsheetMaterial: 'Glass_other',
-          glassRecyclingProcess: ['glass_re_melt'],
-          shouldPass: false,
-          ac: 'AC03'
-        },
-        // AC04: Glass_other v Other = Pass
-        {
-          spreadsheetMaterial: 'Glass_other',
-          glassRecyclingProcess: ['glass_other'],
-          shouldPass: true,
-          ac: 'AC04'
-        }
+        ['Glass_remelt', ['glass_re_melt'], true],
+        ['Glass_remelt', ['glass_other'], false],
+        ['Glass_other', ['glass_re_melt'], false],
+        ['Glass_other', ['glass_other'], true]
       ])(
-        '$ac: $spreadsheetMaterial vs $glassRecyclingProcess → $shouldPass',
-        ({ spreadsheetMaterial, glassRecyclingProcess, shouldPass }) => {
+        '%s vs %s → %s',
+        (spreadsheetMaterial, glassRecyclingProcess, shouldPass) => {
           const parsed = {
             meta: {
               MATERIAL: { value: spreadsheetMaterial }
@@ -195,21 +171,11 @@ describe('validateMaterialType', () => {
       )
 
       it.each([
-        // AC05: Glass_remelt v Any non-glass material = Fail
-        {
-          spreadsheetMaterial: 'Glass_remelt',
-          registrationMaterial: 'plastic',
-          ac: 'AC05'
-        },
-        // AC06: Glass_other v Any non-glass material = Fail
-        {
-          spreadsheetMaterial: 'Glass_other',
-          registrationMaterial: 'plastic',
-          ac: 'AC06'
-        }
+        ['Glass_remelt', 'plastic'],
+        ['Glass_other', 'plastic']
       ])(
-        '$ac: $spreadsheetMaterial vs non-glass registration ($registrationMaterial) → Fail',
-        ({ spreadsheetMaterial, registrationMaterial }) => {
+        '%s vs non-glass registration (%s) fails',
+        (spreadsheetMaterial, registrationMaterial) => {
           const parsed = {
             meta: {
               MATERIAL: { value: spreadsheetMaterial }
@@ -232,37 +198,13 @@ describe('validateMaterialType', () => {
 
     describe('accredited operators (via associated registration)', () => {
       it.each([
-        // AC07: Glass_remelt v Remelt = Pass
-        {
-          spreadsheetMaterial: 'Glass_remelt',
-          glassRecyclingProcess: ['glass_re_melt'],
-          shouldPass: true,
-          ac: 'AC07'
-        },
-        // AC08: Glass_remelt v Other = Fail
-        {
-          spreadsheetMaterial: 'Glass_remelt',
-          glassRecyclingProcess: ['glass_other'],
-          shouldPass: false,
-          ac: 'AC08'
-        },
-        // AC09: Glass_other v Remelt = Fail
-        {
-          spreadsheetMaterial: 'Glass_other',
-          glassRecyclingProcess: ['glass_re_melt'],
-          shouldPass: false,
-          ac: 'AC09'
-        },
-        // AC10: Glass_other v Other = Pass
-        {
-          spreadsheetMaterial: 'Glass_other',
-          glassRecyclingProcess: ['glass_other'],
-          shouldPass: true,
-          ac: 'AC10'
-        }
+        ['Glass_remelt', ['glass_re_melt'], true],
+        ['Glass_remelt', ['glass_other'], false],
+        ['Glass_other', ['glass_re_melt'], false],
+        ['Glass_other', ['glass_other'], true]
       ])(
-        '$ac: $spreadsheetMaterial vs $glassRecyclingProcess → $shouldPass',
-        ({ spreadsheetMaterial, glassRecyclingProcess, shouldPass }) => {
+        '%s vs %s → %s',
+        (spreadsheetMaterial, glassRecyclingProcess, shouldPass) => {
           const parsed = {
             meta: {
               MATERIAL: { value: spreadsheetMaterial }
@@ -286,21 +228,11 @@ describe('validateMaterialType', () => {
       )
 
       it.each([
-        // AC11: Glass_remelt v Any non-glass material = Fail
-        {
-          spreadsheetMaterial: 'Glass_remelt',
-          registrationMaterial: 'aluminium',
-          ac: 'AC11'
-        },
-        // AC12: Glass_other v Any non-glass material = Fail
-        {
-          spreadsheetMaterial: 'Glass_other',
-          registrationMaterial: 'aluminium',
-          ac: 'AC12'
-        }
+        ['Glass_remelt', 'aluminium'],
+        ['Glass_other', 'aluminium']
       ])(
-        '$ac: $spreadsheetMaterial vs non-glass accredited registration ($registrationMaterial) → Fail',
-        ({ spreadsheetMaterial, registrationMaterial }) => {
+        '%s vs non-glass accredited registration (%s) fails',
+        (spreadsheetMaterial, registrationMaterial) => {
           const parsed = {
             meta: {
               MATERIAL: { value: spreadsheetMaterial }
