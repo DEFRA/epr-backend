@@ -217,6 +217,50 @@ describe('validation-pipeline', () => {
       })
     })
 
+    describe('empty fieldsRequiredForWasteBalance', () => {
+      it('returns EXCLUDED when fieldsRequiredForWasteBalance is empty (table does not contribute to waste balance)', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: Joi.object({
+            ROW_ID: Joi.number().min(10000).optional(),
+            SOME_FIELD: Joi.string().optional()
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          // Empty array means this table never contributes to waste balance
+          fieldsRequiredForWasteBalance: []
+        }
+
+        // Even with all fields valid and filled, should be EXCLUDED
+        const row = { ROW_ID: 10001, SOME_FIELD: 'valid value' }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.EXCLUDED)
+        expect(result.issues).toEqual([])
+      })
+
+      it('returns REJECTED when validation fails even if fieldsRequiredForWasteBalance is empty', () => {
+        const schema = {
+          unfilledValues: {},
+          validationSchema: Joi.object({
+            ROW_ID: Joi.number().min(10000).optional()
+          })
+            .unknown(true)
+            .prefs({ abortEarly: false }),
+          fieldsRequiredForWasteBalance: []
+        }
+
+        // ROW_ID is invalid - should still be REJECTED (VAL010 takes priority)
+        const row = { ROW_ID: 9999 }
+
+        const result = classifyRow(row, schema)
+
+        expect(result.outcome).toBe(ROW_OUTCOME.REJECTED)
+        expect(result.issues.length).toBeGreaterThan(0)
+      })
+    })
+
     describe('custom validators', () => {
       it('extracts field from context.field for object-level custom validators', () => {
         const schema = {

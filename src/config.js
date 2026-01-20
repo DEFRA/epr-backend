@@ -228,6 +228,14 @@ const baseConfig = {
       env: 'CDP_UPLOADER_S3_BUCKET_SUMMARY_LOGS'
     }
   },
+  piscina: {
+    maxThreads: {
+      doc: 'Maximum worker threads for summary log validation. Recommend half of available vCPUs.',
+      format: 'nat',
+      default: 2,
+      env: 'PISCINA_MAX_THREADS'
+    }
+  },
   regulator: {
     EA: {
       email: {

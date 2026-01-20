@@ -105,25 +105,14 @@ export function deduplicateOrganisations(
 }
 
 /**
- * Finds organization matches for a user based on email and Defra ID org ID
- * @param {string} defraIdOrgId - The Defra ID organization ID
+ * Finds the organisation linked to a Defra ID organisation
+ * @param {string} defraIdOrgId - The Defra ID organisation ID
  * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns Promise<{Organisation | undefined}> The matched organisation or undefined if none found
+ * @returns {Promise<Organisation | undefined>} The matched organisation or undefined if none found
  */
 export async function findOrganisationMatches(
   defraIdOrgId,
   organisationsRepository
 ) {
-  // Note: This function currently returns empty arrays as the organization matching
-  // logic is not yet implemented. The arrays below will be populated in a future
-  // implementation when the repository queries are added.
-
-  const allOrganisations = await organisationsRepository.findAll()
-
-  // Get linked organisation details if a link exists
-  const linkedOrg = allOrganisations.find(
-    (org) => org.linkedDefraOrganisation?.orgId === defraIdOrgId
-  )
-
-  return linkedOrg
+  return organisationsRepository.findByLinkedDefraOrgId(defraIdOrgId)
 }

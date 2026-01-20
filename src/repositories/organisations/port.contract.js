@@ -1,5 +1,6 @@
 import { testFindBehaviour } from './contract/find.contract.js'
 import { testFindAllIdsBehaviour } from './contract/find-all-ids.contract.js'
+import { testFindByLinkedDefraOrgIdBehaviour } from './contract/find-by-linked-defra-org-id.contract.js'
 import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testReplaceBehaviour } from './contract/replace.contract.js'
 import { testDataIsolationBehaviour } from './contract/data-isolation.contract.js'
@@ -14,6 +15,7 @@ export const testOrganisationsRepositoryContract = (repositoryFactory) => {
   testReplaceBehaviour(repositoryFactory)
   testFindBehaviour(repositoryFactory)
   testFindAllIdsBehaviour(repositoryFactory)
+  testFindByLinkedDefraOrgIdBehaviour(repositoryFactory)
   testFindRegistrationByIdBehaviour(repositoryFactory)
   testFindAccreditationByIdBehaviour(repositoryFactory)
   testDataIsolationBehaviour(repositoryFactory)

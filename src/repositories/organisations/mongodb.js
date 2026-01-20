@@ -1,5 +1,6 @@
 import Boom from '@hapi/boom'
 import { ObjectId } from 'mongodb'
+import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import {
   createInitialStatusHistory,
   mapDocumentWithCurrentStatuses,
@@ -139,6 +140,46 @@ const performFindAll = (db) => async () => {
   return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
 }
 
+const performFindByLinkedDefraOrgId = (db) => async (defraOrgId) => {
+  const doc = await db
+    .collection(COLLECTION_NAME)
+    .findOne({ 'linkedDefraOrganisation.orgId': defraOrgId })
+
+  if (!doc) {
+    return null
+  }
+
+  return mapDocumentWithCurrentStatuses(doc)
+}
+
+const escapeRegex = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const performFindAllLinkableForUser = (db) => async (email) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({
+      // Must not be linked
+      linkedDefraOrganisation: { $exists: false },
+      // Must be approved (check last status in statusHistory)
+      $expr: {
+        $eq: [
+          { $arrayElemAt: ['$statusHistory.status', -1] },
+          REG_ACC_STATUS.APPROVED
+        ]
+      },
+      // User must be an initial user (case-insensitive email match)
+      users: {
+        $elemMatch: {
+          email: { $regex: new RegExp(`^${escapeRegex(email)}$`, 'i') },
+          roles: USER_ROLES.INITIAL
+        }
+      }
+    })
+    .toArray()
+
+  return docs.map((doc) => mapDocumentWithCurrentStatuses(doc))
+}
+
 const findAllIds = (db) => async () => {
   const docs = await db
     .collection(COLLECTION_NAME)
@@ -193,6 +234,8 @@ export const createOrganisationsRepository =
       findById,
       findAll: performFindAll(db),
       findAllIds: findAllIds(db),
+      findByLinkedDefraOrgId: performFindByLinkedDefraOrgId(db),
+      findAllLinkableForUser: performFindAllLinkableForUser(db),
 
       async findRegistrationById(
         organisationId,
