@@ -387,22 +387,15 @@ describe('validateRegistration', () => {
       )
     })
 
-    it('glass: accepts glassRecyclingProcess with only glass_re_melt', () => {
-      const registration = buildRegistration({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_re_melt']
+    it('glass: accepts glassRecyclingProcess with exactly one valid value', () => {
+      ;['glass_re_melt', 'glass_other'].forEach((process) => {
+        const registration = buildRegistration({
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [process]
+        })
+
+        expect(() => validateRegistration(registration)).not.toThrow()
       })
-
-      expect(() => validateRegistration(registration)).not.toThrow()
-    })
-
-    it('glass: accepts glassRecyclingProcess with only glass_other', () => {
-      const registration = buildRegistration({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_other']
-      })
-
-      expect(() => validateRegistration(registration)).not.toThrow()
     })
 
     it('glass: rejects glassRecyclingProcess with both values', () => {
@@ -526,22 +519,15 @@ describe('validateAccreditation', () => {
       )
     })
 
-    it('glass: accepts glassRecyclingProcess with only glass_re_melt', () => {
-      const accreditation = buildAccreditation({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_re_melt']
+    it('glass: accepts glassRecyclingProcess with exactly one valid value', () => {
+      ;['glass_re_melt', 'glass_other'].forEach((process) => {
+        const accreditation = buildAccreditation({
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [process]
+        })
+
+        expect(() => validateAccreditation(accreditation)).not.toThrow()
       })
-
-      expect(() => validateAccreditation(accreditation)).not.toThrow()
-    })
-
-    it('glass: accepts glassRecyclingProcess with only glass_other', () => {
-      const accreditation = buildAccreditation({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_other']
-      })
-
-      expect(() => validateAccreditation(accreditation)).not.toThrow()
     })
 
     it('glass: rejects glassRecyclingProcess with both values', () => {
