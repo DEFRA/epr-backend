@@ -3,6 +3,23 @@ import { performUpdateWasteBalanceTransactions } from './helpers.js'
 
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
 
+/**
+ * Ensures the collection exists with required indexes.
+ * Safe to call multiple times - MongoDB createIndex is idempotent.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<import('mongodb').Collection>}
+ */
+async function ensureCollection(db) {
+  const collection = db.collection(WASTE_BALANCE_COLLECTION_NAME)
+
+  // Optimises waste balance lookups by accreditation ID
+  // Each accreditation has at most one balance document
+  await collection.createIndex({ accreditationId: 1 }, { unique: true })
+
+  return collection
+}
+
 const performFindByAccreditationId = (db) => async (accreditationId) => {
   const validatedAccreditationId = validateAccreditationId(accreditationId)
 
@@ -73,9 +90,11 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} [dependencies] - Optional dependencies
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [dependencies.organisationsRepository]
- * @returns {import('./port.js').WasteBalancesRepositoryFactory}
+ * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
-export const createWasteBalancesRepository = (db, dependencies = {}) => {
+export const createWasteBalancesRepository = async (db, dependencies = {}) => {
+  await ensureCollection(db)
+
   return () => ({
     findByAccreditationId: performFindByAccreditationId(db),
     updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {

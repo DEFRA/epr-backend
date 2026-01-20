@@ -46,8 +46,8 @@ export const mongoDbPlugin = {
       await createSeedData(
         db,
         isProduction,
-        createOrganisationsRepository(db)(),
-        createWasteRecordsRepository(db)()
+        (await createOrganisationsRepository(db))(),
+        (await createWasteRecordsRepository(db))()
       )
 
       server.logger.info({

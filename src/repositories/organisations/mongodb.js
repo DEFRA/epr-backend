@@ -11,6 +11,31 @@ import { validateId, validateOrganisationInsert } from './schema/index.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+
+/**
+ * Ensures the collection exists with required indexes.
+ * Safe to call multiple times - MongoDB createIndex is idempotent.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<import('mongodb').Collection>}
+ */
+async function ensureCollection(db) {
+  const collection = db.collection(COLLECTION_NAME)
+
+  // Create unique indexes to prevent duplicates
+  await collection.createIndex({ orgId: 1 }, { unique: true })
+  await collection.createIndex(
+    { 'registrations.id': 1 },
+    { unique: true, sparse: true }
+  )
+  await collection.createIndex(
+    { 'accreditations.id': 1 },
+    { unique: true, sparse: true }
+  )
+  await collection.createIndex({ 'linkedDefraOrganisation.orgId': 1 })
+
+  return collection
+}
 // Production-safe defaults for multi-AZ MongoDB w:majority (typical p99 lag: 100-200ms)
 const DEFAULT_MAX_CONSISTENCY_RETRIES = 20
 const DEFAULT_CONSISTENCY_RETRY_DELAY_MS = 25
@@ -216,10 +241,15 @@ const findAllIds = (db) => async () => {
 /**
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistencyConfig] - Eventual consistency retry configuration
- * @returns {import('./port.js').OrganisationsRepositoryFactory}
+ * @returns {Promise<import('./port.js').OrganisationsRepositoryFactory>}
  */
-export const createOrganisationsRepository =
-  (db, eventualConsistencyConfig) => () => {
+export const createOrganisationsRepository = async (
+  db,
+  eventualConsistencyConfig
+) => {
+  await ensureCollection(db)
+
+  return () => {
     const maxRetries =
       eventualConsistencyConfig?.maxRetries ?? DEFAULT_MAX_CONSISTENCY_RETRIES
     const retryDelayMs =
@@ -289,3 +319,4 @@ export const createOrganisationsRepository =
       }
     }
   }
+}

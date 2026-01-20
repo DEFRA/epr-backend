@@ -3,7 +3,9 @@ import { createFormSubmissionsRepository } from '#repositories/form-submissions/
 import { getUploadedFileInfo } from '#formsubmission/parsing-common/get-file-upload-details.js'
 
 const logFileDetails = async (server) => {
-  const formSubmissionsRepository = createFormSubmissionsRepository(server.db)()
+  const formSubmissionsRepository = (
+    await createFormSubmissionsRepository(server.db)
+  )()
 
   const uploadedFiles = await getUploadedFileInfo(formSubmissionsRepository)
   logger.info({
