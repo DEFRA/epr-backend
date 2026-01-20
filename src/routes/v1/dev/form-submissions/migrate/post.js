@@ -2,7 +2,6 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import Joi from 'joi'
 
-import { logger } from '#common/helpers/logging/logger.js'
 import { MigrationOrchestrator } from '#formsubmission/migration/migration-orchestrator.js'
 
 /** @import {HapiRequest} from '#common/hapi-types.js' */
@@ -38,73 +37,18 @@ async function handler(request, h) {
   const { formSubmissionsRepository, organisationsRepository } = request
   const { id } = request.params
 
-  // Verify the organisation form submission exists
-  const orgSubmission = await formSubmissionsRepository.findOrganisationById(id)
-
-  if (!orgSubmission) {
-    throw Boom.notFound(`Organisation form submission not found: ${id}`)
-  }
-
-  // Find related registrations and accreditations by referenceNumber
-  const [registrations, accreditations] = await Promise.all([
-    formSubmissionsRepository.findRegistrationsBySystemReference(id),
-    formSubmissionsRepository.findAccreditationsBySystemReference(id)
-  ])
-
-  logger.info({
-    message: `Migrating organisation ${id} with ${registrations.length} registrations and ${accreditations.length} accreditations`
-  })
-
-  // Build the migration delta for this specific organisation
-  const pendingMigration = {
-    organisations: new Set([id]),
-    registrations: new Set(registrations.map((r) => r.id)),
-    accreditations: new Set(accreditations.map((a) => a.id)),
-    totalCount: 1 + registrations.length + accreditations.length
-  }
-
-  // Check what's already migrated
-  const migratedIds = await organisationsRepository.findAllIds()
-  const migrated = {
-    organisations: migratedIds.organisations,
-    registrations: migratedIds.registrations,
-    accreditations: migratedIds.accreditations
-  }
-
-  // Use the MigrationOrchestrator to transform and link
   const orchestrator = new MigrationOrchestrator(
     formSubmissionsRepository,
     organisationsRepository
   )
 
-  const organisations = await orchestrator.transformAndLinkAllNewSubmissions(
-    migrated,
-    pendingMigration
-  )
+  const result = await orchestrator.migrateById(id)
 
-  const migrationItems = orchestrator.prepareMigrationItems(
-    organisations,
-    pendingMigration
-  )
+  if (!result) {
+    throw Boom.notFound(`Organisation form submission not found: ${id}`)
+  }
 
-  // Persist the migrated organisation
-  const { upsertOrganisations } =
-    await import('#formsubmission/migration/organisation-persistence.js')
-  await upsertOrganisations(organisationsRepository, migrationItems)
-
-  logger.info({
-    message: `Successfully migrated organisation ${id}`
-  })
-
-  return h
-    .response({
-      migrated: {
-        organisation: true,
-        registrations: registrations.length,
-        accreditations: accreditations.length
-      }
-    })
-    .code(StatusCodes.OK)
+  return h.response({ migrated: result }).code(StatusCodes.OK)
 }
 
 export const devFormSubmissionsMigratePost = {

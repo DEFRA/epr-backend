@@ -1,7 +1,10 @@
 import { logger } from '#common/helpers/logging/logger.js'
 import { ObjectId } from 'mongodb'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createFormDataMigrator } from './migration-orchestrator.js'
+import {
+  createFormDataMigrator,
+  MigrationOrchestrator
+} from './migration-orchestrator.js'
 import { transformAll } from './submission-transformer.js'
 import { getSubmissionsToMigrate } from './migration-delta-calculator.js'
 import { upsertOrganisations } from './organisation-persistence.js'
@@ -262,6 +265,216 @@ describe('MigrationOrchestrator', () => {
             operation: 'update'
           }
         ])
+      )
+    })
+  })
+
+  describe('migrateById()', () => {
+    let orchestrator
+
+    beforeEach(() => {
+      formsSubmissionRepository.findRegistrationsBySystemReference = vi.fn()
+      formsSubmissionRepository.findAccreditationsBySystemReference = vi.fn()
+
+      orchestrator = new MigrationOrchestrator(
+        formsSubmissionRepository,
+        organisationsRepository
+      )
+    })
+
+    it('should return null when organisation not found', async () => {
+      formsSubmissionRepository.findOrganisationById.mockResolvedValue(null)
+
+      const result = await orchestrator.migrateById('non-existent-id')
+
+      expect(result).toBeNull()
+      expect(transformAll).not.toHaveBeenCalled()
+      expect(upsertOrganisations).not.toHaveBeenCalled()
+    })
+
+    it('should migrate organisation with no registrations or accreditations', async () => {
+      const orgId = new ObjectId().toString()
+      const org = createOrg(orgId)
+
+      formsSubmissionRepository.findOrganisationById.mockResolvedValue({
+        id: orgId
+      })
+      formsSubmissionRepository.findRegistrationsBySystemReference.mockResolvedValue(
+        []
+      )
+      formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
+        []
+      )
+      organisationsRepository.findAllIds.mockResolvedValue({
+        organisations: new Set(),
+        registrations: new Set(),
+        accreditations: new Set()
+      })
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [],
+        accreditations: []
+      })
+
+      const result = await orchestrator.migrateById(orgId)
+
+      expect(result).toEqual({
+        organisation: true,
+        registrations: 0,
+        accreditations: 0
+      })
+
+      expect(upsertOrganisations).toHaveBeenCalledWith(
+        organisationsRepository,
+        [{ value: expect.objectContaining({ id: orgId }), operation: 'insert' }]
+      )
+
+      expect(logger.info).toHaveBeenCalledWith({
+        message: `Migrating organisation ${orgId} with 0 registrations and 0 accreditations`
+      })
+      expect(logger.info).toHaveBeenCalledWith({
+        message: `Successfully migrated organisation ${orgId}`
+      })
+    })
+
+    it('should migrate organisation with related registrations', async () => {
+      const orgId = new ObjectId().toString()
+      const regId = new ObjectId().toString()
+      const org = createOrg(orgId)
+      const reg = createReg(regId, orgId)
+
+      formsSubmissionRepository.findOrganisationById.mockResolvedValue({
+        id: orgId
+      })
+      formsSubmissionRepository.findRegistrationsBySystemReference.mockResolvedValue(
+        [{ id: regId }]
+      )
+      formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
+        []
+      )
+      organisationsRepository.findAllIds.mockResolvedValue({
+        organisations: new Set(),
+        registrations: new Set(),
+        accreditations: new Set()
+      })
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [reg],
+        accreditations: []
+      })
+
+      const result = await orchestrator.migrateById(orgId)
+
+      expect(result).toEqual({
+        organisation: true,
+        registrations: 1,
+        accreditations: 0
+      })
+
+      expect(transformAll).toHaveBeenCalledWith(
+        formsSubmissionRepository,
+        expect.objectContaining({
+          organisations: new Set([orgId]),
+          registrations: new Set([regId])
+        })
+      )
+    })
+
+    it('should migrate organisation with related accreditations', async () => {
+      const orgId = new ObjectId().toString()
+      const accrId = new ObjectId().toString()
+      const org = createOrg(orgId)
+      const accr = createAccr(accrId, orgId)
+
+      formsSubmissionRepository.findOrganisationById.mockResolvedValue({
+        id: orgId
+      })
+      formsSubmissionRepository.findRegistrationsBySystemReference.mockResolvedValue(
+        []
+      )
+      formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
+        [{ id: accrId }]
+      )
+      organisationsRepository.findAllIds.mockResolvedValue({
+        organisations: new Set(),
+        registrations: new Set(),
+        accreditations: new Set()
+      })
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [],
+        accreditations: [accr]
+      })
+
+      const result = await orchestrator.migrateById(orgId)
+
+      expect(result).toEqual({
+        organisation: true,
+        registrations: 0,
+        accreditations: 1
+      })
+
+      expect(transformAll).toHaveBeenCalledWith(
+        formsSubmissionRepository,
+        expect.objectContaining({
+          organisations: new Set([orgId]),
+          accreditations: new Set([accrId])
+        })
+      )
+    })
+
+    it('should migrate organisation with both registrations and accreditations', async () => {
+      const orgId = new ObjectId().toString()
+      const regId = new ObjectId().toString()
+      const accrId = new ObjectId().toString()
+      const org = createOrg(orgId)
+      const reg = createReg(regId, orgId)
+      const accr = createAccr(accrId, orgId)
+
+      formsSubmissionRepository.findOrganisationById.mockResolvedValue({
+        id: orgId
+      })
+      formsSubmissionRepository.findRegistrationsBySystemReference.mockResolvedValue(
+        [{ id: regId }]
+      )
+      formsSubmissionRepository.findAccreditationsBySystemReference.mockResolvedValue(
+        [{ id: accrId }]
+      )
+      organisationsRepository.findAllIds.mockResolvedValue({
+        organisations: new Set(),
+        registrations: new Set(),
+        accreditations: new Set()
+      })
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [reg],
+        accreditations: [accr]
+      })
+
+      const result = await orchestrator.migrateById(orgId)
+
+      expect(result).toEqual({
+        organisation: true,
+        registrations: 1,
+        accreditations: 1
+      })
+
+      expect(upsertOrganisations).toHaveBeenCalledWith(
+        organisationsRepository,
+        [
+          {
+            value: expect.objectContaining({
+              id: orgId,
+              registrations: [reg],
+              accreditations: [accr]
+            }),
+            operation: 'insert'
+          }
+        ]
       )
     })
   })

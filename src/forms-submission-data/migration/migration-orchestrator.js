@@ -118,6 +118,65 @@ export class MigrationOrchestrator {
   }
 
   /**
+   * Migrate a single organisation by ID.
+   * @param {string} id - The organisation form submission ID
+   * @returns {Promise<{organisation: boolean, registrations: number, accreditations: number} | null>}
+   */
+  async migrateById(id) {
+    const orgSubmission =
+      await this.formsSubmissionRepository.findOrganisationById(id)
+
+    if (!orgSubmission) {
+      return null
+    }
+
+    const [registrations, accreditations] = await Promise.all([
+      this.formsSubmissionRepository.findRegistrationsBySystemReference(id),
+      this.formsSubmissionRepository.findAccreditationsBySystemReference(id)
+    ])
+
+    logger.info({
+      message: `Migrating organisation ${id} with ${registrations.length} registrations and ${accreditations.length} accreditations`
+    })
+
+    const pendingMigration = {
+      organisations: new Set([id]),
+      registrations: new Set(registrations.map((r) => r.id)),
+      accreditations: new Set(accreditations.map((a) => a.id)),
+      totalCount: 1 + registrations.length + accreditations.length
+    }
+
+    const migratedIds = await this.organisationsRepository.findAllIds()
+    const migrated = {
+      organisations: migratedIds.organisations,
+      registrations: migratedIds.registrations,
+      accreditations: migratedIds.accreditations
+    }
+
+    const organisations = await this.transformAndLinkAllNewSubmissions(
+      migrated,
+      pendingMigration
+    )
+
+    const migrationItems = this.prepareMigrationItems(
+      organisations,
+      pendingMigration
+    )
+
+    await upsertOrganisations(this.organisationsRepository, migrationItems)
+
+    logger.info({
+      message: `Successfully migrated organisation ${id}`
+    })
+
+    return {
+      organisation: true,
+      registrations: registrations.length,
+      accreditations: accreditations.length
+    }
+  }
+
+  /**
    * @returns {Promise<void>}
    */
   async migrate() {
