@@ -88,8 +88,7 @@ async function executeMigration(organisationsRepository, dryRun) {
  */
 export const runGlassMigration = async (server, options = {}) => {
   try {
-    const featureFlagsInstance = options.featureFlags || server.featureFlags
-    const mode = featureFlagsInstance.getGlassMigrationMode()
+    const mode = server.featureFlags.getGlassMigrationMode()
     const dryRun = options.dryRun ?? mode === 'dry-run'
 
     logger.info({

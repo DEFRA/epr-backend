@@ -114,17 +114,6 @@ describe('runGlassMigration', () => {
     expect(mockLock.free).toHaveBeenCalled()
   })
 
-  it('should use feature flags from options if provided', async () => {
-    const optionsFeatureFlags = {
-      getGlassMigrationMode: vi.fn().mockReturnValue('disabled')
-    }
-
-    await runGlassMigration(mockServer, { featureFlags: optionsFeatureFlags })
-
-    expect(optionsFeatureFlags.getGlassMigrationMode).toHaveBeenCalled()
-    expect(mockServer.featureFlags.getGlassMigrationMode).not.toHaveBeenCalled()
-  })
-
   it('should handle errors gracefully', async () => {
     mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockRepository.findAll.mockRejectedValue(new Error('Database error'))
