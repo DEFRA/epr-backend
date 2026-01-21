@@ -102,7 +102,7 @@ export const validateMaterialType = ({
       issues.addFatal(
         VALIDATION_CATEGORY.BUSINESS,
         'Glass recycling process does not match registration',
-        VALIDATION_CODE.MATERIAL_MISMATCH,
+        VALIDATION_CODE.GLASS_RECYCLING_PROCESS_MISMATCH,
         {
           location,
           expected: requiredGlassProcess,
