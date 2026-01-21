@@ -189,6 +189,42 @@ const extractMetaValues = (parsedMeta) => {
   )
 }
 
+const handleValidationFailure = (error, issues, loggingContext) => {
+  logger.error({
+    error,
+    message: `Failed to validate summary log file: ${loggingContext}`,
+    event: {
+      category: LOGGING_EVENT_CATEGORIES.SERVER,
+      action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
+    }
+  })
+
+  if (error instanceof SpreadsheetValidationError) {
+    issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
+  } else {
+    issues.addFatal(
+      VALIDATION_CATEGORY.TECHNICAL,
+      error.message,
+      VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
+    )
+  }
+}
+
+const validateExporterDates = (wasteRecords, registration) => {
+  for (const wasteRecord of wasteRecords) {
+    // EXPORTER records are guaranteed to have DATE_OF_EXPORT if they are RECEIVED_LOADS
+    const dateOfExport =
+      wasteRecord.record.data[RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]
+
+    if (
+      dateOfExport &&
+      !isWithinAccreditationDateRange(dateOfExport, registration)
+    ) {
+      wasteRecord.outcome = ROW_OUTCOME.IGNORED
+    }
+  }
+}
+
 const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
@@ -250,40 +286,12 @@ const performValidationChecks = async ({
 
     // Validate that Exporter load dates are within accreditation period
     if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
-      for (const wasteRecord of wasteRecords) {
-        // EXPORTER records are guaranteed to have DATE_OF_EXPORT if they are RECEIVED_LOADS
-        const dateOfExport =
-          wasteRecord.record.data[RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]
-
-        if (
-          dateOfExport &&
-          !isWithinAccreditationDateRange(dateOfExport, registration)
-        ) {
-          wasteRecord.outcome = ROW_OUTCOME.IGNORED
-        }
-      }
+      validateExporterDates(wasteRecords, registration)
     }
 
     issues.merge(dataResult.issues)
   } catch (error) {
-    logger.error({
-      error,
-      message: `Failed to validate summary log file: ${loggingContext}`,
-      event: {
-        category: LOGGING_EVENT_CATEGORIES.SERVER,
-        action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
-      }
-    })
-
-    if (error instanceof SpreadsheetValidationError) {
-      issues.addFatal(VALIDATION_CATEGORY.TECHNICAL, error.message, error.code)
-    } else {
-      issues.addFatal(
-        VALIDATION_CATEGORY.TECHNICAL,
-        error.message,
-        VALIDATION_CODE.VALIDATION_SYSTEM_ERROR
-      )
-    }
+    handleValidationFailure(error, issues, loggingContext)
   }
 
   return { issues, wasteRecords, meta }

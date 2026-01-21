@@ -8,10 +8,9 @@ import {
 } from '#domain/summary-logs/table-schemas/shared/index.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 
-import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
-
 /**
  * Extracted waste balance fields.
+
  * @typedef {Object} WasteBalanceFields
 
  * @property {Date} dispatchDate
@@ -76,5 +75,3 @@ export const extractWasteBalanceFields = (record) => {
           ]) || 0
   }
 }
-
-export { isWithinAccreditationDateRange }
