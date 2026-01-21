@@ -144,7 +144,7 @@ export const repositories = {
               db,
               options?.eventualConsistency
             )
-          return await createWasteBalancesRepository(db, {
+          return createWasteBalancesRepository(db, {
             organisationsRepository: organisationsRepositoryFactory()
           })
         },
