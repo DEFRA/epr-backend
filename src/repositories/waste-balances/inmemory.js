@@ -47,6 +47,15 @@ export const performFindByAccreditationId =
     return balance ? structuredClone(balance) : null
   }
 
+const performFindByAccreditationIds =
+  (wasteBalanceStorage) => async (accreditationIds) => {
+    const balances = wasteBalanceStorage.filter((b) =>
+      accreditationIds.includes(b.accreditationId)
+    )
+
+    return balances.map((balance) => structuredClone(balance))
+  }
+
 /**
  * Create an in-memory waste balances repository.
  * Ensures data isolation by deep-cloning on read.
@@ -63,6 +72,7 @@ export const createInMemoryWasteBalancesRepository = (
 
   return () => ({
     findByAccreditationId: performFindByAccreditationId(wasteBalanceStorage),
+    findByAccreditationIds: performFindByAccreditationIds(wasteBalanceStorage),
     updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
