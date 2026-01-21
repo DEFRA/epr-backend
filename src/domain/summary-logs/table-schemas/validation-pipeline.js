@@ -10,18 +10,19 @@
 /**
  * Row classification outcome type
  *
- * @typedef {'REJECTED'|'EXCLUDED'|'INCLUDED'} RowOutcome
+ * @typedef {'REJECTED'|'EXCLUDED'|'INCLUDED'|'IGNORED'} RowOutcome
  */
 
 /**
  * Row classification outcomes
  *
- * @type {Readonly<{REJECTED: 'REJECTED', EXCLUDED: 'EXCLUDED', INCLUDED: 'INCLUDED'}>}
+ * @type {Readonly<{REJECTED: 'REJECTED', EXCLUDED: 'EXCLUDED', INCLUDED: 'INCLUDED', IGNORED: 'IGNORED'}>}
  */
 export const ROW_OUTCOME = Object.freeze({
   REJECTED: 'REJECTED',
   EXCLUDED: 'EXCLUDED',
-  INCLUDED: 'INCLUDED'
+  INCLUDED: 'INCLUDED',
+  IGNORED: 'IGNORED'
 })
 
 /**

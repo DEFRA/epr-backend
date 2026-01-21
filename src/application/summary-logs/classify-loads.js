@@ -110,6 +110,10 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
   const loads = createEmptyLoads()
 
   for (const { record, issues, outcome } of wasteRecords) {
+    if (outcome === ROW_OUTCOME.IGNORED) {
+      continue
+    }
+
     const classification = classifyRecord(record, summaryLogId)
     const validityKey = issues.length > 0 ? 'invalid' : 'valid'
     const validityCategory = loads[classification][validityKey]

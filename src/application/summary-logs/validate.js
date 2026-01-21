@@ -16,12 +16,15 @@ import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/excel
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
+import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { validateDataBusiness } from './validations/data-business.js'
+import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
+import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
-import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
 
 /** @typedef {import('#domain/summary-logs/model.js').SummaryLog} SummaryLog */
 /** @typedef {import('#domain/summary-logs/status.js').SummaryLogStatus} SummaryLogStatus */
@@ -242,6 +245,23 @@ const performValidationChecks = async ({
     })
 
     wasteRecords = dataResult.wasteRecords
+
+    // Validate that Exporter load dates are within accreditation period
+    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
+      for (const wasteRecord of wasteRecords) {
+        // EXPORTER records are guaranteed to have DATE_OF_EXPORT if they are RECEIVED_LOADS
+        const dateOfExport =
+          wasteRecord.record.data[RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]
+
+        if (
+          dateOfExport &&
+          !isWithinAccreditationDateRange(dateOfExport, registration)
+        ) {
+          wasteRecord.outcome = ROW_OUTCOME.IGNORED
+        }
+      }
+    }
+
     issues.merge(dataResult.issues)
   } catch (error) {
     logger.error({
@@ -324,7 +344,8 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
   const counts = {
     [ROW_OUTCOME.INCLUDED]: 0,
     [ROW_OUTCOME.EXCLUDED]: 0,
-    [ROW_OUTCOME.REJECTED]: 0
+    [ROW_OUTCOME.REJECTED]: 0,
+    [ROW_OUTCOME.IGNORED]: 0
   }
 
   for (const { outcome } of wasteRecords) {
