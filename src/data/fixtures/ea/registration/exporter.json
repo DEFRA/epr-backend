@@ -80,7 +80,7 @@
       "shortDescription": "Glass process",
       "title": "What process is intended for recycling the glass?",
       "type": "RadiosField",
-      "value": "Both"
+      "value": "Glass re-melt"
     },
     {
       "shortDescription": "Suppliers",
@@ -1043,7 +1043,7 @@
         "fubWwR": "CBDU123456",
         "QHJFhL": "Waste management licence or environmental permit,Installation permit or Pollution Prevention and Control (PPC) permit,Waste exemption",
         "BeHQjA": "Glass (R5)",
-        "RaiIHT": "Both",
+        "RaiIHT": "Glass re-melt",
         "vsaLhJ": "Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)",
         "ZcjmuP": "SouthHampton\r\nPortsmouth",
         "NOwTKr": "Emma Roberts",
