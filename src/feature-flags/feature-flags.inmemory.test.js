@@ -89,4 +89,19 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
   })
+
+  it('returns true when glassMigration flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({ glassMigration: true })
+    expect(flags.isGlassMigrationEnabled()).toBe(true)
+  })
+
+  it('returns false when glassMigration flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({ glassMigration: false })
+    expect(flags.isGlassMigrationEnabled()).toBe(false)
+  })
+
+  it('returns false when glassMigration flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isGlassMigrationEnabled()).toBe(false)
+  })
 })

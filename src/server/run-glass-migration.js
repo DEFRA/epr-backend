@@ -19,10 +19,7 @@ export async function migrateGlassOrganisation(org, repository) {
   const migratedOrg = migrateOrganisation(org)
 
   logger.info({
-    message: `Migrating glass registrations/accreditations for organisation ${org.id}`,
-    organisationId: org.id,
-    registrationCount: migratedOrg.registrations.length,
-    accreditationCount: migratedOrg.accreditations.length
+    message: `Migrating glass registrations/accreditations for organisation ${org.id} (${migratedOrg.registrations.length} registrations, ${migratedOrg.accreditations.length} accreditations)`
   })
 
   await repository.replace(org.id, org.version, migratedOrg)
@@ -71,9 +68,7 @@ export const runGlassMigration = async (server, options = {}) => {
         }
 
         logger.info({
-          message: `Glass migration completed successfully`,
-          migratedCount,
-          totalOrganisations: organisations.length
+          message: `Glass migration completed successfully (${migratedCount}/${organisations.length} organisations migrated)`
         })
       } finally {
         await lock.free()
