@@ -83,13 +83,14 @@ async function executeMigration(organisationsRepository, dryRun) {
  * Splits records with both processes into two
  * @param {Object} server
  * @param {Object} options
- * @param {boolean} options.dryRun - If true, don't actually persist changes
+ * @param {boolean} [options.dryRun] - If true, don't actually persist changes. If not provided, uses the feature flag value.
  * @returns {Promise<{dryRun: boolean, migrated?: number, wouldMigrate?: number, total: number}|undefined>}
  */
 export const runGlassMigration = async (server, options = {}) => {
   try {
     const featureFlagsInstance = options.featureFlags || server.featureFlags
-    const dryRun = options.dryRun ?? false
+    const dryRun =
+      options.dryRun ?? featureFlagsInstance.isGlassMigrationDryRun()
 
     logger.info({
       message: `Starting glass migration. Feature flag enabled: ${featureFlagsInstance.isGlassMigrationEnabled()}${dryRun ? ' [DRY-RUN]' : ''}`

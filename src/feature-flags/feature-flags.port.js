@@ -4,6 +4,7 @@
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
  * @property {() => boolean} isGlassMigrationEnabled
+ * @property {() => boolean} isGlassMigrationDryRun
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled
  * @property {() => boolean} isSummaryLogsEnabled
  */

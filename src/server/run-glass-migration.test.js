@@ -27,7 +27,8 @@ describe('runGlassMigration', () => {
 
     mockServer = {
       featureFlags: {
-        isGlassMigrationEnabled: vi.fn()
+        isGlassMigrationEnabled: vi.fn(),
+        isGlassMigrationDryRun: vi.fn().mockReturnValue(false)
       },
       locker: {
         lock: vi.fn().mockResolvedValue(mockLock)
@@ -116,7 +117,8 @@ describe('runGlassMigration', () => {
 
   it('should use feature flags from options if provided', async () => {
     const optionsFeatureFlags = {
-      isGlassMigrationEnabled: vi.fn().mockReturnValue(false)
+      isGlassMigrationEnabled: vi.fn().mockReturnValue(false),
+      isGlassMigrationDryRun: vi.fn().mockReturnValue(false)
     }
 
     await runGlassMigration(mockServer, { featureFlags: optionsFeatureFlags })
@@ -235,7 +237,7 @@ describe('runGlassMigration', () => {
   })
 
   describe('dry-run mode', () => {
-    it('should not call replace when dryRun is true', async () => {
+    it('should not call replace when dryRun option is true', async () => {
       mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
       mockRepository.findAll.mockResolvedValue([
         {
@@ -327,6 +329,100 @@ describe('runGlassMigration', () => {
         dryRun: false
       })
 
+      expect(result).toEqual({
+        dryRun: false,
+        migrated: 1,
+        total: 1
+      })
+    })
+
+    it('should use dry-run mode from feature flag when dryRun option is not provided', async () => {
+      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockServer.featureFlags.isGlassMigrationDryRun.mockReturnValue(true)
+      mockRepository.findAll.mockResolvedValue([
+        {
+          id: 'org-1',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              registrationNumber: 'REG-2025-GL',
+              material: 'glass',
+              glassRecyclingProcess: ['glass_re_melt']
+            }
+          ],
+          accreditations: []
+        }
+      ])
+
+      const result = await runGlassMigration(mockServer, {
+        organisationsRepository: mockRepository
+      })
+
+      expect(mockRepository.replace).not.toHaveBeenCalled()
+      expect(result).toEqual({
+        dryRun: true,
+        wouldMigrate: 1,
+        total: 1
+      })
+    })
+
+    it('should migrate normally when feature flag dry-run is false and no dryRun option provided', async () => {
+      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockServer.featureFlags.isGlassMigrationDryRun.mockReturnValue(false)
+      mockRepository.findAll.mockResolvedValue([
+        {
+          id: 'org-1',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              registrationNumber: 'REG-2025-GL',
+              material: 'glass',
+              glassRecyclingProcess: ['glass_re_melt']
+            }
+          ],
+          accreditations: []
+        }
+      ])
+
+      const result = await runGlassMigration(mockServer, {
+        organisationsRepository: mockRepository
+      })
+
+      expect(mockRepository.replace).toHaveBeenCalled()
+      expect(result).toEqual({
+        dryRun: false,
+        migrated: 1,
+        total: 1
+      })
+    })
+
+    it('should allow explicit dryRun option to override feature flag', async () => {
+      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockServer.featureFlags.isGlassMigrationDryRun.mockReturnValue(true)
+      mockRepository.findAll.mockResolvedValue([
+        {
+          id: 'org-1',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              registrationNumber: 'REG-2025-GL',
+              material: 'glass',
+              glassRecyclingProcess: ['glass_re_melt']
+            }
+          ],
+          accreditations: []
+        }
+      ])
+
+      const result = await runGlassMigration(mockServer, {
+        organisationsRepository: mockRepository,
+        dryRun: false
+      })
+
+      expect(mockRepository.replace).toHaveBeenCalled()
       expect(result).toEqual({
         dryRun: false,
         migrated: 1,

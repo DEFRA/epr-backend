@@ -90,18 +90,45 @@ describe('createInMemoryFeatureFlags', () => {
     expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
   })
 
-  it('returns true when glassMigration flag is enabled', () => {
-    const flags = createInMemoryFeatureFlags({ glassMigration: true })
-    expect(flags.isGlassMigrationEnabled()).toBe(true)
-  })
+  describe('glassMigration flag', () => {
+    it('isGlassMigrationEnabled returns true when set to true', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'true' })
+      expect(flags.isGlassMigrationEnabled()).toBe(true)
+    })
 
-  it('returns false when glassMigration flag is disabled', () => {
-    const flags = createInMemoryFeatureFlags({ glassMigration: false })
-    expect(flags.isGlassMigrationEnabled()).toBe(false)
-  })
+    it('isGlassMigrationEnabled returns true when set to dry-run', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'dry-run' })
+      expect(flags.isGlassMigrationEnabled()).toBe(true)
+    })
 
-  it('returns false when glassMigration flag is not provided', () => {
-    const flags = createInMemoryFeatureFlags({})
-    expect(flags.isGlassMigrationEnabled()).toBe(false)
+    it('isGlassMigrationEnabled returns false when set to false', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'false' })
+      expect(flags.isGlassMigrationEnabled()).toBe(false)
+    })
+
+    it('isGlassMigrationEnabled returns false when not provided', () => {
+      const flags = createInMemoryFeatureFlags({})
+      expect(flags.isGlassMigrationEnabled()).toBe(false)
+    })
+
+    it('isGlassMigrationDryRun returns true when set to dry-run', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'dry-run' })
+      expect(flags.isGlassMigrationDryRun()).toBe(true)
+    })
+
+    it('isGlassMigrationDryRun returns false when set to true', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'true' })
+      expect(flags.isGlassMigrationDryRun()).toBe(false)
+    })
+
+    it('isGlassMigrationDryRun returns false when set to false', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'false' })
+      expect(flags.isGlassMigrationDryRun()).toBe(false)
+    })
+
+    it('isGlassMigrationDryRun returns false when not provided', () => {
+      const flags = createInMemoryFeatureFlags({})
+      expect(flags.isGlassMigrationDryRun()).toBe(false)
+    })
   })
 })

@@ -18,6 +18,10 @@ export const createConfigFeatureFlags = (config) => ({
     return config.get('featureFlags.calculateWasteBalanceOnImport')
   },
   isGlassMigrationEnabled() {
-    return config.get('featureFlags.glassMigration')
+    const value = config.get('featureFlags.glassMigration')
+    return value === 'true' || value === 'dry-run'
+  },
+  isGlassMigrationDryRun() {
+    return config.get('featureFlags.glassMigration') === 'dry-run'
   }
 })
