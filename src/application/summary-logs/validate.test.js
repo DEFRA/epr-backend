@@ -1126,6 +1126,8 @@ describe('SummaryLogsValidator', () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
         registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
         material: 'aluminium'

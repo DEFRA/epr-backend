@@ -27,6 +27,7 @@ import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditat
 import { RECEIVED_LOADS_FIELDS as EXPORTER_RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import {
   RECEIVED_LOADS_FIELDS as REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS,
+  REPROCESSED_LOADS_FIELDS as REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS as REPROCESSOR_INPUT_SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
@@ -238,7 +239,9 @@ const validateReprocessorInputDates = (wasteRecords, registration) => {
     const dateToCheck =
       data[
         REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] || data[REPROCESSOR_INPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+      ] ||
+      data[REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
+      data[REPROCESSOR_INPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
 
     if (
       dateToCheck &&
@@ -313,6 +316,8 @@ const performValidationChecks = async ({
       validateExporterDates(wasteRecords, registration)
     } else if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
       validateReprocessorInputDates(wasteRecords, registration)
+    } else {
+      // TODO: Add support for PROCESSING_TYPES.REPROCESSOR_OUTPUT
     }
 
     issues.merge(dataResult.issues)
