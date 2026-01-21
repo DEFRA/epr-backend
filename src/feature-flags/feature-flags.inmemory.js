@@ -17,11 +17,7 @@ export const createInMemoryFeatureFlags = (flags = {}) => ({
   isCalculateWasteBalanceOnImportEnabled() {
     return flags.calculateWasteBalanceOnImport ?? false
   },
-  isGlassMigrationEnabled() {
-    const value = flags.glassMigration
-    return value === 'true' || value === 'dry-run'
-  },
-  isGlassMigrationDryRun() {
-    return flags.glassMigration === 'dry-run'
+  getGlassMigrationMode() {
+    return flags.glassMigration ?? 'disabled'
   }
 })

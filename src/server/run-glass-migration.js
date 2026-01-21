@@ -89,14 +89,14 @@ async function executeMigration(organisationsRepository, dryRun) {
 export const runGlassMigration = async (server, options = {}) => {
   try {
     const featureFlagsInstance = options.featureFlags || server.featureFlags
-    const dryRun =
-      options.dryRun ?? featureFlagsInstance.isGlassMigrationDryRun()
+    const mode = featureFlagsInstance.getGlassMigrationMode()
+    const dryRun = options.dryRun ?? mode === 'dry-run'
 
     logger.info({
-      message: `Starting glass migration. Feature flag enabled: ${featureFlagsInstance.isGlassMigrationEnabled()}${dryRun ? ' [DRY-RUN]' : ''}`
+      message: `Starting glass migration. Mode: ${mode}${dryRun ? ' [DRY-RUN]' : ''}`
     })
 
-    if (!featureFlagsInstance.isGlassMigrationEnabled()) {
+    if (mode === 'disabled') {
       return
     }
 

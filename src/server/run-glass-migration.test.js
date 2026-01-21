@@ -27,8 +27,7 @@ describe('runGlassMigration', () => {
 
     mockServer = {
       featureFlags: {
-        isGlassMigrationEnabled: vi.fn(),
-        isGlassMigrationDryRun: vi.fn().mockReturnValue(false)
+        getGlassMigrationMode: vi.fn().mockReturnValue('disabled')
       },
       locker: {
         lock: vi.fn().mockResolvedValue(mockLock)
@@ -38,7 +37,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should skip migration when feature flag is disabled', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(false)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('disabled')
 
     await runGlassMigration(mockServer)
 
@@ -46,7 +45,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should skip migration when unable to obtain lock', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockServer.locker.lock.mockResolvedValue(null)
 
     await runGlassMigration(mockServer)
@@ -55,7 +54,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should migrate organisations with glass registrations needing migration', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockRepository.findAll.mockResolvedValue([
       {
         id: 'org-1',
@@ -91,7 +90,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should skip organisations that do not need migration', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockRepository.findAll.mockResolvedValue([
       {
         id: 'org-1',
@@ -117,20 +116,17 @@ describe('runGlassMigration', () => {
 
   it('should use feature flags from options if provided', async () => {
     const optionsFeatureFlags = {
-      isGlassMigrationEnabled: vi.fn().mockReturnValue(false),
-      isGlassMigrationDryRun: vi.fn().mockReturnValue(false)
+      getGlassMigrationMode: vi.fn().mockReturnValue('disabled')
     }
 
     await runGlassMigration(mockServer, { featureFlags: optionsFeatureFlags })
 
-    expect(optionsFeatureFlags.isGlassMigrationEnabled).toHaveBeenCalled()
-    expect(
-      mockServer.featureFlags.isGlassMigrationEnabled
-    ).not.toHaveBeenCalled()
+    expect(optionsFeatureFlags.getGlassMigrationMode).toHaveBeenCalled()
+    expect(mockServer.featureFlags.getGlassMigrationMode).not.toHaveBeenCalled()
   })
 
   it('should handle errors gracefully', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockRepository.findAll.mockRejectedValue(new Error('Database error'))
 
     // Should not throw
@@ -140,7 +136,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should release lock even when migration fails', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockRepository.findAll.mockResolvedValue([
       {
         id: 'org-1',
@@ -166,7 +162,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should migrate multiple organisations', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
     mockRepository.findAll.mockResolvedValue([
       {
         id: 'org-1',
@@ -222,7 +218,7 @@ describe('runGlassMigration', () => {
   })
 
   it('should use createOrganisationsRepository when not provided in options', async () => {
-    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
 
     const createdRepository = {
       findAll: vi.fn().mockResolvedValue([]),
@@ -238,7 +234,7 @@ describe('runGlassMigration', () => {
 
   describe('dry-run mode', () => {
     it('should not call replace when dryRun option is true', async () => {
-      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
       mockRepository.findAll.mockResolvedValue([
         {
           id: 'org-1',
@@ -265,7 +261,7 @@ describe('runGlassMigration', () => {
     })
 
     it('should still report organisations that would be migrated in dry-run mode', async () => {
-      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
       mockRepository.findAll.mockResolvedValue([
         {
           id: 'org-1',
@@ -307,7 +303,7 @@ describe('runGlassMigration', () => {
     })
 
     it('should return migration results in normal mode', async () => {
-      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
       mockRepository.findAll.mockResolvedValue([
         {
           id: 'org-1',
@@ -337,8 +333,7 @@ describe('runGlassMigration', () => {
     })
 
     it('should use dry-run mode from feature flag when dryRun option is not provided', async () => {
-      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
-      mockServer.featureFlags.isGlassMigrationDryRun.mockReturnValue(true)
+      mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('dry-run')
       mockRepository.findAll.mockResolvedValue([
         {
           id: 'org-1',
@@ -367,9 +362,8 @@ describe('runGlassMigration', () => {
       })
     })
 
-    it('should migrate normally when feature flag dry-run is false and no dryRun option provided', async () => {
-      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
-      mockServer.featureFlags.isGlassMigrationDryRun.mockReturnValue(false)
+    it('should migrate normally when mode is enabled and no dryRun option provided', async () => {
+      mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
       mockRepository.findAll.mockResolvedValue([
         {
           id: 'org-1',
@@ -398,9 +392,8 @@ describe('runGlassMigration', () => {
       })
     })
 
-    it('should allow explicit dryRun option to override feature flag', async () => {
-      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
-      mockServer.featureFlags.isGlassMigrationDryRun.mockReturnValue(true)
+    it('should allow explicit dryRun option to override feature flag mode', async () => {
+      mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('dry-run')
       mockRepository.findAll.mockResolvedValue([
         {
           id: 'org-1',

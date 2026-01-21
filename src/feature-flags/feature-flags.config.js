@@ -17,11 +17,10 @@ export const createConfigFeatureFlags = (config) => ({
   isCalculateWasteBalanceOnImportEnabled() {
     return config.get('featureFlags.calculateWasteBalanceOnImport')
   },
-  isGlassMigrationEnabled() {
+  getGlassMigrationMode() {
     const value = config.get('featureFlags.glassMigration')
-    return value === 'true' || value === 'dry-run'
-  },
-  isGlassMigrationDryRun() {
-    return config.get('featureFlags.glassMigration') === 'dry-run'
+    if (value === 'true') return 'enabled'
+    if (value === 'dry-run') return 'dry-run'
+    return 'disabled'
   }
 })

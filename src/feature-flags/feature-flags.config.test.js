@@ -57,46 +57,25 @@ describe('createConfigFeatureFlags', () => {
     )
   })
 
-  describe('glassMigration flag', () => {
-    it('isGlassMigrationEnabled returns true when set to true', () => {
+  describe('getGlassMigrationMode', () => {
+    it('returns enabled when set to true', () => {
       const config = { get: vi.fn().mockReturnValue('true') }
       const flags = createConfigFeatureFlags(config)
-      expect(flags.isGlassMigrationEnabled()).toBe(true)
+      expect(flags.getGlassMigrationMode()).toBe('enabled')
       expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
     })
 
-    it('isGlassMigrationEnabled returns true when set to dry-run', () => {
+    it('returns dry-run when set to dry-run', () => {
       const config = { get: vi.fn().mockReturnValue('dry-run') }
       const flags = createConfigFeatureFlags(config)
-      expect(flags.isGlassMigrationEnabled()).toBe(true)
+      expect(flags.getGlassMigrationMode()).toBe('dry-run')
       expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
     })
 
-    it('isGlassMigrationEnabled returns false when set to false', () => {
+    it('returns disabled when set to false', () => {
       const config = { get: vi.fn().mockReturnValue('false') }
       const flags = createConfigFeatureFlags(config)
-      expect(flags.isGlassMigrationEnabled()).toBe(false)
-      expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
-    })
-
-    it('isGlassMigrationDryRun returns true when set to dry-run', () => {
-      const config = { get: vi.fn().mockReturnValue('dry-run') }
-      const flags = createConfigFeatureFlags(config)
-      expect(flags.isGlassMigrationDryRun()).toBe(true)
-      expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
-    })
-
-    it('isGlassMigrationDryRun returns false when set to true', () => {
-      const config = { get: vi.fn().mockReturnValue('true') }
-      const flags = createConfigFeatureFlags(config)
-      expect(flags.isGlassMigrationDryRun()).toBe(false)
-      expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
-    })
-
-    it('isGlassMigrationDryRun returns false when set to false', () => {
-      const config = { get: vi.fn().mockReturnValue('false') }
-      const flags = createConfigFeatureFlags(config)
-      expect(flags.isGlassMigrationDryRun()).toBe(false)
+      expect(flags.getGlassMigrationMode()).toBe('disabled')
       expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
     })
   })
