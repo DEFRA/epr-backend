@@ -79,6 +79,7 @@ describe('Repeated uploads of identical data', () => {
             registrationNumber: 'REG-12345',
             status: 'approved',
             material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt'],
             wasteProcessingType: 'reprocessor',
             reprocessingType: 'input',
             formSubmissionTime: new Date(),
@@ -108,7 +109,7 @@ describe('Repeated uploads of identical data', () => {
           location: { sheet: 'Data', row: 2, column: 'B' }
         },
         MATERIAL: {
-          value: 'Glass',
+          value: 'Glass_remelt',
           location: { sheet: 'Data', row: 3, column: 'B' }
         },
         TEMPLATE_VERSION: {

@@ -16,11 +16,20 @@ import {
 const MATERIAL_MAP = Object.freeze({
   Aluminium: 'aluminium',
   Fibre_based_composite: 'fibre',
-  Glass: 'glass',
+  Glass_remelt: 'glass',
+  Glass_other: 'glass',
   Paper_and_board: 'paper',
   Plastic: 'plastic',
   Steel: 'steel',
   Wood: 'wood'
+})
+
+/**
+ * Maps glass spreadsheet values to the required glassRecyclingProcess value
+ */
+const GLASS_PROCESS_MAP = Object.freeze({
+  Glass_remelt: 'glass_re_melt',
+  Glass_other: 'glass_other'
 })
 
 const VALID_REGISTRATION_MATERIALS = Object.values(MATERIAL_MAP)
@@ -83,6 +92,25 @@ export const validateMaterialType = ({
       }
     )
     return issues
+  }
+
+  // For glass materials, validate the recycling process matches
+  const requiredGlassProcess = GLASS_PROCESS_MAP[spreadsheetMaterial]
+  if (requiredGlassProcess) {
+    const { glassRecyclingProcess } = registration
+    if (!glassRecyclingProcess?.includes(requiredGlassProcess)) {
+      issues.addFatal(
+        VALIDATION_CATEGORY.BUSINESS,
+        'Glass recycling process does not match registration',
+        VALIDATION_CODE.MATERIAL_MISMATCH,
+        {
+          location,
+          expected: requiredGlassProcess,
+          actual: glassRecyclingProcess
+        }
+      )
+      return issues
+    }
   }
 
   logValidationSuccess(

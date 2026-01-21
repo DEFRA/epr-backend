@@ -1,4 +1,4 @@
-/** @import {User} from '#domain/organisations/model.js' */
+/** @import {User, Organisation} from '#domain/organisations/model.js' */
 
 /**
  * @typedef {{
@@ -132,15 +132,6 @@
 
 /**
  * @typedef {RegistrationApproved | RegistrationOther} Registration
- */
-
-/**
- * @typedef {Object} Organisation
- * @property {string} id
- * @property {string} status
- * @property {Registration[]} registrations
- * @property {Accreditation[]} [accreditations]
- * @property {Object} [linkedDefraOrganisation]
  */
 
 /**
