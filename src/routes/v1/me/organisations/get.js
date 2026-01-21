@@ -15,7 +15,7 @@ import { StatusCodes } from 'http-status-codes'
  * @typedef {{
  *   id: string
  *   name: string
- *   orgId: string
+ *   orgId: string | number
  * }} EprOrganisationSummary
  */
 

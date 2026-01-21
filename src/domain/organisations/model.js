@@ -165,7 +165,7 @@ export const USER_ROLES = Object.freeze({
  * @typedef {{
  *   orgId: string;
  *   orgName: string;
- *   linkedAt: Date;
+ *   linkedAt: string;
  *   linkedBy: {
  *     email: string
  *     id: string
