@@ -19,8 +19,12 @@ export const createConfigFeatureFlags = (config) => ({
   },
   getGlassMigrationMode() {
     const value = config.get('featureFlags.glassMigration')
-    if (value === 'true') return 'enabled'
-    if (value === 'dry-run') return 'dry-run'
+    if (value === 'true') {
+      return 'enabled'
+    }
+    if (value === 'dry-run') {
+      return 'dry-run'
+    }
     return 'disabled'
   }
 })

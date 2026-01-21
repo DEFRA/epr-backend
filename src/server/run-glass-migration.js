@@ -94,7 +94,7 @@ export const runGlassMigration = async (server) => {
     })
 
     if (mode === 'disabled') {
-      return
+      return undefined
     }
 
     const lock = await server.locker.lock('glass-migration')
@@ -102,7 +102,7 @@ export const runGlassMigration = async (server) => {
       logger.info({
         message: 'Unable to obtain lock, skipping running glass migration'
       })
-      return
+      return undefined
     }
 
     try {
@@ -113,5 +113,6 @@ export const runGlassMigration = async (server) => {
     }
   } catch (error) {
     logger.error(error, 'Failed to run glass migration')
+    return undefined
   }
 }
