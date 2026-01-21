@@ -10,7 +10,9 @@ import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/export
 
 /**
  * Extracted waste balance fields.
+
  * @typedef {Object} WasteBalanceFields
+
  * @property {Date} dispatchDate
  * @property {boolean} prnIssued
  * @property {number} transactionAmount
@@ -72,18 +74,4 @@ export const extractWasteBalanceFields = (record) => {
             RECEIVED_LOADS_FIELDS.TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED
           ]) || 0
   }
-}
-
-/**
- * Checks if a dispatch date is within the accreditation date range.
- *
- * @param {Date} dispatchDate
- * @param {Object} accreditation
- * @returns {boolean}
- */
-export const isWithinAccreditationDateRange = (dispatchDate, accreditation) => {
-  const validFrom = new Date(accreditation.validFrom)
-  const validTo = new Date(accreditation.validTo)
-
-  return dispatchDate >= validFrom && dispatchDate <= validTo
 }

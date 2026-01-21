@@ -1,8 +1,6 @@
 import { randomUUID } from 'node:crypto'
-import {
-  extractWasteBalanceFields as extractExporterFields,
-  isWithinAccreditationDateRange
-} from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+import { extractWasteBalanceFields as extractExporterFields } from '#domain/waste-balances/table-schemas/exporter/validators/waste-balance-extractor.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
 import { extractWasteBalanceFields as extractReprocessorInputFields } from '#domain/waste-balances/table-schemas/reprocessor-input/validators/waste-balance-extractor.js'
 import { extractWasteBalanceFields as extractReprocessorOutputFields } from '#domain/waste-balances/table-schemas/reprocessor-output/validators/waste-balance-extractor.js'
 import {

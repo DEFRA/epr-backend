@@ -3,10 +3,8 @@ import { PROCESSING_TYPES } from '#domain/summary-logs/meta-fields.js'
 import { RECEIVED_LOADS_FIELDS } from '#domain/summary-logs/table-schemas/exporter/fields.js'
 import { YES_NO_VALUES } from '#domain/summary-logs/table-schemas/shared/index.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import {
-  extractWasteBalanceFields,
-  isWithinAccreditationDateRange
-} from './waste-balance-extractor.js'
+import { extractWasteBalanceFields } from './waste-balance-extractor.js'
+import { isWithinAccreditationDateRange } from '#common/helpers/dates/accreditation.js'
 
 describe('extractWasteBalanceFields', () => {
   const validData = {
