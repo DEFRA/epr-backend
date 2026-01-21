@@ -82,17 +82,15 @@ async function executeMigration(organisationsRepository, dryRun) {
  * Renames GL suffix to GR/GO based on glassRecyclingProcess
  * Splits records with both processes into two
  * @param {Object} server
- * @param {Object} options
- * @param {boolean} [options.dryRun] - If true, don't actually persist changes. If not provided, uses the feature flag value.
  * @returns {Promise<{dryRun: boolean, migrated?: number, wouldMigrate?: number, total: number}|undefined>}
  */
-export const runGlassMigration = async (server, options = {}) => {
+export const runGlassMigration = async (server) => {
   try {
     const mode = server.featureFlags.getGlassMigrationMode()
-    const dryRun = options.dryRun ?? mode === 'dry-run'
+    const dryRun = mode === 'dry-run'
 
     logger.info({
-      message: `Starting glass migration. Mode: ${mode}${dryRun ? ' [DRY-RUN]' : ''}`
+      message: `Starting glass migration. Mode: ${mode}`
     })
 
     if (mode === 'disabled') {
@@ -108,10 +106,7 @@ export const runGlassMigration = async (server, options = {}) => {
     }
 
     try {
-      const organisationsRepository =
-        options.organisationsRepository ??
-        createOrganisationsRepository(server.db)()
-
+      const organisationsRepository = createOrganisationsRepository(server.db)()
       return await executeMigration(organisationsRepository, dryRun)
     } finally {
       await lock.free()

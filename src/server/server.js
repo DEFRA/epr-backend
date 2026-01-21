@@ -135,7 +135,7 @@ async function createServer(options = {}) {
     runFormsDataMigration(server, {
       shouldTruncateEprOrganisations: config.get('truncateEprOrganisations')
     })
-    runGlassMigration(server, options)
+    runGlassMigration(server)
   })
 
   return server
