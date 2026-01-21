@@ -233,6 +233,107 @@ describe('runGlassMigration', () => {
     expect(createOrganisationsRepository).toHaveBeenCalledWith(mockServer.db)
     expect(createdRepository.findAll).toHaveBeenCalled()
   })
+
+  describe('dry-run mode', () => {
+    it('should not call replace when dryRun is true', async () => {
+      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockRepository.findAll.mockResolvedValue([
+        {
+          id: 'org-1',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              registrationNumber: 'REG-2025-GL',
+              material: 'glass',
+              glassRecyclingProcess: ['glass_re_melt']
+            }
+          ],
+          accreditations: []
+        }
+      ])
+
+      await runGlassMigration(mockServer, {
+        organisationsRepository: mockRepository,
+        dryRun: true
+      })
+
+      expect(mockRepository.replace).not.toHaveBeenCalled()
+      expect(mockLock.free).toHaveBeenCalled()
+    })
+
+    it('should still report organisations that would be migrated in dry-run mode', async () => {
+      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockRepository.findAll.mockResolvedValue([
+        {
+          id: 'org-1',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              registrationNumber: 'REG-2025-GL',
+              material: 'glass',
+              glassRecyclingProcess: ['glass_re_melt']
+            }
+          ],
+          accreditations: []
+        },
+        {
+          id: 'org-2',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-2',
+              registrationNumber: 'REG-2025-PA',
+              material: 'paper'
+            }
+          ],
+          accreditations: []
+        }
+      ])
+
+      const result = await runGlassMigration(mockServer, {
+        organisationsRepository: mockRepository,
+        dryRun: true
+      })
+
+      expect(result).toEqual({
+        dryRun: true,
+        wouldMigrate: 1,
+        total: 2
+      })
+    })
+
+    it('should return migration results in normal mode', async () => {
+      mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+      mockRepository.findAll.mockResolvedValue([
+        {
+          id: 'org-1',
+          version: 1,
+          registrations: [
+            {
+              id: 'reg-1',
+              registrationNumber: 'REG-2025-GL',
+              material: 'glass',
+              glassRecyclingProcess: ['glass_re_melt']
+            }
+          ],
+          accreditations: []
+        }
+      ])
+
+      const result = await runGlassMigration(mockServer, {
+        organisationsRepository: mockRepository,
+        dryRun: false
+      })
+
+      expect(result).toEqual({
+        dryRun: false,
+        migrated: 1,
+        total: 1
+      })
+    })
+  })
 })
 
 describe('migrateGlassOrganisation', () => {

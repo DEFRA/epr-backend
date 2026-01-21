@@ -215,11 +215,11 @@ function buildAccreditationIdMapping(
   const mapping = new Map()
 
   for (const original of originalAccreditations) {
-    if (!isGlassAccreditationNeedingMigration(original)) {
-      continue
-    }
+    const needsSplitMapping =
+      isGlassAccreditationNeedingMigration(original) &&
+      hasBothGlassProcesses(original.glassRecyclingProcess)
 
-    if (!hasBothGlassProcesses(original.glassRecyclingProcess)) {
+    if (!needsSplitMapping) {
       continue
     }
 
