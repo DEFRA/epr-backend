@@ -16,5 +16,8 @@ export const createConfigFeatureFlags = (config) => ({
   },
   isCalculateWasteBalanceOnImportEnabled() {
     return config.get('featureFlags.calculateWasteBalanceOnImport')
+  },
+  isCreatePackagingRecyclingNotesEnabled() {
+    return config.get('featureFlags.createPackagingRecyclingNotes')
   }
 })

@@ -178,6 +178,18 @@ describe('#startServer', () => {
     })
   })
 
+  describe('When Packaging Recycling Notes are enabled', () => {
+    test('Should enable Packaging Recycling Notes', async () => {
+      const oldValue = process.env.FEATURE_FLAG_CREATE_PACKAGING_RECYCLING_NOTES
+      process.env.FEATURE_FLAG_CREATE_PACKAGING_RECYCLING_NOTES = 'true'
+
+      await server.stop()
+      server = await startServerImport.startServer()
+
+      process.env.FEATURE_FLAG_CREATE_PACKAGING_RECYCLING_NOTES = oldValue
+    })
+  })
+
   describe('When server start fails', async () => {
     beforeEach(async () => {
       await server.stop()

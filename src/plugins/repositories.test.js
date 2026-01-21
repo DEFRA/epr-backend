@@ -91,5 +91,41 @@ describe('repositories plugin', () => {
         JSON.parse(response2.payload).id
       )
     })
+
+    it('creates the Packaging Recycling Note repository when flagged', async () => {
+      server.decorate('server', 'featureFlags', {
+        isCreatePackagingRecyclingNotesEnabled: () => true
+      })
+
+      await server.register({
+        plugin: repositories.plugin,
+        options: {
+          organisationsRepository: vi.fn(),
+          summaryLogsRepository: vi.fn(),
+          formSubmissionsRepository: vi.fn(),
+          systemLogsRepository: vi.fn(),
+          wasteRecordsRepository: vi.fn(),
+          wasteBalancesRepository: vi.fn(),
+          packagingRecyclingNotesRepository: vi.fn(() => ({ enabled: true }))
+        }
+      })
+
+      server.ext('onRequest', (request, h) => {
+        request.logger = mockLogger
+        return h.continue
+      })
+
+      server.route({
+        method: 'GET',
+        path: '/test',
+        handler: (request) => request.packagingRecyclingNotesRepository
+      })
+
+      await server.initialize()
+
+      const { payload } = await server.inject({ method: 'GET', url: '/test' })
+
+      expect(JSON.parse(payload)).toEqual({ enabled: true })
+    })
   })
 })

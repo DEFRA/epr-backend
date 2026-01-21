@@ -56,4 +56,22 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.calculateWasteBalanceOnImport'
     )
   })
+
+  it('returns true when createPackagingRecyclingNotes flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(true) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(true)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.createPackagingRecyclingNotes'
+    )
+  })
+
+  it('returns false when createPackagingRecyclingNotes flag is enabled', () => {
+    const config = { get: vi.fn().mockReturnValue(false) }
+    const flags = createConfigFeatureFlags(config)
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
+    expect(config.get).toHaveBeenCalledWith(
+      'featureFlags.createPackagingRecyclingNotes'
+    )
+  })
 })

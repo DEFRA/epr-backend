@@ -340,6 +340,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_CALCULATE_WASTE_BALANCE_ON_IMPORT'
+    },
+    createPackagingRecyclingNotes: {
+      doc: 'Feature Flag: Enable Packaging Recycling Note creation',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_CREATE_PACKAGING_RECYCLING_NOTES'
     }
   },
   formSubmissionOverrides: {
