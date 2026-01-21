@@ -1,10 +1,12 @@
 import { StatusCodes } from 'http-status-codes'
 import { ROLES } from '#common/helpers/auth/constants.js'
 import Joi from 'joi'
+import { wasteBalanceResponseSchema } from './response.schema.js'
 
 /** @typedef {import('#repositories/waste-balances/port.js').WasteBalancesRepository} WasteBalancesRepository */
 
-export const wasteBalanceGetPath = '/v1/waste-balance'
+export const wasteBalanceGetPath =
+  '/v1/organisations/{organisationId}/waste-balances'
 
 export const wasteBalanceGet = {
   method: 'GET',
@@ -24,6 +26,9 @@ export const wasteBalanceGet = {
               'accreditationIds must be comma-separated valid MongoDB ObjectIds'
           })
       })
+    },
+    response: {
+      schema: wasteBalanceResponseSchema
     }
   },
   /**

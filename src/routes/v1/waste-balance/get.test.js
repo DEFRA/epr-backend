@@ -8,12 +8,13 @@ import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens
 
 const { validToken } = entraIdMockAuthTokens
 
-describe('GET /v1/waste-balance', () => {
+describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
   setupAuthContext()
 
   let server
   let wasteBalancesRepositoryFactory
 
+  const organisationId = '6507f1f77bcf86cd79943901'
   const accreditationId1 = '507f1f77bcf86cd799439011'
   const accreditationId2 = '507f191e810c19729de860ea'
   const nonExistentId = '000000000000000000000000'
@@ -49,7 +50,7 @@ describe('GET /v1/waste-balance', () => {
   it('returns waste balances for multiple accreditation IDs', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${accreditationId1},${accreditationId2}`,
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationId2}`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -72,7 +73,7 @@ describe('GET /v1/waste-balance', () => {
   it('returns waste balance for a single accreditation ID', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${accreditationId1}`,
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -91,7 +92,7 @@ describe('GET /v1/waste-balance', () => {
   it('returns zero balances for non-existent accreditation IDs', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${nonExistentId}`,
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${nonExistentId}`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -110,7 +111,7 @@ describe('GET /v1/waste-balance', () => {
   it('handles mixed existing and non-existing IDs', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${accreditationId1},${nonExistentId}`,
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${nonExistentId}`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -133,7 +134,7 @@ describe('GET /v1/waste-balance', () => {
   it('rejects invalid accreditation ID format', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/v1/waste-balance?accreditationIds=invalid',
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=invalid`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -145,7 +146,7 @@ describe('GET /v1/waste-balance', () => {
   it('rejects when accreditationIds parameter is missing', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: '/v1/waste-balance',
+      url: `/v1/organisations/${organisationId}/waste-balances`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -157,7 +158,7 @@ describe('GET /v1/waste-balance', () => {
   it('requires authentication', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${accreditationId1}`
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1}`
     })
 
     expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -166,7 +167,7 @@ describe('GET /v1/waste-balance', () => {
   it('handles duplicate IDs in the request', async () => {
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${accreditationId1},${accreditationId1}`,
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationId1}`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
@@ -204,7 +205,7 @@ describe('GET /v1/waste-balance', () => {
 
     const response = await server.inject({
       method: 'GET',
-      url: `/v1/waste-balance?accreditationIds=${accreditationIdWithNulls}`,
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdWithNulls}`,
       headers: {
         Authorization: `Bearer ${validToken}`
       }
