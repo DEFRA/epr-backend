@@ -8,7 +8,7 @@ import {
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
 
-/** @import {Organisation} from '#repositories/organisations/port.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 
 /**
  * @param {Organisation} existing

@@ -95,6 +95,7 @@ export const accreditationSchema = Joi.object({
         )
       )
       .min(1)
+      .max(1)
   ),
   wasteProcessingType: Joi.string()
     .valid(WASTE_PROCESSING_TYPE.REPROCESSOR, WASTE_PROCESSING_TYPE.EXPORTER)
