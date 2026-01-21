@@ -16,7 +16,10 @@ import { SpreadsheetValidationError } from '#adapters/parsers/summary-logs/excel
 import { validateMetaSyntax } from './validations/meta-syntax.js'
 import { validateMetaBusiness } from './validations/meta-business.js'
 import { createDataSyntaxValidator } from './validations/data-syntax.js'
-import { PROCESSING_TYPES, SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
+import {
+  PROCESSING_TYPES,
+  SUMMARY_LOG_META_FIELDS
+} from '#domain/summary-logs/meta-fields.js'
 import { PROCESSING_TYPE_TABLES } from '#domain/summary-logs/table-schemas/index.js'
 import { validateDataBusiness } from './validations/data-business.js'
 import { ROW_OUTCOME } from '#domain/summary-logs/table-schemas/validation-pipeline.js'
