@@ -22,6 +22,7 @@ import { workers } from '#plugins/workers.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
+import { runGlassMigration } from '#server/run-glass-migration.js'
 
 function getServerConfig(config) {
   return {
@@ -134,6 +135,7 @@ async function createServer(options = {}) {
     runFormsDataMigration(server, {
       shouldTruncateEprOrganisations: config.get('truncateEprOrganisations')
     })
+    runGlassMigration(server, options)
   })
 
   return server

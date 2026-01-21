@@ -12,6 +12,7 @@
     "#domain/*": "./src/domain/*",
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
+    "#glass-migration/*": "./src/glass-migration/*",
     "#plugins/*": "./src/plugins/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",

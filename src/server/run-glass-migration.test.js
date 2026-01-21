@@ -1,0 +1,280 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+import {
+  runGlassMigration,
+  migrateGlassOrganisation
+} from './run-glass-migration.js'
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+
+vi.mock('#repositories/organisations/mongodb.js', () => ({
+  createOrganisationsRepository: vi.fn()
+}))
+
+describe('runGlassMigration', () => {
+  let mockServer
+  let mockRepository
+  let mockLock
+
+  beforeEach(() => {
+    mockLock = {
+      free: vi.fn().mockResolvedValue(undefined)
+    }
+
+    mockRepository = {
+      findAll: vi.fn(),
+      replace: vi.fn().mockResolvedValue(undefined)
+    }
+
+    mockServer = {
+      featureFlags: {
+        isGlassMigrationEnabled: vi.fn()
+      },
+      locker: {
+        lock: vi.fn().mockResolvedValue(mockLock)
+      },
+      db: {}
+    }
+  })
+
+  it('should skip migration when feature flag is disabled', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(false)
+
+    await runGlassMigration(mockServer)
+
+    expect(mockServer.locker.lock).not.toHaveBeenCalled()
+  })
+
+  it('should skip migration when unable to obtain lock', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockServer.locker.lock.mockResolvedValue(null)
+
+    await runGlassMigration(mockServer)
+
+    expect(mockRepository.findAll).not.toHaveBeenCalled()
+  })
+
+  it('should migrate organisations with glass registrations needing migration', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockRepository.findAll.mockResolvedValue([
+      {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt']
+          }
+        ],
+        accreditations: []
+      }
+    ])
+
+    await runGlassMigration(mockServer, {
+      organisationsRepository: mockRepository
+    })
+
+    expect(mockRepository.replace).toHaveBeenCalledWith(
+      'org-1',
+      1,
+      expect.objectContaining({
+        registrations: expect.arrayContaining([
+          expect.objectContaining({
+            registrationNumber: 'REG-2025-GR'
+          })
+        ])
+      })
+    )
+    expect(mockLock.free).toHaveBeenCalled()
+  })
+
+  it('should skip organisations that do not need migration', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockRepository.findAll.mockResolvedValue([
+      {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-PA',
+            material: 'paper'
+          }
+        ],
+        accreditations: []
+      }
+    ])
+
+    await runGlassMigration(mockServer, {
+      organisationsRepository: mockRepository
+    })
+
+    expect(mockRepository.replace).not.toHaveBeenCalled()
+    expect(mockLock.free).toHaveBeenCalled()
+  })
+
+  it('should use feature flags from options if provided', async () => {
+    const optionsFeatureFlags = {
+      isGlassMigrationEnabled: vi.fn().mockReturnValue(false)
+    }
+
+    await runGlassMigration(mockServer, { featureFlags: optionsFeatureFlags })
+
+    expect(optionsFeatureFlags.isGlassMigrationEnabled).toHaveBeenCalled()
+    expect(
+      mockServer.featureFlags.isGlassMigrationEnabled
+    ).not.toHaveBeenCalled()
+  })
+
+  it('should handle errors gracefully', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockRepository.findAll.mockRejectedValue(new Error('Database error'))
+
+    // Should not throw
+    await expect(
+      runGlassMigration(mockServer, { organisationsRepository: mockRepository })
+    ).resolves.toBeUndefined()
+  })
+
+  it('should release lock even when migration fails', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockRepository.findAll.mockResolvedValue([
+      {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt']
+          }
+        ],
+        accreditations: []
+      }
+    ])
+    mockRepository.replace.mockRejectedValue(new Error('Replace failed'))
+
+    await runGlassMigration(mockServer, {
+      organisationsRepository: mockRepository
+    })
+
+    expect(mockLock.free).toHaveBeenCalled()
+  })
+
+  it('should migrate multiple organisations', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+    mockRepository.findAll.mockResolvedValue([
+      {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt']
+          }
+        ],
+        accreditations: []
+      },
+      {
+        id: 'org-2',
+        version: 2,
+        registrations: [
+          {
+            id: 'reg-2',
+            registrationNumber: 'REG-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_other']
+          }
+        ],
+        accreditations: []
+      }
+    ])
+
+    await runGlassMigration(mockServer, {
+      organisationsRepository: mockRepository
+    })
+
+    expect(mockRepository.replace).toHaveBeenCalledTimes(2)
+    expect(mockRepository.replace).toHaveBeenCalledWith(
+      'org-1',
+      1,
+      expect.objectContaining({
+        registrations: expect.arrayContaining([
+          expect.objectContaining({ registrationNumber: 'REG-2025-GR' })
+        ])
+      })
+    )
+    expect(mockRepository.replace).toHaveBeenCalledWith(
+      'org-2',
+      2,
+      expect.objectContaining({
+        registrations: expect.arrayContaining([
+          expect.objectContaining({ registrationNumber: 'REG-2025-GO' })
+        ])
+      })
+    )
+  })
+
+  it('should use createOrganisationsRepository when not provided in options', async () => {
+    mockServer.featureFlags.isGlassMigrationEnabled.mockReturnValue(true)
+
+    const createdRepository = {
+      findAll: vi.fn().mockResolvedValue([]),
+      replace: vi.fn()
+    }
+    createOrganisationsRepository.mockReturnValue(() => createdRepository)
+
+    await runGlassMigration(mockServer)
+
+    expect(createOrganisationsRepository).toHaveBeenCalledWith(mockServer.db)
+    expect(createdRepository.findAll).toHaveBeenCalled()
+  })
+})
+
+describe('migrateGlassOrganisation', () => {
+  it('should return false for organisations that do not need migration', async () => {
+    const mockRepo = { replace: vi.fn() }
+    const org = {
+      id: 'org-1',
+      version: 1,
+      registrations: [
+        {
+          registrationNumber: 'REG-2025-PA',
+          material: 'paper'
+        }
+      ],
+      accreditations: []
+    }
+
+    const result = await migrateGlassOrganisation(org, mockRepo)
+
+    expect(result).toBe(false)
+    expect(mockRepo.replace).not.toHaveBeenCalled()
+  })
+
+  it('should return true and call replace for organisations needing migration', async () => {
+    const mockRepo = { replace: vi.fn().mockResolvedValue(undefined) }
+    const org = {
+      id: 'org-1',
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-1',
+          registrationNumber: 'REG-2025-GL',
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt']
+        }
+      ],
+      accreditations: []
+    }
+
+    const result = await migrateGlassOrganisation(org, mockRepo)
+
+    expect(result).toBe(true)
+    expect(mockRepo.replace).toHaveBeenCalled()
+  })
+})

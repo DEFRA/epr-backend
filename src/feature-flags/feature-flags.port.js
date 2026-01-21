@@ -3,6 +3,7 @@
  * @property {() => boolean} isCalculateWasteBalanceOnImportEnabled
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
+ * @property {() => boolean} isGlassMigrationEnabled
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled
  * @property {() => boolean} isSummaryLogsEnabled
  */
