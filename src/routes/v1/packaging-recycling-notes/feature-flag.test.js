@@ -2,8 +2,8 @@ import { describe, it, vi } from 'vitest'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createServer } from '#root/server/server.js'
 import {
-  createIndexes,
-  createOrUpdateCollections
+  createFormCollections,
+  createLockManagerIndex
 } from '#root/common/helpers/collections/create-update.js'
 
 /**
@@ -34,8 +34,8 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
         server.decorate('server', 'mongoClient', {})
         server.decorate('server', 'locker', {})
 
-        createOrUpdateCollections(server.db)
-        createIndexes(server.db)
+        createFormCollections(server.db)
+        createLockManagerIndex(server.db)
       }
     }
   }

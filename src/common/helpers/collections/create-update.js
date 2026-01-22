@@ -44,16 +44,11 @@ const COLLECTION_WASTE_RECORDS = 'waste-records'
  */
 
 /**
- * Create or update collections
- *
- * Note: epr-organisations, system-logs, and packaging-recycling-notes collections
- * are created by their respective repository adapters during ensureCollection calls.
- *
  * @async
  * @param {Db} db
  * @returns {Promise<void>}
  */
-export async function createOrUpdateCollections(db) {
+export async function createFormCollections(db) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
 
   await createOrUpdateOrganisationCollection(db, collections)
@@ -62,17 +57,11 @@ export async function createOrUpdateCollections(db) {
 }
 
 /**
- * Create db indexes
- *
- * Note: Most indexes are now created by their respective repository adapters
- * during ensureCollection calls. This function only creates the mongo-locks
- * index which is used by the LockManager and isn't owned by any adapter.
- *
  * @async
  * @param {Db} db
  * @returns {Promise<void>}
  */
-export async function createIndexes(db) {
+export async function createLockManagerIndex(db) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
 }
 
