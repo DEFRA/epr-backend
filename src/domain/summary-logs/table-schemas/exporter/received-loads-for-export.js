@@ -20,7 +20,7 @@ import { RECEIVED_LOADS_FIELDS as FIELDS, ROW_ID_MINIMUMS } from './fields.js'
 import {
   NET_WEIGHT_MESSAGES,
   validateNetWeight
-} from './validators/net-weight-validator.js'
+} from '../shared/validators/net-weight-validator.js'
 import {
   TONNAGE_EXPORT_MESSAGES,
   validateTonnageExport
