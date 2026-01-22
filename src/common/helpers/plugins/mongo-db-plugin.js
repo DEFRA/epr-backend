@@ -43,11 +43,16 @@ export const mongoDbPlugin = {
       await createOrUpdateCollections(db)
       await createIndexes(db)
 
+      const organisationsRepositoryFactory =
+        await createOrganisationsRepository(db)
+      const wasteRecordsRepositoryFactory =
+        await createWasteRecordsRepository(db)
+
       await createSeedData(
         db,
         isProduction,
-        (await createOrganisationsRepository(db))(),
-        (await createWasteRecordsRepository(db))()
+        organisationsRepositoryFactory(),
+        wasteRecordsRepositoryFactory()
       )
 
       server.logger.info({

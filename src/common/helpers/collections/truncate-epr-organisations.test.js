@@ -74,7 +74,8 @@ describe('truncateEprOrganisations - MongoDB integration', () => {
     async ({ mongoClient }) => {
       const db = mongoClient.db(DATABASE_NAME)
       const collection = db.collection(COLLECTION_NAME)
-      const repository = (await createOrganisationsRepository(db))()
+      const repositoryFactory = await createOrganisationsRepository(db)
+      const repository = repositoryFactory()
 
       // Seed data using epr-organisation fixtures
       await repository.insert(eprOrganisation1)

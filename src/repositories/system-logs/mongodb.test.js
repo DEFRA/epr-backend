@@ -48,7 +48,8 @@ describe('Mongo DB system logs repository', () => {
     }
     const collectionSpy = vi.spyOn(mockDb, 'collection')
 
-    const repository = (await createSystemLogsRepository(mockDb))(mockLogger)
+    const repositoryFactory = await createSystemLogsRepository(mockDb)
+    const repository = repositoryFactory(mockLogger)
 
     const payload = {
       createdAt: new Date(),
