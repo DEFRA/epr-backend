@@ -34,7 +34,8 @@ export const wasteBalanceGet = {
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {wasteBalancesRepository: WasteBalancesRepository}} request
-   * @param {Object} h - Hapi response toolkit
+   * @param {import('#common/hapi-types.js').HapiResponseToolkit} h
+   * @returns {Promise<import('#common/hapi-types.js').HapiResponseObject>}
    */
   handler: async ({ wasteBalancesRepository, query, params }, h) => {
     const { organisationId } = params
