@@ -1,4 +1,4 @@
-import { describe, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { createPackagingRecyclingNotesRepository } from './mongodb'
 
 describe('MongoDB packaging recycling notes repository', () => {
@@ -10,11 +10,13 @@ describe('MongoDB packaging recycling notes repository', () => {
       collection: function () {
         return this
       },
+      createIndex: async () => {},
       findOne: function () {
         return prn
       }
     }
-    const repository = createPackagingRecyclingNotesRepository(dbMock)()
+    const factory = await createPackagingRecyclingNotesRepository(dbMock)
+    const repository = factory()
 
     expect(repository).toEqual({
       findById: expect.any(Function)

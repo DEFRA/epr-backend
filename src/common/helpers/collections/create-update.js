@@ -80,7 +80,7 @@ export async function createOrUpdateCollections(db, featureFlags) {
  * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createIndexes(db, featureFlags) {
+export async function createIndexes(db, _featureFlags) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
 }
 
