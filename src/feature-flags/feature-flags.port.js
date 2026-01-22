@@ -1,8 +1,13 @@
 /**
+ * @typedef {'disabled' | 'enabled' | 'dry-run'} GlassMigrationMode
+ */
+
+/**
  * @typedef {Object} FeatureFlags
  * @property {() => boolean} isCalculateWasteBalanceOnImportEnabled
  * @property {() => boolean} isDevEndpointsEnabled
  * @property {() => boolean} isFormsDataMigrationEnabled
+ * @property {() => GlassMigrationMode} getGlassMigrationMode
  * @property {() => boolean} isLogFileUploadsFromFormsEnabled
  * @property {() => boolean} isSummaryLogsEnabled
  */

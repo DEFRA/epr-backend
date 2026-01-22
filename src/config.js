@@ -340,6 +340,12 @@ const baseConfig = {
       format: Boolean,
       default: false,
       env: 'FEATURE_FLAG_CALCULATE_WASTE_BALANCE_ON_IMPORT'
+    },
+    glassMigration: {
+      doc: 'Feature Flag: Run glass acc/reg number migration on startup (PAE-839/840). Values: false (disabled), true (enabled), dry-run (enabled with dry-run mode)',
+      format: ['false', 'true', 'dry-run'],
+      default: 'false',
+      env: 'FEATURE_FLAG_GLASS_MIGRATION'
     }
   },
   formSubmissionOverrides: {

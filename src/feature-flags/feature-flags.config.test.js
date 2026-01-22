@@ -56,4 +56,27 @@ describe('createConfigFeatureFlags', () => {
       'featureFlags.calculateWasteBalanceOnImport'
     )
   })
+
+  describe('getGlassMigrationMode', () => {
+    it('returns enabled when set to true', () => {
+      const config = { get: vi.fn().mockReturnValue('true') }
+      const flags = createConfigFeatureFlags(config)
+      expect(flags.getGlassMigrationMode()).toBe('enabled')
+      expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
+    })
+
+    it('returns dry-run when set to dry-run', () => {
+      const config = { get: vi.fn().mockReturnValue('dry-run') }
+      const flags = createConfigFeatureFlags(config)
+      expect(flags.getGlassMigrationMode()).toBe('dry-run')
+      expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
+    })
+
+    it('returns disabled when set to false', () => {
+      const config = { get: vi.fn().mockReturnValue('false') }
+      const flags = createConfigFeatureFlags(config)
+      expect(flags.getGlassMigrationMode()).toBe('disabled')
+      expect(config.get).toHaveBeenCalledWith('featureFlags.glassMigration')
+    })
+  })
 })
