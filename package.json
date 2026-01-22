@@ -23,7 +23,8 @@
     "#workers/*": "./src/workers/*"
   },
   "engines": {
-    "node": ">=24.11.0"
+    "node": ">=24.11.0",
+    "npm": ">=11.6.1"
   },
   "scripts": {
     "docker:dev": "NODE_ENV=development npm run server:watch",
