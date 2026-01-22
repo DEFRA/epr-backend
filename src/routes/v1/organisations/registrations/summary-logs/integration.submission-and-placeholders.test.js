@@ -13,10 +13,7 @@ import {
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
-import {
-  buildOrganisation,
-  getValidDateRange
-} from '#repositories/organisations/contract/test-data.js'
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
@@ -38,7 +35,8 @@ import {
 describe('Submission and placeholder tests', () => {
   let organisationId
   let registrationId
-  const { VALID_FROM, VALID_TO } = getValidDateRange()
+  const VALID_FROM = '2025-01-01'
+  const VALID_TO = '2025-12-31'
 
   const { getServer } = setupAuthContext()
 

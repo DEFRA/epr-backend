@@ -89,4 +89,21 @@ describe('createInMemoryFeatureFlags', () => {
     const flags = createInMemoryFeatureFlags({})
     expect(flags.isCalculateWasteBalanceOnImportEnabled()).toBe(false)
   })
+
+  describe('getGlassMigrationMode', () => {
+    it('returns enabled when set to enabled', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'enabled' })
+      expect(flags.getGlassMigrationMode()).toBe('enabled')
+    })
+
+    it('returns dry-run when set to dry-run', () => {
+      const flags = createInMemoryFeatureFlags({ glassMigration: 'dry-run' })
+      expect(flags.getGlassMigrationMode()).toBe('dry-run')
+    })
+
+    it('returns disabled when not provided', () => {
+      const flags = createInMemoryFeatureFlags({})
+      expect(flags.getGlassMigrationMode()).toBe('disabled')
+    })
+  })
 })
