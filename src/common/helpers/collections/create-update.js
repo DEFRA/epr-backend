@@ -1,7 +1,6 @@
 import { createOrUpdateAccreditationCollection } from './create-update-accreditation.js'
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
-import { createOrUpdatePackagingRecyclingNotesCollection } from './create-update-packaging-recycling-notes.js'
 
 import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 import {
@@ -31,7 +30,6 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { toWasteRecordVersions } from '#repositories/waste-records/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 
-/** @import {FeatureFlags} from '#feature-flags/feature-flags.port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 
@@ -53,19 +51,14 @@ const COLLECTION_WASTE_RECORDS = 'waste-records'
  *
  * @async
  * @param {Db} db
- * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createOrUpdateCollections(db, featureFlags) {
+export async function createOrUpdateCollections(db) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
 
   await createOrUpdateOrganisationCollection(db, collections)
   await createOrUpdateRegistrationCollection(db, collections)
   await createOrUpdateAccreditationCollection(db, collections)
-
-  if (featureFlags.isCreatePackagingRecyclingNotesEnabled()) {
-    await createOrUpdatePackagingRecyclingNotesCollection(db, collections)
-  }
 }
 
 /**
@@ -77,10 +70,9 @@ export async function createOrUpdateCollections(db, featureFlags) {
  *
  * @async
  * @param {Db} db
- * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createIndexes(db, _featureFlags) {
+export async function createIndexes(db) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
 }
 

@@ -34,8 +34,8 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
         server.decorate('server', 'mongoClient', {})
         server.decorate('server', 'locker', {})
 
-        createOrUpdateCollections(server.db, server.featureFlags)
-        createIndexes(server.db, server.featureFlags)
+        createOrUpdateCollections(server.db)
+        createIndexes(server.db)
       }
     }
   }
