@@ -10,7 +10,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
  * @param {Object} org
  * @param {Object} repository
  * @param {Object} options
- * @param {boolean} options.dryRun - If true, don't actually persist changes
+ * @param {boolean} [options.dryRun] - If true, don't actually persist changes
  * @returns {Promise<boolean>} true if migrated/would migrate, false if skipped
  */
 export async function migrateGlassOrganisation(org, repository, options = {}) {
@@ -23,8 +23,7 @@ export async function migrateGlassOrganisation(org, repository, options = {}) {
     migratedOrg = migrateOrganisation(org)
   } catch (error) {
     logger.error({
-      message: `Failed to migrate organisation ${org.id}: ${error.message}`,
-      organisationId: org.id
+      message: `Failed to migrate organisation ${org.id}: ${error.message}`
     })
     return false
   }
