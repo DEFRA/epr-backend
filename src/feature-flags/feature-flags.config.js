@@ -26,5 +26,8 @@ export const createConfigFeatureFlags = (config) => ({
       return 'dry-run'
     }
     return 'disabled'
+  },
+  isCreatePackagingRecyclingNotesEnabled() {
+    return config.get('featureFlags.createPackagingRecyclingNotes')
   }
 })

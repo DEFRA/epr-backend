@@ -5,6 +5,7 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
+import { createPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/mongodb.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 
@@ -143,7 +144,11 @@ export const repositories = {
               db,
               options?.eventualConsistency
             )()
-          })
+          }),
+        ...(server.featureFlags?.isCreatePackagingRecyclingNotesEnabled() && {
+          packagingRecyclingNotesRepository:
+            createPackagingRecyclingNotesRepository
+        })
       }
 
       for (const [name, creator] of Object.entries(repositoryFactories)) {

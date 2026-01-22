@@ -1,6 +1,7 @@
 /**
  * @typedef {import('./helpers/logging/logger.js').TypedLogger} TypedLogger
  * @typedef {import('./helpers/logging/logger.js').IndexedLogProperties} IndexedLogProperties
+ * @typedef {import('../feature-flags/feature-flags.port.js').FeatureFlags} FeatureFlags
  * @import {Db} from 'mongodb'
  * @import {LockManager} from 'mongo-locks'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
@@ -16,6 +17,7 @@
  *  organisationsRepository: OrganisationsRepository
  *  payload: T,
  *  server: HapiServer,
+ *  featureFlags: FeatureFlags
  * }} HapiRequest
  */
 /**
@@ -68,6 +70,7 @@
  * @typedef {Object} HapiServer
  * @property {TypedLogger} logger - CDP-compliant typed logger
  * @property {import('mongodb').Db} [db] - MongoDB database (added by mongoDb plugin)
+ * @property {FeatureFlags} featureFlags - Feature flags from env vars
  * @property {*} [mongoClient] - MongoDB client (added by mongoDb plugin)
  * @property {*} [locker] - Mongo lock manager (added by mongoDb plugin)
  * @property {*} events - Server events emitter

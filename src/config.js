@@ -346,6 +346,12 @@ const baseConfig = {
       format: ['false', 'true', 'dry-run'],
       default: 'false',
       env: 'FEATURE_FLAG_GLASS_MIGRATION'
+    },
+    createPackagingRecyclingNotes: {
+      doc: 'Feature Flag: Enable Packaging Recycling Note creation',
+      format: Boolean,
+      default: false,
+      env: 'FEATURE_FLAG_CREATE_PACKAGING_RECYCLING_NOTES'
     }
   },
   formSubmissionOverrides: {

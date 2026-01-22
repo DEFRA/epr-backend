@@ -97,6 +97,14 @@ async function createServer(options = {}) {
     })
   }
 
+  plugins.push({
+    plugin: featureFlags,
+    options: {
+      config,
+      featureFlags: options.featureFlags
+    }
+  })
+
   // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
   if (!options.skipMongoDb) {
     plugins.push({
@@ -112,13 +120,6 @@ async function createServer(options = {}) {
         ...options.repositories,
         skipMongoDb: options.skipMongoDb,
         eventualConsistency: config.get('mongo.eventualConsistency')
-      }
-    },
-    {
-      plugin: featureFlags,
-      options: {
-        config,
-        featureFlags: options.featureFlags
       }
     },
     {

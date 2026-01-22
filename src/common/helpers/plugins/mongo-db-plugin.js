@@ -40,8 +40,10 @@ export const mongoDbPlugin = {
 
       const isProduction = () => config.get('cdpEnvironment') === 'prod'
 
-      await createOrUpdateCollections(db)
-      await createIndexes(db)
+      const { featureFlags } = server
+
+      await createOrUpdateCollections(db, featureFlags)
+      await createIndexes(db, featureFlags)
 
       await createSeedData(
         db,

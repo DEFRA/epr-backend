@@ -1,8 +1,12 @@
 import { createOrUpdateAccreditationCollection } from './create-update-accreditation.js'
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
+import { createOrUpdatePackagingRecyclingNotesCollection } from './create-update-packaging-recycling-notes.js'
 
-import { ORG_ID_START_NUMBER } from '../../enums/index.js'
+import {
+  COLLECTION_PACKAGING_RECYCLING_NOTES,
+  ORG_ID_START_NUMBER
+} from '../../enums/index.js'
 import {
   extractAnswers,
   extractEmail,
@@ -32,6 +36,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { toWasteRecordVersions } from '#repositories/waste-records/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 
+/** @import {FeatureFlags} from '#feature-flags/feature-flags.port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 
@@ -53,17 +58,21 @@ const COLLECTION_SYSTEM_LOGS = 'system-logs'
  *
  * @async
  * @param {Db} db
+ * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createOrUpdateCollections(db) {
+export async function createOrUpdateCollections(db, featureFlags) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
 
   await createOrUpdateOrganisationCollection(db, collections)
   await createOrUpdateRegistrationCollection(db, collections)
   await createOrUpdateAccreditationCollection(db, collections)
-
   await createOrUpdateEPROrganisationCollection(db, collections)
   await createSystemLogsCollection(db, collections)
+
+  if (featureFlags.isCreatePackagingRecyclingNotesEnabled()) {
+    await createOrUpdatePackagingRecyclingNotesCollection(db, collections)
+  }
 }
 
 /**
@@ -71,9 +80,10 @@ export async function createOrUpdateCollections(db) {
  *
  * @async
  * @param {Db} db
+ * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createIndexes(db) {
+export async function createIndexes(db, featureFlags) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
 
   await db.collection(COLLECTION_ORGANISATION).createIndex({ orgId: 1 })
@@ -127,6 +137,16 @@ export async function createIndexes(db) {
   await db
     .collection(COLLECTION_SYSTEM_LOGS)
     .createIndex({ 'context.organisationId': 1 })
+
+  if (featureFlags?.isCreatePackagingRecyclingNotesEnabled()) {
+    await db.collection(COLLECTION_PACKAGING_RECYCLING_NOTES).createIndex(
+      {
+        issuedByOrganisation: 1,
+        'status.currentStatus': 1
+      },
+      { name: 'issuedBy_status' }
+    )
+  }
 }
 
 /**
