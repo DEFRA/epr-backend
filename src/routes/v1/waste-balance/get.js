@@ -50,16 +50,6 @@ export const wasteBalanceGet = {
       return acc
     }, {})
 
-    // Include requested IDs with zero balances if not found
-    accreditationIds.forEach((id) => {
-      if (!(id in balanceMap)) {
-        balanceMap[id] = {
-          amount: 0,
-          availableAmount: 0
-        }
-      }
-    })
-
     return h.response(balanceMap).code(StatusCodes.OK)
   }
 }

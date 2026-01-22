@@ -89,7 +89,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     })
   })
 
-  it('returns zero balances for non-existent accreditation IDs', async () => {
+  it('returns empty object for non-existent accreditation IDs', async () => {
     const response = await server.inject({
       method: 'GET',
       url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${nonExistentId}`,
@@ -100,12 +100,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
-    expect(result).toEqual({
-      [nonExistentId]: {
-        amount: 0,
-        availableAmount: 0
-      }
-    })
+    expect(result).toEqual({})
   })
 
   it('handles mixed existing and non-existing IDs', async () => {
@@ -123,10 +118,6 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       [accreditationId1]: {
         amount: 1000,
         availableAmount: 750
-      },
-      [nonExistentId]: {
-        amount: 0,
-        availableAmount: 0
       }
     })
   })

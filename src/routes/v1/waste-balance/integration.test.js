@@ -107,7 +107,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     })
   })
 
-  it('returns zero balances for non-existent IDs in MongoDB', async ({
+  it('returns empty object for non-existent IDs in MongoDB', async ({
     server
   }) => {
     const response = await server.inject({
@@ -121,10 +121,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
 
-    expect(result[nonExistentId]).toEqual({
-      amount: 0,
-      availableAmount: 0
-    })
+    expect(result).toEqual({})
   })
 
   it('handles mixed existing and non-existing IDs from MongoDB', async ({
@@ -145,13 +142,10 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
       amount: 1000,
       availableAmount: 750
     })
-    expect(result[nonExistentId]).toEqual({
-      amount: 0,
-      availableAmount: 0
-    })
+    expect(result[nonExistentId]).toBeUndefined()
   })
 
-  it('returns empty balances when collection is empty', async ({
+  it('returns empty object when collection is empty', async ({
     server,
     mongoClient
   }) => {
@@ -171,9 +165,6 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
     expect(response.statusCode).toBe(StatusCodes.OK)
     const result = JSON.parse(response.payload)
 
-    expect(result[accreditationId1]).toEqual({
-      amount: 0,
-      availableAmount: 0
-    })
+    expect(result).toEqual({})
   })
 })
