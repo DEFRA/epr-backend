@@ -195,7 +195,9 @@ describe('SummaryLogsValidator', () => {
         registrationNumber: 'REG12345',
         wasteProcessingType: 'reprocessor',
         reprocessingType: 'input',
-        material: 'aluminium'
+        material: 'aluminium',
+        validFrom: '2025-01-01T00:00:00.000Z',
+        validTo: '2025-12-31T23:59:59.999Z'
       })
     }
 
@@ -846,6 +848,335 @@ describe('SummaryLogsValidator', () => {
 
       // Reset the mock for other tests
       wasteRecordsRepository.findByRegistration.mockResolvedValue([])
+    })
+
+    it('sets IGNORED outcome for Reprocessor Input loads with dates outside accreditation range', async () => {
+      // Mock registration with 2025 date range
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 10000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                }),
+                buildReceivedLoadRow({
+                  ROW_ID: 10001,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      // Row 10001 should be IGNORED and thus excluded from all counts
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([10000])
+      expect(updateCall.loads.added.included.rowIds).toEqual([10000])
+
+      // Verify 10001 is not in any count
+      expect(updateCall.loads.added.invalid.count).toBe(0)
+      expect(updateCall.loads.added.excluded.count).toBe(0)
+    })
+
+    it('sets IGNORED outcome for REPROCESSED_LOADS with dates outside accreditation range', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      const reprocessedHeaders = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'PRODUCT_DESCRIPTION',
+        'END_OF_WASTE_STANDARDS',
+        'PRODUCT_TONNAGE',
+        'WEIGHBRIDGE_TICKET_NUMBER',
+        'HAULIER_NAME',
+        'HAULIER_VEHICLE_REGISTRATION_NUMBER',
+        'CUSTOMER_NAME',
+        'CUSTOMER_INVOICE_REFERENCE'
+      ]
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            REPROCESSED_LOADS: {
+              location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+              headers: reprocessedHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [4000, '2025-06-01', '', '', 10, '', '', '', '', ''] // In range
+                },
+                {
+                  rowNumber: 9,
+                  values: [4001, '2024-12-31', '', '', 20, '', '', '', '', ''] // Out of range
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([4000])
+    })
+
+    it('sets IGNORED outcome for SENT_ON_LOADS with dates outside accreditation range', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      const sentOnHeaders = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+        'FINAL_DESTINATION_FACILITY_TYPE',
+        'FINAL_DESTINATION_NAME',
+        'FINAL_DESTINATION_ADDRESS',
+        'FINAL_DESTINATION_POSTCODE',
+        'FINAL_DESTINATION_EMAIL',
+        'FINAL_DESTINATION_PHONE',
+        'YOUR_REFERENCE',
+        'DESCRIPTION_WASTE',
+        'EWC_CODE',
+        'WEIGHBRIDGE_TICKET'
+      ]
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_INPUT' } }),
+          data: {
+            SENT_ON_LOADS: {
+              location: { sheet: 'Sent on', row: 7, column: 'B' },
+              headers: sentOnHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    5000,
+                    '2025-06-01',
+                    10,
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '03 03 08',
+                    ''
+                  ] // In range
+                },
+                {
+                  rowNumber: 9,
+                  values: [
+                    5001,
+                    '2024-12-31',
+                    20,
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '',
+                    '03 03 08',
+                    ''
+                  ] // Out of range
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
+    })
+
+    it('sets IGNORED outcome for EXPORTER loads with dates outside accreditation range', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'exporter',
+        material: 'paper'
+      })
+
+      const headers = [
+        'ROW_ID',
+        'DATE_RECEIVED_FOR_EXPORT',
+        'EWC_CODE',
+        'DESCRIPTION_WASTE',
+        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE',
+        'GROSS_WEIGHT',
+        'TARE_WEIGHT',
+        'PALLET_WEIGHT',
+        'NET_WEIGHT',
+        'BAILING_WIRE_PROTOCOL',
+        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION',
+        'WEIGHT_OF_NON_TARGET_MATERIALS',
+        'RECYCLABLE_PROPORTION_PERCENTAGE',
+        'TONNAGE_RECEIVED_FOR_EXPORT',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED',
+        'DATE_OF_EXPORT',
+        'BASEL_EXPORT_CODE',
+        'CUSTOMS_CODES',
+        'CONTAINER_NUMBER',
+        'DATE_RECEIVED_BY_OSR',
+        'OSR_ID',
+        'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE',
+        'INTERIM_SITE_ID',
+        'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR',
+        'EXPORT_CONTROLS'
+      ]
+
+      const buildRow = (rowId, exportDate) =>
+        headers.map((h) => {
+          if (h === 'ROW_ID') return rowId
+          if (h === 'DATE_OF_EXPORT') return exportDate
+          if (h === 'DATE_RECEIVED_FOR_EXPORT') return '2025-01-01'
+          if (h === 'EWC_CODE') return '03 03 08'
+          if (h === 'DESCRIPTION_WASTE') return 'Paper - other'
+          if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') return 'No'
+          if (h === 'GROSS_WEIGHT') return 100
+          if (h === 'TARE_WEIGHT') return 0
+          if (h === 'PALLET_WEIGHT') return 0
+          if (h === 'NET_WEIGHT') return 100
+          if (h === 'BAILING_WIRE_PROTOCOL') return 'No'
+          if (h === 'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION') {
+            return 'Actual weight (100%)'
+          }
+          if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') return 0
+          if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') return 1
+          if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') return 100
+          return ''
+        })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({
+            PROCESSING_TYPE: { value: 'EXPORTER' },
+            MATERIAL: { value: 'Paper_and_board' }
+          }),
+          data: {
+            RECEIVED_LOADS_FOR_EXPORT: {
+              location: { sheet: 'Received', row: 7, column: 'B' },
+              headers,
+              rows: [
+                { rowNumber: 8, values: buildRow(3000, '2025-06-01') },
+                { rowNumber: 9, values: buildRow(3001, '2024-12-31') }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
+    })
+
+    it('does not set IGNORED outcome when no date field is found', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      const headers = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+        'FINAL_DESTINATION_FACILITY_TYPE',
+        'FINAL_DESTINATION_NAME',
+        'FINAL_DESTINATION_ADDRESS',
+        'FINAL_DESTINATION_POSTCODE',
+        'FINAL_DESTINATION_EMAIL',
+        'FINAL_DESTINATION_PHONE',
+        'YOUR_REFERENCE',
+        'DESCRIPTION_WASTE',
+        'EWC_CODE',
+        'WEIGHBRIDGE_TICKET'
+      ]
+
+      const buildRow = (rowId) =>
+        headers.map((h) => {
+          if (h === 'ROW_ID') return rowId
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON') return 10
+          if (h === 'EWC_CODE') return '03 03 08'
+          if (h === 'DESCRIPTION_WASTE') return 'Aluminium - other'
+          return ''
+        })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ MATERIAL: { value: 'Aluminium' } }),
+          data: {
+            SENT_ON_LOADS: {
+              location: { sheet: 'Sent on', row: 7, column: 'B' },
+              headers,
+              rows: [{ rowNumber: 8, values: buildRow(5000) }]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.invalid.count).toBe(1)
+      expect(updateCall.loads.added.invalid.rowIds).toEqual([5000])
     })
   })
 
