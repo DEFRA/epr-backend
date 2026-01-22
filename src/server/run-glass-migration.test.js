@@ -340,4 +340,26 @@ describe('migrateGlassOrganisation', () => {
     expect(result).toBe(true)
     expect(mockRepo.replace).toHaveBeenCalled()
   })
+
+  it('should return false and not throw when migration fails due to invalid data', async () => {
+    const mockRepo = { replace: vi.fn() }
+    const org = {
+      id: 'org-invalid',
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-1',
+          registrationNumber: 'REG-2025-GL',
+          material: 'glass',
+          glassRecyclingProcess: null // Invalid - should cause migration to fail
+        }
+      ],
+      accreditations: []
+    }
+
+    const result = await migrateGlassOrganisation(org, mockRepo)
+
+    expect(result).toBe(false)
+    expect(mockRepo.replace).not.toHaveBeenCalled()
+  })
 })

@@ -18,7 +18,16 @@ export async function migrateGlassOrganisation(org, repository, options = {}) {
     return false
   }
 
-  const migratedOrg = migrateOrganisation(org)
+  let migratedOrg
+  try {
+    migratedOrg = migrateOrganisation(org)
+  } catch (error) {
+    logger.error({
+      message: `Failed to migrate organisation ${org.id}: ${error.message}`,
+      organisationId: org.id
+    })
+    return false
+  }
 
   if (options.dryRun) {
     logger.info({
