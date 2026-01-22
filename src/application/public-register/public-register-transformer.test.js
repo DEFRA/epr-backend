@@ -80,7 +80,7 @@ describe('transform', () => {
     })
   }
 
-  it('should produce complete row object with all fields', () => {
+  it('should produce complete row object with all fields', async () => {
     const accreditationId = new ObjectId()
 
     const accreditation = createTestAccreditation({
@@ -97,7 +97,7 @@ describe('transform', () => {
       accreditations: [accreditation]
     })
 
-    const rows = transform([org])
+    const rows = await transform([org])
 
     expect(rows).toStrictEqual([
       {
@@ -134,11 +134,11 @@ describe('transform', () => {
     }
   ])(
     'should transform registration with status $expectedStatus without accreditation',
-    ({ status }) => {
+    async ({ status }) => {
       const registration = createTestRegistration({ status })
       const org = createTestOrganisation({ registrations: [registration] })
 
-      const rows = transform([org])
+      const rows = await transform([org])
 
       expect(rows).toEqual([
         {
@@ -185,7 +185,7 @@ describe('transform', () => {
     }
   ])(
     'should transform registration with $expectedStatus accreditation',
-    ({
+    async ({
       status,
       expectedStatus,
       accreditationNumber,
@@ -210,7 +210,7 @@ describe('transform', () => {
         accreditations: [accreditation]
       })
 
-      const rows = transform([org])
+      const rows = await transform([org])
 
       expect(rows).toEqual([
         {
@@ -233,7 +233,7 @@ describe('transform', () => {
     }
   )
 
-  it('should filter out registrations with unapproved statuses', () => {
+  it('should filter out registrations with unapproved statuses', async () => {
     const org = buildOrganisation({
       companyDetails: {
         name: 'Waste Ltd',
@@ -257,13 +257,13 @@ describe('transform', () => {
       ]
     })
 
-    const rows = transform([org])
+    const rows = await transform([org])
 
     expect(rows).toHaveLength(1)
     expect(rows[0].registrationNumber).toBe('R11111111PL')
   })
 
-  it('should filter out accreditations with unapproved statuses', () => {
+  it('should filter out accreditations with unapproved statuses', async () => {
     const accreditationId = new ObjectId()
 
     const org = buildOrganisation({
@@ -299,7 +299,7 @@ describe('transform', () => {
       ]
     })
 
-    const rows = transform([org])
+    const rows = await transform([org])
 
     expect(rows).toEqual([
       {
@@ -321,18 +321,18 @@ describe('transform', () => {
     ])
   })
 
-  it('should not return any rows for organisations with no registrations', () => {
+  it('should not return any rows for organisations with no registrations', async () => {
     const org = buildOrganisation({
       registrations: [],
       accreditations: []
     })
 
-    const rows = transform([org])
+    const rows = await transform([org])
 
     expect(rows).toHaveLength(0)
   })
 
-  it('should handle mixed scenarios with multiple organisations', () => {
+  it('should handle mixed scenarios with multiple organisations', async () => {
     const org1 = buildOrganisation({
       companyDetails: {
         name: 'Multi Material Ltd',
@@ -404,7 +404,7 @@ describe('transform', () => {
       accreditations: []
     })
 
-    const rows = transform([org1, org2, org3])
+    const rows = await transform([org1, org2, org3])
 
     expect(rows).toEqual([
       {
@@ -456,5 +456,63 @@ describe('transform', () => {
         dateLastChanged: ''
       }
     ])
+  })
+
+  it('should filter out test organisations from results', async () => {
+    const testOrgId = 999999
+    const normalOrgId = 500001
+
+    const testOrg = buildOrganisation({
+      orgId: testOrgId,
+      companyDetails: {
+        name: 'Test Organisation',
+        registeredAddress: baseAddress
+      },
+      submittedToRegulator: 'ea',
+      registrations: [
+        buildRegistration({
+          status: REG_ACC_STATUS.APPROVED,
+          registrationNumber: 'R99999999PL',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          material: MATERIAL.PLASTIC,
+          validFrom: VALID_FROM,
+          validTo: VALID_TO,
+          site: { address: baseSiteAddress }
+        })
+      ]
+    })
+
+    const normalOrg = buildOrganisation({
+      orgId: normalOrgId,
+      companyDetails: {
+        name: 'Normal Organisation',
+        registeredAddress: baseAddress
+      },
+      submittedToRegulator: 'ea',
+      registrations: [
+        buildRegistration({
+          status: REG_ACC_STATUS.APPROVED,
+          registrationNumber: 'R50000100PL',
+          wasteProcessingType: WASTE_PROCESSING_TYPE.REPROCESSOR,
+          material: MATERIAL.PLASTIC,
+          validFrom: VALID_FROM,
+          validTo: VALID_TO,
+          site: { address: baseSiteAddress }
+        })
+      ]
+    })
+
+    const rows = await transform([testOrg, normalOrg])
+
+    // Only the normal org should be in results, test org should be filtered out
+    expect(rows).toHaveLength(1)
+    expect(rows[0].businessName).toBe('Normal Organisation')
+    expect(rows[0].registrationNumber).toBe('R50000100PL')
+
+    // Verify test org is not in results
+    const testOrgInResults = rows.find(
+      (row) => row.businessName === 'Test Organisation'
+    )
+    expect(testOrgInResults).toBeUndefined()
   })
 })

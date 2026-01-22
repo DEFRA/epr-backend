@@ -78,11 +78,11 @@ export function capitalize(str) {
  */
 export function formatMaterial(material, glassRecyclingProcess = []) {
   if (material === MATERIAL.GLASS && glassRecyclingProcess?.length > 0) {
-    const process = glassRecyclingProcess
+    const recyclingProcesses = glassRecyclingProcess
       .map((process) => GLASS_RECYCLING_PROCESS_MAPPING[process])
       .join('-')
 
-    return `Glass-${process}`
+    return `Glass-${recyclingProcesses}`
   }
 
   return MATERIAL_DISPLAY_NAMES[material] || capitalize(material)

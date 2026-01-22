@@ -14,12 +14,17 @@ import {
   capitalize
 } from './formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
+import chunk from 'lodash.chunk'
+import { config } from '#root/config.js'
 
 const INCLUDED_STATUSES = new Set([
   REG_ACC_STATUS.APPROVED,
   REG_ACC_STATUS.SUSPENDED,
   REG_ACC_STATUS.CANCELLED
 ])
+
+const TEST_ORGANISATIONS = new Set(JSON.parse(config.get('testOrganisations')))
+const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
 /**
  * @param {Organisation} org
@@ -73,19 +78,41 @@ function isInPublishableState(item) {
   return INCLUDED_STATUSES.has(item.status)
 }
 
+function isTestOrg(org) {
+  return TEST_ORGANISATIONS.has(org.orgId)
+}
+
+/**
+ * @param {Organisation[]} batch
+ * @returns {PublicRegisterRow[]}
+ */
+function processBatch(batch) {
+  return batch
+    .filter((org) => !isTestOrg(org))
+    .flatMap((org) =>
+      org.registrations.filter(isInPublishableState).map((registration) => {
+        const accreditation = getLinkedAccreditation(
+          registration,
+          org.accreditations
+        )
+        return transformRegAcc(org, registration, accreditation)
+      })
+    )
+}
+
 /**
  * Transforms organisations into public register row objects
+ * Processes in chunks to avoid blocking event loop
  * @param {Organisation[]} organisations - Array of organisation entities
- * @returns {PublicRegisterRow[]} - Array of row objects ready for CSV export
+ * @returns {Promise<PublicRegisterRow[]>} - Array of row objects ready for CSV export
  */
-export function transform(organisations) {
-  return organisations.flatMap((org) =>
-    org.registrations.filter(isInPublishableState).map((registration) => {
-      const accreditation = getLinkedAccreditation(
-        registration,
-        org.accreditations
-      )
-      return transformRegAcc(org, registration, accreditation)
-    })
-  )
+export async function transform(organisations) {
+  const results = []
+
+  for (const batch of chunk(organisations, BATCH_SIZE)) {
+    results.push(...processBatch(batch))
+    await new Promise((resolve) => setImmediate(resolve))
+  }
+
+  return results
 }
