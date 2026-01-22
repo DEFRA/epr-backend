@@ -31,9 +31,20 @@ const performFindByAccreditationId = (db) => async (accreditationId) => {
     return null
   }
 
-  // Map MongoDB document to domain model
   const { _id, ...domainFields } = doc
   return structuredClone({ id: _id.toString(), ...domainFields })
+}
+
+const performFindByAccreditationIds = (db) => async (accreditationIds) => {
+  const docs = await db
+    .collection(WASTE_BALANCE_COLLECTION_NAME)
+    .find({ accreditationId: { $in: accreditationIds } })
+    .toArray()
+
+  return docs.map((doc) => {
+    const { _id, ...domainFields } = doc
+    return structuredClone({ id: _id.toString(), ...domainFields })
+  })
 }
 
 /**
@@ -97,6 +108,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
 
   return () => ({
     findByAccreditationId: performFindByAccreditationId(db),
+    findByAccreditationIds: performFindByAccreditationIds(db),
     updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
