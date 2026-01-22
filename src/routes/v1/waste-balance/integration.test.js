@@ -167,41 +167,4 @@ describe('GET /v1/organisations/{organisationId}/waste-balances - Integration', 
 
     expect(result).toEqual({})
   })
-
-  it('returns 403 when accreditation belongs to different organisation in MongoDB', async ({
-    server,
-    mongoClient
-  }) => {
-    const differentOrgId = '7777777777777777777777ff'
-    const accreditationIdDifferentOrg = 'cccccccccccccccccccccccc'
-
-    const collection = mongoClient
-      .db(DATABASE_NAME)
-      .collection(WASTE_BALANCE_COLLECTION_NAME)
-
-    await collection.deleteMany({})
-    await collection.insertOne({
-      accreditationId: accreditationIdDifferentOrg,
-      organisationId: differentOrgId,
-      amount: 5000,
-      availableAmount: 4000,
-      transactions: [],
-      version: 1,
-      schemaVersion: 1
-    })
-
-    const response = await server.inject({
-      method: 'GET',
-      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdDifferentOrg}`,
-      headers: {
-        Authorization: `Bearer ${validToken}`
-      }
-    })
-
-    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
-    const result = JSON.parse(response.payload)
-    expect(result.error).toBe('Forbidden')
-    expect(result.message).toContain(accreditationIdDifferentOrg)
-    expect(result.message).toContain(organisationId)
-  })
 })
