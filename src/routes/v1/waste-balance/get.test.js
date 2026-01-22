@@ -23,6 +23,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository([
       {
         accreditationId: accreditationId1,
+        organisationId,
         amount: 1000,
         availableAmount: 750,
         transactions: [],
@@ -30,6 +31,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
       },
       {
         accreditationId: accreditationId2,
+        organisationId,
         amount: 2500,
         availableAmount: 2500,
         transactions: [],
@@ -179,6 +181,7 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
     wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository([
       {
         accreditationId: accreditationIdWithNulls,
+        organisationId,
         amount: null,
         availableAmount: null,
         transactions: [],
@@ -210,5 +213,100 @@ describe('GET /v1/organisations/{organisationId}/waste-balances', () => {
         availableAmount: 0
       }
     })
+  })
+
+  it('rejects invalid organisationId format', async () => {
+    const response = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/invalid/waste-balances?accreditationIds=${accreditationId1}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+  })
+
+  it('returns 403 when accreditation belongs to a different organisation', async () => {
+    const differentOrgId = '7777777777777777777777ff'
+    const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
+
+    wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository([
+      {
+        accreditationId: accreditationIdDifferentOrg,
+        organisationId: differentOrgId,
+        amount: 1000,
+        availableAmount: 750,
+        transactions: [],
+        version: 1
+      }
+    ])
+
+    const featureFlags = createInMemoryFeatureFlags({})
+    server = await createTestServer({
+      repositories: {
+        wasteBalancesRepository: wasteBalancesRepositoryFactory
+      },
+      featureFlags
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationIdDifferentOrg}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    const result = JSON.parse(response.payload)
+    expect(result.error).toBe('Forbidden')
+    expect(result.message).toContain(accreditationIdDifferentOrg)
+    expect(result.message).toContain(organisationId)
+  })
+
+  it('returns 403 when one of multiple accreditations belongs to a different organisation', async () => {
+    const differentOrgId = '7777777777777777777777ff'
+    const accreditationIdDifferentOrg = 'bbbbbbbbbbbbbbbbbbbbbbbb'
+
+    wasteBalancesRepositoryFactory = createInMemoryWasteBalancesRepository([
+      {
+        accreditationId: accreditationId1,
+        organisationId,
+        amount: 1000,
+        availableAmount: 750,
+        transactions: [],
+        version: 1
+      },
+      {
+        accreditationId: accreditationIdDifferentOrg,
+        organisationId: differentOrgId,
+        amount: 2000,
+        availableAmount: 1500,
+        transactions: [],
+        version: 1
+      }
+    ])
+
+    const featureFlags = createInMemoryFeatureFlags({})
+    server = await createTestServer({
+      repositories: {
+        wasteBalancesRepository: wasteBalancesRepositoryFactory
+      },
+      featureFlags
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: `/v1/organisations/${organisationId}/waste-balances?accreditationIds=${accreditationId1},${accreditationIdDifferentOrg}`,
+      headers: {
+        Authorization: `Bearer ${validToken}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+    const result = JSON.parse(response.payload)
+    expect(result.error).toBe('Forbidden')
+    expect(result.message).toContain(accreditationIdDifferentOrg)
   })
 })

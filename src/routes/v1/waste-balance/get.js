@@ -17,6 +17,14 @@ export const wasteBalanceGet = {
     },
     tags: ['api'],
     validate: {
+      params: Joi.object({
+        organisationId: Joi.string()
+          .pattern(/^[a-f0-9]{24}$/)
+          .required()
+          .messages({
+            'string.pattern.base': 'organisationId must be a valid MongoDB ObjectId'
+          })
+      }),
       query: Joi.object({
         accreditationIds: Joi.string()
           .required()
@@ -35,11 +43,26 @@ export const wasteBalanceGet = {
    * @param {import('#common/hapi-types.js').HapiRequest & {wasteBalancesRepository: WasteBalancesRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async ({ wasteBalancesRepository, query }, h) => {
+  handler: async ({ wasteBalancesRepository, query, params }, h) => {
+    const { organisationId } = params
     const accreditationIds = query.accreditationIds.split(',')
 
     const wasteBalances =
       await wasteBalancesRepository.findByAccreditationIds(accreditationIds)
+
+    // Verify all returned balances belong to the specified organisation
+    const unauthorizedBalance = wasteBalances.find(
+      (balance) => balance.organisationId !== organisationId
+    )
+    if (unauthorizedBalance) {
+      return h
+        .response({
+          statusCode: StatusCodes.FORBIDDEN,
+          error: 'Forbidden',
+          message: `Accreditation ${unauthorizedBalance.accreditationId} does not belong to organisation ${organisationId}`
+        })
+        .code(StatusCodes.FORBIDDEN)
+    }
 
     // Transform to requested shape: { accreditationId: { amount, availableAmount } }
     const balanceMap = wasteBalances.reduce((acc, balance) => {
