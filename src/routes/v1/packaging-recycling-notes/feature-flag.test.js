@@ -44,7 +44,7 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
 describe('Packaging Recycling Notes', () => {
   setupAuthContext()
 
-  it('enables when flag is true', async () => {
+  it('enables when flag is true & collection exists', async () => {
     const server = await createServer({
       featureFlags: {
         dbExists: true,
@@ -57,7 +57,7 @@ describe('Packaging Recycling Notes', () => {
     )
   })
 
-  it('enables when flag is true', async () => {
+  it('enables when flag is true & collection does not yet exist', async () => {
     const server = await createServer({
       featureFlags: {
         isCreatePackagingRecyclingNotesEnabled: () => true
