@@ -4,6 +4,24 @@ const COLLECTION_NAME = 'waste-records'
 const SCHEMA_VERSION = 1
 
 /**
+ * Ensures the collection exists with required indexes.
+ * Safe to call multiple times - MongoDB createIndex is idempotent.
+ *
+ * @param {import('mongodb').Db} db
+ * @returns {Promise<import('mongodb').Collection>}
+ */
+async function ensureCollection(db) {
+  const collection = db.collection(COLLECTION_NAME)
+
+  await collection.createIndex(
+    { organisationId: 1, registrationId: 1, type: 1, rowId: 1 },
+    { unique: true }
+  )
+
+  return collection
+}
+
+/**
  * Maps MongoDB document to domain model by removing internal MongoDB fields
  * and ensuring data isolation through deep cloning
  * @param {Object} doc - MongoDB document
@@ -128,11 +146,15 @@ const performAppendVersions =
 /**
  * Creates a MongoDB-backed waste records repository
  * @param {import('mongodb').Db} db - MongoDB database instance
- * @returns {import('./port.js').WasteRecordsRepositoryFactory}
+ * @returns {Promise<import('./port.js').WasteRecordsRepositoryFactory>}
  */
-export const createWasteRecordsRepository = (db) => () => {
-  return {
-    findByRegistration: performFindByRegistration(db),
-    appendVersions: performAppendVersions(db)
+export const createWasteRecordsRepository = async (db) => {
+  await ensureCollection(db)
+
+  return () => {
+    return {
+      findByRegistration: performFindByRegistration(db),
+      appendVersions: performAppendVersions(db)
+    }
   }
 }

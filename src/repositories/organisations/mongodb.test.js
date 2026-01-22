@@ -21,7 +21,7 @@ const it = mongoIt.extend({
 
   organisationsRepository: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = createOrganisationsRepository(database)
+    const factory = await createOrganisationsRepository(database)
     await use(factory)
   }
 })
@@ -42,6 +42,7 @@ describe('MongoDB organisations repository', () => {
     it('rethrows unexpected database errors during insert', async () => {
       const dbMock = {
         collection: () => ({
+          createIndex: async () => {},
           insertOne: async () => {
             const error = new Error('Unexpected database error')
             error.code = 99999
@@ -50,7 +51,8 @@ describe('MongoDB organisations repository', () => {
         })
       }
 
-      const repository = createOrganisationsRepository(dbMock)()
+      const factory = await createOrganisationsRepository(dbMock)
+      const repository = factory()
       const orgData = buildOrganisation()
 
       await expect(repository.insert(orgData)).rejects.toThrow(

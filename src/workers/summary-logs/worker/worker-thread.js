@@ -125,17 +125,26 @@ export default async function summaryLogsWorkerThread(command) {
     try {
       const db = mongoClient.db(databaseName)
 
-      const summaryLogsRepository = createSummaryLogsRepository(db)(logger)
+      const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
+      const summaryLogsRepository = summaryLogsRepositoryFactory(logger)
+
       const uploadsRepository = createUploadsRepository({
         s3Client,
         cdpUploaderUrl: config.get('cdpUploader.url'),
         s3Bucket: config.get('cdpUploader.s3Bucket')
       })
-      const organisationsRepository = createOrganisationsRepository(db)()
-      const wasteRecordsRepository = createWasteRecordsRepository(db)()
-      const wasteBalancesRepository = createWasteBalancesRepository(db, {
-        organisationsRepository
-      })()
+
+      const organisationsRepositoryFactory =
+        await createOrganisationsRepository(db)
+      const organisationsRepository = organisationsRepositoryFactory()
+
+      const wasteRecordsRepositoryFactory =
+        await createWasteRecordsRepository(db)
+      const wasteRecordsRepository = wasteRecordsRepositoryFactory()
+
+      const wasteBalancesRepositoryFactory =
+        await createWasteBalancesRepository(db, { organisationsRepository })
+      const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
       const summaryLogExtractor = createSummaryLogExtractor({
         uploadsRepository,

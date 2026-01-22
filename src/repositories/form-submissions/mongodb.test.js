@@ -20,7 +20,7 @@ const it = mongoIt.extend({
 
   formSubmissionsRepository: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = createFormSubmissionsRepository(database)
+    const factory = await createFormSubmissionsRepository(database)
     await use(factory)
   },
 

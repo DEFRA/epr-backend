@@ -8,8 +8,8 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '../../enums/index.js'
 import {
-  createIndexes,
-  createOrUpdateCollections,
+  createFormCollections,
+  createLockManagerIndex,
   createSeedData
 } from '../collections/create-update.js'
 
@@ -40,16 +40,19 @@ export const mongoDbPlugin = {
 
       const isProduction = () => config.get('cdpEnvironment') === 'prod'
 
-      const { featureFlags } = server
+      await createFormCollections(db)
+      await createLockManagerIndex(db)
 
-      await createOrUpdateCollections(db, featureFlags)
-      await createIndexes(db, featureFlags)
+      const organisationsRepositoryFactory =
+        await createOrganisationsRepository(db)
+      const wasteRecordsRepositoryFactory =
+        await createWasteRecordsRepository(db)
 
       await createSeedData(
         db,
         isProduction,
-        createOrganisationsRepository(db)(),
-        createWasteRecordsRepository(db)()
+        organisationsRepositoryFactory(),
+        wasteRecordsRepositoryFactory()
       )
 
       server.logger.info({

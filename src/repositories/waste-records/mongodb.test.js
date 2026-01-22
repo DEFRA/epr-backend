@@ -16,7 +16,7 @@ const it = mongoIt.extend({
 
   wasteRecordsRepository: async ({ mongoClient }, use) => {
     const database = mongoClient.db(DATABASE_NAME)
-    const factory = createWasteRecordsRepository(database)
+    const factory = await createWasteRecordsRepository(database)
     await use(factory)
   }
 })

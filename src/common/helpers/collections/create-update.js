@@ -1,12 +1,8 @@
 import { createOrUpdateAccreditationCollection } from './create-update-accreditation.js'
 import { createOrUpdateOrganisationCollection } from './create-update-organisation.js'
 import { createOrUpdateRegistrationCollection } from './create-update-registration.js'
-import { createOrUpdatePackagingRecyclingNotesCollection } from './create-update-packaging-recycling-notes.js'
 
-import {
-  COLLECTION_PACKAGING_RECYCLING_NOTES,
-  ORG_ID_START_NUMBER
-} from '../../enums/index.js'
+import { ORG_ID_START_NUMBER } from '../../enums/index.js'
 import {
   extractAnswers,
   extractEmail,
@@ -28,15 +24,12 @@ import eprOrganisation3 from '#data/fixtures/common/epr-organisations/sample-org
 import eprOrganisation4 from '#data/fixtures/common/epr-organisations/sample-organisation-4.json' with { type: 'json' }
 import exporterRecords from '#data/fixtures/common/waste-records/exporter-records.json' with { type: 'json' }
 
-import { createOrUpdateEPROrganisationCollection } from '#common/helpers/collections/create-update-epr-organisation.js'
-import { createSystemLogsCollection } from '#common/helpers/collections/create-system-logs.js'
 import { createEprOrganisationScenarios } from '#common/helpers/collections/seed-scenarios.js'
 
 import { logger } from '#common/helpers/logging/logger.js'
 import { toWasteRecordVersions } from '#repositories/waste-records/contract/test-data.js'
 import { ObjectId } from 'mongodb'
 
-/** @import {FeatureFlags} from '#feature-flags/feature-flags.port.js' */
 /** @import {OrganisationsRepository} from '#repositories/organisations/port.js' */
 /** @import {WasteRecordsRepository} from '#repositories/waste-records/port.js' */
 
@@ -45,108 +38,31 @@ const COLLECTION_REGISTRATION = 'registration'
 const COLLECTION_ACCREDITATION = 'accreditation'
 const COLLECTION_EPR_ORGANISATIONS = 'epr-organisations'
 const COLLECTION_WASTE_RECORDS = 'waste-records'
-const COLLECTION_SUMMARY_LOGS = 'summary-logs'
-const COLLECTION_WASTE_BALANCES = 'waste-balances'
-const COLLECTION_SYSTEM_LOGS = 'system-logs'
 
 /**
  * @import {Db} from 'mongodb'
  */
 
 /**
- * Create or update collections
- *
  * @async
  * @param {Db} db
- * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createOrUpdateCollections(db, featureFlags) {
+export async function createFormCollections(db) {
   const collections = await db.listCollections({}, { nameOnly: true }).toArray()
 
   await createOrUpdateOrganisationCollection(db, collections)
   await createOrUpdateRegistrationCollection(db, collections)
   await createOrUpdateAccreditationCollection(db, collections)
-  await createOrUpdateEPROrganisationCollection(db, collections)
-  await createSystemLogsCollection(db, collections)
-
-  if (featureFlags.isCreatePackagingRecyclingNotesEnabled()) {
-    await createOrUpdatePackagingRecyclingNotesCollection(db, collections)
-  }
 }
 
 /**
- * Create db indexes
- *
  * @async
  * @param {Db} db
- * @param {FeatureFlags} featureFlags
  * @returns {Promise<void>}
  */
-export async function createIndexes(db, featureFlags) {
+export async function createLockManagerIndex(db) {
   await db.collection('mongo-locks').createIndex({ id: 1 })
-
-  await db.collection(COLLECTION_ORGANISATION).createIndex({ orgId: 1 })
-  await db
-    .collection(COLLECTION_REGISTRATION)
-    .createIndex({ referenceNumber: 1 })
-  await db
-    .collection(COLLECTION_ACCREDITATION)
-    .createIndex({ referenceNumber: 1 })
-
-  await db
-    .collection(COLLECTION_WASTE_RECORDS)
-    .createIndex(
-      { organisationId: 1, registrationId: 1, type: 1, rowId: 1 },
-      { unique: true }
-    )
-
-  // Enforces at most one summary log in 'submitting' status per org/reg pair
-  // This prevents race conditions when two users try to confirm simultaneously
-  await db.collection(COLLECTION_SUMMARY_LOGS).createIndex(
-    { organisationId: 1, registrationId: 1 },
-    {
-      unique: true,
-      partialFilterExpression: { status: 'submitting' }
-    }
-  )
-
-  // TTL index for automatic cleanup of non-submitted summary logs
-  // Documents are deleted when current time exceeds their expiresAt value
-  // SUBMITTED status has expiresAt: null, so those documents are never deleted
-  await db
-    .collection(COLLECTION_SUMMARY_LOGS)
-    .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
-
-  // Optimises findLatestSubmittedForOrgReg query which filters by org/reg/status
-  // and sorts by submittedAt descending
-  await db.collection(COLLECTION_SUMMARY_LOGS).createIndex({
-    organisationId: 1,
-    registrationId: 1,
-    status: 1,
-    submittedAt: -1
-  })
-
-  // Optimises waste balance lookups by accreditation ID
-  // Each accreditation has at most one balance document
-  await db
-    .collection(COLLECTION_WASTE_BALANCES)
-    .createIndex({ accreditationId: 1 }, { unique: true })
-
-  // Optimises system log queries by organisation ID
-  await db
-    .collection(COLLECTION_SYSTEM_LOGS)
-    .createIndex({ 'context.organisationId': 1 })
-
-  if (featureFlags?.isCreatePackagingRecyclingNotesEnabled()) {
-    await db.collection(COLLECTION_PACKAGING_RECYCLING_NOTES).createIndex(
-      {
-        issuedByOrganisation: 1,
-        'status.currentStatus': 1
-      },
-      { name: 'issuedBy_status' }
-    )
-  }
 }
 
 /**
