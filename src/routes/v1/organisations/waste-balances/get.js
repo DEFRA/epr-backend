@@ -58,7 +58,6 @@ export const wasteBalanceGet = {
         .code(StatusCodes.FORBIDDEN)
     }
 
-    // Transform to requested shape: { accreditationId: { amount, availableAmount } }
     const balanceMap = wasteBalances.reduce((acc, balance) => {
       acc[balance.accreditationId] = {
         amount: balance.amount ?? 0,
