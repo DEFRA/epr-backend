@@ -76,6 +76,7 @@ function hasBothGlassProcesses(glassRecyclingProcess) {
  * Get the appropriate suffix based on glass recycling process
  * @param {string[]} glassRecyclingProcess
  * @returns {string}
+ * @throws {Error} If glassRecyclingProcess doesn't contain a valid process
  */
 function getSuffixForProcess(glassRecyclingProcess) {
   if (glassRecyclingProcess?.includes(GLASS_RE_MELT)) {
@@ -84,7 +85,9 @@ function getSuffixForProcess(glassRecyclingProcess) {
   if (glassRecyclingProcess?.includes(GLASS_OTHER)) {
     return GO_SUFFIX
   }
-  return GL_SUFFIX
+  throw new Error(
+    `Cannot determine suffix: glassRecyclingProcess must contain '${GLASS_RE_MELT}' or '${GLASS_OTHER}', got: ${JSON.stringify(glassRecyclingProcess)}`
+  )
 }
 
 /**

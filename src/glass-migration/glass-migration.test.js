@@ -109,7 +109,7 @@ describe('Glass Migration', () => {
       expect(result[0]).toEqual(registration)
     })
 
-    it('should handle null glassRecyclingProcess', () => {
+    it('should throw if glassRecyclingProcess is null', () => {
       const registration = {
         id: 'reg-1',
         registrationNumber: 'REG-2025-GL',
@@ -117,27 +117,24 @@ describe('Glass Migration', () => {
         glassRecyclingProcess: null
       }
 
-      const result = transformGlassRegistration(registration)
-
-      // Should still return unchanged as we can't determine the suffix without process info
-      expect(result).toHaveLength(1)
-      expect(result[0].registrationNumber).toBe('REG-2025-GL')
+      expect(() => transformGlassRegistration(registration)).toThrow(
+        /Cannot determine suffix/
+      )
     })
 
-    it('should handle undefined glassRecyclingProcess', () => {
+    it('should throw if glassRecyclingProcess is undefined', () => {
       const registration = {
         id: 'reg-1',
         registrationNumber: 'REG-2025-GL',
         material: 'glass'
       }
 
-      const result = transformGlassRegistration(registration)
-
-      expect(result).toHaveLength(1)
-      expect(result[0].registrationNumber).toBe('REG-2025-GL')
+      expect(() => transformGlassRegistration(registration)).toThrow(
+        /Cannot determine suffix/
+      )
     })
 
-    it('should handle empty array glassRecyclingProcess', () => {
+    it('should throw if glassRecyclingProcess is empty array', () => {
       const registration = {
         id: 'reg-1',
         registrationNumber: 'REG-2025-GL',
@@ -145,10 +142,9 @@ describe('Glass Migration', () => {
         glassRecyclingProcess: []
       }
 
-      const result = transformGlassRegistration(registration)
-
-      expect(result).toHaveLength(1)
-      expect(result[0].registrationNumber).toBe('REG-2025-GL')
+      expect(() => transformGlassRegistration(registration)).toThrow(
+        /Cannot determine suffix/
+      )
     })
   })
 
@@ -578,7 +574,7 @@ describe('Glass Migration', () => {
       expect(result.accreditations).toHaveLength(3) // 1 paper + 2 split glass
     })
 
-    it('should keep original accreditationId when registration has null glassRecyclingProcess but links to split accreditation', () => {
+    it('should throw if registration has GL suffix but null glassRecyclingProcess', () => {
       const org = {
         id: 'org-1',
         version: 1,
@@ -601,10 +597,39 @@ describe('Glass Migration', () => {
         ]
       }
 
+      expect(() => migrateOrganisation(org)).toThrow(/Cannot determine suffix/)
+    })
+
+    it('should keep original accreditationId when already-migrated registration links to split accreditation but has unrecognised glassRecyclingProcess', () => {
+      // Edge case: registration already has GR suffix (no transformation needed)
+      // but links to an accreditation that gets split, and its glassRecyclingProcess
+      // doesn't contain glass_re_melt or glass_other
+      const org = {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-GR', // Already migrated
+            material: 'glass',
+            glassRecyclingProcess: ['some_unknown_process'],
+            accreditationId: 'acc-1'
+          }
+        ],
+        accreditations: [
+          {
+            id: 'acc-1',
+            accreditationNumber: 'ACC-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+          }
+        ]
+      }
+
       const result = migrateOrganisation(org)
 
-      // Registration has null glassRecyclingProcess so can't determine which split accreditation to link to
-      // Should keep original accreditationId
+      // Registration doesn't match either split accreditation's process type
+      // so keeps original accreditationId
       const reg = result.registrations[0]
       expect(reg.accreditationId).toBe('acc-1')
     })
