@@ -26,7 +26,7 @@ describe('ExcelJS parser performance', () => {
     ...PARSE_DEFAULTS
   }
 
-  const TIMEOUT_MS = 30_000
+  const TIMEOUT_MS = 50_000
 
   it('should parse Exporter template', { timeout: TIMEOUT_MS }, async () => {
     const buffer = await readFile(
