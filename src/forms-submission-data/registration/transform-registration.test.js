@@ -41,7 +41,10 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       ],
       suppliers:
         'Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)',
-      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ],
       plantEquipmentDetails: undefined,
       exportPorts: ['SouthHampton', 'Portsmouth'],
       submitterContactDetails: {
