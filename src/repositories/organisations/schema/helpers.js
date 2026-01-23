@@ -1,5 +1,6 @@
 import Joi from 'joi'
 import {
+  MATERIAL,
   REG_ACC_STATUS,
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
@@ -116,10 +117,27 @@ function findAccreditationsWithoutApprovedRegistration(
     })
 }
 
+/**
+ * Glass registrations can be split into remelt and other processes,
+ * which should be treated as distinct entities for duplicate detection.
+ *
+ * @param {import('#formsubmission/types.js').RegistrationOrAccreditation} item
+ * @returns {string}
+ */
+function getDuplicateDetectionKey(item) {
+  const baseKey = getRegAccKey(item)
+
+  if (item.material === MATERIAL.GLASS && item.glassRecyclingProcess?.[0]) {
+    return `${baseKey}::${item.glassRecyclingProcess[0]}`
+  }
+
+  return baseKey
+}
+
 function findDuplicateApprovals(items) {
   const grouped = Object.groupBy(
     items.filter((item) => item.status === REG_ACC_STATUS.APPROVED),
-    (item) => getRegAccKey(item)
+    (item) => getDuplicateDetectionKey(item)
   )
 
   return Object.entries(grouped).filter(([_key, group]) => group.length > 1)

@@ -10,6 +10,7 @@ import {
   getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
 import { waitForVersion } from '#repositories/summary-logs/contract/test-helpers.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
@@ -20,11 +21,29 @@ import {
   USER_PRESENT_IN_ORG1_EMAIL,
   VALID_TOKEN_CONTACT_ID
 } from '#vite/helpers/create-defra-id-test-tokens.js'
+import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { testInvalidTokenScenarios } from '#vite/helpers/test-invalid-token-scenarios.js'
 import { StatusCodes } from 'http-status-codes'
 
 const { validToken } = defraIdMockAuthTokens
+const { validToken: serviceMaintainerToken } = entraIdMockAuthTokens
+const mockCdpAuditing = vi.fn()
+const mockOrganisationLinkedMetric = vi.fn()
+
+vi.mock('@defra/cdp-auditing', () => ({
+  audit: (...args) => mockCdpAuditing(...args)
+}))
+
+vi.mock(
+  import('#common/helpers/metrics/organisation-linking.js'),
+  async (importOriginal) => ({
+    organisationLinkingMetrics: {
+      ...(await importOriginal()).organisationLinkingMetrics,
+      organisationLinked: () => mockOrganisationLinkedMetric()
+    }
+  })
+)
 
 const ISO_DATE_STRING_REGEX = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/
 
@@ -35,15 +54,22 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   let organisationsRepository
   const { VALID_FROM, VALID_TO } = getValidDateRange()
 
-  beforeEach(async () => {
+  beforeAll(async () => {
     organisationsRepositoryFactory = createInMemoryOrganisationsRepository([])
     organisationsRepository = organisationsRepositoryFactory()
     const featureFlags = createInMemoryFeatureFlags({ organisations: true })
 
     server = await createTestServer({
-      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      repositories: {
+        organisationsRepository: organisationsRepositoryFactory,
+        systemLogsRepository: createSystemLogsRepository()
+      },
       featureFlags
     })
+  })
+
+  afterAll(() => {
+    vi.resetAllMocks()
   })
 
   testInvalidTokenScenarios({
@@ -167,14 +193,10 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
       )
 
       describe('when the request succeeds', async () => {
-        let response
-        let org
-        let finalOrgVersion
+        const performPostLinkOrganisation = async () => {
+          const org = await buildApprovedOrg(organisationsRepository)
 
-        beforeAll(async () => {
-          org = await buildApprovedOrg(organisationsRepository)
-
-          response = await server.inject({
+          const response = await server.inject({
             method: 'POST',
             url: `/v1/organisations/${org.id}/link`,
             headers: {
@@ -182,18 +204,23 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
             }
           })
 
-          finalOrgVersion = await waitForVersion(
+          const finalOrgVersion = await waitForVersion(
             organisationsRepository,
             org.id,
             2
           )
-        })
+          return { response, finalOrgVersion }
+        }
 
         it('returns 200 status code', async () => {
+          const { response } = await performPostLinkOrganisation()
+
           expect(response.statusCode).toBe(StatusCodes.OK)
         })
 
         it('returns the expected payload', async () => {
+          const { response } = await performPostLinkOrganisation()
+
           const result = JSON.parse(response.payload)
 
           expect(result).toEqual({
@@ -211,10 +238,14 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
         })
 
         it('leaves the organisation in the database with status: "active"', async () => {
+          const { finalOrgVersion } = await performPostLinkOrganisation()
+
           expect(finalOrgVersion.status).toBe(ORGANISATION_STATUS.ACTIVE)
         })
 
         it('populates the organisation with a complete "linkedDefraOrganisation" object', async () => {
+          const { finalOrgVersion } = await performPostLinkOrganisation()
+
           expect(finalOrgVersion.linkedDefraOrganisation).toEqual({
             orgId: COMPANY_1_ID,
             orgName: COMPANY_1_NAME,
@@ -224,6 +255,86 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
               id: VALID_TOKEN_CONTACT_ID
             }
           })
+        })
+
+        it('captures a system log', async () => {
+          const start = new Date()
+
+          const { finalOrgVersion } = await performPostLinkOrganisation()
+
+          const systemLogsResponse = await server.inject({
+            method: 'GET',
+            url: `/v1/system-logs?organisationId=${finalOrgVersion.id}`,
+            headers: {
+              Authorization: `Bearer ${serviceMaintainerToken}`
+            }
+          })
+
+          expect(systemLogsResponse.statusCode).toBe(StatusCodes.OK)
+
+          // System log
+          const systemLogsResponseBody = JSON.parse(systemLogsResponse.payload)
+
+          expect(systemLogsResponseBody.systemLogs).toHaveLength(1)
+          const systemLogPayload = systemLogsResponseBody.systemLogs[0]
+
+          expect(systemLogPayload.createdBy).toEqual({
+            id: VALID_TOKEN_CONTACT_ID,
+            email: USER_PRESENT_IN_ORG1_EMAIL,
+            scope: ['linker']
+          })
+
+          expect(
+            new Date(systemLogPayload.createdAt).getTime()
+          ).toBeGreaterThanOrEqual(start.getTime())
+
+          expect(systemLogPayload.event).toEqual({
+            category: 'entity',
+            subCategory: 'epr-organisations',
+            action: 'linked-to-defra-id-organisation'
+          })
+
+          expect(systemLogPayload.context).toEqual({
+            organisationId: finalOrgVersion.id,
+            linkedDefraOrganisation: {
+              id: COMPANY_1_ID,
+              name: COMPANY_1_NAME
+            }
+          })
+        })
+
+        it('captures an audit event', async () => {
+          const { finalOrgVersion } = await performPostLinkOrganisation()
+
+          expect(mockCdpAuditing).toHaveBeenCalledTimes(1)
+
+          const auditPayload = mockCdpAuditing.mock.calls[0][0]
+
+          expect(auditPayload.user).toEqual({
+            id: VALID_TOKEN_CONTACT_ID,
+            email: USER_PRESENT_IN_ORG1_EMAIL,
+            scope: ['linker']
+          })
+
+          expect(auditPayload.event).toEqual({
+            category: 'entity',
+            subCategory: 'epr-organisations',
+            action: 'linked-to-defra-id-organisation'
+          })
+
+          expect(auditPayload.context).toEqual({
+            organisationId: finalOrgVersion.id,
+            linkedDefraOrganisation: {
+              id: COMPANY_1_ID,
+              name: COMPANY_1_NAME
+            }
+          })
+        })
+
+        it('captures a metric', async () => {
+          await performPostLinkOrganisation()
+
+          expect(mockOrganisationLinkedMetric).toHaveBeenCalledTimes(1)
         })
       })
     })
