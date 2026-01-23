@@ -342,11 +342,11 @@ const performValidationChecks = async ({
     if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
       validateExporterDates(wasteRecords, registration)
     }
-    
+
     if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
       validateReprocessorInputDates(wasteRecords, registration)
     }
-    
+
     if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
       validateReprocessorOutputDates(wasteRecords, registration)
     }
