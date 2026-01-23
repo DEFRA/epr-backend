@@ -222,13 +222,19 @@ const handleValidationFailure = (error, issues, loggingContext) => {
 
 const validateExporterDates = (wasteRecords, registration) => {
   for (const wasteRecord of wasteRecords) {
-    // EXPORTER records are guaranteed to have DATE_OF_EXPORT if they are RECEIVED_LOADS
-    const dateOfExport =
-      wasteRecord.record.data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT]
+    const data = wasteRecord.record.data
+    // Check all possible date fields for Exporter tables:
+    // 1. DATE_OF_EXPORT (Received loads)
+    // 2. DATE_RECEIVED_FOR_EXPORT (Received loads fallback)
+    // 3. DATE_LOAD_LEFT_SITE (Sent on loads)
+    const dateToCheck =
+      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_OF_EXPORT] ||
+      data[EXPORTER_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_EXPORT] ||
+      data[REPROCESSOR_INPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
 
     if (
-      dateOfExport &&
-      !isWithinAccreditationDateRange(dateOfExport, registration)
+      dateToCheck &&
+      !isWithinAccreditationDateRange(dateToCheck, registration)
     ) {
       wasteRecord.outcome = ROW_OUTCOME.IGNORED
     }
@@ -238,15 +244,13 @@ const validateExporterDates = (wasteRecords, registration) => {
 const validateReprocessorInputDates = (wasteRecords, registration) => {
   for (const wasteRecord of wasteRecords) {
     const data = wasteRecord.record.data
-    // Check all possible date fields for Reprocessor Input tables.
-    // Received loads use DATE_RECEIVED_FOR_REPROCESSING, while Sent on and
-    // Reprocessed loads use DATE_LOAD_LEFT_SITE.
+    // Check both possible date fields for Reprocessor Input:
+    // 1. DATE_RECEIVED_FOR_REPROCESSING (Received loads)
+    // 2. DATE_LOAD_LEFT_SITE (Reprocessed and Sent on loads)
     const dateToCheck =
       data[
         REPROCESSOR_INPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] ||
-      data[REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
-      data[REPROCESSOR_INPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+      ] || data[REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
 
     if (
       dateToCheck &&
@@ -260,15 +264,13 @@ const validateReprocessorInputDates = (wasteRecords, registration) => {
 const validateReprocessorOutputDates = (wasteRecords, registration) => {
   for (const wasteRecord of wasteRecords) {
     const data = wasteRecord.record.data
-    // Check all possible date fields for Reprocessor Output tables.
-    // Received loads use DATE_RECEIVED_FOR_REPROCESSING, while Sent on and
-    // Reprocessed loads use DATE_LOAD_LEFT_SITE.
+    // Check both possible date fields for Reprocessor Output:
+    // 1. DATE_RECEIVED_FOR_REPROCESSING (Received loads)
+    // 2. DATE_LOAD_LEFT_SITE (Reprocessed and Sent on loads)
     const dateToCheck =
       data[
         REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
-      ] ||
-      data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
-      data[REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+      ] || data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
 
     if (
       dateToCheck &&

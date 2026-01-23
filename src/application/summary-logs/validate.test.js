@@ -1073,11 +1073,11 @@ describe('SummaryLogsValidator', () => {
         'EXPORT_CONTROLS'
       ]
 
-      const buildRow = (rowId, exportDate) =>
+      const buildRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
         headers.map((h) => {
           if (h === 'ROW_ID') return rowId
           if (h === 'DATE_OF_EXPORT') return exportDate
-          if (h === 'DATE_RECEIVED_FOR_EXPORT') return '2025-01-01'
+          if (h === 'DATE_RECEIVED_FOR_EXPORT') return receivedDate
           if (h === 'EWC_CODE') return '03 03 08'
           if (h === 'DESCRIPTION_WASTE') return 'Paper - other'
           if (h === 'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE') return 'No'
@@ -1107,7 +1107,8 @@ describe('SummaryLogsValidator', () => {
               headers,
               rows: [
                 { rowNumber: 8, values: buildRow(3000, '2025-06-01') },
-                { rowNumber: 9, values: buildRow(3001, '2024-12-31') }
+                { rowNumber: 9, values: buildRow(3001, '2024-12-31') },
+                { rowNumber: 10, values: buildRow(3002, '', '2024-12-31') } // Fallback to DATE_RECEIVED_FOR_EXPORT
               ]
             }
           }
@@ -1120,6 +1121,72 @@ describe('SummaryLogsValidator', () => {
 
       expect(updateCall.loads.added.valid.count).toBe(1)
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
+    })
+
+    it('sets IGNORED outcome for EXPORTER Sent on loads using DATE_LOAD_LEFT_SITE', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'exporter',
+        material: 'aluminium'
+      })
+
+      const headers = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+        'FINAL_DESTINATION_FACILITY_TYPE',
+        'FINAL_DESTINATION_NAME',
+        'FINAL_DESTINATION_ADDRESS',
+        'FINAL_DESTINATION_POSTCODE',
+        'FINAL_DESTINATION_EMAIL',
+        'FINAL_DESTINATION_PHONE',
+        'YOUR_REFERENCE',
+        'DESCRIPTION_WASTE',
+        'EWC_CODE',
+        'WEIGHBRIDGE_TICKET'
+      ]
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({
+            PROCESSING_TYPE: { value: 'EXPORTER' },
+            MATERIAL: { value: 'Aluminium' }
+          }),
+          data: {
+            SENT_ON_LOADS: {
+              location: { sheet: 'Sent on', row: 7, column: 'B' },
+              headers,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    4200,
+                    '2024-12-31',
+                    10,
+                    'Other',
+                    'Other Name',
+                    'Address',
+                    'SW1A 1AA',
+                    'test@test.com',
+                    '01234567890',
+                    'REF',
+                    'Aluminium',
+                    '03 03 08',
+                    'WT123'
+                  ]
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.loads.added.valid.count).toBe(0)
     })
 
     it('sets IGNORED outcome for Reprocessor Output loads with dates outside accreditation range', async () => {
@@ -1288,6 +1355,71 @@ describe('SummaryLogsValidator', () => {
 
       expect(updateCall.loads.added.valid.count).toBe(1)
       expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
+    })
+
+    it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Input', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'input',
+        material: 'aluminium'
+      })
+
+      const headers = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+        'FINAL_DESTINATION_FACILITY_TYPE',
+        'FINAL_DESTINATION_NAME',
+        'FINAL_DESTINATION_ADDRESS',
+        'FINAL_DESTINATION_POSTCODE',
+        'FINAL_DESTINATION_EMAIL',
+        'FINAL_DESTINATION_PHONE',
+        'YOUR_REFERENCE',
+        'DESCRIPTION_WASTE',
+        'EWC_CODE',
+        'WEIGHBRIDGE_TICKET'
+      ]
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ MATERIAL: { value: 'Aluminium' } }),
+          data: {
+            SENT_ON_LOADS: {
+              location: { sheet: 'Sent on', row: 7, column: 'B' },
+              headers,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    6000,
+                    '2024-12-31',
+                    10,
+                    'Other',
+                    'Other Name',
+                    'Address',
+                    'SW1A 1AA',
+                    'test@test.com',
+                    '01234567890',
+                    'REF',
+                    'Desc',
+                    '03 03 08',
+                    'WT123'
+                  ]
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+      expect(updateCall.loads.added.valid.count).toBe(0)
     })
 
     it('does not set IGNORED outcome when no date field is found', async () => {
