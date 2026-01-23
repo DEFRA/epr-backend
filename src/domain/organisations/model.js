@@ -30,6 +30,10 @@ export const REGULATOR = Object.freeze({
   NIEA: 'niea'
 })
 
+/**
+ * @typedef {'aluminium' | 'fibre' | 'glass' | 'paper' | 'plastic' | 'steel' | 'wood'} Material
+ */
+
 export const MATERIAL = Object.freeze({
   ALUMINIUM: 'aluminium',
   FIBRE: 'fibre',
@@ -94,10 +98,18 @@ export const WASTE_PERMIT_TYPE = Object.freeze({
   WASTE_EXEMPTION: 'waste_exemption'
 })
 
+/**
+ * @typedef {'glass_re_melt' | 'glass_other'} GlassRecyclingProcess
+ */
+
 export const GLASS_RECYCLING_PROCESS = Object.freeze({
   GLASS_RE_MELT: 'glass_re_melt',
   GLASS_OTHER: 'glass_other'
 })
+
+/**
+ * @typedef {'up_to_500' | 'up_to_5000' | 'up_to_10000' | 'over_10000'} TonnageBand
+ */
 
 export const TONNAGE_BAND = Object.freeze({
   UP_TO_500: 'up_to_500',
