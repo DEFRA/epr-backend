@@ -105,7 +105,6 @@ export const registrationSchema = Joi.object({
         )
       )
       .min(1)
-      .max(1)
   ),
   noticeAddress: requiredForExporterOptionalForReprocessor(addressSchema),
   cbduNumber: Joi.when('submittedToRegulator', {
