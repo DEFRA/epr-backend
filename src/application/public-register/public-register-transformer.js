@@ -50,19 +50,17 @@ function transformRegAcc(org, registration, accreditation) {
     annexIIProcess: getAnnexIIProcess(registration.material),
     accreditationStatus: accreditation ? capitalize(accreditation.status) : '',
     accreditationNo: accreditation?.accreditationNumber || '',
-    tonnageBand: accreditation
-      ? formatTonnageBand(accreditation.prnIssuance?.tonnageBand)
-      : '',
-    activeDate: accreditation?.validFrom
-      ? formatDate(accreditation.validFrom)
-      : '',
-    dateLastChanged: accreditation
-      ? formatDate(
-          accreditation.statusHistory[accreditation.statusHistory.length - 1]
-            .updatedAt
-        )
-      : ''
+    tonnageBand: formatTonnageBand(accreditation?.prnIssuance?.tonnageBand),
+    activeDate: formatDate(accreditation?.validFrom),
+    dateLastChanged: formatDate(getLastStatusUpdateDate(accreditation))
   }
+}
+
+function getLastStatusUpdateDate(item) {
+  const statusHistory = item?.statusHistory
+  return statusHistory
+    ? statusHistory[statusHistory.length - 1].updatedAt
+    : null
 }
 
 function getLinkedAccreditation(registration, accreditations) {

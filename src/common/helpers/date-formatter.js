@@ -19,5 +19,5 @@ const britishFormatter = new Intl.DateTimeFormat('en-GB', {
  * @returns {string} - Formatted date string (e.g., '22/01/2026')
  */
 export function formatDate(date) {
-  return britishFormatter.format(date)
+  return date ? britishFormatter.format(date) : ''
 }

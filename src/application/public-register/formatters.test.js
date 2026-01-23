@@ -131,5 +131,9 @@ describe('formatters', () => {
     it('should return empty string for unknown tonnage band', () => {
       expect(formatTonnageBand('unknown')).toBe('')
     })
+
+    it('should return empty string for null or undefined', () => {
+      expect(formatTonnageBand(null)).toBe('')
+    })
   })
 })

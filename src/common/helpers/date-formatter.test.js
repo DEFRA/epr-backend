@@ -11,4 +11,8 @@ describe('formatDate', () => {
     const date = new Date('2026-03-05T00:00:00Z')
     expect(formatDate(date)).toBe('05/03/2026')
   })
+
+  it('should return empty string for null', () => {
+    expect(formatDate(null)).toBe('')
+  })
 })
