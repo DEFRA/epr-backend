@@ -341,9 +341,13 @@ const performValidationChecks = async ({
     // Validate that load dates are within accreditation period
     if (meta.PROCESSING_TYPE === PROCESSING_TYPES.EXPORTER) {
       validateExporterDates(wasteRecords, registration)
-    } else if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
+    }
+    
+    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
       validateReprocessorInputDates(wasteRecords, registration)
-    } else if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
+    }
+    
+    if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
       validateReprocessorOutputDates(wasteRecords, registration)
     }
 
