@@ -32,8 +32,7 @@ import {
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
 import {
   RECEIVED_LOADS_FIELDS as REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS,
-  REPROCESSED_LOADS_FIELDS as REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS,
-  SENT_ON_LOADS_FIELDS as REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS
+  REPROCESSED_LOADS_FIELDS as REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
