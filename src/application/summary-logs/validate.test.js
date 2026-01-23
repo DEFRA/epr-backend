@@ -1498,7 +1498,7 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 buildReceivedLoadRow({
                   ROW_ID: 20000,
-                  DATE_RECEIVED_FOR_REPROCESSING: '' 
+                  DATE_RECEIVED_FOR_REPROCESSING: ''
                 })
               ]
             })
@@ -1546,7 +1546,21 @@ describe('SummaryLogsValidator', () => {
               rows: [
                 {
                   rowNumber: 8,
-                  values: [4200, '', 10, 'Other', 'Other Name', 'Address', 'SW1A 1AA', 'test@test.com', '01234567890', 'REF', 'Aluminium', '03 03 08', 'WT123']
+                  values: [
+                    4200,
+                    '',
+                    10,
+                    'Other',
+                    'Other Name',
+                    'Address',
+                    'SW1A 1AA',
+                    'test@test.com',
+                    '01234567890',
+                    'REF',
+                    'Aluminium',
+                    '03 03 08',
+                    'WT123'
+                  ]
                 }
               ]
             }
