@@ -345,7 +345,10 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
       orgId: 503177,
       material: MATERIAL.GLASS,
-      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ],
       site: undefined,
       systemReference: '68e68dd778f83083f0f17a77',
       orgName: 'Green Recycling Solutions Ltd',
