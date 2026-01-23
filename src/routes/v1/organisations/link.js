@@ -4,6 +4,8 @@ import { StatusCodes } from 'http-status-codes'
 
 import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
 import { organisationsLinkPath } from '#domain/organisations/paths.js'
+import { auditOrganisationLinking } from '#root/auditing/organisation-linking.js'
+import { organisationLinkingMetrics } from '#common/helpers/metrics/organisation-linking.js'
 
 /**
  * @typedef {{
@@ -34,7 +36,11 @@ export const organisationsLink = {
   },
 
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & { params: { organisationId: string } }} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {
+   *    organisationsRepository: import('#repositories/organisations/port.js').OrganisationsRepository,
+   *    systemLogsRepository: import('#repositories/system-logs/port.js').SystemLogsRepository,
+   *    params: { organisationId: string }
+   * }} request
    * @param {import('@hapi/hapi').ResponseToolkit} h
    * @returns {Promise<import('@hapi/hapi').ResponseObject>}
    */
@@ -73,6 +79,12 @@ export const organisationsLink = {
       status: ORGANISATION_STATUS.ACTIVE,
       linkedDefraOrganisation: linkedDefraOrg
     })
+
+    await auditOrganisationLinking(request, id, {
+      id: linkedDefraOrg.orgId,
+      name: linkedDefraOrg.orgName
+    })
+    await organisationLinkingMetrics.organisationLinked()
 
     const updatedOrganisation = await organisationsRepository.findById(
       id,
