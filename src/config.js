@@ -378,6 +378,20 @@ const baseConfig = {
     nullable: true,
     default: null,
     env: 'GOVUK_NOTIFY_API_KEY'
+  },
+  testOrganisations: {
+    doc: 'JSON array of test organisation ids e.g. [500000]',
+    format: String,
+    default: '[]',
+    env: 'TEST_ORGANISATIONS'
+  },
+  publicRegister: {
+    batchSize: {
+      doc: 'Public register generation batch size. This is used for yielding back to event loop',
+      format: String,
+      default: '100',
+      env: 'PUBLIC_REGISTER_BATCH_SIZE'
+    }
   }
 }
 
