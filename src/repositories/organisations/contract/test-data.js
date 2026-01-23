@@ -44,7 +44,10 @@ export const buildRegistration = (overrides = {}) => {
   }
 
   if (registration.wasteProcessingType === 'exporter') {
-    delete registration.glassRecyclingProcess
+    // Only delete glassRecyclingProcess for non-glass exporters
+    if (registration.material !== 'glass') {
+      delete registration.glassRecyclingProcess
+    }
     delete registration.site
     delete registration.wasteManagementPermits
     delete registration.yearlyMetrics

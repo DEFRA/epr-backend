@@ -8,6 +8,7 @@ import {
   getValidDateRange
 } from './test-data.js'
 import {
+  GLASS_RECYCLING_PROCESS,
   MATERIAL,
   REG_ACC_STATUS,
   REPROCESSING_TYPE,
@@ -646,6 +647,109 @@ export const testRegAccApprovalValidation = (it) => {
           }
 
           const duplicateKey = 'exporter::paper'
+          const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
+
+          await expect(
+            repository.replace(
+              organisation.id,
+              1,
+              prepareOrgUpdate(inserted, invalidUpdates)
+            )
+          ).rejects.toThrow(expectedError)
+        })
+
+        it('accepts approved glass exporter registrations with different glassRecyclingProcess values', async () => {
+          const organisation = buildOrganisation()
+
+          const orgData = {
+            ...organisation,
+            registrations: [
+              buildRegistration({
+                id: new ObjectId().toString(),
+                wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+                material: MATERIAL.GLASS,
+                glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+                exportPorts: ['Port A'],
+                noticeAddress: { line1: '123 Test St', postcode: 'AB12 3CD' }
+              }),
+              buildRegistration({
+                id: new ObjectId().toString(),
+                wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+                material: MATERIAL.GLASS,
+                glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER],
+                exportPorts: ['Port B'],
+                noticeAddress: { line1: '456 Test Ave', postcode: 'XY98 7ZW' }
+              })
+            ]
+          }
+
+          await repository.insert(orgData)
+          const inserted = await repository.findById(organisation.id)
+
+          const validUpdates = {
+            registrations: inserted.registrations.map((reg) => ({
+              ...reg,
+              status: REG_ACC_STATUS.APPROVED,
+              registrationNumber: `REG-${reg.id}`,
+              validFrom: VALID_FROM,
+              validTo: VALID_TO
+            }))
+          }
+
+          await repository.replace(
+            organisation.id,
+            1,
+            prepareOrgUpdate(inserted, validUpdates)
+          )
+
+          const saved = await repository.findById(organisation.id, 2)
+          expect(saved.registrations).toHaveLength(2)
+          expect(
+            saved.registrations.every(
+              (r) => r.status === REG_ACC_STATUS.APPROVED
+            )
+          ).toBe(true)
+        })
+
+        it('rejects duplicate approved glass exporter registrations with same glassRecyclingProcess', async () => {
+          const organisation = buildOrganisation()
+
+          const orgData = {
+            ...organisation,
+            registrations: [
+              buildRegistration({
+                id: new ObjectId().toString(),
+                wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+                material: MATERIAL.GLASS,
+                glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+                exportPorts: ['Port A'],
+                noticeAddress: { line1: '123 Test St', postcode: 'AB12 3CD' }
+              }),
+              buildRegistration({
+                id: new ObjectId().toString(),
+                wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+                material: MATERIAL.GLASS,
+                glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT],
+                exportPorts: ['Port B'],
+                noticeAddress: { line1: '456 Test Ave', postcode: 'XY98 7ZW' }
+              })
+            ]
+          }
+
+          await repository.insert(orgData)
+          const inserted = await repository.findById(organisation.id)
+
+          const invalidUpdates = {
+            registrations: inserted.registrations.map((reg) => ({
+              ...reg,
+              status: REG_ACC_STATUS.APPROVED,
+              registrationNumber: `REG-${reg.id}`,
+              validFrom: VALID_FROM,
+              validTo: VALID_TO
+            }))
+          }
+
+          const duplicateKey = 'exporter::glass::glass_re_melt'
           const expectedError = `Multiple approved registrations found with duplicate keys [${duplicateKey}]: ${inserted.registrations[0].id}, ${inserted.registrations[1].id}`
 
           await expect(
