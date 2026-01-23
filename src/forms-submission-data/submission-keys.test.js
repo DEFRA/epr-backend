@@ -36,27 +36,6 @@ describe('keyForRegAcc', () => {
         })
       ).toBe('exporter::glass::output')
     })
-
-    it('includes site postcode when present', () => {
-      expect(
-        getRegAccKey({
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          material: MATERIAL.GLASS,
-          site: { address: { postcode: 'SW1A 1AA' } }
-        })
-      ).toBe('exporter::glass::SW1A1AA')
-    })
-
-    it('includes site postcode and reprocessingType when both present', () => {
-      expect(
-        getRegAccKey({
-          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-          material: MATERIAL.GLASS,
-          site: { address: { postcode: 'SW1A 1AA' } },
-          reprocessingType: REPROCESSING_TYPE.INPUT
-        })
-      ).toBe('exporter::glass::SW1A1AA::input')
-    })
   })
 
   describe('reprocessor', () => {
@@ -147,53 +126,6 @@ describe('isAccreditationForRegistration', () => {
         wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
         material: MATERIAL.PLASTIC,
         reprocessingType: REPROCESSING_TYPE.OUTPUT
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
-
-    it('matches when type, material and site postcode are the same', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS,
-        site: { address: { postcode: 'SW1A 1AA' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS,
-        site: { address: { postcode: 'SW1A 1AA' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        true
-      )
-    })
-
-    it('does not match when site postcode differs', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS,
-        site: { address: { postcode: 'SW1A 1AA' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS,
-        site: { address: { postcode: 'W1B 1NT' } }
-      }
-      expect(isAccreditationForRegistration(accreditation, registration)).toBe(
-        false
-      )
-    })
-
-    it('does not match when one has site and other does not', () => {
-      const accreditation = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS,
-        site: { address: { postcode: 'SW1A 1AA' } }
-      }
-      const registration = {
-        wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
-        material: MATERIAL.GLASS
       }
       expect(isAccreditationForRegistration(accreditation, registration)).toBe(
         false

@@ -1,3 +1,4 @@
+import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { siteKey } from '#formsubmission/parsing-common/site.js'
 
 /**
@@ -8,11 +9,11 @@ const KEY_DELIMITER = '::'
 
 /**
  * Generates a unique key for a registration or accreditation based on waste processing type,
- * material, site (when present), and optional reprocessing type.
+ * material, site (for reprocessors), and optional reprocessing type.
  *
  * The key format is:
- * - Without site: `{wasteProcessingType}::{material}[::{reprocessingType}]`
- * - With site: `{wasteProcessingType}::{material}::{normalizedPostcode}[::{reprocessingType}]`
+ * - For exporters: `{wasteProcessingType}::{material}[::{reprocessingType}]`
+ * - For reprocessors: `{wasteProcessingType}::{material}::{normalizedPostcode}[::{reprocessingType}]`
  *
  * @param {RegistrationOrAccreditation} item - Registration or accreditation object
  * @returns {string} key for registration or accreditation
@@ -24,16 +25,14 @@ export function getRegAccKey(item) {
 /**
  * Extracts the identity fields as key-value pairs.
  * Uses conditional spreading for a cleaner, declarative structure.
- *
- * The postcode field is included when a site is present (even if the postcode
- * is null/undefined) to ensure that items with missing postcodes don't
- * incorrectly match each other.
  */
 function getRegAccKeyValuePairs(item) {
   return {
     wasteProcessingType: item.wasteProcessingType,
     material: item.material,
-    ...(item.site && { postcode: siteKey(item.site) }),
+    ...(item.wasteProcessingType === WASTE_PROCESSING_TYPE.REPROCESSOR && {
+      postcode: siteKey(item.site)
+    }),
     ...(item.reprocessingType && {
       reprocessingType: item.reprocessingType
     })
