@@ -30,6 +30,11 @@ import {
   REPROCESSED_LOADS_FIELDS as REPROCESSOR_INPUT_REPROCESSED_LOADS_FIELDS,
   SENT_ON_LOADS_FIELDS as REPROCESSOR_INPUT_SENT_ON_LOADS_FIELDS
 } from '#domain/summary-logs/table-schemas/reprocessor-input/fields.js'
+import {
+  RECEIVED_LOADS_FIELDS as REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS,
+  REPROCESSED_LOADS_FIELDS as REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS,
+  SENT_ON_LOADS_FIELDS as REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS
+} from '#domain/summary-logs/table-schemas/reprocessor-output/fields.js'
 import { transformFromSummaryLog } from '#application/waste-records/transform-from-summary-log.js'
 import { classifyLoads } from './classify-loads.js'
 
@@ -252,6 +257,28 @@ const validateReprocessorInputDates = (wasteRecords, registration) => {
   }
 }
 
+const validateReprocessorOutputDates = (wasteRecords, registration) => {
+  for (const wasteRecord of wasteRecords) {
+    const data = wasteRecord.record.data
+    // Check all possible date fields for Reprocessor Output tables.
+    // Received loads use DATE_RECEIVED_FOR_REPROCESSING, while Sent on and
+    // Reprocessed loads use DATE_LOAD_LEFT_SITE.
+    const dateToCheck =
+      data[
+        REPROCESSOR_OUTPUT_RECEIVED_LOADS_FIELDS.DATE_RECEIVED_FOR_REPROCESSING
+      ] ||
+      data[REPROCESSOR_OUTPUT_REPROCESSED_LOADS_FIELDS.DATE_LOAD_LEFT_SITE] ||
+      data[REPROCESSOR_OUTPUT_SENT_ON_LOADS_FIELDS.DATE_LOAD_LEFT_SITE]
+
+    if (
+      dateToCheck &&
+      !isWithinAccreditationDateRange(dateToCheck, registration)
+    ) {
+      wasteRecord.outcome = ROW_OUTCOME.IGNORED
+    }
+  }
+}
+
 const performValidationChecks = async ({
   summaryLogId,
   summaryLog,
@@ -316,8 +343,8 @@ const performValidationChecks = async ({
       validateExporterDates(wasteRecords, registration)
     } else if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_INPUT) {
       validateReprocessorInputDates(wasteRecords, registration)
-    } else {
-      // TODO: Add support for PROCESSING_TYPES.REPROCESSOR_OUTPUT
+    } else if (meta.PROCESSING_TYPE === PROCESSING_TYPES.REPROCESSOR_OUTPUT) {
+      validateReprocessorOutputDates(wasteRecords, registration)
     }
 
     issues.merge(dataResult.issues)

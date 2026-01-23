@@ -1122,6 +1122,174 @@ describe('SummaryLogsValidator', () => {
       expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
     })
 
+    it('sets IGNORED outcome for Reprocessor Output loads with dates outside accreditation range', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium'
+      })
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' } }),
+          data: {
+            RECEIVED_LOADS_FOR_REPROCESSING: buildReceivedLoadsTable({
+              rows: [
+                buildReceivedLoadRow({
+                  ROW_ID: 20000,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2025-06-01' // In range
+                }),
+                buildReceivedLoadRow({
+                  ROW_ID: 20001,
+                  DATE_RECEIVED_FOR_REPROCESSING: '2024-12-31' // Out of range
+                })
+              ]
+            })
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([20000])
+    })
+
+    it('sets IGNORED outcome for REPROCESSED_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium'
+      })
+
+      const reprocessedHeaders = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'PRODUCT_TONNAGE',
+        'UK_PACKAGING_WEIGHT_PERCENTAGE',
+        'PRODUCT_UK_PACKAGING_WEIGHT_PROPORTION',
+        'ADD_PRODUCT_WEIGHT'
+      ]
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' } }),
+          data: {
+            REPROCESSED_LOADS: {
+              location: { sheet: 'Reprocessed', row: 7, column: 'B' },
+              headers: reprocessedHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [3000, '2025-06-01', 10, 0.5, 5, 'No'] // In range
+                },
+                {
+                  rowNumber: 9,
+                  values: [3001, '2024-12-31', 20, 0.5, 10, 'No'] // Out of range
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([3000])
+    })
+
+    it('sets IGNORED outcome for SENT_ON_LOADS in Reprocessor Output with dates outside accreditation range', async () => {
+      organisationsRepository.findRegistrationById.mockResolvedValue({
+        id: 'reg-123',
+        registrationNumber: 'REG12345',
+        validFrom: '2025-01-01',
+        validTo: '2025-12-31',
+        wasteProcessingType: 'reprocessor',
+        reprocessingType: 'output',
+        material: 'aluminium'
+      })
+
+      const sentOnHeaders = [
+        'ROW_ID',
+        'DATE_LOAD_LEFT_SITE',
+        'TONNAGE_OF_UK_PACKAGING_WASTE_SENT_ON',
+        'FINAL_DESTINATION_FACILITY_TYPE',
+        'FINAL_DESTINATION_NAME',
+        'FINAL_DESTINATION_ADDRESS',
+        'FINAL_DESTINATION_POSTCODE',
+        'FINAL_DESTINATION_EMAIL',
+        'FINAL_DESTINATION_PHONE',
+        'YOUR_REFERENCE',
+        'DESCRIPTION_WASTE'
+      ]
+
+      summaryLogExtractor.extract.mockResolvedValue(
+        buildExtractedData({
+          meta: buildMeta({ PROCESSING_TYPE: { value: 'REPROCESSOR_OUTPUT' } }),
+          data: {
+            SENT_ON_LOADS: {
+              location: { sheet: 'Sent on', row: 7, column: 'B' },
+              headers: sentOnHeaders,
+              rows: [
+                {
+                  rowNumber: 8,
+                  values: [
+                    5000,
+                    '2025-06-01',
+                    10,
+                    'Other',
+                    'Other Name',
+                    'Address',
+                    'SW1A 1AA',
+                    'test@test.com',
+                    '01234567890',
+                    'REF',
+                    'Desc'
+                  ] // In range
+                },
+                {
+                  rowNumber: 9,
+                  values: [
+                    5001,
+                    '2024-12-31',
+                    20,
+                    'Other',
+                    'Other Name',
+                    'Address',
+                    'SW1A 1AA',
+                    'test@test.com',
+                    '01234567890',
+                    'REF',
+                    'Desc'
+                  ] // Out of range
+                }
+              ]
+            }
+          }
+        })
+      )
+
+      await validateSummaryLog(summaryLogId)
+
+      const updateCall = summaryLogsRepository.update.mock.calls[0][2]
+
+      expect(updateCall.loads.added.valid.count).toBe(1)
+      expect(updateCall.loads.added.valid.rowIds).toEqual([5000])
+    })
+
     it('does not set IGNORED outcome when no date field is found', async () => {
       organisationsRepository.findRegistrationById.mockResolvedValue({
         id: 'reg-123',
