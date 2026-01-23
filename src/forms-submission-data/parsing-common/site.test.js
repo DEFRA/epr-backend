@@ -85,4 +85,8 @@ describe('siteKey', () => {
     }
     expect(siteKey(site)).toBeUndefined()
   })
+
+  it('should return undefined when site is undefined', () => {
+    expect(siteKey(undefined)).toBeUndefined()
+  })
 })
