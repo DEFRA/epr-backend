@@ -106,7 +106,7 @@
     "msw": "2.12.7",
     "neostandard": "0.12.2",
     "nodemon": "3.1.11",
-    "prettier": "3.8.0",
+    "prettier": "3.8.1",
     "testcontainers": "11.11.0",
     "tinybench": "6.0.0",
     "vitest": "4.0.17",
