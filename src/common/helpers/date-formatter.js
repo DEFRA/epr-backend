@@ -14,10 +14,15 @@ const britishFormatter = new Intl.DateTimeFormat('en-GB', {
 })
 
 /**
- * Formats a Date object to British format (DD/MM/YYYY)
- * @param {Date} date - Date object to format
+ * Formats a Date object or date string to British format (DD/MM/YYYY)
+ * @param {Date|string} date - Date object or ISO date string (YYYY-MM-DD) to format
  * @returns {string} - Formatted date string (e.g., '22/01/2026')
  */
 export function formatDate(date) {
-  return date ? britishFormatter.format(date) : ''
+  if (!date) {
+    return ''
+  }
+  const dateObj =
+    typeof date === 'string' ? new Date(date + 'T00:00:00.000Z') : date
+  return britishFormatter.format(dateObj)
 }

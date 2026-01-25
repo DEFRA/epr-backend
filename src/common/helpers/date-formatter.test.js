@@ -12,6 +12,10 @@ describe('formatDate', () => {
     expect(formatDate(date)).toBe('05/03/2026')
   })
 
+  it('should format date string', () => {
+    expect(formatDate('2026-03-01')).toBe('01/03/2026')
+  })
+
   it('should return empty string for null', () => {
     expect(formatDate(null)).toBe('')
   })
