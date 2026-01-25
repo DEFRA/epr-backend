@@ -19,7 +19,6 @@ describe('repositories plugin', () => {
   describe('lazy initialization and caching', () => {
     it('creates repository on first access and caches it for subsequent accesses (in the same request)', async () => {
       const mockFactory = vi.fn(() => ({ findAll: vi.fn() }))
-
       await server.register({
         plugin: repositories.plugin,
         options: {
@@ -28,7 +27,8 @@ describe('repositories plugin', () => {
           formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           systemLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() })),
-          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          publicRegisterRepository: vi.fn(() => ({ save: vi.fn() }))
         }
       })
 
@@ -66,7 +66,8 @@ describe('repositories plugin', () => {
           formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           systemLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
           wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() })),
-          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() }))
+          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          publicRegisterRepository: vi.fn(() => ({ save: vi.fn() }))
         }
       })
 
@@ -106,6 +107,7 @@ describe('repositories plugin', () => {
           systemLogsRepository: vi.fn(),
           wasteRecordsRepository: vi.fn(),
           wasteBalancesRepository: vi.fn(),
+          publicRegisterRepository: vi.fn(() => ({ save: vi.fn() })),
           packagingRecyclingNotesRepository: vi.fn(() => ({ enabled: true }))
         }
       })

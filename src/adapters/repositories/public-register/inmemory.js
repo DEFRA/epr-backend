@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} InMemoryPublicRegisterRepositoryConfig
  * @property {string} [s3Bucket] - S3 bucket name (for URL generation)
+ * @property {number} [preSignedUrlExpiry] - Expiry time for pre-signed URLs in seconds
  */
 
 /**
