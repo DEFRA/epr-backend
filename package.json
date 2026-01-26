@@ -97,7 +97,7 @@
     "validator": "13.15.23"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "4.0.17",
+    "@vitest/coverage-v8": "4.0.18",
     "eslint": "9.39.2",
     "eslint-plugin-n": "17.23.2",
     "husky": "9.1.7",
@@ -106,10 +106,10 @@
     "msw": "2.12.7",
     "neostandard": "0.12.2",
     "nodemon": "3.1.11",
-    "prettier": "3.8.0",
+    "prettier": "3.8.1",
     "testcontainers": "11.11.0",
     "tinybench": "6.0.0",
-    "vitest": "4.0.17",
+    "vitest": "4.0.18",
     "vitest-fetch-mock": "0.4.5",
     "vitest-mongodb": "1.0.3"
   }
