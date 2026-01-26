@@ -26,13 +26,18 @@ export const testPublicRegisterRepositoryContract = (it) => {
       await publicRegisterRepository.save(fileName, csvData)
 
       // Generate presigned URL
-      const url = await publicRegisterRepository.generatePresignedUrl(fileName)
-      expect(url).toBeDefined()
-      expect(typeof url).toBe('string')
+      const result =
+        await publicRegisterRepository.generatePresignedUrl(fileName)
+      expect(result).toBeDefined()
+      expect(result.url).toBeDefined()
+      expect(typeof result.url).toBe('string')
+      expect(result.expiresAt).toBeDefined()
+      expect(typeof result.expiresAt).toBe('string')
+      expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now())
 
       // Fetch and validate data
       const retrievedData =
-        await publicRegisterRepository.fetchFromPresignedUrl(url)
+        await publicRegisterRepository.fetchFromPresignedUrl(result.url)
       expect(retrievedData).toBe(csvData)
     })
 
@@ -41,11 +46,16 @@ export const testPublicRegisterRepositoryContract = (it) => {
       const csvData = 'Name,Age\nAlice,30'
 
       await publicRegisterRepository.save(fileName, csvData)
-      const url = await publicRegisterRepository.generatePresignedUrl(fileName)
+      const result =
+        await publicRegisterRepository.generatePresignedUrl(fileName)
 
-      expect(url).toBeDefined()
-      expect(typeof url).toBe('string')
-      expect(url).toContain(fileName)
+      expect(result).toBeDefined()
+      expect(result.url).toBeDefined()
+      expect(typeof result.url).toBe('string')
+      expect(result.url).toContain(fileName)
+      expect(result.expiresAt).toBeDefined()
+      expect(typeof result.expiresAt).toBe('string')
+      expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now())
     })
   })
 }

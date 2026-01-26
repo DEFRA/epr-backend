@@ -1,7 +1,10 @@
 /**
  * @typedef {Object} InMemoryPublicRegisterRepositoryConfig
  * @property {string} [s3Bucket] - S3 bucket name (for URL generation)
+ * @property {number} [preSignedUrlExpiry] - Expiry time for pre-signed URLs in seconds
  */
+
+/** @typedef {import('#domain/public-register/repository/port.js').PresignedUrlResult} PresignedUrlResult */
 
 /**
  * Creates an in-memory public register repository for testing
@@ -11,6 +14,8 @@
  */
 export const createInMemoryPublicRegisterRepository = (config = {}) => {
   const s3Bucket = config.s3Bucket ?? 'test-bucket'
+  const ONE_HOUR = 3600
+  const preSignedUrlExpiry = config.preSignedUrlExpiry ?? ONE_HOUR
 
   /** @type {Map<string, string>} */
   const storage = new Map()
@@ -48,7 +53,7 @@ export const createInMemoryPublicRegisterRepository = (config = {}) => {
      * Generate a mock pre-signed URL
      *
      * @param {string} fileName - The file name/key
-     * @returns {Promise<string>} Mock pre-signed URL
+     * @returns {Promise<PresignedUrlResult>} Mock pre-signed URL with expiry info
      * @throws {Error} If file not found
      */
     async generatePresignedUrl(fileName) {
@@ -57,7 +62,13 @@ export const createInMemoryPublicRegisterRepository = (config = {}) => {
       }
       const url = `https://re-ex-public-register.test/${s3Bucket}/${fileName}/pre-signed-url`
       preSignedUrls.set(url, fileName)
-      return url
+      const expiresAt = new Date(
+        Date.now() + preSignedUrlExpiry * 1000
+      ).toISOString()
+      return {
+        url,
+        expiresAt
+      }
     }
   }
 }
