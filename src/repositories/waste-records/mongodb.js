@@ -68,10 +68,11 @@ const buildExistingSummaryLogIds = () => ({
 /**
  * Builds MongoDB update operation for appending a version
  * @param {import('./schema.js').WasteRecordKey} key - Composite key identifying the record
+ * @param {string | undefined} accreditationId
  * @param {Object} versionData
  * @returns {Object} MongoDB update operation
  */
-const buildAppendVersionOperation = (key, versionData) => {
+const buildAppendVersionOperation = (key, accreditationId, versionData) => {
   const existingSummaryLogIds = buildExistingSummaryLogIds()
   const versionExists = {
     $in: [versionData.version.summaryLog.id, existingSummaryLogIds]
@@ -86,6 +87,7 @@ const buildAppendVersionOperation = (key, versionData) => {
             // Static fields - only set on insert
             schemaVersion: SCHEMA_VERSION,
             ...key,
+            accreditationId,
             // Current data - only update if version doesn't exist
             data: {
               $cond: {
@@ -116,7 +118,13 @@ const buildAppendVersionOperation = (key, versionData) => {
 }
 
 const performAppendVersions =
-  (db) => async (organisationId, registrationId, wasteRecordVersions) => {
+  (db) =>
+  async (
+    organisationId,
+    registrationId,
+    accreditationId,
+    wasteRecordVersions
+  ) => {
     const validatedOrgId = validateOrganisationId(organisationId)
     const validatedRegId = validateRegistrationId(registrationId)
 
@@ -136,7 +144,9 @@ const performAppendVersions =
           rowId
         }
 
-        bulkOps.push(buildAppendVersionOperation(key, versionData))
+        bulkOps.push(
+          buildAppendVersionOperation(key, accreditationId, versionData)
+        )
       }
     }
 

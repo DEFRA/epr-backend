@@ -206,6 +206,7 @@ async function createWasteRecordsFixtures(db, wasteRecordsRepository) {
       await wasteRecordsRepository.appendVersions(
         organisationId,
         registrationId,
+        undefined,
         toWasteRecordVersions(versionsObj)
       )
     }

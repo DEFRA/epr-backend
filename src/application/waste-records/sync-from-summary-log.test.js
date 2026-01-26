@@ -191,6 +191,7 @@ describe('syncFromSummaryLog', () => {
     await wasteRecordRepository.appendVersions(
       'org-1',
       'reg-1',
+      undefined,
       wasteRecordVersions
     )
 
@@ -276,6 +277,7 @@ describe('syncFromSummaryLog', () => {
     await wasteRecordRepository.appendVersions(
       'org-1',
       'reg-1',
+      undefined,
       wasteRecordVersions
     )
 
@@ -362,6 +364,7 @@ describe('syncFromSummaryLog', () => {
     await wasteRecordRepository.appendVersions(
       'org-1',
       'reg-1',
+      undefined,
       wasteRecordVersions
     )
 
@@ -457,6 +460,7 @@ describe('syncFromSummaryLog', () => {
     await wasteRecordRepository.appendVersions(
       'org-1',
       'reg-1',
+      undefined,
       wasteRecordVersions
     )
 
@@ -986,6 +990,7 @@ describe('syncFromSummaryLog', () => {
       await wasteRecordRepository.appendVersions(
         'org-1',
         'reg-1',
+        undefined,
         wasteRecordVersions
       )
 
@@ -1073,6 +1078,7 @@ describe('syncFromSummaryLog', () => {
       await wasteRecordRepository.appendVersions(
         'org-1',
         'reg-1',
+        undefined,
         wasteRecordVersions
       )
 
