@@ -7,18 +7,20 @@ import { defraIdMockAuthTokens } from '#vite/helpers/create-defra-id-test-tokens
  * @param {() => import('@hapi/hapi').Server} params.server
  * @param {() => Promise<{method: string, url: string, headers?: Object, payload?: Object}>} params.makeRequest
  * @param {((response: any) => void)=} params.additionalExpectations - Optional additional expectations
+ * @param {number=} params.successStatus - Optional success status code (defaults to 200 OK)
  */
 export function testOnlyServiceMaintainerCanAccess({
   server,
   makeRequest,
-  additionalExpectations
+  additionalExpectations,
+  successStatus = StatusCodes.OK
 }) {
   describe('A user with', () => {
     const tokenScenarios = [
       {
         token: entraIdMockAuthTokens.validToken,
         description: 'a valid Entra token with the service maintainer role',
-        expectedStatus: StatusCodes.OK
+        expectedStatus: successStatus
       },
       {
         token: entraIdMockAuthTokens.nonServiceMaintainerUserToken,
