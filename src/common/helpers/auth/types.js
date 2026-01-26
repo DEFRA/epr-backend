@@ -22,13 +22,16 @@
  *
  * Used for Frontend application authentication and organization-based access control
  *
+ * Note: currentRelationshipId and relationships may be undefined for users
+ * who haven't been enrolled in the service (confirmed by Defra ID team)
+ *
  * @typedef {{
  *   contactId: string
  *   email: string
  *   firstName: string
  *   lastName: string
- *   currentRelationshipId: string
- *   relationships: string[]
+ *   currentRelationshipId?: string
+ *   relationships?: string[]
  *   iss: string
  *   aud: string
  *   exp: number
