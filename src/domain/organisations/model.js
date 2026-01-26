@@ -222,7 +222,7 @@ export const USER_ROLES = Object.freeze({
 /**
  * @typedef {{
  *   id: string;
- *   accreditations?: Accreditation[];
+ *   accreditations: Accreditation[];
  *   businessType?: BusinessTypeValue;
  *   companyDetails: CompanyDetails;
  *   formSubmissionTime: Date;
@@ -230,7 +230,7 @@ export const USER_ROLES = Object.freeze({
  *   managementContactDetails?: User;
  *   orgId: number;
  *   partnership?: Partnership;
- *   registrations?: Registration[];
+ *   registrations: Registration[];
  *   reprocessingNations?: NationValue[];
  *   schemaVersion: number;
  *   status: OrganisationStatus;
