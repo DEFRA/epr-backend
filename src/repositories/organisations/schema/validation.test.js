@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   validateAccreditation,
@@ -700,5 +700,110 @@ describe('organisationJSONSchemaOverrides', () => {
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
     })
+  })
+})
+
+describe('normaliseOrganisationFromDb', () => {
+  // Import dynamically to avoid circular dependency issues in test setup
+  let normaliseOrganisationFromDb
+
+  beforeAll(async () => {
+    const module = await import('./validation.js')
+    normaliseOrganisationFromDb = module.normaliseOrganisationFromDb
+  })
+
+  it('defaults undefined registrations to empty array', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1
+      // registrations is undefined
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.registrations).toEqual([])
+  })
+
+  it('defaults undefined accreditations to empty array', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1
+      // accreditations is undefined
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.accreditations).toEqual([])
+  })
+
+  it('defaults undefined users to empty array', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1
+      // users is undefined
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.users).toEqual([])
+  })
+
+  it('preserves existing arrays', () => {
+    const registration = buildRegistration()
+    const accreditation = buildAccreditation()
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1,
+      registrations: [registration],
+      accreditations: [accreditation],
+      users: [
+        {
+          email: 'test@example.com',
+          fullName: 'Test User',
+          roles: ['standard']
+        }
+      ]
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.registrations).toHaveLength(1)
+    expect(result.accreditations).toHaveLength(1)
+    expect(result.users).toHaveLength(1)
+  })
+
+  it('preserves MongoDB fields like _id and version', () => {
+    const objectId = new ObjectId()
+    const dbDoc = {
+      _id: objectId,
+      orgId: 123,
+      version: 5,
+      schemaVersion: 1,
+      statusHistory: [{ status: 'created', updatedAt: new Date() }]
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result._id).toEqual(objectId)
+    expect(result.version).toBe(5)
+    expect(result.schemaVersion).toBe(1)
+    expect(result.statusHistory).toHaveLength(1)
+  })
+
+  it('preserves unknown fields from database', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1,
+      someFutureField: 'should be kept'
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.someFutureField).toBe('should be kept')
   })
 })

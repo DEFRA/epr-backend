@@ -82,3 +82,15 @@ export const organisationReplaceSchema = organisationInsertSchema
     registrations: Joi.array().items(registrationUpdateSchema).default([]),
     accreditations: Joi.array().items(accreditationUpdateSchema).default([])
   })
+
+/**
+ * Schema for normalising organisation documents read from the database.
+ * Ensures array fields are never undefined by applying defaults.
+ * Allows all other fields through unchanged - full validation is the
+ * responsibility of the write path; read path just normalises.
+ */
+export const organisationReadSchema = Joi.object({
+  registrations: Joi.array().default([]),
+  accreditations: Joi.array().default([]),
+  users: Joi.array().default([])
+}).unknown(true)

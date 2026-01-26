@@ -1,4 +1,5 @@
 export {
+  normaliseOrganisationFromDb,
   validateId,
   validateOrganisationInsert,
   validateOrganisationUpdate,
