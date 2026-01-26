@@ -38,6 +38,10 @@ export const isInitialUser = (email) => (organisation) =>
 export function getOrgDataFromDefraIdToken(tokenPayload) {
   const { currentRelationshipId, relationships } = tokenPayload
 
+  if (!relationships) {
+    return []
+  }
+
   return relationships.map((relationship) => {
     const [relationshipId, organisationId, organisationName] =
       relationship.split(':')
@@ -45,7 +49,9 @@ export function getOrgDataFromDefraIdToken(tokenPayload) {
     return {
       defraIdOrgId: organisationId,
       defraIdOrgName: organisationName?.trim(),
-      isCurrent: stringEquals(currentRelationshipId, relationshipId)
+      isCurrent:
+        currentRelationshipId !== undefined &&
+        stringEquals(currentRelationshipId, relationshipId)
     }
   })
 }
