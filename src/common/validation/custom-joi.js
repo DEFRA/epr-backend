@@ -16,6 +16,7 @@ export const customJoi = Joi.extend(
           return { value: String(value) }
         }
         // Returning undefined means "no coercion needed" in Joi's API
+        return undefined
       }
     })
   )
