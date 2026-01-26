@@ -93,6 +93,10 @@ export const validateRowContinuity = ({
       const [type, rowId] = missingKey.split(':')
       const originalRecord = existingRecordsMap.get(missingKey)
 
+      // Guard: key came from existingRecordsMap.keys() so record must exist
+      /* istanbul ignore if */
+      if (!originalRecord) continue
+
       const lastVersion =
         originalRecord.versions[originalRecord.versions.length - 1]
 

@@ -87,7 +87,7 @@ function getProductsMadeFromRecycling(rawSubmissionData) {
  * @param {import('#domain/organisations/model.js').WasteProcessingTypeValue} wasteProcessingType - Type of waste processing
  * @param {Object} rawSubmissionData - Raw form submission data
  * @param {Object} answersByPages - Answers organized by page title
- * @returns {Array} Yearly metrics data including year, input, output, and products
+ * @returns {Array | undefined} Yearly metrics data including year, input, output, and products (undefined for non-reprocessors)
  */
 export function getYearlyMetrics(
   wasteProcessingType,

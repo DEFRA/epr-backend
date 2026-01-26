@@ -115,7 +115,11 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
     }
 
     const classification = classifyRecord(record, summaryLogId)
-    const validityKey = issues.length > 0 ? 'invalid' : 'valid'
+    const validityKey =
+      /* istanbul ignore next -- defensive: issues array always present in validation results */ (issues?.length ??
+        0) > 0
+        ? 'invalid'
+        : 'valid'
     const validityCategory = loads[classification][validityKey]
 
     validityCategory.count++

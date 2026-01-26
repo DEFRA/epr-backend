@@ -42,7 +42,7 @@ export const WASTE_BALANCE_TRANSACTION_ENTITY_TYPE = Object.freeze({
  * @property {string} id
  * @property {WasteBalanceTransactionType} type - Transaction type
  * @property {string} createdAt - ISO8601 timestamp
- * @property {UserSummary} createdBy - User who created the transaction
+ * @property {UserSummary} [createdBy] - User who created the transaction (may be undefined for system-generated transactions)
  * @property {number} amount - Transaction amount
  * @property {number} openingAmount - Balance before transaction
  * @property {number} closingAmount - Balance after transaction

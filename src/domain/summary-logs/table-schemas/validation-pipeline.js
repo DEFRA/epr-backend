@@ -64,6 +64,21 @@ export const filterToFilled = (row, unfilledValues) => {
 }
 
 /**
+ * Issue from validation pipeline when a field fails schema validation (VAL010)
+ * @typedef {{ code: 'VALIDATION_ERROR', field?: string | number, message?: string, type: string }} ValidationErrorIssue
+ */
+
+/**
+ * Issue from validation pipeline when a required field is missing (VAL011)
+ * @typedef {{ code: 'MISSING_REQUIRED_FIELD', field: string, message?: undefined }} MissingFieldIssue
+ */
+
+/**
+ * Union of all issue types from the validation pipeline
+ * @typedef {ValidationErrorIssue | MissingFieldIssue} RowClassificationIssue
+ */
+
+/**
  * Classifies a row based on the validation pipeline
  *
  * Pipeline steps:
@@ -77,7 +92,7 @@ export const filterToFilled = (row, unfilledValues) => {
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
  * @param {string[]} tableSchema.fieldsRequiredForWasteBalance - Fields required for VAL011
- * @returns {{ outcome: "REJECTED" | "EXCLUDED" | "INCLUDED", issues: Array<{ code: string, field?: string | number, message?: string, type?: string }> }}
+ * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
  */
 export const classifyRow = (row, tableSchema) => {
   const { unfilledValues, validationSchema, fieldsRequiredForWasteBalance } =

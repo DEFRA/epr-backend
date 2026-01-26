@@ -140,7 +140,11 @@ function findDuplicateApprovals(items) {
     (item) => getDuplicateDetectionKey(item)
   )
 
-  return Object.entries(grouped).filter(([_key, group]) => group.length > 1)
+  return Object.entries(grouped).filter(
+    ([_key, group]) =>
+      /* istanbul ignore next -- defensive: group always exists from Object.groupBy */ (group?.length ??
+        0) > 1
+  )
 }
 
 function formatDuplicateError(duplicates, itemType) {

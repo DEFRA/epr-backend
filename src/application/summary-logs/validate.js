@@ -410,7 +410,7 @@ const recordValidationIssueMetrics = async (issues, processingType) => {
 /**
  * Records row outcome metrics grouped by outcome
  *
- * @param {ValidatedWasteRecord[]} wasteRecords - Waste records with outcomes
+ * @param {ValidatedWasteRecord[] | null} wasteRecords - Waste records with outcomes
  * @param {string} processingType - The processing type for the metric dimension
  */
 const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {

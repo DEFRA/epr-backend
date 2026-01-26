@@ -15,9 +15,10 @@ import {
  * @returns {void}
  */
 const requireApprovedRegistration = (existing) => {
-  const hasApproved = existing.registrations.some(
-    (reg) => reg.status === REG_ACC_STATUS.APPROVED
-  )
+  const hasApproved =
+    /* istanbul ignore next -- defensive: registrations always exists */ (
+      existing.registrations ?? []
+    ).some((reg) => reg.status === REG_ACC_STATUS.APPROVED)
 
   if (!hasApproved) {
     throw Boom.badData(

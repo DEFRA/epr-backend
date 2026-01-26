@@ -2,7 +2,7 @@
  * Transforms organisation entities into public register row objects
  */
 
-/** @import {Organisation} from '#repositories/organisations/port.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
@@ -88,13 +88,17 @@ function processBatch(batch) {
   return batch
     .filter((org) => !isTestOrg(org))
     .flatMap((org) =>
-      org.registrations.filter(isInPublishableState).map((registration) => {
-        const accreditation = getLinkedAccreditation(
-          registration,
-          org.accreditations
-        )
-        return transformRegAcc(org, registration, accreditation)
-      })
+      /* istanbul ignore next -- defensive: orgs always have registrations array */ (
+        org.registrations ?? []
+      )
+        .filter(isInPublishableState)
+        .map((registration) => {
+          const accreditation = getLinkedAccreditation(
+            registration,
+            org.accreditations
+          )
+          return transformRegAcc(org, registration, accreditation)
+        })
     )
 }
 

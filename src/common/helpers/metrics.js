@@ -24,7 +24,10 @@ const recordMetric = async (metricName, value, unit, dimensions) => {
 
   try {
     const metricsLogger = createMetricsLogger()
-    metricsLogger.putDimensions(dimensions)
+    /* istanbul ignore else -- dimensions always provided by callers */
+    if (dimensions) {
+      metricsLogger.putDimensions(dimensions)
+    }
     metricsLogger.putMetric(metricName, value, unit, StorageResolution.Standard)
     await metricsLogger.flush()
   } catch (error) {
