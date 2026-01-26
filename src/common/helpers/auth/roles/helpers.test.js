@@ -87,6 +87,38 @@ describe('getOrgDataFromDefraIdToken', () => {
     expect(result).toEqual([])
   })
 
+  it('should handle undefined relationships', () => {
+    const tokenPayload = {
+      id: 'user-id',
+      email: 'user@example.com',
+      currentRelationshipId: 'rel-1'
+      // relationships is undefined - can happen with unenrolled Defra ID users
+    }
+
+    const result = getOrgDataFromDefraIdToken(tokenPayload)
+
+    expect(result).toEqual([])
+  })
+
+  it('should handle undefined currentRelationshipId', () => {
+    const tokenPayload = {
+      id: 'user-id',
+      email: 'user@example.com',
+      // currentRelationshipId is undefined
+      relationships: ['rel-1:org-1:Organisation One']
+    }
+
+    const result = getOrgDataFromDefraIdToken(tokenPayload)
+
+    expect(result).toEqual([
+      {
+        defraIdOrgId: 'org-1',
+        defraIdOrgName: 'Organisation One',
+        isCurrent: false
+      }
+    ])
+  })
+
   it('should handle organisation names with colons by splitting on first two colons only', () => {
     const tokenPayload = {
       id: 'user-id',
