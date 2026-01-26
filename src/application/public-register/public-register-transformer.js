@@ -88,17 +88,13 @@ function processBatch(batch) {
   return batch
     .filter((org) => !isTestOrg(org))
     .flatMap((org) =>
-      /* istanbul ignore next -- defensive: orgs always have registrations array */ (
-        org.registrations ?? []
-      )
-        .filter(isInPublishableState)
-        .map((registration) => {
-          const accreditation = getLinkedAccreditation(
-            registration,
-            org.accreditations
-          )
-          return transformRegAcc(org, registration, accreditation)
-        })
+      org.registrations.filter(isInPublishableState).map((registration) => {
+        const accreditation = getLinkedAccreditation(
+          registration,
+          org.accreditations
+        )
+        return transformRegAcc(org, registration, accreditation)
+      })
     )
 }
 
