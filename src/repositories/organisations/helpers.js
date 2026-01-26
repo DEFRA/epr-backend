@@ -108,9 +108,7 @@ const collateItems = (
   /** @type {SlimUser[]} */
   const users = []
 
-  for (const item of /* istanbul ignore next -- defensive: collectionKey always exists */ updated[
-    collectionKey
-  ] ?? []) {
+  for (const item of updated[collectionKey]) {
     const itemStatus = getCurrentStatus(item)
     const existingItem = existing[collectionKey]?.find((i) => i.id === item.id)
     const existingItemStatus = existingItem

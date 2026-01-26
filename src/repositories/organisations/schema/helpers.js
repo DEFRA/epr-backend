@@ -141,9 +141,8 @@ function findDuplicateApprovals(items) {
   )
 
   return Object.entries(grouped).filter(
-    ([_key, group]) =>
-      /* istanbul ignore next -- defensive: group always exists from Object.groupBy */ (group?.length ??
-        0) > 1
+    // Object.entries yields only keys that exist, so group is always present
+    ([_key, group]) => /** @type {typeof items} */ (group).length > 1
   )
 }
 

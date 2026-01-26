@@ -115,11 +115,9 @@ export const classifyLoads = ({ wasteRecords, summaryLogId }) => {
     }
 
     const classification = classifyRecord(record, summaryLogId)
+    // Issues always present after validation pipeline (data-syntax.js sets it)
     const validityKey =
-      /* istanbul ignore next -- defensive: issues array always present in validation results */ (issues?.length ??
-        0) > 0
-        ? 'invalid'
-        : 'valid'
+      /** @type {ValidationIssue[]} */ (issues).length > 0 ? 'invalid' : 'valid'
     const validityCategory = loads[classification][validityKey]
 
     validityCategory.count++
