@@ -18,14 +18,14 @@ describe('generatePublicRegister', () => {
   it('generates public register with approved registration and accreditation', async () => {
     await buildApprovedOrg(organisationRepo, { orgId: 200001 })
 
-    const presignedUrl = await generatePublicRegister(
+    const result = await generatePublicRegister(
       organisationRepo,
       publicRegisterRepo
     )
 
-    expect(presignedUrl).toBeTruthy()
+    expect(result.url).toBeTruthy()
 
-    const csvData = await publicRegisterRepo.fetchFromPresignedUrl(presignedUrl)
+    const csvData = await publicRegisterRepo.fetchFromPresignedUrl(result.url)
 
     const { VALID_FROM } = getValidDateRange()
     const activeDate = formatDate(VALID_FROM)

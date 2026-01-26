@@ -9,6 +9,7 @@ import { createPackagingRecyclingNotesRepository } from '#repositories/packaging
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 import { createPublicRegisterRepository } from '#adapters/repositories/public-register/public-register.js'
+import { publicRegisterConfig } from '#application/public-register/config.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
@@ -100,10 +101,8 @@ const registerPublicRegisterRepository = (server, options, skipMongoDb) => {
 
     const publicRegisterRepository = createPublicRegisterRepository({
       s3Client,
-      s3Bucket: config.get('publicRegister.s3Bucket'),
-      preSignedUrlExpiry: Number.parseInt(
-        config.get('publicRegister.preSignedUrlExpiry')
-      )
+      s3Bucket: publicRegisterConfig.s3Bucket,
+      preSignedUrlExpiry: publicRegisterConfig.preSignedUrlExpiry
     })
 
     server.ext('onRequest', (request, h) => {

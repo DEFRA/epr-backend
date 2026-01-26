@@ -94,11 +94,12 @@ describe('S3 public register repository', () => {
     await repository.save(fileName, csvData)
 
     // Generate URL
-    const url = await repository.generatePresignedUrl(fileName)
-    expect(url).toContain(fileName)
+    const result = await repository.generatePresignedUrl(fileName)
+    expect(result.url).toContain(fileName)
+    expect(result.expiresAt).toBeTruthy()
+    expect(new Date(result.expiresAt).getTime()).toBeGreaterThan(Date.now())
 
-    // Fetch from URL using MSW
-    const retrieved = await repository.fetchFromPresignedUrl(url)
+    const retrieved = await repository.fetchFromPresignedUrl(result.url)
     expect(retrieved).toBe(csvData)
   })
 })

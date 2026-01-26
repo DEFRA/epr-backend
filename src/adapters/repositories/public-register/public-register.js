@@ -2,6 +2,7 @@ import { GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 
 /** @typedef {import('@aws-sdk/client-s3').S3Client} S3Client */
+/** @typedef {import('#domain/public-register/repository/port.js').PresignedUrlResult} PresignedUrlResult */
 
 /**
  * @typedef {Object} PublicRegisterRepositoryConfig
@@ -53,7 +54,7 @@ export const createPublicRegisterRepository = ({
    * Generate a pre-signed URL for accessing the file
    *
    * @param {string} fileName - The file name/key
-   * @returns {Promise<string>} Pre-signed URL
+   * @returns {Promise<PresignedUrlResult>} Pre-signed URL with expiry info
    */
   async generatePresignedUrl(fileName) {
     const command = new GetObjectCommand({
@@ -61,8 +62,17 @@ export const createPublicRegisterRepository = ({
       Key: fileName
     })
 
-    return getSignedUrl(s3Client, command, {
+    const url = await getSignedUrl(s3Client, command, {
       expiresIn: preSignedUrlExpiry
     })
+
+    const expiresAt = new Date(
+      Date.now() + preSignedUrlExpiry * 1000
+    ).toISOString()
+
+    return {
+      url,
+      expiresAt
+    }
   }
 })

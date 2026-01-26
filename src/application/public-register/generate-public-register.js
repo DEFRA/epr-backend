@@ -20,7 +20,7 @@ function formatDateYYYYMMDD(date) {
  *
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} organisationRepo - Organisation repository
  * @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepo - Public register repository
- * @returns {Promise<string>} Pre-signed URL for the generated public register file
+ * @returns {Promise<import('#domain/public-register/repository/port.js').PresignedUrlResult>} Pre-signed URL with expiry info for the generated public register file
  */
 export async function generatePublicRegister(
   organisationRepo,
@@ -53,10 +53,10 @@ export async function generatePublicRegister(
   logger.info({ message: `Saving public register to storage: ${fileName}` })
   await publicRegisterRepo.save(fileName, publicRegisterCsv)
 
-  const presignedUrl = await publicRegisterRepo.generatePresignedUrl(fileName)
+  const result = await publicRegisterRepo.generatePresignedUrl(fileName)
   logger.info({
-    message: `Public register generation completed : ${fileName}`
+    message: `Public register generation completed: ${fileName}, URL expires at ${result.expiresAt}`
   })
 
-  return presignedUrl
+  return result
 }
