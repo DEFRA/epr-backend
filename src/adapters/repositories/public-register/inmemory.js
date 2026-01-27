@@ -39,12 +39,8 @@ export const createInMemoryPublicRegisterRepository = (config = {}) => {
      *
      * @param {string} url - Mock pre-signed URL or file name
      * @returns {Promise<string>} The CSV content
-     * @throws {Error} If file not found
      */
     async fetchFromPresignedUrl(url) {
-      if (!preSignedUrls.has(url)) {
-        throw new Error(`Pre signed url not found: ${url}`)
-      }
       const fileName = preSignedUrls.get(url)
       return storage.get(fileName)
     },
@@ -54,12 +50,8 @@ export const createInMemoryPublicRegisterRepository = (config = {}) => {
      *
      * @param {string} fileName - The file name/key
      * @returns {Promise<PresignedUrlResult>} Mock pre-signed URL with expiry info
-     * @throws {Error} If file not found
      */
     async generatePresignedUrl(fileName) {
-      if (!storage.has(fileName)) {
-        throw new Error(`File not found: ${fileName}`)
-      }
       const url = `https://re-ex-public-register.test/${s3Bucket}/${fileName}/pre-signed-url`
       preSignedUrls.set(url, fileName)
       const expiresAt = new Date(

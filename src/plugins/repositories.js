@@ -9,7 +9,7 @@ import { createPackagingRecyclingNotesRepository } from '#repositories/packaging
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 import { createPublicRegisterRepository } from '#adapters/repositories/public-register/public-register.js'
-import { publicRegisterConfig } from '#application/public-register/config.js'
+import { publicRegisterConfig } from '#adapters/repositories/public-register/config.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions

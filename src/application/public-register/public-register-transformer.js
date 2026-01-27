@@ -7,16 +7,15 @@
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import {
+  capitalize,
   formatAddress,
   formatMaterial,
-  getAnnexIIProcess,
   formatTonnageBand,
-  capitalize
+  getAnnexIIProcess
 } from './formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
 import { config } from '#root/config.js'
-import { publicRegisterConfig } from './config.js'
 
 const INCLUDED_STATUSES = new Set([
   REG_ACC_STATUS.APPROVED,
@@ -25,7 +24,7 @@ const INCLUDED_STATUSES = new Set([
 ])
 
 const TEST_ORGANISATIONS = new Set(JSON.parse(config.get('testOrganisations')))
-const BATCH_SIZE = publicRegisterConfig.batchSize
+const BATCH_SIZE = Number(config.get('publicRegister.batchSize'))
 
 /**
  * @param {Organisation} org

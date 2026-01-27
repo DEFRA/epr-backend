@@ -6,12 +6,6 @@ import { config } from '#root/config.js'
  */
 export const publicRegisterConfig = {
   /**
-   * Batch size for processing organisations during public register generation
-   * Used for yielding back to event loop to prevent blocking
-   */
-  batchSize: Number(config.get('publicRegister.batchSize')),
-
-  /**
    * S3 bucket name where public register CSV files are stored
    */
   s3Bucket: config.get('publicRegister.s3Bucket'),
