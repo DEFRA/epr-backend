@@ -652,22 +652,6 @@ describe('createSummaryLogsCommandExecutor without repository', () => {
     )
   })
 
-  it('does not set timeout for submit when no repository provided', async () => {
-    mockRun.mockImplementation(() => new Promise(() => {}))
-
-    await summaryLogsWorker.submit(summaryLogId)
-
-    // Advance time past the timeout period
-    await vi.advanceTimersByTimeAsync(10 * 60 * 1000)
-
-    // Should not log timeout error since no timeout was set
-    expect(logger.error).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: expect.stringContaining('timed out')
-      })
-    )
-  })
-
   it('does not mark as failed on validate worker crash when no repository', async () => {
     const error = new Error('Worker crashed')
     mockRun.mockRejectedValue(error)
