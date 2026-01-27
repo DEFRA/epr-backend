@@ -491,55 +491,6 @@ describe('createSummaryLogsCommandExecutor', () => {
         )
       })
 
-      it('marks summary log as submission_failed on submit timeout', async () => {
-        mockRun.mockImplementation(() => new Promise(() => {}))
-
-        mainThreadRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: {
-            status: SUMMARY_LOG_STATUS.SUBMITTING
-          }
-        })
-        mainThreadRepository.update.mockResolvedValue(undefined)
-
-        await summaryLogsWorker.submit(summaryLogId)
-
-        await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
-
-        expect(mainThreadRepository.findById).toHaveBeenCalledWith(summaryLogId)
-        expect(mainThreadRepository.update).toHaveBeenCalledWith(
-          summaryLogId,
-          1,
-          {
-            status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED,
-            expiresAt: expect.any(Date)
-          }
-        )
-      })
-
-      it('logs timeout error for submit', async () => {
-        mockRun.mockImplementation(() => new Promise(() => {}))
-
-        mainThreadRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: {
-            status: SUMMARY_LOG_STATUS.SUBMITTING
-          }
-        })
-        mainThreadRepository.update.mockResolvedValue(undefined)
-
-        await summaryLogsWorker.submit(summaryLogId)
-
-        await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
-
-        expect(logger.error).toHaveBeenCalledWith(
-          expect.objectContaining({
-            message: expect.stringContaining('submit worker timed out'),
-            summaryLogId
-          })
-        )
-      })
-
       it('only marks as submission_failed if status is still submitting', async () => {
         const error = new Error('Submit worker crashed')
         mockRun.mockRejectedValue(error)

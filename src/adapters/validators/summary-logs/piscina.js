@@ -110,9 +110,8 @@ const markAsValidationFailed = async (summaryLogId, repository, logger) => {
 
 /**
  * Marks a summary log as submission_failed if it's still in submitting state.
- * This is a "safety net" called from the main thread when:
- *   - The worker thread crashes (promise rejects)
- *   - The worker thread hangs forever (timeout fires)
+ * This is a "safety net" called from the main thread when the worker thread
+ * crashes (promise rejects).
  *
  * @param {string} summaryLogId
  * @param {SummaryLogsRepository} repository - Main thread repository instance
@@ -277,25 +276,6 @@ export const createSummaryLogsCommandExecutor = (
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
       })
-
-      // Start timeout tracker - if worker hangs or crashes, we'll mark as submission_failed
-      if (summaryLogsRepository) {
-        const timeoutId = setTimeout(async () => {
-          activeTimeouts.delete(summaryLogId)
-          logger.error({
-            message: `Summary log submit worker timed out: summaryLogId=${summaryLogId}`,
-            summaryLogId
-          })
-
-          await markAsSubmissionFailed(
-            summaryLogId,
-            summaryLogsRepository,
-            logger
-          )
-        }, WORKER_TIMEOUT_MS)
-
-        activeTimeouts.set(summaryLogId, timeoutId)
-      }
 
       runCommandInWorker(
         SUMMARY_LOG_COMMAND.SUBMIT,
