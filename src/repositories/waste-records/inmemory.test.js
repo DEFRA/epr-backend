@@ -7,7 +7,7 @@ import {
   toWasteRecordVersions
 } from './contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { inMemoryWasteRecordsRepositoryPlugin } from '#plugins/repositories/inmemory-waste-records-repository-plugin.js'
+import { createInMemoryWasteRecordsRepositoryPlugin } from '#plugins/repositories/inmemory-waste-records-repository-plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -25,7 +25,8 @@ describe('In-memory waste records repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryWasteRecordsRepositoryPlugin)
+      const { plugin } = createInMemoryWasteRecordsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',

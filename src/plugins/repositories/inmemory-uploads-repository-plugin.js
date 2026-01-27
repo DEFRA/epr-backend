@@ -2,29 +2,22 @@ import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/
 import { registerRepository } from './register-repository.js'
 
 /**
- * @typedef {Object} InMemoryUploadsRepositoryPluginOptions
- * @property {Object} [config] - Optional configuration
- */
-
-/**
- * In-memory uploads repository adapter plugin for testing.
- * Registers the uploads repository directly on the request object,
- * matching the existing access pattern used by route handlers.
+ * Creates an in-memory uploads repository plugin for testing.
+ * Returns both the plugin (for server registration) and the repository
+ * (for direct test access to insert/query data).
  *
- * This is a stateless repository - the same instance is used for all requests.
+ * @param {Object} [config] - Optional configuration
+ * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#adapters/repositories/uploads/port.js').UploadsRepository }}
  */
-export const inMemoryUploadsRepositoryPlugin = {
-  name: 'uploadsRepository',
-  version: '1.0.0',
+export function createInMemoryUploadsRepositoryPlugin(config) {
+  const repository = createInMemoryUploadsRepository(config)
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   * @param {InMemoryUploadsRepositoryPluginOptions} [options]
-   */
-  register: (server, options = {}) => {
-    // Note: createInMemoryUploadsRepository returns the repo directly, not a factory
-    const repository = createInMemoryUploadsRepository(options.config)
-
-    registerRepository(server, 'uploadsRepository', () => repository)
+  const plugin = {
+    name: 'uploadsRepository',
+    register: (server) => {
+      registerRepository(server, 'uploadsRepository', () => repository)
+    }
   }
+
+  return { plugin, repository }
 }

@@ -2,29 +2,23 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { registerRepository } from './register-repository.js'
 
 /**
- * @typedef {Object} InMemoryWasteRecordsRepositoryPluginOptions
- * @property {Object[]} [initialRecords] - Initial waste records data
- */
-
-/**
- * In-memory waste records repository adapter plugin for testing.
- * Registers the waste records repository directly on the request object,
- * matching the existing access pattern used by route handlers.
+ * Creates an in-memory waste records repository plugin for testing.
+ * Returns both the plugin (for server registration) and the repository
+ * (for direct test access to insert/query data).
  *
- * This is a stateless repository - the same instance is used for all requests.
+ * @param {Object[]} [initialRecords] - Initial waste records data
+ * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/waste-records/port.js').WasteRecordsRepository }}
  */
-export const inMemoryWasteRecordsRepositoryPlugin = {
-  name: 'wasteRecordsRepository',
-  version: '1.0.0',
+export function createInMemoryWasteRecordsRepositoryPlugin(initialRecords) {
+  const factory = createInMemoryWasteRecordsRepository(initialRecords)
+  const repository = factory()
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   * @param {InMemoryWasteRecordsRepositoryPluginOptions} [options]
-   */
-  register: (server, options = {}) => {
-    const factory = createInMemoryWasteRecordsRepository(options.initialRecords)
-    const repository = factory()
-
-    registerRepository(server, 'wasteRecordsRepository', () => repository)
+  const plugin = {
+    name: 'wasteRecordsRepository',
+    register: (server) => {
+      registerRepository(server, 'wasteRecordsRepository', () => repository)
+    }
   }
+
+  return { plugin, repository }
 }

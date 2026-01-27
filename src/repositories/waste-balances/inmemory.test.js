@@ -2,7 +2,7 @@ import Hapi from '@hapi/hapi'
 import { describe, it as base, expect, it, vi } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
-import { inMemoryWasteBalancesRepositoryPlugin } from '#plugins/repositories/inmemory-waste-balances-repository-plugin.js'
+import { createInMemoryWasteBalancesRepositoryPlugin } from '#plugins/repositories/inmemory-waste-balances-repository-plugin.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -65,7 +65,8 @@ describe('waste-balances repository - in-memory implementation', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryWasteBalancesRepositoryPlugin)
+      const { plugin } = createInMemoryWasteBalancesRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'GET',
