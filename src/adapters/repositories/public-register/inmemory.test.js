@@ -1,4 +1,4 @@
-import { describe, it as base } from 'vitest'
+import { describe, it as base, expect } from 'vitest'
 import { createInMemoryPublicRegisterRepository } from './inmemory.js'
 import { testPublicRegisterRepositoryContract } from './port.contract.js'
 
@@ -13,7 +13,10 @@ const it = base.extend({
   }
 })
 
-// NOSONAR: javascript:S2187 - Contract tests from port.contract.js provide test cases
 describe('In-memory public register repository', () => {
+  it('creates a repository instance', ({ publicRegisterRepository }) => {
+    expect(publicRegisterRepository).toBeDefined()
+  })
+
   testPublicRegisterRepositoryContract(it)
 })
