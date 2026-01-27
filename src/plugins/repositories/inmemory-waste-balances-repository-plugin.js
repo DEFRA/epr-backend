@@ -7,12 +7,8 @@ import { registerRepository } from './register-repository.js'
  */
 
 /**
- * Creates an in-memory waste balances repository plugin for testing.
- * Returns both the plugin (for server registration) and the repository
- * (for direct test access to insert/query data).
- *
- * @param {Object[]} [initialWasteBalances] - Initial waste balances data
- * @param {WasteBalancesDependencies} [dependencies] - Dependencies
+ * @param {Object[]} [initialWasteBalances]
+ * @param {WasteBalancesDependencies} [dependencies]
  * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/waste-balances/port.js').WasteBalancesRepository }}
  */
 export function createInMemoryWasteBalancesRepositoryPlugin(
