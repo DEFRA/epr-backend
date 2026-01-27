@@ -365,6 +365,10 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
     beforeAll(async () => {
       server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository()
+        },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: false
         })
