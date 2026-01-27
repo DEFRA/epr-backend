@@ -4,50 +4,9 @@ import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 
 // Import mocked modules
-import { createMongoClient } from '#common/helpers/mongo-client.js'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
-import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
-
-// Mock all external dependencies
-vi.mock('#common/helpers/mongo-client.js', () => ({
-  createMongoClient: vi.fn()
-}))
-
-vi.mock('#common/helpers/s3/s3-client.js', () => ({
-  createS3Client: vi.fn()
-}))
-
-vi.mock('#repositories/summary-logs/mongodb.js', () => ({
-  createSummaryLogsRepository: vi.fn()
-}))
-
-vi.mock('#repositories/organisations/mongodb.js', () => ({
-  createOrganisationsRepository: vi.fn()
-}))
-
-vi.mock('#repositories/waste-records/mongodb.js', () => ({
-  createWasteRecordsRepository: vi.fn()
-}))
-
-vi.mock('#repositories/waste-balances/mongodb.js', () => ({
-  createWasteBalancesRepository: vi.fn()
-}))
-
-vi.mock('#adapters/repositories/uploads/cdp-uploader.js', () => ({
-  createUploadsRepository: vi.fn()
-}))
-
-vi.mock('#application/summary-logs/extractor.js', () => ({
-  createSummaryLogExtractor: vi.fn()
-}))
 
 vi.mock('#application/summary-logs/validate.js', () => ({
   createSummaryLogsValidator: vi.fn()
@@ -66,19 +25,15 @@ vi.mock('#common/helpers/metrics/summary-logs.js', () => ({
   }
 }))
 
-vi.mock('#feature-flags/feature-flags.config.js', () => ({
-  createConfigFeatureFlags: vi.fn(() => ({}))
-}))
-
 describe('createCommandHandlers', () => {
   let mockLogger
-  let mockMongoClient
-  let mockS3Client
-  let mockDb
+  let mockRepositories
   let mockSummaryLogsRepository
   let mockOrganisationsRepository
   let mockWasteRecordsRepository
   let mockWasteBalancesRepository
+  let mockSummaryLogExtractor
+  let mockFeatureFlags
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -89,13 +44,6 @@ describe('createCommandHandlers', () => {
       warn: vi.fn()
     }
 
-    mockDb = { collection: vi.fn() }
-    mockMongoClient = {
-      db: vi.fn().mockReturnValue(mockDb),
-      close: vi.fn()
-    }
-    mockS3Client = { destroy: vi.fn() }
-
     mockSummaryLogsRepository = {
       findById: vi.fn(),
       update: vi.fn()
@@ -103,57 +51,17 @@ describe('createCommandHandlers', () => {
     mockOrganisationsRepository = {}
     mockWasteRecordsRepository = {}
     mockWasteBalancesRepository = {}
+    mockSummaryLogExtractor = {}
+    mockFeatureFlags = {}
 
-    createMongoClient.mockResolvedValue(mockMongoClient)
-    createS3Client.mockReturnValue(mockS3Client)
-    createSummaryLogsRepository.mockResolvedValue(
-      () => mockSummaryLogsRepository
-    )
-    createOrganisationsRepository.mockResolvedValue(
-      () => mockOrganisationsRepository
-    )
-    createWasteRecordsRepository.mockResolvedValue(
-      () => mockWasteRecordsRepository
-    )
-    createWasteBalancesRepository.mockResolvedValue(
-      () => mockWasteBalancesRepository
-    )
-    createUploadsRepository.mockReturnValue({})
-    createSummaryLogExtractor.mockReturnValue({})
-  })
-
-  it('creates connections once at startup', async () => {
-    const mockValidate = vi.fn()
-    createSummaryLogsValidator.mockReturnValue(mockValidate)
-
-    const { handleValidateCommand } = await createCommandHandlers({
-      logger: mockLogger
-    })
-
-    // Connections created once during initialization
-    expect(createMongoClient).toHaveBeenCalledTimes(1)
-    expect(createS3Client).toHaveBeenCalledTimes(1)
-
-    // Process multiple messages
-    await handleValidateCommand({ summaryLogId: 'log-1' })
-    await handleValidateCommand({ summaryLogId: 'log-2' })
-
-    // Connections should still only be created once
-    expect(createMongoClient).toHaveBeenCalledTimes(1)
-    expect(createS3Client).toHaveBeenCalledTimes(1)
-  })
-
-  it('returns cleanup function that closes connections', async () => {
-    const { cleanup } = await createCommandHandlers({
-      logger: mockLogger
-    })
-
-    expect(typeof cleanup).toBe('function')
-
-    await cleanup()
-
-    expect(mockS3Client.destroy).toHaveBeenCalled()
-    expect(mockMongoClient.close).toHaveBeenCalled()
+    mockRepositories = {
+      summaryLogsRepository: mockSummaryLogsRepository,
+      organisationsRepository: mockOrganisationsRepository,
+      wasteRecordsRepository: mockWasteRecordsRepository,
+      wasteBalancesRepository: mockWasteBalancesRepository,
+      summaryLogExtractor: mockSummaryLogExtractor,
+      featureFlags: mockFeatureFlags
+    }
   })
 
   describe('handleValidateCommand', () => {
@@ -161,8 +69,9 @@ describe('createCommandHandlers', () => {
       const mockValidate = vi.fn()
       createSummaryLogsValidator.mockReturnValue(mockValidate)
 
-      const { handleValidateCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleValidateCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await handleValidateCommand({ summaryLogId: 'test-log-123' })
@@ -177,8 +86,9 @@ describe('createCommandHandlers', () => {
         .mockRejectedValue(new Error('Validation failed'))
       createSummaryLogsValidator.mockReturnValue(mockValidate)
 
-      const { handleValidateCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleValidateCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await expect(
@@ -208,8 +118,9 @@ describe('createCommandHandlers', () => {
     })
 
     it('syncs waste records from summary log', async () => {
-      const { handleSubmitCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleSubmitCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await handleSubmitCommand({ summaryLogId })
@@ -221,8 +132,9 @@ describe('createCommandHandlers', () => {
     })
 
     it('updates status to SUBMITTED', async () => {
-      const { handleSubmitCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleSubmitCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await handleSubmitCommand({ summaryLogId })
@@ -235,8 +147,9 @@ describe('createCommandHandlers', () => {
     })
 
     it('records metrics', async () => {
-      const { handleSubmitCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleSubmitCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await handleSubmitCommand({ summaryLogId })
@@ -257,8 +170,9 @@ describe('createCommandHandlers', () => {
     })
 
     it('logs submission success', async () => {
-      const { handleSubmitCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleSubmitCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await handleSubmitCommand({ summaryLogId })
@@ -271,8 +185,9 @@ describe('createCommandHandlers', () => {
     it('throws if summary log not found', async () => {
       mockSummaryLogsRepository.findById.mockResolvedValue(null)
 
-      const { handleSubmitCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleSubmitCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await expect(handleSubmitCommand({ summaryLogId })).rejects.toThrow(
@@ -286,8 +201,9 @@ describe('createCommandHandlers', () => {
         summaryLog: { status: SUMMARY_LOG_STATUS.VALIDATED }
       })
 
-      const { handleSubmitCommand } = await createCommandHandlers({
-        logger: mockLogger
+      const { handleSubmitCommand } = createCommandHandlers({
+        logger: mockLogger,
+        repositories: mockRepositories
       })
 
       await expect(handleSubmitCommand({ summaryLogId })).rejects.toThrow(

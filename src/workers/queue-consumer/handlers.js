@@ -1,81 +1,35 @@
-import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
-import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
 import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
-import { createMongoClient } from '#common/helpers/mongo-client.js'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import {
   SUMMARY_LOG_STATUS,
   transitionStatus
 } from '#domain/summary-logs/status.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
-import { createConfigFeatureFlags } from '#feature-flags/feature-flags.config.js'
-
-import { config } from '#root/config.js'
 
 /**
  * Creates command handlers for the queue consumer.
- * Connections are created once at startup and reused across all messages.
  *
  * @param {object} options
  * @param {object} options.logger - Pino logger instance
- * @returns {Promise<object>} Object with handlers and cleanup function
+ * @param {object} options.repositories - Injected repositories
+ * @param {object} options.repositories.summaryLogsRepository
+ * @param {object} options.repositories.organisationsRepository
+ * @param {object} options.repositories.wasteRecordsRepository
+ * @param {object} options.repositories.wasteBalancesRepository
+ * @param {object} options.repositories.summaryLogExtractor
+ * @param {object} options.repositories.featureFlags
+ * @returns {object} Object with handleValidateCommand and handleSubmitCommand functions
  */
-export async function createCommandHandlers({ logger }) {
-  // Create connections once at startup
-  const { mongoUrl, mongoOptions, databaseName } = config.get('mongo')
-  const awsRegion = config.get('awsRegion')
-  const s3Endpoint = config.get('s3Endpoint')
-  const isDevelopment = config.get('isDevelopment')
-
-  const mongoClient = await createMongoClient({
-    url: mongoUrl,
-    options: mongoOptions
-  })
-
-  const s3Client = createS3Client({
-    region: awsRegion,
-    endpoint: s3Endpoint,
-    forcePathStyle: isDevelopment
-  })
-
-  const db = mongoClient.db(databaseName)
-
-  const summaryLogsRepositoryFactory = await createSummaryLogsRepository(db)
-  const summaryLogsRepository = summaryLogsRepositoryFactory(logger)
-
-  const uploadsRepository = createUploadsRepository({
-    s3Client,
-    cdpUploaderUrl: config.get('cdpUploader.url'),
-    s3Bucket: config.get('cdpUploader.s3Bucket')
-  })
-
-  const organisationsRepositoryFactory = await createOrganisationsRepository(db)
-  const organisationsRepository = organisationsRepositoryFactory()
-
-  const wasteRecordsRepositoryFactory = await createWasteRecordsRepository(db)
-  const wasteRecordsRepository = wasteRecordsRepositoryFactory()
-
-  const wasteBalancesRepositoryFactory = await createWasteBalancesRepository(
-    db,
-    { organisationsRepository }
-  )
-  const wasteBalancesRepository = wasteBalancesRepositoryFactory()
-
-  const summaryLogExtractor = createSummaryLogExtractor({
-    uploadsRepository,
-    logger
-  })
-
-  const cleanup = async () => {
-    s3Client.destroy()
-    await mongoClient.close()
-  }
+export function createCommandHandlers({ logger, repositories }) {
+  const {
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    wasteBalancesRepository,
+    summaryLogExtractor,
+    featureFlags
+  } = repositories
 
   const handleValidateCommand = async ({ summaryLogId }) => {
     const validateSummaryLog = createSummaryLogsValidator({
@@ -109,7 +63,6 @@ export async function createCommandHandlers({ logger }) {
       summaryLog.meta?.[SUMMARY_LOG_META_FIELDS.PROCESSING_TYPE]
 
     // Sync waste records from summary log
-    const featureFlags = createConfigFeatureFlags(config)
     const sync = syncFromSummaryLog({
       extractor: summaryLogExtractor,
       wasteRecordRepository: wasteRecordsRepository,
@@ -152,7 +105,6 @@ export async function createCommandHandlers({ logger }) {
 
   return {
     handleValidateCommand,
-    handleSubmitCommand,
-    cleanup
+    handleSubmitCommand
   }
 }
