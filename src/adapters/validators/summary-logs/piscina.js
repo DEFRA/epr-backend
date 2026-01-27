@@ -203,12 +203,10 @@ const runCommandInWorker = async (
       }
     })
 
-    if (repository) {
-      if (command === SUMMARY_LOG_COMMAND.VALIDATE) {
-        await markAsValidationFailed(summaryLogId, repository, logger)
-      } else {
-        await markAsSubmissionFailed(summaryLogId, repository, logger)
-      }
+    if (command === SUMMARY_LOG_COMMAND.VALIDATE && repository) {
+      await markAsValidationFailed(summaryLogId, repository, logger)
+    } else if (command === SUMMARY_LOG_COMMAND.SUBMIT && repository) {
+      await markAsSubmissionFailed(summaryLogId, repository, logger)
     }
   }
 }
