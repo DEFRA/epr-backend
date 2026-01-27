@@ -25,7 +25,7 @@ import { mongoSystemLogsRepositoryPlugin } from '#plugins/repositories/mongo-sys
 import { s3UploadsRepositoryPlugin } from '#plugins/repositories/s3-uploads-repository-plugin.js'
 import { s3PublicRegisterRepositoryPlugin } from '#plugins/repositories/s3-public-register-repository-plugin.js'
 import { router } from '#plugins/router.js'
-import { workers } from '#plugins/workers.js'
+import { piscinaWorkersPlugin } from '#plugins/piscina-workers-plugin.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
@@ -113,7 +113,7 @@ async function createServer(options = {}) {
     }
   })
 
-  // LEGACY: Skip MongoDB for tests of /v1/apply/* routes that bypass repositories.
+  // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
   // These routes use raw db.collection() access and need refactoring.
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
   // See: src/routes/v1/apply/*.js
@@ -140,17 +140,12 @@ async function createServer(options = {}) {
       },
       mongoSystemLogsRepositoryPlugin,
       s3UploadsRepositoryPlugin,
-      s3PublicRegisterRepositoryPlugin
+      s3PublicRegisterRepositoryPlugin,
+      piscinaWorkersPlugin
     )
   }
 
-  plugins.push(
-    {
-      plugin: workers,
-      options: options.workers
-    },
-    router
-  )
+  plugins.push(router)
 
   await server.register(plugins)
 
