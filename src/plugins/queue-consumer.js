@@ -25,8 +25,8 @@ export const queueConsumer = {
 
       const sqsClient = createSQSClient({ region, endpoint })
 
-      const { handleValidateCommand, handleSubmitCommand } =
-        createCommandHandlers({ logger: server.logger })
+      const { handleValidateCommand, handleSubmitCommand, cleanup } =
+        await createCommandHandlers({ logger: server.logger })
 
       let consumer
 
@@ -51,6 +51,7 @@ export const queueConsumer = {
           'Failed to create command queue consumer'
         )
         sqsClient.destroy()
+        await cleanup()
         throw err
       }
 
@@ -103,6 +104,7 @@ export const queueConsumer = {
           })
         } finally {
           sqsClient.destroy()
+          await cleanup()
         }
       })
     }

@@ -58,9 +58,10 @@ describe('queue-consumer plugin', () => {
     }
     createCommandQueueConsumer.mockResolvedValue(mockConsumer)
 
-    createCommandHandlers.mockReturnValue({
+    createCommandHandlers.mockResolvedValue({
       handleValidateCommand: vi.fn(),
-      handleSubmitCommand: vi.fn()
+      handleSubmitCommand: vi.fn(),
+      cleanup: vi.fn()
     })
   })
 
@@ -105,9 +106,10 @@ describe('queue-consumer plugin', () => {
   it('creates consumer with correct dependencies', async () => {
     const mockHandlers = {
       handleValidateCommand: vi.fn(),
-      handleSubmitCommand: vi.fn()
+      handleSubmitCommand: vi.fn(),
+      cleanup: vi.fn()
     }
-    createCommandHandlers.mockReturnValue(mockHandlers)
+    createCommandHandlers.mockResolvedValue(mockHandlers)
 
     await server.register({
       plugin: queueConsumer,
@@ -136,7 +138,14 @@ describe('queue-consumer plugin', () => {
     await server.stop()
   })
 
-  it('stops consumer on server stop', async () => {
+  it('stops consumer and cleans up on server stop', async () => {
+    const mockCleanup = vi.fn()
+    createCommandHandlers.mockResolvedValue({
+      handleValidateCommand: vi.fn(),
+      handleSubmitCommand: vi.fn(),
+      cleanup: mockCleanup
+    })
+
     await server.register({
       plugin: queueConsumer,
       options: { config: mockConfig }
@@ -147,9 +156,17 @@ describe('queue-consumer plugin', () => {
 
     expect(mockConsumer.stop).toHaveBeenCalled()
     expect(mockSqsClient.destroy).toHaveBeenCalled()
+    expect(mockCleanup).toHaveBeenCalled()
   })
 
-  it('destroys SQS client and throws when consumer creation fails', async () => {
+  it('cleans up and throws when consumer creation fails', async () => {
+    const mockCleanup = vi.fn()
+    createCommandHandlers.mockResolvedValue({
+      handleValidateCommand: vi.fn(),
+      handleSubmitCommand: vi.fn(),
+      cleanup: mockCleanup
+    })
+
     const error = new Error('Queue not found')
     createCommandQueueConsumer.mockRejectedValue(error)
 
@@ -161,5 +178,6 @@ describe('queue-consumer plugin', () => {
     ).rejects.toThrow('Queue not found')
 
     expect(mockSqsClient.destroy).toHaveBeenCalled()
+    expect(mockCleanup).toHaveBeenCalled()
   })
 })
