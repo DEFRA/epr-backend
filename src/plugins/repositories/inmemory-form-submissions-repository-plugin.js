@@ -9,11 +9,7 @@ import { registerRepository } from './register-repository.js'
  */
 
 /**
- * Creates an in-memory form submissions repository plugin for testing.
- * Returns both the plugin (for server registration) and the repository
- * (for direct test access to insert/query data).
- *
- * @param {FormSubmissionsInitialData} [initialData] - Initial data
+ * @param {FormSubmissionsInitialData} [initialData]
  * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/form-submissions/port.js').FormSubmissionsRepository }}
  */
 export function createInMemoryFormSubmissionsRepositoryPlugin(
