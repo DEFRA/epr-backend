@@ -124,19 +124,7 @@ async function createServer(options = {}) {
     },
     {
       plugin: workers,
-      options: {
-        ...options.workers,
-        // When skipping MongoDB, pass the test repository to workers plugin
-        // If no repository provided, use a stub that does nothing (for tests that don't use summary logs)
-        ...(options.skipMongoDb && {
-          summaryLogsRepository: options.repositories?.summaryLogsRepository
-            ? options.repositories.summaryLogsRepository(server.logger)
-            : /* v8 ignore next */ {
-                findById: async () => null,
-                update: async () => {}
-              }
-        })
-      }
+      options: options.workers
     },
     router
   )
