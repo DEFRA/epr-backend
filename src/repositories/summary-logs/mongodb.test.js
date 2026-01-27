@@ -1,10 +1,12 @@
 import { randomUUID } from 'node:crypto'
+import Hapi from '@hapi/hapi'
 import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
+import { mongoSummaryLogsRepositoryPlugin } from '#plugins/repositories/mongo-summary-logs-repository-plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -190,6 +192,49 @@ describe('MongoDB summary logs repository', () => {
       await expect(
         repository.transitionToSubmittingExclusive(logId, 1, 'org-1', 'reg-1')
       ).rejects.toThrow('Connection timeout')
+    })
+  })
+
+  describe('plugin wiring', () => {
+    it('makes repository available on request via plugin', async ({
+      mongoClient
+    }) => {
+      const server = Hapi.server()
+
+      // Provide db dependency that the plugin expects
+      const fakeMongoPlugin = {
+        name: 'mongodb',
+        register: async (s) => {
+          s.decorate('server', 'db', mongoClient.db(DATABASE_NAME))
+        }
+      }
+      await server.register(fakeMongoPlugin)
+      await server.register(mongoSummaryLogsRepositoryPlugin)
+
+      // Provide request.logger that the plugin needs
+      server.ext('onRequest', (request, h) => {
+        request.logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+        return h.continue
+      })
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const id = `test-${randomUUID()}`
+          const summaryLog = summaryLogFactory.validating()
+          await request.summaryLogsRepository.insert(id, summaryLog)
+          const found = await request.summaryLogsRepository.findById(id)
+          return { wasFound: found !== null }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.wasFound).toBe(true)
     })
   })
 })

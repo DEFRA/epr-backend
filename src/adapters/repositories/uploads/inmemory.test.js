@@ -1,7 +1,9 @@
+import Hapi from '@hapi/hapi'
 import { describe, it as base, beforeEach, afterEach, expect } from 'vitest'
 import { createInMemoryUploadsRepository } from './inmemory.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createCallbackReceiver } from './test-helpers/callback-receiver.js'
+import { inMemoryUploadsRepositoryPlugin } from '#plugins/repositories/inmemory-uploads-repository-plugin.js'
 
 let callbackReceiver
 
@@ -50,5 +52,37 @@ describe('In-memory uploads repository', () => {
     await expect(
       uploadsRepository.completeUpload('unknown-id', Buffer.from('test'))
     ).rejects.toThrow('No pending upload found for uploadId: unknown-id')
+  })
+
+  describe('plugin wiring', () => {
+    it('makes repository available on request via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryUploadsRepositoryPlugin)
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const result =
+            await request.uploadsRepository.initiateSummaryLogUpload({
+              organisationId: 'org-123',
+              registrationId: 'reg-456',
+              callbackUrl: 'http://localhost:9999/callback'
+            })
+          return {
+            hasUploadUrl: !!result.uploadUrl,
+            hasUploadId: !!result.uploadId
+          }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.hasUploadUrl).toBe(true)
+      expect(result.hasUploadId).toBe(true)
+    })
   })
 })

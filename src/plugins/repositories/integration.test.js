@@ -1,33 +1,46 @@
 /**
- * Integration test demonstrating that per-repository plugins work with
- * existing route handlers WITHOUT requiring changes to those handlers.
+ * Integration tests for per-repository adapter plugins.
  *
- * This validates the spike hypothesis: the per-repository approach allows
- * zero-migration-cost adoption because handlers already destructure
- * `request.organisationsRepository` directly.
+ * These tests verify that each plugin correctly wires its repository onto
+ * the request object by performing ONE real operation per repository.
+ * This is not about testing repository behaviour (that's what contract tests
+ * are for) - it's about verifying the plugin composition is correct.
  */
 import Hapi from '@hapi/hapi'
-import { describe, test, expect, beforeEach } from 'vitest'
+import { describe, test, expect, beforeEach, vi } from 'vitest'
 import { StatusCodes } from 'http-status-codes'
-import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
-import { inMemoryOrganisationsRepositoryPlugin } from './inmemory-organisations-repository-plugin.js'
 
-// Import an actual route handler that uses organisationsRepository
+// Test data builders
+import { buildOrganisation } from '#repositories/organisations/contract/test-data.js'
+import { summaryLogFactory } from '#repositories/summary-logs/contract/test-data.js'
+import {
+  buildVersionData,
+  toWasteRecordVersions
+} from '#repositories/waste-records/contract/test-data.js'
+import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
+
+// In-memory plugins (used in tests)
+import { inMemoryOrganisationsRepositoryPlugin } from './inmemory-organisations-repository-plugin.js'
+import { inMemorySummaryLogsRepositoryPlugin } from './inmemory-summary-logs-repository-plugin.js'
+import { inMemoryFormSubmissionsRepositoryPlugin } from './inmemory-form-submissions-repository-plugin.js'
+import { inMemoryWasteRecordsRepositoryPlugin } from './inmemory-waste-records-repository-plugin.js'
+import { inMemoryWasteBalancesRepositoryPlugin } from './inmemory-waste-balances-repository-plugin.js'
+import { inMemorySystemLogsRepositoryPlugin } from './inmemory-system-logs-repository-plugin.js'
+import { inMemoryUploadsRepositoryPlugin } from './inmemory-uploads-repository-plugin.js'
+import { inMemoryPublicRegisterRepositoryPlugin } from './inmemory-public-register-repository-plugin.js'
+
+// Actual route handler (proves zero-migration)
 import { organisationsGetAll } from '#routes/v1/organisations/get.js'
 
 describe('per-repository plugins integration', () => {
-  describe('with existing route handlers', () => {
+  describe('zero-migration: existing route handlers work unchanged', () => {
     /** @type {import('@hapi/hapi').Server} */
     let server
 
     beforeEach(async () => {
       server = Hapi.server()
-
-      // Register the per-repository plugin (not the bundled one)
       await server.register(inMemoryOrganisationsRepositoryPlugin)
 
-      // Insert test data directly via server.app is not possible because
-      // the plugin registers on request. Instead, we add a setup route.
       server.route({
         method: 'POST',
         path: '/test-setup',
@@ -39,7 +52,6 @@ describe('per-repository plugins integration', () => {
         }
       })
 
-      // Register the actual route handler (modified to skip auth for test)
       server.route({
         ...organisationsGetAll,
         options: { ...organisationsGetAll.options, auth: false }
@@ -48,46 +60,277 @@ describe('per-repository plugins integration', () => {
       await server.initialize()
     })
 
-    test('existing route handler works with per-repository plugin', async () => {
-      // Setup: insert an organisation
-      const setupResponse = await server.inject({
-        method: 'POST',
-        url: '/test-setup'
-      })
-      expect(setupResponse.statusCode).toBe(200)
+    test('organisationsGetAll handler works with per-repository plugin', async () => {
+      await server.inject({ method: 'POST', url: '/test-setup' })
 
-      // Execute: call the actual route handler
       const response = await server.inject({
         method: 'GET',
         url: '/v1/organisations'
       })
 
-      // Verify: handler works without modification
       expect(response.statusCode).toBe(StatusCodes.OK)
-      const result = JSON.parse(response.payload)
-      expect(result).toHaveLength(1)
-      expect(result[0].id).toBeDefined()
+      expect(JSON.parse(response.payload)).toHaveLength(1)
     })
+  })
 
-    test('demonstrates zero-migration for route handlers', async () => {
-      // The organisationsGetAll handler destructures directly:
-      //   handler: async ({ organisationsRepository }, h) => { ... }
-      //
-      // The per-repository plugin adds organisationsRepository to request:
-      //   request.organisationsRepository
-      //
-      // Therefore: existing handlers work unchanged.
-      //
-      // This test confirms that the handler code does not need to change
-      // from { organisationsRepository } to { repositories: { organisations } }
+  describe('organisationsRepository plugin', () => {
+    test('insert and findById works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryOrganisationsRepositoryPlugin)
 
-      const response = await server.inject({
-        method: 'GET',
-        url: '/v1/organisations'
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const org = buildOrganisation()
+          await request.organisationsRepository.insert(org)
+          const found = await request.organisationsRepository.findById(org.id)
+          return { inserted: org.id, found: found?.id }
+        }
       })
 
-      // If this passes, the zero-migration hypothesis is validated
-      expect(response.statusCode).toBe(StatusCodes.OK)
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.found).toBe(result.inserted)
+    })
+  })
+
+  describe('summaryLogsRepository plugin', () => {
+    test('insert and findById works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemorySummaryLogsRepositoryPlugin)
+
+      // Mock request.logger for per-request instantiation
+      server.ext('onRequest', (request, h) => {
+        request.logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+        return h.continue
+      })
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const id = 'summary-log-test-123'
+          const organisationId = 'org-123'
+          const summaryLog = summaryLogFactory.validating({
+            organisationId,
+            registrationId: 'reg-456'
+          })
+          await request.summaryLogsRepository.insert(id, summaryLog)
+          const found = await request.summaryLogsRepository.findById(id)
+          return {
+            wasFound: found !== null,
+            organisationId: found?.summaryLog?.organisationId
+          }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.wasFound).toBe(true)
+      expect(result.organisationId).toBe('org-123')
+    })
+  })
+
+  describe('formSubmissionsRepository plugin', () => {
+    test('findAllAccreditations works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register({
+        plugin: inMemoryFormSubmissionsRepositoryPlugin,
+        options: {
+          initialAccreditations: [
+            { id: 'acc-1', referenceNumber: 'ACC001', orgId: 'org-1' }
+          ]
+        }
+      })
+
+      server.route({
+        method: 'GET',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const accreditations =
+            await request.formSubmissionsRepository.findAllAccreditations()
+          return { count: accreditations.length }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'GET', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.count).toBe(1)
+    })
+  })
+
+  describe('wasteRecordsRepository plugin', () => {
+    test('appendVersions and findByRegistration works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryWasteRecordsRepositoryPlugin)
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const organisationId = 'org-123'
+          const registrationId = 'reg-456'
+
+          const wasteRecordVersions = toWasteRecordVersions({
+            [WASTE_RECORD_TYPE.RECEIVED]: {
+              'row-1': buildVersionData(),
+              'row-2': buildVersionData()
+            }
+          })
+
+          await request.wasteRecordsRepository.appendVersions(
+            organisationId,
+            registrationId,
+            wasteRecordVersions
+          )
+
+          const found = await request.wasteRecordsRepository.findByRegistration(
+            organisationId,
+            registrationId
+          )
+          return { found: found.length }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.found).toBe(2)
+    })
+  })
+
+  describe('wasteBalancesRepository plugin', () => {
+    test('findByAccreditationId works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryWasteBalancesRepositoryPlugin)
+
+      server.route({
+        method: 'GET',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          // Should return null for non-existent accreditation (not throw)
+          const balance =
+            await request.wasteBalancesRepository.findByAccreditationId(
+              'non-existent-accreditation'
+            )
+          return { found: balance !== null }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'GET', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.found).toBe(false)
+    })
+  })
+
+  describe('systemLogsRepository plugin', () => {
+    test('insert and findByOrganisationId works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemorySystemLogsRepositoryPlugin)
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const organisationId = 'org-123'
+          await request.systemLogsRepository.insert({
+            id: 'log-1',
+            context: { organisationId },
+            message: 'Test log entry',
+            createdAt: new Date()
+          })
+          const results =
+            await request.systemLogsRepository.findByOrganisationId(
+              organisationId
+            )
+          return { count: results.length }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.count).toBe(1)
+    })
+  })
+
+  describe('uploadsRepository plugin', () => {
+    test('initiateSummaryLogUpload returns upload metadata via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryUploadsRepositoryPlugin)
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const result =
+            await request.uploadsRepository.initiateSummaryLogUpload({
+              organisationId: 'org-123',
+              registrationId: 'reg-456',
+              callbackUrl: 'http://localhost/callback'
+            })
+          return {
+            hasUploadUrl: !!result.uploadUrl,
+            hasUploadId: !!result.uploadId
+          }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.hasUploadUrl).toBe(true)
+      expect(result.hasUploadId).toBe(true)
+    })
+  })
+
+  describe('publicRegisterRepository plugin', () => {
+    test('save and generatePresignedUrl works via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryPublicRegisterRepositoryPlugin)
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const fileName = 'test-register.csv'
+          const content = 'header1,header2\nvalue1,value2'
+
+          await request.publicRegisterRepository.save(fileName, content)
+          const result =
+            await request.publicRegisterRepository.generatePresignedUrl(
+              fileName
+            )
+
+          return { hasUrl: !!result.url }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.hasUrl).toBe(true)
     })
   })
 })

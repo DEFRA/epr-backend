@@ -1,6 +1,8 @@
+import Hapi from '@hapi/hapi'
 import { describe, it as base, expect, it, vi } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
+import { inMemoryWasteBalancesRepositoryPlugin } from '#plugins/repositories/inmemory-waste-balances-repository-plugin.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -59,4 +61,31 @@ describe('waste-balances repository - in-memory implementation', () => {
   })
 
   testWasteBalancesRepositoryContract(extendedIt)
+
+  describe('plugin wiring', () => {
+    it('makes repository available on request via plugin', async () => {
+      const server = Hapi.server()
+      await server.register(inMemoryWasteBalancesRepositoryPlugin)
+
+      server.route({
+        method: 'GET',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          // Should return null for non-existent accreditation (not throw)
+          const balance =
+            await request.wasteBalancesRepository.findByAccreditationId(
+              'non-existent-accreditation'
+            )
+          return { found: balance !== null }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'GET', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.found).toBe(false)
+    })
+  })
 })
