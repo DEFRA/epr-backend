@@ -104,3 +104,12 @@ export function getAnnexIIProcess(material) {
 export function formatTonnageBand(tonnageBand) {
   return TONNAGE_BAND_DISPLAY_NAMES[tonnageBand] || ''
 }
+
+/**
+ * Converts a string to fully uppercase
+ * @param {string} str - String to uppercase
+ * @returns {string} - Fully uppercase string (e.g., 'ea' → 'EA', 'sepa' → 'SEPA')
+ */
+export function uppercaseString(str) {
+  return str ? str.toUpperCase() : ''
+}

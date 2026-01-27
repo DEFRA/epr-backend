@@ -11,7 +11,8 @@ import {
   formatAddress,
   formatMaterial,
   formatTonnageBand,
-  getAnnexIIProcess
+  getAnnexIIProcess,
+  uppercaseString
 } from './formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'
@@ -39,7 +40,7 @@ function transformRegAcc(org, registration, accreditation) {
     registeredOffice: formatAddress(
       org.companyDetails.registeredAddress || org.companyDetails.address
     ),
-    appropriateAgency: org.submittedToRegulator,
+    appropriateAgency: uppercaseString(org.submittedToRegulator),
     registrationNumber: registration.registrationNumber,
     tradingName: org.companyDetails.tradingName || '',
     reprocessingSite: formatAddress(registration.site?.address),
