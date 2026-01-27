@@ -5,6 +5,7 @@ import {
   migrateGlassOrganisation
 } from './run-glass-migration.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import * as glassMigration from '#glass-migration/glass-migration.js'
 
 vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
@@ -341,6 +342,30 @@ describe('migrateGlassOrganisation', () => {
     expect(mockRepo.replace).toHaveBeenCalled()
   })
 
+  it('should not include id or version in replacement data (identity separate from data)', async () => {
+    const mockRepo = { replace: vi.fn().mockResolvedValue(undefined) }
+    const org = {
+      id: 'org-1',
+      version: 5,
+      registrations: [
+        {
+          id: 'reg-1',
+          registrationNumber: 'REG-2025-GL',
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt']
+        }
+      ],
+      accreditations: []
+    }
+
+    await migrateGlassOrganisation(org, mockRepo)
+
+    expect(mockRepo.replace).toHaveBeenCalledWith('org-1', 5, expect.anything())
+    const replacementData = mockRepo.replace.mock.calls[0][2]
+    expect(replacementData).not.toHaveProperty('id')
+    expect(replacementData).not.toHaveProperty('version')
+  })
+
   it('should return false and not throw when migration fails due to invalid data', async () => {
     const mockRepo = { replace: vi.fn() }
     const org = {
@@ -361,5 +386,32 @@ describe('migrateGlassOrganisation', () => {
 
     expect(result).toBe(false)
     expect(mockRepo.replace).not.toHaveBeenCalled()
+  })
+
+  it('should handle migration result with undefined arrays gracefully', async () => {
+    const mockRepo = { replace: vi.fn().mockResolvedValue(undefined) }
+    const org = {
+      id: 'org-1',
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-1',
+          registrationNumber: 'REG-2025-GL',
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt']
+        }
+      ],
+      accreditations: []
+    }
+
+    // Mock migrateOrganisation to return object without arrays
+    vi.spyOn(glassMigration, 'migrateOrganisation').mockReturnValueOnce({})
+
+    const result = await migrateGlassOrganisation(org, mockRepo)
+
+    expect(result).toBe(true)
+    expect(mockRepo.replace).toHaveBeenCalled()
+
+    vi.restoreAllMocks()
   })
 })
