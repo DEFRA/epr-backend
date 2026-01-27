@@ -7,7 +7,7 @@ describe('generateCsv', () => {
       type: 'Reprocessor',
       businessName: 'Waste Ltd',
       registeredOffice: '1 Waste Road, London, N1 1AA',
-      appropriateAgency: 'Ea',
+      appropriateAgency: 'EA',
       registrationNumber: 'R12345678PL',
       tradingName: 'Waste Recovery',
       reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -23,7 +23,7 @@ describe('generateCsv', () => {
       type: 'Exporter',
       businessName: 'Export Co',
       registeredOffice: '10 Export Street, Bristol, BS1 2AB',
-      appropriateAgency: 'Sepa',
+      appropriateAgency: 'SEPA',
       registrationNumber: 'R87654321AL',
       tradingName: 'Export Trading',
       reprocessingSite: '',
@@ -45,8 +45,8 @@ describe('generateCsv', () => {
       'Type,Business name,"Registered office\n' +
       'Head office\n' +
       'Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band\n' +
-      'Reprocessor,Waste Ltd,"1 Waste Road, London, N1 1AA",Ea,R12345678PL,Waste Recovery,"2 Waste Site, London, EC1 1AA",Plastic,R3,A123456PL,22/01/2026,Approved,22/01/2026,"Up to 10,000 tonnes"\n' +
-      'Exporter,Export Co,"10 Export Street, Bristol, BS1 2AB",Sepa,R87654321AL,Export Trading,,Aluminium,R4,,,,,'
+      'Reprocessor,Waste Ltd,"1 Waste Road, London, N1 1AA",EA,R12345678PL,Waste Recovery,"2 Waste Site, London, EC1 1AA",Plastic,R3,A123456PL,22/01/2026,Approved,22/01/2026,"Up to 10,000 tonnes"\n' +
+      'Exporter,Export Co,"10 Export Street, Bristol, BS1 2AB",SEPA,R87654321AL,Export Trading,,Aluminium,R4,,,,,'
 
     expect(csvOutput).toBe(expectedCsv)
   })
