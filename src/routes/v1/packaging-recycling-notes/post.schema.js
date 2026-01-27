@@ -7,6 +7,7 @@ import {
 } from '#domain/organisations/model.js'
 
 const POSITIVE_INTEGER = 1
+const MAX_ISSUER_NOTES_LENGTH = 200
 
 export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
   issuedToOrganisation: Joi.string().required(),
@@ -20,7 +21,7 @@ export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
   wasteProcessingType: Joi.string()
     .valid(...Object.values(WASTE_PROCESSING_TYPE))
     .required(),
-  issuerNotes: Joi.string().max(200).allow('').optional()
+  issuerNotes: Joi.string().max(MAX_ISSUER_NOTES_LENGTH).allow('').optional()
 }).messages({
   'any.required': '{#label} is required',
   'number.min': '{#label} must be at least {#limit}',

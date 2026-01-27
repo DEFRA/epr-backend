@@ -27,6 +27,53 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 export const packagingRecyclingNotesCreatePath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes'
 
+/**
+ * Build PRN data for creation
+ * @param {Object} params
+ * @param {string} params.organisationId
+ * @param {string} params.registrationId
+ * @param {PackagingRecyclingNotesCreatePayload} params.payload
+ * @param {string} params.userId
+ * @param {Date} params.now
+ */
+const buildPrnData = ({
+  organisationId,
+  registrationId,
+  payload,
+  userId,
+  now
+}) => ({
+  issuedByOrganisation: organisationId,
+  issuedByRegistration: registrationId,
+  issuedToOrganisation: payload.issuedToOrganisation,
+  tonnage: payload.tonnage,
+  material: payload.material,
+  nation: payload.nation,
+  wasteProcessingType: payload.wasteProcessingType,
+  isExport: payload.wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER,
+  issuerNotes: payload.issuerNotes || undefined,
+  status: {
+    currentStatus: PRN_STATUS.DRAFT,
+    history: [{ status: PRN_STATUS.DRAFT, updatedAt: now, updatedBy: userId }]
+  },
+  createdAt: now,
+  createdBy: userId,
+  updatedAt: now
+})
+
+/**
+ * Build response from created PRN
+ * @param {Object} prn
+ */
+const buildResponse = (prn) => ({
+  id: prn.id,
+  tonnage: prn.tonnage,
+  material: prn.material,
+  issuedToOrganisation: prn.issuedToOrganisation,
+  status: prn.status.currentStatus,
+  createdAt: prn.createdAt
+})
+
 export const packagingRecyclingNotesCreate = {
   method: 'POST',
   path: packagingRecyclingNotesCreatePath,
@@ -45,43 +92,18 @@ export const packagingRecyclingNotesCreate = {
     const { packagingRecyclingNotesRepository, params, payload, logger, auth } =
       request
     const { organisationId, registrationId } = params
-    const {
-      issuedToOrganisation,
-      tonnage,
-      material,
-      nation,
-      wasteProcessingType,
-      issuerNotes
-    } = payload
-
     const userId = auth.credentials?.profile?.id ?? 'unknown'
     const now = new Date()
 
     try {
-      const prn = await packagingRecyclingNotesRepository.create({
-        issuedByOrganisation: organisationId,
-        issuedByRegistration: registrationId,
-        issuedToOrganisation,
-        tonnage,
-        material,
-        nation,
-        wasteProcessingType,
-        isExport: wasteProcessingType === WASTE_PROCESSING_TYPE.EXPORTER,
-        issuerNotes: issuerNotes || undefined,
-        status: {
-          currentStatus: PRN_STATUS.DRAFT,
-          history: [
-            {
-              status: PRN_STATUS.DRAFT,
-              updatedAt: now,
-              updatedBy: userId
-            }
-          ]
-        },
-        createdAt: now,
-        createdBy: userId,
-        updatedAt: now
+      const prnData = buildPrnData({
+        organisationId,
+        registrationId,
+        payload,
+        userId,
+        now
       })
+      const prn = await packagingRecyclingNotesRepository.create(prnData)
 
       logger.info({
         message: `PRN created: id=${prn.id}`,
@@ -92,16 +114,7 @@ export const packagingRecyclingNotesCreate = {
         }
       })
 
-      return h
-        .response({
-          id: prn.id,
-          tonnage: prn.tonnage,
-          material: prn.material,
-          issuedToOrganisation: prn.issuedToOrganisation,
-          status: prn.status.currentStatus,
-          createdAt: prn.createdAt
-        })
-        .code(StatusCodes.CREATED)
+      return h.response(buildResponse(prn)).code(StatusCodes.CREATED)
     } catch (error) {
       if (error.isBoom) {
         throw error
