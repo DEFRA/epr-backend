@@ -97,6 +97,16 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
 
 vi.mock('@defra/hapi-secure-context')
 
+vi.mock('#plugins/queue-consumer.js', () => ({
+  queueConsumer: {
+    plugin: {
+      name: 'queue-consumer',
+      version: '1.0.0',
+      register: () => {}
+    }
+  }
+}))
+
 vi.mock('@defra/cdp-auditing', () => ({
   enableAuditing: (...args) => mockEnabledAuditing(...args)
 }))

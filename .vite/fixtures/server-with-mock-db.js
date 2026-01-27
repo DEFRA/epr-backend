@@ -39,7 +39,10 @@ export const it = test.extend({
     // eslint-disable-next-line no-empty-pattern
     async ({}, use) => {
       const { createServer } = await import('#server/server.js')
-      const testServer = await createServer({ skipMongoDb: true })
+      const testServer = await createServer({
+        skipMongoDb: true,
+        skipQueueConsumer: true
+      })
 
       // Add a mock db object that can be spied on
       // This allows tests to do: vi.spyOn(server.db, 'collection')

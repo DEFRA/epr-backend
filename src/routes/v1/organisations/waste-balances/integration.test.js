@@ -20,7 +20,8 @@ const it = mongoIt.extend({
 
   server: async ({ db }, use) => {
     const server = await createServer({
-      mongoUri: db
+      mongoUri: db,
+      skipQueueConsumer: true
     })
     await server.initialize()
     await use(server)

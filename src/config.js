@@ -236,6 +236,21 @@ const baseConfig = {
       env: 'PISCINA_MAX_THREADS'
     }
   },
+  commandQueue: {
+    endpoint: {
+      doc: 'AWS SQS endpoint for command queue. Only set for LocalStack in development; null uses default AWS endpoint.',
+      format: String,
+      nullable: true,
+      default: null,
+      env: 'COMMAND_QUEUE_ENDPOINT'
+    },
+    name: {
+      doc: 'SQS queue name for async backend commands (validate, submit)',
+      format: String,
+      default: 'epr_backend_commands',
+      env: 'COMMAND_QUEUE_NAME'
+    }
+  },
   regulator: {
     EA: {
       email: {

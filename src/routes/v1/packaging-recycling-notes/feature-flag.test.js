@@ -46,6 +46,7 @@ describe('Packaging Recycling Notes', () => {
 
   it('enables when flag is true & collection exists', async () => {
     const server = await createServer({
+      skipQueueConsumer: true,
       featureFlags: {
         dbExists: true,
         isCreatePackagingRecyclingNotesEnabled: () => true
@@ -59,6 +60,7 @@ describe('Packaging Recycling Notes', () => {
 
   it('enables when flag is true & collection does not yet exist', async () => {
     const server = await createServer({
+      skipQueueConsumer: true,
       featureFlags: {
         isCreatePackagingRecyclingNotesEnabled: () => true
       }
@@ -71,6 +73,7 @@ describe('Packaging Recycling Notes', () => {
 
   it('disables when flag is not true', async () => {
     const server = await createServer({
+      skipQueueConsumer: true,
       featureFlags: {
         isCreatePackagingRecyclingNotesEnabled: () => false
       }

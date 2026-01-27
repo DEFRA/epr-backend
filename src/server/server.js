@@ -16,6 +16,7 @@ import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags } from '#plugins/feature-flags.js'
+import { queueConsumer } from '#plugins/queue-consumer.js'
 import { repositories } from '#plugins/repositories.js'
 import { router } from '#plugins/router.js'
 import { workers } from '#plugins/workers.js'
@@ -125,6 +126,13 @@ async function createServer(options = {}) {
     {
       plugin: workers,
       options: options.workers
+    },
+    {
+      plugin: queueConsumer,
+      options: {
+        config,
+        skip: options.skipQueueConsumer
+      }
     },
     router
   )
