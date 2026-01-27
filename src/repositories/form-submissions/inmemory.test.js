@@ -7,7 +7,7 @@ import {
   buildRegistration,
   buildOrganisation
 } from './contract/test-data.js'
-import { inMemoryFormSubmissionsRepositoryPlugin } from '#plugins/repositories/inmemory-form-submissions-repository-plugin.js'
+import { createInMemoryFormSubmissionsRepositoryPlugin } from '#plugins/repositories/inmemory-form-submissions-repository-plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -103,12 +103,10 @@ describe('In-memory form submissions repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register({
-        plugin: inMemoryFormSubmissionsRepositoryPlugin,
-        options: {
-          initialAccreditations: [buildAccreditation()]
-        }
+      const { plugin } = createInMemoryFormSubmissionsRepositoryPlugin({
+        accreditations: [buildAccreditation()]
       })
+      await server.register(plugin)
 
       server.route({
         method: 'GET',

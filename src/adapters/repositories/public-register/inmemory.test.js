@@ -2,7 +2,7 @@ import Hapi from '@hapi/hapi'
 import { describe, it as base, expect } from 'vitest'
 import { createInMemoryPublicRegisterRepository } from './inmemory.js'
 import { testPublicRegisterRepositoryContract } from './port.contract.js'
-import { inMemoryPublicRegisterRepositoryPlugin } from '#plugins/repositories/inmemory-public-register-repository-plugin.js'
+import { createInMemoryPublicRegisterRepositoryPlugin } from '#plugins/repositories/inmemory-public-register-repository-plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -25,10 +25,10 @@ describe('In-memory public register repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register({
-        plugin: inMemoryPublicRegisterRepositoryPlugin,
-        options: { config: { s3Bucket: 'test-bucket' } }
+      const { plugin } = createInMemoryPublicRegisterRepositoryPlugin({
+        s3Bucket: 'test-bucket'
       })
+      await server.register(plugin)
 
       server.route({
         method: 'POST',

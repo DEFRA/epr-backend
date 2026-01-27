@@ -7,7 +7,7 @@ import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
-import { inMemoryOrganisationsRepositoryPlugin } from '#plugins/repositories/inmemory-organisations-repository-plugin.js'
+import { createInMemoryOrganisationsRepositoryPlugin } from '#plugins/repositories/inmemory-organisations-repository-plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -64,7 +64,8 @@ describe('In-memory organisations repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryOrganisationsRepositoryPlugin)
+      const { plugin } = createInMemoryOrganisationsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',

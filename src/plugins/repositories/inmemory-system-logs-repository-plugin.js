@@ -2,23 +2,24 @@ import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.j
 import { registerRepository } from './register-repository.js'
 
 /**
- * In-memory system logs repository adapter plugin for testing.
- * Registers the system logs repository directly on the request object,
- * matching the existing access pattern used by route handlers.
+ * Creates an in-memory system logs repository plugin for testing.
+ * Returns both the plugin (for server registration) and the repository
+ * (for direct test access to insert/query data).
  *
- * Note: The in-memory version doesn't require a logger, but we still
- * use per-request instantiation to match the MongoDB adapter pattern.
+ * Storage is shared between the test instance and per-request instances.
+ *
+ * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/system-logs/port.js').SystemLogsRepository }}
  */
-export const inMemorySystemLogsRepositoryPlugin = {
-  name: 'systemLogsRepository',
-  version: '1.0.0',
+export function createInMemorySystemLogsRepositoryPlugin() {
+  const factory = createSystemLogsRepository()
+  const repository = factory()
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   */
-  register: (server) => {
-    const factory = createSystemLogsRepository()
-
-    registerRepository(server, 'systemLogsRepository', () => factory())
+  const plugin = {
+    name: 'systemLogsRepository',
+    register: (server) => {
+      registerRepository(server, 'systemLogsRepository', () => factory())
+    }
   }
+
+  return { plugin, repository }
 }

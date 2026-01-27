@@ -2,29 +2,22 @@ import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/p
 import { registerRepository } from './register-repository.js'
 
 /**
- * @typedef {Object} InMemoryPublicRegisterRepositoryPluginOptions
- * @property {Object} [config] - Optional configuration
- */
-
-/**
- * In-memory public register repository adapter plugin for testing.
- * Registers the public register repository directly on the request object,
- * matching the existing access pattern used by route handlers.
+ * Creates an in-memory public register repository plugin for testing.
+ * Returns both the plugin (for server registration) and the repository
+ * (for direct test access to insert/query data).
  *
- * This is a stateless repository - the same instance is used for all requests.
+ * @param {Object} [config] - Optional configuration
+ * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#adapters/repositories/public-register/port.js').PublicRegisterRepository }}
  */
-export const inMemoryPublicRegisterRepositoryPlugin = {
-  name: 'publicRegisterRepository',
-  version: '1.0.0',
+export function createInMemoryPublicRegisterRepositoryPlugin(config) {
+  const repository = createInMemoryPublicRegisterRepository(config)
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   * @param {InMemoryPublicRegisterRepositoryPluginOptions} [options]
-   */
-  register: (server, options = {}) => {
-    // Note: createInMemoryPublicRegisterRepository returns the repo directly, not a factory
-    const repository = createInMemoryPublicRegisterRepository(options.config)
-
-    registerRepository(server, 'publicRegisterRepository', () => repository)
+  const plugin = {
+    name: 'publicRegisterRepository',
+    register: (server) => {
+      registerRepository(server, 'publicRegisterRepository', () => repository)
+    }
   }
+
+  return { plugin, repository }
 }
