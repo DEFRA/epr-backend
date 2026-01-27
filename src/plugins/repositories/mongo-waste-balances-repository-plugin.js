@@ -1,9 +1,10 @@
+import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { registerRepository } from './register-repository.js'
 
 /**
  * @typedef {Object} MongoWasteBalancesRepositoryPluginOptions
- * @property {Object} [dependencies] - Dependencies (e.g. organisationsRepository)
+ * @property {{maxRetries?: number, retryDelayMs?: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
 
 /**
@@ -13,8 +14,8 @@ import { registerRepository } from './register-repository.js'
  *
  * This is a stateless repository - the same instance is used for all requests.
  *
- * Note: This plugin may depend on organisationsRepository being available
- * if certain features require it. Pass dependencies via options if needed.
+ * Creates its own internal organisationsRepository for internal operations.
+ * This is separate from the organisationsRepository registered for route handlers.
  */
 export const mongoWasteBalancesRepositoryPlugin = {
   name: 'wasteBalancesRepository',
@@ -26,10 +27,16 @@ export const mongoWasteBalancesRepositoryPlugin = {
    * @param {MongoWasteBalancesRepositoryPluginOptions} [options]
    */
   register: async (server, options = {}) => {
-    const factory = await createWasteBalancesRepository(
+    // Create internal organisationsRepository for wasteBalances' internal operations
+    const organisationsFactory = await createOrganisationsRepository(
       server.db,
-      options.dependencies
+      options.eventualConsistency
     )
+    const organisationsRepository = organisationsFactory()
+
+    const factory = await createWasteBalancesRepository(server.db, {
+      organisationsRepository
+    })
     const repository = factory()
 
     registerRepository(server, 'wasteBalancesRepository', () => repository)
