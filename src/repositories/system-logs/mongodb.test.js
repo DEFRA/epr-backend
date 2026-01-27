@@ -1,9 +1,11 @@
-import { describe, vi } from 'vitest'
+import Hapi from '@hapi/hapi'
+import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
+import { mongoSystemLogsRepositoryPlugin } from '#plugins/repositories/mongo-system-logs-repository-plugin.js'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {
@@ -61,5 +63,55 @@ describe('Mongo DB system logs repository', () => {
 
     expect(collectionSpy).toHaveBeenCalled()
     expect(mockLogger.error).toHaveBeenCalled()
+  })
+
+  describe('plugin wiring', () => {
+    it('makes repository available on request via plugin', async ({
+      mongoClient
+    }) => {
+      const server = Hapi.server()
+
+      // Provide db dependency that the plugin expects
+      const fakeMongoPlugin = {
+        name: 'mongodb',
+        register: async (s) => {
+          s.decorate('server', 'db', mongoClient.db('epr-backend'))
+        }
+      }
+      await server.register(fakeMongoPlugin)
+      await server.register(mongoSystemLogsRepositoryPlugin)
+
+      // Provide request.logger that the plugin needs
+      server.ext('onRequest', (request, h) => {
+        request.logger = { info: vi.fn(), error: vi.fn(), warn: vi.fn() }
+        return h.continue
+      })
+
+      server.route({
+        method: 'POST',
+        path: '/test',
+        options: { auth: false },
+        handler: async (request) => {
+          const organisationId = 'org-123'
+          await request.systemLogsRepository.insert({
+            id: 'log-1',
+            context: { organisationId },
+            message: 'Test log entry',
+            createdAt: new Date()
+          })
+          const results =
+            await request.systemLogsRepository.findByOrganisationId(
+              organisationId
+            )
+          return { count: results.length }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'POST', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.count).toBe(1)
+    })
   })
 })
