@@ -1,4 +1,5 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
+import { registerRepository } from './register-repository.js'
 
 /**
  * MongoDB summary logs repository adapter plugin.
@@ -21,20 +22,8 @@ export const mongoSummaryLogsRepositoryPlugin = {
   register: async (server) => {
     const factory = await createSummaryLogsRepository(server.db)
 
-    server.ext('onRequest', (request, h) => {
-      let cached
-
-      Object.defineProperty(request, 'summaryLogsRepository', {
-        get() {
-          if (!cached) {
-            cached = factory(request.logger)
-          }
-          return cached
-        },
-        enumerable: true,
-        configurable: true
-      })
-      return h.continue
-    })
+    registerRepository(server, 'summaryLogsRepository', (request) =>
+      factory(request.logger)
+    )
   }
 }

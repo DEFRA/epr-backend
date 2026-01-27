@@ -1,4 +1,5 @@
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import { registerRepository } from './register-repository.js'
 
 /**
  * @typedef {Object} InMemoryOrganisationsRepositoryPluginOptions
@@ -26,15 +27,6 @@ export const inMemoryOrganisationsRepositoryPlugin = {
     )
     const repository = factory()
 
-    server.ext('onRequest', (request, h) => {
-      Object.defineProperty(request, 'organisationsRepository', {
-        get() {
-          return repository
-        },
-        enumerable: true,
-        configurable: true
-      })
-      return h.continue
-    })
+    registerRepository(server, 'organisationsRepository', () => repository)
   }
 }

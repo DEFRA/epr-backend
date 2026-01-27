@@ -1,4 +1,5 @@
 import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
+import { registerRepository } from './register-repository.js'
 
 /**
  * In-memory summary logs repository adapter plugin for testing.
@@ -20,20 +21,8 @@ export const inMemorySummaryLogsRepositoryPlugin = {
   register: (server) => {
     const factory = createInMemorySummaryLogsRepository()
 
-    server.ext('onRequest', (request, h) => {
-      let cached
-
-      Object.defineProperty(request, 'summaryLogsRepository', {
-        get() {
-          if (!cached) {
-            cached = factory(request.logger)
-          }
-          return cached
-        },
-        enumerable: true,
-        configurable: true
-      })
-      return h.continue
-    })
+    registerRepository(server, 'summaryLogsRepository', (request) =>
+      factory(request.logger)
+    )
   }
 }
