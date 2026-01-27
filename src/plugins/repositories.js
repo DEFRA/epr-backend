@@ -8,6 +8,8 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
 import { createPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/mongodb.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
+import { createPublicRegisterRepository } from '#adapters/repositories/public-register/public-register.js'
+import { publicRegisterConfig } from '#adapters/repositories/public-register/config.js'
 
 /**
  * @typedef {Object} RepositoriesPluginOptions
@@ -16,6 +18,7 @@ import { config } from '#root/config.js'
  * @property {import('#repositories/form-submissions/port.js').FormSubmissionsRepositoryFactory} [formSubmissionsRepository] - Optional test override for form submissions repository factory
  * @property {import('#repositories/waste-records/port.js').WasteRecordsRepositoryFactory} [wasteRecordsRepository] - Optional test override for waste records repository factory
  * @property {import('#domain/uploads/repository/port.js').UploadsRepository} [uploadsRepository] - Optional test override for uploads repository
+ * @property {import('#domain/public-register/repository/port.js').PublicRegisterRepository} [publicRegisterRepository] - Optional test override for public register repository
  * @property {boolean} [skipMongoDb] - Set to true when MongoDB is not available (e.g., in-memory tests)
  * @property {{maxRetries: number, retryDelayMs: number}} [eventualConsistency] - Eventual consistency retry configuration
  */
@@ -59,6 +62,54 @@ const registerUploadsRepository = (server, options, skipMongoDb) => {
         // istanbul ignore next -- production wiring, equivalent getter tested via options path
         get() {
           return uploadsRepository
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  }
+}
+
+/**
+ * Registers the public register repository with optional test override.
+ * @param {import('#common/hapi-types.js').HapiServer} server
+ * @param {RepositoriesPluginOptions} [options]
+ * @param {boolean} [skipMongoDb]
+ */
+const registerPublicRegisterRepository = (server, options, skipMongoDb) => {
+  if (options?.publicRegisterRepository) {
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'publicRegisterRepository', {
+        get() {
+          return options.publicRegisterRepository
+        },
+        enumerable: true,
+        configurable: true
+      })
+      return h.continue
+    })
+  } else if (skipMongoDb) {
+    // skipMongoDb is true and no test override - public register repository not registered
+    // This is intentional: tests using skipMongoDb must provide their own publicRegisterRepository
+  } else {
+    const s3Client = createS3Client({
+      region: config.get('awsRegion'),
+      endpoint: config.get('s3Endpoint'),
+      forcePathStyle: config.get('isDevelopment')
+    })
+
+    const publicRegisterRepository = createPublicRegisterRepository({
+      s3Client,
+      s3Bucket: publicRegisterConfig.s3Bucket,
+      preSignedUrlExpiry: publicRegisterConfig.preSignedUrlExpiry
+    })
+
+    server.ext('onRequest', (request, h) => {
+      Object.defineProperty(request, 'publicRegisterRepository', {
+        // istanbul ignore next -- production wiring, equivalent getter tested via options path
+        get() {
+          return publicRegisterRepository
         },
         enumerable: true,
         configurable: true
@@ -159,6 +210,7 @@ export const repositories = {
       }
 
       registerUploadsRepository(server, options, skipMongoDb)
+      registerPublicRegisterRepository(server, options, skipMongoDb)
     }
   }
 }

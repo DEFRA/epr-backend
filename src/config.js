@@ -391,6 +391,18 @@ const baseConfig = {
       format: String,
       default: '100',
       env: 'PUBLIC_REGISTER_BATCH_SIZE'
+    },
+    s3Bucket: {
+      doc: 'S3 bucket for public register generation',
+      format: String,
+      default: 're-ex-public-register',
+      env: 'PUBLIC_REGISTER_S3_BUCKET'
+    },
+    preSignedUrlExpiry: {
+      doc: 'Expiry time in seconds for presigned url',
+      format: String,
+      default: '3600',
+      env: 'PUBLIC_REGISTER_URL_EXPIRY'
     }
   }
 }

@@ -7,11 +7,11 @@
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'
 import {
+  capitalize,
   formatAddress,
   formatMaterial,
-  getAnnexIIProcess,
   formatTonnageBand,
-  capitalize
+  getAnnexIIProcess
 } from './formatters.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
 import chunk from 'lodash.chunk'

@@ -4,7 +4,8 @@ import { transform } from './public-register-transformer.js'
 import {
   buildAccreditation,
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
 import {
   MATERIAL,
@@ -26,8 +27,7 @@ describe('transform', () => {
     postcode: 'EC1 1AA'
   }
 
-  const VALID_FROM = new Date('2026-01-01')
-  const VALID_TO = new Date('2027-01-01')
+  const { VALID_FROM, VALID_TO } = getValidDateRange()
 
   const TODAY = new Date(Date.now())
   const CREATED_DATE = new Date(TODAY.getTime() - 24 * 60 * 60 * 1000)
