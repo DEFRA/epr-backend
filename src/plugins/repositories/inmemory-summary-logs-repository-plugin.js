@@ -10,17 +10,9 @@ const noopLogger = {
 }
 /* c8 ignore stop */
 
-/**
- * Creates an in-memory summary logs repository plugin for testing.
- * Returns both the plugin (for server registration) and the repository
- * (for direct test access to insert/query data).
- *
- * The repository requires per-request instantiation for logging during
- * update conflicts. Storage is shared between the test instance (with
- * noop logger) and per-request instances (with request.logger).
- *
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/summary-logs/port.js').SummaryLogsRepository }}
- */
+// Per-request instantiation for update conflict logging.
+// Storage shared between test instance (noop logger) and per-request instances.
+/** @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/summary-logs/port.js').SummaryLogsRepository }} */
 export function createInMemorySummaryLogsRepositoryPlugin() {
   const factory = createInMemorySummaryLogsRepository()
   const repository = factory(noopLogger)

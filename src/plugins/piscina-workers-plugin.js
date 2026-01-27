@@ -8,19 +8,11 @@ import {
 } from '#common/enums/index.js'
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 
-/**
- * Piscina-based workers adapter plugin for production.
- * Uses thread pool for CPU-intensive summary log validation and submission.
- * Requires mongodb plugin to be registered for the safety net repository.
- */
 export const piscinaWorkersPlugin = {
   name: 'workers',
   version: '1.0.0',
   dependencies: ['mongodb'],
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   */
   register: async (server) => {
     const summaryLogsRepository = (
       await createSummaryLogsRepository(server.db)

@@ -1,24 +1,12 @@
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { registerRepository } from './register-repository.js'
 
-/**
- * MongoDB summary logs repository adapter plugin.
- * Registers the summary logs repository directly on the request object,
- * matching the existing access pattern used by route handlers.
- *
- * This repository requires per-request instantiation because it needs
- * the request's logger for error logging during update conflicts.
- * The repository is lazily created on first access and cached for the
- * duration of the request.
- */
+// Per-request instantiation: needs request.logger for update conflict logging.
 export const mongoSummaryLogsRepositoryPlugin = {
   name: 'summaryLogsRepository',
   version: '1.0.0',
   dependencies: ['mongodb'],
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   */
   register: async (server) => {
     const factory = await createSummaryLogsRepository(server.db)
 

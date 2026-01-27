@@ -2,11 +2,7 @@ import { createInMemoryWasteRecordsRepository } from '#repositories/waste-record
 import { registerRepository } from './register-repository.js'
 
 /**
- * Creates an in-memory waste records repository plugin for testing.
- * Returns both the plugin (for server registration) and the repository
- * (for direct test access to insert/query data).
- *
- * @param {Object[]} [initialRecords] - Initial waste records data
+ * @param {Object[]} [initialRecords]
  * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/waste-records/port.js').WasteRecordsRepository }}
  */
 export function createInMemoryWasteRecordsRepositoryPlugin(initialRecords) {
