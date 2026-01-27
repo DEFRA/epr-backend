@@ -1,3 +1,4 @@
+import { vi, beforeEach, describe, it, expect } from 'vitest'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { StatusCodes } from 'http-status-codes'
@@ -8,6 +9,13 @@ import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/p
 import { buildApprovedOrg } from '#vite/helpers/build-approved-org.js'
 import { publicRegisterGeneratePath } from '#routes/v1/public-register/generate/post.js'
 import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
+
+const mockAuditPublicRegisterGenerate = vi.fn()
+
+vi.mock('#root/auditing/public-register.js', () => ({
+  auditPublicRegisterGenerate: (...args) =>
+    mockAuditPublicRegisterGenerate(...args)
+}))
 
 const { validToken } = entraIdMockAuthTokens
 
@@ -22,6 +30,7 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
   let inMemoryPublicRegisterRepository
 
   beforeEach(async () => {
+    mockAuditPublicRegisterGenerate.mockClear()
     inMemoryPublicRegisterRepository = createInMemoryPublicRegisterRepository()
     inMemoryOrganisationsRepositoryFactory =
       createInMemoryOrganisationsRepository()
@@ -60,6 +69,15 @@ describe(`POST ${publicRegisterGeneratePath}`, () => {
           expiresAt: expect.any(String)
         })
       )
+
+      expect(mockAuditPublicRegisterGenerate).toHaveBeenCalledTimes(1)
+      const [request, context] = mockAuditPublicRegisterGenerate.mock.calls[0]
+      expect(request.auth.credentials.id).toBeDefined()
+      expect(request.auth.credentials.email).toBeDefined()
+      expect(request.auth.credentials.scope).toContain('service_maintainer')
+      expect(context.url).toBe(result.downloadUrl)
+      expect(context.expiresAt).toBe(result.expiresAt)
+      expect(context.generatedAt).toBe(result.generatedAt)
     })
   })
 
