@@ -24,10 +24,20 @@ export const workers = {
         return
       }
 
-      // Check if mongodb plugin is registered
-      const hasMongoDb = server.registrations.mongodb !== undefined
+      // If test provides a repository, use it directly (for in-memory tests)
+      if (options?.summaryLogsRepository) {
+        const summaryLogsWorker = createSummaryLogsCommandExecutor(
+          server.logger,
+          options.summaryLogsRepository
+        )
 
-      if (hasMongoDb) {
+        server.decorate(
+          'request',
+          'summaryLogsWorker',
+          () => summaryLogsWorker,
+          { apply: true }
+        )
+      } else {
         // Production: wait for mongodb to be available, then create worker with repository
         server.dependency('mongodb', async () => {
           const summaryLogsRepository = (
@@ -45,18 +55,6 @@ export const workers = {
             { apply: true }
           )
         })
-      } else {
-        // No mongodb (e.g., in-memory tests) - create worker without safety net repository
-        const summaryLogsWorker = createSummaryLogsCommandExecutor(
-          server.logger
-        )
-
-        server.decorate(
-          'request',
-          'summaryLogsWorker',
-          () => summaryLogsWorker,
-          { apply: true }
-        )
       }
 
       server.events.on('stop', async () => {

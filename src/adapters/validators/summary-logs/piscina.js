@@ -168,7 +168,7 @@ const clearTaskTimeout = (summaryLogId) => {
  * @param {string} command
  * @param {string} summaryLogId
  * @param {object} logger
- * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking
+ * @param {SummaryLogsRepository} repository - Main thread repository for failure tracking
  * @returns {Promise<void>}
  */
 const runCommandInWorker = async (
@@ -203,24 +203,22 @@ const runCommandInWorker = async (
       }
     })
 
-    if (repository) {
-      if (command === SUMMARY_LOG_COMMAND.VALIDATE) {
-        await markAsValidationFailed(summaryLogId, repository, logger)
-      } else {
-        await markAsSubmissionFailed(summaryLogId, repository, logger)
-      }
+    if (command === SUMMARY_LOG_COMMAND.VALIDATE) {
+      await markAsValidationFailed(summaryLogId, repository, logger)
+    } else {
+      await markAsSubmissionFailed(summaryLogId, repository, logger)
     }
   }
 }
 
 /**
- * Creates a summary logs command executor with timeout tracking.
+ * Creates a summary logs command executor with failure tracking.
  *
  * @param {object} logger
- * @param {SummaryLogsRepository} [summaryLogsRepository] - Main thread repository for timeout tracking.
+ * @param {SummaryLogsRepository} summaryLogsRepository - Main thread repository for failure tracking.
  *   This is NOT the same repository used inside the worker thread. The worker thread creates its own
- *   repository instance for normal status updates (e.g., validating → validated).
- *   This repository is ONLY used as a "safety net" to mark summary logs as validation_failed when
+ *   repository instance for normal status updates (e.g. validating → validated).
+ *   This repository is used as a "safety net" to mark summary logs as failed when
  *   the worker crashes or times out.
  * @returns {SummaryLogsCommandExecutor}
  */
@@ -241,29 +239,27 @@ export const createSummaryLogsCommandExecutor = (
       })
 
       // Start timeout tracker - if worker hangs or crashes, we'll mark as validation_failed
-      if (summaryLogsRepository) {
-        const timeoutId = setTimeout(async () => {
-          activeTimeouts.delete(summaryLogId)
-          logger.error({
-            message: `Summary log validate worker timed out: summaryLogId=${summaryLogId}`,
-            summaryLogId
-          })
+      const timeoutId = setTimeout(async () => {
+        activeTimeouts.delete(summaryLogId)
+        logger.error({
+          message: `Summary log validate worker timed out: summaryLogId=${summaryLogId}`,
+          summaryLogId
+        })
 
-          await markAsValidationFailed(
-            summaryLogId,
-            summaryLogsRepository,
-            logger
-          )
-        }, WORKER_TIMEOUT_MS)
+        await markAsValidationFailed(
+          summaryLogId,
+          summaryLogsRepository,
+          logger
+        )
+      }, WORKER_TIMEOUT_MS)
 
-        activeTimeouts.set(summaryLogId, timeoutId)
-      }
+      activeTimeouts.set(summaryLogId, timeoutId)
 
       runCommandInWorker(
         SUMMARY_LOG_COMMAND.VALIDATE,
         summaryLogId,
         logger,
-        summaryLogsRepository ?? null
+        summaryLogsRepository
       )
     },
     submit: async (summaryLogId) => {
@@ -281,7 +277,7 @@ export const createSummaryLogsCommandExecutor = (
         SUMMARY_LOG_COMMAND.SUBMIT,
         summaryLogId,
         logger,
-        summaryLogsRepository ?? null
+        summaryLogsRepository
       )
     }
   }

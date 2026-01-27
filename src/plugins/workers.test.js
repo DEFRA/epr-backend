@@ -74,30 +74,6 @@ describe('workers plugin', () => {
     })
   })
 
-  describe('when mongodb is not registered', () => {
-    it('creates worker without repository', async () => {
-      const { createSummaryLogsCommandExecutor } =
-        await import('#adapters/validators/summary-logs/piscina.js')
-
-      await server.register({
-        plugin: workers.plugin
-      })
-
-      server.route({
-        method: 'GET',
-        path: '/test',
-        handler: (request) => ({ hasWorker: !!request.summaryLogsWorker })
-      })
-
-      await server.initialize()
-      const response = await server.inject({ method: 'GET', url: '/test' })
-
-      expect(JSON.parse(response.payload).hasWorker).toBe(true)
-      expect(createSummaryLogsCommandExecutor).toHaveBeenCalledWith(mockLogger)
-      expect(createSummaryLogsCommandExecutor).toHaveBeenCalledTimes(1)
-    })
-  })
-
   describe('when mongodb is registered', () => {
     it('creates worker with repository after mongodb is available', async () => {
       const { createSummaryLogsCommandExecutor } =
@@ -140,13 +116,19 @@ describe('workers plugin', () => {
   })
 
   describe('server stop event', () => {
+    const mockMongoDbPlugin = {
+      name: 'mongodb',
+      register: (srv) => {
+        srv.decorate('server', 'db', { collection: vi.fn() })
+      }
+    }
+
     it('closes worker pool on server stop', async () => {
       const { closeWorkerPool } =
         await import('#adapters/validators/summary-logs/piscina.js')
 
-      await server.register({
-        plugin: workers.plugin
-      })
+      await server.register({ plugin: mockMongoDbPlugin })
+      await server.register({ plugin: workers.plugin })
 
       await server.initialize()
       await server.stop()
@@ -171,9 +153,8 @@ describe('workers plugin', () => {
       const testError = new Error('Pool close failed')
       closeWorkerPool.mockRejectedValueOnce(testError)
 
-      await server.register({
-        plugin: workers.plugin
-      })
+      await server.register({ plugin: mockMongoDbPlugin })
+      await server.register({ plugin: workers.plugin })
 
       await server.initialize()
       await server.stop()
