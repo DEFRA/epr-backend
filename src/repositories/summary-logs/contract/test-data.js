@@ -150,5 +150,14 @@ export const summaryLogFactory = {
    */
   validationFailed: createFactory(SUMMARY_LOG_STATUS.VALIDATION_FAILED, () => ({
     file: buildFile()
+  })),
+
+  /**
+   * SUBMISSION_FAILED - requires file and submittedAt
+   * Use when testing submission worker crashes or timeout scenarios
+   */
+  submissionFailed: createFactory(SUMMARY_LOG_STATUS.SUBMISSION_FAILED, () => ({
+    file: buildFile(),
+    submittedAt: DEFAULT_SUBMITTED_AT
   }))
 }

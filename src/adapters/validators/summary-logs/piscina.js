@@ -10,6 +10,7 @@ import {
 } from '#common/enums/index.js'
 import {
   PROCESSING_STATUSES,
+  SUBMISSION_PROCESSING_STATUSES,
   SUMMARY_LOG_COMMAND,
   SUMMARY_LOG_STATUS,
   transitionStatus
@@ -108,6 +109,50 @@ const markAsValidationFailed = async (summaryLogId, repository, logger) => {
 }
 
 /**
+ * Marks a summary log as submission_failed if it's still in submitting state.
+ * This is a "safety net" called from the main thread when:
+ *   - The worker thread crashes (promise rejects)
+ *   - The worker thread hangs forever (timeout fires)
+ *
+ * @param {string} summaryLogId
+ * @param {SummaryLogsRepository} repository - Main thread repository instance
+ * @param {object} logger
+ * @returns {Promise<void>}
+ */
+const markAsSubmissionFailed = async (summaryLogId, repository, logger) => {
+  try {
+    const result = await repository.findById(summaryLogId)
+
+    if (!result) {
+      logger.warn({
+        message: `Cannot mark as submission_failed: summary log not found`,
+        summaryLogId
+      })
+      return
+    }
+
+    const { version, summaryLog } = result
+
+    // Only mark as submission_failed if still in submitting state
+    if (!SUBMISSION_PROCESSING_STATUSES.includes(summaryLog.status)) {
+      return
+    }
+
+    await repository.update(
+      summaryLogId,
+      version,
+      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+    )
+  } catch (err) {
+    logger.error({
+      error: err,
+      message: `Failed to mark summary log as submission_failed`,
+      summaryLogId
+    })
+  }
+}
+
+/**
  * Clears the timeout for a given summaryLogId if one exists.
  * @param {string} summaryLogId
  */
@@ -124,7 +169,7 @@ const clearTaskTimeout = (summaryLogId) => {
  * @param {string} command
  * @param {string} summaryLogId
  * @param {object} logger
- * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking (only used for validate command)
+ * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking
  * @returns {Promise<void>}
  */
 const runCommandInWorker = async (
@@ -159,10 +204,12 @@ const runCommandInWorker = async (
       }
     })
 
-    // For validate command failures, mark as validation_failed
-    // (submit failures will be handled differently in Phase 3)
-    if (command === SUMMARY_LOG_COMMAND.VALIDATE && repository) {
-      await markAsValidationFailed(summaryLogId, repository, logger)
+    if (repository) {
+      if (command === SUMMARY_LOG_COMMAND.VALIDATE) {
+        await markAsValidationFailed(summaryLogId, repository, logger)
+      } else {
+        await markAsSubmissionFailed(summaryLogId, repository, logger)
+      }
     }
   }
 }
@@ -231,8 +278,31 @@ export const createSummaryLogsCommandExecutor = (
         }
       })
 
-      // Submit command does not use timeout tracking (Phase 3 will handle submission failures differently)
-      runCommandInWorker(SUMMARY_LOG_COMMAND.SUBMIT, summaryLogId, logger, null)
+      // Start timeout tracker - if worker hangs or crashes, we'll mark as submission_failed
+      if (summaryLogsRepository) {
+        const timeoutId = setTimeout(async () => {
+          activeTimeouts.delete(summaryLogId)
+          logger.error({
+            message: `Summary log submit worker timed out: summaryLogId=${summaryLogId}`,
+            summaryLogId
+          })
+
+          await markAsSubmissionFailed(
+            summaryLogId,
+            summaryLogsRepository,
+            logger
+          )
+        }, WORKER_TIMEOUT_MS)
+
+        activeTimeouts.set(summaryLogId, timeoutId)
+      }
+
+      runCommandInWorker(
+        SUMMARY_LOG_COMMAND.SUBMIT,
+        summaryLogId,
+        logger,
+        summaryLogsRepository ?? null
+      )
     }
   }
 }
