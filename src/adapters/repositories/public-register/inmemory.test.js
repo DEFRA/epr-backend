@@ -13,6 +13,7 @@ const it = base.extend({
   }
 })
 
+// NOSONAR: javascript:S2187 - Contract tests from port.contract.js provide test cases
 describe('In-memory public register repository', () => {
   testPublicRegisterRepositoryContract(it)
 })
