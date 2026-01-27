@@ -69,127 +69,83 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
   }
 }
 
-/**
- * Creates a test server with in-memory repositories.
- * Accepts optional overrides for repositories and workers.
- *
- * @param {CreateTestServerOptions} [options]
- * @returns {Promise<TestServer>}
- */
-export async function createTestServer(options = {}) {
-  const config = getConfig()
-  const repoOverrides = options.repositories ?? {}
+const repositoryConfigs = [
+  {
+    name: 'organisationsRepository',
+    createDefault: createInMemoryOrganisationsRepositoryPlugin
+  },
+  {
+    name: 'summaryLogsRepository',
+    createDefault: createInMemorySummaryLogsRepositoryPlugin
+  },
+  {
+    name: 'formSubmissionsRepository',
+    createDefault: createInMemoryFormSubmissionsRepositoryPlugin
+  },
+  {
+    name: 'wasteRecordsRepository',
+    createDefault: createInMemoryWasteRecordsRepositoryPlugin
+  },
+  {
+    name: 'wasteBalancesRepository',
+    createDefault: createInMemoryWasteBalancesRepositoryPlugin
+  },
+  {
+    name: 'systemLogsRepository',
+    createDefault: createInMemorySystemLogsRepositoryPlugin
+  },
+  {
+    name: 'uploadsRepository',
+    createDefault: createInMemoryUploadsRepositoryPlugin
+  },
+  {
+    name: 'publicRegisterRepository',
+    createDefault: createInMemoryPublicRegisterRepositoryPlugin
+  }
+]
 
-  const server = Hapi.server({
+/**
+ * Builds repository plugins from config, applying any overrides.
+ * @param {Object} repoOverrides - Repository overrides keyed by name
+ * @returns {import('@hapi/hapi').Plugin<void>[]}
+ */
+function buildRepositoryPlugins(repoOverrides) {
+  return repositoryConfigs.map(({ name, createDefault }) => {
+    if (repoOverrides[name]) {
+      return createRepositoryPlugin(name, repoOverrides[name])
+    }
+    return createDefault().plugin
+  })
+}
+
+/**
+ * Creates a Hapi server with test configuration.
+ * @param {ReturnType<typeof getConfig>} config
+ * @returns {import('@hapi/hapi').Server}
+ */
+function createHapiServer(config) {
+  return Hapi.server({
     host: config.get('host'),
     port: config.get('port'),
     debug: config.get('debug'),
     routes: {
-      validate: {
-        options: {
-          abortEarly: false
-        },
-        failAction
-      },
+      validate: { options: { abortEarly: false }, failAction },
       security: {
-        hsts: {
-          maxAge: 31536000,
-          includeSubDomains: true,
-          preload: false
-        },
+        hsts: { maxAge: 31536000, includeSubDomains: true, preload: false },
         xss: /** @type {'enabled'} */ ('enabled'),
         noSniff: true,
         xframe: /** @type {true} */ (true)
       }
     },
-    router: {
-      stripTrailingSlash: true
-    }
+    router: { stripTrailingSlash: true }
   })
+}
 
-  // Core plugins needed for testing
-  const plugins = [
-    requestLogger,
-    requestTracing,
-    cacheControl,
-    secureContext,
-    pulse,
-    Jwt,
-    authPlugin,
-    authFailureLogger
-  ]
-
-  // Feature flags - use provided override or config-based
-  plugins.push({
-    plugin: featureFlagsPlugin,
-    options: {
-      config,
-      featureFlags: options.featureFlags
-    }
-  })
-
-  // Repository plugins - use override if provided, otherwise default in-memory
-  const repositoryConfigs = [
-    {
-      name: 'organisationsRepository',
-      createDefault: createInMemoryOrganisationsRepositoryPlugin
-    },
-    {
-      name: 'summaryLogsRepository',
-      createDefault: createInMemorySummaryLogsRepositoryPlugin
-    },
-    {
-      name: 'formSubmissionsRepository',
-      createDefault: createInMemoryFormSubmissionsRepositoryPlugin
-    },
-    {
-      name: 'wasteRecordsRepository',
-      createDefault: createInMemoryWasteRecordsRepositoryPlugin
-    },
-    {
-      name: 'wasteBalancesRepository',
-      createDefault: createInMemoryWasteBalancesRepositoryPlugin
-    },
-    {
-      name: 'systemLogsRepository',
-      createDefault: createInMemorySystemLogsRepositoryPlugin
-    },
-    {
-      name: 'uploadsRepository',
-      createDefault: createInMemoryUploadsRepositoryPlugin
-    },
-    {
-      name: 'publicRegisterRepository',
-      createDefault: createInMemoryPublicRegisterRepositoryPlugin
-    }
-  ]
-
-  for (const { name, createDefault } of repositoryConfigs) {
-    if (repoOverrides[name]) {
-      // Use provided override - wrap in plugin
-      plugins.push(createRepositoryPlugin(name, repoOverrides[name]))
-    } else {
-      // Use default in-memory plugin
-      const { plugin } = createDefault()
-      plugins.push(plugin)
-    }
-  }
-
-  // Mock workers plugin - pass any worker overrides
-  plugins.push({
-    plugin: mockWorkersPlugin,
-    options: options.workers
-  })
-
-  // Router (routes)
-  plugins.push(router)
-
-  await server.register(plugins)
-  await server.initialize()
-
-  /** @type {TestServer} */
-  const testServer = /** @type {*} */ (server)
-
+/**
+ * Attaches logger mocks to the test server for assertion in tests.
+ * @param {TestServer} testServer
+ */
+function attachLoggerMocks(testServer) {
   testServer.loggerMocks = {
     info: vi.fn(),
     error: vi.fn(),
@@ -208,6 +164,43 @@ export async function createTestServer(options = {}) {
     )
     return h.continue
   })
+}
+
+/**
+ * Creates a test server with in-memory repositories.
+ * Accepts optional overrides for repositories and workers.
+ *
+ * @param {CreateTestServerOptions} [options]
+ * @returns {Promise<TestServer>}
+ */
+export async function createTestServer(options = {}) {
+  const config = getConfig()
+  const server = createHapiServer(config)
+
+  const plugins = [
+    requestLogger,
+    requestTracing,
+    cacheControl,
+    secureContext,
+    pulse,
+    Jwt,
+    authPlugin,
+    authFailureLogger,
+    {
+      plugin: featureFlagsPlugin,
+      options: { config, featureFlags: options.featureFlags }
+    },
+    ...buildRepositoryPlugins(options.repositories ?? {}),
+    { plugin: mockWorkersPlugin, options: options.workers },
+    router
+  ]
+
+  await server.register(plugins)
+  await server.initialize()
+
+  /** @type {TestServer} */
+  const testServer = /** @type {*} */ (server)
+  attachLoggerMocks(testServer)
 
   return testServer
 }
