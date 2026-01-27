@@ -16,7 +16,14 @@ import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags } from '#plugins/feature-flags.js'
-import { repositories } from '#plugins/repositories.js'
+import { mongoOrganisationsRepositoryPlugin } from '#plugins/repositories/mongo-organisations-repository-plugin.js'
+import { mongoSummaryLogsRepositoryPlugin } from '#plugins/repositories/mongo-summary-logs-repository-plugin.js'
+import { mongoFormSubmissionsRepositoryPlugin } from '#plugins/repositories/mongo-form-submissions-repository-plugin.js'
+import { mongoWasteRecordsRepositoryPlugin } from '#plugins/repositories/mongo-waste-records-repository-plugin.js'
+import { mongoWasteBalancesRepositoryPlugin } from '#plugins/repositories/mongo-waste-balances-repository-plugin.js'
+import { mongoSystemLogsRepositoryPlugin } from '#plugins/repositories/mongo-system-logs-repository-plugin.js'
+import { s3UploadsRepositoryPlugin } from '#plugins/repositories/s3-uploads-repository-plugin.js'
+import { s3PublicRegisterRepositoryPlugin } from '#plugins/repositories/s3-public-register-repository-plugin.js'
 import { router } from '#plugins/router.js'
 import { workers } from '#plugins/workers.js'
 import { getConfig } from '#root/config.js'
@@ -65,7 +72,8 @@ async function createServer(options = {}) {
   // secureContext  - loads CA certificates from environment config
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
-  // repositories   - sets up repository adapters and attaches to `request` objects
+  // mongo*Plugin   - individual repository plugins (ADR 0026 adapter pattern)
+  // s3*Plugin      - S3 repository plugins
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // workers        - sets up worker thread pools and attaches to `request` objects
   // router         - routes used in the app
@@ -105,23 +113,38 @@ async function createServer(options = {}) {
     }
   })
 
-  // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
-  if (!options.skipMongoDb) {
+  // LEGACY: Skip MongoDB for tests of /v1/apply/* routes that bypass repositories.
+  // These routes use raw db.collection() access and need refactoring.
+  // Once refactored, delete this flag and the server-with-mock-db.js fixture.
+  // See: src/routes/v1/apply/*.js
+  if (!options._testOnlyLegacyApplyRoutes) {
+    // MongoDB connection - required for production
     plugins.push({
       plugin: mongoDbPlugin,
       options: config.get('mongo')
     })
+
+    // Repository plugins - explicit composition, no conditional logic
+    const eventualConsistency = config.get('mongo.eventualConsistency')
+    plugins.push(
+      {
+        plugin: mongoOrganisationsRepositoryPlugin,
+        options: { eventualConsistency }
+      },
+      mongoSummaryLogsRepositoryPlugin,
+      mongoFormSubmissionsRepositoryPlugin,
+      mongoWasteRecordsRepositoryPlugin,
+      {
+        plugin: mongoWasteBalancesRepositoryPlugin,
+        options: { eventualConsistency }
+      },
+      mongoSystemLogsRepositoryPlugin,
+      s3UploadsRepositoryPlugin,
+      s3PublicRegisterRepositoryPlugin
+    )
   }
 
   plugins.push(
-    {
-      plugin: repositories,
-      options: {
-        ...options.repositories,
-        skipMongoDb: options.skipMongoDb,
-        eventualConsistency: config.get('mongo.eventualConsistency')
-      }
-    },
     {
       plugin: workers,
       options: options.workers
