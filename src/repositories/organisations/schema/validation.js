@@ -3,6 +3,7 @@ import Joi from 'joi'
 import {
   idSchema,
   organisationInsertSchema,
+  organisationReadSchema,
   organisationReplaceSchema,
   registrationSchema,
   statusHistoryItemSchema
@@ -94,5 +95,17 @@ export const validateAccreditation = (data) => {
     throw Boom.badData(`Invalid accreditation data: ${details}`)
   }
 
+  return value
+}
+
+/**
+ * Normalises an organisation document read from the database.
+ * Ensures array fields are never undefined by applying defaults.
+ * This is an internal adapter concern - callers receive data matching the port types.
+ * @param {object} data - Raw document from MongoDB
+ * @returns {object} Normalised document with array defaults applied
+ */
+export const normaliseOrganisationFromDb = (data) => {
+  const { value } = organisationReadSchema.validate(data)
   return value
 }

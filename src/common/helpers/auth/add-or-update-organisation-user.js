@@ -9,16 +9,17 @@ import partition from 'lodash.partition'
 export const getDisplayName = ({ firstName, lastName }) =>
   [firstName, lastName].filter(Boolean).join(' ')
 
-/** @param {CollatedUser} user */
+/** @param {CollatedUser | null} user */
 const noUser = (user) => !user
 
-/** @param {CollatedUser} user */
+/** @param {CollatedUser | null} user */
 const withChangedDetails = (
   user,
   /** @type {DefraIdTokenPayload} */ { email, firstName, lastName }
 ) =>
-  !stringEquals(user.email, email) ||
-  !stringEquals(user.fullName, getDisplayName({ firstName, lastName }))
+  user &&
+  (!stringEquals(user.email, email) ||
+    !stringEquals(user.fullName, getDisplayName({ firstName, lastName })))
 
 /**
  * @param {Organisation} organisation

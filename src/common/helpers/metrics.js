@@ -15,7 +15,7 @@ import { logger } from './logging/logger.js'
  * @param {string} metricName - The name of the metric
  * @param {number} value - The value to record
  * @param {import('aws-embedded-metrics').Unit} unit - The AWS CloudWatch unit
- * @param {Dimensions} [dimensions] - Optional dimensions for the metric
+ * @param {Dimensions} dimensions - Dimensions for the metric
  */
 const recordMetric = async (metricName, value, unit, dimensions) => {
   if (!config.get('isMetricsEnabled')) {

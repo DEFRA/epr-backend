@@ -50,6 +50,12 @@ const getCurrentDetailsFromToken = (auth) => {
 
   const currentOrg = orgInfo.find((org) => org.isCurrent)
 
+  // Token should always have a current organisation
+  /* istanbul ignore if -- defensive check, Defra ID tokens always contain org info */
+  if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
+    throw new Error('Token missing current organisation information')
+  }
+
   return {
     id: currentOrg.defraIdOrgId,
     name: currentOrg.defraIdOrgName
@@ -82,7 +88,7 @@ export const organisationsLinkedGetAll = {
       organisationsRepository.findAllLinkableForUser(email)
     ])
 
-    const linked = linkedOrg
+    const linked = linkedOrg?.linkedDefraOrganisation
       ? {
           id: linkedOrg.id,
           name: linkedOrg.linkedDefraOrganisation.orgName,

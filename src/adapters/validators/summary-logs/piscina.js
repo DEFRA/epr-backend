@@ -217,7 +217,7 @@ export const createSummaryLogsCommandExecutor = (
         SUMMARY_LOG_COMMAND.VALIDATE,
         summaryLogId,
         logger,
-        summaryLogsRepository
+        summaryLogsRepository ?? null
       )
     },
     submit: async (summaryLogId) => {

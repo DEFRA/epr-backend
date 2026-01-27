@@ -114,7 +114,9 @@ export const runGlassMigration = async (server) => {
     }
 
     try {
-      const organisationsRepository = createOrganisationsRepository(server.db)()
+      const organisationsRepository = (
+        await createOrganisationsRepository(server.db)
+      )()
       return await executeMigration(organisationsRepository, dryRun)
     } finally {
       await lock.free()

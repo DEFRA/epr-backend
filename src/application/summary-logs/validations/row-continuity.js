@@ -91,7 +91,10 @@ export const validateRowContinuity = ({
   if (missingRowKeys.length > 0) {
     for (const missingKey of missingRowKeys) {
       const [type, rowId] = missingKey.split(':')
-      const originalRecord = existingRecordsMap.get(missingKey)
+      // Key came from existingRowKeys derived from same source as map, so guaranteed to exist
+      const originalRecord = /** @type {WasteRecord} */ (
+        existingRecordsMap.get(missingKey)
+      )
 
       const lastVersion =
         originalRecord.versions[originalRecord.versions.length - 1]

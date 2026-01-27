@@ -2,7 +2,7 @@
  * Transforms organisation entities into public register row objects
  */
 
-/** @import {Organisation} from '#repositories/organisations/port.js' */
+/** @import {Organisation} from '#domain/organisations/model.js' */
 /** @import {PublicRegisterRow} from './types.js' */
 
 import { REG_ACC_STATUS } from '#domain/organisations/model.js'

@@ -3,8 +3,7 @@
  */
 
 /** @import {RegistrationAddress} from '#repositories/organisations/port.js' */
-/** @import {RegAccStatus} from '#domain/organisations/model.js' */
-/** @import {Material, GlassRecyclingProcess, TonnageBand} from './types.js' */
+/** @import {Material, GlassRecyclingProcess, TonnageBand, Address} from '#domain/organisations/model.js' */
 
 import {
   GLASS_RECYCLING_PROCESS,
@@ -41,7 +40,7 @@ export const TONNAGE_BAND_DISPLAY_NAMES = {
 /**
  * Formats an address object into a single comma-separated string
  * Excludes the fullAddress field
- * @param {RegistrationAddress} address -
+ * @param {RegistrationAddress | Address | undefined} address -
  * @returns {string} -
  */
 export function formatAddress(address) {

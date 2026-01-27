@@ -114,7 +114,7 @@ export function deduplicateOrganisations(
  * Finds the organisation linked to a Defra ID organisation
  * @param {string} defraIdOrgId - The Defra ID organisation ID
  * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns {Promise<Organisation | undefined>} The matched organisation or undefined if none found
+ * @returns {Promise<Organisation | null>} The matched organisation or null if none found
  */
 export async function findOrganisationMatches(
   defraIdOrgId,

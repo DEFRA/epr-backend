@@ -127,7 +127,7 @@ export const findOrCreateWasteBalance = async ({
     return wasteBalance
   }
 
-  if (!shouldCreate) {
+  if (!shouldCreate || !organisationId) {
     return null
   }
 
