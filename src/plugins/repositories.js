@@ -5,7 +5,7 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { createPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/mongodb.js'
+import { createPackagingRecyclingNotesRepository } from '#modules/packaging-recycling-notes/index.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 import { createPublicRegisterRepository } from '#adapters/repositories/public-register/public-register.js'

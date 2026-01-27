@@ -6,6 +6,7 @@
   "type": "module",
   "imports": {
     "#adapters/*": "./src/adapters/*",
+    "#modules/*": "./src/modules/*",
     "#application/*": "./src/application/*",
     "#common/*": "./src/common/*",
     "#data/*": "./src/data/*",
