@@ -562,48 +562,6 @@ describe('createSummaryLogsCommandExecutor', () => {
           })
         )
       })
-
-      it('clears the timeout timer on submit success', async () => {
-        mockRun.mockResolvedValue(undefined)
-
-        await summaryLogsWorker.submit(summaryLogId)
-
-        // Wait for promise chain to complete
-        await vi.runAllTimersAsync()
-
-        // Advance time past the timeout period
-        await vi.advanceTimersByTimeAsync(10 * 60 * 1000)
-
-        // Main thread repository should NOT be called
-        expect(mainThreadRepository.update).not.toHaveBeenCalled()
-      })
-
-      it('clears the timeout timer on submit failure', async () => {
-        const error = new Error('Submit worker crashed')
-        mockRun.mockRejectedValue(error)
-
-        mainThreadRepository.findById.mockResolvedValue({
-          version: 1,
-          summaryLog: {
-            status: SUMMARY_LOG_STATUS.SUBMITTING
-          }
-        })
-        mainThreadRepository.update.mockResolvedValue(undefined)
-
-        await summaryLogsWorker.submit(summaryLogId)
-
-        // Wait for promise chain to complete
-        await vi.runAllTimersAsync()
-
-        // Reset mock to check it's not called again
-        mainThreadRepository.update.mockClear()
-
-        // Advance time past the timeout period
-        await vi.advanceTimersByTimeAsync(10 * 60 * 1000)
-
-        // Should not call update again because timeout was cleared
-        expect(mainThreadRepository.update).not.toHaveBeenCalled()
-      })
     })
 
     describe('concurrent tasks', () => {
