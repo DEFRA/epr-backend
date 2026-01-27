@@ -2,33 +2,35 @@ import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balan
 import { registerRepository } from './register-repository.js'
 
 /**
- * @typedef {Object} InMemoryWasteBalancesRepositoryPluginOptions
- * @property {Object[]} [initialWasteBalances] - Initial waste balances data
- * @property {Object} [dependencies] - Dependencies (e.g. organisationsRepository)
+ * @typedef {Object} WasteBalancesDependencies
+ * @property {import('#repositories/organisations/port.js').OrganisationsRepository} [organisationsRepository]
  */
 
 /**
- * In-memory waste balances repository adapter plugin for testing.
- * Registers the waste balances repository directly on the request object,
- * matching the existing access pattern used by route handlers.
+ * Creates an in-memory waste balances repository plugin for testing.
+ * Returns both the plugin (for server registration) and the repository
+ * (for direct test access to insert/query data).
  *
- * This is a stateless repository - the same instance is used for all requests.
+ * @param {Object[]} [initialWasteBalances] - Initial waste balances data
+ * @param {WasteBalancesDependencies} [dependencies] - Dependencies
+ * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/waste-balances/port.js').WasteBalancesRepository }}
  */
-export const inMemoryWasteBalancesRepositoryPlugin = {
-  name: 'wasteBalancesRepository',
-  version: '1.0.0',
+export function createInMemoryWasteBalancesRepositoryPlugin(
+  initialWasteBalances,
+  dependencies
+) {
+  const factory = createInMemoryWasteBalancesRepository(
+    initialWasteBalances,
+    dependencies
+  )
+  const repository = factory()
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   * @param {InMemoryWasteBalancesRepositoryPluginOptions} [options]
-   */
-  register: (server, options = {}) => {
-    const factory = createInMemoryWasteBalancesRepository(
-      options.initialWasteBalances,
-      options.dependencies
-    )
-    const repository = factory()
-
-    registerRepository(server, 'wasteBalancesRepository', () => repository)
+  const plugin = {
+    name: 'wasteBalancesRepository',
+    register: (server) => {
+      registerRepository(server, 'wasteBalancesRepository', () => repository)
+    }
   }
+
+  return { plugin, repository }
 }

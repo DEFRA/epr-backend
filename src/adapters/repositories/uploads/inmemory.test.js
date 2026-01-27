@@ -3,7 +3,7 @@ import { describe, it as base, beforeEach, afterEach, expect } from 'vitest'
 import { createInMemoryUploadsRepository } from './inmemory.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createCallbackReceiver } from './test-helpers/callback-receiver.js'
-import { inMemoryUploadsRepositoryPlugin } from '#plugins/repositories/inmemory-uploads-repository-plugin.js'
+import { createInMemoryUploadsRepositoryPlugin } from '#plugins/repositories/inmemory-uploads-repository-plugin.js'
 
 let callbackReceiver
 
@@ -57,7 +57,8 @@ describe('In-memory uploads repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryUploadsRepositoryPlugin)
+      const { plugin } = createInMemoryUploadsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',

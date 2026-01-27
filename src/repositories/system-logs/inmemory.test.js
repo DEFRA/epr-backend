@@ -2,7 +2,7 @@ import Hapi from '@hapi/hapi'
 import { describe, expect, it as base } from 'vitest'
 import { createSystemLogsRepository } from './inmemory.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
-import { inMemorySystemLogsRepositoryPlugin } from '#plugins/repositories/inmemory-system-logs-repository-plugin.js'
+import { createInMemorySystemLogsRepositoryPlugin } from '#plugins/repositories/inmemory-system-logs-repository-plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -25,7 +25,8 @@ describe('In memory system logs repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemorySystemLogsRepositoryPlugin)
+      const { plugin } = createInMemorySystemLogsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',

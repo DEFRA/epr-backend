@@ -19,15 +19,15 @@ import {
 } from '#repositories/waste-records/contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
 
-// In-memory plugins (used in tests)
-import { inMemoryOrganisationsRepositoryPlugin } from './inmemory-organisations-repository-plugin.js'
-import { inMemorySummaryLogsRepositoryPlugin } from './inmemory-summary-logs-repository-plugin.js'
-import { inMemoryFormSubmissionsRepositoryPlugin } from './inmemory-form-submissions-repository-plugin.js'
-import { inMemoryWasteRecordsRepositoryPlugin } from './inmemory-waste-records-repository-plugin.js'
-import { inMemoryWasteBalancesRepositoryPlugin } from './inmemory-waste-balances-repository-plugin.js'
-import { inMemorySystemLogsRepositoryPlugin } from './inmemory-system-logs-repository-plugin.js'
-import { inMemoryUploadsRepositoryPlugin } from './inmemory-uploads-repository-plugin.js'
-import { inMemoryPublicRegisterRepositoryPlugin } from './inmemory-public-register-repository-plugin.js'
+// In-memory plugin factories (used in tests)
+import { createInMemoryOrganisationsRepositoryPlugin } from './inmemory-organisations-repository-plugin.js'
+import { createInMemorySummaryLogsRepositoryPlugin } from './inmemory-summary-logs-repository-plugin.js'
+import { createInMemoryFormSubmissionsRepositoryPlugin } from './inmemory-form-submissions-repository-plugin.js'
+import { createInMemoryWasteRecordsRepositoryPlugin } from './inmemory-waste-records-repository-plugin.js'
+import { createInMemoryWasteBalancesRepositoryPlugin } from './inmemory-waste-balances-repository-plugin.js'
+import { createInMemorySystemLogsRepositoryPlugin } from './inmemory-system-logs-repository-plugin.js'
+import { createInMemoryUploadsRepositoryPlugin } from './inmemory-uploads-repository-plugin.js'
+import { createInMemoryPublicRegisterRepositoryPlugin } from './inmemory-public-register-repository-plugin.js'
 
 // Actual route handler (proves zero-migration)
 import { organisationsGetAll } from '#routes/v1/organisations/get.js'
@@ -39,7 +39,8 @@ describe('per-repository plugins integration', () => {
 
     beforeEach(async () => {
       server = Hapi.server()
-      await server.register(inMemoryOrganisationsRepositoryPlugin)
+      const { plugin } = createInMemoryOrganisationsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',
@@ -76,7 +77,8 @@ describe('per-repository plugins integration', () => {
   describe('organisationsRepository plugin', () => {
     test('insert and findById works via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryOrganisationsRepositoryPlugin)
+      const { plugin } = createInMemoryOrganisationsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',
@@ -101,7 +103,8 @@ describe('per-repository plugins integration', () => {
   describe('summaryLogsRepository plugin', () => {
     test('insert and findById works via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemorySummaryLogsRepositoryPlugin)
+      const { plugin } = createInMemorySummaryLogsRepositoryPlugin()
+      await server.register(plugin)
 
       // Mock request.logger for per-request instantiation
       server.ext('onRequest', (request, h) => {
@@ -141,14 +144,12 @@ describe('per-repository plugins integration', () => {
   describe('formSubmissionsRepository plugin', () => {
     test('findAllAccreditations works via plugin', async () => {
       const server = Hapi.server()
-      await server.register({
-        plugin: inMemoryFormSubmissionsRepositoryPlugin,
-        options: {
-          initialAccreditations: [
-            { id: 'acc-1', referenceNumber: 'ACC001', orgId: 'org-1' }
-          ]
-        }
+      const { plugin } = createInMemoryFormSubmissionsRepositoryPlugin({
+        accreditations: [
+          { id: 'acc-1', referenceNumber: 'ACC001', orgId: 'org-1' }
+        ]
       })
+      await server.register(plugin)
 
       server.route({
         method: 'GET',
@@ -172,7 +173,8 @@ describe('per-repository plugins integration', () => {
   describe('wasteRecordsRepository plugin', () => {
     test('appendVersions and findByRegistration works via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryWasteRecordsRepositoryPlugin)
+      const { plugin } = createInMemoryWasteRecordsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',
@@ -214,7 +216,8 @@ describe('per-repository plugins integration', () => {
   describe('wasteBalancesRepository plugin', () => {
     test('findByAccreditationId works via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryWasteBalancesRepositoryPlugin)
+      const { plugin } = createInMemoryWasteBalancesRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'GET',
@@ -241,7 +244,8 @@ describe('per-repository plugins integration', () => {
   describe('systemLogsRepository plugin', () => {
     test('insert and findByOrganisationId works via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemorySystemLogsRepositoryPlugin)
+      const { plugin } = createInMemorySystemLogsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',
@@ -274,7 +278,8 @@ describe('per-repository plugins integration', () => {
   describe('uploadsRepository plugin', () => {
     test('initiateSummaryLogUpload returns upload metadata via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryUploadsRepositoryPlugin)
+      const { plugin } = createInMemoryUploadsRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',
@@ -306,7 +311,8 @@ describe('per-repository plugins integration', () => {
   describe('publicRegisterRepository plugin', () => {
     test('save and generatePresignedUrl works via plugin', async () => {
       const server = Hapi.server()
-      await server.register(inMemoryPublicRegisterRepositoryPlugin)
+      const { plugin } = createInMemoryPublicRegisterRepositoryPlugin()
+      await server.register(plugin)
 
       server.route({
         method: 'POST',

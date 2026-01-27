@@ -2,31 +2,25 @@ import { createInMemoryOrganisationsRepository } from '#repositories/organisatio
 import { registerRepository } from './register-repository.js'
 
 /**
- * @typedef {Object} InMemoryOrganisationsRepositoryPluginOptions
- * @property {Object[]} [initialOrganisations] - Initial organisations data
- */
-
-/**
- * In-memory organisations repository adapter plugin for testing.
- * Registers the organisations repository directly on the request object,
- * matching the existing access pattern used by route handlers.
+ * Creates an in-memory organisations repository plugin for testing.
+ * Returns both the plugin (for server registration) and the repository
+ * (for direct test access to insert/query data).
  *
- * This is a stateless repository - the same instance is used for all requests.
+ * @param {Object[]} [initialOrganisations] - Initial organisations data
+ * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/organisations/port.js').OrganisationsRepository }}
  */
-export const inMemoryOrganisationsRepositoryPlugin = {
-  name: 'organisationsRepository',
-  version: '1.0.0',
+export function createInMemoryOrganisationsRepositoryPlugin(
+  initialOrganisations
+) {
+  const factory = createInMemoryOrganisationsRepository(initialOrganisations)
+  const repository = factory()
 
-  /**
-   * @param {import('@hapi/hapi').Server} server
-   * @param {InMemoryOrganisationsRepositoryPluginOptions} [options]
-   */
-  register: (server, options = {}) => {
-    const factory = createInMemoryOrganisationsRepository(
-      options.initialOrganisations
-    )
-    const repository = factory()
-
-    registerRepository(server, 'organisationsRepository', () => repository)
+  const plugin = {
+    name: 'organisationsRepository',
+    register: (server) => {
+      registerRepository(server, 'organisationsRepository', () => repository)
+    }
   }
+
+  return { plugin, repository }
 }
