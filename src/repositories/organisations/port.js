@@ -142,9 +142,15 @@
  */
 
 /**
+ * Organisation replacement payload with identity fields removed.
+ * Identity (id, version) is passed as separate parameters to replace().
+ * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationReplacement
+ */
+
+/**
  * @typedef {Object} OrganisationsRepository
  * @property {(organisation: Object) => Promise<void>} insert
- * @property {(id: string, version: number, replacement: Object) => Promise<void>} replace
+ * @property {(id: string, version: number, replacement: OrganisationReplacement) => Promise<void>} replace
  * @property {() => Promise<Object[]>} findAll
  * @property {(id: string, minimumVersion?: number) => Promise<Object|null>} findById
  * @property {(defraOrgId: string) => Promise<Organisation|null>} findByLinkedDefraOrgId - Find organisation linked to a Defra organisation ID

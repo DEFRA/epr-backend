@@ -3,15 +3,9 @@ import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 import { auditOrganisationUpdate } from '#root/auditing/organisations.js'
 
-/** @import {Organisation} from '#domain/organisations/model.js' */
-
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
 /** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
-
-/**
- * Organisation update payload with system fields removed
- * @typedef {Partial<Omit<Organisation, 'id'|'version'|'schemaVersion'|'status'|'statusHistory'>>} OrganisationUpdateFragment
- */
 
 /**
  * @typedef {{version: number, updateFragment: object}} PutByIdPayload
@@ -68,7 +62,7 @@ export const organisationsPutById = {
 
     const { version: _v, id: _, ...sanitisedFragment } = updateFragment
 
-    /** @type {OrganisationUpdateFragment} */
+    /** @type {OrganisationReplacement} */
     const updates = sanitisedFragment
 
     try {
