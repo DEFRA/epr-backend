@@ -21,18 +21,68 @@ async function ensureCollection(db) {
     { name: 'issuedBy_status' }
   )
 
+  // Index for PRN number lookups
+  await collection.createIndex(
+    { prnNumber: 1 },
+    { name: 'prnNumber', sparse: true }
+  )
+
   return collection
 }
 
 /**
  * @param {import('mongodb').Db} db
  * @param {string} id
- * @returns {Promise<Object>} Prn
+ * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote | null>}
  */
 const findById = async (db, id) => {
-  return db
+  const doc = await db
     .collection(COLLECTION_NAME)
     .findOne({ _id: ObjectId.createFromHexString(id) })
+
+  if (!doc) {
+    return null
+  }
+
+  return {
+    ...doc,
+    id: doc._id.toHexString()
+  }
+}
+
+/**
+ * @typedef {Omit<import('#domain/prn/model.js').PackagingRecyclingNote, 'id'>} CreatePrnInput
+ */
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {CreatePrnInput} prn
+ * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote>}
+ */
+const create = async (db, prn) => {
+  const result = await db.collection(COLLECTION_NAME).insertOne(prn)
+
+  return {
+    ...prn,
+    id: result.insertedId.toHexString()
+  }
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {string} organisationId
+ * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote[]>}
+ */
+const findByOrganisation = async (db, organisationId) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ issuedByOrganisation: organisationId })
+    .toArray()
+
+  return docs.map((doc) => ({
+    ...doc,
+    id: doc._id.toHexString()
+  }))
 }
 
 /**
@@ -43,6 +93,9 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
   await ensureCollection(db)
 
   return () => ({
-    findById: (id) => findById(db, id)
+    findById: (id) => findById(db, id),
+    create: (prn) => create(db, prn),
+    findByOrganisation: (organisationId) =>
+      findByOrganisation(db, organisationId)
   })
 }

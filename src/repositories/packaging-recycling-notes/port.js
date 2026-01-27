@@ -1,6 +1,8 @@
 /**
  * @typedef {Object} PackagingRecyclingNotesRepository
- * @property {(id: string) => Promise<Object>} findById
+ * @property {(id: string) => Promise<import('#domain/prn/model.js').PackagingRecyclingNote | null>} findById
+ * @property {(prn: Omit<import('#domain/prn/model.js').PackagingRecyclingNote, 'id'>) => Promise<import('#domain/prn/model.js').PackagingRecyclingNote>} create
+ * @property {(organisationId: string) => Promise<import('#domain/prn/model.js').PackagingRecyclingNote[]>} findByOrganisation
  */
 
 /**
