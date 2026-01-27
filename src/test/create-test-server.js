@@ -45,7 +45,7 @@ import { createInMemoryPublicRegisterRepositoryPlugin } from '#plugins/repositor
 
 /**
  * Creates a plugin that wraps a repository for request access.
- * Supports both factory functions (old pattern) and direct instances (new pattern).
+ * Supports both factory functions (per-request instantiation) and direct instances.
  *
  * @param {string} name - Repository name
  * @param {Function|Object} repositoryOrFactory - Repository instance OR factory function
@@ -59,10 +59,10 @@ function createRepositoryPlugin(name, repositoryOrFactory) {
     register: (server) => {
       registerRepository(server, name, (request) => {
         if (isFactory) {
-          // Old pattern: factory function that takes logger
+          // Factory: call with logger (ignored if factory doesn't need it)
           return repositoryOrFactory(request.logger)
         }
-        // New pattern: direct instance
+        // Direct instance
         return repositoryOrFactory
       })
     }
