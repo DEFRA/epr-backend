@@ -1,4 +1,5 @@
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { registerRepository } from './register-repository.js'
 
 /**
  * @typedef {Object} MongoOrganisationsRepositoryPluginOptions
@@ -28,15 +29,6 @@ export const mongoOrganisationsRepositoryPlugin = {
     )
     const repository = factory()
 
-    server.ext('onRequest', (request, h) => {
-      Object.defineProperty(request, 'organisationsRepository', {
-        get() {
-          return repository
-        },
-        enumerable: true,
-        configurable: true
-      })
-      return h.continue
-    })
+    registerRepository(server, 'organisationsRepository', () => repository)
   }
 }
