@@ -1,6 +1,5 @@
 import { auditGlassMigration } from './glass-migration.js'
 import { vi, describe, it, beforeEach, afterEach } from 'vitest'
-import { randomBytes } from 'crypto'
 
 const mockAudit = vi.fn()
 const mockInsert = vi.fn()
@@ -28,13 +27,15 @@ describe('auditGlassMigration', () => {
     insert: mockInsert
   })
 
-  describe('small payloads', () => {
-    it('includes full context in CDP audit event', async () => {
+  describe('registration rename (GL to GR)', () => {
+    it('logs the registration number change', async () => {
       const previous = {
-        registrations: [{ registrationNumber: 'REG-2025-GL' }]
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-2025-GL' }],
+        accreditations: []
       }
       const next = {
-        registrations: [{ registrationNumber: 'REG-2025-GR' }]
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-2025-GR' }],
+        accreditations: []
       }
 
       await auditGlassMigration(
@@ -50,44 +51,31 @@ describe('auditGlassMigration', () => {
           subCategory: 'epr-organisations',
           action: 'glass-migration'
         },
-        context: { organisationId, previous, next },
-        user: { id: 'system', email: 'system', scope: [] }
-      })
-    })
-
-    it('includes full context in system log', async () => {
-      const previous = {
-        registrations: [{ registrationNumber: 'REG-2025-GL' }]
-      }
-      const next = {
-        registrations: [{ registrationNumber: 'REG-2025-GR' }]
-      }
-
-      await auditGlassMigration(
-        createMockSystemLogsRepository(),
-        organisationId,
-        previous,
-        next
-      )
-
-      expect(mockInsert).toHaveBeenCalledWith({
-        createdAt: now,
-        createdBy: { id: 'system', email: 'system', scope: [] },
-        event: {
-          category: 'entity',
-          subCategory: 'epr-organisations',
-          action: 'glass-migration'
+        context: {
+          organisationId,
+          registrations: [
+            { id: 'reg-1', from: 'REG-2025-GL', to: 'REG-2025-GR' }
+          ],
+          accreditations: []
         },
-        context: { organisationId, previous, next }
+        user: { id: 'system', email: 'system', scope: [] }
       })
     })
   })
 
-  describe('large payloads', () => {
-    it('omits previous and next from CDP audit event', async () => {
-      const veryLongString = randomBytes(1e6).toString('hex')
-      const previous = { registrations: [{ data: veryLongString }] }
-      const next = { registrations: [{ data: veryLongString }] }
+  describe('registration split (GL to GR + GO)', () => {
+    it('logs both new registration numbers', async () => {
+      const previous = {
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-2025-GL' }],
+        accreditations: []
+      }
+      const next = {
+        registrations: [
+          { id: 'reg-1', registrationNumber: 'REG-2025-GR' },
+          { id: 'reg-2', registrationNumber: 'REG-2025-GO' }
+        ],
+        accreditations: []
+      }
 
       await auditGlassMigration(
         createMockSystemLogsRepository(),
@@ -102,15 +90,68 @@ describe('auditGlassMigration', () => {
           subCategory: 'epr-organisations',
           action: 'glass-migration'
         },
-        context: { organisationId },
+        context: {
+          organisationId,
+          registrations: [
+            {
+              id: 'reg-1',
+              from: 'REG-2025-GL',
+              to: ['REG-2025-GR', 'REG-2025-GO']
+            }
+          ],
+          accreditations: []
+        },
         user: { id: 'system', email: 'system', scope: [] }
       })
     })
+  })
 
-    it('still includes full context in system log', async () => {
-      const veryLongString = randomBytes(1e6).toString('hex')
-      const previous = { registrations: [{ data: veryLongString }] }
-      const next = { registrations: [{ data: veryLongString }] }
+  describe('accreditation rename', () => {
+    it('logs the accreditation number change', async () => {
+      const previous = {
+        registrations: [],
+        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-2025-GL' }]
+      }
+      const next = {
+        registrations: [],
+        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-2025-GO' }]
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith({
+        event: {
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'glass-migration'
+        },
+        context: {
+          organisationId,
+          registrations: [],
+          accreditations: [
+            { id: 'acc-1', from: 'ACC-2025-GL', to: 'ACC-2025-GO' }
+          ]
+        },
+        user: { id: 'system', email: 'system', scope: [] }
+      })
+    })
+  })
+
+  describe('system log insertion', () => {
+    it('records with createdAt and createdBy fields', async () => {
+      const previous = {
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-2025-GL' }],
+        accreditations: []
+      }
+      const next = {
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-2025-GR' }],
+        accreditations: []
+      }
 
       await auditGlassMigration(
         createMockSystemLogsRepository(),
@@ -127,8 +168,225 @@ describe('auditGlassMigration', () => {
           subCategory: 'epr-organisations',
           action: 'glass-migration'
         },
-        context: { organisationId, previous, next }
+        context: {
+          organisationId,
+          registrations: [
+            { id: 'reg-1', from: 'REG-2025-GL', to: 'REG-2025-GR' }
+          ],
+          accreditations: []
+        }
       })
+    })
+  })
+
+  describe('non-glass registrations', () => {
+    it('ignores registrations without GL suffix', async () => {
+      const previous = {
+        registrations: [
+          { id: 'reg-1', registrationNumber: 'REG-2025-GL' },
+          { id: 'reg-2', registrationNumber: 'REG-2025-PA' }
+        ],
+        accreditations: []
+      }
+      const next = {
+        registrations: [
+          { id: 'reg-1', registrationNumber: 'REG-2025-GR' },
+          { id: 'reg-2', registrationNumber: 'REG-2025-PA' }
+        ],
+        accreditations: []
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            registrations: [
+              { id: 'reg-1', from: 'REG-2025-GL', to: 'REG-2025-GR' }
+            ]
+          })
+        })
+      )
+    })
+  })
+
+  describe('accreditation split (GL to GR + GO)', () => {
+    it('logs both new accreditation numbers', async () => {
+      const previous = {
+        registrations: [],
+        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-2025-GL' }]
+      }
+      const next = {
+        registrations: [],
+        accreditations: [
+          { id: 'acc-1', accreditationNumber: 'ACC-2025-GR' },
+          { id: 'acc-2', accreditationNumber: 'ACC-2025-GO' }
+        ]
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            accreditations: [
+              {
+                id: 'acc-1',
+                from: 'ACC-2025-GL',
+                to: ['ACC-2025-GR', 'ACC-2025-GO']
+              }
+            ]
+          })
+        })
+      )
+    })
+  })
+
+  describe('non-glass accreditations', () => {
+    it('ignores accreditations without GL suffix', async () => {
+      const previous = {
+        registrations: [],
+        accreditations: [
+          { id: 'acc-1', accreditationNumber: 'ACC-2025-GL' },
+          { id: 'acc-2', accreditationNumber: 'ACC-2025-PA' }
+        ]
+      }
+      const next = {
+        registrations: [],
+        accreditations: [
+          { id: 'acc-1', accreditationNumber: 'ACC-2025-GO' },
+          { id: 'acc-2', accreditationNumber: 'ACC-2025-PA' }
+        ]
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            accreditations: [
+              { id: 'acc-1', from: 'ACC-2025-GL', to: 'ACC-2025-GO' }
+            ]
+          })
+        })
+      )
+    })
+  })
+
+  describe('edge cases', () => {
+    it('ignores GL registration with no matching GR/GO in migrated data', async () => {
+      const previous = {
+        registrations: [{ id: 'reg-1', registrationNumber: 'REG-2025-GL' }],
+        accreditations: []
+      }
+      // Migration somehow didn't produce a GR/GO version
+      const next = {
+        registrations: [],
+        accreditations: []
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            registrations: [],
+            accreditations: []
+          })
+        })
+      )
+    })
+
+    it('ignores GL accreditation with no matching GR/GO in migrated data', async () => {
+      const previous = {
+        registrations: [],
+        accreditations: [{ id: 'acc-1', accreditationNumber: 'ACC-2025-GL' }]
+      }
+      // Migration somehow didn't produce a GR/GO version
+      const next = {
+        registrations: [],
+        accreditations: []
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            registrations: [],
+            accreditations: []
+          })
+        })
+      )
+    })
+  })
+
+  describe('empty or undefined arrays', () => {
+    it('handles undefined registrations', async () => {
+      const previous = { accreditations: [] }
+      const next = { accreditations: [] }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            registrations: [],
+            accreditations: []
+          })
+        })
+      )
+    })
+
+    it('handles undefined accreditations', async () => {
+      const previous = { registrations: [] }
+      const next = { registrations: [] }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockAudit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          context: expect.objectContaining({
+            registrations: [],
+            accreditations: []
+          })
+        })
+      )
     })
   })
 })
