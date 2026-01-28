@@ -9,7 +9,8 @@ export const SUMMARY_LOG_STATUS = Object.freeze({
   SUBMITTING: 'submitting',
   SUBMITTED: 'submitted',
   SUPERSEDED: 'superseded',
-  VALIDATION_FAILED: 'validation_failed'
+  VALIDATION_FAILED: 'validation_failed',
+  SUBMISSION_FAILED: 'submission_failed'
 })
 
 // TTL calculation constants
@@ -39,6 +40,7 @@ const STATUS_TO_TTL = {
   [SUMMARY_LOG_STATUS.REJECTED]: days(1),
   [SUMMARY_LOG_STATUS.INVALID]: weeks(1),
   [SUMMARY_LOG_STATUS.VALIDATION_FAILED]: days(1),
+  [SUMMARY_LOG_STATUS.SUBMISSION_FAILED]: days(1),
   [SUMMARY_LOG_STATUS.SUBMITTING]: minutes(SUBMITTING_TIMEOUT_MINUTES),
   [SUMMARY_LOG_STATUS.SUBMITTED]: null
 }
@@ -77,13 +79,22 @@ export const SUMMARY_LOG_COMMAND = Object.freeze({
 })
 
 /**
- * Statuses that indicate a summary log is still being processed.
+ * Statuses that indicate a summary log is still being validated.
  * Used by the timeout tracker to determine if a failed/timed-out task
  * should be marked as validation_failed.
  */
 export const PROCESSING_STATUSES = Object.freeze([
   SUMMARY_LOG_STATUS.PREPROCESSING,
   SUMMARY_LOG_STATUS.VALIDATING
+])
+
+/**
+ * Statuses that indicate a summary log is still being submitted.
+ * Used by the timeout tracker to determine if a failed/timed-out task
+ * should be marked as submission_failed.
+ */
+export const SUBMISSION_PROCESSING_STATUSES = Object.freeze([
+  SUMMARY_LOG_STATUS.SUBMITTING
 ])
 
 /**
@@ -123,11 +134,13 @@ const VALID_TRANSITIONS = {
   [SUMMARY_LOG_STATUS.INVALID]: [],
   [SUMMARY_LOG_STATUS.SUBMITTING]: [
     SUMMARY_LOG_STATUS.SUBMITTED,
-    SUMMARY_LOG_STATUS.SUPERSEDED // Stale preview - cannot be resubmitted
+    SUMMARY_LOG_STATUS.SUPERSEDED, // Stale preview - cannot be resubmitted
+    SUMMARY_LOG_STATUS.SUBMISSION_FAILED
   ],
   [SUMMARY_LOG_STATUS.SUBMITTED]: [],
   [SUMMARY_LOG_STATUS.SUPERSEDED]: [], // Keep state for backwards compatibility
-  [SUMMARY_LOG_STATUS.VALIDATION_FAILED]: []
+  [SUMMARY_LOG_STATUS.VALIDATION_FAILED]: [],
+  [SUMMARY_LOG_STATUS.SUBMISSION_FAILED]: []
 }
 
 class InvalidTransitionError extends Error {

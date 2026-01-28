@@ -283,4 +283,31 @@ describe('GET /v1/organisations/{organisationId}/registrations/{registrationId}/
       expect(payload.accreditationNumber).toBeUndefined()
     })
   })
+
+  describe('submission_failed status in response', () => {
+    it('returns OK', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submissionFailed({ organisationId, registrationId })
+      )
+
+      const response = await makeRequest(server)
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+    })
+
+    it('returns submission_failed status', async () => {
+      const { server, summaryLogsRepository } = await createServer()
+      await summaryLogsRepository.insert(
+        summaryLogId,
+        summaryLogFactory.submissionFailed({ organisationId, registrationId })
+      )
+
+      const response = await makeRequest(server)
+
+      const payload = JSON.parse(response.payload)
+      expect(payload.status).toBe(SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+    })
+  })
 })

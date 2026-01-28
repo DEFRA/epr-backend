@@ -119,7 +119,8 @@ describe('summaryLogMetrics', () => {
         'submitting',
         'submitted',
         'superseded',
-        'validation_failed'
+        'validation_failed',
+        'submission_failed'
       ]
 
       for (const status of statuses) {

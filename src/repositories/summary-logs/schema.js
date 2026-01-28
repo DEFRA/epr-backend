@@ -24,7 +24,8 @@ const statusSchema = Joi.string().valid(
   SUMMARY_LOG_STATUS.SUBMITTING,
   SUMMARY_LOG_STATUS.SUBMITTED,
   SUMMARY_LOG_STATUS.SUPERSEDED,
-  SUMMARY_LOG_STATUS.VALIDATION_FAILED
+  SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+  SUMMARY_LOG_STATUS.SUBMISSION_FAILED
 )
 
 const fileSchema = Joi.object({
@@ -55,7 +56,11 @@ export const summaryLogInsertSchema = Joi.object({
   meta: metaSchema.optional(),
   expiresAt: Joi.date().allow(null).required(),
   submittedAt: Joi.when('status', {
-    is: Joi.valid(SUMMARY_LOG_STATUS.SUBMITTING, SUMMARY_LOG_STATUS.SUBMITTED),
+    is: Joi.valid(
+      SUMMARY_LOG_STATUS.SUBMITTING,
+      SUMMARY_LOG_STATUS.SUBMITTED,
+      SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+    ),
     then: Joi.string().isoDate().required(),
     otherwise: Joi.forbidden()
   }),
