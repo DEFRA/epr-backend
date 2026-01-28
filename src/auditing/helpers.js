@@ -1,3 +1,5 @@
+import { config } from '#root/config.js'
+
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
  */
@@ -25,4 +27,15 @@ async function recordSystemLog(request, { user, ...restPayload }) {
   })
 }
 
-export { extractUserDetails, recordSystemLog }
+/**
+ * Check if payload is small enough for CDP auditing library.
+ * Large payloads cause errors and the audit event is lost.
+ * @param {object} payload
+ * @returns {boolean}
+ */
+function isPayloadSmallEnoughToAudit(payload) {
+  const payloadSize = Buffer.byteLength(JSON.stringify(payload), 'utf8')
+  return payloadSize < config.get('audit.maxPayloadSizeBytes')
+}
+
+export { extractUserDetails, recordSystemLog, isPayloadSmallEnoughToAudit }

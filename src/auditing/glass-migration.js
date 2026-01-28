@@ -1,5 +1,5 @@
 import { audit } from '@defra/cdp-auditing'
-import { config } from '#root/config.js'
+import { isPayloadSmallEnoughToAudit } from './helpers.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -50,11 +50,6 @@ async function auditGlassMigration(
     event: payload.event,
     context: payload.context
   })
-}
-
-function isPayloadSmallEnoughToAudit(payload) {
-  const payloadSize = Buffer.byteLength(JSON.stringify(payload), 'utf8')
-  return payloadSize < config.get('audit.maxPayloadSizeBytes')
 }
 
 export { auditGlassMigration }
