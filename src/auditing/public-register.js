@@ -1,0 +1,28 @@
+import { audit } from '@defra/cdp-auditing'
+import { extractUserDetails, recordSystemLog } from './helpers.js'
+
+/**
+ * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
+ */
+
+/**
+ * @param {import('#common/hapi-types.js').HapiRequest & {systemLogsRepository: SystemLogsRepository}} request
+ * @param {{url: string, generatedAt:String, expiresAt: string}} context
+ */
+async function auditPublicRegisterGenerate(request, context) {
+  const user = extractUserDetails(request)
+  const payload = {
+    event: {
+      category: 'public-register',
+      subCategory: 'download',
+      action: 'generate'
+    },
+    context,
+    user
+  }
+
+  audit(payload)
+  await recordSystemLog(request, payload)
+}
+
+export { auditPublicRegisterGenerate }

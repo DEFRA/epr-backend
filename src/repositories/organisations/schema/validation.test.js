@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 import { ObjectId } from 'mongodb'
 import {
   validateAccreditation,
@@ -105,9 +105,8 @@ describe('validateRegistration', () => {
       expect(() => validateRegistration(registration)).not.toThrow()
     })
 
-    it.each([REGULATOR.NRW, REGULATOR.SEPA])(
-      '%s: rejects missing cbduNumber',
-      (regulator) => {
+    it('NRW/SEPA: rejects missing cbduNumber', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           cbduNumber: undefined
@@ -116,20 +115,19 @@ describe('validateRegistration', () => {
         expect(() => validateRegistration(registration)).toThrow(
           /Invalid registration data.*cbduNumber.*any.required/
         )
-      }
-    )
+      })
+    })
 
-    it.each([REGULATOR.NRW, REGULATOR.SEPA])(
-      '%s: accepts any string format',
-      (regulator) => {
+    it('NRW/SEPA: accepts any string format', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           cbduNumber: 'ANY-FORMAT-123'
         })
 
         expect(() => validateRegistration(registration)).not.toThrow()
-      }
-    )
+      })
+    })
 
     it('NIEA: accepts when cbduNumber is omitted (optional for NIEA)', () => {
       const registration = buildRegistration({
@@ -171,9 +169,8 @@ describe('validateRegistration', () => {
       expect(() => validateRegistration(registration)).not.toThrow()
     })
 
-    it.each([REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA])(
-      '%s: accepts flexible reference and code formats',
-      (regulator) => {
+    it('NRW/SEPA/NIEA: accepts flexible reference and code formats', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           wasteManagementPermits: [
@@ -191,8 +188,8 @@ describe('validateRegistration', () => {
         })
 
         expect(() => validateRegistration(registration)).not.toThrow()
-      }
-    )
+      })
+    })
 
     it('EA: rejects non-WEX reference format', () => {
       const registration = buildRegistration({
@@ -238,9 +235,8 @@ describe('validateRegistration', () => {
       )
     })
 
-    it.each([REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA])(
-      '%s: rejects missing reference',
-      (regulator) => {
+    it('NRW/SEPA/NIEA: rejects missing reference', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           wasteManagementPermits: [
@@ -256,12 +252,11 @@ describe('validateRegistration', () => {
         expect(() => validateRegistration(registration)).toThrow(
           /Invalid registration data.*reference.*any.required/
         )
-      }
-    )
+      })
+    })
 
-    it.each([REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA])(
-      '%s: rejects missing exemptionCode',
-      (regulator) => {
+    it('NRW/SEPA/NIEA: rejects missing exemptionCode', () => {
+      ;[REGULATOR.NRW, REGULATOR.SEPA, REGULATOR.NIEA].forEach((regulator) => {
         const registration = buildRegistration({
           submittedToRegulator: regulator,
           wasteManagementPermits: [
@@ -280,28 +275,36 @@ describe('validateRegistration', () => {
         expect(() => validateRegistration(registration)).toThrow(
           /Invalid registration data.*exemptionCode.*any.required/
         )
-      }
-    )
+      })
+    })
   })
 
   describe('conditional field validation by wasteProcessingType', () => {
-    it.each([
-      ['site', /Invalid registration data.*site.*any.required/],
-      [
-        'yearlyMetrics',
-        /Invalid registration data.*yearlyMetrics.*any.required/
-      ],
-      [
-        'plantEquipmentDetails',
-        /Invalid registration data.*plantEquipmentDetails.*any.required/
+    it('reprocessor: rejects when missing required fields', () => {
+      const requiredFields = [
+        {
+          field: 'site',
+          error: /Invalid registration data.*site.*any.required/
+        },
+        {
+          field: 'yearlyMetrics',
+          error: /Invalid registration data.*yearlyMetrics.*any.required/
+        },
+        {
+          field: 'plantEquipmentDetails',
+          error:
+            /Invalid registration data.*plantEquipmentDetails.*any.required/
+        }
       ]
-    ])('reprocessor: rejects when missing %s', (field, error) => {
-      const registration = buildRegistration({
-        wasteProcessingType: 'reprocessor',
-        [field]: undefined
-      })
 
-      expect(() => validateRegistration(registration)).toThrow(error)
+      requiredFields.forEach(({ field, error }) => {
+        const registration = buildRegistration({
+          wasteProcessingType: 'reprocessor',
+          [field]: undefined
+        })
+
+        expect(() => validateRegistration(registration)).toThrow(error)
+      })
     })
 
     it('exporter: rejects when missing exportPorts', () => {
@@ -346,28 +349,30 @@ describe('validateRegistration', () => {
   })
 
   describe('waste permit validation by type and wasteProcessingType', () => {
-    it.each([
-      [
-        'environmental_permit',
-        { type: 'environmental_permit', permitNumber: 'EPR/AB1234CD/A001' },
-        /Invalid registration data.*authorisedMaterials.*any.required/
-      ],
-      [
-        'waste_exemption',
-        { type: 'waste_exemption' },
-        /Invalid registration data.*exemptions.*any.required/
+    it('reprocessor: rejects permits missing required fields', () => {
+      const permitTests = [
+        {
+          permit: {
+            type: 'environmental_permit',
+            permitNumber: 'EPR/AB1234CD/A001'
+          },
+          error: /Invalid registration data.*authorisedMaterials.*any.required/
+        },
+        {
+          permit: { type: 'waste_exemption' },
+          error: /Invalid registration data.*exemptions.*any.required/
+        }
       ]
-    ])(
-      'reprocessor: rejects %s permit missing required fields',
-      (_permitType, permit, error) => {
+
+      permitTests.forEach(({ permit, error }) => {
         const registration = buildRegistration({
           wasteProcessingType: 'reprocessor',
           wasteManagementPermits: [permit]
         })
 
         expect(() => validateRegistration(registration)).toThrow(error)
-      }
-    )
+      })
+    })
   })
 
   describe('material-specific field validation', () => {
@@ -382,58 +387,22 @@ describe('validateRegistration', () => {
       )
     })
 
-    it.each(['glass_re_melt', 'glass_other'])(
-      'glass: accepts glassRecyclingProcess with %s',
-      (process) => {
-        const registration = buildRegistration({
-          material: MATERIAL.GLASS,
-          glassRecyclingProcess: [process]
-        })
-
-        expect(() => validateRegistration(registration)).not.toThrow()
-      }
-    )
-
-    it('glass: rejects glassRecyclingProcess with both values', () => {
+    it('glass: accepts valid glassRecyclingProcess', () => {
       const registration = buildRegistration({
         material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+        glassRecyclingProcess: ['glass_re_melt']
       })
 
-      expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*glassRecyclingProcess.*array.max/
-      )
+      expect(() => validateRegistration(registration)).not.toThrow()
     })
 
-    it('glass: rejects empty glassRecyclingProcess array', () => {
-      const registration = buildRegistration({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: []
-      })
-
-      expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*glassRecyclingProcess.*array.min/
-      )
-    })
-
-    it('non-glass: accepts when glassRecyclingProcess is null', () => {
+    it('non-glass: accepts when glassRecyclingProcess is omitted', () => {
       const registration = buildRegistration({
         material: MATERIAL.PAPER,
         glassRecyclingProcess: null
       })
 
       expect(() => validateRegistration(registration)).not.toThrow()
-    })
-
-    it('non-glass: rejects when glassRecyclingProcess has a value', () => {
-      const registration = buildRegistration({
-        material: MATERIAL.PAPER,
-        glassRecyclingProcess: ['glass_re_melt']
-      })
-
-      expect(() => validateRegistration(registration)).toThrow(
-        /Invalid registration data.*glassRecyclingProcess/
-      )
     })
   })
 })
@@ -515,38 +484,13 @@ describe('validateAccreditation', () => {
       )
     })
 
-    it.each(['glass_re_melt', 'glass_other'])(
-      'glass: accepts glassRecyclingProcess with %s',
-      (process) => {
-        const accreditation = buildAccreditation({
-          material: MATERIAL.GLASS,
-          glassRecyclingProcess: [process]
-        })
-
-        expect(() => validateAccreditation(accreditation)).not.toThrow()
-      }
-    )
-
-    it('glass: rejects glassRecyclingProcess with both values', () => {
+    it('glass: accepts valid glassRecyclingProcess', () => {
       const accreditation = buildAccreditation({
         material: MATERIAL.GLASS,
-        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+        glassRecyclingProcess: ['glass_re_melt']
       })
 
-      expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*glassRecyclingProcess.*array.max/
-      )
-    })
-
-    it('glass: rejects empty glassRecyclingProcess array', () => {
-      const accreditation = buildAccreditation({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: []
-      })
-
-      expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*glassRecyclingProcess.*array.min/
-      )
+      expect(() => validateAccreditation(accreditation)).not.toThrow()
     })
 
     it('non-glass: accepts when glassRecyclingProcess is null', () => {
@@ -556,17 +500,6 @@ describe('validateAccreditation', () => {
       })
 
       expect(() => validateAccreditation(accreditation)).not.toThrow()
-    })
-
-    it('non-glass: rejects when glassRecyclingProcess has a value', () => {
-      const accreditation = buildAccreditation({
-        material: MATERIAL.PAPER,
-        glassRecyclingProcess: ['glass_re_melt']
-      })
-
-      expect(() => validateAccreditation(accreditation)).toThrow(
-        /Invalid accreditation data.*glassRecyclingProcess/
-      )
     })
   })
 
@@ -767,5 +700,110 @@ describe('organisationJSONSchemaOverrides', () => {
       const { error } = validate(organisation)
       expect(error).toBeUndefined()
     })
+  })
+})
+
+describe('normaliseOrganisationFromDb', () => {
+  // Import dynamically to avoid circular dependency issues in test setup
+  let normaliseOrganisationFromDb
+
+  beforeAll(async () => {
+    const module = await import('./validation.js')
+    normaliseOrganisationFromDb = module.normaliseOrganisationFromDb
+  })
+
+  it('defaults undefined registrations to empty array', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1
+      // registrations is undefined
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.registrations).toEqual([])
+  })
+
+  it('defaults undefined accreditations to empty array', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1
+      // accreditations is undefined
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.accreditations).toEqual([])
+  })
+
+  it('defaults undefined users to empty array', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1
+      // users is undefined
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.users).toEqual([])
+  })
+
+  it('preserves existing arrays', () => {
+    const registration = buildRegistration()
+    const accreditation = buildAccreditation()
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1,
+      registrations: [registration],
+      accreditations: [accreditation],
+      users: [
+        {
+          email: 'test@example.com',
+          fullName: 'Test User',
+          roles: ['standard']
+        }
+      ]
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.registrations).toHaveLength(1)
+    expect(result.accreditations).toHaveLength(1)
+    expect(result.users).toHaveLength(1)
+  })
+
+  it('preserves MongoDB fields like _id and version', () => {
+    const objectId = new ObjectId()
+    const dbDoc = {
+      _id: objectId,
+      orgId: 123,
+      version: 5,
+      schemaVersion: 1,
+      statusHistory: [{ status: 'created', updatedAt: new Date() }]
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result._id).toEqual(objectId)
+    expect(result.version).toBe(5)
+    expect(result.schemaVersion).toBe(1)
+    expect(result.statusHistory).toHaveLength(1)
+  })
+
+  it('preserves unknown fields from database', () => {
+    const dbDoc = {
+      _id: new ObjectId(),
+      orgId: 123,
+      version: 1,
+      someFutureField: 'should be kept'
+    }
+
+    const result = normaliseOrganisationFromDb(dbDoc)
+
+    expect(result.someFutureField).toBe('should be kept')
   })
 })

@@ -80,7 +80,7 @@ async function recordStatusTransition({ status, processingType }) {
 async function recordWasteRecordsCreated({ processingType }, count) {
   await incrementCounter(
     'summaryLog.wasteRecords',
-    { operation: 'created', processingType: toDimension(processingType) },
+    buildDimensions({ operation: 'created', processingType }),
     count
   )
 }
@@ -93,7 +93,7 @@ async function recordWasteRecordsCreated({ processingType }, count) {
 async function recordWasteRecordsUpdated({ processingType }, count) {
   await incrementCounter(
     'summaryLog.wasteRecords',
-    { operation: 'updated', processingType: toDimension(processingType) },
+    buildDimensions({ operation: 'updated', processingType }),
     count
   )
 }

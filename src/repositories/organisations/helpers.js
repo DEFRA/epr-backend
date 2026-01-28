@@ -1,5 +1,6 @@
 import { REG_ACC_STATUS, USER_ROLES } from '#domain/organisations/model.js'
 import {
+  normaliseOrganisationFromDb,
   validateOrganisationUpdate,
   validateStatusHistory
 } from './schema/index.js'
@@ -234,7 +235,8 @@ export const collateUsers = (existing, updated) => {
 }
 
 export const mapDocumentWithCurrentStatuses = (org) => {
-  const { _id, ...rest } = org
+  const normalised = normaliseOrganisationFromDb(org)
+  const { _id, ...rest } = normalised
 
   rest.status = getCurrentStatus(rest)
 

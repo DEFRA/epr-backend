@@ -51,6 +51,8 @@ process.env.FORM_SUBMISSION_OVERRIDES =
 process.env.SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH =
   '["507f191e810c19729de860ea","507f191e810c19729de860eb","65a2f5a1b4c5d9f8e7a6b1c3","65a2f5a1b4c5d9f8e7a6b1c5"]'
 
+process.env.TEST_ORGANISATIONS = '[999999]'
+
 beforeAll(async () => {
   // Setup fetch mock
   fetchMock.enableMocks()

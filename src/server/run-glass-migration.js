@@ -5,6 +5,8 @@ import {
 } from '#glass-migration/glass-migration.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 
+/** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
+
 /**
  * Run glass migration for a single organisation
  * @param {Object} org
@@ -18,28 +20,35 @@ export async function migrateGlassOrganisation(org, repository, options = {}) {
     return false
   }
 
+  // Separate identity from data - the repository contract expects these as separate parameters
+  const { id, version, ...orgData } = org
+
+  /** @type {OrganisationReplacement} */
   let migratedOrg
   try {
-    migratedOrg = migrateOrganisation(org)
+    migratedOrg = migrateOrganisation(orgData)
   } catch (error) {
     logger.error({
-      message: `Failed to migrate organisation ${org.id}: ${error.message}`
+      message: `Failed to migrate organisation ${id}: ${error.message}`
     })
     return false
   }
 
+  const regCount = migratedOrg.registrations?.length ?? 0
+  const accCount = migratedOrg.accreditations?.length ?? 0
+
   if (options.dryRun) {
     logger.info({
-      message: `[DRY-RUN] Would migrate glass registrations/accreditations for organisation ${org.id} (${migratedOrg.registrations.length} registrations, ${migratedOrg.accreditations.length} accreditations)`
+      message: `[DRY-RUN] Would migrate glass registrations/accreditations for organisation ${id} (${regCount} registrations, ${accCount} accreditations)`
     })
     return true
   }
 
   logger.info({
-    message: `Migrating glass registrations/accreditations for organisation ${org.id} (${migratedOrg.registrations.length} registrations, ${migratedOrg.accreditations.length} accreditations)`
+    message: `Migrating glass registrations/accreditations for organisation ${id} (${regCount} registrations, ${accCount} accreditations)`
   })
 
-  await repository.replace(org.id, org.version, migratedOrg)
+  await repository.replace(id, version, migratedOrg)
   return true
 }
 
@@ -114,7 +123,9 @@ export const runGlassMigration = async (server) => {
     }
 
     try {
-      const organisationsRepository = createOrganisationsRepository(server.db)()
+      const organisationsRepository = (
+        await createOrganisationsRepository(server.db)
+      )()
       return await executeMigration(organisationsRepository, dryRun)
     } finally {
       await lock.free()

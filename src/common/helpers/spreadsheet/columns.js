@@ -41,7 +41,9 @@ export const columnNumberToLetter = (colNumber) => {
 export const columnLetterToNumber = (colLetter) => {
   let result = 0
   for (let i = 0; i < colLetter.length; i++) {
-    const charCode = colLetter.codePointAt(i) - ASCII_CODE_OFFSET + 1
+    // codePointAt returns undefined only if i >= string.length, which can't happen in this loop
+    const charCode =
+      /** @type {number} */ (colLetter.codePointAt(i)) - ASCII_CODE_OFFSET + 1
     result = result * ALPHABET_SIZE + charCode
   }
   return result

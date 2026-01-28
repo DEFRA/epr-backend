@@ -38,7 +38,7 @@
       "shortDescription": "Glass process",
       "title": "What process is intended for recycling the glass?",
       "type": "RadiosField",
-      "value": "Glass re-melt"
+      "value": "Both"
     },
     {
       "shortDescription": "Tonnage band",
@@ -986,7 +986,7 @@
         "Ooierc": "503177",
         "MyWHms": "68e68dd778f83083f0f17a77",
         "qkCaCh": "Glass (R5)",
-        "WNTLmM": "Glass re-melt",
+        "WNTLmM": "Both",
         "XKWebf": "Up to 10,000 tonnes",
         "yzvIcu": "0",
         "EJZCFh": "More detail for spend on new reprocessing infrastructure",

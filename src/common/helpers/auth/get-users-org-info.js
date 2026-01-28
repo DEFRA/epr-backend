@@ -16,7 +16,7 @@ import {
  * Retrieves organization information for a user based on their Defra ID token
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload containing user and organization data
  * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns {Promise<Organisation>} The first matching organisation
+ * @returns {Promise<Organisation | null>} The first matching organisation or null if no match or no org ID in token
  */
 export async function getOrgMatchingUsersToken(
   tokenPayload,
@@ -24,10 +24,10 @@ export async function getOrgMatchingUsersToken(
 ) {
   const { defraIdOrgId } = getDefraTokenSummary(tokenPayload)
 
-  const linkedEprOrg = await findOrganisationMatches(
-    defraIdOrgId,
-    organisationsRepository
-  )
+  /* istanbul ignore if -- defensive: defraIdOrgId always present in valid tokens */
+  if (!defraIdOrgId) {
+    return null
+  }
 
-  return linkedEprOrg
+  return findOrganisationMatches(defraIdOrgId, organisationsRepository)
 }

@@ -5,6 +5,12 @@ import {
   migrateGlassOrganisation
 } from './run-glass-migration.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
+import {
+  buildOrganisation,
+  buildRegistration
+} from '#repositories/organisations/contract/test-data.js'
+import * as glassMigration from '#glass-migration/glass-migration.js'
 
 vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
@@ -299,67 +305,96 @@ describe('runGlassMigration', () => {
 })
 
 describe('migrateGlassOrganisation', () => {
-  it('should return false for organisations that do not need migration', async () => {
-    const mockRepo = { replace: vi.fn() }
-    const org = {
-      id: 'org-1',
-      version: 1,
-      registrations: [
-        {
-          registrationNumber: 'REG-2025-PA',
-          material: 'paper'
-        }
-      ],
-      accreditations: []
-    }
+  describe('with in-memory repository (contract validation)', () => {
+    let repository
 
-    const result = await migrateGlassOrganisation(org, mockRepo)
+    beforeEach(() => {
+      repository = createInMemoryOrganisationsRepository()()
+    })
 
-    expect(result).toBe(false)
-    expect(mockRepo.replace).not.toHaveBeenCalled()
+    it('should return false for organisations that do not need migration', async () => {
+      // Build a valid organisation with paper registration (no migration needed)
+      const orgData = buildOrganisation()
+      await repository.insert(orgData)
+      const org = await repository.findById(orgData.id)
+
+      const result = await migrateGlassOrganisation(org, repository)
+
+      expect(result).toBe(false)
+    })
+
+    it('should migrate glass registration and pass contract validation', async () => {
+      // Build organisation with glass registration needing migration
+      const glassReg = buildRegistration({
+        material: 'glass',
+        registrationNumber: 'REG-2025-GL',
+        glassRecyclingProcess: ['glass_re_melt']
+      })
+      const orgData = buildOrganisation()
+      orgData.registrations = [glassReg]
+      await repository.insert(orgData)
+
+      const org = await repository.findById(orgData.id)
+
+      // This would have failed with the old code due to 'id: any.unknown' validation error
+      const result = await migrateGlassOrganisation(org, repository)
+
+      expect(result).toBe(true)
+
+      // Verify the migration actually worked
+      const updated = await repository.findById(orgData.id, 2)
+      expect(updated.registrations[0].registrationNumber).toBe('REG-2025-GR')
+    })
   })
 
-  it('should return true and call replace for organisations needing migration', async () => {
-    const mockRepo = { replace: vi.fn().mockResolvedValue(undefined) }
-    const org = {
-      id: 'org-1',
-      version: 1,
-      registrations: [
-        {
-          id: 'reg-1',
-          registrationNumber: 'REG-2025-GL',
-          material: 'glass',
-          glassRecyclingProcess: ['glass_re_melt']
-        }
-      ],
-      accreditations: []
-    }
+  describe('error handling (with mocks)', () => {
+    it('should return false when migration transformation fails', async () => {
+      const mockRepo = { replace: vi.fn() }
+      // Minimal org data that passes shouldMigrateOrganisation but fails migrateOrganisation
+      const org = {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: null // Invalid - will cause migrateOrganisation to throw
+          }
+        ],
+        accreditations: []
+      }
 
-    const result = await migrateGlassOrganisation(org, mockRepo)
+      const result = await migrateGlassOrganisation(org, mockRepo)
 
-    expect(result).toBe(true)
-    expect(mockRepo.replace).toHaveBeenCalled()
-  })
+      expect(result).toBe(false)
+      expect(mockRepo.replace).not.toHaveBeenCalled()
+    })
+    it('should handle migration result with undefined arrays gracefully', async () => {
+      const mockRepo = { replace: vi.fn().mockResolvedValue(undefined) }
+      const org = {
+        id: 'org-1',
+        version: 1,
+        registrations: [
+          {
+            id: 'reg-1',
+            registrationNumber: 'REG-2025-GL',
+            material: 'glass',
+            glassRecyclingProcess: ['glass_re_melt']
+          }
+        ],
+        accreditations: []
+      }
 
-  it('should return false and not throw when migration fails due to invalid data', async () => {
-    const mockRepo = { replace: vi.fn() }
-    const org = {
-      id: 'org-invalid',
-      version: 1,
-      registrations: [
-        {
-          id: 'reg-1',
-          registrationNumber: 'REG-2025-GL',
-          material: 'glass',
-          glassRecyclingProcess: null // Invalid - should cause migration to fail
-        }
-      ],
-      accreditations: []
-    }
+      // Mock migrateOrganisation to return object without arrays
+      vi.spyOn(glassMigration, 'migrateOrganisation').mockReturnValueOnce({})
 
-    const result = await migrateGlassOrganisation(org, mockRepo)
+      const result = await migrateGlassOrganisation(org, mockRepo)
 
-    expect(result).toBe(false)
-    expect(mockRepo.replace).not.toHaveBeenCalled()
+      expect(result).toBe(true)
+      expect(mockRepo.replace).toHaveBeenCalled()
+
+      vi.restoreAllMocks()
+    })
   })
 })

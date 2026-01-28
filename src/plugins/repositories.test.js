@@ -1,6 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { repositories } from './repositories.js'
 
+// Mock S3 client creation to avoid creating real AWS SDK instances in tests
+vi.mock('#common/helpers/s3/s3-client.js', () => ({
+  createS3Client: vi.fn(() => ({
+    send: vi.fn()
+  }))
+}))
+
 describe('repositories plugin', () => {
   let server
   let mockLogger
@@ -19,7 +26,6 @@ describe('repositories plugin', () => {
   describe('lazy initialization and caching', () => {
     it('creates repository on first access and caches it for subsequent accesses (in the same request)', async () => {
       const mockFactory = vi.fn(() => ({ findAll: vi.fn() }))
-
       await server.register({
         plugin: repositories.plugin,
         options: {
@@ -126,6 +132,41 @@ describe('repositories plugin', () => {
       const { payload } = await server.inject({ method: 'GET', url: '/test' })
 
       expect(JSON.parse(payload)).toEqual({ enabled: true })
+    })
+
+    it('creates publicRegisterRepository', async () => {
+      await server.register({
+        plugin: repositories.plugin,
+        options: {
+          summaryLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          organisationsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          formSubmissionsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          systemLogsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          wasteRecordsRepository: vi.fn(() => ({ findAll: vi.fn() })),
+          wasteBalancesRepository: vi.fn(() => ({ findAll: vi.fn() }))
+        }
+      })
+
+      server.ext('onRequest', (request, h) => {
+        request.logger = mockLogger
+        return h.continue
+      })
+
+      server.route({
+        method: 'GET',
+        path: '/test',
+        handler: (request) => {
+          return {
+            publicRepositoryPresent: request.publicRegisterRepository !== null
+          }
+        }
+      })
+
+      await server.initialize()
+      const response = await server.inject({ method: 'GET', url: '/test' })
+      const result = JSON.parse(response.payload)
+
+      expect(result.publicRepositoryPresent).toBe(true)
     })
   })
 })

@@ -120,7 +120,7 @@ const groupAndTransformRowIssues = (issues) => {
  */
 export const transformValidationResponse = (validation) => {
   // Handle direct failures (e.g., from upload rejection)
-  if (validation?.failures?.length > 0) {
+  if ((validation?.failures?.length ?? 0) > 0) {
     return {
       validation: {
         failures: validation.failures,
