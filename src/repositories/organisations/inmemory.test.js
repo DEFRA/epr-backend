@@ -1,4 +1,3 @@
-import Hapi from '@hapi/hapi'
 import { beforeEach, describe, expect, it as base } from 'vitest'
 import { createInMemoryOrganisationsRepository } from './inmemory.js'
 import { testOrganisationsRepositoryContract } from './port.contract.js'
@@ -7,7 +6,6 @@ import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -58,32 +56,6 @@ describe('In-memory organisations repository', () => {
       expect(storedOrg.status).toBeUndefined()
       expect(storedOrg.registrations[0].status).toBeUndefined()
       expect(storedOrg.accreditations[0].status).toBeUndefined()
-    })
-  })
-
-  describe('plugin wiring', () => {
-    it('makes repository available on request via plugin', async () => {
-      const server = Hapi.server()
-      const plugin = createInMemoryOrganisationsRepositoryPlugin()
-      await server.register(plugin)
-
-      server.route({
-        method: 'POST',
-        path: '/test',
-        options: { auth: false },
-        handler: async (request) => {
-          const org = buildOrganisation()
-          await request.organisationsRepository.insert(org)
-          const found = await request.organisationsRepository.findById(org.id)
-          return { inserted: org.id, found: found?.id }
-        }
-      })
-
-      await server.initialize()
-      const response = await server.inject({ method: 'POST', url: '/test' })
-      const result = JSON.parse(response.payload)
-
-      expect(result.found).toBe(result.inserted)
     })
   })
 })

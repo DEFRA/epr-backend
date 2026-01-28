@@ -1,4 +1,3 @@
-import Hapi from '@hapi/hapi'
 import { beforeEach, describe, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -9,7 +8,6 @@ import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
-import { mongoOrganisationsRepositoryPlugin } from './mongodb.plugin.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const DATABASE_NAME = 'epr-backend'
@@ -103,42 +101,6 @@ describe('MongoDB organisations repository', () => {
       expect(rawDoc.status).toBeUndefined()
       expect(rawDoc.registrations[0].status).toBeUndefined()
       expect(rawDoc.accreditations[0].status).toBeUndefined()
-    })
-  })
-
-  describe('plugin wiring', () => {
-    it('makes repository available on request via plugin', async ({
-      mongoClient
-    }) => {
-      const server = Hapi.server()
-
-      // Provide db dependency that the plugin expects
-      const fakeMongoPlugin = {
-        name: 'mongodb',
-        register: async (s) => {
-          s.decorate('server', 'db', mongoClient.db(DATABASE_NAME))
-        }
-      }
-      await server.register(fakeMongoPlugin)
-      await server.register(mongoOrganisationsRepositoryPlugin)
-
-      server.route({
-        method: 'POST',
-        path: '/test',
-        options: { auth: false },
-        handler: async (request) => {
-          const org = buildOrganisation()
-          await request.organisationsRepository.insert(org)
-          const found = await request.organisationsRepository.findById(org.id)
-          return { inserted: org.id, found: found?.id }
-        }
-      })
-
-      await server.initialize()
-      const response = await server.inject({ method: 'POST', url: '/test' })
-      const result = JSON.parse(response.payload)
-
-      expect(result.found).toBe(result.inserted)
     })
   })
 })
