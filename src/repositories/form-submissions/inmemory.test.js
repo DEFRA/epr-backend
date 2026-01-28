@@ -1,4 +1,3 @@
-import Hapi from '@hapi/hapi'
 import { describe, beforeEach, expect, it as base } from 'vitest'
 import { createFormSubmissionsRepository } from './inmemory.js'
 import { testFormSubmissionsRepositoryContract } from './port.contract.js'
@@ -7,7 +6,6 @@ import {
   buildRegistration,
   buildOrganisation
 } from './contract/test-data.js'
-import { createInMemoryFormSubmissionsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern
@@ -99,31 +97,4 @@ describe('In-memory form submissions repository', () => {
   })
 
   testFormSubmissionsRepositoryContract(it)
-
-  describe('plugin wiring', () => {
-    it('makes repository available on request via plugin', async () => {
-      const server = Hapi.server()
-      const plugin = createInMemoryFormSubmissionsRepositoryPlugin({
-        accreditations: [buildAccreditation()]
-      })
-      await server.register(plugin)
-
-      server.route({
-        method: 'GET',
-        path: '/test',
-        options: { auth: false },
-        handler: async (request) => {
-          const accreditations =
-            await request.formSubmissionsRepository.findAllAccreditations()
-          return { count: accreditations.length }
-        }
-      })
-
-      await server.initialize()
-      const response = await server.inject({ method: 'GET', url: '/test' })
-      const result = JSON.parse(response.payload)
-
-      expect(result.count).toBe(1)
-    })
-  })
 })

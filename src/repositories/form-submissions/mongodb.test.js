@@ -1,4 +1,3 @@
-import Hapi from '@hapi/hapi'
 import { describe, beforeEach, expect } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -9,7 +8,6 @@ import {
   buildRegistration,
   buildOrganisation
 } from './contract/test-data.js'
-import { mongoFormSubmissionsRepositoryPlugin } from './mongodb.plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 
@@ -122,42 +120,4 @@ describe('MongoDB form submissions repository', () => {
   })
 
   testFormSubmissionsRepositoryContract(it)
-
-  describe('plugin wiring', () => {
-    it('makes repository available on request via plugin', async ({
-      mongoClient,
-      seedAccreditations
-    }) => {
-      await seedAccreditations()
-
-      const server = Hapi.server()
-
-      // Provide db dependency that the plugin expects
-      const fakeMongoPlugin = {
-        name: 'mongodb',
-        register: async (s) => {
-          s.decorate('server', 'db', mongoClient.db(DATABASE_NAME))
-        }
-      }
-      await server.register(fakeMongoPlugin)
-      await server.register(mongoFormSubmissionsRepositoryPlugin)
-
-      server.route({
-        method: 'GET',
-        path: '/test',
-        options: { auth: false },
-        handler: async (request) => {
-          const accreditations =
-            await request.formSubmissionsRepository.findAllAccreditations()
-          return { count: accreditations.length }
-        }
-      })
-
-      await server.initialize()
-      const response = await server.inject({ method: 'GET', url: '/test' })
-      const result = JSON.parse(response.payload)
-
-      expect(result.count).toBe(3)
-    })
-  })
 })

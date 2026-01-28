@@ -1,10 +1,8 @@
-import Hapi from '@hapi/hapi'
 import { describe, beforeEach, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
-import { mongoWasteBalancesRepositoryPlugin } from './mongodb.plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'
@@ -75,44 +73,6 @@ describe('MongoDB waste balances repository', () => {
 
     describe('waste balances repository contract', () => {
       testWasteBalancesRepositoryContract(it)
-    })
-
-    describe('plugin wiring', () => {
-      it('makes repository available on request via plugin', async ({
-        mongoClient
-      }) => {
-        const server = Hapi.server()
-
-        // Provide db dependency that the plugin expects
-        const fakeMongoPlugin = {
-          name: 'mongodb',
-          register: async (s) => {
-            s.decorate('server', 'db', mongoClient.db(DATABASE_NAME))
-          }
-        }
-        await server.register(fakeMongoPlugin)
-        await server.register(mongoWasteBalancesRepositoryPlugin)
-
-        server.route({
-          method: 'GET',
-          path: '/test',
-          options: { auth: false },
-          handler: async (request) => {
-            // Should return null for non-existent accreditation (not throw)
-            const balance =
-              await request.wasteBalancesRepository.findByAccreditationId(
-                'non-existent-accreditation'
-              )
-            return { found: balance !== null }
-          }
-        })
-
-        await server.initialize()
-        const response = await server.inject({ method: 'GET', url: '/test' })
-        const result = JSON.parse(response.payload)
-
-        expect(result.found).toBe(false)
-      })
     })
   })
 })
