@@ -64,7 +64,7 @@ const ALL_FIELDS = [
  * Tracks waste received for export. This schema defines:
  * - What counts as "unfilled" per field (unfilledValues)
  * - How to validate filled fields (validationSchema for VAL010)
- * - Which fields must be present for Waste Balance (fieldsRequiredForWasteBalance for VAL011)
+ * - Which fields must be present for inclusion in Waste Balance (fieldsRequiredForInclusionInWasteBalance for VAL011)
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
@@ -154,25 +154,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     .prefs({ abortEarly: false }),
 
   /**
-   * VAL011: Fields required for Waste Balance calculation
+   * VAL011: Fields required for inclusion in Waste Balance
    *
-   * If any of these fields are missing (unfilled), the row is EXCLUDED
-   * from the Waste Balance but still included in the submission.
+   * Per PAE-659 AC03: ALL mandatory fields must be completed for a row to be
+   * included in the Waste Balance. For exporter, this is all 25 fields.
    */
-  fieldsRequiredForWasteBalance: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_RECEIVED_FOR_EXPORT,
-    FIELDS.EWC_CODE,
-    FIELDS.DESCRIPTION_WASTE,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
-    FIELDS.GROSS_WEIGHT,
-    FIELDS.TARE_WEIGHT,
-    FIELDS.PALLET_WEIGHT,
-    FIELDS.NET_WEIGHT,
-    FIELDS.BAILING_WIRE_PROTOCOL,
-    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
-    FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
-    FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
-  ]
+  fieldsRequiredForInclusionInWasteBalance: ALL_FIELDS
 }

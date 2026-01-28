@@ -102,37 +102,14 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.fatalFields).toContain('EXPORT_CONTROLS')
     })
 
-    it('has fieldsRequiredForWasteBalance array with validated fields', () => {
-      expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
-      expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DATE_RECEIVED_FOR_EXPORT'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DESCRIPTION_WASTE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain('GROSS_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('TARE_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('PALLET_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('NET_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'BAILING_WIRE_PROTOCOL'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'WEIGHT_OF_NON_TARGET_MATERIALS'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'RECYCLABLE_PROPORTION_PERCENTAGE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'TONNAGE_RECEIVED_FOR_EXPORT'
+    it('has fieldsRequiredForInclusionInWasteBalance equal to ALL fields', () => {
+      expect(
+        Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
+      ).toBe(true)
+      // Per PAE-659 AC03: ALL mandatory fields must be completed for inclusion
+      // in waste balance - this means all 25 fields for exporter
+      expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual(
+        schema.requiredHeaders
       )
     })
   })

@@ -56,5 +56,5 @@ export const REPROCESSED_LOADS = {
    *
    * Empty - this table does not contribute to waste balance for REPROCESSOR_INPUT.
    */
-  fieldsRequiredForWasteBalance: []
+  fieldsRequiredForInclusionInWasteBalance: []
 }

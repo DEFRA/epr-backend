@@ -8,7 +8,7 @@ import { SENT_ON_LOADS_FIELDS as FIELDS } from './fields.js'
 
 /**
  * Fields required for waste balance calculation.
- * Used for fatalFields and fieldsRequiredForWasteBalance.
+ * Used for fatalFields and fieldsRequiredForInclusionInWasteBalance.
  */
 const WASTE_BALANCE_FIELDS = [
   FIELDS.ROW_ID,
@@ -74,5 +74,5 @@ export const createSentOnLoadsSchema = (rowIdMinimum) => ({
   /**
    * VAL011: Fields required for Waste Balance calculation
    */
-  fieldsRequiredForWasteBalance: WASTE_BALANCE_FIELDS
+  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
 })

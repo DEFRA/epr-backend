@@ -56,5 +56,5 @@ export const SENT_ON_LOADS = {
    *
    * Empty - this table does not contribute to waste balance for REPROCESSOR_OUTPUT.
    */
-  fieldsRequiredForWasteBalance: []
+  fieldsRequiredForInclusionInWasteBalance: []
 }

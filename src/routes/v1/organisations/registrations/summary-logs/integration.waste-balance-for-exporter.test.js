@@ -103,6 +103,8 @@ describe('Submission and placeholder tests (Exporter)', () => {
     ]
 
     const createRowValues = (overrides = {}) => {
+      // All 25 fields must be filled for a row to be included in waste balance
+      // (per PAE-659 AC03: "has all mandatory fields completed")
       const defaults = {
         rowId: 1001,
         dateReceived: '2025-01-15T00:00:00.000Z',
@@ -119,10 +121,10 @@ describe('Submission and placeholder tests (Exporter)', () => {
         recyclablePropPct: 1,
         tonnageReceived: 850,
         interimSite: 'No',
-        interimSiteId: null,
-        interimTonnage: null,
-        dateReceivedByOsr: null,
-        osrId: null,
+        interimSiteId: 100,
+        interimTonnage: 0,
+        dateReceivedByOsr: '2025-01-18T00:00:00.000Z',
+        osrId: 100,
         exportTonnage: 100,
         exportDate: '2025-01-20T00:00:00.000Z',
         exportControls: 'Article 18 (Green list)',
