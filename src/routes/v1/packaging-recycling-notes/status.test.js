@@ -196,6 +196,31 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.payload).toContain('Invalid status transition')
       })
 
+      it('returns 400 when PRN has unknown current status', async () => {
+        const unknownStatusPrnId = '507f1f77bcf86cd799439033'
+        const unknownStatusPrn = createMockPrn({
+          id: unknownStatusPrnId,
+          status: {
+            currentStatus: 'unknown_status',
+            history: [{ status: 'unknown_status', updatedAt: new Date() }]
+          }
+        })
+
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          unknownStatusPrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${unknownStatusPrnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.payload).toContain('Invalid status transition')
+      })
+
       it('returns 422 for invalid PRN id format', async () => {
         const invalidId = 'invalid-id'
 
@@ -221,6 +246,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('returns 500 when updateStatus returns null', async () => {
+        // Reset PRN to draft status for this test
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
         packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
           null
         )
@@ -236,6 +265,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
       })
 
       it('returns 500 when repository throws non-Boom error', async () => {
+        // Reset PRN to draft status for this test
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
         packagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
