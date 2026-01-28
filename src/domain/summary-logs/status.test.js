@@ -516,5 +516,85 @@ describe('status', () => {
         transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTING)
       ).toThrow('Cannot transition summary log from validating to submitting')
     })
+
+    // SUBMISSION_FAILED status transitions
+    it('returns status update for submitting -> submission_failed transition', () => {
+      const summaryLog = {
+        id: 'log-submission-failed-1',
+        status: SUMMARY_LOG_STATUS.SUBMITTING,
+        file: { id: 'file-13' }
+      }
+      const result = transitionStatus(
+        summaryLog,
+        SUMMARY_LOG_STATUS.SUBMISSION_FAILED
+      )
+
+      expect(result).toEqual({
+        status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED,
+        expiresAt: ONE_DAY_LATER
+      })
+    })
+
+    it('throws error for submission_failed -> any transition (terminal state)', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.PREPROCESSING)
+      ).toThrow(
+        'Cannot transition summary log from submission_failed to preprocessing'
+      )
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTING)
+      ).toThrow(
+        'Cannot transition summary log from submission_failed to submitting'
+      )
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMITTED)
+      ).toThrow(
+        'Cannot transition summary log from submission_failed to submitted'
+      )
+    })
+
+    it('throws error for preprocessing -> submission_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.PREPROCESSING }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from preprocessing to submission_failed'
+      )
+    })
+
+    it('throws error for validating -> submission_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATING }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from validating to submission_failed'
+      )
+    })
+
+    it('throws error for validated -> submission_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.VALIDATED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from validated to submission_failed'
+      )
+    })
+
+    it('throws error for submitted -> submission_failed transition', () => {
+      const summaryLog = { status: SUMMARY_LOG_STATUS.SUBMITTED }
+
+      expect(() =>
+        transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
+      ).toThrow(
+        'Cannot transition summary log from submitted to submission_failed'
+      )
+    })
   })
 })
