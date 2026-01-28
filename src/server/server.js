@@ -72,7 +72,7 @@ async function createServer(options = {}) {
   // secureContext  - loads CA certificates from environment config
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
-  // mongo*Plugin   - individual repository plugins (ADR 0026 adapter pattern)
+  // mongo*Plugin   - individual repository plugins
   // s3*Plugin      - S3 repository plugins
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // workers        - sets up worker thread pools and attaches to `request` objects
