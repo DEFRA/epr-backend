@@ -103,7 +103,7 @@ describe('In-memory form submissions repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryFormSubmissionsRepositoryPlugin({
+      const plugin = createInMemoryFormSubmissionsRepositoryPlugin({
         accreditations: [buildAccreditation()]
       })
       await server.register(plugin)

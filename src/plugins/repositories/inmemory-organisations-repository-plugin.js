@@ -3,7 +3,7 @@ import { registerRepository } from './register-repository.js'
 
 /**
  * @param {Object[]} [initialOrganisations]
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/organisations/port.js').OrganisationsRepository }}
+ * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryOrganisationsRepositoryPlugin(
   initialOrganisations
@@ -11,12 +11,10 @@ export function createInMemoryOrganisationsRepositoryPlugin(
   const factory = createInMemoryOrganisationsRepository(initialOrganisations)
   const repository = factory()
 
-  const plugin = {
+  return {
     name: 'organisationsRepository',
     register: (server) => {
       registerRepository(server, 'organisationsRepository', () => repository)
     }
   }
-
-  return { plugin, repository }
 }

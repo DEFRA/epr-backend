@@ -3,17 +3,15 @@ import { registerRepository } from './register-repository.js'
 
 /**
  * @param {Object} [config]
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#adapters/repositories/uploads/port.js').UploadsRepository }}
+ * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryUploadsRepositoryPlugin(config) {
   const repository = createInMemoryUploadsRepository(config)
 
-  const plugin = {
+  return {
     name: 'uploadsRepository',
     register: (server) => {
       registerRepository(server, 'uploadsRepository', () => repository)
     }
   }
-
-  return { plugin, repository }
 }

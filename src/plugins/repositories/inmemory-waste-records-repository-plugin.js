@@ -3,18 +3,16 @@ import { registerRepository } from './register-repository.js'
 
 /**
  * @param {Object[]} [initialRecords]
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/waste-records/port.js').WasteRecordsRepository }}
+ * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryWasteRecordsRepositoryPlugin(initialRecords) {
   const factory = createInMemoryWasteRecordsRepository(initialRecords)
   const repository = factory()
 
-  const plugin = {
+  return {
     name: 'wasteRecordsRepository',
     register: (server) => {
       registerRepository(server, 'wasteRecordsRepository', () => repository)
     }
   }
-
-  return { plugin, repository }
 }

@@ -3,17 +3,15 @@ import { registerRepository } from './register-repository.js'
 
 /**
  * @param {Object} [config]
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#adapters/repositories/public-register/port.js').PublicRegisterRepository }}
+ * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryPublicRegisterRepositoryPlugin(config) {
   const repository = createInMemoryPublicRegisterRepository(config)
 
-  const plugin = {
+  return {
     name: 'publicRegisterRepository',
     register: (server) => {
       registerRepository(server, 'publicRegisterRepository', () => repository)
     }
   }
-
-  return { plugin, repository }
 }

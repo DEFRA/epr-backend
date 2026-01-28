@@ -39,7 +39,7 @@ describe('per-repository plugins integration', () => {
 
     beforeEach(async () => {
       server = Hapi.server()
-      const { plugin } = createInMemoryOrganisationsRepositoryPlugin()
+      const plugin = createInMemoryOrganisationsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({
@@ -77,7 +77,7 @@ describe('per-repository plugins integration', () => {
   describe('organisationsRepository plugin', () => {
     test('insert and findById works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryOrganisationsRepositoryPlugin()
+      const plugin = createInMemoryOrganisationsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({
@@ -103,7 +103,7 @@ describe('per-repository plugins integration', () => {
   describe('summaryLogsRepository plugin', () => {
     test('insert and findById works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemorySummaryLogsRepositoryPlugin()
+      const plugin = createInMemorySummaryLogsRepositoryPlugin()
       await server.register(plugin)
 
       // Mock request.logger for per-request instantiation
@@ -144,7 +144,7 @@ describe('per-repository plugins integration', () => {
   describe('formSubmissionsRepository plugin', () => {
     test('findAllAccreditations works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryFormSubmissionsRepositoryPlugin({
+      const plugin = createInMemoryFormSubmissionsRepositoryPlugin({
         accreditations: [
           { id: 'acc-1', referenceNumber: 'ACC001', orgId: 'org-1' }
         ]
@@ -173,7 +173,7 @@ describe('per-repository plugins integration', () => {
   describe('wasteRecordsRepository plugin', () => {
     test('appendVersions and findByRegistration works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryWasteRecordsRepositoryPlugin()
+      const plugin = createInMemoryWasteRecordsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({
@@ -216,7 +216,7 @@ describe('per-repository plugins integration', () => {
   describe('wasteBalancesRepository plugin', () => {
     test('findByAccreditationId works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryWasteBalancesRepositoryPlugin()
+      const plugin = createInMemoryWasteBalancesRepositoryPlugin()
       await server.register(plugin)
 
       server.route({
@@ -244,7 +244,7 @@ describe('per-repository plugins integration', () => {
   describe('systemLogsRepository plugin', () => {
     test('insert and findByOrganisationId works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemorySystemLogsRepositoryPlugin()
+      const plugin = createInMemorySystemLogsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({
@@ -278,7 +278,7 @@ describe('per-repository plugins integration', () => {
   describe('uploadsRepository plugin', () => {
     test('initiateSummaryLogUpload returns upload metadata via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryUploadsRepositoryPlugin()
+      const plugin = createInMemoryUploadsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({
@@ -311,7 +311,7 @@ describe('per-repository plugins integration', () => {
   describe('publicRegisterRepository plugin', () => {
     test('save and generatePresignedUrl works via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryPublicRegisterRepositoryPlugin()
+      const plugin = createInMemoryPublicRegisterRepositoryPlugin()
       await server.register(plugin)
 
       server.route({

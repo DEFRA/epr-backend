@@ -65,7 +65,7 @@ describe('waste-balances repository - in-memory implementation', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryWasteBalancesRepositoryPlugin()
+      const plugin = createInMemoryWasteBalancesRepositoryPlugin()
       await server.register(plugin)
 
       server.route({

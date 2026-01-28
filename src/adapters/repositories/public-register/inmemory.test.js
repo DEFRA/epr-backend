@@ -25,7 +25,7 @@ describe('In-memory public register repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryPublicRegisterRepositoryPlugin({
+      const plugin = createInMemoryPublicRegisterRepositoryPlugin({
         s3Bucket: 'test-bucket'
       })
       await server.register(plugin)
