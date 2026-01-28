@@ -165,3 +165,44 @@ export function validateApprovals(registrations, accreditations) {
     throw Boom.badData(errorMessages.join('; '))
   }
 }
+
+/**
+ * Validates that specific fields in array items have not been modified.
+ * Matches items by 'id' rather than array index to allow safe deletions.
+ *
+ * @param {string[]} fields - List of field names that cannot be modified.
+ */
+export const validateImmutableFields = (fields) => (value, helpers) => {
+  const original = helpers.prefs.context?.original
+  if (!original) return value
+
+  // Identify which array we are validating (e.g. 'registrations', 'accreditations')
+  const key = helpers.state.path.at(-1)
+  const originalItems = original[key]
+
+  if (!Array.isArray(originalItems)) return value
+
+  // Create a map of existing items for O(1) lookup
+  const originalItemsMap = new Map(originalItems.map((i) => [String(i.id), i]))
+
+  for (const item of value) {
+    // If item has no ID or is new, skip checks
+    if (!item.id) continue
+
+    const originalItem = originalItemsMap.get(String(item.id))
+
+    // Only check if we found a matching ID (validation against persistence)
+    if (originalItem) {
+      for (const field of fields) {
+        // strict equality check
+        if (JSON.stringify(item[field]) !== JSON.stringify(originalItem[field])) {
+          return helpers.error('any.invalid', {
+            message: `Field '${field}' cannot be modified` // Joi will use this as a custom error message
+          })
+        }
+      }
+    }
+  }
+
+  return value
+}

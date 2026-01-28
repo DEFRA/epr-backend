@@ -19,6 +19,7 @@ import {
   userSchema
 } from './base.js'
 import { registrationSchema, registrationUpdateSchema } from './registration.js'
+import { validateImmutableFields } from './helpers.js'
 
 export { idSchema, statusHistoryItemSchema } from './base.js'
 export { registrationSchema } from './registration.js'
@@ -79,6 +80,12 @@ export const organisationReplaceSchema = organisationInsertSchema
   .fork(['status'], (schema) => schema.optional())
   .keys({
     schemaVersion: Joi.number().required().valid(1),
-    registrations: Joi.array().items(registrationUpdateSchema).default([]),
-    accreditations: Joi.array().items(accreditationUpdateSchema).default([])
+    registrations: Joi.array()
+      .items(registrationUpdateSchema)
+      .default([])
+      .custom(validateImmutableFields(['id', 'statusHistory'])),
+    accreditations: Joi.array()
+      .items(accreditationUpdateSchema)
+      .default([])
+      .custom(validateImmutableFields(['id', 'statusHistory']))
   })

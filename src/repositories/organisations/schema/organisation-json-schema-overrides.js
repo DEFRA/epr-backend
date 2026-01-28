@@ -10,7 +10,7 @@ import { registrationUpdateSchema } from './registration.js'
  * conditional logic that does not translate directly.
  */
 
-const NON_EDITABLE_KEYS = new Set(['id'])
+const NON_EDITABLE_KEYS = new Set(['id', 'statusHistory', 'systemReference'])
 
 /**
  * Extracts and processes the first valid branch from a conditional schema.
