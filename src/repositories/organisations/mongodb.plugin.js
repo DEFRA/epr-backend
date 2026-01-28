@@ -1,5 +1,5 @@
-import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { registerRepository } from './register-repository.js'
+import { createOrganisationsRepository } from './mongodb.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @typedef {Object} MongoOrganisationsRepositoryPluginOptions

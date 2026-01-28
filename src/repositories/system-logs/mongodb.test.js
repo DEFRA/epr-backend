@@ -5,7 +5,7 @@ import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 import { MongoClient } from 'mongodb'
 import { randomUUID } from 'crypto'
-import { mongoSystemLogsRepositoryPlugin } from '#plugins/repositories/mongo-system-logs-repository-plugin.js'
+import { mongoSystemLogsRepositoryPlugin } from './mongodb.plugin.js'
 
 const it = mongoIt.extend({
   mongoClient: async ({ db }, use) => {

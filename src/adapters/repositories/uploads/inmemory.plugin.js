@@ -1,5 +1,5 @@
-import { createInMemoryUploadsRepository } from '#adapters/repositories/uploads/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createInMemoryUploadsRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Object} [config]

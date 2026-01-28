@@ -1,5 +1,5 @@
-import { createInMemoryPublicRegisterRepository } from '#adapters/repositories/public-register/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createInMemoryPublicRegisterRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Object} [config]

@@ -9,7 +9,7 @@ import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
-import { mongoOrganisationsRepositoryPlugin } from '#plugins/repositories/mongo-organisations-repository-plugin.js'
+import { mongoOrganisationsRepositoryPlugin } from './mongodb.plugin.js'
 
 const COLLECTION_NAME = 'epr-organisations'
 const DATABASE_NAME = 'epr-backend'

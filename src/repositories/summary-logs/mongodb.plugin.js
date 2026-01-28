@@ -1,5 +1,5 @@
-import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
-import { registerRepository } from './register-repository.js'
+import { createSummaryLogsRepository } from './mongodb.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 // Per-request instantiation: needs request.logger for update conflict logging.
 export const mongoSummaryLogsRepositoryPlugin = {

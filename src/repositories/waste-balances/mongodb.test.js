@@ -4,7 +4,7 @@ import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { MongoClient } from 'mongodb'
 import { createWasteBalancesRepository } from './mongodb.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
-import { mongoWasteBalancesRepositoryPlugin } from '#plugins/repositories/mongo-waste-balances-repository-plugin.js'
+import { mongoWasteBalancesRepositoryPlugin } from './mongodb.plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 const WASTE_BALANCE_COLLECTION_NAME = 'waste-balances'

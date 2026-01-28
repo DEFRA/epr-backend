@@ -1,5 +1,5 @@
-import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { registerRepository } from './register-repository.js'
+import { createSystemLogsRepository } from './mongodb.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 // Per-request instantiation: needs request.logger for error logging.
 export const mongoSystemLogsRepositoryPlugin = {

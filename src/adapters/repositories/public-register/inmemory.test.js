@@ -2,7 +2,7 @@ import Hapi from '@hapi/hapi'
 import { describe, it as base, expect } from 'vitest'
 import { createInMemoryPublicRegisterRepository } from './inmemory.js'
 import { testPublicRegisterRepositoryContract } from './port.contract.js'
-import { createInMemoryPublicRegisterRepositoryPlugin } from '#plugins/repositories/inmemory-public-register-repository-plugin.js'
+import { createInMemoryPublicRegisterRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

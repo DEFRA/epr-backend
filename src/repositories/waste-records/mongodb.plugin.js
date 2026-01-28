@@ -1,5 +1,5 @@
-import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
-import { registerRepository } from './register-repository.js'
+import { createWasteRecordsRepository } from './mongodb.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 export const mongoWasteRecordsRepositoryPlugin = {
   name: 'wasteRecordsRepository',

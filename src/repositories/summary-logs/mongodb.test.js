@@ -6,7 +6,7 @@ import { MongoClient } from 'mongodb'
 import { createSummaryLogsRepository } from './mongodb.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
-import { mongoSummaryLogsRepositoryPlugin } from '#plugins/repositories/mongo-summary-logs-repository-plugin.js'
+import { mongoSummaryLogsRepositoryPlugin } from './mongodb.plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 

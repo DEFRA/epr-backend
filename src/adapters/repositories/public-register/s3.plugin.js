@@ -1,8 +1,8 @@
-import { createPublicRegisterRepository } from '#adapters/repositories/public-register/public-register.js'
-import { publicRegisterConfig } from '#adapters/repositories/public-register/config.js'
+import { createPublicRegisterRepository } from './public-register.js'
+import { publicRegisterConfig } from './config.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
-import { registerRepository } from './register-repository.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 export const s3PublicRegisterRepositoryPlugin = {
   name: 'publicRegisterRepository',

@@ -1,5 +1,5 @@
-import { createFormSubmissionsRepository } from '#repositories/form-submissions/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createFormSubmissionsRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @typedef {Object} FormSubmissionsInitialData

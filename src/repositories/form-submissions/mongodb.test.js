@@ -9,7 +9,7 @@ import {
   buildRegistration,
   buildOrganisation
 } from './contract/test-data.js'
-import { mongoFormSubmissionsRepositoryPlugin } from '#plugins/repositories/mongo-form-submissions-repository-plugin.js'
+import { mongoFormSubmissionsRepositoryPlugin } from './mongodb.plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 

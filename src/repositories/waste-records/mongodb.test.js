@@ -9,7 +9,7 @@ import {
   toWasteRecordVersions
 } from './contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { mongoWasteRecordsRepositoryPlugin } from '#plugins/repositories/mongo-waste-records-repository-plugin.js'
+import { mongoWasteRecordsRepositoryPlugin } from './mongodb.plugin.js'
 
 const DATABASE_NAME = 'epr-backend'
 const COLLECTION_NAME = 'waste-records'

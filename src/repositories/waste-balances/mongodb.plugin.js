@@ -1,6 +1,6 @@
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
-import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
-import { registerRepository } from './register-repository.js'
+import { createWasteBalancesRepository } from './mongodb.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @typedef {Object} MongoWasteBalancesRepositoryPluginOptions
