@@ -1,5 +1,13 @@
 import { StatusCodes } from 'http-status-codes'
-import { vi, describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest'
+import {
+  vi,
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  afterEach
+} from 'vitest'
 
 import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
