@@ -27,7 +27,8 @@ describe('MongoDB packaging recycling notes repository', () => {
     expect(repository).toEqual({
       findById: expect.any(Function),
       create: expect.any(Function),
-      findByOrganisation: expect.any(Function)
+      findByOrganisation: expect.any(Function),
+      updateStatus: expect.any(Function)
     })
 
     expect(await repository.findById(hexId)).toEqual({ ...prn, id: hexId })
@@ -189,6 +190,81 @@ describe('MongoDB packaging recycling notes repository', () => {
         ...prn,
         id: hexId
       })
+    })
+  })
+
+  describe('updateStatus', () => {
+    it('updates status and returns PRN with id', async () => {
+      const hexId = '123456789012345678901234'
+      const updatedPrn = {
+        _id: { toHexString: () => hexId },
+        issuedByOrganisation: 'org-123',
+        tonnage: 100,
+        status: {
+          currentStatus: 'awaiting_authorisation',
+          history: [
+            { status: 'draft', updatedAt: new Date() },
+            { status: 'awaiting_authorisation', updatedAt: new Date() }
+          ]
+        }
+      }
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndUpdate: async () => updatedPrn
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(dbMock)
+      const repository = factory()
+
+      const result = await repository.updateStatus({
+        id: hexId,
+        status: 'awaiting_authorisation',
+        updatedBy: 'user-123',
+        updatedAt: new Date()
+      })
+
+      expect(result).toEqual({
+        ...updatedPrn,
+        id: hexId
+      })
+    })
+
+    it('returns null when PRN not found', async () => {
+      const hexId = '123456789012345678901234'
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndUpdate: async () => null
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(dbMock)
+      const repository = factory()
+
+      const result = await repository.updateStatus({
+        id: hexId,
+        status: 'awaiting_authorisation',
+        updatedBy: 'user-123',
+        updatedAt: new Date()
+      })
+
+      expect(result).toBeNull()
     })
   })
 })

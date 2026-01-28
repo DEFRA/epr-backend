@@ -12,6 +12,22 @@ export const PRN_STATUS = Object.freeze({
 })
 
 /**
+ * Valid status transitions for PRNs
+ * @type {Record<PrnStatus, PrnStatus[]>}
+ */
+export const PRN_STATUS_TRANSITIONS = Object.freeze({
+  [PRN_STATUS.DRAFT]: [PRN_STATUS.AWAITING_AUTHORISATION, PRN_STATUS.CANCELLED],
+  [PRN_STATUS.AWAITING_AUTHORISATION]: [
+    PRN_STATUS.AWAITING_ACCEPTANCE,
+    PRN_STATUS.CANCELLED
+  ],
+  [PRN_STATUS.AWAITING_ACCEPTANCE]: [PRN_STATUS.ACCEPTED, PRN_STATUS.REJECTED],
+  [PRN_STATUS.ACCEPTED]: [],
+  [PRN_STATUS.REJECTED]: [],
+  [PRN_STATUS.CANCELLED]: []
+})
+
+/**
  * @typedef {{
  *   status: PrnStatus;
  *   updatedAt: Date;
