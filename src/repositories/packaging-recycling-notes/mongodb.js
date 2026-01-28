@@ -87,6 +87,36 @@ const findByOrganisation = async (db, organisationId) => {
 
 /**
  * @param {import('mongodb').Db} db
+ * @param {import('./port.js').UpdateStatusParams} params
+ * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote | null>}
+ */
+const updateStatus = async (db, { id, status, updatedBy, updatedAt }) => {
+  const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+    { _id: ObjectId.createFromHexString(id) },
+    {
+      $set: {
+        'status.currentStatus': status,
+        updatedAt
+      },
+      $push: {
+        'status.history': { status, updatedAt, updatedBy }
+      }
+    },
+    { returnDocument: 'after' }
+  )
+
+  if (!result) {
+    return null
+  }
+
+  return {
+    ...result,
+    id: result._id.toHexString()
+  }
+}
+
+/**
+ * @param {import('mongodb').Db} db
  * @returns {Promise<import('./port.js').PackagingRecyclingNotesRepositoryFactory>}
  */
 export const createPackagingRecyclingNotesRepository = async (db) => {
@@ -96,6 +126,7 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
     findById: (id) => findById(db, id),
     create: (prn) => create(db, prn),
     findByOrganisation: (organisationId) =>
-      findByOrganisation(db, organisationId)
+      findByOrganisation(db, organisationId),
+    updateStatus: (params) => updateStatus(db, params)
   })
 }
