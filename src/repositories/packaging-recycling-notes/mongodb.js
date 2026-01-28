@@ -1,5 +1,7 @@
 import { ObjectId } from 'mongodb'
 
+import { validateId } from './validation.js'
+
 const COLLECTION_NAME = 'packaging-recycling-notes'
 
 /**
@@ -21,18 +23,38 @@ async function ensureCollection(db) {
     { name: 'issuedBy_status' }
   )
 
+  // Optimises queries for PRN list by accreditation
+  await collection.createIndex(
+    { accreditationId: 1 },
+    { name: 'accreditationId' }
+  )
+
   return collection
 }
 
 /**
  * @param {import('mongodb').Db} db
  * @param {string} id
- * @returns {Promise<Object>} Prn
+ * @returns {Promise<Object|null>} Prn
  */
 const findById = async (db, id) => {
+  const validatedId = validateId(id)
   return db
     .collection(COLLECTION_NAME)
-    .findOne({ _id: ObjectId.createFromHexString(id) })
+    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
+}
+
+/**
+ * @param {import('mongodb').Db} db
+ * @param {string} accreditationId
+ * @returns {Promise<Array<Object>>} PRNs for the accreditation
+ */
+const findByAccreditationId = async (db, accreditationId) => {
+  const validatedAccreditationId = validateId(accreditationId)
+  return db
+    .collection(COLLECTION_NAME)
+    .find({ accreditationId: validatedAccreditationId })
+    .toArray()
 }
 
 /**
@@ -43,6 +65,8 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
   await ensureCollection(db)
 
   return () => ({
-    findById: (id) => findById(db, id)
+    findById: (id) => findById(db, id),
+    findByAccreditationId: (accreditationId) =>
+      findByAccreditationId(db, accreditationId)
   })
 }

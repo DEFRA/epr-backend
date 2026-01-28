@@ -1,6 +1,7 @@
 /**
  * @typedef {Object} PackagingRecyclingNotesRepository
  * @property {(id: string) => Promise<Object>} findById
+ * @property {(accreditationId: string) => Promise<Array<Object>>} findByAccreditationId
  */
 
 /**
