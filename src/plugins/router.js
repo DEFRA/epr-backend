@@ -8,6 +8,7 @@ import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
 import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
+import * as packagingRecyclingNotesRoutes from '#routes/v1/packaging-recycling-notes/index.js'
 
 const router = {
   plugin: {
@@ -25,6 +26,11 @@ const router = {
           ? Object.values(devRoutes)
           : []
 
+        const packagingRecyclingNotesRoutesBehindFeatureFlag =
+          featureFlags.isCreatePackagingRecyclingNotesEnabled()
+            ? Object.values(packagingRecyclingNotesRoutes)
+            : []
+
         server.route([
           health,
           ...apply,
@@ -35,7 +41,8 @@ const router = {
           ...formSubmissionsRoutes,
           ...Object.values(systemLogsRoutes),
           ...wasteBalances,
-          ...Object.values(publicRegisterRoutes)
+          ...Object.values(publicRegisterRoutes),
+          ...packagingRecyclingNotesRoutesBehindFeatureFlag
         ])
       })
     }
