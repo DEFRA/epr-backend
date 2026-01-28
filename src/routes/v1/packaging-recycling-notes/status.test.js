@@ -113,7 +113,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     })
 
     describe('successful requests', () => {
-      it('returns 200 when transitioning from draft to created', async () => {
+      it('returns 200 and calls updateStatus with correct parameters', async () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}/status`,
@@ -126,15 +126,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         const body = JSON.parse(response.payload)
         expect(body.id).toBe(prnId)
         expect(body.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
-      })
-
-      it('calls repository updateStatus with correct parameters', async () => {
-        await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}/status`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
-        })
 
         expect(
           packagingRecyclingNotesRepository.updateStatus
@@ -205,7 +196,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(response.payload).toContain('Invalid status transition')
       })
 
-      it('returns 400 for invalid PRN id format', async () => {
+      it('returns 422 for invalid PRN id format', async () => {
         const invalidId = 'invalid-id'
 
         const response = await server.inject({
@@ -215,10 +206,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
 
-      it('returns 400 for invalid status value', async () => {
+      it('returns 422 for invalid status value', async () => {
         const response = await server.inject({
           method: 'POST',
           url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}/status`,
@@ -226,7 +217,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: 'invalid_status' }
         })
 
-        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
     })
   })

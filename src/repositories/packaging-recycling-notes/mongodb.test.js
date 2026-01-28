@@ -27,7 +27,8 @@ describe('MongoDB packaging recycling notes repository', () => {
     expect(repository).toEqual({
       findById: expect.any(Function),
       create: expect.any(Function),
-      findByOrganisation: expect.any(Function)
+      findByOrganisation: expect.any(Function),
+      updateStatus: expect.any(Function)
     })
 
     expect(await repository.findById(hexId)).toEqual({ ...prn, id: hexId })
