@@ -219,6 +219,36 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
       })
+
+      it('returns 500 when updateStatus returns null', async () => {
+        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
+          null
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      })
+
+      it('returns 500 when repository throws non-Boom error', async () => {
+        packagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
+          new Error('Database connection failed')
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+      })
     })
   })
 
