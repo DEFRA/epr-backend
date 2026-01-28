@@ -60,7 +60,7 @@ export const generateLatestPublicRegister = {
         .code(StatusCodes.CREATED)
     } catch (error) {
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${publicRegisterGeneratePath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
