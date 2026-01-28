@@ -1,4 +1,5 @@
 import { audit } from '@defra/cdp-auditing'
+import { config } from '#root/config.js'
 
 /**
  * @import {SystemLogsRepository} from '#repositories/system-logs/port.js'
@@ -35,13 +36,25 @@ async function auditGlassMigration(
     user: SYSTEM_USER
   }
 
-  audit(payload)
+  // Prevent sending large payloads to CDP library (causes error and audit event is lost)
+  const safeAuditingPayload = isPayloadSmallEnoughToAudit(payload)
+    ? payload
+    : { ...payload, context: { organisationId } }
+
+  audit(safeAuditingPayload)
+
+  // System logs always get the full payload
   await systemLogsRepository.insert({
     createdAt: new Date(),
     createdBy: SYSTEM_USER,
     event: payload.event,
     context: payload.context
   })
+}
+
+function isPayloadSmallEnoughToAudit(payload) {
+  const payloadSize = Buffer.byteLength(JSON.stringify(payload), 'utf8')
+  return payloadSize < config.get('audit.maxPayloadSizeBytes')
 }
 
 export { auditGlassMigration }

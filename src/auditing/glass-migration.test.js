@@ -1,5 +1,6 @@
 import { auditGlassMigration } from './glass-migration.js'
 import { vi, describe, it, beforeEach, afterEach } from 'vitest'
+import { randomBytes } from 'crypto'
 
 const mockAudit = vi.fn()
 const mockInsert = vi.fn()
@@ -27,56 +28,107 @@ describe('auditGlassMigration', () => {
     insert: mockInsert
   })
 
-  it('records audit event with glass-migration category and migrate action', async () => {
-    const previous = {
-      registrations: [{ registrationNumber: 'REG-2025-GL' }]
-    }
-    const next = {
-      registrations: [{ registrationNumber: 'REG-2025-GR' }]
-    }
+  describe('small payloads', () => {
+    it('includes full context in CDP audit event', async () => {
+      const previous = {
+        registrations: [{ registrationNumber: 'REG-2025-GL' }]
+      }
+      const next = {
+        registrations: [{ registrationNumber: 'REG-2025-GR' }]
+      }
 
-    await auditGlassMigration(
-      createMockSystemLogsRepository(),
-      organisationId,
-      previous,
-      next
-    )
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
 
-    expect(mockAudit).toHaveBeenCalledWith({
-      event: {
-        category: 'entity',
-        subCategory: 'epr-organisations',
-        action: 'glass-migration'
-      },
-      context: { organisationId, previous, next },
-      user: { id: 'system', email: 'system', scope: [] }
+      expect(mockAudit).toHaveBeenCalledWith({
+        event: {
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'glass-migration'
+        },
+        context: { organisationId, previous, next },
+        user: { id: 'system', email: 'system', scope: [] }
+      })
+    })
+
+    it('includes full context in system log', async () => {
+      const previous = {
+        registrations: [{ registrationNumber: 'REG-2025-GL' }]
+      }
+      const next = {
+        registrations: [{ registrationNumber: 'REG-2025-GR' }]
+      }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockInsert).toHaveBeenCalledWith({
+        createdAt: now,
+        createdBy: { id: 'system', email: 'system', scope: [] },
+        event: {
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'glass-migration'
+        },
+        context: { organisationId, previous, next }
+      })
     })
   })
 
-  it('records system log with createdAt and createdBy fields', async () => {
-    const previous = {
-      registrations: [{ registrationNumber: 'REG-2025-GL' }]
-    }
-    const next = {
-      registrations: [{ registrationNumber: 'REG-2025-GR' }]
-    }
+  describe('large payloads', () => {
+    it('omits previous and next from CDP audit event', async () => {
+      const veryLongString = randomBytes(1e6).toString('hex')
+      const previous = { registrations: [{ data: veryLongString }] }
+      const next = { registrations: [{ data: veryLongString }] }
 
-    await auditGlassMigration(
-      createMockSystemLogsRepository(),
-      organisationId,
-      previous,
-      next
-    )
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
 
-    expect(mockInsert).toHaveBeenCalledWith({
-      createdAt: now,
-      createdBy: { id: 'system', email: 'system', scope: [] },
-      event: {
-        category: 'entity',
-        subCategory: 'epr-organisations',
-        action: 'glass-migration'
-      },
-      context: { organisationId, previous, next }
+      expect(mockAudit).toHaveBeenCalledWith({
+        event: {
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'glass-migration'
+        },
+        context: { organisationId },
+        user: { id: 'system', email: 'system', scope: [] }
+      })
+    })
+
+    it('still includes full context in system log', async () => {
+      const veryLongString = randomBytes(1e6).toString('hex')
+      const previous = { registrations: [{ data: veryLongString }] }
+      const next = { registrations: [{ data: veryLongString }] }
+
+      await auditGlassMigration(
+        createMockSystemLogsRepository(),
+        organisationId,
+        previous,
+        next
+      )
+
+      expect(mockInsert).toHaveBeenCalledWith({
+        createdAt: now,
+        createdBy: { id: 'system', email: 'system', scope: [] },
+        event: {
+          category: 'entity',
+          subCategory: 'epr-organisations',
+          action: 'glass-migration'
+        },
+        context: { organisationId, previous, next }
+      })
     })
   })
 })
