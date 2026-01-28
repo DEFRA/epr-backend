@@ -25,7 +25,7 @@ describe('In-memory waste records repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryWasteRecordsRepositoryPlugin()
+      const plugin = createInMemoryWasteRecordsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({

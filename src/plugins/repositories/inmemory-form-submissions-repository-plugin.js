@@ -10,7 +10,7 @@ import { registerRepository } from './register-repository.js'
 
 /**
  * @param {FormSubmissionsInitialData} [initialData]
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/form-submissions/port.js').FormSubmissionsRepository }}
+ * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryFormSubmissionsRepositoryPlugin(
   initialData = {}
@@ -22,12 +22,10 @@ export function createInMemoryFormSubmissionsRepositoryPlugin(
   )
   const repository = factory()
 
-  const plugin = {
+  return {
     name: 'formSubmissionsRepository',
     register: (server) => {
       registerRepository(server, 'formSubmissionsRepository', () => repository)
     }
   }
-
-  return { plugin, repository }
 }

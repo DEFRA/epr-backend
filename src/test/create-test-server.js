@@ -114,7 +114,7 @@ function buildRepositoryPlugins(repoOverrides) {
     if (repoOverrides[name]) {
       return createRepositoryPlugin(name, repoOverrides[name])
     }
-    return createDefault().plugin
+    return createDefault()
   })
 }
 

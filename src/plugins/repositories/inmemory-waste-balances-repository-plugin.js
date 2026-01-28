@@ -9,7 +9,7 @@ import { registerRepository } from './register-repository.js'
 /**
  * @param {Object[]} [initialWasteBalances]
  * @param {WasteBalancesDependencies} [dependencies]
- * @returns {{ plugin: import('@hapi/hapi').Plugin<void>, repository: import('#repositories/waste-balances/port.js').WasteBalancesRepository }}
+ * @returns {import('@hapi/hapi').Plugin<void>}
  */
 export function createInMemoryWasteBalancesRepositoryPlugin(
   initialWasteBalances,
@@ -21,12 +21,10 @@ export function createInMemoryWasteBalancesRepositoryPlugin(
   )
   const repository = factory()
 
-  const plugin = {
+  return {
     name: 'wasteBalancesRepository',
     register: (server) => {
       registerRepository(server, 'wasteBalancesRepository', () => repository)
     }
   }
-
-  return { plugin, repository }
 }

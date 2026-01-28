@@ -57,7 +57,7 @@ describe('In-memory uploads repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemoryUploadsRepositoryPlugin()
+      const plugin = createInMemoryUploadsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({

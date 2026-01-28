@@ -25,7 +25,7 @@ describe('In memory system logs repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemorySystemLogsRepositoryPlugin()
+      const plugin = createInMemorySystemLogsRepositoryPlugin()
       await server.register(plugin)
 
       server.route({

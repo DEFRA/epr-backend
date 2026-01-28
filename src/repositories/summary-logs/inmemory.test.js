@@ -98,7 +98,7 @@ describe('In-memory summary logs repository', () => {
   describe('plugin wiring', () => {
     it('makes repository available on request via plugin', async () => {
       const server = Hapi.server()
-      const { plugin } = createInMemorySummaryLogsRepositoryPlugin()
+      const plugin = createInMemorySummaryLogsRepositoryPlugin()
       await server.register(plugin)
 
       // Provide request.logger that the plugin needs
