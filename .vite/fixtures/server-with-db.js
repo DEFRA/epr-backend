@@ -6,7 +6,7 @@ export const it = dbTest.extend({
       // db parameter triggers MongoDB setup (unused directly)
       const _dbUri = db
       const { createServer } = await import('#server/server.js')
-      const server = await createServer()
+      const server = await createServer({ skipQueueConsumer: true })
       await server.initialize()
 
       await use(server)

@@ -26,7 +26,7 @@ describe('MongoDB plugin', () => {
     process.env.MONGO_DATABASE = testDbName
 
     const { createServer } = await import('#server/server.js')
-    server = await createServer()
+    server = await createServer({ skipQueueConsumer: true })
     await server.initialize()
   })
 
@@ -55,7 +55,7 @@ describe('MongoDB plugin', () => {
 
   it('should handle re-initialization against existing database', async () => {
     const { createServer } = await import('#server/server.js')
-    const server2 = await createServer()
+    const server2 = await createServer({ skipQueueConsumer: true })
     await server2.initialize()
     await server2.stop()
 

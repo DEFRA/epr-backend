@@ -20,6 +20,7 @@ export async function createTestServer(options = {}) {
 
   const server = await createServer({
     skipMongoDb,
+    skipQueueConsumer: true,
     ...options
   })
   await server.initialize()
