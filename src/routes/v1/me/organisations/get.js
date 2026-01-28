@@ -1,5 +1,8 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
+import {
+  getOrgDataFromDefraIdToken,
+  isInitialUser
+} from '#common/helpers/auth/roles/helpers.js'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -26,6 +29,7 @@ import { StatusCodes } from 'http-status-codes'
  *     id: string
  *   }
  *   linkedAt: string
+ *   isInitialUser: boolean
  * }} LinkedDefraOrganisation
  */
 
@@ -94,7 +98,8 @@ export const organisationsLinkedGetAll = {
           name: linkedOrg.linkedDefraOrganisation.orgName,
           orgId: linkedOrg.linkedDefraOrganisation.orgId,
           linkedBy: linkedOrg.linkedDefraOrganisation.linkedBy,
-          linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt
+          linkedAt: linkedOrg.linkedDefraOrganisation.linkedAt,
+          isInitialUser: isInitialUser(email)(linkedOrg)
         }
       : null
 

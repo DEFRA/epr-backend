@@ -108,7 +108,8 @@ describe('GET /v1/me/organisations', () => {
             email,
             id: '550e8400-e29b-41d4-a716-446655440001'
           },
-          linkedAt
+          linkedAt,
+          isInitialUser: true
         },
         unlinked: [
           {
@@ -221,7 +222,58 @@ describe('GET /v1/me/organisations', () => {
     const result = JSON.parse(response.payload)
 
     expect(result.organisations.linked).not.toBeNull()
+    expect(result.organisations.linked.isInitialUser).toBe(true)
     expect(result.organisations.unlinked).toEqual([])
+  })
+
+  it('should return isInitialUser false when user does not have initial_user role on linked org', async () => {
+    const organisationsRepositoryFactory =
+      createInMemoryOrganisationsRepository([])
+    const organisationsRepository = organisationsRepositoryFactory()
+    const featureFlags = createInMemoryFeatureFlags({
+      organisations: true
+    })
+
+    const server = await createTestServer({
+      repositories: { organisationsRepository: organisationsRepositoryFactory },
+      featureFlags
+    })
+
+    const linkedAt = new Date().toISOString()
+
+    // Linked organisation where user only has standard_user role
+    await buildApprovedOrg(organisationsRepository, {
+      users: [
+        {
+          fullName: 'Test User',
+          email,
+          roles: ['standard_user']
+        }
+      ],
+      linkedDefraOrganisation: {
+        orgId: COMPANY_1_ID,
+        orgName: 'Test Company Ltd',
+        linkedBy: {
+          email: 'someone.else@example.com',
+          id: '550e8400-e29b-41d4-a716-446655440001'
+        },
+        linkedAt
+      }
+    })
+
+    const response = await server.inject({
+      method: 'GET',
+      url: '/v1/me/organisations',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    })
+
+    expect(response.statusCode).toBe(StatusCodes.OK)
+    const result = JSON.parse(response.payload)
+
+    expect(result.organisations.linked).not.toBeNull()
+    expect(result.organisations.linked.isInitialUser).toBe(false)
   })
 
   it('should return empty arrays when user has no organisations', async () => {
