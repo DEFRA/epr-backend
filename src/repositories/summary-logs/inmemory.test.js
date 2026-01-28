@@ -5,7 +5,7 @@ import { createInMemorySummaryLogsRepository } from './inmemory.js'
 import { testSummaryLogsRepositoryContract } from './port.contract.js'
 import { summaryLogFactory } from './contract/test-data.js'
 import { waitForVersion } from './contract/test-helpers.js'
-import { createInMemorySummaryLogsRepositoryPlugin } from '#plugins/repositories/inmemory-summary-logs-repository-plugin.js'
+import { createInMemorySummaryLogsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

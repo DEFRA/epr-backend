@@ -1,5 +1,5 @@
-import { createInMemoryWasteBalancesRepository } from '#repositories/waste-balances/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createInMemoryWasteBalancesRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @typedef {Object} WasteBalancesDependencies

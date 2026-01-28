@@ -1,5 +1,5 @@
-import { createInMemoryWasteRecordsRepository } from '#repositories/waste-records/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createInMemoryWasteRecordsRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Object[]} [initialRecords]

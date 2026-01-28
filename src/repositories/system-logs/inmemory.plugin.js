@@ -1,5 +1,5 @@
-import { createSystemLogsRepository } from '#repositories/system-logs/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createSystemLogsRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /** @returns {import('@hapi/hapi').Plugin<void>} */
 export function createInMemorySystemLogsRepositoryPlugin() {

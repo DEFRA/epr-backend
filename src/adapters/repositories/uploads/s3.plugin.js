@@ -1,7 +1,7 @@
-import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createUploadsRepository } from './cdp-uploader.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
-import { registerRepository } from './register-repository.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 export const s3UploadsRepositoryPlugin = {
   name: 'uploadsRepository',

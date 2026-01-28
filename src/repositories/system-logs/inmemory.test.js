@@ -2,7 +2,7 @@ import Hapi from '@hapi/hapi'
 import { describe, expect, it as base } from 'vitest'
 import { createSystemLogsRepository } from './inmemory.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
-import { createInMemorySystemLogsRepositoryPlugin } from '#plugins/repositories/inmemory-system-logs-repository-plugin.js'
+import { createInMemorySystemLogsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

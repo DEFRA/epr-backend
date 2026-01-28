@@ -2,7 +2,7 @@ import Hapi from '@hapi/hapi'
 import { describe, it as base, expect, it, vi } from 'vitest'
 import { createInMemoryWasteBalancesRepository } from './inmemory.js'
 import { testWasteBalancesRepositoryContract } from './port.contract.js'
-import { createInMemoryWasteBalancesRepositoryPlugin } from '#plugins/repositories/inmemory-waste-balances-repository-plugin.js'
+import { createInMemoryWasteBalancesRepositoryPlugin } from './inmemory.plugin.js'
 
 const extendedIt = base.extend({
   // eslint-disable-next-line no-empty-pattern

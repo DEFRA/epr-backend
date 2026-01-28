@@ -3,7 +3,7 @@ import { describe, it as base, beforeEach, afterEach, expect } from 'vitest'
 import { createInMemoryUploadsRepository } from './inmemory.js'
 import { testUploadsRepositoryContract } from './port.contract.js'
 import { createCallbackReceiver } from './test-helpers/callback-receiver.js'
-import { createInMemoryUploadsRepositoryPlugin } from '#plugins/repositories/inmemory-uploads-repository-plugin.js'
+import { createInMemoryUploadsRepositoryPlugin } from './inmemory.plugin.js'
 
 let callbackReceiver
 

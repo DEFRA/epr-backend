@@ -1,7 +1,4 @@
-import {
-  closeWorkerPool,
-  createSummaryLogsCommandExecutor
-} from '#adapters/validators/summary-logs/piscina.js'
+import { closeWorkerPool, createSummaryLogsCommandExecutor } from './piscina.js'
 import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES

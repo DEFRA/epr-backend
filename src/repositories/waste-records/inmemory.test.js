@@ -7,7 +7,7 @@ import {
   toWasteRecordVersions
 } from './contract/test-data.js'
 import { WASTE_RECORD_TYPE } from '#domain/waste-records/model.js'
-import { createInMemoryWasteRecordsRepositoryPlugin } from '#plugins/repositories/inmemory-waste-records-repository-plugin.js'
+import { createInMemoryWasteRecordsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

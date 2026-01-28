@@ -7,7 +7,7 @@ import {
   buildRegistration,
   buildOrganisation
 } from './contract/test-data.js'
-import { createInMemoryFormSubmissionsRepositoryPlugin } from '#plugins/repositories/inmemory-form-submissions-repository-plugin.js'
+import { createInMemoryFormSubmissionsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

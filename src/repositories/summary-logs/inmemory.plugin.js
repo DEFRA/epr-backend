@@ -1,5 +1,5 @@
-import { createInMemorySummaryLogsRepository } from '#repositories/summary-logs/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createInMemorySummaryLogsRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 // Per-request instantiation for update conflict logging.
 /** @returns {import('@hapi/hapi').Plugin<void>} */

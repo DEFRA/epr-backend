@@ -7,7 +7,7 @@ import {
   ORGANISATION_STATUS,
   REG_ACC_STATUS
 } from '#domain/organisations/model.js'
-import { createInMemoryOrganisationsRepositoryPlugin } from '#plugins/repositories/inmemory-organisations-repository-plugin.js'
+import { createInMemoryOrganisationsRepositoryPlugin } from './inmemory.plugin.js'
 
 const it = base.extend({
   // eslint-disable-next-line no-empty-pattern

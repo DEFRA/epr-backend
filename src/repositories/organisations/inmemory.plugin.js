@@ -1,5 +1,5 @@
-import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
-import { registerRepository } from './register-repository.js'
+import { createInMemoryOrganisationsRepository } from './inmemory.js'
+import { registerRepository } from '#plugins/register-repository.js'
 
 /**
  * @param {Object[]} [initialOrganisations]
