@@ -5,21 +5,29 @@ import {
   migrateGlassOrganisation
 } from './run-glass-migration.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
   buildRegistration
 } from '#repositories/organisations/contract/test-data.js'
 import * as glassMigration from '#glass-migration/glass-migration.js'
+import * as glassMigrationAudit from '#root/auditing/glass-migration.js'
 
 vi.mock('#repositories/organisations/mongodb.js', () => ({
   createOrganisationsRepository: vi.fn()
 }))
 
+vi.mock('#repositories/system-logs/mongodb.js', () => ({
+  createSystemLogsRepository: vi.fn()
+}))
+
 describe('runGlassMigration', () => {
   let mockServer
   let mockRepository
+  let mockSystemLogsRepository
   let mockLock
+  let auditSpy
 
   beforeEach(() => {
     mockLock = {
@@ -31,7 +39,16 @@ describe('runGlassMigration', () => {
       replace: vi.fn().mockResolvedValue(undefined)
     }
 
+    mockSystemLogsRepository = {
+      insert: vi.fn().mockResolvedValue(undefined)
+    }
+
     createOrganisationsRepository.mockReturnValue(() => mockRepository)
+    createSystemLogsRepository.mockResolvedValue(() => mockSystemLogsRepository)
+
+    auditSpy = vi
+      .spyOn(glassMigrationAudit, 'auditGlassMigration')
+      .mockResolvedValue(undefined)
 
     mockServer = {
       featureFlags: {
@@ -63,21 +80,20 @@ describe('runGlassMigration', () => {
 
   it('should migrate organisations with glass registrations needing migration', async () => {
     mockServer.featureFlags.getGlassMigrationMode.mockReturnValue('enabled')
-    mockRepository.findAll.mockResolvedValue([
-      {
-        id: 'org-1',
-        version: 1,
-        registrations: [
-          {
-            id: 'reg-1',
-            registrationNumber: 'REG-2025-GL',
-            material: 'glass',
-            glassRecyclingProcess: ['glass_re_melt']
-          }
-        ],
-        accreditations: []
-      }
-    ])
+    const originalOrg = {
+      id: 'org-1',
+      version: 1,
+      registrations: [
+        {
+          id: 'reg-1',
+          registrationNumber: 'REG-2025-GL',
+          material: 'glass',
+          glassRecyclingProcess: ['glass_re_melt']
+        }
+      ],
+      accreditations: []
+    }
+    mockRepository.findAll.mockResolvedValue([originalOrg])
 
     await runGlassMigration(mockServer)
 
@@ -89,6 +105,16 @@ describe('runGlassMigration', () => {
           expect.objectContaining({
             registrationNumber: 'REG-2025-GR'
           })
+        ])
+      })
+    )
+    expect(auditSpy).toHaveBeenCalledWith(
+      mockSystemLogsRepository,
+      'org-1',
+      { registrations: originalOrg.registrations, accreditations: [] },
+      expect.objectContaining({
+        registrations: expect.arrayContaining([
+          expect.objectContaining({ registrationNumber: 'REG-2025-GR' })
         ])
       })
     )
