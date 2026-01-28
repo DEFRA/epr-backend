@@ -203,7 +203,7 @@ const runCommandInWorker = async (
       }
     })
 
-    // Only mark as failed if repository is available (see https://github.com/DEFRA/epr-backend/pull/693)
+    // Repository is optional until https://github.com/DEFRA/epr-backend/pull/694 makes it always injected
     if (repository) {
       switch (command) {
         case SUMMARY_LOG_COMMAND.VALIDATE:
