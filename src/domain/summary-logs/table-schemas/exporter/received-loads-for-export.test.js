@@ -102,15 +102,93 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.fatalFields).toContain('EXPORT_CONTROLS')
     })
 
-    it('has fieldsRequiredForInclusionInWasteBalance equal to ALL fields', () => {
-      expect(
-        Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
-      ).toBe(true)
+    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       // Per PAE-659 AC03: ALL mandatory fields must be completed for inclusion
-      // in waste balance - this means all 25 fields for exporter
-      expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual(
-        schema.requiredHeaders
-      )
+      // in waste balance. For exporter, this is all 25 fields.
+      it('contains all mandatory fields for waste balance inclusion', () => {
+        expect(
+          Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
+        ).toBe(true)
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'ROW_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DATE_RECEIVED_FOR_EXPORT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'EWC_CODE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DESCRIPTION_WASTE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'GROSS_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TARE_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'PALLET_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'NET_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'BAILING_WIRE_PROTOCOL'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'WEIGHT_OF_NON_TARGET_MATERIALS'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'RECYCLABLE_PROPORTION_PERCENTAGE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TONNAGE_RECEIVED_FOR_EXPORT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DATE_OF_EXPORT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'BASEL_EXPORT_CODE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'CUSTOMS_CODES'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'CONTAINER_NUMBER'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DATE_RECEIVED_BY_OSR'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'OSR_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'INTERIM_SITE_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'EXPORT_CONTROLS'
+        )
+      })
+
+      it('has exactly 25 fields required for waste balance (all mandatory)', () => {
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(25)
+      })
     })
   })
 
