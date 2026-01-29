@@ -5,6 +5,7 @@ import { audit } from '@defra/cdp-auditing'
  */
 
 const SYSTEM_USER = { id: 'system', email: 'system', scope: [] }
+const GLASS_SUFFIX_LENGTH = 2
 
 /**
  * Extract registration number changes from before/after state
@@ -23,7 +24,10 @@ function extractRegistrationChanges(
       continue
     }
 
-    const baseNumber = original.registrationNumber.slice(0, -2)
+    const baseNumber = original.registrationNumber.slice(
+      0,
+      -GLASS_SUFFIX_LENGTH
+    )
 
     // Find migrated registration(s) - could be 1 (rename) or 2 (split)
     // Must end with GR or GO (the glass suffixes)
@@ -45,6 +49,8 @@ function extractRegistrationChanges(
         from: original.registrationNumber,
         to: migrated.map((r) => r.registrationNumber)
       })
+    } else {
+      // No matching migrations found - no change to record
     }
   }
 
@@ -68,7 +74,10 @@ function extractAccreditationChanges(
       continue
     }
 
-    const baseNumber = original.accreditationNumber.slice(0, -2)
+    const baseNumber = original.accreditationNumber.slice(
+      0,
+      -GLASS_SUFFIX_LENGTH
+    )
 
     // Find migrated accreditation(s) - could be 1 (rename) or 2 (split)
     // Must end with GR or GO (the glass suffixes)
@@ -90,6 +99,8 @@ function extractAccreditationChanges(
         from: original.accreditationNumber,
         to: migrated.map((a) => a.accreditationNumber)
       })
+    } else {
+      // No matching migrations found - no change to record
     }
   }
 
