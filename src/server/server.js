@@ -16,9 +16,16 @@ import { authFailureLogger } from '#plugins/auth-failure-logger.js'
 import { authPlugin } from '#plugins/auth/auth-plugin.js'
 import { cacheControl } from '#plugins/cache-control.js'
 import { featureFlags } from '#plugins/feature-flags.js'
-import { repositories } from '#plugins/repositories.js'
+import { mongoOrganisationsRepositoryPlugin } from '#repositories/organisations/mongodb.plugin.js'
+import { mongoSummaryLogsRepositoryPlugin } from '#repositories/summary-logs/mongodb.plugin.js'
+import { mongoFormSubmissionsRepositoryPlugin } from '#repositories/form-submissions/mongodb.plugin.js'
+import { mongoWasteRecordsRepositoryPlugin } from '#repositories/waste-records/mongodb.plugin.js'
+import { mongoWasteBalancesRepositoryPlugin } from '#repositories/waste-balances/mongodb.plugin.js'
+import { mongoSystemLogsRepositoryPlugin } from '#repositories/system-logs/mongodb.plugin.js'
+import { s3UploadsRepositoryPlugin } from '#adapters/repositories/uploads/s3.plugin.js'
+import { s3PublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/s3.plugin.js'
 import { router } from '#plugins/router.js'
-import { workers } from '#plugins/workers.js'
+import { piscinaWorkersPlugin } from '#adapters/validators/summary-logs/piscina.plugin.js'
 import { getConfig } from '#root/config.js'
 import { logFilesUploadedFromForms } from '#server/log-form-file-uploads.js'
 import { runFormsDataMigration } from '#server/run-forms-data-migration.js'
@@ -65,7 +72,8 @@ async function createServer(options = {}) {
   // secureContext  - loads CA certificates from environment config
   // pulse          - provides shutdown handlers
   // mongoDb        - sets up mongo connection pool and attaches to `server` and `request` objects
-  // repositories   - sets up repository adapters and attaches to `request` objects
+  // mongo*Plugin   - individual repository plugins
+  // s3*Plugin      - S3 repository plugins
   // featureFlags   - sets up feature flag adapter and attaches to `request` objects
   // workers        - sets up worker thread pools and attaches to `request` objects
   // router         - routes used in the app
@@ -105,29 +113,39 @@ async function createServer(options = {}) {
     }
   })
 
-  // Only register MongoDB plugin if not explicitly skipped (e.g., for in-memory tests)
-  if (!options.skipMongoDb) {
+  // LEGACY: Skip MongoDB, repositories and workers for tests of /v1/apply/* routes.
+  // These routes use raw db.collection() access and need refactoring.
+  // Once refactored, delete this flag and the server-with-mock-db.js fixture.
+  // See: src/routes/v1/apply/*.js
+  if (!options._testOnlyLegacyApplyRoutes) {
+    // MongoDB connection - required for production
     plugins.push({
       plugin: mongoDbPlugin,
       options: config.get('mongo')
     })
+
+    // Repository plugins - explicit composition, no conditional logic
+    const eventualConsistency = config.get('mongo.eventualConsistency')
+    plugins.push(
+      {
+        plugin: mongoOrganisationsRepositoryPlugin,
+        options: { eventualConsistency }
+      },
+      mongoSummaryLogsRepositoryPlugin,
+      mongoFormSubmissionsRepositoryPlugin,
+      mongoWasteRecordsRepositoryPlugin,
+      {
+        plugin: mongoWasteBalancesRepositoryPlugin,
+        options: { eventualConsistency }
+      },
+      mongoSystemLogsRepositoryPlugin,
+      s3UploadsRepositoryPlugin,
+      s3PublicRegisterRepositoryPlugin,
+      piscinaWorkersPlugin
+    )
   }
 
-  plugins.push(
-    {
-      plugin: repositories,
-      options: {
-        ...options.repositories,
-        skipMongoDb: options.skipMongoDb,
-        eventualConsistency: config.get('mongo.eventualConsistency')
-      }
-    },
-    {
-      plugin: workers,
-      options: options.workers
-    },
-    router
-  )
+  plugins.push(router)
 
   await server.register(plugins)
 

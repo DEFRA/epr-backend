@@ -1,4 +1,4 @@
-import { describe, it as base } from 'vitest'
+import { describe, expect, it as base } from 'vitest'
 import { createSystemLogsRepository } from './inmemory.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'
 
