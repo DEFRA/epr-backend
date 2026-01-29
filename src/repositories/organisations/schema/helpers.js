@@ -5,6 +5,7 @@ import {
   WASTE_PERMIT_TYPE,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { statusHistoryItemSchema } from './base.js'
 import {
   getRegAccKey,
   isAccreditationForRegistration
@@ -186,3 +187,32 @@ export function validateApprovals(registrations, accreditations) {
     throw Boom.badData(errorMessages.join('; '))
   }
 }
+
+/**
+ * GLASS SPLIT MIGRATION WORKAROUND (PAE-840 / Defra-5av8)
+ *
+ * Glass registrations/accreditations with both 'remelt' and 'other' processing types
+ * were originally stored as single records. A migration splits these into two separate
+ * records - but the new 'other' record gets a fresh ID. Without special handling, the
+ * repository layer would reset its status to 'created' (as it does for all new items).
+ *
+ * This schema allows the migration to pass through the original statusHistory, but ONLY
+ * for glass items with split suffixes (GR = glass remelt, GO = glass other). For all
+ * other items, statusHistory is silently stripped because the repository layer manages
+ * it internally - callers don't need to worry about removing it from their input.
+ *
+ * @param {string} numberFieldName - The field containing the reg/acc number (e.g. 'registrationNumber')
+ * @returns {Joi.Schema} Schema that preserves statusHistory only for glass splits
+ */
+export const statusHistoryOnlyForGlassSplitMigration = (numberFieldName) =>
+  Joi.array()
+    .items(statusHistoryItemSchema)
+    .when('material', {
+      is: MATERIAL.GLASS,
+      then: Joi.when(numberFieldName, {
+        is: Joi.string().pattern(/G[RO]$/),
+        then: Joi.optional(),
+        otherwise: Joi.strip()
+      }),
+      otherwise: Joi.strip()
+    })

@@ -64,9 +64,11 @@ export const updateStatusHistoryForItems = (existingItems, itemUpdates) => {
         statusHistory: statusHistoryWithChanges(updatedItem, existingItem)
       }
     } else {
+      // Preserve existing statusHistory if present (e.g. from glass migration split),
+      // otherwise create fresh 'created' status for genuinely new items
       return {
         ...updatedItem,
-        statusHistory: createInitialStatusHistory()
+        statusHistory: updatedItem.statusHistory ?? createInitialStatusHistory()
       }
     }
   })

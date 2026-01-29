@@ -22,6 +22,7 @@ import {
   requiredForReprocessor,
   requiredForReprocessorOptionalForExporter,
   requiredWhenApprovedOrSuspended,
+  statusHistoryOnlyForGlassSplitMigration,
   whenExporter,
   whenMaterial,
   whenReprocessor
@@ -68,6 +69,7 @@ export const registrationSchema = Joi.object({
       REG_ACC_STATUS.SUSPENDED
     )
     .forbidden(),
+  statusHistory: statusHistoryOnlyForGlassSplitMigration('registrationNumber'),
   registrationNumber: Joi.string()
     .when('status', requiredWhenApprovedOrSuspended)
     .default(null),

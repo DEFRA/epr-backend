@@ -16,6 +16,7 @@ import {
 import {
   dateRequiredWhenApprovedOrSuspended,
   requiredWhenApprovedOrSuspended,
+  statusHistoryOnlyForGlassSplitMigration,
   whenExporter,
   whenMaterial,
   whenReprocessor
@@ -62,6 +63,7 @@ export const accreditationSchema = Joi.object({
       REG_ACC_STATUS.SUSPENDED
     )
     .forbidden(),
+  statusHistory: statusHistoryOnlyForGlassSplitMigration('accreditationNumber'),
   validFrom: dateRequiredWhenApprovedOrSuspended(),
   validTo: dateRequiredWhenApprovedOrSuspended(),
   accreditationNumber: Joi.string()

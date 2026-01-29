@@ -9,8 +9,15 @@ import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js
 import { createInMemoryOrganisationsRepository } from '#repositories/organisations/inmemory.js'
 import {
   buildOrganisation,
-  buildRegistration
+  buildRegistration,
+  buildAccreditation,
+  prepareOrgUpdate,
+  getValidDateRange
 } from '#repositories/organisations/contract/test-data.js'
+import {
+  REG_ACC_STATUS,
+  REPROCESSING_TYPE
+} from '#domain/organisations/model.js'
 import * as glassMigration from '#glass-migration/glass-migration.js'
 import * as glassMigrationAudit from '#root/auditing/glass-migration.js'
 
@@ -370,6 +377,143 @@ describe('migrateGlassOrganisation', () => {
       // Verify the migration actually worked
       const updated = await repository.findById(orgData.id, 2)
       expect(updated.registrations[0].registrationNumber).toBe('REG-2025-GR')
+    })
+
+    it('should preserve approved status when splitting dual-process glass registration', async () => {
+      const { VALID_FROM, VALID_TO } = getValidDateRange()
+
+      // Build organisation with dual-process glass registration
+      const glassReg = buildRegistration({
+        material: 'glass',
+        registrationNumber: 'REG-2025-GL',
+        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+      })
+      const orgData = buildOrganisation()
+      orgData.registrations = [glassReg]
+      await repository.insert(orgData)
+
+      // Approve the registration using proper update flow
+      const inserted = await repository.findById(orgData.id)
+      const regToApprove = {
+        ...inserted.registrations[0],
+        status: REG_ACC_STATUS.APPROVED,
+        registrationNumber: 'REG-2025-GL',
+        validFrom: VALID_FROM,
+        validTo: VALID_TO,
+        reprocessingType: REPROCESSING_TYPE.INPUT
+      }
+
+      await repository.replace(
+        orgData.id,
+        inserted.version,
+        prepareOrgUpdate(inserted, {
+          registrations: [regToApprove]
+        })
+      )
+
+      // Verify it's now approved
+      const approved = await repository.findById(orgData.id, 2)
+      expect(approved.registrations[0].status).toBe(REG_ACC_STATUS.APPROVED)
+
+      // Run the migration
+      const result = await migrateGlassOrganisation(approved, repository)
+      expect(result).toBe(true)
+
+      // Verify BOTH split registrations are still approved
+      const migrated = await repository.findById(orgData.id, 3)
+      expect(migrated.registrations).toHaveLength(2)
+
+      const remeltReg = migrated.registrations.find(
+        (r) => r.registrationNumber === 'REG-2025-GR'
+      )
+      const otherReg = migrated.registrations.find(
+        (r) => r.registrationNumber === 'REG-2025-GO'
+      )
+
+      expect(remeltReg).toBeDefined()
+      expect(otherReg).toBeDefined()
+
+      // This is the bug: the 'other' registration gets reset to 'created'
+      // because it has a new ID that doesn't exist in the existing items
+      expect(remeltReg.status).toBe(REG_ACC_STATUS.APPROVED)
+      expect(otherReg.status).toBe(REG_ACC_STATUS.APPROVED) // FAILS - gets 'created'
+    })
+
+    it('should preserve approved status when splitting dual-process glass accreditation', async () => {
+      const { VALID_FROM, VALID_TO } = getValidDateRange()
+
+      // Build organisation with dual-process glass accreditation and a linked registration
+      // (accreditations require a linked approved registration to be approved)
+      const glassAcc = buildAccreditation({
+        material: 'glass',
+        accreditationNumber: 'ACC-2025-GL',
+        glassRecyclingProcess: ['glass_re_melt', 'glass_other']
+      })
+      const glassReg = buildRegistration({
+        material: 'glass',
+        registrationNumber: 'REG-2025-GL',
+        glassRecyclingProcess: ['glass_re_melt', 'glass_other'],
+        accreditationId: glassAcc.id
+      })
+      const orgData = buildOrganisation()
+      orgData.accreditations = [glassAcc]
+      orgData.registrations = [glassReg]
+      await repository.insert(orgData)
+
+      // Approve both registration and accreditation (accreditation requires linked approved reg)
+      const inserted = await repository.findById(orgData.id)
+      const regToApprove = {
+        ...inserted.registrations[0],
+        status: REG_ACC_STATUS.APPROVED,
+        registrationNumber: 'REG-2025-GL',
+        validFrom: VALID_FROM,
+        validTo: VALID_TO,
+        reprocessingType: REPROCESSING_TYPE.INPUT
+      }
+      const accToApprove = {
+        ...inserted.accreditations[0],
+        status: REG_ACC_STATUS.APPROVED,
+        accreditationNumber: 'ACC-2025-GL',
+        validFrom: VALID_FROM,
+        validTo: VALID_TO,
+        reprocessingType: REPROCESSING_TYPE.INPUT
+      }
+
+      await repository.replace(
+        orgData.id,
+        inserted.version,
+        prepareOrgUpdate(inserted, {
+          registrations: [regToApprove],
+          accreditations: [accToApprove]
+        })
+      )
+
+      // Verify both are now approved
+      const approved = await repository.findById(orgData.id, 2)
+      expect(approved.registrations[0].status).toBe(REG_ACC_STATUS.APPROVED)
+      expect(approved.accreditations[0].status).toBe(REG_ACC_STATUS.APPROVED)
+
+      // Run the migration
+      const result = await migrateGlassOrganisation(approved, repository)
+      expect(result).toBe(true)
+
+      // Verify BOTH split accreditations are still approved
+      const migrated = await repository.findById(orgData.id, 3)
+      expect(migrated.accreditations).toHaveLength(2)
+
+      const remeltAcc = migrated.accreditations.find(
+        (a) => a.accreditationNumber === 'ACC-2025-GR'
+      )
+      const otherAcc = migrated.accreditations.find(
+        (a) => a.accreditationNumber === 'ACC-2025-GO'
+      )
+
+      expect(remeltAcc).toBeDefined()
+      expect(otherAcc).toBeDefined()
+
+      // This is the bug: the 'other' accreditation gets reset to 'created'
+      expect(remeltAcc.status).toBe(REG_ACC_STATUS.APPROVED)
+      expect(otherAcc.status).toBe(REG_ACC_STATUS.APPROVED) // FAILS - gets 'created'
     })
   })
 

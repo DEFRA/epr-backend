@@ -23,19 +23,13 @@ export const getValidDateRange = () => {
   }
 }
 
-function initializeStatusForItems(items) {
-  if (Array.isArray(items)) {
-    for (const item of items) {
-      item.statusHistory = createInitialStatusHistory()
-    }
-  }
-}
-
 export const buildRegistration = (overrides = {}) => {
   const desiredType = overrides.wasteProcessingType || 'reprocessor'
   const baseRegistrationIndex = desiredType === 'exporter' ? 1 : 0
 
-  const baseRegistration = org1.registrations[baseRegistrationIndex]
+  // Exclude statusHistory - repository insert sets it, validation forbids it for non-glass
+  const { statusHistory: _, ...baseRegistration } =
+    org1.registrations[baseRegistrationIndex]
 
   /** @type {Record<string, any>} */
   const registration = {
@@ -64,7 +58,8 @@ export const buildRegistration = (overrides = {}) => {
 }
 
 export const buildAccreditation = (overrides = {}) => {
-  const baseAccreditation = org1.accreditations[0]
+  // Exclude statusHistory - repository insert sets it, validation forbids it for non-glass
+  const { statusHistory: _, ...baseAccreditation } = org1.accreditations[0]
 
   const accreditation = {
     ...baseAccreditation,
@@ -86,21 +81,26 @@ export const buildOrganisation = (overrides = {}) => {
     accreditationIdMap.set(acc.id, new ObjectId().toString())
   }
 
-  // Deep clone accreditations with new IDs
-  const accreditations = org1.accreditations.map((acc) => ({
-    ...acc,
-    id: accreditationIdMap.get(acc.id)
-  }))
-
-  // Deep clone registrations with new IDs, updating accreditationId links
-  const registrations = org1.registrations.map((reg) => ({
-    ...reg,
-    id: new ObjectId().toString(),
-    // Update accreditationId to point to the new accreditation ID
-    ...(reg.accreditationId && {
-      accreditationId: accreditationIdMap.get(reg.accreditationId)
+  // Deep clone accreditations with new IDs, excluding statusHistory
+  // (we add fresh statusHistory below, after overrides are applied)
+  const accreditations = org1.accreditations.map(
+    ({ statusHistory: _, ...acc }) => ({
+      ...acc,
+      id: accreditationIdMap.get(acc.id)
     })
-  }))
+  )
+
+  // Deep clone registrations with new IDs, excluding statusHistory
+  const registrations = org1.registrations.map(
+    ({ statusHistory: _, ...reg }) => ({
+      ...reg,
+      id: new ObjectId().toString(),
+      // Update accreditationId to point to the new accreditation ID
+      ...(reg.accreditationId && {
+        accreditationId: accreditationIdMap.get(reg.accreditationId)
+      })
+    })
+  )
 
   const org = {
     ...org1,
@@ -112,8 +112,15 @@ export const buildOrganisation = (overrides = {}) => {
     ...overrides
   }
 
-  initializeStatusForItems(org.registrations)
-  initializeStatusForItems(org.accreditations)
+  // Ensure all registrations/accreditations have statusHistory.
+  // Tests pass pre-built orgs directly to the in-memory repository constructor,
+  // which bypasses the insert path that normally adds statusHistory.
+  for (const item of org.registrations ?? []) {
+    item.statusHistory ??= createInitialStatusHistory()
+  }
+  for (const item of org.accreditations ?? []) {
+    item.statusHistory ??= createInitialStatusHistory()
+  }
 
   return org
 }
