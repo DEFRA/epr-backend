@@ -2,7 +2,9 @@
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
  * @import {OrganisationsRepository} from '#repositories/organisations/port.js'
  */
+import { config } from '#root/config.js'
 
+const SKIP_TEST_ORG_IDS = config.get('skipTransformingTestOrganisations')
 /**
  * @param {FormSubmissionsRepository} formsSubmissionRepository
  * @param {OrganisationsRepository} organisationsRepository
@@ -16,9 +18,15 @@ export async function getSubmissionsToMigrate(
   const submissionIds =
     await formsSubmissionRepository.findAllFormSubmissionIds()
 
-  const pendingOrgs = submissionIds.organisations.difference(
+  const submittedOrganisationIds = new Set(
+    [...submissionIds.organisations].filter(
+      (orgId) => !SKIP_TEST_ORG_IDS.includes(orgId)
+    )
+  )
+  const pendingOrgs = submittedOrganisationIds.difference(
     migratedIds.organisations
   )
+
   const pendingRegs = submissionIds.registrations.difference(
     migratedIds.registrations
   )
