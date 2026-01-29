@@ -71,7 +71,7 @@ describe('upsertOrganisations', () => {
       await upsertOrganisations(organisationsRepository, organisations)
 
       expect(logger.error).toHaveBeenCalledWith({
-        error,
+        err: error,
         message: 'Error inserting organisation',
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,
@@ -99,7 +99,7 @@ describe('upsertOrganisations', () => {
       await upsertOrganisations(organisationsRepository, organisations)
 
       expect(logger.error).toHaveBeenCalledWith({
-        error,
+        err: error,
         message: 'Error updating organisation',
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,

@@ -8,7 +8,7 @@ import { loggerOptions } from './logger-options.js'
  *
  * @typedef {Object} IndexedLogProperties
  * @property {string} [message] - Original log message
- * @property {{code?: string, id?: string, message?: string, stack_trace?: string, type?: string}} [error] - Error information
+ * @property {Error} [err] - Error object for Pino serialization (converted to error/* fields in output)
  * @property {{action?: string, category?: string, created?: string|number, duration?: number, kind?: string, outcome?: string, reason?: string, reference?: string, severity?: number|string, type?: string}} [event] - Event metadata
  * @property {{request?: {body?: {bytes?: number}, bytes?: number, headers?: {'Accept-language'?: string, 'accept-encoding'?: string, 'cache-control'?: string, expires?: string, referer?: string}, id?: string}, response?: {status_code?: number}}} [http] - HTTP request/response details (other response fields are CDP reserved)
  * @property {{level?: string, file?: {path?: string}, logger?: string}} [log] - Log metadata

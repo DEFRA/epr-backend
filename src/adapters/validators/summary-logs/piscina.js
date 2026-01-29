@@ -101,7 +101,7 @@ const markAsValidationFailed = async (summaryLogId, repository, logger) => {
     )
   } catch (err) {
     logger.error({
-      error: err,
+      err,
       message: `Failed to mark summary log as validation_failed`,
       summaryLogId
     })
@@ -144,7 +144,7 @@ const markAsSubmissionFailed = async (summaryLogId, repository, logger) => {
     )
   } catch (err) {
     logger.error({
-      error: err,
+      err,
       message: `Failed to mark summary log as submission_failed`,
       summaryLogId
     })
@@ -195,7 +195,7 @@ const runCommandInWorker = async (
     clearTaskTimeout(summaryLogId)
 
     logger.error({
-      error: err,
+      err,
       message: `Summary log ${command} worker failed: summaryLogId=${summaryLogId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,

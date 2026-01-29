@@ -56,7 +56,7 @@ describe('Lock Functions', () => {
 
       expect(result).toBeNull()
       expect(mockLoggerError).toHaveBeenCalledWith({
-        error: expect.any(MongoLockError),
+        err: expect.any(MongoLockError),
         message: `Failed to acquire lock for ${resource}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,

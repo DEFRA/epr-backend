@@ -252,7 +252,7 @@ export const testOptimisticConcurrency = (it) => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            error: expect.any(Error),
+            err: expect.any(Error),
             message: `Version conflict detected for summary log ${id}`,
             event: {
               category: 'database',
@@ -298,9 +298,9 @@ export const testOptimisticConcurrency = (it) => {
         })
 
         const logCall = logger.error.mock.calls[0][0]
-        expect(logCall.error).toBeInstanceOf(Error)
+        expect(logCall.err).toBeInstanceOf(Error)
         const expectedVersion = 2
-        expect(logCall.error.message).toBe(
+        expect(logCall.err.message).toBe(
           `Version conflict: attempted to update with version ${initial.version} but current version is ${expectedVersion}`
         )
       })

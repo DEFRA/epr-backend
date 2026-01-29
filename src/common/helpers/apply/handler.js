@@ -52,7 +52,7 @@ export function registrationAndAccreditationHandler(name, path, factory) {
       const validationFailedForFields = getValidationFailedFields(error)
       const message = `Failure on ${path} for orgId: ${orgId} and referenceNumber: ${referenceNumber}, mongo validation failures: ${validationFailedForFields}`
       logger.error({
-        error,
+        err: error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
