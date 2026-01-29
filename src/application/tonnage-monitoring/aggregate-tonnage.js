@@ -4,6 +4,7 @@ import { MATERIAL } from '#domain/organisations/model.js'
 
 const ORGANISATIONS_COLLECTION = 'epr-organisations'
 const WASTE_RECORDS_COLLECTION = 'waste-records'
+const DATA_PROCESSING_TYPE = '$data.processingType'
 
 const buildTonnageExpression = () => ({
   $switch: {
@@ -11,7 +12,7 @@ const buildTonnageExpression = () => ({
       {
         case: {
           $and: [
-            { $eq: ['$data.processingType', PROCESSING_TYPES.EXPORTER] },
+            { $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.EXPORTER] },
             { $eq: ['$type', WASTE_RECORD_TYPE.EXPORTED] }
           ]
         },
@@ -33,7 +34,7 @@ const buildTonnageExpression = () => ({
         case: {
           $and: [
             {
-              $eq: ['$data.processingType', PROCESSING_TYPES.REPROCESSOR_INPUT]
+              $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_INPUT]
             },
             { $eq: ['$type', WASTE_RECORD_TYPE.RECEIVED] }
           ]
@@ -44,7 +45,7 @@ const buildTonnageExpression = () => ({
         case: {
           $and: [
             {
-              $eq: ['$data.processingType', PROCESSING_TYPES.REPROCESSOR_OUTPUT]
+              $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
             },
             { $eq: ['$type', WASTE_RECORD_TYPE.PROCESSED] },
             { $eq: ['$data.ADD_PRODUCT_WEIGHT', 'Yes'] }
@@ -61,18 +62,18 @@ const buildDispatchDateExpression = () => ({
   $switch: {
     branches: [
       {
-        case: { $eq: ['$data.processingType', PROCESSING_TYPES.EXPORTER] },
+        case: { $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.EXPORTER] },
         then: '$data.DATE_OF_EXPORT'
       },
       {
         case: {
-          $eq: ['$data.processingType', PROCESSING_TYPES.REPROCESSOR_INPUT]
+          $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_INPUT]
         },
         then: '$data.DATE_RECEIVED_FOR_REPROCESSING'
       },
       {
         case: {
-          $eq: ['$data.processingType', PROCESSING_TYPES.REPROCESSOR_OUTPUT]
+          $eq: [DATA_PROCESSING_TYPE, PROCESSING_TYPES.REPROCESSOR_OUTPUT]
         },
         then: '$data.DATE_LOAD_LEFT_SITE'
       }
@@ -81,89 +82,66 @@ const buildDispatchDateExpression = () => ({
   }
 })
 
-export const aggregateTonnageByMaterial = async (db) => {
-  const pipeline = [
-    {
-      $match: {
-        type: {
-          $in: [
-            WASTE_RECORD_TYPE.RECEIVED,
-            WASTE_RECORD_TYPE.PROCESSED,
-            WASTE_RECORD_TYPE.EXPORTED
-          ]
-        },
-        'data.processingType': {
-          $in: [
-            PROCESSING_TYPES.EXPORTER,
-            PROCESSING_TYPES.REPROCESSOR_INPUT,
-            PROCESSING_TYPES.REPROCESSOR_OUTPUT
-          ]
-        }
-      }
+const buildMaterialLookupStage = () => ({
+  $lookup: {
+    from: ORGANISATIONS_COLLECTION,
+    let: {
+      orgId: { $toObjectId: '$_id.organisationId' },
+      regId: '$_id.registrationId'
     },
-    {
-      $addFields: {
-        dispatchDate: buildDispatchDateExpression(),
-        calculatedTonnage: buildTonnageExpression()
+    pipeline: [
+      { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
+      { $unwind: '$registrations' },
+      { $match: { $expr: { $eq: ['$registrations.id', '$$regId'] } } },
+      { $project: { material: '$registrations.material' } }
+    ],
+    as: 'orgData'
+  }
+})
+
+const buildAggregationPipeline = () => [
+  {
+    $match: {
+      type: {
+        $in: [
+          WASTE_RECORD_TYPE.RECEIVED,
+          WASTE_RECORD_TYPE.PROCESSED,
+          WASTE_RECORD_TYPE.EXPORTED
+        ]
+      },
+      'data.processingType': {
+        $in: [
+          PROCESSING_TYPES.EXPORTER,
+          PROCESSING_TYPES.REPROCESSOR_INPUT,
+          PROCESSING_TYPES.REPROCESSOR_OUTPUT
+        ]
       }
-    },
-    {
-      $match: {
-        dispatchDate: { $ne: null },
-        calculatedTonnage: { $gt: 0 }
-      }
-    },
-    {
-      $group: {
-        _id: {
-          organisationId: '$organisationId',
-          registrationId: '$registrationId'
-        },
-        totalTonnage: { $sum: '$calculatedTonnage' }
-      }
-    },
-    {
-      $lookup: {
-        from: ORGANISATIONS_COLLECTION,
-        let: {
-          orgId: { $toObjectId: '$_id.organisationId' },
-          regId: '$_id.registrationId'
-        },
-        pipeline: [
-          { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
-          { $unwind: '$registrations' },
-          { $match: { $expr: { $eq: ['$registrations.id', '$$regId'] } } },
-          { $project: { material: '$registrations.material' } }
-        ],
-        as: 'orgData'
-      }
-    },
-    {
-      $addFields: {
-        material: { $arrayElemAt: ['$orgData.material', 0] }
-      }
-    },
-    {
-      $match: {
-        material: { $ne: null }
-      }
-    },
-    {
-      $group: {
-        _id: '$material',
-        totalTonnage: { $sum: '$totalTonnage' }
-      }
-    },
-    {
-      $sort: { _id: 1 }
     }
-  ]
+  },
+  {
+    $addFields: {
+      dispatchDate: buildDispatchDateExpression(),
+      calculatedTonnage: buildTonnageExpression()
+    }
+  },
+  { $match: { dispatchDate: { $ne: null }, calculatedTonnage: { $gt: 0 } } },
+  {
+    $group: {
+      _id: {
+        organisationId: '$organisationId',
+        registrationId: '$registrationId'
+      },
+      totalTonnage: { $sum: '$calculatedTonnage' }
+    }
+  },
+  buildMaterialLookupStage(),
+  { $addFields: { material: { $arrayElemAt: ['$orgData.material', 0] } } },
+  { $match: { material: { $ne: null } } },
+  { $group: { _id: '$material', totalTonnage: { $sum: '$totalTonnage' } } },
+  { $sort: { _id: 1 } }
+]
 
-  const results = await db
-    .collection(WASTE_RECORDS_COLLECTION)
-    .aggregate(pipeline)
-    .toArray()
-
+const formatTonnageResults = (results) => {
   const allMaterials = Object.values(MATERIAL)
   const materialTonnageMap = new Map(
     results.map((r) => [r._id, r.totalTonnage])
@@ -175,6 +153,19 @@ export const aggregateTonnageByMaterial = async (db) => {
   }))
 
   const total = materials.reduce((sum, item) => sum + item.totalTonnage, 0)
+
+  return { materials, total }
+}
+
+export const aggregateTonnageByMaterial = async (db) => {
+  const pipeline = buildAggregationPipeline()
+
+  const results = await db
+    .collection(WASTE_RECORDS_COLLECTION)
+    .aggregate(pipeline)
+    .toArray()
+
+  const { materials, total } = formatTonnageResults(results)
 
   return {
     generatedAt: new Date().toISOString(),
