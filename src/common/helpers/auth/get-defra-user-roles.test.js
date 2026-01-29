@@ -28,7 +28,7 @@ vi.mock('./get-roles-for-org-access.js', () => ({
     mockGetRolesForOrganisationAccess(...args)
 }))
 
-describe('#getDefraUserRoles', () => {
+describe('#getDefraUserRoles - legacy implementation', () => {
   const mockOrganisationsRepository = {}
   const mockRequest = /** @type {any} */ ({
     organisationsRepository: mockOrganisationsRepository,
@@ -37,7 +37,8 @@ describe('#getDefraUserRoles', () => {
     params: {},
     server: {
       app: {}
-    }
+    },
+    route: { settings: { app: {} } }
   })
 
   beforeEach(() => {
@@ -436,6 +437,124 @@ describe('#getDefraUserRoles', () => {
       expect(mockIsOrganisationsDiscoveryReq).toHaveBeenCalledTimes(1)
       expect(mockGetOrgMatchingUsersToken).toHaveBeenCalledTimes(1)
       expect(mockGetRolesForOrganisationAccess).toHaveBeenCalledTimes(1)
+    })
+  })
+})
+
+describe('#getDefraUserRoles - PRNs implemenation', () => {
+  const validTokenPayload = {
+    contactId: 'id-123',
+    email: 'user@example.com',
+    firstName: 'John',
+    lastName: 'D',
+    iss: 'iss-vaue',
+    aud: 'aud-value',
+    exp: 123,
+    iat: 456
+  }
+
+  const mockOrganisationsRepository = {
+    findById: vi.fn()
+  }
+
+  const baseMockRequest = /** @type {any} */ ({
+    organisationsRepository: mockOrganisationsRepository,
+    path: '/api/v1/organisations',
+    method: 'get',
+    params: {},
+    server: {
+      app: {}
+    },
+    route: { settings: { app: { usesRefactoredDefraIdAuth: true } } }
+  })
+
+  const baseStubOrganisation = {
+    id: 'org-123',
+    linkedDefraOrganisation: { orgId: 'defra-org-123' },
+    name: 'Test Organisation',
+    status: 'active',
+    accreditations: [{ id: 'acc-456' }]
+  }
+
+  beforeEach(() => {
+    mockGetDefraTokenSummary.mockReturnValue({
+      defraIdOrgId: 'defra-org-123'
+    })
+    mockOrganisationsRepository.findById.mockResolvedValue(baseStubOrganisation)
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe('request specifies organisation and accredition IDs', () => {
+    const mockRequest = {
+      ...baseMockRequest,
+      params: {
+        organisationId: 'org-123',
+        accreditationId: 'acc-456'
+      }
+    }
+
+    describe('assigns standard user role', () => {
+      test('when user represents the organisation owning the accreditation', async () => {
+        const roles = await getDefraUserRoles(validTokenPayload, mockRequest)
+
+        expect(roles).toContain(ROLES.standardUser)
+      })
+    })
+
+    describe('does not assign standard user role', () => {
+      test('when organisation does not exist', async () => {
+        mockOrganisationsRepository.findById.mockRejectedValue(
+          new Error('Organisation not found')
+        )
+
+        const result = await getDefraUserRoles(validTokenPayload, mockRequest)
+
+        expect(result).not.toContain(ROLES.standardUser)
+      })
+
+      test("when user's token does not specify an Defra Id organsition id", async () => {
+        mockGetDefraTokenSummary.mockReturnValue({})
+
+        const result = await getDefraUserRoles(validTokenPayload, mockRequest)
+
+        expect(result).not.toContain(ROLES.standardUser)
+      })
+
+      test("when organisation is not linked to user's Defra org", async () => {
+        mockOrganisationsRepository.findById.mockResolvedValue({
+          ...baseStubOrganisation,
+          linkedDefraOrganisation: { orgId: 'different-defra-org-456' }
+        })
+
+        const result = await getDefraUserRoles(validTokenPayload, mockRequest)
+
+        expect(result).not.toContain(ROLES.standardUser)
+      })
+
+      test('when organisation status is not active', async () => {
+        mockOrganisationsRepository.findById.mockResolvedValue({
+          ...baseStubOrganisation,
+          status: 'suspended'
+        })
+
+        const result = await getDefraUserRoles(validTokenPayload, mockRequest)
+
+        expect(result).not.toContain(ROLES.standardUser)
+      })
+
+      test('when organisation does not own the accreditation', async () => {
+        mockOrganisationsRepository.findById.mockResolvedValue({
+          ...baseStubOrganisation,
+          accreditations: []
+        })
+
+        const result = await getDefraUserRoles(validTokenPayload, mockRequest)
+
+        expect(result).not.toContain(ROLES.standardUser)
+      })
     })
   })
 })

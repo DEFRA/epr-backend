@@ -28,11 +28,10 @@ vi.mock('./get-entra-user-roles.js', () => ({
   getEntraUserRoles: (...args) => mockGetEntraUserRoles(...args)
 }))
 
-// Mock getUsersOrganisationInfo
-const mockGetOrgMatchingUsersToken = vi.fn()
+const mockGetDefraUserRoles = vi.fn()
 
-vi.mock('./get-users-org-info.js', () => ({
-  getOrgMatchingUsersToken: (...args) => mockGetOrgMatchingUsersToken(...args)
+vi.mock('./get-defra-user-roles.js', () => ({
+  getDefraUserRoles: (...args) => mockGetDefraUserRoles(...args)
 }))
 
 describe('#getJwtStrategyConfig', () => {
@@ -47,6 +46,7 @@ describe('#getJwtStrategyConfig', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockGetEntraUserRoles.mockResolvedValue([ROLES.serviceMaintainer])
+    mockGetDefraUserRoles.mockResolvedValue([ROLES.inquirer])
   })
 
   afterEach(() => {
@@ -445,8 +445,6 @@ describe('#getJwtStrategyConfig', () => {
         const testOrgId =
           userPresentInOrg1DefraIdTokenPayload.currentRelationshipId
 
-        mockGetOrgMatchingUsersToken.mockResolvedValue({ id: testOrgId })
-
         const config = getJwtStrategyConfig(customOidcConfigs)
         const artifacts = {
           decoded: { payload: { ...userPresentInOrg1DefraIdTokenPayload } }
@@ -570,6 +568,8 @@ describe('#getJwtStrategyConfig', () => {
           path: '/v1/me/organisations',
           method: 'get'
         }
+
+        mockGetDefraUserRoles.mockResolvedValue([])
 
         const result = await config.validate(artifacts, request)
 
