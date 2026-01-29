@@ -205,7 +205,7 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
 
   if (!Array.isArray(originalItems)) {
     return value
-  } 
+  }
 
   // Create a map of existing items for O(1) lookup
   const originalItemsMap = new Map(originalItems.map((i) => [String(i.id), i]))
@@ -225,9 +225,7 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
 
     for (const field of fields) {
       // strict equality check
-      if (
-        JSON.stringify(item[field]) !== JSON.stringify(originalItem[field])
-      ) {
+      if (JSON.stringify(item[field]) !== JSON.stringify(originalItem[field])) {
         return helpers.error('any.invalid', {
           message: `Field '${field}' cannot be modified` // Joi will use this as a custom error message
         })
