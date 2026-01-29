@@ -31,7 +31,7 @@ describe(`GET ${tonnageMonitoringPath}`, () => {
   beforeEach(async () => {
     mockAggregateTonnageByMaterial.mockClear()
     mockAggregateTonnageByMaterial.mockResolvedValue(defaultTonnageData)
-    server = await createTestServer()
+    server = await createTestServer({ repositories: {} })
   })
 
   describe('happy path', () => {
