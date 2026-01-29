@@ -115,10 +115,14 @@ export const buildOrganisation = (overrides = {}) => {
   // Ensure all registrations/accreditations have statusHistory.
   // Tests pass pre-built orgs directly to the in-memory repository constructor,
   // which bypasses the insert path that normally adds statusHistory.
-  for (const item of org.registrations ?? []) {
+  for (const item of /** @type {Record<string, any>[]} */ (
+    org.registrations ?? []
+  )) {
     item.statusHistory ??= createInitialStatusHistory()
   }
-  for (const item of org.accreditations ?? []) {
+  for (const item of /** @type {Record<string, any>[]} */ (
+    org.accreditations ?? []
+  )) {
     item.statusHistory ??= createInitialStatusHistory()
   }
 

@@ -212,7 +212,7 @@ export const statusHistoryOnlyForGlassSplitMigration = (numberFieldName) =>
       then: Joi.when(numberFieldName, {
         is: Joi.string().pattern(/G[RO]$/),
         then: Joi.optional(),
-        otherwise: Joi.strip()
+        otherwise: Joi.any().strip()
       }),
-      otherwise: Joi.strip()
+      otherwise: Joi.any().strip()
     })
