@@ -12,7 +12,7 @@ const buildTonnageExpression = () => ({
         case: {
           $and: [
             { $eq: ['$data.processingType', PROCESSING_TYPES.EXPORTER] },
-            { $eq: ['$type', WASTE_RECORD_TYPE.RECEIVED] }
+            { $eq: ['$type', WASTE_RECORD_TYPE.EXPORTED] }
           ]
         },
         then: {
@@ -86,7 +86,11 @@ export const aggregateTonnageByMaterial = async (db) => {
     {
       $match: {
         type: {
-          $in: [WASTE_RECORD_TYPE.RECEIVED, WASTE_RECORD_TYPE.PROCESSED]
+          $in: [
+            WASTE_RECORD_TYPE.RECEIVED,
+            WASTE_RECORD_TYPE.PROCESSED,
+            WASTE_RECORD_TYPE.EXPORTED
+          ]
         },
         'data.processingType': {
           $in: [
@@ -121,9 +125,12 @@ export const aggregateTonnageByMaterial = async (db) => {
     {
       $lookup: {
         from: ORGANISATIONS_COLLECTION,
-        let: { orgId: '$_id.organisationId', regId: '$_id.registrationId' },
+        let: {
+          orgId: { $toObjectId: '$_id.organisationId' },
+          regId: '$_id.registrationId'
+        },
         pipeline: [
-          { $match: { $expr: { $eq: ['$id', '$$orgId'] } } },
+          { $match: { $expr: { $eq: ['$_id', '$$orgId'] } } },
           { $unwind: '$registrations' },
           { $match: { $expr: { $eq: ['$registrations.id', '$$regId'] } } },
           { $project: { material: '$registrations.material' } }
