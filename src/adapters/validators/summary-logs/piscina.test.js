@@ -109,7 +109,7 @@ describe('createSummaryLogsCommandExecutor', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(logger.error).toHaveBeenCalledWith({
-      error,
+      err: error,
       message:
         'Summary log validate worker failed: summaryLogId=summary-log-123',
       event: {
@@ -175,7 +175,7 @@ describe('createSummaryLogsCommandExecutor', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(logger.error).toHaveBeenCalledWith({
-        error,
+        err: error,
         message:
           'Summary log submit worker failed: summaryLogId=summary-log-123',
         event: {
@@ -352,7 +352,7 @@ describe('createSummaryLogsCommandExecutor', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            error: updateError,
+            err: updateError,
             message: expect.stringContaining(
               'Failed to mark summary log as validation_failed'
             ),
@@ -462,32 +462,105 @@ describe('createSummaryLogsCommandExecutor', () => {
       })
     })
 
-    describe('submit command timeout', () => {
-      it('does not mark as validation_failed for submit command failures', async () => {
+    describe('submit command failure handling', () => {
+      it('marks summary log as submission_failed when submit worker crashes', async () => {
         const error = new Error('Submit worker crashed')
         mockRun.mockRejectedValue(error)
+
+        mainThreadRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog: {
+            status: SUMMARY_LOG_STATUS.SUBMITTING
+          }
+        })
+        mainThreadRepository.update.mockResolvedValue(undefined)
 
         await summaryLogsWorker.submit(summaryLogId)
 
         // Wait for promise chain to complete
         await vi.runAllTimersAsync()
 
-        // Submit failures should not trigger validation_failed marking
-        // (submission failures are handled differently - Phase 3)
-        expect(mainThreadRepository.findById).not.toHaveBeenCalled()
-        expect(mainThreadRepository.update).not.toHaveBeenCalled()
+        expect(mainThreadRepository.findById).toHaveBeenCalledWith(summaryLogId)
+        expect(mainThreadRepository.update).toHaveBeenCalledWith(
+          summaryLogId,
+          1,
+          {
+            status: SUMMARY_LOG_STATUS.SUBMISSION_FAILED,
+            expiresAt: expect.any(Date)
+          }
+        )
       })
 
-      it('does not mark as validation_failed on submit timeout', async () => {
-        mockRun.mockImplementation(() => new Promise(() => {}))
+      it('only marks as submission_failed if status is still submitting', async () => {
+        const error = new Error('Submit worker crashed')
+        mockRun.mockRejectedValue(error)
+
+        // Summary log has already transitioned to submitted
+        mainThreadRepository.findById.mockResolvedValue({
+          version: 2,
+          summaryLog: {
+            status: SUMMARY_LOG_STATUS.SUBMITTED
+          }
+        })
 
         await summaryLogsWorker.submit(summaryLogId)
 
-        await vi.advanceTimersByTimeAsync(5 * 60 * 1000)
+        // Wait for promise chain to complete
+        await vi.runAllTimersAsync()
 
-        // Submit timeouts should not trigger validation_failed marking
-        expect(mainThreadRepository.findById).not.toHaveBeenCalled()
+        expect(mainThreadRepository.findById).toHaveBeenCalledWith(summaryLogId)
         expect(mainThreadRepository.update).not.toHaveBeenCalled()
+      })
+
+      it('logs warning if summary log not found for submit failure', async () => {
+        const error = new Error('Submit worker crashed')
+        mockRun.mockRejectedValue(error)
+
+        mainThreadRepository.findById.mockResolvedValue(null)
+
+        await summaryLogsWorker.submit(summaryLogId)
+
+        // Wait for promise chain to complete
+        await vi.runAllTimersAsync()
+
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.objectContaining({
+            message: expect.stringContaining(
+              'Cannot mark as submission_failed'
+            ),
+            summaryLogId
+          })
+        )
+        expect(mainThreadRepository.update).not.toHaveBeenCalled()
+      })
+
+      it('logs error if update fails for submit failure', async () => {
+        const workerError = new Error('Submit worker crashed')
+        const updateError = new Error('Database connection failed')
+        mockRun.mockRejectedValue(workerError)
+
+        mainThreadRepository.findById.mockResolvedValue({
+          version: 1,
+          summaryLog: {
+            status: SUMMARY_LOG_STATUS.SUBMITTING
+          }
+        })
+        mainThreadRepository.update.mockRejectedValue(updateError)
+
+        await summaryLogsWorker.submit(summaryLogId)
+
+        // Wait for promise chain to complete
+        await vi.runAllTimersAsync()
+
+        expect(logger.error).toHaveBeenCalledWith(
+          expect.objectContaining({
+            err: updateError,
+            message: expect.stringContaining(
+              'Failed to mark summary log as submission_failed'
+            ),
+            summaryLogId
+          })
+        )
       })
     })
 
@@ -533,6 +606,23 @@ describe('createSummaryLogsCommandExecutor', () => {
           }
         )
       })
+    })
+
+    it('does not attempt status update on worker crash when no repository provided', async () => {
+      const workerWithoutRepo = createSummaryLogsCommandExecutor(logger)
+      const error = new Error('Worker crashed')
+      mockRun.mockRejectedValue(error)
+
+      await workerWithoutRepo.validate(summaryLogId)
+      await workerWithoutRepo.submit(summaryLogId)
+      await vi.runAllTimersAsync()
+
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.stringContaining('worker failed')
+        })
+      )
+      expect(mainThreadRepository.findById).not.toHaveBeenCalled()
     })
   })
 })

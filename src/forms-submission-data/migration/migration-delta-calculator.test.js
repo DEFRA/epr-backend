@@ -110,4 +110,30 @@ describe('getSubmissionsToMigrate', () => {
     expect(result.pendingMigration.accreditations.size).toBe(0)
     expect(result.pendingMigration.totalCount).toBe(0)
   })
+
+  it('should exclude test organisation IDs from pending migrations', async () => {
+    const testOrgId = '697a3c0e0587e4d4d7f3d533'
+    const realOrgId = org2Id.toString()
+
+    organisationsRepository.findAllIds.mockResolvedValue({
+      organisations: new Set(),
+      registrations: new Set(),
+      accreditations: new Set()
+    })
+    formsSubmissionRepository.findAllFormSubmissionIds.mockResolvedValue({
+      organisations: new Set([testOrgId, realOrgId]),
+      registrations: new Set([reg1Id.toString()]),
+      accreditations: new Set([accr1Id.toString()])
+    })
+
+    const result = await getSubmissionsToMigrate(
+      formsSubmissionRepository,
+      organisationsRepository
+    )
+
+    // Test org should be filtered out, only real org should remain
+    expect(result.pendingMigration.organisations).toEqual(new Set([realOrgId]))
+    expect(result.pendingMigration.organisations.has(testOrgId)).toBe(false)
+    expect(result.pendingMigration.totalCount).toBe(3) // 1 org + 1 reg + 1 accr
+  })
 })

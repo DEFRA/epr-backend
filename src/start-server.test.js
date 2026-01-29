@@ -207,7 +207,7 @@ describe('#startServer', () => {
       )
 
       expect(mockLoggerError).toHaveBeenCalledWith({
-        error: expect.any(Error),
+        err: expect.any(Error),
         message: 'Server failed to start',
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

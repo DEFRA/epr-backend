@@ -373,7 +373,7 @@ export async function createEprOrganisationScenarios(
       })
     } catch (error) {
       logger.error({
-        error,
+        err: error,
         message: `Seed scenarios: failed to create ${name}`
       })
     }

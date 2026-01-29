@@ -81,7 +81,7 @@ export const workers = {
         } catch (err) {
           /* v8 ignore next 9 */
           server.logger.error({
-            error: err,
+            err,
             message: 'Failed to close worker pool',
             event: {
               category: LOGGING_EVENT_CATEGORIES.SERVER,

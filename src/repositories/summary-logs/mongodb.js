@@ -90,7 +90,7 @@ const update = (db, logger) => async (id, version, updates) => {
       `Version conflict: attempted to update with version ${version} but current version is ${existing.version}`
     )
     logger.error({
-      error: conflictError,
+      err: conflictError,
       message: `Version conflict detected for summary log ${validatedId}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.DB,
