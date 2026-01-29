@@ -60,11 +60,6 @@ const createInMemoryPackagingRecyclingNotesRepository = (initialPrns = []) => {
       const prn = store.get(id)
       return prn ? { ...prn } : null
     }),
-    findByOrganisation: vi.fn(async (orgId) =>
-      Array.from(store.values()).filter(
-        (prn) => prn.issuedByOrganisation === orgId
-      )
-    ),
     updateStatus: vi.fn(async ({ id, status, updatedBy, updatedAt }) => {
       const prn = store.get(id)
       if (!prn) return null
@@ -294,7 +289,6 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           packagingRecyclingNotesRepository: () => ({
             findById: vi.fn(),
             create: vi.fn(),
-            findByOrganisation: vi.fn(),
             updateStatus: vi.fn()
           })
         },

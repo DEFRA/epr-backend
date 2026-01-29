@@ -42,12 +42,7 @@ const createInMemoryPackagingRecyclingNotesRepository = () => {
       store.set(id, created)
       return created
     }),
-    findById: vi.fn(async (id) => store.get(id) || null),
-    findByOrganisation: vi.fn(async (orgId) =>
-      Array.from(store.values()).filter(
-        (prn) => prn.issuedByOrganisation === orgId
-      )
-    )
+    findById: vi.fn(async (id) => store.get(id) || null)
   })
 }
 
