@@ -35,6 +35,10 @@ describe('#getDefraUserRoles', () => {
     params: {},
     server: {
       app: {}
+    },
+    logger: {
+      info: vi.fn(),
+      error: vi.fn()
     }
   })
 

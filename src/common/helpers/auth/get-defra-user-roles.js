@@ -45,7 +45,9 @@ export async function getDefraUserRoles(tokenPayload, request) {
       roles.push(ROLES.standardUser)
     }
   } catch (_error) {
-    /* ignored no organisation found with supplied ID */
+    request.logger.info({
+      message: `No organisation found for ID: ${organisationId}`
+    })
   }
 
   return roles
