@@ -573,4 +573,3 @@ describe('isInitialUser', () => {
     expect(result).toBe(true)
   })
 })
-

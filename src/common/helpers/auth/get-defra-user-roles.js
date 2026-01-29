@@ -14,7 +14,7 @@ import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.j
  */
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
-  
+
   if (!email) {
     return []
   }
