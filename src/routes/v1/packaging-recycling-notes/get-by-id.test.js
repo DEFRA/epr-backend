@@ -28,7 +28,12 @@ const mockPrn = {
   tonnage: 50,
   material: 'glass',
   status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
-  createdAt: new Date('2026-01-15T10:00:00Z')
+  createdAt: new Date('2026-01-15T10:00:00Z'),
+  issuerNotes: 'Test notes',
+  isDecemberWaste: true,
+  authorisedAt: new Date('2026-01-16T14:30:00Z'),
+  authorisedBy: { name: 'John Smith', position: 'Director' },
+  wasteProcessingType: 'reprocessor'
 }
 
 const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
@@ -92,7 +97,52 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           tonnage: 50,
           material: 'glass',
           status: PRN_STATUS.AWAITING_AUTHORISATION,
-          createdAt: '2026-01-15T10:00:00.000Z'
+          createdAt: '2026-01-15T10:00:00.000Z',
+          notes: 'Test notes',
+          isDecemberWaste: true,
+          authorisedAt: '2026-01-16T14:30:00.000Z',
+          authorisedBy: { name: 'John Smith', position: 'Director' },
+          wasteProcessingType: 'reprocessor'
+        })
+      })
+
+      it('returns default values when optional fields are missing', async () => {
+        const minimalPrn = {
+          id: prnId,
+          issuedByOrganisation: organisationId,
+          issuedByRegistration: registrationId,
+          issuedToOrganisation: 'Acme Packaging Ltd',
+          tonnage: 50,
+          material: 'glass',
+          status: { currentStatus: PRN_STATUS.AWAITING_AUTHORISATION },
+          createdAt: new Date('2026-01-15T10:00:00Z')
+          // Missing: issuerNotes, isDecemberWaste, authorisedAt, authorisedBy, wasteProcessingType
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          minimalPrn
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        const payload = JSON.parse(response.payload)
+        expect(payload).toStrictEqual({
+          id: prnId,
+          issuedToOrganisation: 'Acme Packaging Ltd',
+          tonnage: 50,
+          material: 'glass',
+          status: PRN_STATUS.AWAITING_AUTHORISATION,
+          createdAt: '2026-01-15T10:00:00.000Z',
+          notes: null,
+          isDecemberWaste: false,
+          authorisedAt: null,
+          authorisedBy: null,
+          wasteProcessingType: null
         })
       })
     })

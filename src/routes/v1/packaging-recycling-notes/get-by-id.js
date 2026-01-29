@@ -23,7 +23,12 @@ const buildResponse = (prn) => ({
   tonnage: prn.tonnage,
   material: prn.material,
   status: prn.status.currentStatus,
-  createdAt: prn.createdAt
+  createdAt: prn.createdAt,
+  notes: prn.issuerNotes ?? null,
+  isDecemberWaste: prn.isDecemberWaste ?? false,
+  authorisedAt: prn.authorisedAt ?? null,
+  authorisedBy: prn.authorisedBy ?? null,
+  wasteProcessingType: prn.wasteProcessingType ?? null
 })
 
 export const packagingRecyclingNoteById = {
