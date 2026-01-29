@@ -27,7 +27,6 @@ export async function getDefraUserRoles(tokenPayload, request) {
     organisationId &&
     (await request.organisationsRepository.findById(organisationId))
 
-  // TODO test where does a get (with defra ID token) for an org that doesn't exist
   if (organisationById) {
     const orgInToken = getDefraTokenSummary(tokenPayload)
 
