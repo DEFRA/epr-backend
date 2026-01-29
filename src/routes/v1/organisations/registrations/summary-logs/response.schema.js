@@ -47,7 +47,8 @@ export const summaryLogResponseSchema = Joi.object({
       SUMMARY_LOG_STATUS.SUBMITTING,
       SUMMARY_LOG_STATUS.SUBMITTED,
       SUMMARY_LOG_STATUS.SUPERSEDED,
-      SUMMARY_LOG_STATUS.VALIDATION_FAILED
+      SUMMARY_LOG_STATUS.VALIDATION_FAILED,
+      SUMMARY_LOG_STATUS.SUBMISSION_FAILED
     )
     .required(),
   validation: Joi.object({
