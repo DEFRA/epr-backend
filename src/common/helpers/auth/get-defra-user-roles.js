@@ -19,15 +19,17 @@ export async function getDefraUserRoles(tokenPayload, request) {
     return []
   }
 
-  const roles = []
-  roles.push(ROLES.inquirer)
+  const roles = [ROLES.inquirer]
 
   const { organisationId } = request.params
-  const organisationById =
-    organisationId &&
-    (await request.organisationsRepository.findById(organisationId))
 
-  if (organisationById) {
+  if (!organisationId) {
+    return roles
+  }
+
+  try {
+    const organisationById =
+      await request.organisationsRepository.findById(organisationId)
     const orgInToken = getDefraTokenSummary(tokenPayload)
 
     if (isInitialUser(email, organisationById)) {
@@ -42,6 +44,8 @@ export async function getDefraUserRoles(tokenPayload, request) {
       addOrUpdateOrganisationUser(request, tokenPayload, organisationById)
       roles.push(ROLES.standardUser)
     }
+  } catch (_error) {
+    /* ignored no organisation found with supplied ID */
   }
 
   return roles

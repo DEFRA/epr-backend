@@ -112,7 +112,9 @@ describe('#getDefraUserRoles', () => {
         params: { organisationId: 'org-123' }
       }
 
-      mockOrganisationsRepository.findById.mockResolvedValue(null)
+      mockOrganisationsRepository.findById.mockRejectedValue(
+        new Error('Organisation not found')
+      )
 
       const result = await getDefraUserRoles(validTokenPayload, request)
 
@@ -181,7 +183,9 @@ describe('#getDefraUserRoles', () => {
         params: { organisationId: 'org-123' }
       }
 
-      mockOrganisationsRepository.findById.mockResolvedValue(null)
+      mockOrganisationsRepository.findById.mockRejectedValue(
+        new Error('Organisation not found')
+      )
 
       const result = await getDefraUserRoles(validTokenPayload, request)
 

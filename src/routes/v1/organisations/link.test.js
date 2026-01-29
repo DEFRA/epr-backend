@@ -90,7 +90,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
   })
 
   describe('the request contains a valid Defra Id token', () => {
-    it('when the organisation in the request does not exist, returns 401', async () => {
+    it('when the organisation in the request does not exist, returns 403', async () => {
       const nonExistingOrg = buildOrganisation()
       const response = await server.inject({
         method: 'POST',
@@ -99,7 +99,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           Authorization: `Bearer ${validToken}`
         }
       })
-      expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
     })
 
     describe('the request is valid, the org exists', () => {
