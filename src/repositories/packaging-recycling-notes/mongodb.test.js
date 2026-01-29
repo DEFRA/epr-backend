@@ -27,7 +27,6 @@ describe('MongoDB packaging recycling notes repository', () => {
     expect(repository).toEqual({
       findById: expect.any(Function),
       create: expect.any(Function),
-      findByOrganisation: expect.any(Function),
       findByRegistration: expect.any(Function),
       updateStatus: expect.any(Function)
     })
@@ -65,76 +64,6 @@ describe('MongoDB packaging recycling notes repository', () => {
         ...prnInput,
         id: hexId
       })
-    })
-  })
-
-  describe('findByOrganisation', () => {
-    it('returns PRNs for the specified organisation', async () => {
-      const hexId1 = '123456789012345678901234'
-      const hexId2 = '234567890123456789012345'
-      const organisationId = 'org-123'
-
-      const prns = [
-        {
-          _id: { toHexString: () => hexId1 },
-          issuedByOrganisation: organisationId,
-          tonnage: 100
-        },
-        {
-          _id: { toHexString: () => hexId2 },
-          issuedByOrganisation: organisationId,
-          tonnage: 200
-        }
-      ]
-
-      const dbMock = {
-        collection: function () {
-          return this
-        },
-        createIndex: async () => {},
-        findOne: async () => null,
-        insertOne: async () => ({ insertedId: { toHexString: () => hexId1 } }),
-        find: function () {
-          return {
-            toArray: async () => prns
-          }
-        }
-      }
-
-      const factory = await createPackagingRecyclingNotesRepository(dbMock)
-      const repository = factory()
-
-      const result = await repository.findByOrganisation(organisationId)
-
-      expect(result).toEqual([
-        { ...prns[0], id: hexId1 },
-        { ...prns[1], id: hexId2 }
-      ])
-    })
-
-    it('returns empty array when no PRNs found', async () => {
-      const dbMock = {
-        collection: function () {
-          return this
-        },
-        createIndex: async () => {},
-        findOne: async () => null,
-        insertOne: async () => ({
-          insertedId: { toHexString: () => '123456789012345678901234' }
-        }),
-        find: function () {
-          return {
-            toArray: async () => []
-          }
-        }
-      }
-
-      const factory = await createPackagingRecyclingNotesRepository(dbMock)
-      const repository = factory()
-
-      const result = await repository.findByOrganisation('org-nonexistent')
-
-      expect(result).toEqual([])
     })
   })
 

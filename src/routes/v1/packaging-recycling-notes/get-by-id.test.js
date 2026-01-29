@@ -40,7 +40,6 @@ const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
   return () => ({
     create: vi.fn(),
     findById: vi.fn(async () => prn),
-    findByOrganisation: vi.fn(),
     findByRegistration: vi.fn()
   })
 }
