@@ -63,7 +63,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.unfilledValues.EXPORT_CONTROLS).toContain('Choose option')
     })
 
-    it('has fatalFields array with all validated fields', () => {
+    it('has fatalFields array with waste balance fields (not supplementary)', () => {
       expect(Array.isArray(schema.fatalFields)).toBe(true)
       expect(schema.fatalFields).toContain('ROW_ID')
       expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_EXPORT')
@@ -95,17 +95,19 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.fatalFields).toContain(
         'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
       )
-      expect(schema.fatalFields).toContain('INTERIM_SITE_ID')
-      expect(schema.fatalFields).toContain(
+      // Supplementary fields are NOT fatal
+      expect(schema.fatalFields).not.toContain('INTERIM_SITE_ID')
+      expect(schema.fatalFields).not.toContain(
         'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR'
       )
-      expect(schema.fatalFields).toContain('EXPORT_CONTROLS')
+      expect(schema.fatalFields).not.toContain('EXPORT_CONTROLS')
     })
 
     describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
-      // Per PAE-659 AC03: ALL mandatory fields must be completed for inclusion
-      // in waste balance. For exporter, this is all 25 fields.
-      it('contains all mandatory fields for waste balance inclusion', () => {
+      // Per PAE-984: Only business-mandated fields are required for waste balance.
+      // Supplementary fields (EXPORT_CONTROLS, INTERIM_SITE_ID,
+      // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR) are not required.
+      it('contains the 22 business-mandated fields for waste balance inclusion', () => {
         expect(
           Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
         ).toBe(true)
@@ -175,19 +177,22 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
         expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
         )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+      })
+
+      it('does NOT include supplementary fields (audit/conditional)', () => {
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
           'INTERIM_SITE_ID'
         )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
           'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR'
         )
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
           'EXPORT_CONTROLS'
         )
       })
 
-      it('has exactly 25 fields required for waste balance (all mandatory)', () => {
-        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(25)
+      it('has exactly 22 fields required for waste balance (per PAE-984)', () => {
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(22)
       })
     })
   })
