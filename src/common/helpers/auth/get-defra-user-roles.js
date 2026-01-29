@@ -44,9 +44,10 @@ export async function getDefraUserRoles(tokenPayload, request) {
       addOrUpdateOrganisationUser(request, tokenPayload, organisationById)
       roles.push(ROLES.standardUser)
     }
-  } catch (_error) {
-    request.logger.info({
-      message: `No organisation found for ID: ${organisationId}`
+  } catch (error) {
+    request.logger.warn({
+      message: `No organisation found for ID: ${organisationId}`,
+      error
     })
   }
 
