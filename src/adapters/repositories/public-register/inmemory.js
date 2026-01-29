@@ -41,8 +41,8 @@ export const createInMemoryPublicRegisterRepository = (config = {}) => {
      * @returns {Promise<string>} The CSV content
      */
     async fetchFromPresignedUrl(url) {
-      const fileName = preSignedUrls.get(url)
-      return storage.get(fileName)
+      const fileName = /** @type {string} */ (preSignedUrls.get(url))
+      return /** @type {string} */ (storage.get(fileName))
     },
 
     /**
