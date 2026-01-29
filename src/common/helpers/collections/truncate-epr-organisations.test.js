@@ -31,7 +31,7 @@ describe('truncateEprOrganisations', () => {
     })
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Failed to truncate collection epr-organisations',
-      error
+      err: error
     })
   })
 })

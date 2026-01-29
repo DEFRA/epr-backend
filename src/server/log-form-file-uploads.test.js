@@ -96,7 +96,7 @@ describe('logFilesUploadedFromForms', () => {
     await logFilesUploadedFromForms(mockServer)
 
     expect(mockLoggerError).toHaveBeenCalledWith({
-      error: mockError,
+      err: mockError,
       message: 'Failed to run logging of files uploaded from defra forms'
     })
   })

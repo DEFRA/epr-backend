@@ -203,7 +203,7 @@ const extractMetaValues = (parsedMeta) => {
 
 const handleValidationFailure = (error, issues, loggingContext) => {
   logger.error({
-    error,
+    err: error,
     message: `Failed to validate summary log file: ${loggingContext}`,
     event: {
       category: LOGGING_EVENT_CATEGORIES.SERVER,

@@ -80,7 +80,7 @@ export const summaryLogsCreate = {
       }
 
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${summaryLogsCreatePath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

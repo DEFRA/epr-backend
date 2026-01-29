@@ -244,7 +244,7 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
-      error,
+      err: error,
       message: `Failure on ${organisationPath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
@@ -280,7 +280,7 @@ describe(`${url} route`, () => {
     const body = JSON.parse(response.payload)
     expect(body.message).toMatch(`An internal server error occurred`)
     expect(server.loggerMocks.error).toHaveBeenCalledWith({
-      error,
+      err: error,
       message: `Failure on ${organisationPath}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
