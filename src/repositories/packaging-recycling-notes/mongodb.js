@@ -87,6 +87,23 @@ const findByOrganisation = async (db, organisationId) => {
 
 /**
  * @param {import('mongodb').Db} db
+ * @param {string} registrationId
+ * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote[]>}
+ */
+const findByRegistration = async (db, registrationId) => {
+  const docs = await db
+    .collection(COLLECTION_NAME)
+    .find({ issuedByRegistration: registrationId })
+    .toArray()
+
+  return docs.map((doc) => ({
+    ...doc,
+    id: doc._id.toHexString()
+  }))
+}
+
+/**
+ * @param {import('mongodb').Db} db
  * @param {import('./port.js').UpdateStatusParams} params
  * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote | null>}
  */
@@ -127,6 +144,8 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
     create: (prn) => create(db, prn),
     findByOrganisation: (organisationId) =>
       findByOrganisation(db, organisationId),
+    findByRegistration: (registrationId) =>
+      findByRegistration(db, registrationId),
     updateStatus: (params) => updateStatus(db, params)
   })
 }
