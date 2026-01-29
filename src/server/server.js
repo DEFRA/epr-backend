@@ -92,7 +92,16 @@ async function createServer(options = {}) {
           title: 'API Documentation',
           version: '1'
         },
-        documentationPath: '/swagger'
+        documentationPath: '/swagger',
+        securityDefinitions: {
+          Bearer: {
+            type: 'apiKey',
+            name: 'Authorization',
+            in: 'header',
+            description: 'Enter your Bearer token in the format: Bearer {token}'
+          }
+        },
+        security: [{ Bearer: [] }]
       }
     })
   }
