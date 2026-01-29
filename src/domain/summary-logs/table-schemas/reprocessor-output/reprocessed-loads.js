@@ -78,7 +78,7 @@ export const REPROCESSED_LOADS = {
    * A load will only be added to your waste balance when you provide
    * all the information in this section.
    */
-  fieldsRequiredForWasteBalance: [
+  fieldsRequiredForInclusionInWasteBalance: [
     FIELDS.PRODUCT_TONNAGE,
     FIELDS.DATE_LOAD_LEFT_SITE,
     FIELDS.UK_PACKAGING_WEIGHT_PERCENTAGE,

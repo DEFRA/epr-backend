@@ -63,7 +63,7 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.unfilledValues.EXPORT_CONTROLS).toContain('Choose option')
     })
 
-    it('has fatalFields array with all validated fields', () => {
+    it('has fatalFields array with waste balance fields (not supplementary)', () => {
       expect(Array.isArray(schema.fatalFields)).toBe(true)
       expect(schema.fatalFields).toContain('ROW_ID')
       expect(schema.fatalFields).toContain('DATE_RECEIVED_FOR_EXPORT')
@@ -95,45 +95,105 @@ describe('RECEIVED_LOADS_FOR_EXPORT', () => {
       expect(schema.fatalFields).toContain(
         'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
       )
-      expect(schema.fatalFields).toContain('INTERIM_SITE_ID')
-      expect(schema.fatalFields).toContain(
+      // Supplementary fields are NOT fatal
+      expect(schema.fatalFields).not.toContain('INTERIM_SITE_ID')
+      expect(schema.fatalFields).not.toContain(
         'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR'
       )
-      expect(schema.fatalFields).toContain('EXPORT_CONTROLS')
+      expect(schema.fatalFields).not.toContain('EXPORT_CONTROLS')
     })
 
-    it('has fieldsRequiredForWasteBalance array with validated fields', () => {
-      expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
-      expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DATE_RECEIVED_FOR_EXPORT'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'DESCRIPTION_WASTE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain('GROSS_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('TARE_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('PALLET_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain('NET_WEIGHT')
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'BAILING_WIRE_PROTOCOL'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'WEIGHT_OF_NON_TARGET_MATERIALS'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'RECYCLABLE_PROPORTION_PERCENTAGE'
-      )
-      expect(schema.fieldsRequiredForWasteBalance).toContain(
-        'TONNAGE_RECEIVED_FOR_EXPORT'
-      )
+    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
+      // Per PAE-984: Only business-mandated fields are required for waste balance.
+      // Supplementary fields (EXPORT_CONTROLS, INTERIM_SITE_ID,
+      // TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR) are not required.
+      it('contains the 22 business-mandated fields for waste balance inclusion', () => {
+        expect(
+          Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
+        ).toBe(true)
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'ROW_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DATE_RECEIVED_FOR_EXPORT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'EWC_CODE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DESCRIPTION_WASTE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'GROSS_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TARE_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'PALLET_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'NET_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'BAILING_WIRE_PROTOCOL'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'WEIGHT_OF_NON_TARGET_MATERIALS'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'RECYCLABLE_PROPORTION_PERCENTAGE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TONNAGE_RECEIVED_FOR_EXPORT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DATE_OF_EXPORT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'BASEL_EXPORT_CODE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'CUSTOMS_CODES'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'CONTAINER_NUMBER'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DATE_RECEIVED_BY_OSR'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'OSR_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE'
+        )
+      })
+
+      it('does NOT include supplementary fields (audit/conditional)', () => {
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
+          'INTERIM_SITE_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
+          'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
+          'EXPORT_CONTROLS'
+        )
+      })
+
+      it('has exactly 22 fields required for waste balance (per PAE-984)', () => {
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(22)
+      })
     })
   })
 
