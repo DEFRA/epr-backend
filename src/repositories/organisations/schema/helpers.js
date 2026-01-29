@@ -216,7 +216,9 @@ export const validateImmutableFields = (fields) => (value, helpers) => {
     if (originalItem) {
       for (const field of fields) {
         // strict equality check
-        if (JSON.stringify(item[field]) !== JSON.stringify(originalItem[field])) {
+        if (
+          JSON.stringify(item[field]) !== JSON.stringify(originalItem[field])
+        ) {
           return helpers.error('any.invalid', {
             message: `Field '${field}' cannot be modified` // Joi will use this as a custom error message
           })

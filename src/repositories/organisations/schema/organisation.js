@@ -83,11 +83,11 @@ export const organisationReplaceSchema = organisationInsertSchema
     registrations: Joi.array()
       .items(registrationUpdateSchema)
       .default([])
-      .custom(validateImmutableFields(['id', 'statusHistory'])),
+      .custom(validateImmutableFields(['id'])),
     accreditations: Joi.array()
       .items(accreditationUpdateSchema)
       .default([])
-      .custom(validateImmutableFields(['id', 'statusHistory']))
+      .custom(validateImmutableFields(['id']))
   })
 
 /**
