@@ -32,18 +32,18 @@ export function testOnlyServiceMaintainerCanAccess({
         token: defraIdMockAuthTokens.unknownUnauthorisedUserToken,
         description:
           'a valid Defra Id token but with an unknown email and contactId',
-        expectedStatus: StatusCodes.UNAUTHORIZED
+        expectedStatus: StatusCodes.FORBIDDEN
       },
       {
         token: defraIdMockAuthTokens.validToken,
         description: 'a valid Defra Id token for a known public user',
-        expectedStatus: StatusCodes.UNAUTHORIZED
+        expectedStatus: StatusCodes.FORBIDDEN
       },
       {
         token: defraIdMockAuthTokens.unknownButAuthorisedUserToken,
         description:
           'a valid Defra Id token for an unknown user with a relationshipId pointing at the org',
-        expectedStatus: StatusCodes.UNAUTHORIZED
+        expectedStatus: StatusCodes.FORBIDDEN
       }
     ]
 
@@ -162,7 +162,7 @@ export function testStandardUserAndServiceMaintainerCanAccess({
         token: defraIdMockAuthTokens.unknownUnauthorisedUserToken,
         description:
           'a valid Defra Id token but with an unknown email and contactId',
-        expectedStatus: StatusCodes.UNAUTHORIZED
+        expectedStatus: StatusCodes.FORBIDDEN
       },
       {
         token: defraIdMockAuthTokens.validToken,

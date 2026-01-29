@@ -46,7 +46,7 @@ export const organisationsLink = {
    */
   handler: async (request, h) => {
     // TODO: `orgInToken`, `organisationId` and `organisation` are guaranteed to exist here
-    // by the logic in `isAuthorisedOrgLinkingReq` which frontloads those checks.
+    // by the logic in `getDefraUserRoles` which frontloads those checks.
     // It may make sense to move those checks into this handler
 
     const { orgInToken } = request.server.app

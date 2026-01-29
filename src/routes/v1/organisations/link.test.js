@@ -119,7 +119,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           description: 'user is not in the users list',
           user: baseUserObject,
           status: ORGANISATION_STATUS.APPROVED,
-          expectedStatusCode: StatusCodes.UNAUTHORIZED
+          expectedStatusCode: StatusCodes.FORBIDDEN
         },
         {
           description: 'user is valid',
@@ -281,7 +281,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(systemLogPayload.createdBy).toEqual({
             id: VALID_TOKEN_CONTACT_ID,
             email: USER_PRESENT_IN_ORG1_EMAIL,
-            scope: ['linker']
+            scope: ['inquirer', 'linker']
           })
 
           expect(
@@ -313,7 +313,7 @@ describe('POST /v1/organisations/{organisationId}/link', () => {
           expect(auditPayload.user).toEqual({
             id: VALID_TOKEN_CONTACT_ID,
             email: USER_PRESENT_IN_ORG1_EMAIL,
-            scope: ['linker']
+            scope: ['inquirer', 'linker']
           })
 
           expect(auditPayload.event).toEqual({

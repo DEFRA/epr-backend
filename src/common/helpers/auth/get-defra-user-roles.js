@@ -1,12 +1,7 @@
-import Boom from '@hapi/boom'
 import { ROLES } from '#common/helpers/auth/constants.js'
-import { isAuthorisedOrgLinkingReq } from './is-authorised-org-linking-req.js'
-import {
-  getDefraTokenSummary,
-  isOrganisationsDiscoveryReq
-} from './roles/helpers.js'
-import { getOrgMatchingUsersToken } from './get-users-org-info.js'
-import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
+import { getDefraTokenSummary, isInitialUser } from './roles/helpers.js'
+import { ORGANISATION_STATUS } from '#domain/organisations/model.js'
+import { addOrUpdateOrganisationUser } from './add-or-update-organisation-user.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 /** @typedef {import('./types.js').DefraIdTokenPayload} DefraIdTokenPayload */
@@ -14,54 +9,64 @@ import { getRolesForOrganisationAccess } from './get-roles-for-org-access.js'
 /**
  * Determines the roles for a Defra ID user based on their token and request context
  * @param {DefraIdTokenPayload} tokenPayload - The Defra ID token payload
- * @param {import('#common/hapi-types.js').HapiRequest} request - The Hapi request object
+ * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
  * @returns {Promise<string[]>} Array of role strings
  */
 export async function getDefraUserRoles(tokenPayload, request) {
   const { email } = tokenPayload
-
+  
   if (!email) {
     return []
   }
 
-  // This throws if the user is unauthorised
-  const isValidLinkingReq = await isAuthorisedOrgLinkingReq(
-    request,
-    tokenPayload
-  )
+  const roles = []
+  roles.push(ROLES.inquirer)
 
-  if (isValidLinkingReq) {
-    request.server.app.orgInToken = getDefraTokenSummary(tokenPayload)
+  const { organisationId } = request.params
+  const organisationById =
+    organisationId &&
+    (await request.organisationsRepository.findById(organisationId))
 
-    return [ROLES.linker]
+  // TODO test where does a get (with defra ID token) for an org that doesn't exist
+  if (organisationById) {
+    const orgInToken = getDefraTokenSummary(tokenPayload)
+
+    if (isInitialUser(email, organisationById)) {
+      request.server.app.orgInToken = orgInToken
+      roles.push(ROLES.linker)
+    }
+
+    if (
+      orgIsLinkedToUsersDefraIdOrg(organisationById, orgInToken) &&
+      orgStatusIsAccessible(organisationById)
+    ) {
+      addOrUpdateOrganisationUser(request, tokenPayload, organisationById)
+      roles.push(ROLES.standardUser)
+    }
   }
-
-  const { organisationsRepository } = request
-
-  // The endpoint will show info based on the user's email and contactId
-  if (isOrganisationsDiscoveryReq(request)) {
-    return [ROLES.inquirer]
-  }
-
-  const linkedEprOrg = await getOrgMatchingUsersToken(
-    tokenPayload,
-    organisationsRepository
-  )
-
-  if (!linkedEprOrg) {
-    throw Boom.forbidden('User is not linked to an organisation')
-  }
-
-  // Throws error if:
-  // - the request does not have an organisationId param
-  // - or if the linkedEprOrg does not match the organisationId param
-  // - or if the organisation status is not accessible
-  // Adds the user to the organisation if they are not already present
-  const roles = await getRolesForOrganisationAccess(
-    request,
-    linkedEprOrg.id,
-    tokenPayload
-  )
 
   return roles
+}
+
+/**
+ * @param {Object} organization
+ * @param {{ defraIdOrgId?: string }} orgInUsersToken
+ * @returns
+ */
+function orgIsLinkedToUsersDefraIdOrg(
+  organization,
+  { defraIdOrgId: usersDefraIdOrgId }
+) {
+  return (
+    !!usersDefraIdOrgId &&
+    organization.linkedDefraOrganisation?.orgId === usersDefraIdOrgId
+  )
+}
+
+/**
+ * @param {Object} organization
+ * @returns {boolean}
+ */
+function orgStatusIsAccessible(organization) {
+  return [ORGANISATION_STATUS.ACTIVE].includes(organization.status)
 }

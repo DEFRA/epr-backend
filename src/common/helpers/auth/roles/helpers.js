@@ -1,5 +1,4 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
 
 /** @import {DefraIdRelationship, DefraIdTokenPayload} from '../types.js' */
 /** @import {Organisation} from '#domain/organisations/model.js' */
@@ -19,9 +18,10 @@ export const stringEquals = (a, b) =>
 /**
  * Checks if a user is the initial user of an organisation
  * @param {string} email - The user's email address
- * @returns {(organisation: Organisation) => boolean} Function that checks if the user is an initial user
+ * @param {Organisation} organisation - The organisation to check against
+ * @returns {boolean} True if the user is an initial user of the organisation
  */
-export const isInitialUser = (email) => (organisation) =>
+export const isInitialUser = (email, organisation) =>
   Boolean(
     organisation.users?.some(
       (user) =>
@@ -79,16 +79,6 @@ export function getDefraTokenSummary(tokenPayload) {
 }
 
 /**
- * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
- * @returns {boolean}
- */
-export function isOrganisationsDiscoveryReq(request) {
-  return (
-    request.path === organisationsLinkedGetAllPath && request.method === 'get'
-  )
-}
-
-/**
  * Helper function to deduplicate organisations by ID
  *
  * Exported for testing purposes
@@ -108,17 +98,4 @@ export function deduplicateOrganisations(
         : [...prev, organisation],
     []
   )
-}
-
-/**
- * Finds the organisation linked to a Defra ID organisation
- * @param {string} defraIdOrgId - The Defra ID organisation ID
- * @param {OrganisationsRepository} organisationsRepository - The organisations repository
- * @returns {Promise<Organisation | null>} The matched organisation or null if none found
- */
-export async function findOrganisationMatches(
-  defraIdOrgId,
-  organisationsRepository
-) {
-  return organisationsRepository.findByLinkedDefraOrgId(defraIdOrgId)
 }

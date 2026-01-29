@@ -1,14 +1,11 @@
 import { USER_ROLES } from '#domain/organisations/model.js'
-import { organisationsLinkedGetAllPath } from '#domain/organisations/paths.js'
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import {
   deduplicateOrganisations,
-  findOrganisationMatches,
   getCurrentRelationship,
   getDefraTokenSummary,
   getOrgDataFromDefraIdToken,
-  isInitialUser,
-  isOrganisationsDiscoveryReq
+  isInitialUser
 } from './helpers.js'
 
 describe('getOrgDataFromDefraIdToken', () => {
@@ -312,53 +309,6 @@ describe('getDefraTokenSummary', () => {
   })
 })
 
-describe('isOrganisationsDiscoveryReq', () => {
-  it('should return true for GET request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'get'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(true)
-  })
-
-  it('should return false for POST request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'post'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-
-  it('should return false for GET request to different path', () => {
-    const request = /** @type {any} */ ({
-      path: '/api/v1/different-path',
-      method: 'get'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-
-  it('should return false for PUT request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'put'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-
-  it('should return false for DELETE request to organisations linked path', () => {
-    const request = /** @type {any} */ ({
-      path: organisationsLinkedGetAllPath,
-      method: 'delete'
-    })
-
-    expect(isOrganisationsDiscoveryReq(request)).toBe(false)
-  })
-})
-
 describe('deduplicateOrganisations', () => {
   it('should return empty array when both inputs are empty', () => {
     const result = deduplicateOrganisations([], [])
@@ -458,7 +408,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(true)
   })
@@ -473,7 +423,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(true)
   })
@@ -488,7 +438,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -503,7 +453,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -511,7 +461,7 @@ describe('isInitialUser', () => {
   it('should return false when users array is undefined', () => {
     const organisation = /** @type {any} */ ({})
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -521,7 +471,7 @@ describe('isInitialUser', () => {
       users: null
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -531,7 +481,7 @@ describe('isInitialUser', () => {
       users: []
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -546,7 +496,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -561,7 +511,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -576,7 +526,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(false)
   })
@@ -599,7 +549,7 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(true)
   })
@@ -618,40 +568,9 @@ describe('isInitialUser', () => {
       ]
     })
 
-    const result = isInitialUser('user@example.com')(organisation)
+    const result = isInitialUser('user@example.com', organisation)
 
     expect(result).toBe(true)
   })
 })
 
-describe('findOrganisationMatches', () => {
-  it('should call findByLinkedDefraOrgId with the defra org ID', async () => {
-    const mockOrg = {
-      id: 'org-1',
-      linkedDefraOrganisation: { orgId: 'defra-123' }
-    }
-    const mockRepository = {
-      findByLinkedDefraOrgId: vi.fn().mockResolvedValue(mockOrg)
-    }
-
-    const result = await findOrganisationMatches('defra-123', mockRepository)
-
-    expect(mockRepository.findByLinkedDefraOrgId).toHaveBeenCalledWith(
-      'defra-123'
-    )
-    expect(result).toEqual(mockOrg)
-  })
-
-  it('should return null when no organisation is linked', async () => {
-    const mockRepository = {
-      findByLinkedDefraOrgId: vi.fn().mockResolvedValue(null)
-    }
-
-    const result = await findOrganisationMatches('non-existent', mockRepository)
-
-    expect(mockRepository.findByLinkedDefraOrgId).toHaveBeenCalledWith(
-      'non-existent'
-    )
-    expect(result).toBeNull()
-  })
-})
