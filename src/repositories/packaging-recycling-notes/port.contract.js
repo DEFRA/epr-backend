@@ -1,4 +1,5 @@
 import { describe } from 'vitest'
+import { testInsertBehaviour } from './contract/insert.contract.js'
 import { testFindBehaviour } from './contract/find.contract.js'
 
 /**
@@ -10,6 +11,7 @@ import { testFindBehaviour } from './contract/find.contract.js'
  */
 export const testPackagingRecyclingNotesRepositoryContract = (it) => {
   describe('packaging recycling notes repository contract', () => {
+    testInsertBehaviour(it)
     testFindBehaviour(it)
   })
 }

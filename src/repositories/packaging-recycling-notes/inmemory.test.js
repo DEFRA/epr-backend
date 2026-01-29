@@ -31,6 +31,7 @@ describe('In-memory packaging recycling notes repository', () => {
       packagingRecyclingNotesRepository
     }) => {
       expect(packagingRecyclingNotesRepository).toEqual({
+        insert: expect.any(Function),
         findById: expect.any(Function),
         findByAccreditationId: expect.any(Function)
       })

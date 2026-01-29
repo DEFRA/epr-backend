@@ -13,7 +13,7 @@ export const prnsGet = {
   path: prnsGetPath,
   options: {
     auth: {
-      scope: [ROLES.standardUser, ROLES.serviceMaintainer]
+      scope: [ROLES.standardUser]
     },
     tags: ['api'],
     validate: {

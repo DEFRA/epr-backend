@@ -1,8 +1,9 @@
-import { ObjectId } from 'mongodb'
+import Boom from '@hapi/boom'
 
 import { validateId } from './validation.js'
 
 const COLLECTION_NAME = 'packaging-recycling-notes'
+const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
 
 /**
  * Ensures the collection exists with required indexes.
@@ -32,6 +33,19 @@ async function ensureCollection(db) {
   return collection
 }
 
+const insert = (db) => async (id, prn) => {
+  const validatedId = validateId(id)
+
+  try {
+    await db.collection(COLLECTION_NAME).insertOne({ _id: validatedId, ...prn })
+  } catch (error) {
+    if (error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE) {
+      throw Boom.conflict(`PRN with id ${validatedId} already exists`)
+    }
+    throw error
+  }
+}
+
 /**
  * @param {import('mongodb').Db} db
  * @param {string} id
@@ -39,9 +53,7 @@ async function ensureCollection(db) {
  */
 const findById = async (db, id) => {
   const validatedId = validateId(id)
-  return db
-    .collection(COLLECTION_NAME)
-    .findOne({ _id: ObjectId.createFromHexString(validatedId) })
+  return db.collection(COLLECTION_NAME).findOne({ _id: validatedId })
 }
 
 /**
@@ -65,6 +77,7 @@ export const createPackagingRecyclingNotesRepository = async (db) => {
   await ensureCollection(db)
 
   return () => ({
+    insert: insert(db),
     findById: (id) => findById(db, id),
     findByAccreditationId: (accreditationId) =>
       findByAccreditationId(db, accreditationId)

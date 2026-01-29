@@ -4,9 +4,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createInMemoryPackagingRecyclingNotesRepository } from '#repositories/packaging-recycling-notes/inmemory.js'
 import { createTestServer } from '#test/create-test-server.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { entraIdMockAuthTokens } from '#vite/helpers/create-entra-id-test-tokens.js'
-
-const { validToken } = entraIdMockAuthTokens
+import { asStandardUser } from '#test/inject-auth.js'
 
 describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId}/prns', () => {
   setupAuthContext()
@@ -66,9 +64,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -83,9 +79,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       const result = JSON.parse(response.payload)
@@ -108,9 +102,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       const result = JSON.parse(response.payload)
@@ -144,9 +136,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.OK)
@@ -179,9 +169,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/invalid/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -191,9 +179,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/invalid/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
@@ -228,7 +214,10 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
   })
 
   describe('authorization', () => {
-    it('returns 403 when PRN belongs to different organisation', async () => {
+    it('returns 403 when accreditation belongs to a different organisation', async () => {
+      // Scenario: user queries their own org but with an accreditation
+      // that belongs to a different org. The PRNs for that accreditation
+      // will have a different organisationId, triggering the ownership check.
       const prnFromDifferentOrg = [
         {
           _id: 'cccccccccccccccccccccccc',
@@ -257,9 +246,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
@@ -267,6 +254,37 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const result = JSON.parse(response.payload)
 
       expect(result.error).toBe('Forbidden')
+    })
+
+    it('returns empty items when accreditation has no PRNs', async () => {
+      // Scenario: user queries their own org with an accreditation ID
+      // that has no PRNs. This returns 200 with empty items because
+      // the ownership check only triggers when PRNs exist.
+      const unrelatedAccreditationId = 'eeeeeeeeeeeeeeeeeeeeeeee'
+
+      const featureFlags = createInMemoryFeatureFlags({
+        createPackagingRecyclingNotes: true
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          packagingRecyclingNotesRepository:
+            createInMemoryPackagingRecyclingNotesRepository(stubPrns)
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: `/v1/organisations/${organisationId}/accreditations/${unrelatedAccreditationId}/prns`,
+        ...asStandardUser({ linkedOrgId: organisationId })
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.OK)
+
+      const result = JSON.parse(response.payload)
+
+      expect(result.items).toEqual([])
     })
   })
 
@@ -287,9 +305,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
       const response = await server.inject({
         method: 'GET',
         url: `/v1/organisations/${organisationId}/accreditations/${accreditationId}/prns`,
-        headers: {
-          Authorization: `Bearer ${validToken}`
-        }
+        ...asStandardUser({ linkedOrgId: organisationId })
       })
 
       expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)

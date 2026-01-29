@@ -1,3 +1,5 @@
+import Boom from '@hapi/boom'
+
 import { validateId } from './validation.js'
 
 /**
@@ -19,6 +21,21 @@ export const createInMemoryPackagingRecyclingNotesRepository = (
   }
 
   return () => ({
+    /**
+     * @param {string} id
+     * @param {Object} prn
+     * @returns {Promise<void>}
+     */
+    insert: async (id, prn) => {
+      const validatedId = validateId(id)
+
+      if (storage.has(validatedId)) {
+        throw Boom.conflict(`PRN with id ${validatedId} already exists`)
+      }
+
+      storage.set(validatedId, structuredClone(prn))
+    },
+
     /**
      * @param {string} id
      * @returns {Promise<Object|null>}
