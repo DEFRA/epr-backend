@@ -109,7 +109,7 @@ describe('createSummaryLogsCommandExecutor', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(logger.error).toHaveBeenCalledWith({
-      error,
+      err: error,
       message:
         'Summary log validate worker failed: summaryLogId=summary-log-123',
       event: {
@@ -175,7 +175,7 @@ describe('createSummaryLogsCommandExecutor', () => {
       await new Promise((resolve) => setTimeout(resolve, 0))
 
       expect(logger.error).toHaveBeenCalledWith({
-        error,
+        err: error,
         message:
           'Summary log submit worker failed: summaryLogId=summary-log-123',
         event: {
@@ -352,7 +352,7 @@ describe('createSummaryLogsCommandExecutor', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            error: updateError,
+            err: updateError,
             message: expect.stringContaining(
               'Failed to mark summary log as validation_failed'
             ),
@@ -554,7 +554,7 @@ describe('createSummaryLogsCommandExecutor', () => {
 
         expect(logger.error).toHaveBeenCalledWith(
           expect.objectContaining({
-            error: updateError,
+            err: updateError,
             message: expect.stringContaining(
               'Failed to mark summary log as submission_failed'
             ),

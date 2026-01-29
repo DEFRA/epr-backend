@@ -34,7 +34,7 @@ function partitionBySuccess(results, type) {
       } else {
         acc.failed.push(result)
         logger.error({
-          error: result.error,
+          err: result.error,
           message: `Error transforming ${type} submission`,
           event: {
             category: LOGGING_EVENT_CATEGORIES.DB,

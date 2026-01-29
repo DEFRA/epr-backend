@@ -109,53 +109,67 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING', () => {
       })
     })
 
-    describe('fieldsRequiredForWasteBalance (VAL011)', () => {
+    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       it('contains fields required for waste balance calculation', () => {
-        expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
-        expect(schema.fieldsRequiredForWasteBalance).toContain('ROW_ID')
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(
+          Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
+        ).toBe(true)
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'ROW_ID'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'DATE_RECEIVED_FOR_REPROCESSING'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain('EWC_CODE')
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'EWC_CODE'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'DESCRIPTION_WASTE'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain('GROSS_WEIGHT')
-        expect(schema.fieldsRequiredForWasteBalance).toContain('TARE_WEIGHT')
-        expect(schema.fieldsRequiredForWasteBalance).toContain('PALLET_WEIGHT')
-        expect(schema.fieldsRequiredForWasteBalance).toContain('NET_WEIGHT')
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'GROSS_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'TARE_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'PALLET_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
+          'NET_WEIGHT'
+        )
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'BAILING_WIRE_PROTOCOL'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'WEIGHT_OF_NON_TARGET_MATERIALS'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'RECYCLABLE_PROPORTION_PERCENTAGE'
         )
-        expect(schema.fieldsRequiredForWasteBalance).toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toContain(
           'TONNAGE_RECEIVED_FOR_RECYCLING'
         )
       })
 
       it('has exactly 14 fields required for waste balance', () => {
-        expect(schema.fieldsRequiredForWasteBalance).toHaveLength(14)
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(14)
       })
 
       it('does NOT contain supplementary columns from Sections 2 & 3', () => {
-        expect(schema.fieldsRequiredForWasteBalance).not.toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
           'SUPPLIER_NAME'
         )
-        expect(schema.fieldsRequiredForWasteBalance).not.toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
           'YOUR_REFERENCE'
         )
-        expect(schema.fieldsRequiredForWasteBalance).not.toContain(
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).not.toContain(
           'CARRIER_NAME'
         )
       })

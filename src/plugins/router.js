@@ -9,6 +9,7 @@ import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
 import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
+import * as prnRoutes from '#routes/v1/organisations/accreditations/prns/index.js'
 
 const router = {
   plugin: {
@@ -26,12 +27,18 @@ const router = {
           ? Object.values(devRoutes)
           : []
 
+        const prnRoutesBehindFeatureFlag =
+          featureFlags.isCreatePackagingRecyclingNotesEnabled()
+            ? Object.values(prnRoutes)
+            : []
+
         server.route([
           health,
           ...apply,
           ...Object.values(meRoutes),
           ...summaryLogsRoutesBehindFeatureFlag,
           ...devRoutesBehindFeatureFlag,
+          ...prnRoutesBehindFeatureFlag,
           ...Object.values(organisationRoutes),
           ...formSubmissionsRoutes,
           ...Object.values(systemLogsRoutes),

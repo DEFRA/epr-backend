@@ -36,7 +36,7 @@ describe('setupGlobalErrorHandler', () => {
     listeners[listeners.length - 1](error)
 
     expect(mockLogger.error).toHaveBeenCalledWith({
-      error,
+      err: error,
       message: 'Unhandled rejection',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,
@@ -63,7 +63,7 @@ describe('setupGlobalErrorHandler', () => {
     listeners[listeners.length - 1](boomError)
 
     expect(mockLogger.error).toHaveBeenCalledWith({
-      error: boomError,
+      err: boomError,
       message: 'Unhandled rejection',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

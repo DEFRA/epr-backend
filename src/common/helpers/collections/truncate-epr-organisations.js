@@ -12,7 +12,7 @@ export async function truncateEprOrganisations(db) {
   } catch (error) {
     logger.error({
       message: `Failed to truncate collection ${eprOrganisations}`,
-      error
+      err: error
     })
   }
 }

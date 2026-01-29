@@ -180,7 +180,7 @@ describe('workers plugin', () => {
 
       expect(mockLogger.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: testError,
+          err: testError,
           message: 'Failed to close worker pool'
         })
       )

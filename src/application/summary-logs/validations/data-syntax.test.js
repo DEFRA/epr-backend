@@ -30,7 +30,11 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: ['ROW_ID', 'TEXT_FIELD', 'NUMBER_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: [
+          'ROW_ID',
+          'TEXT_FIELD',
+          'NUMBER_FIELD'
+        ]
       },
       DATE_TABLE: {
         requiredHeaders: ['ROW_ID', 'DATE_FIELD'],
@@ -45,7 +49,7 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: ['ROW_ID', 'DATE_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'DATE_FIELD']
       },
       PATTERN_TABLE: {
         requiredHeaders: ['ROW_ID', 'CODE_FIELD'],
@@ -63,7 +67,7 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: ['ROW_ID', 'CODE_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'CODE_FIELD']
       },
       // Schema with unmapped Joi error type to test error handling
       UNMAPPED_TABLE: {
@@ -77,7 +81,7 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: ['ROW_ID', 'EMAIL_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'EMAIL_FIELD']
       },
       // Schema without fatalFields to test fallback to empty array
       NO_FATAL_FIELDS_TABLE: {
@@ -96,7 +100,7 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: ['ROW_ID', 'VALUE_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'VALUE_FIELD']
       },
       // Schema with string.valid() to test any.only mapping
       VALID_VALUES_TABLE: {
@@ -115,7 +119,7 @@ describe('createDataSyntaxValidator', () => {
         })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: ['ROW_ID', 'YES_NO_FIELD']
+        fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'YES_NO_FIELD']
       },
       // Schema with custom calculation validator to test calculation mismatch mapping
       CALCULATED_TABLE: {
@@ -154,7 +158,7 @@ describe('createDataSyntaxValidator', () => {
           })
           .unknown(true)
           .prefs({ abortEarly: false }),
-        fieldsRequiredForWasteBalance: [
+        fieldsRequiredForInclusionInWasteBalance: [
           'ROW_ID',
           'VALUE_A',
           'VALUE_B',

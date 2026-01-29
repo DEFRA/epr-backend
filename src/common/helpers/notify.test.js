@@ -145,7 +145,7 @@ describe('sendEmail', () => {
       sendEmail(templateId, emailAddress, personalisation)
     ).rejects.toThrow('fail')
     expect(mockLoggerError).toHaveBeenCalledWith({
-      error,
+      err: error,
       message: expect.any(String),
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

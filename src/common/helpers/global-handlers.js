@@ -10,7 +10,7 @@ export function setupGlobalErrorHandler(logger) {
     const statusCode = /** @type {any} */ (error)?.output?.status_code
 
     logger.error({
-      error,
+      err: error,
       message: 'Unhandled rejection',
       event: {
         category: LOGGING_EVENT_CATEGORIES.HTTP,

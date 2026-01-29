@@ -55,9 +55,13 @@ describe('table-schemas', () => {
           expect(typeof schema.validationSchema.validate).toBe('function')
         })
 
-        it('has fieldsRequiredForWasteBalance array (for VAL011)', () => {
-          expect(Array.isArray(schema.fieldsRequiredForWasteBalance)).toBe(true)
-          expect(schema.fieldsRequiredForWasteBalance.length).toBeGreaterThan(0)
+        it('has fieldsRequiredForInclusionInWasteBalance array (for VAL011)', () => {
+          expect(
+            Array.isArray(schema.fieldsRequiredForInclusionInWasteBalance)
+          ).toBe(true)
+          expect(
+            schema.fieldsRequiredForInclusionInWasteBalance.length
+          ).toBeGreaterThan(0)
         })
       })
     })

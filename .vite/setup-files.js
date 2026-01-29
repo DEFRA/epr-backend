@@ -53,6 +53,8 @@ process.env.SYSTEM_REFERENCES_REQUIRING_ORG_ID_MATCH =
 
 process.env.TEST_ORGANISATIONS = '[999999]'
 
+process.env.TEST_ORGANISATIONS_SKIP_TRANSFORM = '["697a3c0e0587e4d4d7f3d533"]'
+
 beforeAll(async () => {
   // Setup fetch mock
   fetchMock.enableMocks()

@@ -27,10 +27,14 @@ import {
 } from './validators/tonnage-export-validator.js'
 
 /**
- * All fields in this table - used for requiredHeaders and fatalFields
- * since they're identical for this schema.
+ * Fields required for waste balance calculation (per PAE-984 business spec).
+ *
+ * These are the core fields needed for tonnage calculation. Does NOT include:
+ * - EXPORT_CONTROLS (audit/traceability, not required for tonnage)
+ * - INTERIM_SITE_ID (only required when DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE == Yes)
+ * - TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR (conditional, same as above)
  */
-const ALL_FIELDS = [
+const WASTE_BALANCE_FIELDS = [
   FIELDS.ROW_ID,
   FIELDS.DATE_RECEIVED_FOR_EXPORT,
   FIELDS.EWC_CODE,
@@ -52,7 +56,21 @@ const ALL_FIELDS = [
   FIELDS.CONTAINER_NUMBER,
   FIELDS.DATE_RECEIVED_BY_OSR,
   FIELDS.OSR_ID,
-  FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE,
+  FIELDS.DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE
+]
+
+/**
+ * Supplementary fields - present in template but not required for waste balance.
+ *
+ * INTERIM_SITE_ID and TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR are
+ * conditionally required when DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE == Yes,
+ * but we don't enforce this at the schema level since it would require
+ * conditional validation logic. Including them as supplementary means rows
+ * with incomplete interim site data will still be included in waste balance.
+ *
+ * EXPORT_CONTROLS is an audit field, not required for tonnage calculation.
+ */
+const SUPPLEMENTARY_FIELDS = [
   FIELDS.INTERIM_SITE_ID,
   FIELDS.TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR,
   FIELDS.EXPORT_CONTROLS
@@ -64,12 +82,12 @@ const ALL_FIELDS = [
  * Tracks waste received for export. This schema defines:
  * - What counts as "unfilled" per field (unfilledValues)
  * - How to validate filled fields (validationSchema for VAL010)
- * - Which fields must be present for Waste Balance (fieldsRequiredForWasteBalance for VAL011)
+ * - Which fields must be present for inclusion in Waste Balance (fieldsRequiredForInclusionInWasteBalance for VAL011)
  */
 export const RECEIVED_LOADS_FOR_EXPORT = {
   rowIdField: FIELDS.ROW_ID,
 
-  requiredHeaders: ALL_FIELDS,
+  requiredHeaders: [...WASTE_BALANCE_FIELDS, ...SUPPLEMENTARY_FIELDS],
 
   /**
    * Per-field values that indicate "unfilled"
@@ -89,9 +107,10 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
    * Fields that produce FATAL errors when validation fails
    *
    * ROW_ID is always fatal as it indicates tampering or corruption.
-   * All fields are fatal per ticket requirements.
+   * Only waste balance fields cause fatal errors; supplementary fields
+   * are optional and don't block submission.
    */
-  fatalFields: ALL_FIELDS,
+  fatalFields: WASTE_BALANCE_FIELDS,
 
   /**
    * VAL010: Validation schema for filled fields
@@ -154,25 +173,12 @@ export const RECEIVED_LOADS_FOR_EXPORT = {
     .prefs({ abortEarly: false }),
 
   /**
-   * VAL011: Fields required for Waste Balance calculation
+   * VAL011: Fields required for inclusion in Waste Balance
    *
-   * If any of these fields are missing (unfilled), the row is EXCLUDED
-   * from the Waste Balance but still included in the submission.
+   * Per PAE-984: Only the 22 business-mandated fields are required.
+   * Supplementary fields (EXPORT_CONTROLS, INTERIM_SITE_ID,
+   * TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR) are not required for
+   * waste balance inclusion.
    */
-  fieldsRequiredForWasteBalance: [
-    FIELDS.ROW_ID,
-    FIELDS.DATE_RECEIVED_FOR_EXPORT,
-    FIELDS.EWC_CODE,
-    FIELDS.DESCRIPTION_WASTE,
-    FIELDS.WERE_PRN_OR_PERN_ISSUED_ON_THIS_WASTE,
-    FIELDS.GROSS_WEIGHT,
-    FIELDS.TARE_WEIGHT,
-    FIELDS.PALLET_WEIGHT,
-    FIELDS.NET_WEIGHT,
-    FIELDS.BAILING_WIRE_PROTOCOL,
-    FIELDS.HOW_DID_YOU_CALCULATE_RECYCLABLE_PROPORTION,
-    FIELDS.WEIGHT_OF_NON_TARGET_MATERIALS,
-    FIELDS.RECYCLABLE_PROPORTION_PERCENTAGE,
-    FIELDS.TONNAGE_RECEIVED_FOR_EXPORT
-  ]
+  fieldsRequiredForInclusionInWasteBalance: WASTE_BALANCE_FIELDS
 }

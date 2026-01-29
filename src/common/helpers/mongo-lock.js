@@ -27,7 +27,7 @@ async function acquireLock(locker, resource) {
     const error = new MongoLockError('Could not acquire mongo resource lock')
 
     logger.error({
-      error,
+      err: error,
       message: `Failed to acquire lock for ${resource}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.DB,

@@ -96,9 +96,9 @@ describe('RECEIVED_LOADS_FOR_REPROCESSING (REPROCESSOR_OUTPUT)', () => {
       })
     })
 
-    describe('fieldsRequiredForWasteBalance (VAL011)', () => {
+    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       it('is empty (table does not contribute to waste balance for REPROCESSOR_OUTPUT)', () => {
-        expect(schema.fieldsRequiredForWasteBalance).toHaveLength(0)
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)
       })
     })
 
