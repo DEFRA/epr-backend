@@ -93,6 +93,8 @@ async function createServer(options = {}) {
           version: '1'
         },
         documentationPath: '/swagger',
+        grouping: 'tags',
+        tags: [{ name: 'admin', description: 'Admin UI endpoints' }],
         securityDefinitions: {
           Bearer: {
             type: 'apiKey',
