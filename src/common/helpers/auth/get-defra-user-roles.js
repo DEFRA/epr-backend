@@ -120,7 +120,10 @@ function orgIsLinkedToUsersDefraIdOrg(
   organisation,
   { defraIdOrgId: usersDefraIdOrgId }
 ) {
-  return !!usersDefraIdOrgId && organisation.linkedDefraOrganisation?.orgId === usersDefraIdOrgId
+  return (
+    !!usersDefraIdOrgId &&
+    organisation.linkedDefraOrganisation?.orgId === usersDefraIdOrgId
+  )
 }
 
 /**
@@ -136,10 +139,7 @@ function orgStatusIsAccessible(organisation) {
  * @param {string} accreditatonId
  * @returns {boolean}
  */
-function orgOwnsAccreditation(
-  organisation,
-  accreditatonId
-) {
+function orgOwnsAccreditation(organisation, accreditatonId) {
   return organisation.accreditations.some(
     (accreditation) => accreditation.id === accreditatonId
   )
