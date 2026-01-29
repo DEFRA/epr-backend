@@ -110,9 +110,18 @@ export const aggregateTonnageByMaterial = async (db) => {
       }
     },
     {
+      $group: {
+        _id: {
+          organisationId: '$organisationId',
+          registrationId: '$registrationId'
+        },
+        totalTonnage: { $sum: '$calculatedTonnage' }
+      }
+    },
+    {
       $lookup: {
         from: ORGANISATIONS_COLLECTION,
-        let: { orgId: '$organisationId', regId: '$registrationId' },
+        let: { orgId: '$_id.organisationId', regId: '$_id.registrationId' },
         pipeline: [
           { $match: { $expr: { $eq: ['$id', '$$orgId'] } } },
           { $unwind: '$registrations' },
@@ -135,7 +144,7 @@ export const aggregateTonnageByMaterial = async (db) => {
     {
       $group: {
         _id: '$material',
-        totalTonnage: { $sum: '$calculatedTonnage' }
+        totalTonnage: { $sum: '$totalTonnage' }
       }
     },
     {
