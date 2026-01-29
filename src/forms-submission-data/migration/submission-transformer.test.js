@@ -170,7 +170,7 @@ describe('transformAll', () => {
         category: 'database',
         reference: org2Id.toString()
       },
-      error: expect.any(Error)
+      err: expect.any(Error)
     })
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Error transforming registration submission',
@@ -179,7 +179,7 @@ describe('transformAll', () => {
         category: 'database',
         reference: reg2Id.toString()
       },
-      error: expect.any(Error)
+      err: expect.any(Error)
     })
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Error transforming accreditation submission',
@@ -188,7 +188,7 @@ describe('transformAll', () => {
         category: 'database',
         reference: accrId2.toString()
       },
-      error: expect.any(Error)
+      err: expect.any(Error)
     })
 
     expect(logger.info).toHaveBeenCalledWith({
@@ -293,7 +293,7 @@ describe('transformAll', () => {
         category: 'database',
         reference: org2Id.toString()
       },
-      error: expect.any(Error)
+      err: expect.any(Error)
     })
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Error transforming registration submission',
@@ -302,7 +302,7 @@ describe('transformAll', () => {
         category: 'database',
         reference: reg2Id.toString()
       },
-      error: expect.any(Error)
+      err: expect.any(Error)
     })
     expect(logger.error).toHaveBeenCalledWith({
       message: 'Error transforming accreditation submission',
@@ -311,7 +311,7 @@ describe('transformAll', () => {
         category: 'database',
         reference: accrId2.toString()
       },
-      error: expect.any(Error)
+      err: expect.any(Error)
     })
 
     expect(logger.info).toHaveBeenCalledWith({

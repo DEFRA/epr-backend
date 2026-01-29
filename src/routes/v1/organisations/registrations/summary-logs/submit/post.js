@@ -156,7 +156,7 @@ export const summaryLogsSubmit = {
       }
 
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${summaryLogsSubmitPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

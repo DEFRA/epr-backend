@@ -152,7 +152,7 @@ export const organisation = {
       const message = `Failure on ${organisationPath}`
 
       logger.error({
-        error,
+        err: error,
         message,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

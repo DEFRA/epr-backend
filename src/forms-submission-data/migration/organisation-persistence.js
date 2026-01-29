@@ -41,7 +41,7 @@ function insertOrganisation(organisationsRepository, item) {
     )
     .catch((error) => {
       logger.error({
-        error,
+        err: error,
         message: 'Error inserting organisation',
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,
@@ -73,7 +73,7 @@ function updateOrganisation(organisationsRepository, item) {
     )
     .catch((error) => {
       logger.error({
-        error,
+        err: error,
         message: 'Error updating organisation',
         event: {
           category: LOGGING_EVENT_CATEGORIES.DB,

@@ -88,7 +88,7 @@ export const mongoDbPlugin = {
         } catch (err) {
           /* v8 ignore next 8 */
           server.logger.error({
-            error: err,
+            err,
             message: 'Failed to close mongo client',
             event: {
               category: LOGGING_EVENT_CATEGORIES.DB,

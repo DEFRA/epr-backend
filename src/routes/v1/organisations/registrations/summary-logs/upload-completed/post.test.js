@@ -508,7 +508,7 @@ describe(`${summaryLogsUploadCompletedPath} route`, () => {
       expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
       expect(server.loggerMocks.error).toHaveBeenCalledWith(
         expect.objectContaining({
-          error: testError,
+          err: testError,
           message: `Failure on ${summaryLogsUploadCompletedPath}`,
           event: {
             category: 'server',

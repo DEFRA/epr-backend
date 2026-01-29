@@ -15,7 +15,7 @@ export function getLocalSecret(configKey) {
     return fs.readFileSync(path, 'utf8').toString().trim()
   } catch (error) {
     logger.error({
-      error,
+      err: error,
       message: `An error occurred while trying to read the secret: ${configKey}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,

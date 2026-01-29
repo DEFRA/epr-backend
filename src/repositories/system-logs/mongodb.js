@@ -32,7 +32,7 @@ export const createSystemLogsRepository = async (db) => {
         })
       } catch (error) {
         logger.error({
-          error,
+          err: error,
           message: 'Failed to internally record system log'
         })
       }

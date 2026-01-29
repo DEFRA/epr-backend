@@ -35,7 +35,7 @@ async function startServer() {
     return server
   } catch (error) {
     logger.error({
-      error,
+      err: error,
       message: 'Server failed to start',
       event: {
         category: LOGGING_EVENT_CATEGORIES.SERVER,
