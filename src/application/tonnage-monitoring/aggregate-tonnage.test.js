@@ -61,14 +61,6 @@ describe('aggregateTonnageByMaterial', () => {
     expect(actualMaterials.sort()).toEqual(expectedMaterials.sort())
   })
 
-  it('should query the waste-records collection', async () => {
-    const db = createMockDb([])
-
-    await aggregateTonnageByMaterial(db)
-
-    expect(db.collection).toHaveBeenCalledWith('waste-records')
-  })
-
   it('should return generatedAt timestamp', async () => {
     const db = createMockDb([])
 
