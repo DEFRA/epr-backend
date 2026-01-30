@@ -16,7 +16,7 @@ import {
 import { ACCREDITATION } from './form-field-constants.js'
 import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
 import { applyAccreditationOverrides } from '#formsubmission/overrides/override.js'
-import { splitGlassSubmissions } from '#formsubmission/registration/split-glass-submissions.js'
+import { splitGlassSubmissions } from '#formsubmission/parsing-common/split-glass-submissions.js'
 
 function getSubmitterDetails(answersByShortDescription) {
   return {

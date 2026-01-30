@@ -23,7 +23,7 @@ import {
 } from '#formsubmission/registration/extract-contacts.js'
 import { getYearlyMetrics } from '#formsubmission/registration/extract-yearly-metrics.js'
 import { applyRegistrationOverrides } from '#formsubmission/overrides/override.js'
-import { splitGlassSubmissions } from '#formsubmission/registration/split-glass-submissions.js'
+import { splitGlassSubmissions } from '#formsubmission/parsing-common/split-glass-submissions.js'
 
 function getNoticeAddress(answersByShortDescription) {
   const noticeAddress =

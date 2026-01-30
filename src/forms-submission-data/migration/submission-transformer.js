@@ -66,8 +66,9 @@ async function fetchAndTransform(
   const results = await Promise.all(promises)
   const { successful, failed } = partitionBySuccess(results, type)
 
+  const transformedCount = submissionIds.size - failed.length
   logger.info({
-    message: `Transformed ${successful.length}/${submissionIds.size} ${type} form submissions (${failed.length} failed)`
+    message: `Transformed ${transformedCount}/${submissionIds.size} ${type} form submissions (${failed.length} failed)`
   })
 
   return successful
