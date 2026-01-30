@@ -37,8 +37,10 @@ describe('createSentOnLoadsSchema', () => {
       )
     })
 
-    it('has fieldsRequiredForWasteBalance matching fatalFields', () => {
-      expect(schema.fieldsRequiredForWasteBalance).toEqual(schema.fatalFields)
+    it('has fieldsRequiredForInclusionInWasteBalance matching fatalFields', () => {
+      expect(schema.fieldsRequiredForInclusionInWasteBalance).toEqual(
+        schema.fatalFields
+      )
     })
   })
 

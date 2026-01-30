@@ -8,8 +8,11 @@ import {
 import Boom from '@hapi/boom'
 import { auditPublicRegisterGenerate } from '#root/auditing/public-register.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
+/**
+ * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#domain/public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
+ * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
+ */
 
 export const publicRegisterGeneratePath = '/v1/public-register/generate'
 
@@ -23,7 +26,7 @@ export const generateLatestPublicRegister = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, publicRegisterRepository: PublicRegisterRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {

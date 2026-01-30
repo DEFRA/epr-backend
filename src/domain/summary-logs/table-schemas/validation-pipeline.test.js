@@ -110,7 +110,7 @@ describe('validation-pipeline', () => {
       })
         .unknown(true)
         .prefs({ abortEarly: false }),
-      fieldsRequiredForWasteBalance: ['ROW_ID', 'TEXT_FIELD']
+      fieldsRequiredForInclusionInWasteBalance: ['ROW_ID', 'TEXT_FIELD']
     })
 
     describe('REJECTED outcome (VAL010 fails)', () => {
@@ -217,8 +217,8 @@ describe('validation-pipeline', () => {
       })
     })
 
-    describe('empty fieldsRequiredForWasteBalance', () => {
-      it('returns EXCLUDED when fieldsRequiredForWasteBalance is empty (table does not contribute to waste balance)', () => {
+    describe('empty fieldsRequiredForInclusionInWasteBalance', () => {
+      it('returns EXCLUDED when fieldsRequiredForInclusionInWasteBalance is empty (table does not contribute to waste balance)', () => {
         const schema = {
           unfilledValues: {},
           validationSchema: Joi.object({
@@ -228,7 +228,7 @@ describe('validation-pipeline', () => {
             .unknown(true)
             .prefs({ abortEarly: false }),
           // Empty array means this table never contributes to waste balance
-          fieldsRequiredForWasteBalance: []
+          fieldsRequiredForInclusionInWasteBalance: []
         }
 
         // Even with all fields valid and filled, should be EXCLUDED
@@ -240,7 +240,7 @@ describe('validation-pipeline', () => {
         expect(result.issues).toEqual([])
       })
 
-      it('returns REJECTED when validation fails even if fieldsRequiredForWasteBalance is empty', () => {
+      it('returns REJECTED when validation fails even if fieldsRequiredForInclusionInWasteBalance is empty', () => {
         const schema = {
           unfilledValues: {},
           validationSchema: Joi.object({
@@ -248,7 +248,7 @@ describe('validation-pipeline', () => {
           })
             .unknown(true)
             .prefs({ abortEarly: false }),
-          fieldsRequiredForWasteBalance: []
+          fieldsRequiredForInclusionInWasteBalance: []
         }
 
         // ROW_ID is invalid - should still be REJECTED (VAL010 takes priority)
@@ -289,7 +289,11 @@ describe('validation-pipeline', () => {
                 'must equal VALUE_A × VALUE_B'
             })
             .prefs({ abortEarly: false }),
-          fieldsRequiredForWasteBalance: ['VALUE_A', 'VALUE_B', 'RESULT']
+          fieldsRequiredForInclusionInWasteBalance: [
+            'VALUE_A',
+            'VALUE_B',
+            'RESULT'
+          ]
         }
 
         const row = { VALUE_A: 10, VALUE_B: 5, RESULT: 100 } // Should be 50

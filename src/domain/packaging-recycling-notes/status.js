@@ -1,6 +1,6 @@
 /**
  * PRN status values
- * @see /docs/architecture/decisions/0024-create-prn-api-strategy.md
+ * @see {@link /docs/architecture/decisions/0024-create-prn-api-strategy.md}
  */
 export const PRN_STATUS = Object.freeze({
   AWAITING_AUTHORISATION: 'awaiting_authorisation',
