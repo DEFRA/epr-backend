@@ -6,6 +6,7 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
+import { splitGlassSubmissions } from '#formsubmission/registration/split-glass-submissions.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
@@ -100,5 +101,9 @@ export async function transformAll(
     )
   ])
 
-  return { organisations, registrations, accreditations }
+  return {
+    organisations,
+    registrations: splitGlassSubmissions(registrations),
+    accreditations
+  }
 }

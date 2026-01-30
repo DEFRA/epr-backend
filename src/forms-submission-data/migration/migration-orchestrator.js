@@ -4,7 +4,6 @@ import {
   linkRegistrationToAccreditations
 } from '#formsubmission/link-form-submissions.js'
 import { systemReferencesRequiringOrgIdMatch } from '#formsubmission/data-migration-config.js'
-import { splitGlassSubmissions } from '#formsubmission/registration/split-glass-submissions.js'
 import { transformAll } from './submission-transformer.js'
 import { getSubmissionsToMigrate } from './migration-delta-calculator.js'
 import { upsertOrganisations } from './organisation-persistence.js'
@@ -80,12 +79,10 @@ export class MigrationOrchestrator {
       submissionsToMigrate
     )
 
-    const splitRegistrations = splitGlassSubmissions(registrations)
-
     const exitingOrgsWithSubmissionsToMigrate =
       await this.fetchExistingOrganisations(
         migratedSubmissionIds,
-        splitRegistrations,
+        registrations,
         accreditations
       )
 
@@ -96,7 +93,7 @@ export class MigrationOrchestrator {
     /** @type {OrganisationWithRegistrations[]} */
     const organisationsWithRegistrations = this.linkRegistrations(
       allOrganisationsToMigrate,
-      splitRegistrations
+      registrations
     )
 
     /** @type {Organisation[]} */

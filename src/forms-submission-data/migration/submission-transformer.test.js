@@ -5,6 +5,10 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL
+} from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -323,5 +327,51 @@ describe('transformAll', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Transformed 1/2 accreditation form submissions (1 failed)'
     })
+  })
+
+  it('should split glass registrations with both processes into remelt and other', async () => {
+    const regId = new ObjectId()
+    const submissionsToMigrate = {
+      organisations: new Set(),
+      registrations: new Set([regId.toString()]),
+      accreditations: new Set()
+    }
+
+    formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce({
+      id: regId.toString(),
+      rawSubmissionData: {}
+    })
+
+    parseRegistrationSubmission.mockReturnValueOnce({
+      id: regId.toString(),
+      systemReference: new ObjectId().toString(),
+      orgId: 500001,
+      material: MATERIAL.GLASS,
+      glassRecyclingProcess: [
+        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+        GLASS_RECYCLING_PROCESS.GLASS_OTHER
+      ]
+    })
+
+    const result = await transformAll(
+      formsSubmissionRepository,
+      submissionsToMigrate
+    )
+
+    expect(result.registrations).toHaveLength(2)
+    expect(result.registrations[0]).toEqual(
+      expect.objectContaining({
+        id: regId.toString(),
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+      })
+    )
+    expect(result.registrations[1]).toEqual(
+      expect.objectContaining({
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      })
+    )
+    expect(result.registrations[1].id).not.toBe(regId.toString())
   })
 })
