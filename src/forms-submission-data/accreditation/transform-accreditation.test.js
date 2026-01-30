@@ -20,9 +20,12 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
       exporter.rawSubmissionData
     )
 
-    expect(() => validateAccreditation(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((acc) =>
+      expect(() => validateAccreditation(acc)).not.toThrow()
+    )
 
-    expect(result).toStrictEqual({
+    expect(result[0]).toStrictEqual({
       id: '68e6aa2423d5d5454a9a193c',
       formSubmissionTime: new Date('2025-10-08T18:15:00.199Z'),
       submittedToRegulator: REGULATOR.EA,
@@ -128,9 +131,12 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
       reprocessorWood.rawSubmissionData
     )
 
-    expect(() => validateAccreditation(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((acc) =>
+      expect(() => validateAccreditation(acc)).not.toThrow()
+    )
 
-    expect(result).toStrictEqual({
+    expect(result[0]).toStrictEqual({
       id: '68e6a62723d5d5454a9a193a',
       formSubmissionTime: new Date('2025-10-08T17:57:59.709Z'),
       submittedToRegulator: REGULATOR.EA,
@@ -229,9 +235,12 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
       reprocessorPaper.rawSubmissionData
     )
 
-    expect(() => validateAccreditation(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((acc) =>
+      expect(() => validateAccreditation(acc)).not.toThrow()
+    )
 
-    expect(result).toStrictEqual({
+    expect(result[0]).toStrictEqual({
       id: '68e6a50423d5d5454a9a1939',
       formSubmissionTime: new Date('2025-10-08T17:53:08.213Z'),
       submittedToRegulator: REGULATOR.EA,
@@ -330,25 +339,23 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
     })
   })
 
-  it('should parse exporter-without-registration accreditation from fixture', () => {
+  it('should split exporter-without-registration accreditation with both glass processes', () => {
     const result = parseAccreditationSubmission(
       exporterWithoutRegistration._id.$oid,
       exporterWithoutRegistration.rawSubmissionData
     )
 
-    expect(() => validateAccreditation(result)).not.toThrow()
+    expect(result).toHaveLength(2)
+    result.forEach((acc) =>
+      expect(() => validateAccreditation(acc)).not.toThrow()
+    )
 
-    expect(result).toStrictEqual({
-      id: '68e6a97723d5d5454a9a193b',
+    const commonFields = {
       formSubmissionTime: new Date('2025-10-08T18:12:07.326Z'),
       submittedToRegulator: REGULATOR.EA,
       wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
       orgId: 503177,
       material: MATERIAL.GLASS,
-      glassRecyclingProcess: [
-        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-        GLASS_RECYCLING_PROCESS.GLASS_OTHER
-      ],
       site: undefined,
       systemReference: '68e68dd778f83083f0f17a77',
       orgName: 'Green Recycling Solutions Ltd',
@@ -432,7 +439,21 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
             'https://forms-designer.test.cdp-int.defra.cloud/file-download/1e7cba15-9387-4872-b694-917e4546fc9c'
         }
       ]
+    }
+
+    expect(result[0]).toStrictEqual({
+      ...commonFields,
+      id: '68e6a97723d5d5454a9a193b',
+      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
     })
+
+    expect(result[1]).toStrictEqual(
+      expect.objectContaining({
+        ...commonFields,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      })
+    )
+    expect(result[1].id).not.toBe('68e6a97723d5d5454a9a193b')
   })
 
   it('should apply systemReference override when accreditation id matches override config', () => {
@@ -458,9 +479,12 @@ describe('parseAccreditationSubmission - Integration Tests with Fixture Data', (
       accreditationWithTypo.rawSubmissionData
     )
 
-    expect(() => validateAccreditation(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((acc) =>
+      expect(() => validateAccreditation(acc)).not.toThrow()
+    )
 
     // Verify the systemReference was corrected by the override
-    expect(result.systemReference).toBe('65a2f5a1b4c5d9f8e7a6b1c3')
+    expect(result[0].systemReference).toBe('65a2f5a1b4c5d9f8e7a6b1c3')
   })
 })

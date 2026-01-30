@@ -215,5 +215,5 @@ export function parseOrgSubmission(id, orgId, rawSubmissionData) {
       rawSubmissionData
     )
   }
-  return applyOrganisationOverrides(parsed)
+  return [applyOrganisationOverrides(parsed)]
 }

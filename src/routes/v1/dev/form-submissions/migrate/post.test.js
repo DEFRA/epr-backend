@@ -220,10 +220,12 @@ describe('POST /v1/dev/form-submissions/{id}/migrate', () => {
       expect(body.migrated.organisation).toBe(true)
       expect(body.migrated.registrations).toBe(regsToUse.length)
 
-      // Verify organisation was persisted with registration
+      // Verify organisation was persisted with registrations
+      // The exporter fixture has glass with both remelt and other processes,
+      // which is split into 2 separate registrations at migration time
       const migratedOrg = await organisationsRepository.findById(orgId)
       expect(migratedOrg).toBeDefined()
-      expect(migratedOrg.registrations).toHaveLength(regsToUse.length)
+      expect(migratedOrg.registrations).toHaveLength(2)
     })
 
     it('should migrate organisation with related accreditations', async () => {
