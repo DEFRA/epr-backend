@@ -12,6 +12,10 @@ import {
   linkItemsToOrganisations,
   linkRegistrationToAccreditations
 } from '#formsubmission/link-form-submissions.js'
+import {
+  GLASS_RECYCLING_PROCESS,
+  MATERIAL
+} from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -218,6 +222,55 @@ describe('MigrationOrchestrator', () => {
           }
         ]
       )
+    })
+
+    it('should split glass registrations with both processes before linking', async () => {
+      const orgId = new ObjectId().toString()
+      const regId = new ObjectId().toString()
+
+      getSubmissionsToMigrate.mockResolvedValue(
+        createMockDelta([], [orgId], [regId], [])
+      )
+
+      const org = createOrg(orgId)
+      const glassReg = {
+        ...createReg(regId, orgId),
+        material: MATERIAL.GLASS,
+        glassRecyclingProcess: [
+          GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+          GLASS_RECYCLING_PROCESS.GLASS_OTHER
+        ]
+      }
+
+      transformAll.mockResolvedValue({
+        organisations: [org],
+        registrations: [glassReg],
+        accreditations: []
+      })
+
+      await migrator.migrate()
+
+      // Verify linkItemsToOrganisations received split registrations
+      const registrationsLinkCall = linkItemsToOrganisations.mock.calls.find(
+        (call) => call[2] === 'registrations'
+      )
+      const linkedRegistrations = registrationsLinkCall[1]
+
+      expect(linkedRegistrations).toHaveLength(2)
+      expect(linkedRegistrations[0]).toEqual(
+        expect.objectContaining({
+          id: regId,
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
+        })
+      )
+      expect(linkedRegistrations[1]).toEqual(
+        expect.objectContaining({
+          material: MATERIAL.GLASS,
+          glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+        })
+      )
+      expect(linkedRegistrations[1].id).not.toBe(regId)
     })
 
     it('should perform mixed migration with both new and existing orgs', async () => {
