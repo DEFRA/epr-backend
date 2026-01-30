@@ -1,9 +1,16 @@
-import { describe, expect, it } from 'vitest'
+import { logger } from '#common/helpers/logging/logger.js'
+import { describe, expect, it, vi } from 'vitest'
 import { splitGlassSubmissions } from './split-glass-submissions.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL
 } from '#domain/organisations/model.js'
+
+vi.mock('#common/helpers/logging/logger.js', () => ({
+  logger: {
+    info: vi.fn()
+  }
+}))
 
 function makeRegistration(overrides = {}) {
   return {
@@ -135,6 +142,30 @@ describe('splitGlassSubmissions', () => {
       GLASS_RECYCLING_PROCESS.GLASS_OTHER
     ])
     expect(result[3].id).toBe('glass-remelt')
+  })
+
+  it('should log when registrations are split', () => {
+    const both = makeGlassRegistration([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      GLASS_RECYCLING_PROCESS.GLASS_OTHER
+    ])
+
+    splitGlassSubmissions([both])
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Split 1 glass registration(s) with both processes into remelt + other'
+    })
+  })
+
+  it('should not log when no registrations are split', () => {
+    const remelt = makeGlassRegistration([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
+    ])
+
+    splitGlassSubmissions([remelt])
+
+    expect(logger.info).not.toHaveBeenCalled()
   })
 
   it('should copy all properties to both split registrations', () => {

@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { logger } from '#common/helpers/logging/logger.js'
 import {
   GLASS_RECYCLING_PROCESS,
   MATERIAL
@@ -32,9 +33,18 @@ function splitIntoRemeltAndOther(registration) {
 }
 
 export function splitGlassSubmissions(registrations) {
-  return registrations.flatMap((registration) =>
+  const result = registrations.flatMap((registration) =>
     hasBothGlassProcesses(registration)
       ? splitIntoRemeltAndOther(registration)
       : [registration]
   )
+
+  const splitCount = result.length - registrations.length
+  if (splitCount > 0) {
+    logger.info({
+      message: `Split ${splitCount} glass registration(s) with both processes into remelt + other`
+    })
+  }
+
+  return result
 }
