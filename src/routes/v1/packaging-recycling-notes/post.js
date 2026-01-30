@@ -15,6 +15,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /**
  * @typedef {{
+ *   accreditationId: string;
  *   issuedToOrganisation: string;
  *   tonnage: number;
  *   material: string;
@@ -43,6 +44,7 @@ const buildPrnData = ({
   userId,
   now
 }) => ({
+  accreditationId: payload.accreditationId,
   issuedByOrganisation: organisationId,
   issuedByRegistration: registrationId,
   issuedToOrganisation: payload.issuedToOrganisation,

@@ -23,8 +23,10 @@ import { packagingRecyclingNotesCreatePath } from './post.js'
 
 const organisationId = 'org-123'
 const registrationId = 'reg-456'
+const accreditationId = '507f1f77bcf86cd799439011'
 
 const validPayload = {
+  accreditationId,
   issuedToOrganisation: 'producer-org-789',
   tonnage: 100,
   material: MATERIAL.PLASTIC,
@@ -197,6 +199,34 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     })
 
     describe('validation errors', () => {
+      it('returns 422 when accreditationId is missing', async () => {
+        const { accreditationId: _acc, ...payloadWithoutAccreditationId } =
+          validPayload
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: payloadWithoutAccreditationId
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
+      it('returns 422 when accreditationId is invalid', async () => {
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: {
+            ...validPayload,
+            accreditationId: 'not-a-valid-hex-id'
+          }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
+      })
+
       it('returns 422 when tonnage is missing', async () => {
         const { tonnage: _tonnage, ...payloadWithoutTonnage } = validPayload
 

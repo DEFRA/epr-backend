@@ -168,6 +168,33 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           accreditationYear: null
         })
       })
+
+      it('returns null accreditationYear when accreditation validFrom is invalid', async () => {
+        const prnWithAccreditation = {
+          ...mockPrn,
+          accreditationId
+        }
+        const invalidAccreditation = {
+          ...mockAccreditation,
+          validFrom: 'not-a-valid-date'
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          prnWithAccreditation
+        )
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          invalidAccreditation
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.accreditationYear).toBe(null)
+      })
     })
 
     describe('not found', () => {
