@@ -13,30 +13,36 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 vi.mock('#formsubmission/organisation/transform-organisation.js', () => ({
-  parseOrgSubmission: vi.fn((id, orgId, _) => ({
-    id,
-    orgId,
-    companyDetails: { name: `Company ${orgId}` },
-    users: [],
-    registrations: [],
-    accreditations: []
-  }))
+  parseOrgSubmission: vi.fn((id, orgId, _) => [
+    {
+      id,
+      orgId,
+      companyDetails: { name: `Company ${orgId}` },
+      users: [],
+      registrations: [],
+      accreditations: []
+    }
+  ])
 }))
 vi.mock('#formsubmission/registration/transform-registration.js', () => ({
-  parseRegistrationSubmission: vi.fn((id, _) => ({
-    id,
-    systemReference: new ObjectId().toString(),
-    orgId: 500001,
-    material: 'plastic'
-  }))
+  parseRegistrationSubmission: vi.fn((id, _) => [
+    {
+      id,
+      systemReference: new ObjectId().toString(),
+      orgId: 500001,
+      material: 'plastic'
+    }
+  ])
 }))
 vi.mock('#formsubmission/accreditation/transform-accreditation.js', () => ({
-  parseAccreditationSubmission: vi.fn((id, _) => ({
-    id,
-    systemReference: new ObjectId().toString(),
-    orgId: 500001,
-    material: 'plastic'
-  }))
+  parseAccreditationSubmission: vi.fn((id, _) => [
+    {
+      id,
+      systemReference: new ObjectId().toString(),
+      orgId: 500001,
+      material: 'plastic'
+    }
+  ])
 }))
 
 describe('transformAll', () => {
@@ -244,34 +250,40 @@ describe('transformAll', () => {
 
     // But parse operations fail for second item in each category
     parseOrgSubmission
-      .mockReturnValueOnce({
-        id: org1Id.toString(),
-        orgId: 500001,
-        companyDetails: { name: 'Company 500001' },
-        users: [],
-        registrations: [],
-        accreditations: []
-      })
+      .mockReturnValueOnce([
+        {
+          id: org1Id.toString(),
+          orgId: 500001,
+          companyDetails: { name: 'Company 500001' },
+          users: [],
+          registrations: [],
+          accreditations: []
+        }
+      ])
       .mockImplementationOnce(() => {
         throw new Error('Organisation parse failed')
       })
     parseRegistrationSubmission
-      .mockReturnValueOnce({
-        id: reg1Id.toString(),
-        systemReference: new ObjectId().toString(),
-        orgId: 500001,
-        material: 'plastic'
-      })
+      .mockReturnValueOnce([
+        {
+          id: reg1Id.toString(),
+          systemReference: new ObjectId().toString(),
+          orgId: 500001,
+          material: 'plastic'
+        }
+      ])
       .mockImplementationOnce(() => {
         throw new Error('Registration parse failed')
       })
     parseAccreditationSubmission
-      .mockReturnValueOnce({
-        id: accrId1.toString(),
-        systemReference: new ObjectId().toString(),
-        orgId: 500001,
-        material: 'plastic'
-      })
+      .mockReturnValueOnce([
+        {
+          id: accrId1.toString(),
+          systemReference: new ObjectId().toString(),
+          orgId: 500001,
+          material: 'plastic'
+        }
+      ])
       .mockImplementationOnce(() => {
         throw new Error('Accreditation parse failed')
       })

@@ -30,7 +30,7 @@ function partitionBySuccess(results, type) {
   return results.reduce(
     (acc, result) => {
       if (result.success) {
-        acc.successful.push(result.value)
+        acc.successful.push(...result.value)
       } else {
         acc.failed.push(result)
         logger.error({
@@ -66,8 +66,9 @@ async function fetchAndTransform(
   const results = await Promise.all(promises)
   const { successful, failed } = partitionBySuccess(results, type)
 
+  const transformedCount = submissionIds.size - failed.length
   logger.info({
-    message: `Transformed ${successful.length}/${submissionIds.size} ${type} form submissions (${failed.length} failed)`
+    message: `Transformed ${transformedCount}/${submissionIds.size} ${type} form submissions (${failed.length} failed)`
   })
 
   return successful
@@ -100,5 +101,9 @@ export async function transformAll(
     )
   ])
 
-  return { organisations, registrations, accreditations }
+  return {
+    organisations,
+    registrations,
+    accreditations
+  }
 }

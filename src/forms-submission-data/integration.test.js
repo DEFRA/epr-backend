@@ -83,11 +83,12 @@ describe('Migration Integration Tests with Fixtures', () => {
       )
 
       // Count total registrations across all orgs
+      // Glass exporter with "Both" processes is split into remelt + other = 4 total
       const totalRegistrations = allOrgs.reduce(
         (count, org) => count + (org.registrations?.length || 0),
         0
       )
-      expect(totalRegistrations).toBe(3)
+      expect(totalRegistrations).toBe(4)
 
       // Count total accreditations across all orgs (should be 0 - no accreditations yet)
       const totalAccreditations = allOrgs.reduce(
@@ -97,9 +98,10 @@ describe('Migration Integration Tests with Fixtures', () => {
       expect(totalAccreditations).toBe(0)
 
       // Verify registrations count by org
+      // Glass exporter with "Both" processes is split into remelt + other
       const org503181 = orgsByOrgId.get(503181)
       expect(org503181).toBeDefined()
-      expect(org503181.registrations).toHaveLength(1)
+      expect(org503181.registrations).toHaveLength(2)
 
       const org503176 = orgsByOrgId.get(503176)
       expect(org503176).toBeDefined()
@@ -130,13 +132,16 @@ describe('Migration Integration Tests with Fixtures', () => {
         (count, org) => count + (org.accreditations?.length || 0),
         0
       )
-      expect(totalAccreditations).toBe(5)
+      // exporter-without-registration (org 503177) has both glass processes,
+      // so its single accreditation is split into remelt + other = 6 total
+      expect(totalAccreditations).toBe(6)
 
       const org503181 = allOrgs.find((o) => o.orgId === 503181)
       expect(org503181.accreditations).toHaveLength(1)
-      expect(org503181.registrations[0].accreditationId).toBe(
-        exporterAccreditation._id.$oid
-      )
+      // Both split glass registrations (remelt + other) link to the same accreditation
+      for (const reg of org503181.registrations) {
+        expect(reg.accreditationId).toBe(exporterAccreditation._id.$oid)
+      }
 
       const org503176 = allOrgs.find((o) => o.orgId === 503176)
       expect(org503176.accreditations).toHaveLength(3)
