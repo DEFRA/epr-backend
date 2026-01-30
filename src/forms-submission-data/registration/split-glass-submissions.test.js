@@ -144,13 +144,13 @@ describe('splitGlassSubmissions', () => {
     expect(result[3].id).toBe('glass-remelt')
   })
 
-  it('should log when registrations are split', () => {
+  it('should log when submissions are split using the provided type label', () => {
     const both = makeGlassRegistration([
       GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
       GLASS_RECYCLING_PROCESS.GLASS_OTHER
     ])
 
-    splitGlassSubmissions([both])
+    splitGlassSubmissions([both], 'registration')
 
     expect(logger.info).toHaveBeenCalledWith({
       message:
@@ -158,12 +158,26 @@ describe('splitGlassSubmissions', () => {
     })
   })
 
-  it('should not log when no registrations are split', () => {
+  it('should use the type label in the log message', () => {
+    const both = makeGlassRegistration([
+      GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
+      GLASS_RECYCLING_PROCESS.GLASS_OTHER
+    ])
+
+    splitGlassSubmissions([both], 'accreditation')
+
+    expect(logger.info).toHaveBeenCalledWith({
+      message:
+        'Split 1 glass accreditation(s) with both processes into remelt + other'
+    })
+  })
+
+  it('should not log when no submissions are split', () => {
     const remelt = makeGlassRegistration([
       GLASS_RECYCLING_PROCESS.GLASS_RE_MELT
     ])
 
-    splitGlassSubmissions([remelt])
+    splitGlassSubmissions([remelt], 'registration')
 
     expect(logger.info).not.toHaveBeenCalled()
   })

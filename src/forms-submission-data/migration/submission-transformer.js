@@ -6,7 +6,6 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
-import { splitGlassSubmissions } from '#formsubmission/registration/split-glass-submissions.js'
 
 /**
  * @import {FormSubmissionsRepository} from '#repositories/form-submissions/port.js'
@@ -31,7 +30,7 @@ function partitionBySuccess(results, type) {
   return results.reduce(
     (acc, result) => {
       if (result.success) {
-        acc.successful.push(result.value)
+        acc.successful.push(...result.value)
       } else {
         acc.failed.push(result)
         logger.error({
@@ -103,7 +102,7 @@ export async function transformAll(
 
   return {
     organisations,
-    registrations: splitGlassSubmissions(registrations),
+    registrations,
     accreditations
   }
 }

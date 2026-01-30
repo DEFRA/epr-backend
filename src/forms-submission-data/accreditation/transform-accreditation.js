@@ -16,6 +16,7 @@ import {
 import { ACCREDITATION } from './form-field-constants.js'
 import { getPrnIssuance } from '#formsubmission/accreditation/prn-issuance.js'
 import { applyAccreditationOverrides } from '#formsubmission/overrides/override.js'
+import { splitGlassSubmissions } from '#formsubmission/registration/split-glass-submissions.js'
 
 function getSubmitterDetails(answersByShortDescription) {
   return {
@@ -98,5 +99,6 @@ function buildParsedAccreditation(id, rawSubmissionData) {
 
 export function parseAccreditationSubmission(id, rawSubmissionData) {
   const parsed = buildParsedAccreditation(id, rawSubmissionData)
-  return applyAccreditationOverrides(parsed)
+  const accreditation = applyAccreditationOverrides(parsed)
+  return splitGlassSubmissions([accreditation], 'accreditation')
 }

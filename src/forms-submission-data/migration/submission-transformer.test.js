@@ -5,10 +5,6 @@ import { logger } from '#common/helpers/logging/logger.js'
 import { parseOrgSubmission } from '#formsubmission/organisation/transform-organisation.js'
 import { parseRegistrationSubmission } from '#formsubmission/registration/transform-registration.js'
 import { parseAccreditationSubmission } from '#formsubmission/accreditation/transform-accreditation.js'
-import {
-  GLASS_RECYCLING_PROCESS,
-  MATERIAL
-} from '#domain/organisations/model.js'
 
 vi.mock('#common/helpers/logging/logger.js', () => ({
   logger: {
@@ -17,30 +13,36 @@ vi.mock('#common/helpers/logging/logger.js', () => ({
   }
 }))
 vi.mock('#formsubmission/organisation/transform-organisation.js', () => ({
-  parseOrgSubmission: vi.fn((id, orgId, _) => ({
-    id,
-    orgId,
-    companyDetails: { name: `Company ${orgId}` },
-    users: [],
-    registrations: [],
-    accreditations: []
-  }))
+  parseOrgSubmission: vi.fn((id, orgId, _) => [
+    {
+      id,
+      orgId,
+      companyDetails: { name: `Company ${orgId}` },
+      users: [],
+      registrations: [],
+      accreditations: []
+    }
+  ])
 }))
 vi.mock('#formsubmission/registration/transform-registration.js', () => ({
-  parseRegistrationSubmission: vi.fn((id, _) => ({
-    id,
-    systemReference: new ObjectId().toString(),
-    orgId: 500001,
-    material: 'plastic'
-  }))
+  parseRegistrationSubmission: vi.fn((id, _) => [
+    {
+      id,
+      systemReference: new ObjectId().toString(),
+      orgId: 500001,
+      material: 'plastic'
+    }
+  ])
 }))
 vi.mock('#formsubmission/accreditation/transform-accreditation.js', () => ({
-  parseAccreditationSubmission: vi.fn((id, _) => ({
-    id,
-    systemReference: new ObjectId().toString(),
-    orgId: 500001,
-    material: 'plastic'
-  }))
+  parseAccreditationSubmission: vi.fn((id, _) => [
+    {
+      id,
+      systemReference: new ObjectId().toString(),
+      orgId: 500001,
+      material: 'plastic'
+    }
+  ])
 }))
 
 describe('transformAll', () => {
@@ -248,34 +250,40 @@ describe('transformAll', () => {
 
     // But parse operations fail for second item in each category
     parseOrgSubmission
-      .mockReturnValueOnce({
-        id: org1Id.toString(),
-        orgId: 500001,
-        companyDetails: { name: 'Company 500001' },
-        users: [],
-        registrations: [],
-        accreditations: []
-      })
+      .mockReturnValueOnce([
+        {
+          id: org1Id.toString(),
+          orgId: 500001,
+          companyDetails: { name: 'Company 500001' },
+          users: [],
+          registrations: [],
+          accreditations: []
+        }
+      ])
       .mockImplementationOnce(() => {
         throw new Error('Organisation parse failed')
       })
     parseRegistrationSubmission
-      .mockReturnValueOnce({
-        id: reg1Id.toString(),
-        systemReference: new ObjectId().toString(),
-        orgId: 500001,
-        material: 'plastic'
-      })
+      .mockReturnValueOnce([
+        {
+          id: reg1Id.toString(),
+          systemReference: new ObjectId().toString(),
+          orgId: 500001,
+          material: 'plastic'
+        }
+      ])
       .mockImplementationOnce(() => {
         throw new Error('Registration parse failed')
       })
     parseAccreditationSubmission
-      .mockReturnValueOnce({
-        id: accrId1.toString(),
-        systemReference: new ObjectId().toString(),
-        orgId: 500001,
-        material: 'plastic'
-      })
+      .mockReturnValueOnce([
+        {
+          id: accrId1.toString(),
+          systemReference: new ObjectId().toString(),
+          orgId: 500001,
+          material: 'plastic'
+        }
+      ])
       .mockImplementationOnce(() => {
         throw new Error('Accreditation parse failed')
       })
@@ -327,51 +335,5 @@ describe('transformAll', () => {
     expect(logger.info).toHaveBeenCalledWith({
       message: 'Transformed 1/2 accreditation form submissions (1 failed)'
     })
-  })
-
-  it('should split glass registrations with both processes into remelt and other', async () => {
-    const regId = new ObjectId()
-    const submissionsToMigrate = {
-      organisations: new Set(),
-      registrations: new Set([regId.toString()]),
-      accreditations: new Set()
-    }
-
-    formsSubmissionRepository.findRegistrationById.mockResolvedValueOnce({
-      id: regId.toString(),
-      rawSubmissionData: {}
-    })
-
-    parseRegistrationSubmission.mockReturnValueOnce({
-      id: regId.toString(),
-      systemReference: new ObjectId().toString(),
-      orgId: 500001,
-      material: MATERIAL.GLASS,
-      glassRecyclingProcess: [
-        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-        GLASS_RECYCLING_PROCESS.GLASS_OTHER
-      ]
-    })
-
-    const result = await transformAll(
-      formsSubmissionRepository,
-      submissionsToMigrate
-    )
-
-    expect(result.registrations).toHaveLength(2)
-    expect(result.registrations[0]).toEqual(
-      expect.objectContaining({
-        id: regId.toString(),
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
-      })
-    )
-    expect(result.registrations[1]).toEqual(
-      expect.objectContaining({
-        material: MATERIAL.GLASS,
-        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
-      })
-    )
-    expect(result.registrations[1].id).not.toBe(regId.toString())
   })
 })

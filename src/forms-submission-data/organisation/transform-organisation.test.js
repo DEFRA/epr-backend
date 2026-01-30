@@ -26,7 +26,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       registeredLtdPartnership.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: registeredLtdPartnership._id.$oid,
       orgId: registeredLtdPartnership.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
@@ -67,7 +68,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         ]
       }
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse registered limited liability partnership organisation from fixture', async () => {
@@ -77,7 +80,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       registeredLtdLiability.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: registeredLtdLiability._id.$oid,
       orgId: registeredLtdLiability.orgId,
       wasteProcessingTypes: [
@@ -113,7 +117,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
         partners: []
       }
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse registered organisation with no partnership from fixture', async () => {
@@ -123,7 +129,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       registeredNoPartnership.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: registeredNoPartnership._id.$oid,
       orgId: registeredNoPartnership.orgId,
       wasteProcessingTypes: [
@@ -161,7 +168,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       submittedToRegulator: 'ea',
       partnership: undefined
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse non-registered UK sole trader organisation from fixture', async () => {
@@ -171,7 +180,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       nonRegisteredUkSoleTrader.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: nonRegisteredUkSoleTrader._id.$oid,
       orgId: nonRegisteredUkSoleTrader.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
@@ -205,7 +215,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       submittedToRegulator: 'ea',
       partnership: undefined
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse non-registered organisation with outside UK address from fixture', async () => {
@@ -215,7 +227,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       nonRegisteredOutsideUk.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: nonRegisteredOutsideUk._id.$oid,
       orgId: nonRegisteredOutsideUk.orgId,
       wasteProcessingTypes: [
@@ -249,7 +262,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       submittedToRegulator: 'ea',
       partnership: undefined
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse unincorporated association with separate management contact from fixture', async () => {
@@ -259,7 +274,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       unincorporatedSeparateControl.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: unincorporatedSeparateControl._id.$oid,
       orgId: unincorporatedSeparateControl.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
@@ -293,7 +309,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       submittedToRegulator: 'ea',
       partnership: undefined
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse sole trader with separate management contact from fixture', async () => {
@@ -303,7 +321,8 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       soleTraderSeparateControl.rawSubmissionData
     )
 
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    expect(result[0]).toStrictEqual({
       id: soleTraderSeparateControl._id.$oid,
       orgId: soleTraderSeparateControl.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.EXPORTER],
@@ -337,7 +356,9 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       submittedToRegulator: 'ea',
       partnership: undefined
     })
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 
   it('should parse non-UK organisation with separate management contact from fixture', async () => {
@@ -347,8 +368,11 @@ describe('parseOrgSubmission - Integration Tests with Fixture Data', () => {
       nonUkSeparateControl.rawSubmissionData
     )
 
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
-    expect(result).toStrictEqual({
+    expect(result).toHaveLength(1)
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
+    expect(result[0]).toStrictEqual({
       id: nonUkSeparateControl._id.$oid,
       orgId: nonUkSeparateControl.orgId,
       wasteProcessingTypes: [WASTE_PROCESSING_TYPE.REPROCESSOR],
@@ -396,10 +420,12 @@ describe('parseOrgSubmission - Override Application', () => {
     )
 
     // Verify that the orgId was overridden
-    expect(result.orgId).toBe(999999)
-    expect(result.id).toBe('60a1f2b3c4d5e6f7a8b9c0d1')
+    expect(result[0].orgId).toBe(999999)
+    expect(result[0].id).toBe('60a1f2b3c4d5e6f7a8b9c0d1')
 
-    expect(() => validateOrganisationInsert(result)).not.toThrow()
+    result.forEach((org) =>
+      expect(() => validateOrganisationInsert(org)).not.toThrow()
+    )
   })
 })
 

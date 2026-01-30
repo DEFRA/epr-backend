@@ -132,7 +132,9 @@ describe('Migration Integration Tests with Fixtures', () => {
         (count, org) => count + (org.accreditations?.length || 0),
         0
       )
-      expect(totalAccreditations).toBe(5)
+      // exporter-without-registration (org 503177) has both glass processes,
+      // so its single accreditation is split into remelt + other = 6 total
+      expect(totalAccreditations).toBe(6)
 
       const org503181 = allOrgs.find((o) => o.orgId === 503181)
       expect(org503181.accreditations).toHaveLength(1)

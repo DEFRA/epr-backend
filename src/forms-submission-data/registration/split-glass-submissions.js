@@ -32,17 +32,17 @@ function splitIntoRemeltAndOther(registration) {
   return [remelt, other]
 }
 
-export function splitGlassSubmissions(registrations) {
-  const result = registrations.flatMap((registration) =>
-    hasBothGlassProcesses(registration)
-      ? splitIntoRemeltAndOther(registration)
-      : [registration]
+export function splitGlassSubmissions(submissions, submissionType) {
+  const result = submissions.flatMap((submission) =>
+    hasBothGlassProcesses(submission)
+      ? splitIntoRemeltAndOther(submission)
+      : [submission]
   )
 
-  const splitCount = result.length - registrations.length
+  const splitCount = result.length - submissions.length
   if (splitCount > 0) {
     logger.info({
-      message: `Split ${splitCount} glass registration(s) with both processes into remelt + other`
+      message: `Split ${splitCount} glass ${submissionType}(s) with both processes into remelt + other`
     })
   }
 
