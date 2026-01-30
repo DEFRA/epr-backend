@@ -9,16 +9,32 @@ import {
 } from '#common/enums/index.js'
 
 /** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 export const packagingRecyclingNoteByIdPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes/{prnId}'
 
 /**
+ * Extract year from ISO date string
+ * @param {string|undefined} isoDate
+ * @returns {number|null}
+ */
+const extractYear = (isoDate) => {
+  if (!isoDate) {
+    return null
+  }
+  const date = new Date(isoDate)
+  return Number.isNaN(date.getTime()) ? null : date.getFullYear()
+}
+
+/**
  * Build response from PRN
  * @param {import('#domain/prn/model.js').PackagingRecyclingNote} prn
+ * @param {number|null} accreditationYear
  */
-const buildResponse = (prn) => ({
+const buildResponse = (prn, accreditationYear) => ({
   id: prn.id,
+  prnNumber: prn.prnNumber ?? null,
   issuedToOrganisation: prn.issuedToOrganisation,
   tonnage: prn.tonnage,
   material: prn.material,
@@ -28,7 +44,8 @@ const buildResponse = (prn) => ({
   isDecemberWaste: prn.isDecemberWaste ?? false,
   authorisedAt: prn.authorisedAt ?? null,
   authorisedBy: prn.authorisedBy ?? null,
-  wasteProcessingType: prn.wasteProcessingType ?? null
+  wasteProcessingType: prn.wasteProcessingType ?? null,
+  accreditationYear
 })
 
 export const packagingRecyclingNoteById = {
@@ -39,12 +56,17 @@ export const packagingRecyclingNoteById = {
     tags: ['api']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { packagingRecyclingNotesRepository, params, logger } = request
-    const { prnId } = params
+    const {
+      packagingRecyclingNotesRepository,
+      organisationsRepository,
+      params,
+      logger
+    } = request
+    const { organisationId, prnId } = params
 
     try {
       const prn = await packagingRecyclingNotesRepository.findById(prnId)
@@ -52,6 +74,15 @@ export const packagingRecyclingNoteById = {
       if (!prn) {
         throw Boom.notFound('PRN not found')
       }
+
+      // Fetch accreditation to derive accreditationYear from validFrom
+      const accreditation = prn.accreditationId
+        ? await organisationsRepository.findAccreditationById(
+            organisationId,
+            prn.accreditationId
+          )
+        : null
+      const accreditationYear = extractYear(accreditation?.validFrom)
 
       logger.info({
         message: `PRN retrieved: id=${prnId}`,
@@ -62,7 +93,7 @@ export const packagingRecyclingNoteById = {
         }
       })
 
-      return h.response(buildResponse(prn)).code(StatusCodes.OK)
+      return h.response(buildResponse(prn, accreditationYear)).code(StatusCodes.OK)
     } catch (error) {
       if (error.isBoom) {
         throw error

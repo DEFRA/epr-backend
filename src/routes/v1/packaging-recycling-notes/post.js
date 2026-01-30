@@ -12,6 +12,7 @@ import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
 /** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
 
 /**
  * @typedef {{
@@ -32,6 +33,7 @@ export const packagingRecyclingNotesCreatePath =
  * @param {Object} params
  * @param {string} params.organisationId
  * @param {string} params.registrationId
+ * @param {string} params.accreditationId
  * @param {PackagingRecyclingNotesCreatePayload} params.payload
  * @param {string} params.userId
  * @param {Date} params.now
@@ -39,10 +41,12 @@ export const packagingRecyclingNotesCreatePath =
 const buildPrnData = ({
   organisationId,
   registrationId,
+  accreditationId,
   payload,
   userId,
   now
 }) => ({
+  accreditationId,
   issuedByOrganisation: organisationId,
   issuedByRegistration: registrationId,
   issuedToOrganisation: payload.issuedToOrganisation,
@@ -85,20 +89,40 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository, organisationsRepository: OrganisationsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { packagingRecyclingNotesRepository, params, payload, logger, auth } =
-      request
+    const {
+      packagingRecyclingNotesRepository,
+      organisationsRepository,
+      params,
+      payload,
+      logger,
+      auth
+    } = request
     const { organisationId, registrationId } = params
     const userId = auth.credentials?.profile?.id ?? 'unknown'
     const now = new Date()
 
     try {
+      const registration = await organisationsRepository.findRegistrationById(
+        organisationId,
+        registrationId
+      )
+
+      if (!registration) {
+        throw Boom.notFound('Registration not found')
+      }
+
+      if (!registration.accreditation) {
+        throw Boom.badRequest('Registration does not have an accreditation')
+      }
+
       const prnData = buildPrnData({
         organisationId,
         registrationId,
+        accreditationId: registration.accreditation.id,
         payload,
         userId,
         now

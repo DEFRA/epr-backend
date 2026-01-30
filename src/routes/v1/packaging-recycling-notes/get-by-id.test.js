@@ -19,9 +19,19 @@ import { packagingRecyclingNoteByIdPath } from './get-by-id.js'
 const organisationId = 'org-123'
 const registrationId = 'reg-001'
 const prnId = 'prn-001'
+const accreditationId = 'acc-001'
+
+const mockAccreditation = {
+  id: accreditationId,
+  validFrom: '2026-01-01T00:00:00.000Z',
+  validTo: '2026-12-31T23:59:59.999Z',
+  status: 'approved'
+}
 
 const mockPrn = {
   id: prnId,
+  prnNumber: 'PRN-2026-00001',
+  accreditationId,
   issuedByOrganisation: organisationId,
   issuedByRegistration: registrationId,
   issuedToOrganisation: 'Acme Packaging Ltd',
@@ -44,21 +54,31 @@ const createInMemoryPackagingRecyclingNotesRepository = (prn = null) => {
   })
 }
 
+const createInMemoryOrganisationsRepository = (accreditation = null) => {
+  return () => ({
+    findAccreditationById: vi.fn(async () => accreditation)
+  })
+}
+
 describe(`${packagingRecyclingNoteByIdPath} route`, () => {
   setupAuthContext()
 
   describe('when feature flag is enabled', () => {
     let server
     let packagingRecyclingNotesRepository
+    let organisationsRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository(mockPrn)()
+      organisationsRepository =
+        createInMemoryOrganisationsRepository(mockAccreditation)()
 
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
+            packagingRecyclingNotesRepository,
+          organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: true
@@ -92,6 +112,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toStrictEqual({
           id: prnId,
+          prnNumber: 'PRN-2026-00001',
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
@@ -101,7 +122,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           isDecemberWaste: true,
           authorisedAt: '2026-01-16T14:30:00.000Z',
           authorisedBy: { name: 'John Smith', position: 'Director' },
-          wasteProcessingType: 'reprocessor'
+          wasteProcessingType: 'reprocessor',
+          accreditationYear: 2026
         })
       })
 
@@ -132,6 +154,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         const payload = JSON.parse(response.payload)
         expect(payload).toStrictEqual({
           id: prnId,
+          prnNumber: null,
           issuedToOrganisation: 'Acme Packaging Ltd',
           tonnage: 50,
           material: 'glass',
@@ -141,8 +164,36 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           isDecemberWaste: false,
           authorisedAt: null,
           authorisedBy: null,
-          wasteProcessingType: null
+          wasteProcessingType: null,
+          accreditationYear: null
         })
+      })
+
+      it('returns null accreditationYear when accreditation validFrom is invalid', async () => {
+        const prnWithAccreditation = {
+          ...mockPrn,
+          accreditationId
+        }
+        const invalidAccreditation = {
+          ...mockAccreditation,
+          validFrom: 'not-a-valid-date'
+        }
+        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          prnWithAccreditation
+        )
+        organisationsRepository.findAccreditationById.mockResolvedValueOnce(
+          invalidAccreditation
+        )
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        const payload = JSON.parse(response.payload)
+        expect(payload.accreditationYear).toBe(null)
       })
     })
 
@@ -210,7 +261,8 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository:
-            createInMemoryPackagingRecyclingNotesRepository()
+            createInMemoryPackagingRecyclingNotesRepository(),
+          organisationsRepository: createInMemoryOrganisationsRepository()
         },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: false
