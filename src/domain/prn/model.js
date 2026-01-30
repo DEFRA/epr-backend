@@ -39,6 +39,7 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  * @typedef {{
  *   id: string;
  *   prnNumber?: string;
+ *   accreditationId?: string;
  *   issuedByOrganisation: string;
  *   issuedByRegistration: string;
  *   issuedToOrganisation: string;
@@ -47,7 +48,10 @@ export const PRN_STATUS_TRANSITIONS = Object.freeze({
  *   nation: string;
  *   wasteProcessingType: string;
  *   isExport: boolean;
+ *   isDecemberWaste?: boolean;
  *   issuerNotes?: string;
+ *   authorisedAt?: Date;
+ *   authorisedBy?: { name: string; position: string };
  *   status: {
  *     currentStatus: PrnStatus;
  *     history: PrnStatusHistoryItem[];
