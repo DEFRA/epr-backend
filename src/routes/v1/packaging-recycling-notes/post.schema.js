@@ -8,10 +8,8 @@ import {
 
 const POSITIVE_INTEGER = 1
 const MAX_ISSUER_NOTES_LENGTH = 200
-const OBJECT_ID_LENGTH = 24
 
 export const packagingRecyclingNotesCreatePayloadSchema = Joi.object({
-  accreditationId: Joi.string().hex().length(OBJECT_ID_LENGTH).required(),
   issuedToOrganisation: Joi.string().required(),
   tonnage: Joi.number().integer().min(POSITIVE_INTEGER).required(),
   material: Joi.string()

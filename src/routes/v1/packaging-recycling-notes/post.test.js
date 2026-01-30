@@ -25,8 +25,16 @@ const organisationId = 'org-123'
 const registrationId = 'reg-456'
 const accreditationId = '507f1f77bcf86cd799439011'
 
+const mockRegistration = {
+  id: registrationId,
+  accreditation: {
+    id: accreditationId,
+    validFrom: '2026-01-01T00:00:00.000Z',
+    validTo: '2026-12-31T23:59:59.999Z'
+  }
+}
+
 const validPayload = {
-  accreditationId,
   issuedToOrganisation: 'producer-org-789',
   tonnage: 100,
   material: MATERIAL.PLASTIC,
@@ -48,21 +56,31 @@ const createInMemoryPackagingRecyclingNotesRepository = () => {
   })
 }
 
+const createInMemoryOrganisationsRepository = (registration = null) => {
+  return () => ({
+    findRegistrationById: vi.fn(async () => registration)
+  })
+}
+
 describe(`${packagingRecyclingNotesCreatePath} route`, () => {
   setupAuthContext()
 
   describe('when feature flag is enabled', () => {
     let server
     let packagingRecyclingNotesRepository
+    let organisationsRepository
 
     beforeAll(async () => {
       packagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
+      organisationsRepository =
+        createInMemoryOrganisationsRepository(mockRegistration)()
 
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
+            packagingRecyclingNotesRepository,
+          organisationsRepository: () => organisationsRepository
         },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: true
@@ -115,6 +133,24 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
             issuedByOrganisation: organisationId,
             issuedByRegistration: registrationId,
             issuedToOrganisation: validPayload.issuedToOrganisation
+          })
+        )
+      })
+
+      it('creates PRN with accreditationId from registration lookup', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(
+          organisationsRepository.findRegistrationById
+        ).toHaveBeenCalledWith(organisationId, registrationId)
+        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+          expect.objectContaining({
+            accreditationId
           })
         )
       })
@@ -198,35 +234,38 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       })
     })
 
+    describe('registration lookup errors', () => {
+      it('returns 404 when registration not found', async () => {
+        organisationsRepository.findRegistrationById.mockResolvedValueOnce(null)
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
+      it('returns 400 when registration has no accreditation', async () => {
+        organisationsRepository.findRegistrationById.mockResolvedValueOnce({
+          id: registrationId
+          // no accreditation
+        })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: validPayload
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.BAD_REQUEST)
+      })
+    })
+
     describe('validation errors', () => {
-      it('returns 422 when accreditationId is missing', async () => {
-        const { accreditationId: _acc, ...payloadWithoutAccreditationId } =
-          validPayload
-
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: payloadWithoutAccreditationId
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
-      it('returns 422 when accreditationId is invalid', async () => {
-        const response = await server.inject({
-          method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
-          ...asStandardUser({ linkedOrgId: organisationId }),
-          payload: {
-            ...validPayload,
-            accreditationId: 'not-a-valid-hex-id'
-          }
-        })
-
-        expect(response.statusCode).toBe(StatusCodes.UNPROCESSABLE_ENTITY)
-      })
-
       it('returns 422 when tonnage is missing', async () => {
         const { tonnage: _tonnage, ...payloadWithoutTonnage } = validPayload
 
@@ -392,7 +431,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       server = await createTestServer({
         repositories: {
           packagingRecyclingNotesRepository:
-            createInMemoryPackagingRecyclingNotesRepository()
+            createInMemoryPackagingRecyclingNotesRepository(),
+          organisationsRepository:
+            createInMemoryOrganisationsRepository(mockRegistration)
         },
         featureFlags: createInMemoryFeatureFlags({
           createPackagingRecyclingNotes: false
