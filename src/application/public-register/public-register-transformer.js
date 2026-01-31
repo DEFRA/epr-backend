@@ -40,7 +40,7 @@ function transformRegAcc(org, registration, accreditation) {
     registeredOffice: formatAddress(
       org.companyDetails.registeredAddress || org.companyDetails.address
     ),
-    appropriateAgency: uppercaseString(org.submittedToRegulator),
+    appropriateAgency: uppercaseString(registration.submittedToRegulator),
     registrationNumber: registration.registrationNumber,
     tradingName: org.companyDetails.tradingName || '',
     reprocessingSite: formatAddress(registration.site?.address),
