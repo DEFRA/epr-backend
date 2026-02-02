@@ -33,7 +33,7 @@ async function ensureCollection(db) {
 /**
  * @param {import('mongodb').Db} db
  * @param {string} id
- * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote | null>}
+ * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
  */
 const findById = async (db, id) => {
   const doc = await db
@@ -51,13 +51,13 @@ const findById = async (db, id) => {
 }
 
 /**
- * @typedef {Omit<import('#domain/prn/model.js').PackagingRecyclingNote, 'id'>} CreatePrnInput
+ * @typedef {Omit<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote, 'id'>} CreatePrnInput
  */
 
 /**
  * @param {import('mongodb').Db} db
  * @param {CreatePrnInput} prn
- * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote>}
+ * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote>}
  */
 const create = async (db, prn) => {
   const result = await db.collection(COLLECTION_NAME).insertOne(prn)
@@ -71,7 +71,7 @@ const create = async (db, prn) => {
 /**
  * @param {import('mongodb').Db} db
  * @param {string} registrationId
- * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote[]>}
+ * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote[]>}
  */
 const findByRegistration = async (db, registrationId) => {
   const docs = await db
@@ -88,7 +88,7 @@ const findByRegistration = async (db, registrationId) => {
 /**
  * @param {import('mongodb').Db} db
  * @param {import('./port.js').UpdateStatusParams} params
- * @returns {Promise<import('#domain/prn/model.js').PackagingRecyclingNote | null>}
+ * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
  */
 const updateStatus = async (db, { id, status, updatedBy, updatedAt }) => {
   const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(

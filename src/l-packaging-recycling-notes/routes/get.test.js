@@ -13,7 +13,7 @@ import { createInMemoryFeatureFlags } from '#feature-flags/feature-flags.inmemor
 import { createTestServer } from '#test/create-test-server.js'
 import { asStandardUser } from '#test/inject-auth.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
-import { PRN_STATUS } from '#domain/prn/model.js'
+import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import { packagingRecyclingNotesListPath } from './get.js'
 
 const organisationId = 'org-123'

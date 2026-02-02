@@ -7,11 +7,11 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { PRN_STATUS } from '#domain/prn/model.js'
+import { PRN_STATUS } from '#l-packaging-recycling-notes/domain/model.js'
 import { WASTE_PROCESSING_TYPE } from '#domain/organisations/model.js'
 import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
 
-/** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 /**
  * @typedef {{

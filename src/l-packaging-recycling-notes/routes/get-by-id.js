@@ -8,14 +8,14 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 
-/** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNoteByIdPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes/{prnId}'
 
 /**
  * Build response from PRN
- * @param {import('#domain/prn/model.js').PackagingRecyclingNote} prn
+ * @param {import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
  */
 const buildResponse = (prn) => ({
   id: prn.id,

@@ -8,9 +8,12 @@ import {
   LOGGING_EVENT_ACTIONS,
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
-import { PRN_STATUS, PRN_STATUS_TRANSITIONS } from '#domain/prn/model.js'
+import {
+  PRN_STATUS,
+  PRN_STATUS_TRANSITIONS
+} from '#l-packaging-recycling-notes/domain/model.js'
 
-/** @typedef {import('#repositories/packaging-recycling-notes/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
+/** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
   '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes/{id}/status'
@@ -29,8 +32,8 @@ const updateStatusPayloadSchema = Joi.object({
 
 /**
  * Validates that a status transition is allowed
- * @param {import('#domain/prn/model.js').PrnStatus} currentStatus
- * @param {import('#domain/prn/model.js').PrnStatus} newStatus
+ * @param {import('#l-packaging-recycling-notes/domain/model.js').PrnStatus} currentStatus
+ * @param {import('#l-packaging-recycling-notes/domain/model.js').PrnStatus} newStatus
  * @returns {boolean}
  */
 function isValidTransition(currentStatus, newStatus) {
@@ -40,7 +43,7 @@ function isValidTransition(currentStatus, newStatus) {
 
 /**
  * Build response from updated PRN
- * @param {import('#domain/prn/model.js').PackagingRecyclingNote} prn
+ * @param {import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote} prn
  */
 const buildResponse = (prn) => ({
   id: prn.id,
@@ -68,7 +71,7 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#domain/prn/model.js').PrnStatus}> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#l-packaging-recycling-notes/domain/model.js').PrnStatus}> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
