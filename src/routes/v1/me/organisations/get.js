@@ -41,6 +41,18 @@ import { StatusCodes } from 'http-status-codes'
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 /**
+ * Extract loggable organization info (org name and current flag)
+ *
+ * @param {import('#common/helpers/auth/roles/helpers.js').DefraIdRelationship[]} orgInfo - Array of organization relationships
+ * @returns {Array<{defraIdOrgName: string | undefined, isCurrent: boolean}>} Array of objects with defraIdOrgName and isCurrent
+ */
+const getLoggableOrgInfo = (orgInfo) =>
+  orgInfo.map((org) => ({
+    defraIdOrgName: org.defraIdOrgName,
+    isCurrent: org.isCurrent
+  }))
+
+/**
  * Get current Defra ID details from token
  *
  * @param {*} auth
@@ -56,13 +68,8 @@ const getCurrentDetailsFromToken = (auth, logger) => {
   if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
     logger.warn({
       message: 'User token missing organisation information',
-      contactId: auth.credentials.id,
       relationshipsCount: orgInfo.length,
-      // Only log safe (non-PII) fields: org IDs and isCurrent flag
-      orgInfo: orgInfo.map((org) => ({
-        defraIdOrgId: org.defraIdOrgId,
-        isCurrent: org.isCurrent
-      }))
+      orgInfo: getLoggableOrgInfo(orgInfo)
     })
 
     throw Boom.forbidden(
