@@ -12,6 +12,7 @@ import {
   PRN_STATUS,
   PRN_STATUS_TRANSITIONS
 } from '#l-packaging-recycling-notes/domain/model.js'
+import { generatePrnNumber } from '#l-packaging-recycling-notes/domain/prn-number-generator.js'
 
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
@@ -111,13 +112,20 @@ export const packagingRecyclingNotesUpdateStatus = {
         )
       }
 
+      // Generate PRN number when issuing (transitioning to awaiting_acceptance)
+      const isIssuing = newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
+      const prnNumber = isIssuing
+        ? generatePrnNumber({ nation: prn.nation, isExport: prn.isExport })
+        : undefined
+
       // Update status
       const updatedPrn =
         await lumpyPackagingRecyclingNotesRepository.updateStatus({
           id,
           status: newStatus,
           updatedBy: userId,
-          updatedAt: now
+          updatedAt: now,
+          prnNumber
         })
 
       if (!updatedPrn) {

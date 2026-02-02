@@ -266,5 +266,80 @@ describe('MongoDB packaging recycling notes repository', () => {
 
       expect(result).toBeNull()
     })
+
+    it('sets prnNumber when provided', async () => {
+      const hexId = '123456789012345678901234'
+      const prnNumber = 'ER2612345'
+      let capturedUpdate = null
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndUpdate: async (filter, update) => {
+          capturedUpdate = update
+          return {
+            _id: { toHexString: () => hexId },
+            prnNumber,
+            status: { currentStatus: 'awaiting_acceptance', history: [] }
+          }
+        }
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(dbMock)
+      const repository = factory()
+
+      await repository.updateStatus({
+        id: hexId,
+        status: 'awaiting_acceptance',
+        updatedBy: 'user-123',
+        updatedAt: new Date(),
+        prnNumber
+      })
+
+      expect(capturedUpdate.$set.prnNumber).toBe(prnNumber)
+    })
+
+    it('does not set prnNumber when not provided', async () => {
+      const hexId = '123456789012345678901234'
+      let capturedUpdate = null
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndUpdate: async (filter, update) => {
+          capturedUpdate = update
+          return {
+            _id: { toHexString: () => hexId },
+            status: { currentStatus: 'awaiting_authorisation', history: [] }
+          }
+        }
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(dbMock)
+      const repository = factory()
+
+      await repository.updateStatus({
+        id: hexId,
+        status: 'awaiting_authorisation',
+        updatedBy: 'user-123',
+        updatedAt: new Date()
+      })
+
+      expect(capturedUpdate.$set.prnNumber).toBeUndefined()
+    })
   })
 })

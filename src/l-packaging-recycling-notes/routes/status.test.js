@@ -60,17 +60,22 @@ const createInMemoryPackagingRecyclingNotesRepository = (initialPrns = []) => {
       const prn = store.get(id)
       return prn ? { ...prn } : null
     }),
-    updateStatus: vi.fn(async ({ id, status, updatedBy, updatedAt }) => {
-      const prn = store.get(id)
-      if (!prn) return null
+    updateStatus: vi.fn(
+      async ({ id, status, updatedBy, updatedAt, prnNumber }) => {
+        const prn = store.get(id)
+        if (!prn) return null
 
-      prn.status.currentStatus = status
-      prn.status.history.push({ status, updatedAt, updatedBy })
-      prn.updatedAt = updatedAt
-      store.set(id, prn)
+        prn.status.currentStatus = status
+        prn.status.history.push({ status, updatedAt, updatedBy })
+        prn.updatedAt = updatedAt
+        if (prnNumber) {
+          prn.prnNumber = prnNumber
+        }
+        store.set(id, prn)
 
-      return { ...prn }
-    })
+        return { ...prn }
+      }
+    )
   })
 }
 
@@ -130,6 +135,161 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
             status: PRN_STATUS.AWAITING_AUTHORISATION
           })
         )
+      })
+
+      it('does not generate PRN number for non-issuing transitions', async () => {
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            prnNumber: undefined
+          })
+        )
+      })
+    })
+
+    describe('PRN number generation', () => {
+      it('generates PRN number when issuing (transitioning to awaiting_acceptance)', async () => {
+        const awaitingAuthPrn = createMockPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            prnNumber: expect.stringMatching(/^ER26\d{5}$/)
+          })
+        )
+      })
+
+      it('generates PRN number with X for exporter', async () => {
+        const exporterPrn = createMockPrn({
+          isExport: true,
+          wasteProcessingType: WASTE_PROCESSING_TYPE.EXPORTER,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          exporterPrn
+        )
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            prnNumber: expect.stringMatching(/^EX26\d{5}$/)
+          })
+        )
+      })
+
+      it('uses nation code for agency prefix', async () => {
+        const walesPrn = createMockPrn({
+          nation: NATION.WALES,
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          walesPrn
+        )
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            prnNumber: expect.stringMatching(/^WR26\d{5}$/)
+          })
+        )
+      })
+
+      it('returns PRN number in response when issuing', async () => {
+        const awaitingAuthPrn = createMockPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        const body = JSON.parse(response.payload)
+        expect(body.prnNumber).toMatch(/^ER26\d{5}$/)
       })
     })
 

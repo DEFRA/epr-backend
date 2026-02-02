@@ -90,14 +90,23 @@ const findByRegistration = async (db, registrationId) => {
  * @param {import('./port.js').UpdateStatusParams} params
  * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
  */
-const updateStatus = async (db, { id, status, updatedBy, updatedAt }) => {
+const updateStatus = async (
+  db,
+  { id, status, updatedBy, updatedAt, prnNumber }
+) => {
+  const setFields = {
+    'status.currentStatus': status,
+    updatedAt
+  }
+
+  if (prnNumber) {
+    setFields.prnNumber = prnNumber
+  }
+
   const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
     { _id: ObjectId.createFromHexString(id) },
     {
-      $set: {
-        'status.currentStatus': status,
-        updatedAt
-      },
+      $set: setFields,
       $push: {
         'status.history': { status, updatedAt, updatedBy }
       }
