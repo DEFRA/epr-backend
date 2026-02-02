@@ -37,6 +37,8 @@ function transformRegAcc(org, registration, accreditation) {
   return {
     type: capitalize(registration.wasteProcessingType),
     businessName: org.companyDetails.name,
+    companiesHouseNumber: org.companyDetails?.companiesHouseNumber || '',
+    orgId: org.orgId,
     registeredOffice: formatAddress(
       org.companyDetails.registeredAddress || org.companyDetails.address
     ),
