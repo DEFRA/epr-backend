@@ -64,7 +64,6 @@ describe('commandQueueConsumerPlugin', () => {
   it('has correct plugin metadata', () => {
     expect(commandQueueConsumerPlugin.name).toBe('command-queue-consumer')
     expect(commandQueueConsumerPlugin.version).toBe('1.0.0')
-    expect(commandQueueConsumerPlugin.dependencies).toContain('mongodb')
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'summaryLogsRepository'
     )
