@@ -464,6 +464,56 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           lumpyPackagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledTimes(2)
       })
+
+      it('sets updatedBy to the authenticated user ID', async () => {
+        const userId = 'specific-test-user-id'
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId, id: userId }),
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            updatedBy: userId
+          })
+        )
+      })
+
+      it('falls back to unknown when credentials have no id', async () => {
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          createMockPrn()
+        )
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          auth: {
+            strategy: 'access-token',
+            credentials: {
+              scope: ['standard_user'],
+              linkedOrgId: organisationId
+            }
+          },
+          payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            updatedBy: 'unknown'
+          })
+        )
+      })
     })
 
     describe('error handling', () => {

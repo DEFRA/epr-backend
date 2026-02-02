@@ -1,3 +1,5 @@
+import { randomInt } from 'node:crypto'
+
 import { NATION } from '#domain/organisations/model.js'
 
 /**
@@ -45,7 +47,7 @@ export function generatePrnNumber({ nation, isExport, suffix }) {
     ? OPERATOR_TYPE_CODE.EXPORTER
     : OPERATOR_TYPE_CODE.REPROCESSOR
 
-  const randomSuffix = Math.floor(Math.random() * RANDOM_SUFFIX_RANGE)
+  const randomSuffix = randomInt(RANDOM_SUFFIX_RANGE)
   const paddedSuffix = String(randomSuffix).padStart(RANDOM_SUFFIX_PADDING, '0')
 
   const base = `${agencyCode}${operatorTypeCode}${ACCREDITATION_YEAR}${paddedSuffix}`

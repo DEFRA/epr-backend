@@ -125,7 +125,7 @@ export const packagingRecyclingNotesUpdateStatus = {
     } = request
     const { organisationId, registrationId, id } = params
     const { status: newStatus } = payload
-    const userId = auth.credentials?.profile?.id ?? 'unknown'
+    const userId = auth.credentials?.id ?? 'unknown'
     const now = new Date()
 
     try {
