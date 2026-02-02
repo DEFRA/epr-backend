@@ -150,13 +150,9 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           payload: { status: PRN_STATUS.AWAITING_AUTHORISATION }
         })
 
-        expect(
-          lumpyPackagingRecyclingNotesRepository.updateStatus
-        ).toHaveBeenCalledWith(
-          expect.objectContaining({
-            prnNumber: undefined
-          })
-        )
+        const callArgs =
+          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[0][0]
+        expect(callArgs).not.toHaveProperty('prnNumber')
       })
     })
 

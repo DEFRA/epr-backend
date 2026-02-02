@@ -169,8 +169,7 @@ export const packagingRecyclingNotesUpdateStatus = {
           id,
           status: newStatus,
           updatedBy: userId,
-          updatedAt: now,
-          prnNumber: undefined
+          updatedAt: now
         })
       }
 
