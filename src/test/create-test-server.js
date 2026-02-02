@@ -25,6 +25,7 @@ import { createInMemoryWasteBalancesRepositoryPlugin } from '#repositories/waste
 import { createInMemorySystemLogsRepositoryPlugin } from '#repositories/system-logs/inmemory.plugin.js'
 import { createInMemoryUploadsRepositoryPlugin } from '#adapters/repositories/uploads/inmemory.plugin.js'
 import { createInMemoryPublicRegisterRepositoryPlugin } from '#adapters/repositories/public-register/inmemory.plugin.js'
+import { createInMemoryPackagingRecyclingNotesRepositoryPlugin } from '#repositories/packaging-recycling-notes/inmemory.plugin.js'
 
 /**
  * @typedef {import('#common/hapi-types.js').HapiServer & {
@@ -101,6 +102,10 @@ const repositoryConfigs = [
   {
     name: 'publicRegisterRepository',
     createDefault: createInMemoryPublicRegisterRepositoryPlugin
+  },
+  {
+    name: 'packagingRecyclingNotesRepository',
+    createDefault: createInMemoryPackagingRecyclingNotesRepositoryPlugin
   }
 ]
 
