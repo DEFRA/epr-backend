@@ -84,9 +84,8 @@ function createInMemoryLumpyPackagingRecyclingNotesRepository(
 export function createInMemoryLumpyPackagingRecyclingNotesRepositoryPlugin(
   initialPrns
 ) {
-  const factory = createInMemoryLumpyPackagingRecyclingNotesRepository(
-    initialPrns
-  )
+  const factory =
+    createInMemoryLumpyPackagingRecyclingNotesRepository(initialPrns)
   const repository = factory()
 
   return {

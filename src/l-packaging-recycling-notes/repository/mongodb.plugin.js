@@ -8,9 +8,9 @@ import { registerRepository } from '#plugins/register-repository.js'
 export const lumpyPackagingRecyclingNotesRepositoryPlugin = {
   name: 'lumpyPackagingRecyclingNotesRepository',
   dependencies: ['mongodb'],
-  register: (server, options) => {
+  register: async (server, options) => {
     const db = options?.db ?? server.db
-    const createRepository = createPackagingRecyclingNotesRepository(db)
+    const createRepository = await createPackagingRecyclingNotesRepository(db)
 
     registerRepository(
       server,
