@@ -162,11 +162,19 @@ const createMessageHandler = (deps) => async (message) => {
     // Mark as failed (permanent failure) and delete message
     switch (commandType) {
       case SUMMARY_LOG_COMMAND.VALIDATE:
-        await markAsValidationFailed(summaryLogId, summaryLogsRepository, logger)
+        await markAsValidationFailed(
+          summaryLogId,
+          summaryLogsRepository,
+          logger
+        )
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await markAsSubmissionFailed(summaryLogId, summaryLogsRepository, logger)
+        await markAsSubmissionFailed(
+          summaryLogId,
+          summaryLogsRepository,
+          logger
+        )
         break
     }
 
