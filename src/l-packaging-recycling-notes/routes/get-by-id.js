@@ -44,12 +44,20 @@ export const packagingRecyclingNoteById = {
    */
   handler: async (request, h) => {
     const { lumpyPackagingRecyclingNotesRepository, params, logger } = request
-    const { prnId } = params
+    const { organisationId, registrationId, prnId } = params
 
     try {
       const prn = await lumpyPackagingRecyclingNotesRepository.findById(prnId)
 
       if (!prn) {
+        throw Boom.notFound('PRN not found')
+      }
+
+      // Verify the PRN belongs to the requested organisation and registration
+      if (
+        prn.issuedByOrganisation !== organisationId ||
+        prn.issuedByRegistration !== registrationId
+      ) {
         throw Boom.notFound('PRN not found')
       }
 
