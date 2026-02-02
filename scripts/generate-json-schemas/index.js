@@ -11,3 +11,13 @@ if (!fs.existsSync(outputDir)) {
 
 const outputPath = path.join(outputDir, 'organisation.update.json')
 fs.writeFileSync(outputPath, JSON.stringify(organisation, null, 2))
+
+const adminFrontendPath = path.join(
+  process.cwd(),
+  '../epr-re-ex-admin-frontend/src/server/common/schemas/organisation.json'
+)
+
+if (fs.existsSync(path.dirname(adminFrontendPath))) {
+  fs.writeFileSync(adminFrontendPath, JSON.stringify(organisation, null, 2))
+  console.log(`Updated schema in admin frontend: ${adminFrontendPath}`)
+}

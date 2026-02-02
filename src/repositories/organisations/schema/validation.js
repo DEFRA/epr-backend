@@ -42,10 +42,11 @@ export const validateOrganisationInsert = (data) => {
   return value
 }
 
-export const validateOrganisationUpdate = (data) => {
+export const validateOrganisationUpdate = (data, existing = null) => {
   const { error, value } = organisationReplaceSchema.validate(data, {
     abortEarly: false,
-    stripUnknown: true
+    stripUnknown: true,
+    context: { original: existing }
   })
 
   if (error) {
