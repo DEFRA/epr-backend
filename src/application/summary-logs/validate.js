@@ -460,49 +460,6 @@ const recordRowOutcomeMetrics = async (wasteRecords, processingType) => {
  * @param {SummaryLogExtractor} params.summaryLogExtractor
  * @returns {Function} Function that validates a summary log by ID
  */
-/**
- * @typedef {object} ValidateDependencies
- * @property {SummaryLogsRepository} summaryLogsRepository
- * @property {OrganisationsRepository} organisationsRepository
- * @property {WasteRecordsRepository} wasteRecordsRepository
- * @property {SummaryLogExtractor} summaryLogExtractor
- */
-
-/**
- * Validates a summary log by ID.
- *
- * @param {string} summaryLogId
- * @param {ValidateDependencies} deps
- * @returns {Promise<void>}
- */
-export const validateSummaryLog = async (summaryLogId, deps) => {
-  const {
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    summaryLogExtractor
-  } = deps
-
-  const validator = createSummaryLogsValidator({
-    summaryLogsRepository,
-    organisationsRepository,
-    wasteRecordsRepository,
-    summaryLogExtractor
-  })
-
-  await validator(summaryLogId)
-}
-
-/**
- * Creates a summary logs validator function
- *
- * @param {Object} params
- * @param {SummaryLogsRepository} params.summaryLogsRepository
- * @param {OrganisationsRepository} params.organisationsRepository
- * @param {WasteRecordsRepository} params.wasteRecordsRepository
- * @param {SummaryLogExtractor} params.summaryLogExtractor
- * @returns {Function} Function that validates a summary log by ID
- */
 export const createSummaryLogsValidator = ({
   summaryLogsRepository,
   organisationsRepository,
