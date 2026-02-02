@@ -79,20 +79,20 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let packagingRecyclingNotesRepository
+    let lumpyPackagingRecyclingNotesRepository
     const mockPrn = createMockPrn()
 
     beforeAll(async () => {
-      packagingRecyclingNotesRepository =
+      lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository([mockPrn])()
 
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
+          lumpyPackagingRecyclingNotesRepository: () =>
+            lumpyPackagingRecyclingNotesRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: true
+          lumpyPackagingRecyclingNotes: true
         })
       })
 
@@ -123,7 +123,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         expect(body.status).toBe(PRN_STATUS.AWAITING_AUTHORISATION)
 
         expect(
-          packagingRecyclingNotesRepository.updateStatus
+          lumpyPackagingRecyclingNotesRepository.updateStatus
         ).toHaveBeenCalledWith(
           expect.objectContaining({
             id: prnId,
@@ -172,7 +172,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
         })
 
         // Add to repository
-        packagingRecyclingNotesRepository.findById.mockImplementation(
+        lumpyPackagingRecyclingNotesRepository.findById.mockImplementation(
           async (id) => {
             if (id === createdPrnId) return createdPrn
             if (id === prnId) return mockPrn
@@ -201,7 +201,7 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
           }
         })
 
-        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           unknownStatusPrn
         )
 
@@ -242,10 +242,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('returns 500 when updateStatus returns null', async () => {
         // Reset PRN to draft status for this test
-        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
-        packagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.updateStatus.mockResolvedValueOnce(
           null
         )
 
@@ -261,10 +261,10 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
       it('returns 500 when repository throws non-Boom error', async () => {
         // Reset PRN to draft status for this test
-        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           createMockPrn()
         )
-        packagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.updateStatus.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -286,14 +286,14 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository: () => ({
+          lumpyPackagingRecyclingNotesRepository: () => ({
             findById: vi.fn(),
             create: vi.fn(),
             updateStatus: vi.fn()
           })
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: false
+          lumpyPackagingRecyclingNotes: false
         })
       })
 

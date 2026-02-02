@@ -98,9 +98,9 @@ describe('repositories plugin', () => {
       )
     })
 
-    it('creates the Packaging Recycling Note repository when flagged', async () => {
+    it('creates the Lumpy Packaging Recycling Note repository when lumpy flag is enabled', async () => {
       server.decorate('server', 'featureFlags', {
-        isCreatePackagingRecyclingNotesEnabled: () => true
+        isCreateLumpyPackagingRecyclingNotesEnabled: () => true
       })
 
       await server.register({
@@ -112,7 +112,9 @@ describe('repositories plugin', () => {
           systemLogsRepository: vi.fn(),
           wasteRecordsRepository: vi.fn(),
           wasteBalancesRepository: vi.fn(),
-          packagingRecyclingNotesRepository: vi.fn(() => ({ enabled: true }))
+          lumpyPackagingRecyclingNotesRepository: vi.fn(() => ({
+            enabled: true
+          }))
         }
       })
 
@@ -124,7 +126,7 @@ describe('repositories plugin', () => {
       server.route({
         method: 'GET',
         path: '/test',
-        handler: (request) => request.packagingRecyclingNotesRepository
+        handler: (request) => request.lumpyPackagingRecyclingNotesRepository
       })
 
       await server.initialize()

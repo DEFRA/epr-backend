@@ -49,19 +49,19 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let packagingRecyclingNotesRepository
+    let lumpyPackagingRecyclingNotesRepository
 
     beforeAll(async () => {
-      packagingRecyclingNotesRepository =
+      lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository(mockPrn)()
 
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
+          lumpyPackagingRecyclingNotesRepository: () =>
+            lumpyPackagingRecyclingNotesRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: true
+          lumpyPackagingRecyclingNotes: true
         })
       })
 
@@ -85,9 +85,9 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
         })
 
         expect(response.statusCode).toBe(StatusCodes.OK)
-        expect(packagingRecyclingNotesRepository.findById).toHaveBeenCalledWith(
-          prnId
-        )
+        expect(
+          lumpyPackagingRecyclingNotesRepository.findById
+        ).toHaveBeenCalledWith(prnId)
 
         const payload = JSON.parse(response.payload)
         expect(payload).toStrictEqual({
@@ -117,7 +117,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
           createdAt: new Date('2026-01-15T10:00:00Z')
           // Missing: issuerNotes, isDecemberWaste, authorisedAt, authorisedBy, wasteProcessingType
         }
-        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
           minimalPrn
         )
 
@@ -148,7 +148,9 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
     describe('not found', () => {
       it('returns 404 when PRN does not exist', async () => {
-        packagingRecyclingNotesRepository.findById.mockResolvedValueOnce(null)
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          null
+        )
 
         const response = await server.inject({
           method: 'GET',
@@ -174,7 +176,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        packagingRecyclingNotesRepository.findById.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findById.mockRejectedValueOnce(
           Boom.default.forbidden('Access denied')
         )
 
@@ -188,7 +190,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        packagingRecyclingNotesRepository.findById.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findById.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -209,11 +211,11 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository:
+          lumpyPackagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository()
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: false
+          lumpyPackagingRecyclingNotes: false
         })
       })
 

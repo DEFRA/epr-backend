@@ -5,7 +5,7 @@ import { createWasteRecordsRepository } from '#repositories/waste-records/mongod
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
 import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
 import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
-import { createPackagingRecyclingNotesRepository } from '#l-packaging-recycling-notes/repository/mongodb.js'
+import { createPackagingRecyclingNotesRepository as createLumpyPackagingRecyclingNotesRepository } from '#l-packaging-recycling-notes/repository/mongodb.js'
 import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { config } from '#root/config.js'
 import { createPublicRegisterRepository } from '#adapters/repositories/public-register/public-register.js'
@@ -199,9 +199,10 @@ export const repositories = {
             organisationsRepository: organisationsRepositoryFactory()
           })
         },
-        ...(server.featureFlags?.isCreatePackagingRecyclingNotesEnabled() && {
-          packagingRecyclingNotesRepository:
-            createPackagingRecyclingNotesRepository
+        // Lumpy PRN repository - completely separate from engineering team's implementation
+        ...(server.featureFlags?.isCreateLumpyPackagingRecyclingNotesEnabled?.() && {
+          lumpyPackagingRecyclingNotesRepository:
+            createLumpyPackagingRecyclingNotesRepository
         })
       }
 

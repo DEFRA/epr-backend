@@ -106,4 +106,42 @@ describe('createInMemoryFeatureFlags', () => {
       expect(flags.getGlassMigrationMode()).toBe('disabled')
     })
   })
+
+  it('returns true when createPackagingRecyclingNotes flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      createPackagingRecyclingNotes: true
+    })
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(true)
+  })
+
+  it('returns false when createPackagingRecyclingNotes flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      createPackagingRecyclingNotes: false
+    })
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
+  })
+
+  it('returns false when createPackagingRecyclingNotes flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isCreatePackagingRecyclingNotesEnabled()).toBe(false)
+  })
+
+  it('returns true when lumpyPackagingRecyclingNotes flag is enabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      lumpyPackagingRecyclingNotes: true
+    })
+    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(true)
+  })
+
+  it('returns false when lumpyPackagingRecyclingNotes flag is disabled', () => {
+    const flags = createInMemoryFeatureFlags({
+      lumpyPackagingRecyclingNotes: false
+    })
+    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
+  })
+
+  it('returns false when lumpyPackagingRecyclingNotes flag is not provided', () => {
+    const flags = createInMemoryFeatureFlags({})
+    expect(flags.isCreateLumpyPackagingRecyclingNotesEnabled()).toBe(false)
+  })
 })

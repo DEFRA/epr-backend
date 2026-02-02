@@ -55,19 +55,19 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let packagingRecyclingNotesRepository
+    let lumpyPackagingRecyclingNotesRepository
 
     beforeAll(async () => {
-      packagingRecyclingNotesRepository =
+      lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository(mockPrns)()
 
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
+          lumpyPackagingRecyclingNotesRepository: () =>
+            lumpyPackagingRecyclingNotesRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: true
+          lumpyPackagingRecyclingNotes: true
         })
       })
 
@@ -92,7 +92,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.OK)
         expect(
-          packagingRecyclingNotesRepository.findByRegistration
+          lumpyPackagingRecyclingNotesRepository.findByRegistration
         ).toHaveBeenCalledWith(registrationId)
 
         const payload = JSON.parse(response.payload)
@@ -108,7 +108,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       })
 
       it('returns empty array when no PRNs exist', async () => {
-        packagingRecyclingNotesRepository.findByRegistration.mockResolvedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findByRegistration.mockResolvedValueOnce(
           []
         )
 
@@ -139,7 +139,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        packagingRecyclingNotesRepository.findByRegistration.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findByRegistration.mockRejectedValueOnce(
           Boom.default.notFound('Registration not found')
         )
 
@@ -153,7 +153,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        packagingRecyclingNotesRepository.findByRegistration.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.findByRegistration.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -174,11 +174,11 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository:
+          lumpyPackagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository()
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: false
+          lumpyPackagingRecyclingNotes: false
         })
       })
 

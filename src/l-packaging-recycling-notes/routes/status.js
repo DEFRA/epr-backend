@@ -71,12 +71,17 @@ export const packagingRecyclingNotesUpdateStatus = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#l-packaging-recycling-notes/domain/model.js').PrnStatus}> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<{status: import('#l-packaging-recycling-notes/domain/model.js').PrnStatus}> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { packagingRecyclingNotesRepository, params, payload, logger, auth } =
-      request
+    const {
+      lumpyPackagingRecyclingNotesRepository,
+      params,
+      payload,
+      logger,
+      auth
+    } = request
     const { organisationId, registrationId, id } = params
     const { status: newStatus } = payload
     const userId = auth.credentials?.profile?.id ?? 'unknown'
@@ -84,7 +89,7 @@ export const packagingRecyclingNotesUpdateStatus = {
 
     try {
       // Fetch existing PRN
-      const prn = await packagingRecyclingNotesRepository.findById(id)
+      const prn = await lumpyPackagingRecyclingNotesRepository.findById(id)
 
       if (!prn) {
         throw Boom.notFound(`PRN not found: ${id}`)
@@ -107,12 +112,13 @@ export const packagingRecyclingNotesUpdateStatus = {
       }
 
       // Update status
-      const updatedPrn = await packagingRecyclingNotesRepository.updateStatus({
-        id,
-        status: newStatus,
-        updatedBy: userId,
-        updatedAt: now
-      })
+      const updatedPrn =
+        await lumpyPackagingRecyclingNotesRepository.updateStatus({
+          id,
+          status: newStatus,
+          updatedBy: userId,
+          updatedAt: now
+        })
 
       if (!updatedPrn) {
         throw Boom.badImplementation('Failed to update PRN status')

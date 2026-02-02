@@ -51,19 +51,19 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
   describe('when feature flag is enabled', () => {
     let server
-    let packagingRecyclingNotesRepository
+    let lumpyPackagingRecyclingNotesRepository
 
     beforeAll(async () => {
-      packagingRecyclingNotesRepository =
+      lumpyPackagingRecyclingNotesRepository =
         createInMemoryPackagingRecyclingNotesRepository()()
 
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository: () =>
-            packagingRecyclingNotesRepository
+          lumpyPackagingRecyclingNotesRepository: () =>
+            lumpyPackagingRecyclingNotesRepository
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: true
+          lumpyPackagingRecyclingNotes: true
         })
       })
 
@@ -108,7 +108,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
           expect.objectContaining({
             issuedByOrganisation: organisationId,
             issuedByRegistration: registrationId,
@@ -125,7 +127,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           payload: validPayload
         })
 
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
           expect.objectContaining({
             status: expect.objectContaining({
               currentStatus: PRN_STATUS.DRAFT,
@@ -150,7 +154,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           }
         })
 
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
           expect.objectContaining({
             isExport: false
           })
@@ -168,7 +174,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           }
         })
 
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
           expect.objectContaining({
             isExport: true
           })
@@ -188,7 +196,9 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
           }
         })
 
-        expect(packagingRecyclingNotesRepository.create).toHaveBeenCalledWith(
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
           expect.objectContaining({
             issuerNotes: notes
           })
@@ -324,7 +334,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     describe('error handling', () => {
       it('re-throws Boom errors from repository', async () => {
         const Boom = await import('@hapi/boom')
-        packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.create.mockRejectedValueOnce(
           Boom.default.notFound('Organisation not found')
         )
 
@@ -339,7 +349,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       })
 
       it('returns 500 for unexpected errors', async () => {
-        packagingRecyclingNotesRepository.create.mockRejectedValueOnce(
+        lumpyPackagingRecyclingNotesRepository.create.mockRejectedValueOnce(
           new Error('Database connection failed')
         )
 
@@ -361,11 +371,11 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     beforeAll(async () => {
       server = await createTestServer({
         repositories: {
-          packagingRecyclingNotesRepository:
+          lumpyPackagingRecyclingNotesRepository:
             createInMemoryPackagingRecyclingNotesRepository()
         },
         featureFlags: createInMemoryFeatureFlags({
-          createPackagingRecyclingNotes: false
+          lumpyPackagingRecyclingNotes: false
         })
       })
 

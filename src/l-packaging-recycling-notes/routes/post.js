@@ -85,12 +85,17 @@ export const packagingRecyclingNotesCreate = {
     }
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {packagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest<PackagingRecyclingNotesCreatePayload> & {lumpyPackagingRecyclingNotesRepository: PackagingRecyclingNotesRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
   handler: async (request, h) => {
-    const { packagingRecyclingNotesRepository, params, payload, logger, auth } =
-      request
+    const {
+      lumpyPackagingRecyclingNotesRepository,
+      params,
+      payload,
+      logger,
+      auth
+    } = request
     const { organisationId, registrationId } = params
     const userId = auth.credentials?.profile?.id ?? 'unknown'
     const now = new Date()
@@ -103,7 +108,7 @@ export const packagingRecyclingNotesCreate = {
         userId,
         now
       })
-      const prn = await packagingRecyclingNotesRepository.create(prnData)
+      const prn = await lumpyPackagingRecyclingNotesRepository.create(prnData)
 
       logger.info({
         message: `PRN created: id=${prn.id}`,
