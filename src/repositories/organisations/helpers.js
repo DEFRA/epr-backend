@@ -271,7 +271,7 @@ function prepareRegAccForReplace(validated, existing) {
 }
 
 export const prepareForReplace = (existing, updates) => {
-  const validated = validateOrganisationUpdate(updates)
+  const validated = validateOrganisationUpdate(updates, existing)
   const { registrations, accreditations } = prepareRegAccForReplace(
     validated,
     existing
