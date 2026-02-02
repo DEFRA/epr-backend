@@ -10,7 +10,6 @@ export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
   dependencies: [
-    'mongodb',
     'summaryLogsRepository',
     'organisationsRepository',
     'wasteRecordsRepository',
