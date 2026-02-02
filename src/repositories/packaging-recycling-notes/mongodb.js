@@ -53,7 +53,9 @@ const insert = (db) => async (id, prn) => {
  */
 const findById = async (db, id) => {
   const validatedId = validateId(id)
-  return db.collection(COLLECTION_NAME).findOne({ _id: validatedId })
+  /** @type {any} */
+  const filter = { _id: validatedId }
+  return db.collection(COLLECTION_NAME).findOne(filter)
 }
 
 /**
