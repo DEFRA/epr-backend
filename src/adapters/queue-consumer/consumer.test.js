@@ -14,7 +14,7 @@ vi.mock('#application/summary-logs/validate.js')
 vi.mock('#application/waste-records/sync-from-summary-log.js')
 vi.mock('#common/helpers/metrics/summary-logs.js')
 
-const { createSummaryLogsValidator } =
+const { validateSummaryLog } =
   await import('#application/summary-logs/validate.js')
 const { syncFromSummaryLog } =
   await import('#application/waste-records/sync-from-summary-log.js')
@@ -68,7 +68,7 @@ describe('createCommandQueueConsumer', () => {
     }
 
     vi.mocked(Consumer.create).mockReturnValue(mockConsumer)
-    vi.mocked(createSummaryLogsValidator).mockReturnValue(vi.fn())
+    vi.mocked(validateSummaryLog).mockResolvedValue(undefined)
     vi.mocked(syncFromSummaryLog).mockReturnValue(
       vi.fn().mockResolvedValue({ created: 0, updated: 0 })
     )
@@ -268,9 +268,6 @@ describe('createCommandQueueConsumer', () => {
 
     describe('validate command', () => {
       it('processes validate command successfully', async () => {
-        const mockValidator = vi.fn()
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
-
         const message = {
           MessageId: 'msg-123',
           Body: JSON.stringify({ command: 'validate', summaryLogId: 'log-123' })
@@ -278,7 +275,15 @@ describe('createCommandQueueConsumer', () => {
 
         await handleMessage(message)
 
-        expect(mockValidator).toHaveBeenCalledWith('log-123')
+        expect(validateSummaryLog).toHaveBeenCalledWith(
+          'log-123',
+          expect.objectContaining({
+            summaryLogsRepository,
+            organisationsRepository,
+            wasteRecordsRepository,
+            summaryLogExtractor
+          })
+        )
         expect(logger.info).toHaveBeenCalledWith(
           expect.objectContaining({
             message: 'Command completed: validate for summaryLogId=log-123'
@@ -287,10 +292,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('marks as validation_failed when validate command fails', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+        vi.mocked(validateSummaryLog).mockRejectedValue(
+          new Error('Validation failed')
+        )
 
         summaryLogsRepository.findById.mockResolvedValue({
           version: 1,
@@ -314,10 +318,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('logs warning when summary log not found during failure handling', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+        vi.mocked(validateSummaryLog).mockRejectedValue(
+          new Error('Validation failed')
+        )
 
         summaryLogsRepository.findById.mockResolvedValue(null)
 
@@ -335,10 +338,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('skips marking as failed if not in processing status', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+        vi.mocked(validateSummaryLog).mockRejectedValue(
+          new Error('Validation failed')
+        )
 
         summaryLogsRepository.findById.mockResolvedValue({
           version: 1,
@@ -356,10 +358,9 @@ describe('createCommandQueueConsumer', () => {
       })
 
       it('logs error when marking as failed fails', async () => {
-        const mockValidator = vi
-          .fn()
-          .mockRejectedValue(new Error('Validation failed'))
-        vi.mocked(createSummaryLogsValidator).mockReturnValue(mockValidator)
+        vi.mocked(validateSummaryLog).mockRejectedValue(
+          new Error('Validation failed')
+        )
 
         summaryLogsRepository.findById.mockResolvedValue({
           version: 1,
