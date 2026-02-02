@@ -12,7 +12,7 @@ export const organisationsGetAll = {
     auth: {
       scope: [ROLES.serviceMaintainer]
     },
-    tags: ['api']
+    tags: ['api', 'admin']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
