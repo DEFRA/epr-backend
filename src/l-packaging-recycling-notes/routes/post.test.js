@@ -143,6 +143,55 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
         )
       })
 
+      it('sets createdBy and updatedBy to the authenticated user ID', async () => {
+        const userId = 'specific-test-user-id'
+
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+          ...asStandardUser({ linkedOrgId: organisationId, id: userId }),
+          payload: validPayload
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            createdBy: userId,
+            status: expect.objectContaining({
+              history: expect.arrayContaining([
+                expect.objectContaining({
+                  updatedBy: userId
+                })
+              ])
+            })
+          })
+        )
+      })
+
+      it('falls back to unknown when credentials have no id', async () => {
+        await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
+          auth: {
+            strategy: 'access-token',
+            credentials: {
+              scope: ['standard_user'],
+              linkedOrgId: organisationId
+            }
+          },
+          payload: validPayload
+        })
+
+        expect(
+          lumpyPackagingRecyclingNotesRepository.create
+        ).toHaveBeenCalledWith(
+          expect.objectContaining({
+            createdBy: 'unknown'
+          })
+        )
+      })
+
       it('sets isExport to false for reprocessor', async () => {
         await server.inject({
           method: 'POST',

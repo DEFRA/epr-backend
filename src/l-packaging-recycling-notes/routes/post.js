@@ -97,7 +97,7 @@ export const packagingRecyclingNotesCreate = {
       auth
     } = request
     const { organisationId, registrationId } = params
-    const userId = auth.credentials?.profile?.id ?? 'unknown'
+    const userId = auth.credentials?.id ?? 'unknown'
     const now = new Date()
 
     try {
