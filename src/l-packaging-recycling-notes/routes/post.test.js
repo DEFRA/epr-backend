@@ -82,7 +82,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 201 with created PRN details', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: validPayload
         })
@@ -103,7 +103,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('creates PRN with correct organisation and registration', async () => {
         await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: validPayload
         })
@@ -120,7 +120,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('creates PRN with draft status and history', async () => {
         await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: validPayload
         })
@@ -142,7 +142,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('sets isExport to false for reprocessor', async () => {
         await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -160,7 +160,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('sets isExport to true for exporter', async () => {
         await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -180,7 +180,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -202,7 +202,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: payloadWithoutTonnage
         })
@@ -213,7 +213,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when tonnage is zero', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -227,7 +227,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when tonnage is negative', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -241,7 +241,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when tonnage is not an integer', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -255,7 +255,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when material is invalid', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -269,7 +269,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when nation is invalid', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -283,7 +283,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when wasteProcessingType is invalid', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -297,7 +297,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 422 when issuerNotes exceeds 200 characters', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: {
             ...validPayload,
@@ -313,7 +313,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
       it('returns 401 when not authenticated', async () => {
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           payload: validPayload
         })
 
@@ -330,7 +330,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: validPayload
         })
@@ -345,7 +345,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
 
         const response = await server.inject({
           method: 'POST',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId }),
           payload: validPayload
         })
@@ -379,7 +379,7 @@ describe(`${packagingRecyclingNotesCreatePath} route`, () => {
     it('returns 404 when feature flag is disabled', async () => {
       const response = await server.inject({
         method: 'POST',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
         ...asStandardUser({ linkedOrgId: organisationId }),
         payload: validPayload
       })

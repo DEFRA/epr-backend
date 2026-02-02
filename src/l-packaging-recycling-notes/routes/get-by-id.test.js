@@ -80,7 +80,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('returns 200 with PRN data', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -123,7 +123,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -152,7 +152,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/non-existent`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/non-existent`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -164,7 +164,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
       it('returns 401 when not authenticated', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -180,7 +180,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -194,7 +194,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -227,7 +227,7 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
     it('returns 404 when feature flag is disabled', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes/${prnId}`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 

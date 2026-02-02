@@ -11,7 +11,7 @@ import {
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNoteByIdPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes/{prnId}'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes/{prnId}'
 
 /**
  * Build response from PRN

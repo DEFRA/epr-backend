@@ -21,7 +21,7 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
           listCollections: () => ({
             toArray: vi.fn().mockImplementation(() => {
               return server.featureFlags.dbExists === true
-                ? [{ name: 'packaging-recycling-notes' }]
+                ? [{ name: 'l-packaging-recycling-notes' }]
                 : []
             })
           }),

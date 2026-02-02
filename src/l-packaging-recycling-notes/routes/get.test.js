@@ -86,7 +86,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       it('returns 200 with list of PRNs for registration', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -114,7 +114,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -129,7 +129,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
       it('returns 401 when not authenticated', async () => {
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`
         })
 
         expect(response.statusCode).toBe(StatusCodes.UNAUTHORIZED)
@@ -145,7 +145,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -159,7 +159,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
 
         const response = await server.inject({
           method: 'GET',
-          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
           ...asStandardUser({ linkedOrgId: organisationId })
         })
 
@@ -192,7 +192,7 @@ describe(`${packagingRecyclingNotesListPath} route`, () => {
     it('returns 404 when feature flag is disabled', async () => {
       const response = await server.inject({
         method: 'GET',
-        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/packaging-recycling-notes`,
+        url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes`,
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 

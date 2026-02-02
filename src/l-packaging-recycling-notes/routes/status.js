@@ -16,7 +16,7 @@ import {
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
 export const packagingRecyclingNotesUpdateStatusPath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes/{id}/status'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes/{id}/status'
 
 const statusValues = Object.values(PRN_STATUS)
 

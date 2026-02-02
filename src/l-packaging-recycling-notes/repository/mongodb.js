@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb'
 
-const COLLECTION_NAME = 'packaging-recycling-notes'
+const COLLECTION_NAME = 'l-packaging-recycling-notes'
 
 /**
  * Ensures the collection exists with required indexes.

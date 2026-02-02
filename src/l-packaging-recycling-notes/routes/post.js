@@ -25,7 +25,7 @@ import { packagingRecyclingNotesCreatePayloadSchema } from './post.schema.js'
  */
 
 export const packagingRecyclingNotesCreatePath =
-  '/v1/organisations/{organisationId}/registrations/{registrationId}/packaging-recycling-notes'
+  '/v1/organisations/{organisationId}/registrations/{registrationId}/l-packaging-recycling-notes'
 
 /**
  * Build PRN data for creation
