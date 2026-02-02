@@ -5,15 +5,10 @@ import {
 import { commandQueueConsumerPlugin } from './queue-consumer.plugin.js'
 
 vi.mock('#common/helpers/sqs/sqs-client.js')
-vi.mock('#common/helpers/s3/s3-client.js')
-vi.mock('#adapters/repositories/uploads/cdp-uploader.js')
 vi.mock('#application/summary-logs/extractor.js')
 vi.mock('./consumer.js')
 
 const { createSqsClient } = await import('#common/helpers/sqs/sqs-client.js')
-const { createS3Client } = await import('#common/helpers/s3/s3-client.js')
-const { createUploadsRepository } =
-  await import('#adapters/repositories/uploads/cdp-uploader.js')
 const { createSummaryLogExtractor } =
   await import('#application/summary-logs/extractor.js')
 const { createCommandQueueConsumer } = await import('./consumer.js')
@@ -22,7 +17,6 @@ describe('commandQueueConsumerPlugin', () => {
   let server
   let config
   let mockSqsClient
-  let mockS3Client
   let mockConsumer
 
   beforeEach(() => {
@@ -39,6 +33,7 @@ describe('commandQueueConsumerPlugin', () => {
         organisationsRepository: {},
         wasteRecordsRepository: {},
         wasteBalancesRepository: {},
+        uploadsRepository: {},
         featureFlags: {}
       }
     }
@@ -48,23 +43,16 @@ describe('commandQueueConsumerPlugin', () => {
         const values = {
           awsRegion: 'eu-west-2',
           'commandQueue.endpoint': 'http://localhost:4566',
-          'commandQueue.queueName': 'test-queue',
-          s3Endpoint: 'http://localhost:4566',
-          isDevelopment: true,
-          'cdpUploader.url': 'http://localhost:7337',
-          'cdpUploader.s3Bucket': 'cdp-uploader-quarantine'
+          'commandQueue.queueName': 'test-queue'
         }
         return values[key]
       })
     }
 
     mockSqsClient = { destroy: vi.fn() }
-    mockS3Client = { destroy: vi.fn() }
     mockConsumer = { start: vi.fn(), stop: vi.fn() }
 
     vi.mocked(createSqsClient).mockReturnValue(mockSqsClient)
-    vi.mocked(createS3Client).mockReturnValue(mockS3Client)
-    vi.mocked(createUploadsRepository).mockReturnValue({})
     vi.mocked(createSummaryLogExtractor).mockReturnValue({})
     vi.mocked(createCommandQueueConsumer).mockResolvedValue(mockConsumer)
   })
@@ -80,6 +68,9 @@ describe('commandQueueConsumerPlugin', () => {
     expect(commandQueueConsumerPlugin.dependencies).toContain(
       'summaryLogsRepository'
     )
+    expect(commandQueueConsumerPlugin.dependencies).toContain(
+      'uploadsRepository'
+    )
     expect(commandQueueConsumerPlugin.dependencies).toContain('feature-flags')
   })
 
@@ -90,26 +81,6 @@ describe('commandQueueConsumerPlugin', () => {
       expect(createSqsClient).toHaveBeenCalledWith({
         region: 'eu-west-2',
         endpoint: 'http://localhost:4566'
-      })
-    })
-
-    it('creates S3 client with correct config', async () => {
-      await commandQueueConsumerPlugin.register(server, { config })
-
-      expect(createS3Client).toHaveBeenCalledWith({
-        region: 'eu-west-2',
-        endpoint: 'http://localhost:4566',
-        forcePathStyle: true
-      })
-    })
-
-    it('creates uploads repository', async () => {
-      await commandQueueConsumerPlugin.register(server, { config })
-
-      expect(createUploadsRepository).toHaveBeenCalledWith({
-        s3Client: mockS3Client,
-        cdpUploaderUrl: 'http://localhost:7337',
-        s3Bucket: 'cdp-uploader-quarantine'
       })
     })
 
@@ -174,7 +145,7 @@ describe('commandQueueConsumerPlugin', () => {
   })
 
   describe('server stop event', () => {
-    it('stops consumer and destroys clients', async () => {
+    it('stops consumer and destroys SQS client', async () => {
       await commandQueueConsumerPlugin.register(server, { config })
 
       // Start first to create consumer
@@ -197,7 +168,6 @@ describe('commandQueueConsumerPlugin', () => {
       })
       expect(mockConsumer.stop).toHaveBeenCalled()
       expect(mockSqsClient.destroy).toHaveBeenCalled()
-      expect(mockS3Client.destroy).toHaveBeenCalled()
       expect(server.logger.info).toHaveBeenCalledWith({
         message: 'SQS command queue consumer stopped',
         event: {
@@ -217,7 +187,6 @@ describe('commandQueueConsumerPlugin', () => {
 
       expect(mockConsumer.stop).not.toHaveBeenCalled()
       expect(mockSqsClient.destroy).toHaveBeenCalled()
-      expect(mockS3Client.destroy).toHaveBeenCalled()
     })
   })
 })

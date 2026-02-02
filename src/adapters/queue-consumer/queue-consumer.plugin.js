@@ -4,8 +4,6 @@ import {
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
-import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
-import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
 export const commandQueueConsumerPlugin = {
@@ -17,6 +15,7 @@ export const commandQueueConsumerPlugin = {
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
+    'uploadsRepository',
     'feature-flags'
   ],
 
@@ -26,25 +25,13 @@ export const commandQueueConsumerPlugin = {
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
     const queueName = config.get('commandQueue.queueName')
-    const s3Endpoint = config.get('s3Endpoint')
-    const isDevelopment = config.get('isDevelopment')
 
     const sqsClient = createSqsClient({
       region: awsRegion,
       endpoint: sqsEndpoint
     })
 
-    const s3Client = createS3Client({
-      region: awsRegion,
-      endpoint: s3Endpoint,
-      forcePathStyle: isDevelopment
-    })
-
-    const uploadsRepository = createUploadsRepository({
-      s3Client,
-      cdpUploaderUrl: config.get('cdpUploader.url'),
-      s3Bucket: config.get('cdpUploader.s3Bucket')
-    })
+    const uploadsRepository = server.app.uploadsRepository
 
     const summaryLogExtractor = createSummaryLogExtractor({
       uploadsRepository,
@@ -103,7 +90,6 @@ export const commandQueueConsumerPlugin = {
         consumer.stop()
       }
       sqsClient.destroy()
-      s3Client.destroy()
 
       server.logger.info({
         message: 'SQS command queue consumer stopped',
