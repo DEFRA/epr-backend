@@ -34,24 +34,12 @@ export const prnGetById = {
 
     const prn = await packagingRecyclingNotesRepository.findById(prnId)
 
-    if (!prn) {
-      throw Boom.notFound(`PRN ${prnId} not found`)
-    }
-
-    if (prn.organisationId !== organisationId) {
-      return h
-        .response({
-          statusCode: StatusCodes.FORBIDDEN,
-          error: 'Forbidden',
-          message: `PRN ${prnId} does not belong to organisation ${organisationId}`
-        })
-        .code(StatusCodes.FORBIDDEN)
-    }
-
-    if (prn.accreditationId !== accreditationId) {
-      throw Boom.notFound(
-        `PRN ${prnId} does not belong to accreditation ${accreditationId}`
-      )
+    if (
+      !prn ||
+      prn.organisationId !== organisationId ||
+      prn.accreditationId !== accreditationId
+    ) {
+      throw Boom.notFound(`PRN/PERN ${prnId} not found`)
     }
 
     return h.response(prn).code(StatusCodes.OK)

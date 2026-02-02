@@ -34,7 +34,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
   describe('with valid authentication and PRN data', () => {
     let server
 
-    beforeEach(async () => {
+    it('returns the PRN matching the given id', async () => {
       const featureFlags = createInMemoryFeatureFlags({
         createPackagingRecyclingNotes: true
       })
@@ -46,9 +46,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
         },
         featureFlags
       })
-    })
 
-    it('returns the PRN matching the given id', async () => {
       const response = await server.inject({
         method: 'GET',
         url: basePath,
@@ -76,7 +74,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
   describe('not found', () => {
     let server
 
-    beforeEach(async () => {
+    it('returns 404 when PRN does not exist', async () => {
       const featureFlags = createInMemoryFeatureFlags({
         createPackagingRecyclingNotes: true
       })
@@ -88,9 +86,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
         },
         featureFlags
       })
-    })
 
-    it('returns 404 when PRN does not exist', async () => {
       const response = await server.inject({
         method: 'GET',
         url: basePath,
@@ -102,7 +98,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
   })
 
   describe('authorization', () => {
-    it('returns 403 when PRN belongs to a different organisation', async () => {
+    it('returns 404 when PRN belongs to a different organisation', async () => {
       const prnFromDifferentOrg = {
         ...stubPrn,
         organisationId: differentOrgId
@@ -128,7 +124,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
         ...asStandardUser({ linkedOrgId: organisationId })
       })
 
-      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
     })
 
     it('returns 404 when PRN belongs to a different accreditation', async () => {
@@ -212,7 +208,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
   describe('authentication', () => {
     let server
 
-    beforeEach(async () => {
+    it('requires authentication', async () => {
       const featureFlags = createInMemoryFeatureFlags({
         createPackagingRecyclingNotes: true
       })
@@ -224,9 +220,7 @@ describe('GET /v1/organisations/{organisationId}/accreditations/{accreditationId
         },
         featureFlags
       })
-    })
 
-    it('requires authentication', async () => {
       const response = await server.inject({
         method: 'GET',
         url: basePath
