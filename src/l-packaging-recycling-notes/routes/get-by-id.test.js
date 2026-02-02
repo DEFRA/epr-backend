@@ -160,6 +160,30 @@ describe(`${packagingRecyclingNoteByIdPath} route`, () => {
 
         expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
       })
+
+      it('returns 404 when PRN belongs to different organisation', async () => {
+        const differentOrgId = 'different-org'
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${differentOrgId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: differentOrgId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
+
+      it('returns 404 when PRN belongs to different registration', async () => {
+        const differentRegId = 'different-reg'
+
+        const response = await server.inject({
+          method: 'GET',
+          url: `/v1/organisations/${organisationId}/registrations/${differentRegId}/l-packaging-recycling-notes/${prnId}`,
+          ...asStandardUser({ linkedOrgId: organisationId })
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.NOT_FOUND)
+      })
     })
 
     describe('authentication', () => {
