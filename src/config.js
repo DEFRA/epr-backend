@@ -391,6 +391,20 @@ const baseConfig = {
     default: '[]',
     env: 'TEST_ORGANISATIONS_SKIP_TRANSFORM'
   },
+  commandQueue: {
+    endpoint: {
+      doc: 'AWS SQS endpoint for command queue',
+      format: String,
+      default: 'http://127.0.0.1:4566',
+      env: 'COMMAND_QUEUE_SQS_ENDPOINT'
+    },
+    queueName: {
+      doc: 'SQS queue name for backend commands',
+      format: String,
+      default: 'epr_backend_commands',
+      env: 'COMMAND_QUEUE_SQS_QUEUE_NAME'
+    }
+  },
   publicRegister: {
     batchSize: {
       doc: 'Public register generation batch size. This is used for yielding back to event loop',
