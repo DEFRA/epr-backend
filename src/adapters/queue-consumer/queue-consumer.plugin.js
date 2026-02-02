@@ -38,14 +38,14 @@ export const commandQueueConsumerPlugin = {
       logger: server.logger
     })
 
-    // Access repositories registered by other plugins
-    const summaryLogsRepository = server.app.summaryLogsRepository
-    const organisationsRepository = server.app.organisationsRepository
-    const wasteRecordsRepository = server.app.wasteRecordsRepository
-    const wasteBalancesRepository = server.app.wasteBalancesRepository
-
-    // Access feature flags
-    const featureFlags = server.app.featureFlags
+    // Access deps registered by other plugins
+    const {
+      summaryLogsRepository,
+      organisationsRepository,
+      wasteRecordsRepository,
+      wasteBalancesRepository,
+      featureFlags
+    } = server.app
 
     // Consumer created lazily on server start to avoid SQS connection during tests
     let consumer = null
