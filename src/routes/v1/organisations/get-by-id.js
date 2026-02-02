@@ -13,7 +13,7 @@ export const organisationsGetById = {
     auth: {
       scope: [ROLES.serviceMaintainer, ROLES.standardUser]
     },
-    tags: ['api']
+    tags: ['api', 'admin']
   },
   /**
    * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, params: { orgId: string }}} request

@@ -8,6 +8,7 @@ import { formSubmissionsRoutes } from '#routes/v1/form-submissions/index.js'
 import * as systemLogsRoutes from '#routes/v1/system-logs/index.js'
 import { wasteBalances } from '#routes/v1/organisations/waste-balances/index.js'
 import * as publicRegisterRoutes from '#routes/v1/public-register/index.js'
+import * as tonnageMonitoringRoutes from '#routes/v1/tonnage-monitoring/index.js'
 import * as prnRoutes from '#routes/v1/organisations/accreditations/prns/index.js'
 
 const router = {
@@ -42,7 +43,8 @@ const router = {
           ...formSubmissionsRoutes,
           ...Object.values(systemLogsRoutes),
           ...wasteBalances,
-          ...Object.values(publicRegisterRoutes)
+          ...Object.values(publicRegisterRoutes),
+          ...Object.values(tonnageMonitoringRoutes)
         ])
       })
     }

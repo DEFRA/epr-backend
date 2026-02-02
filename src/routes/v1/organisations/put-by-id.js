@@ -35,7 +35,7 @@ export const organisationsPutById = {
     auth: {
       scope: [ROLES.serviceMaintainer]
     },
-    tags: ['api'],
+    tags: ['api', 'admin'],
     validate: {
       payload: validateMyPayload
     }
