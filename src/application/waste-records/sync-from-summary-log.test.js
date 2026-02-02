@@ -162,7 +162,7 @@ describe('syncFromSummaryLog', () => {
 
     expect(
       wasteBalancesRepository.updateWasteBalanceTransactions
-    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123')
+    ).toHaveBeenCalledWith(expect.any(Array), 'accred-123', undefined)
   })
 
   it('updates existing waste records when rowId already exists', async () => {
@@ -781,7 +781,8 @@ describe('syncFromSummaryLog', () => {
           type: WASTE_RECORD_TYPE.EXPORTED
         })
       ]),
-      'acc-1'
+      'acc-1',
+      undefined
     )
   })
 

@@ -129,10 +129,10 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
- * @param {Object} [user] - User who initiated the sync
- * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
- */
-  return async (summaryLog, user) => {n for consistent versioning
+   * @param {Object} [user] - User who initiated the sync
+   * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
+   */
+  return async (summaryLog, user) => {
     const timestamp = new Date().toISOString()
 
     // 1. Extract/parse the summary log
@@ -212,9 +212,9 @@ export const syncFromSummaryLog = (dependencies) => {
       accreditationId,
       featureFlags,
       wasteBalancesRepository,
-      wasteRecords
-    }),
+      wasteRecords,
       user
+    })
 
     // 9. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog

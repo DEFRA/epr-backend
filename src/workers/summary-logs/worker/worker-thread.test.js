@@ -9,6 +9,7 @@ import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { SUMMARY_LOG_STATUS } from '#domain/summary-logs/status.js'
 import {
   SUMMARY_LOG_META_FIELDS,
@@ -46,12 +47,14 @@ vi.mock('#repositories/summary-logs/mongodb.js')
 vi.mock('#repositories/organisations/mongodb.js')
 vi.mock('#repositories/waste-records/mongodb.js')
 vi.mock('#repositories/waste-balances/mongodb.js')
+vi.mock('#repositories/system-logs/mongodb.js')
 vi.mock('../../../config.js', () => createMockConfig())
 
 describe('summaryLogsWorkerThread', () => {
   let mockDb
   let mockMongoClient
   let mockS3Client
+  let mockSystemLogsRepository
   let mockSummaryLogsRepository
   let mockUploadsRepository
   let mockOrganisationsRepository
@@ -78,6 +81,10 @@ describe('summaryLogsWorkerThread', () => {
     mockSummaryLogsRepository = {
       findById: vi.fn(),
       update: vi.fn()
+    }
+
+    mockSystemLogsRepository = {
+      create: vi.fn()
     }
 
     mockUploadsRepository = {
@@ -111,6 +118,9 @@ describe('summaryLogsWorkerThread', () => {
     summaryLogId = 'summary-log-123'
 
     vi.mocked(createMongoClient).mockResolvedValue(mockMongoClient)
+    vi.mocked(createSystemLogsRepository).mockReturnValue(
+      () => mockSystemLogsRepository
+    )
     vi.mocked(createS3Client).mockReturnValue(mockS3Client)
     vi.mocked(createSummaryLogsRepository).mockReturnValue(
       () => mockSummaryLogsRepository
@@ -315,7 +325,7 @@ describe('summaryLogsWorkerThread', () => {
         summaryLogId
       })
 
-      expect(mockSyncFromSummaryLog).toHaveBeenCalledWith(summaryLog)
+      expect(mockSyncFromSummaryLog).toHaveBeenCalledWith(summaryLog, undefined)
     })
 
     it('should update summary log status to SUBMITTED', async () => {

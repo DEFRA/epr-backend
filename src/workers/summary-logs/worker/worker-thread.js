@@ -172,8 +172,8 @@ export default async function summaryLogsWorkerThread(command) {
           break
 
         case SUMMARY_LOG_COMMAND.SUBMIT:
-          await handleSubmitCom,
-            user: command.usermand({
+          await handleSubmitCommand({
+            user: command.user,
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
             organisationsRepository,

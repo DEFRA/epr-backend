@@ -1,4 +1,5 @@
 import { validateAccreditationId } from './validation.js'
+import { audit } from '@defra/cdp-auditing'
 import { calculateWasteBalanceUpdates } from '#domain/waste-balances/calculator.js'
 import { randomUUID } from 'node:crypto'
 import {
