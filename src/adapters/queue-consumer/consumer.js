@@ -7,8 +7,8 @@ import {
 } from '#common/enums/index.js'
 import { SUMMARY_LOG_COMMAND } from '#domain/summary-logs/status.js'
 import {
-  markAsValidationFailed,
-  markAsSubmissionFailed
+  markAsSubmissionFailed,
+  markAsValidationFailed
 } from '#domain/summary-logs/mark-as-failed.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
@@ -55,15 +55,6 @@ const handleValidateCommand = async (summaryLogId, deps) => {
   })
 
   await validateSummaryLog(summaryLogId)
-}
-
-/**
- * Handles a submit command.
- * @param {string} summaryLogId
- * @param {ConsumerDependencies} deps
- */
-const handleSubmitCommand = async (summaryLogId, deps) => {
-  await submitSummaryLog(summaryLogId, deps)
 }
 
 /**
@@ -162,7 +153,7 @@ const createMessageHandler = (deps) => async (message) => {
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
-        await handleSubmitCommand(summaryLogId, deps)
+        await submitSummaryLog(summaryLogId, deps)
         break
 
       default:
