@@ -224,7 +224,7 @@ export const performUpdateWasteBalanceTransactions = async ({
     version: (wasteBalance.version || 0) + 1
   }
 
-  await saveBalance(updatedBalance, newTransactions, request)
+  await saveBalance(updatedBalance, newTransactions)
 
   const user = request?.auth?.credentials || request
 

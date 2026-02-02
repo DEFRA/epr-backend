@@ -19,8 +19,7 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
  * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
 export const saveBalance =
-  (wasteBalanceStorage) =>
-  async (updatedBalance, _newTransactions, request) => {
+  (wasteBalanceStorage) => async (updatedBalance, _newTransactions) => {
     const existingIndex = wasteBalanceStorage.findIndex(
       (b) => b.accreditationId === updatedBalance.accreditationId
     )

@@ -72,10 +72,9 @@ export const findBalance = (db) => async (id) => {
  * Save a waste balance.
  *
  * @param {import('mongodb').Db} db
- * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], request?: Object) => Promise<void>}
+ * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
-export const saveBalance =
-  (db) => async (updatedBalance, newTransactions, request) => {
+export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
     await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
       { accreditationId: updatedBalance.accreditationId },
       /** @type {*} */ ({
