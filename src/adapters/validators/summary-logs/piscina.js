@@ -203,20 +203,18 @@ const runCommandInWorker = async (
       }
     })
 
-    if (!repository) {
-      throw new Error(`No repository provided to mark summary log as failed`)
-    }
-
-    switch (command) {
-      case SUMMARY_LOG_COMMAND.VALIDATE:
-        await markAsValidationFailed(summaryLogId, repository, logger)
-        break
-      case SUMMARY_LOG_COMMAND.SUBMIT:
-        await markAsSubmissionFailed(summaryLogId, repository, logger)
-        break
-      /* v8 ignore next 2 */
-      default:
-        throw new Error(`Unknown command: ${command}`)
+    if (repository) {
+      switch (command) {
+        case SUMMARY_LOG_COMMAND.VALIDATE:
+          await markAsValidationFailed(summaryLogId, repository, logger)
+          break
+        case SUMMARY_LOG_COMMAND.SUBMIT:
+          await markAsSubmissionFailed(summaryLogId, repository, logger)
+          break
+        /* v8 ignore next 2 */
+        default:
+          throw new Error(`Unknown command: ${command}`)
+      }
     }
   }
 }
