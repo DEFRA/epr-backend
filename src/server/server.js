@@ -60,6 +60,60 @@ function getServerConfig(config) {
   }
 }
 
+/* istanbul ignore next */
+function getSwaggerPlugins() {
+  return [
+    Inert,
+    Vision,
+    {
+      plugin: HapiSwagger,
+      options: {
+        info: {
+          title: 'API Documentation',
+          version: '1'
+        },
+        documentationPath: '/swagger',
+        grouping: 'tags',
+        tags: [{ name: 'admin', description: 'Admin UI endpoints' }],
+        securityDefinitions: {
+          Bearer: {
+            type: 'apiKey',
+            name: 'Authorization',
+            in: 'header',
+            description: 'Enter your Bearer token in the format: Bearer {token}'
+          }
+        },
+        security: [{ Bearer: [] }]
+      }
+    }
+  ]
+}
+
+function getProductionPlugins(config) {
+  const eventualConsistency = config.get('mongo.eventualConsistency')
+  return [
+    {
+      plugin: mongoDbPlugin,
+      options: config.get('mongo')
+    },
+    {
+      plugin: mongoOrganisationsRepositoryPlugin,
+      options: { eventualConsistency }
+    },
+    mongoSummaryLogsRepositoryPlugin,
+    mongoFormSubmissionsRepositoryPlugin,
+    mongoWasteRecordsRepositoryPlugin,
+    {
+      plugin: mongoWasteBalancesRepositoryPlugin,
+      options: { eventualConsistency }
+    },
+    mongoSystemLogsRepositoryPlugin,
+    s3UploadsRepositoryPlugin,
+    s3PublicRegisterRepositoryPlugin,
+    piscinaWorkersPlugin
+  ]
+}
+
 async function createServer(options = {}) {
   setupProxy()
   const config = getConfig()
@@ -93,27 +147,7 @@ async function createServer(options = {}) {
 
   /* istanbul ignore next */
   if (config.get('isSwaggerEnabled')) {
-    plugins.push(Inert, Vision, {
-      plugin: HapiSwagger,
-      options: {
-        info: {
-          title: 'API Documentation',
-          version: '1'
-        },
-        documentationPath: '/swagger',
-        grouping: 'tags',
-        tags: [{ name: 'admin', description: 'Admin UI endpoints' }],
-        securityDefinitions: {
-          Bearer: {
-            type: 'apiKey',
-            name: 'Authorization',
-            in: 'header',
-            description: 'Enter your Bearer token in the format: Bearer {token}'
-          }
-        },
-        security: [{ Bearer: [] }]
-      }
-    })
+    plugins.push(...getSwaggerPlugins())
   }
 
   plugins.push({
@@ -129,31 +163,7 @@ async function createServer(options = {}) {
   // Once refactored, delete this flag and the server-with-mock-db.js fixture.
   // See: src/routes/v1/apply/*.js
   if (!options._testOnlyLegacyApplyRoutes) {
-    // MongoDB connection - required for production
-    plugins.push({
-      plugin: mongoDbPlugin,
-      options: config.get('mongo')
-    })
-
-    // Repository plugins - explicit composition, no conditional logic
-    const eventualConsistency = config.get('mongo.eventualConsistency')
-    plugins.push(
-      {
-        plugin: mongoOrganisationsRepositoryPlugin,
-        options: { eventualConsistency }
-      },
-      mongoSummaryLogsRepositoryPlugin,
-      mongoFormSubmissionsRepositoryPlugin,
-      mongoWasteRecordsRepositoryPlugin,
-      {
-        plugin: mongoWasteBalancesRepositoryPlugin,
-        options: { eventualConsistency }
-      },
-      mongoSystemLogsRepositoryPlugin,
-      s3UploadsRepositoryPlugin,
-      s3PublicRegisterRepositoryPlugin,
-      piscinaWorkersPlugin
-    )
+    plugins.push(...getProductionPlugins(config))
   }
 
   plugins.push(router)
