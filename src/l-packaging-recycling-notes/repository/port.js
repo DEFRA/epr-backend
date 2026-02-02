@@ -4,6 +4,7 @@
  * @property {import('#l-packaging-recycling-notes/domain/model.js').PrnStatus} status - New status
  * @property {string} updatedBy - User ID making the change
  * @property {Date} updatedAt - Timestamp of the change
+ * @property {string} [prnNumber] - PRN number to set when issuing (transitioning to awaiting_acceptance)
  */
 
 /**
