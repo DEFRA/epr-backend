@@ -32,7 +32,7 @@ export const organisationsLink = {
     auth: {
       scope: [ROLES.linker]
     },
-    tags: ['api']
+    tags: ['api', 'admin']
   },
 
   /**

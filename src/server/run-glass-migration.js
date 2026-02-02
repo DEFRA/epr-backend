@@ -4,8 +4,11 @@ import {
   shouldMigrateOrganisation
 } from '#glass-migration/glass-migration.js'
 import { createOrganisationsRepository } from '#repositories/organisations/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
+import { auditGlassMigration } from '#root/auditing/glass-migration.js'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationReplacement} OrganisationReplacement */
+/** @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository */
 
 /**
  * Run glass migration for a single organisation
@@ -13,6 +16,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
  * @param {Object} repository
  * @param {Object} options
  * @param {boolean} [options.dryRun] - If true, don't actually persist changes
+ * @param {SystemLogsRepository} [options.systemLogsRepository] - Repository for audit logging
  * @returns {Promise<boolean>} true if migrated/would migrate, false if skipped
  */
 export async function migrateGlassOrganisation(org, repository, options = {}) {
@@ -49,16 +53,31 @@ export async function migrateGlassOrganisation(org, repository, options = {}) {
   })
 
   await repository.replace(id, version, migratedOrg)
+
+  if (options.systemLogsRepository) {
+    await auditGlassMigration(
+      options.systemLogsRepository,
+      id,
+      orgData,
+      migratedOrg
+    )
+  }
+
   return true
 }
 
 /**
  * Execute the glass migration across all organisations
  * @param {Object} organisationsRepository
+ * @param {SystemLogsRepository} systemLogsRepository
  * @param {boolean} dryRun
  * @returns {Promise<{dryRun: boolean, migrated?: number, wouldMigrate?: number, total: number}>}
  */
-async function executeMigration(organisationsRepository, dryRun) {
+async function executeMigration(
+  organisationsRepository,
+  systemLogsRepository,
+  dryRun
+) {
   const organisations = await organisationsRepository.findAll()
   let migratedCount = 0
 
@@ -66,7 +85,7 @@ async function executeMigration(organisationsRepository, dryRun) {
     const wasMigrated = await migrateGlassOrganisation(
       org,
       organisationsRepository,
-      { dryRun }
+      { dryRun, systemLogsRepository }
     )
     if (wasMigrated) {
       migratedCount++
@@ -126,7 +145,14 @@ export const runGlassMigration = async (server) => {
       const organisationsRepository = (
         await createOrganisationsRepository(server.db)
       )()
-      return await executeMigration(organisationsRepository, dryRun)
+      const systemLogsRepository = (
+        await createSystemLogsRepository(server.db)
+      )(logger)
+      return await executeMigration(
+        organisationsRepository,
+        systemLogsRepository,
+        dryRun
+      )
     } finally {
       await lock.free()
     }

@@ -1,4 +1,4 @@
-import { describe, vi } from 'vitest'
+import { describe, expect, vi } from 'vitest'
 import { it as mongoIt } from '#vite/fixtures/mongo.js'
 import { createSystemLogsRepository } from './mongodb.js'
 import { testSystemLogsRepositoryContract } from './port.contract.js'

@@ -18,6 +18,7 @@ export default defineConfig({
         '.vite/helpers/**',
         '**/*.json',
         '**/*.md',
+        '**/*.plugin.js',
         '**/*.port.js',
         '**/*.sh',
         '**/*.xlsx',

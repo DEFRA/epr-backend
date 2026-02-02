@@ -60,7 +60,8 @@ const createTestSchema = (options = {}) => ({
     })
       .unknown(true)
       .prefs({ abortEarly: false }),
-  fieldsRequiredForWasteBalance: options.fieldsRequiredForWasteBalance || []
+  fieldsRequiredForInclusionInWasteBalance:
+    options.fieldsRequiredForInclusionInWasteBalance || []
 })
 
 /**
@@ -573,7 +574,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
         unfilledValues: {
           VALUE: ['Choose option'] // Redundant but present in real schemas
         },
-        fieldsRequiredForWasteBalance: ['VALUE']
+        fieldsRequiredForInclusionInWasteBalance: ['VALUE']
       })
 
       // Row where parser already normalised 'Choose option' to null
@@ -616,7 +617,7 @@ describe('Parser Workarounds - Integration Characterisation Tests', () => {
           unfilledValues: {
             VALUE: ['Choose option'] // Redundant
           },
-          fieldsRequiredForWasteBalance: ['VALUE']
+          fieldsRequiredForInclusionInWasteBalance: ['VALUE']
         })
       })
 

@@ -34,7 +34,7 @@ describe('generatePublicRegister', () => {
     const expectedCsv = `\uFEFFType,Business name,"Registered office
 Head office
 Main place of business in UK",Appropriate Agency,Registration number,Trading name,Registered Reprocessing site (UK),Packaging Waste Category,Annex II Process,Accreditation No,Active Date,Accreditation status,Date status last changed,Tonnage Band
-Reprocessor,ACME ltd,"Palace of Westminster, London, SW1A 0AA",ea,REG1,ACME ltd,"7 Glass processing site, London, SW2A 0AA",Glass-remelt,R5,ACC1,${activeDate},Approved,${dateLastUpdated},"Over 10,000 tonnes"`
+Reprocessor,ACME ltd,"Palace of Westminster, London, SW1A 0AA",EA,REG1,ACME ltd,"7 Glass processing site, London, SW2A 0AA",Glass-remelt,R5,ACC1,${activeDate},Approved,${dateLastUpdated},"Over 10,000 tonnes"`
 
     expect(csvData).toBe(expectedCsv)
   })

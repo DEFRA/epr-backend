@@ -91,12 +91,15 @@ export const filterToFilled = (row, unfilledValues) => {
  * @param {Object} tableSchema - The table schema
  * @param {Record<string, string[]>} tableSchema.unfilledValues - Per-field unfilled values
  * @param {import('joi').ObjectSchema} tableSchema.validationSchema - Joi schema for VAL010
- * @param {string[]} tableSchema.fieldsRequiredForWasteBalance - Fields required for VAL011
+ * @param {string[]} tableSchema.fieldsRequiredForInclusionInWasteBalance - Fields required for VAL011
  * @returns {{ outcome: RowOutcome, issues: RowClassificationIssue[] }}
  */
 export const classifyRow = (row, tableSchema) => {
-  const { unfilledValues, validationSchema, fieldsRequiredForWasteBalance } =
-    tableSchema
+  const {
+    unfilledValues,
+    validationSchema,
+    fieldsRequiredForInclusionInWasteBalance
+  } = tableSchema
 
   // Step 1: Filter to filled fields only
   const filledFields = filterToFilled(row, unfilledValues)
@@ -119,19 +122,21 @@ export const classifyRow = (row, tableSchema) => {
   }
 
   // Step 3: VAL011 - Check required fields are present
-  // If fieldsRequiredForWasteBalance is empty, this table does not contribute
+  // If fieldsRequiredForInclusionInWasteBalance is empty, this table does not contribute
   // to the waste balance at all - all rows should be EXCLUDED
-  if (fieldsRequiredForWasteBalance.length === 0) {
+  if (fieldsRequiredForInclusionInWasteBalance.length === 0) {
     return {
       outcome: ROW_OUTCOME.EXCLUDED,
       issues: []
     }
   }
 
-  const missingRequired = fieldsRequiredForWasteBalance.filter((field) => {
-    const fieldUnfilledValues = unfilledValues[field] || []
-    return !isFilled(row[field], fieldUnfilledValues)
-  })
+  const missingRequired = fieldsRequiredForInclusionInWasteBalance.filter(
+    (field) => {
+      const fieldUnfilledValues = unfilledValues[field] || []
+      return !isFilled(row[field], fieldUnfilledValues)
+    }
+  )
 
   if (missingRequired.length > 0) {
     return {

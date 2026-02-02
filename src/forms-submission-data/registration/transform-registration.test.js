@@ -16,16 +16,18 @@ import {
 } from '#domain/organisations/model.js'
 
 describe('parseRegistrationSubmission - Integration Tests with Fixture Data', () => {
-  it('should parse exporter registration from fixture', async () => {
+  it('should split exporter glass registration with both processes into remelt and other', async () => {
     const result = parseRegistrationSubmission(
       exporter._id.$oid,
       exporter.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(2)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
-    expect(result).toStrictEqual({
-      id: exporter._id.$oid,
+    const commonFields = {
       orgId: 503181,
       systemReference: '68e6912278f83083f0f17a7b',
       formSubmissionTime: new Date('2025-10-08T17:48:22.220Z'),
@@ -41,10 +43,6 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       ],
       suppliers:
         'Local authorities, supermarkets, manufacturing companies, waste collection companies, materials recovery facilities (MRFs)',
-      glassRecyclingProcess: [
-        GLASS_RECYCLING_PROCESS.GLASS_RE_MELT,
-        GLASS_RECYCLING_PROCESS.GLASS_OTHER
-      ],
       plantEquipmentDetails: undefined,
       exportPorts: ['SouthHampton', 'Portsmouth'],
       submitterContactDetails: {
@@ -83,7 +81,21 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
         }
       ],
       yearlyMetrics: undefined
+    }
+
+    expect(result[0]).toStrictEqual({
+      ...commonFields,
+      id: exporter._id.$oid,
+      glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_RE_MELT]
     })
+
+    expect(result[1]).toStrictEqual(
+      expect.objectContaining({
+        ...commonFields,
+        glassRecyclingProcess: [GLASS_RECYCLING_PROCESS.GLASS_OTHER]
+      })
+    )
+    expect(result[1].id).not.toBe(exporter._id.$oid)
   })
 
   it('should parse reprocessor registration for all materials from fixture', async () => {
@@ -92,10 +104,12 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorAllMaterials.rawSubmissionData
     )
 
-    // Validate result against registrationSchema
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
-    expect(result).toStrictEqual({
+    expect(result[0]).toStrictEqual({
       id: reprocessorAllMaterials._id.$oid,
       orgId: 503176,
       systemReference: '68e68d9c78f83083f0f17a76',
@@ -299,8 +313,11 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorAllMaterialsWithoutNoticeAddress.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
-    expect(result.noticeAddress).toBeUndefined()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
+    expect(result[0].noticeAddress).toBeUndefined()
   })
 
   it('should handle reprocessor with partial site capacity data', async () => {
@@ -324,11 +341,14 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorWithPartialCapacity.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
     // Should have site capacity for all materials except Wood
-    expect(result.site.siteCapacity).toHaveLength(6)
-    expect(result.site.siteCapacity).toEqual([
+    expect(result[0].site.siteCapacity).toHaveLength(6)
+    expect(result[0].site.siteCapacity).toEqual([
       {
         material: MATERIAL.ALUMINIUM,
         siteCapacityTimescale: TIME_SCALE.MONTHLY,
@@ -383,10 +403,13 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorWithoutExemptions.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
     // Verify no waste exemption permit exists
-    const hasWasteExemption = result.wasteManagementPermits.some(
+    const hasWasteExemption = result[0].wasteManagementPermits.some(
       (permit) => permit.type === WASTE_PERMIT_TYPE.WASTE_EXEMPTION
     )
     expect(hasWasteExemption).toBe(false)
@@ -413,10 +436,13 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorWithoutEnvPermit.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
     // Verify no environmental permit exists
-    const hasEnvPermit = result.wasteManagementPermits.some(
+    const hasEnvPermit = result[0].wasteManagementPermits.some(
       (permit) => permit.type === WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT
     )
     expect(hasEnvPermit).toBe(false)
@@ -443,10 +469,13 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorWithoutInstallationPermit.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
     // Verify no installation permit exists
-    const hasInstallationPermit = result.wasteManagementPermits.some(
+    const hasInstallationPermit = result[0].wasteManagementPermits.some(
       (permit) => permit.type === WASTE_PERMIT_TYPE.INSTALLATION_PERMIT
     )
     expect(hasInstallationPermit).toBe(false)
@@ -467,13 +496,16 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       }
     }
 
-    const result = await parseRegistrationSubmission(
+    const result = parseRegistrationSubmission(
       exporterWithoutPermits._id.$oid,
       exporterWithoutPermits.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
-    expect(result.wasteManagementPermits).toEqual([])
+    expect(result).toHaveLength(2)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
+    result.forEach((reg) => expect(reg.wasteManagementPermits).toEqual([]))
   })
 
   it('should handle reprocessor without SIP file uploads', async () => {
@@ -497,8 +529,11 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorWithoutSipFiles.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
-    expect(result.samplingInspectionPlanPart1FileUploads).toEqual([])
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
+    expect(result[0].samplingInspectionPlanPart1FileUploads).toEqual([])
   })
 
   it('should parse SEPA/NIEA reprocessor registration', async () => {
@@ -507,15 +542,18 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       reprocessorSepa.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(1)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
-    expect(result.systemReference).toBe('68e68d9c78f83083f0f17a76')
+    expect(result[0].systemReference).toBe('68e68d9c78f83083f0f17a76')
     // Verify SEPA-specific values are parsed correctly
-    expect(result.submittedToRegulator).toBe(REGULATOR.SEPA)
-    expect(result.cbduNumber).toBe('SEPA-WML-2024-001')
+    expect(result[0].submittedToRegulator).toBe(REGULATOR.SEPA)
+    expect(result[0].cbduNumber).toBe('SEPA-WML-2024-001')
 
     // Should parse the same permit data despite different page titles
-    expect(result.wasteManagementPermits).toEqual([
+    expect(result[0].wasteManagementPermits).toEqual([
       {
         type: WASTE_PERMIT_TYPE.ENVIRONMENTAL_PERMIT,
         permitNumber: 'EPR/AB1234CD/A001',
@@ -594,9 +632,14 @@ describe('parseRegistrationSubmission - Integration Tests with Fixture Data', ()
       registrationWithTypo.rawSubmissionData
     )
 
-    expect(() => validateRegistration(result)).not.toThrow()
+    expect(result).toHaveLength(2)
+    result.forEach((reg) =>
+      expect(() => validateRegistration(reg)).not.toThrow()
+    )
 
-    // Verify the systemReference was corrected by the override
-    expect(result.systemReference).toBe('507f191e810c19729de860ea')
+    // Verify the systemReference was corrected by the override on all split records
+    result.forEach((reg) =>
+      expect(reg.systemReference).toBe('507f191e810c19729de860ea')
+    )
   })
 })

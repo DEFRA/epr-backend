@@ -784,7 +784,7 @@ describe('SummaryLogsValidator', () => {
       const updateCall = summaryLogsRepository.update.mock.calls[0][2]
 
       // Note: ROW_ID values come directly from test data as numbers
-      // Row 10001 is excluded because EWC_CODE is missing (fieldsRequiredForWasteBalance)
+      // Row 10001 is excluded because EWC_CODE is missing (fieldsRequiredForInclusionInWasteBalance)
       expect(updateCall.loads).toEqual({
         added: {
           valid: { count: 1, rowIds: [10000] },
@@ -1073,6 +1073,8 @@ describe('SummaryLogsValidator', () => {
         'EXPORT_CONTROLS'
       ]
 
+      // All 25 fields must be filled for a row to be INCLUDED in waste balance
+      // (per PAE-659 AC03: "has all mandatory fields completed")
       const buildRow = (rowId, exportDate, receivedDate = '2025-01-01') =>
         headers.map((h) => {
           if (h === 'ROW_ID') return rowId
@@ -1092,6 +1094,16 @@ describe('SummaryLogsValidator', () => {
           if (h === 'WEIGHT_OF_NON_TARGET_MATERIALS') return 0
           if (h === 'RECYCLABLE_PROPORTION_PERCENTAGE') return 1
           if (h === 'TONNAGE_RECEIVED_FOR_EXPORT') return 100
+          if (h === 'TONNAGE_OF_UK_PACKAGING_WASTE_EXPORTED') return 100
+          if (h === 'BASEL_EXPORT_CODE') return 'B3020'
+          if (h === 'CUSTOMS_CODES') return '123456'
+          if (h === 'CONTAINER_NUMBER') return 'CONT123'
+          if (h === 'DATE_RECEIVED_BY_OSR') return '2025-01-15'
+          if (h === 'OSR_ID') return 100
+          if (h === 'DID_WASTE_PASS_THROUGH_AN_INTERIM_SITE') return 'No'
+          if (h === 'INTERIM_SITE_ID') return 100
+          if (h === 'TONNAGE_PASSED_INTERIM_SITE_RECEIVED_BY_OSR') return 0
+          if (h === 'EXPORT_CONTROLS') return 'Article 18 (Green list)'
           return ''
         })
 

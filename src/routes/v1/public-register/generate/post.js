@@ -6,9 +6,13 @@ import {
   LOGGING_EVENT_CATEGORIES
 } from '#common/enums/index.js'
 import Boom from '@hapi/boom'
+import { auditPublicRegisterGenerate } from '#root/auditing/public-register.js'
 
-/** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
- * @param {import('#domain/public-register/repository/port.js').PublicRegisterRepository} publicRegisterRepository - Public register repository*/
+/**
+ * @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository
+ * @typedef {import('#domain/public-register/repository/port.js').PublicRegisterRepository} PublicRegisterRepository
+ * @typedef {import('#repositories/system-logs/port.js').SystemLogsRepository} SystemLogsRepository
+ */
 
 export const publicRegisterGeneratePath = '/v1/public-register/generate'
 
@@ -19,21 +23,27 @@ export const generateLatestPublicRegister = {
     auth: {
       scope: [ROLES.serviceMaintainer]
     },
-    tags: ['api']
+    tags: ['api', 'admin']
   },
   /**
-   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository}} request
+   * @param {import('#common/hapi-types.js').HapiRequest & {organisationsRepository: OrganisationsRepository, publicRegisterRepository: PublicRegisterRepository, systemLogsRepository: SystemLogsRepository}} request
    * @param {Object} h - Hapi response toolkit
    */
-  handler: async (
-    { organisationsRepository, publicRegisterRepository, logger },
-    h
-  ) => {
+  handler: async (request, h) => {
+    const { organisationsRepository, publicRegisterRepository, logger } =
+      request
     try {
       const result = await generatePublicRegister(
         organisationsRepository,
         publicRegisterRepository
       )
+
+      const generatedTime = new Date().toISOString()
+      await auditPublicRegisterGenerate(request, {
+        url: result.url,
+        expiresAt: result.expiresAt,
+        generatedAt: generatedTime
+      })
 
       logger.info({
         message: 'Public register generated successfully',
@@ -47,13 +57,13 @@ export const generateLatestPublicRegister = {
         .response({
           status: 'generated',
           downloadUrl: result.url,
-          generatedAt: new Date().toISOString(),
+          generatedAt: generatedTime,
           expiresAt: result.expiresAt
         })
         .code(StatusCodes.CREATED)
     } catch (error) {
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${publicRegisterGeneratePath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

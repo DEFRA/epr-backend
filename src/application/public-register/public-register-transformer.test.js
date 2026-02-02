@@ -10,6 +10,7 @@ import {
 import {
   MATERIAL,
   REG_ACC_STATUS,
+  REGULATOR,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
 import { formatDate } from '#common/helpers/date-formatter.js'
@@ -104,7 +105,49 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
         registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'ea',
+        appropriateAgency: 'EA',
+        registrationNumber: 'R12345678PL',
+        tradingName: 'Waste Recovery',
+        reprocessingSite: '2 Waste Site, London, EC1 1AA',
+        packagingWasteCategory: 'Plastic',
+        annexIIProcess: 'R3',
+        accreditationStatus: 'Approved',
+        accreditationNo: 'A123456PL',
+        tonnageBand: 'Up to 10,000 tonnes',
+        activeDate: EXPECTED_ACTIVE_DATE,
+        dateLastChanged: EXPECTED_DATE_LAST_CHANGED
+      }
+    ])
+  })
+
+  it('should use regulator info from registration for populating appropriate agency', async () => {
+    const accreditationId = new ObjectId()
+
+    const accreditation = createTestAccreditation({
+      id: accreditationId.toString(),
+      accreditationNumber: 'A123456PL',
+      submittedToRegulator: REGULATOR.SEPA
+    })
+
+    const registration = createTestRegistration({
+      accreditationId: accreditationId.toString(),
+      submittedToRegulator: REGULATOR.SEPA
+    })
+
+    const org = createTestOrganisation({
+      submittedToRegulator: REGULATOR.EA,
+      registrations: [registration],
+      accreditations: [accreditation]
+    })
+
+    const rows = await transform([org])
+
+    expect(rows).toStrictEqual([
+      {
+        type: 'Reprocessor',
+        businessName: 'Waste Ltd',
+        registeredOffice: '1 Waste Road, London, N1 1AA',
+        appropriateAgency: 'SEPA',
         registrationNumber: 'R12345678PL',
         tradingName: 'Waste Recovery',
         reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -145,7 +188,7 @@ describe('transform', () => {
           type: 'Reprocessor',
           businessName: 'Waste Ltd',
           registeredOffice: '1 Waste Road, London, N1 1AA',
-          appropriateAgency: 'ea',
+          appropriateAgency: 'EA',
           registrationNumber: 'R12345678PL',
           tradingName: 'Waste Recovery',
           reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -217,7 +260,7 @@ describe('transform', () => {
           type: 'Reprocessor',
           businessName: 'Waste Ltd',
           registeredOffice: '1 Waste Road, London, N1 1AA',
-          appropriateAgency: 'ea',
+          appropriateAgency: 'EA',
           registrationNumber: 'R12345678PL',
           tradingName: 'Waste Recovery',
           reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -306,7 +349,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Waste Ltd',
         registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'ea',
+        appropriateAgency: 'EA',
         registrationNumber: 'R11111111PL',
         tradingName: '',
         reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -411,7 +454,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Multi Material Ltd',
         registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'ea',
+        appropriateAgency: 'EA',
         registrationNumber: 'R11111111PL',
         tradingName: '',
         reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -427,7 +470,7 @@ describe('transform', () => {
         type: 'Reprocessor',
         businessName: 'Multi Material Ltd',
         registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'ea',
+        appropriateAgency: 'EA',
         registrationNumber: 'R22222222PL',
         tradingName: '',
         reprocessingSite: '2 Waste Site, London, EC1 1AA',
@@ -443,7 +486,7 @@ describe('transform', () => {
         type: 'Exporter',
         businessName: 'Exporter Ltd',
         registeredOffice: '1 Waste Road, London, N1 1AA',
-        appropriateAgency: 'sepa',
+        appropriateAgency: 'EA',
         registrationNumber: 'R44444444AL',
         tradingName: '',
         reprocessingSite: '',

@@ -50,9 +50,9 @@ describe('REPROCESSED_LOADS (REPROCESSOR_INPUT)', () => {
       })
     })
 
-    describe('fieldsRequiredForWasteBalance (VAL011)', () => {
+    describe('fieldsRequiredForInclusionInWasteBalance (VAL011)', () => {
       it('is empty (table does not contribute to waste balance)', () => {
-        expect(schema.fieldsRequiredForWasteBalance).toHaveLength(0)
+        expect(schema.fieldsRequiredForInclusionInWasteBalance).toHaveLength(0)
       })
     })
 

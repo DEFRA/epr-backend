@@ -206,7 +206,7 @@ export const summaryLogsUploadCompleted = {
       }
 
       logger.error({
-        error,
+        err: error,
         message: `Failure on ${summaryLogsUploadCompletedPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

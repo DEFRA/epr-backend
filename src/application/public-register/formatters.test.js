@@ -4,7 +4,8 @@ import {
   formatAddress,
   formatMaterial,
   formatTonnageBand,
-  getAnnexIIProcess
+  getAnnexIIProcess,
+  uppercaseString
 } from './formatters.js'
 import {
   GLASS_RECYCLING_PROCESS,
@@ -134,6 +135,19 @@ describe('formatters', () => {
 
     it('should return empty string for null or undefined', () => {
       expect(formatTonnageBand(null)).toBe('')
+    })
+  })
+
+  describe('uppercaseString', () => {
+    it('should convert string to fully uppercase', () => {
+      expect(uppercaseString(REGULATOR.EA)).toBe('EA')
+      expect(uppercaseString(REGULATOR.SEPA)).toBe('SEPA')
+      expect(uppercaseString(REGULATOR.NIEA)).toBe('NIEA')
+      expect(uppercaseString(REGULATOR.NRW)).toBe('NRW')
+    })
+
+    it('should return empty string for null', () => {
+      expect(uppercaseString(null)).toBe('')
     })
   })
 })

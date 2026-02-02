@@ -391,6 +391,12 @@ const baseConfig = {
     default: '[]',
     env: 'TEST_ORGANISATIONS'
   },
+  skipTransformingTestOrganisations: {
+    doc: 'JSON array of test organisation mongo ids e.g. ["697a3c0e0587e4d4d7f3d533"]',
+    format: String,
+    default: '[]',
+    env: 'TEST_ORGANISATIONS_SKIP_TRANSFORM'
+  },
   publicRegister: {
     batchSize: {
       doc: 'Public register generation batch size. This is used for yielding back to event loop',

@@ -36,7 +36,7 @@ export const logFilesUploadedFromForms = async (server, options = {}) => {
     await logFileDetails(server)
   } catch (error) {
     logger.error({
-      error,
+      err: error,
       message: 'Failed to run logging of files uploaded from defra forms'
     })
   }

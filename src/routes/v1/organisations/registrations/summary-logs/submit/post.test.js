@@ -387,7 +387,7 @@ describe(`${summaryLogsSubmitPath} route`, () => {
       consoleErrorSpy.mockRestore()
 
       expect(server.loggerMocks.error).toHaveBeenCalledWith({
-        error: testError,
+        err: testError,
         message: `Failure on ${summaryLogsSubmitPath}`,
         event: {
           category: LOGGING_EVENT_CATEGORIES.SERVER,

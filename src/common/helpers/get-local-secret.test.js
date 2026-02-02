@@ -60,7 +60,7 @@ describe('getLocalSecret', () => {
     const result = getLocalSecret(configKey)
     expect(result).toEqual(null)
     expect(mockLoggerError).toHaveBeenCalledWith({
-      error,
+      err: error,
       message: `An error occurred while trying to read the secret: ${configKey}.\n${error}`,
       event: {
         category: LOGGING_EVENT_CATEGORIES.SECRET,
