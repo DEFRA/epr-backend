@@ -169,16 +169,18 @@ const clearTaskTimeout = (summaryLogId) => {
  * @param {string} summaryLogId
  * @param {object} logger
  * @param {SummaryLogsRepository | null} repository - Main thread repository for timeout tracking
+ * @param {object} [user]
  * @returns {Promise<void>}
  */
 const runCommandInWorker = async (
   command,
   summaryLogId,
   logger,
-  repository
+  repository,
+  user
 ) => {
   try {
-    await pool.run({ command, summaryLogId })
+    await pool.run({ command, summaryLogId, user })
 
     // Clear timeout on success - worker completed normally
     clearTaskTimeout(summaryLogId)
@@ -273,7 +275,7 @@ export const createSummaryLogsCommandExecutor = (
         summaryLogsRepository ?? null
       )
     },
-    submit: async (summaryLogId) => {
+    submit: async (summaryLogId, user) => {
       // Fire-and-forget: submission runs asynchronously in worker thread, request returns immediately
       // Intentionally not awaiting as the HTTP response completes before submission finishes
       logger.info({
@@ -288,7 +290,8 @@ export const createSummaryLogsCommandExecutor = (
         SUMMARY_LOG_COMMAND.SUBMIT,
         summaryLogId,
         logger,
-        summaryLogsRepository ?? null
+        summaryLogsRepository ?? null,
+        user
       )
     }
   }

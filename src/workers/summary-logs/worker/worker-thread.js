@@ -17,6 +17,7 @@ import { createOrganisationsRepository } from '#repositories/organisations/mongo
 import { createSummaryLogsRepository } from '#repositories/summary-logs/mongodb.js'
 import { createWasteRecordsRepository } from '#repositories/waste-records/mongodb.js'
 import { createWasteBalancesRepository } from '#repositories/waste-balances/mongodb.js'
+import { createSystemLogsRepository } from '#repositories/system-logs/mongodb.js'
 import { createConfigFeatureFlags } from '#feature-flags/feature-flags.config.js'
 
 import { config } from '#root/config.js'
@@ -46,7 +47,8 @@ const handleSubmitCommand = async ({
   organisationsRepository,
   wasteRecordsRepository,
   wasteBalancesRepository,
-  summaryLogExtractor
+  summaryLogExtractor,
+  user
 }) => {
   // Load the summary log
   const existing = await summaryLogsRepository.findById(summaryLogId)
@@ -79,7 +81,7 @@ const handleSubmitCommand = async ({
 
   const { created, updated } = await summaryLogMetrics.timedSubmission(
     { processingType },
-    () => sync(summaryLog)
+    () => sync(summaryLog, user)
   )
 
   // Record submission metrics
@@ -142,8 +144,14 @@ export default async function summaryLogsWorkerThread(command) {
         await createWasteRecordsRepository(db)
       const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
+      const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
+      const systemLogsRepository = systemLogsRepositoryFactory()
+
       const wasteBalancesRepositoryFactory =
-        await createWasteBalancesRepository(db, { organisationsRepository })
+        await createWasteBalancesRepository(db, {
+          organisationsRepository,
+          systemLogsRepository
+        })
       const wasteBalancesRepository = wasteBalancesRepositoryFactory()
 
       const summaryLogExtractor = createSummaryLogExtractor({
@@ -164,7 +172,8 @@ export default async function summaryLogsWorkerThread(command) {
           break
 
         case SUMMARY_LOG_COMMAND.SUBMIT:
-          await handleSubmitCommand({
+          await handleSubmitCom,
+            user: command.usermand({
             summaryLogId: command.summaryLogId,
             summaryLogsRepository,
             organisationsRepository,

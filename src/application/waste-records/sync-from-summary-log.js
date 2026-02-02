@@ -79,7 +79,8 @@ const updateWasteBalances = async ({
   accreditationId,
   featureFlags,
   wasteBalancesRepository,
-  wasteRecords
+  wasteRecords,
+  user
 }) => {
   // We only calculate waste balance for exporters and reprocessor inputs currently
   const processingType = parsedData?.meta?.PROCESSING_TYPE?.value
@@ -95,7 +96,8 @@ const updateWasteBalances = async ({
   ) {
     await wasteBalancesRepository.updateWasteBalanceTransactions(
       wasteRecords.map((r) => r.record),
-      accreditationId
+      accreditationId,
+      user
     )
   }
 }
@@ -127,11 +129,10 @@ export const syncFromSummaryLog = (dependencies) => {
    * @param {string} summaryLog.file.uri - The S3 URI (e.g., s3://bucket/key)
    * @param {string} summaryLog.organisationId - The organisation ID
    * @param {string} summaryLog.registrationId - The registration ID
-   * @param {string} [summaryLog.accreditationId] - Optional accreditation ID
-   * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
-   */
-  return async (summaryLog) => {
-    // Capture timestamp at start of submission for consistent versioning
+ * @param {Object} [user] - User who initiated the sync
+ * @returns {Promise<{created: number, updated: number}>} Counts of created and updated waste records
+ */
+  return async (summaryLog, user) => {n for consistent versioning
     const timestamp = new Date().toISOString()
 
     // 1. Extract/parse the summary log
@@ -212,7 +213,8 @@ export const syncFromSummaryLog = (dependencies) => {
       featureFlags,
       wasteBalancesRepository,
       wasteRecords
-    })
+    }),
+      user
 
     // 9. Count created/updated records for metrics
     // The change property is set by transformFromSummaryLog

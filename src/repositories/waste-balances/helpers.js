@@ -157,16 +157,19 @@ export const filterValidRecords = (wasteRecords) => {
  * @param {import('#domain/waste-records/model.js').WasteRecord[]} params.wasteRecords
  * @param {string} params.accreditationId
  * @param {Object} params.dependencies
- * @param {Object} [params.dependencies.organisationsRepository]
+ * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [params.dependencies.organisationsRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [params.dependencies.systemLogsRepository]
  * @param {(accreditationId: string) => Promise<import('#domain/waste-balances/model.js').WasteBalance | null>} params.findBalance
  * @param {(balance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>} params.saveBalance
+ * @param {any} [params.user]
  */
 export const performUpdateWasteBalanceTransactions = async ({
   wasteRecords,
   accreditationId,
   dependencies,
   findBalance,
-  saveBalance
+  saveBalance,
+  user
 }) => {
   const validRecords = filterValidRecords(wasteRecords)
 
@@ -221,4 +224,32 @@ export const performUpdateWasteBalanceTransactions = async ({
   }
 
   await saveBalance(updatedBalance, newTransactions)
+
+  if (user) {
+    const payload = {
+      event: {
+        category: 'waste-reporting',
+        subCategory: 'waste-balance',
+        action: 'update'
+      },
+      context: {
+        accreditationId: updatedBalance.accreditationId,
+        amount: updatedBalance.amount,
+        availableAmount: updatedBalance.availableAmount,
+        newTransactions
+      },
+      user
+    }
+
+    audit(payload)
+
+    if (dependencies.systemLogsRepository) {
+      await dependencies.systemLogsRepository.insert({
+        createdAt: new Date(),
+        createdBy: user,
+        event: payload.event,
+        context: payload.context
+      })
+    }
+  }
 }

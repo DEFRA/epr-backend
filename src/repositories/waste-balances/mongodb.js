@@ -109,13 +109,18 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
   return () => ({
     findByAccreditationId: performFindByAccreditationId(db),
     findByAccreditationIds: performFindByAccreditationIds(db),
-    updateWasteBalanceTransactions: async (wasteRecords, accreditationId) => {
+    updateWasteBalanceTransactions: async (
+      wasteRecords,
+      accreditationId,
+      user
+    ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
         accreditationId,
         dependencies,
         findBalance: findBalance(db),
-        saveBalance: saveBalance(db)
+        saveBalance: saveBalance(db),
+        user
       })
     }
   })
