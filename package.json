@@ -13,6 +13,7 @@
     "#feature-flags/*": "./src/feature-flags/*",
     "#formsubmission/*": "./src/forms-submission-data/*",
     "#glass-migration/*": "./src/glass-migration/*",
+    "#l-packaging-recycling-notes/*": "./src/l-packaging-recycling-notes/*",
     "#plugins/*": "./src/plugins/*",
     "#repositories/*": "./src/repositories/*",
     "#root/*": "./src/*",

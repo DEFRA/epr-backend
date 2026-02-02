@@ -7,8 +7,14 @@ import {
 } from '#root/common/helpers/collections/create-update.js'
 
 /**
- * These tests are largely for coverage and can probably be deleted
- * once we have routes in place.
+ * Tests for Lumpy Packaging Recycling Notes feature flag.
+ *
+ * The lumpy PRN implementation is COMPLETELY SEPARATE from the engineering team's:
+ * - Different feature flag: isCreateLumpyPackagingRecyclingNotesEnabled
+ * - Different repository: lumpyPackagingRecyclingNotesRepository
+ * - Different routes: /l-packaging-recycling-notes
+ *
+ * No code is shared between the two implementations.
  */
 
 vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
@@ -21,7 +27,7 @@ vi.mock('#common/helpers/plugins/mongo-db-plugin.js', () => ({
           listCollections: () => ({
             toArray: vi.fn().mockImplementation(() => {
               return server.featureFlags.dbExists === true
-                ? [{ name: 'packaging-recycling-notes' }]
+                ? [{ name: 'l-packaging-recycling-notes' }]
                 : []
             })
           }),
@@ -48,36 +54,36 @@ describe('Packaging Recycling Notes', () => {
     const server = await createServer({
       featureFlags: {
         dbExists: true,
-        isCreatePackagingRecyclingNotesEnabled: () => true
+        isCreateLumpyPackagingRecyclingNotesEnabled: () => true
       }
     })
 
-    expect(server.featureFlags.isCreatePackagingRecyclingNotesEnabled()).toBe(
-      true
-    )
+    expect(
+      server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
+    ).toBe(true)
   })
 
   it('enables when flag is true & collection does not yet exist', async () => {
     const server = await createServer({
       featureFlags: {
-        isCreatePackagingRecyclingNotesEnabled: () => true
+        isCreateLumpyPackagingRecyclingNotesEnabled: () => true
       }
     })
 
-    expect(server.featureFlags.isCreatePackagingRecyclingNotesEnabled()).toBe(
-      true
-    )
+    expect(
+      server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
+    ).toBe(true)
   })
 
   it('disables when flag is not true', async () => {
     const server = await createServer({
       featureFlags: {
-        isCreatePackagingRecyclingNotesEnabled: () => false
+        isCreateLumpyPackagingRecyclingNotesEnabled: () => false
       }
     })
 
-    expect(server.featureFlags.isCreatePackagingRecyclingNotesEnabled()).toBe(
-      false
-    )
+    expect(
+      server.featureFlags.isCreateLumpyPackagingRecyclingNotesEnabled()
+    ).toBe(false)
   })
 })
