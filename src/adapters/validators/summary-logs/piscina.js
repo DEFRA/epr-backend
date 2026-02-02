@@ -205,19 +205,16 @@ const runCommandInWorker = async (
       }
     })
 
-    // Repository is optional until https://github.com/DEFRA/epr-backend/pull/694 makes it always injected
-    if (repository) {
-      switch (command) {
-        case SUMMARY_LOG_COMMAND.VALIDATE:
-          await markAsValidationFailed(summaryLogId, repository, logger)
-          break
-        case SUMMARY_LOG_COMMAND.SUBMIT:
-          await markAsSubmissionFailed(summaryLogId, repository, logger)
-          break
-        /* v8 ignore next 2 */
-        default:
-          throw new Error(`Unknown command: ${command}`)
-      }
+    switch (command) {
+      case SUMMARY_LOG_COMMAND.VALIDATE:
+        await markAsValidationFailed(summaryLogId, repository, logger)
+        break
+      case SUMMARY_LOG_COMMAND.SUBMIT:
+        await markAsSubmissionFailed(summaryLogId, repository, logger)
+        break
+      /* v8 ignore next 2 */
+      default:
+        throw new Error(`Unknown command: ${command}`)
     }
   }
 }
@@ -226,7 +223,7 @@ const runCommandInWorker = async (
  * Creates a summary logs command executor with timeout tracking.
  *
  * @param {object} logger
- * @param {SummaryLogsRepository} [summaryLogsRepository] - Main thread repository for timeout tracking.
+ * @param {SummaryLogsRepository} summaryLogsRepository - Main thread repository for timeout tracking.
  *   This is NOT the same repository used inside the worker thread. The worker thread creates its own
  *   repository instance for normal status updates (e.g., validating → validated).
  *   This repository is ONLY used as a "safety net" to mark summary logs as validation_failed when
@@ -250,29 +247,27 @@ export const createSummaryLogsCommandExecutor = (
       })
 
       // Start timeout tracker - if worker hangs or crashes, we'll mark as validation_failed
-      if (summaryLogsRepository) {
-        const timeoutId = setTimeout(async () => {
-          activeTimeouts.delete(summaryLogId)
-          logger.error({
-            message: `Summary log validate worker timed out: summaryLogId=${summaryLogId}`,
-            summaryLogId
-          })
+      const timeoutId = setTimeout(async () => {
+        activeTimeouts.delete(summaryLogId)
+        logger.error({
+          message: `Summary log validate worker timed out: summaryLogId=${summaryLogId}`,
+          summaryLogId
+        })
 
-          await markAsValidationFailed(
-            summaryLogId,
-            summaryLogsRepository,
-            logger
-          )
-        }, WORKER_TIMEOUT_MS)
+        await markAsValidationFailed(
+          summaryLogId,
+          summaryLogsRepository,
+          logger
+        )
+      }, WORKER_TIMEOUT_MS)
 
-        activeTimeouts.set(summaryLogId, timeoutId)
-      }
+      activeTimeouts.set(summaryLogId, timeoutId)
 
       runCommandInWorker(
         SUMMARY_LOG_COMMAND.VALIDATE,
         summaryLogId,
         logger,
-        summaryLogsRepository ?? null
+        summaryLogsRepository
       )
     },
     submit: async (summaryLogId, user) => {
