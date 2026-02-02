@@ -7,12 +7,14 @@ import {
   COMPANY_1_ID,
   COMPANY_1_NAME,
   COMPANY_2_ID,
-  generateValidTokenWith
+  DEFRA_TOKEN_SECOND_RELATIONSHIP_ID,
+  generateValidTokenWith,
+  VALID_TOKEN_RELATIONSHIPS
 } from '#vite/helpers/create-defra-id-test-tokens.js'
 import { setupAuthContext } from '#vite/helpers/setup-auth-mocking.js'
 import { randomUUID } from 'crypto'
 import { StatusCodes } from 'http-status-codes'
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 describe('GET /v1/me/organisations', () => {
   setupAuthContext()
@@ -418,5 +420,138 @@ describe('GET /v1/me/organisations', () => {
 
     expect(result.organisations.linked).toBeNull()
     expect(result.organisations.unlinked).toHaveLength(1)
+  })
+
+  describe('when token is missing current organisation information', () => {
+    it('should return 403 when token has no relationships', async () => {
+      const tokenWithoutRelationships = generateValidTokenWith({
+        email,
+        relationships: undefined,
+        currentRelationshipId: undefined
+      })
+
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({
+        organisations: true
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: {
+          Authorization: `Bearer ${tokenWithoutRelationships}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      const result = JSON.parse(response.payload)
+      expect(result.message).toBe(
+        'Token missing current organisation information'
+      )
+
+      expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+        message: 'Token missing current organisation information',
+        hasRelationships: false,
+        relationshipCount: 0,
+        hasCurrentRelationshipId: false,
+        matchedCurrentOrg: false
+      })
+    })
+
+    it('should return 403 when token has no currentRelationshipId', async () => {
+      const tokenWithoutCurrentRelationship = generateValidTokenWith({
+        email,
+        relationships: VALID_TOKEN_RELATIONSHIPS,
+        currentRelationshipId: undefined
+      })
+
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({
+        organisations: true
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: {
+          Authorization: `Bearer ${tokenWithoutCurrentRelationship}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      const result = JSON.parse(response.payload)
+      expect(result.message).toBe(
+        'Token missing current organisation information'
+      )
+
+      expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+        message: 'Token missing current organisation information',
+        hasRelationships: true,
+        relationshipCount: 2,
+        hasCurrentRelationshipId: false,
+        matchedCurrentOrg: false
+      })
+    })
+
+    it('should return 403 when currentRelationshipId does not match any relationship', async () => {
+      const tokenWithMismatchedRelationship = generateValidTokenWith({
+        email,
+        relationships: [
+          `${DEFRA_TOKEN_SECOND_RELATIONSHIP_ID}:${COMPANY_2_ID}:Company 2 Name`
+        ],
+        currentRelationshipId: randomUUID()
+      })
+
+      const organisationsRepositoryFactory =
+        createInMemoryOrganisationsRepository([])
+      const featureFlags = createInMemoryFeatureFlags({
+        organisations: true
+      })
+
+      const server = await createTestServer({
+        repositories: {
+          organisationsRepository: organisationsRepositoryFactory
+        },
+        featureFlags
+      })
+
+      const response = await server.inject({
+        method: 'GET',
+        url: '/v1/me/organisations',
+        headers: {
+          Authorization: `Bearer ${tokenWithMismatchedRelationship}`
+        }
+      })
+
+      expect(response.statusCode).toBe(StatusCodes.FORBIDDEN)
+      const result = JSON.parse(response.payload)
+      expect(result.message).toBe(
+        'Token missing current organisation information'
+      )
+
+      expect(server.loggerMocks.warn).toHaveBeenCalledWith({
+        message: 'Token missing current organisation information',
+        hasRelationships: true,
+        relationshipCount: 1,
+        hasCurrentRelationshipId: true,
+        matchedCurrentOrg: false
+      })
+    })
   })
 })

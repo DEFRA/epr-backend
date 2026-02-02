@@ -1,5 +1,6 @@
 import { ROLES } from '#common/helpers/auth/constants.js'
 import { getOrgDataFromDefraIdToken } from '#common/helpers/auth/roles/helpers.js'
+import Boom from '@hapi/boom'
 import { StatusCodes } from 'http-status-codes'
 
 /** @typedef {import('#repositories/organisations/port.js').OrganisationsRepository} OrganisationsRepository */
@@ -40,20 +41,35 @@ import { StatusCodes } from 'http-status-codes'
 export const organisationsLinkedGetAllPath = '/v1/me/organisations'
 
 /**
- * Get current Defra ID details from token
+ * Get current Defra ID details from token.
+ * Throws Boom.forbidden if the token has no current organisation.
  *
  * @param {*} auth
+ * @param {object} logger
  * @returns {DefraOrgSummary}
  */
-const getCurrentDetailsFromToken = (auth) => {
+const getCurrentDetailsFromToken = (auth, logger) => {
   const orgInfo = getOrgDataFromDefraIdToken(auth.artifacts.decoded.payload)
 
   const currentOrg = orgInfo.find((org) => org.isCurrent)
 
-  // Token should always have a current organisation
-  /* istanbul ignore if -- defensive check, Defra ID tokens always contain org info */
   if (!currentOrg?.defraIdOrgId || !currentOrg?.defraIdOrgName) {
-    throw new Error('Token missing current organisation information')
+    const message = 'Token missing current organisation information'
+
+    const { currentRelationshipId, relationships } =
+      auth.artifacts.decoded.payload
+
+    logger.warn({
+      message,
+      hasRelationships: Array.isArray(relationships),
+      relationshipCount: Array.isArray(relationships)
+        ? relationships.length
+        : 0,
+      hasCurrentRelationshipId: currentRelationshipId !== undefined,
+      matchedCurrentOrg: false
+    })
+
+    throw Boom.forbidden(message)
   }
 
   return {
@@ -81,7 +97,7 @@ export const organisationsLinkedGetAll = {
 
     const { email } = auth.credentials
 
-    const current = getCurrentDetailsFromToken(auth)
+    const current = getCurrentDetailsFromToken(auth, request.logger)
 
     const [linkedOrg, linkableOrgs] = await Promise.all([
       organisationsRepository.findByLinkedDefraOrgId(current.id),
