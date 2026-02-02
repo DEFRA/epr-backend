@@ -72,29 +72,30 @@ export const findBalance = (db) => async (id) => {
  * Save a waste balance.
  *
  * @param {import('mongodb').Db} db
- * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
+ * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[], request?: Object) => Promise<void>}
  */
-export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
-  await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
-    { accreditationId: updatedBalance.accreditationId },
-    /** @type {*} */ ({
-      $set: {
-        amount: updatedBalance.amount,
-        availableAmount: updatedBalance.availableAmount,
-        version: updatedBalance.version,
-        schemaVersion: updatedBalance.schemaVersion
-      },
-      $push: {
-        transactions: { $each: newTransactions }
-      },
-      $setOnInsert: {
-        _id: updatedBalance.id,
-        organisationId: updatedBalance.organisationId
-      }
-    }),
-    { upsert: true }
-  )
-}
+export const saveBalance =
+  (db) => async (updatedBalance, newTransactions, request) => {
+    await db.collection(WASTE_BALANCE_COLLECTION_NAME).updateOne(
+      { accreditationId: updatedBalance.accreditationId },
+      /** @type {*} */ ({
+        $set: {
+          amount: updatedBalance.amount,
+          availableAmount: updatedBalance.availableAmount,
+          version: updatedBalance.version,
+          schemaVersion: updatedBalance.schemaVersion
+        },
+        $push: {
+          transactions: { $each: newTransactions }
+        },
+        $setOnInsert: {
+          _id: updatedBalance.id,
+          organisationId: updatedBalance.organisationId
+        }
+      }),
+      { upsert: true }
+    )
+  }
 
 /**
  * Creates a MongoDB-backed waste balances repository
@@ -113,7 +114,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
-      user
+      request
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
@@ -121,7 +122,7 @@ export const createWasteBalancesRepository = async (db, dependencies = {}) => {
         dependencies,
         findBalance: findBalance(db),
         saveBalance: saveBalance(db),
-        user
+        request
       })
     }
   })

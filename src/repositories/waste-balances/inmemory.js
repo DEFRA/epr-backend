@@ -19,7 +19,8 @@ export const findBalance = (wasteBalanceStorage) => async (id) => {
  * @returns {(updatedBalance: import('#domain/waste-balances/model.js').WasteBalance, newTransactions: any[]) => Promise<void>}
  */
 export const saveBalance =
-  (wasteBalanceStorage) => async (updatedBalance, _newTransactions) => {
+  (wasteBalanceStorage) =>
+  async (updatedBalance, _newTransactions, request) => {
     const existingIndex = wasteBalanceStorage.findIndex(
       (b) => b.accreditationId === updatedBalance.accreditationId
     )
@@ -77,7 +78,7 @@ export const createInMemoryWasteBalancesRepository = (
     updateWasteBalanceTransactions: async (
       wasteRecords,
       accreditationId,
-      user
+      request
     ) => {
       return performUpdateWasteBalanceTransactions({
         wasteRecords,
@@ -85,7 +86,7 @@ export const createInMemoryWasteBalancesRepository = (
         dependencies,
         findBalance: findBalance(wasteBalanceStorage),
         saveBalance: saveBalance(wasteBalanceStorage),
-        user
+        request
       })
     },
     // Test-only method to access internal storage
