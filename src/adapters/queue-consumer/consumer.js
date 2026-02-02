@@ -8,10 +8,12 @@ import {
 import {
   SUMMARY_LOG_COMMAND,
   SUMMARY_LOG_STATUS,
-  PROCESSING_STATUSES,
-  SUBMISSION_PROCESSING_STATUSES,
   transitionStatus
 } from '#domain/summary-logs/status.js'
+import {
+  markAsValidationFailed,
+  markAsSubmissionFailed
+} from '#domain/summary-logs/mark-as-failed.js'
 import { SUMMARY_LOG_META_FIELDS } from '#domain/summary-logs/meta-fields.js'
 import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { syncFromSummaryLog } from '#application/waste-records/sync-from-summary-log.js'
@@ -37,82 +39,6 @@ import { summaryLogMetrics } from '#common/helpers/metrics/summary-logs.js'
  * @property {object} summaryLogExtractor
  * @property {object} featureFlags
  */
-
-/**
- * Marks a summary log as validation_failed if it's still in a processing state.
- * @param {string} summaryLogId
- * @param {object} repository
- * @param {object} logger
- */
-const markAsValidationFailed = async (summaryLogId, repository, logger) => {
-  try {
-    const result = await repository.findById(summaryLogId)
-
-    if (!result) {
-      logger.warn({
-        message: `Cannot mark as validation_failed: summary log not found`,
-        summaryLogId
-      })
-      return
-    }
-
-    const { version, summaryLog } = result
-
-    if (!PROCESSING_STATUSES.includes(summaryLog.status)) {
-      return
-    }
-
-    await repository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.VALIDATION_FAILED)
-    )
-  } catch (err) {
-    logger.error({
-      err,
-      message: `Failed to mark summary log as validation_failed`,
-      summaryLogId
-    })
-  }
-}
-
-/**
- * Marks a summary log as submission_failed if it's still in submitting state.
- * @param {string} summaryLogId
- * @param {object} repository
- * @param {object} logger
- */
-const markAsSubmissionFailed = async (summaryLogId, repository, logger) => {
-  try {
-    const result = await repository.findById(summaryLogId)
-
-    if (!result) {
-      logger.warn({
-        message: `Cannot mark as submission_failed: summary log not found`,
-        summaryLogId
-      })
-      return
-    }
-
-    const { version, summaryLog } = result
-
-    if (!SUBMISSION_PROCESSING_STATUSES.includes(summaryLog.status)) {
-      return
-    }
-
-    await repository.update(
-      summaryLogId,
-      version,
-      transitionStatus(summaryLog, SUMMARY_LOG_STATUS.SUBMISSION_FAILED)
-    )
-  } catch (err) {
-    logger.error({
-      err,
-      message: `Failed to mark summary log as submission_failed`,
-      summaryLogId
-    })
-  }
-}
 
 /**
  * Handles a validate command.
