@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { createPackagingRecyclingNotesRepository } from './mongodb'
+import {
+  createPackagingRecyclingNotesRepository,
+  PrnNumberConflictError
+} from './mongodb'
 
 describe('MongoDB packaging recycling notes repository', () => {
   it('creates the repository with all methods', async () => {
@@ -340,6 +343,107 @@ describe('MongoDB packaging recycling notes repository', () => {
       })
 
       expect(capturedUpdate.$set.prnNumber).toBeUndefined()
+    })
+
+    it('throws PrnNumberConflictError when prnNumber already exists', async () => {
+      const hexId = '123456789012345678901234'
+      const prnNumber = 'ER2612345'
+      const duplicateKeyError = new Error('duplicate key error')
+      duplicateKeyError.code = 11000
+      duplicateKeyError.keyPattern = { prnNumber: 1 }
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndUpdate: async () => {
+          throw duplicateKeyError
+        }
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.updateStatus({
+          id: hexId,
+          status: 'awaiting_acceptance',
+          updatedBy: 'user-123',
+          updatedAt: new Date(),
+          prnNumber
+        })
+      ).rejects.toThrow(PrnNumberConflictError)
+    })
+
+    it('rethrows other MongoDB errors', async () => {
+      const hexId = '123456789012345678901234'
+      const otherError = new Error('Some other MongoDB error')
+      otherError.code = 12345
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async () => {},
+        findOne: async () => null,
+        insertOne: async () => ({ insertedId: { toHexString: () => hexId } }),
+        find: function () {
+          return { toArray: async () => [] }
+        },
+        findOneAndUpdate: async () => {
+          throw otherError
+        }
+      }
+
+      const factory = await createPackagingRecyclingNotesRepository(dbMock)
+      const repository = factory()
+
+      await expect(
+        repository.updateStatus({
+          id: hexId,
+          status: 'awaiting_acceptance',
+          updatedBy: 'user-123',
+          updatedAt: new Date(),
+          prnNumber: 'ER2612345'
+        })
+      ).rejects.toThrow('Some other MongoDB error')
+    })
+  })
+
+  describe('ensureCollection', () => {
+    it('creates unique index on prnNumber', async () => {
+      const createdIndexes = []
+
+      const dbMock = {
+        collection: function () {
+          return this
+        },
+        createIndex: async (fields, options) => {
+          createdIndexes.push({ fields, options })
+        },
+        findOne: async () => null,
+        insertOne: async () => ({
+          insertedId: { toHexString: () => '123456789012345678901234' }
+        }),
+        find: function () {
+          return { toArray: async () => [] }
+        }
+      }
+
+      await createPackagingRecyclingNotesRepository(dbMock)
+
+      const prnNumberIndex = createdIndexes.find(
+        (idx) => idx.options.name === 'prnNumber'
+      )
+      expect(prnNumberIndex).toBeDefined()
+      expect(prnNumberIndex.options.unique).toBe(true)
+      expect(prnNumberIndex.options.sparse).toBe(true)
     })
   })
 })

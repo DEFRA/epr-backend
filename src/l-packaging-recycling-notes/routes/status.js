@@ -13,6 +13,10 @@ import {
   PRN_STATUS_TRANSITIONS
 } from '#l-packaging-recycling-notes/domain/model.js'
 import { generatePrnNumber } from '#l-packaging-recycling-notes/domain/prn-number-generator.js'
+import { PrnNumberConflictError } from '#l-packaging-recycling-notes/repository/mongodb.js'
+
+/** Suffixes A-Z for collision avoidance */
+const COLLISION_SUFFIXES = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')
 
 /** @typedef {import('#l-packaging-recycling-notes/repository/port.js').PackagingRecyclingNotesRepository} PackagingRecyclingNotesRepository */
 
@@ -55,6 +59,42 @@ const buildResponse = (prn) => ({
   status: prn.status.currentStatus,
   updatedAt: prn.updatedAt
 })
+
+/**
+ * Issues a PRN with retry logic for PRN number collisions.
+ * Tries without suffix first, then A-Z on collision.
+ *
+ * @param {PackagingRecyclingNotesRepository} repository
+ * @param {Object} updateParams - Parameters for updateStatus (id, status, updatedBy, updatedAt)
+ * @param {Object} prnParams - Parameters for PRN number generation (nation, isExport)
+ * @returns {Promise<import('#l-packaging-recycling-notes/domain/model.js').PackagingRecyclingNote | null>}
+ * @throws {Error} If all suffix attempts are exhausted
+ */
+async function issuePrnWithRetry(repository, updateParams, prnParams) {
+  // Try without suffix first
+  const suffixAttempts = [undefined, ...COLLISION_SUFFIXES]
+
+  for (const suffix of suffixAttempts) {
+    const prnNumber = generatePrnNumber({ ...prnParams, suffix })
+
+    try {
+      return await repository.updateStatus({
+        ...updateParams,
+        prnNumber
+      })
+    } catch (error) {
+      if (error instanceof PrnNumberConflictError) {
+        // Continue to next suffix
+        continue
+      }
+      // Rethrow other errors
+      throw error
+    }
+  }
+
+  // All suffixes exhausted
+  throw new Error('Unable to generate unique PRN number after all retries')
+}
 
 export const packagingRecyclingNotesUpdateStatus = {
   method: 'POST',
@@ -114,19 +154,25 @@ export const packagingRecyclingNotesUpdateStatus = {
 
       // Generate PRN number when issuing (transitioning to awaiting_acceptance)
       const isIssuing = newStatus === PRN_STATUS.AWAITING_ACCEPTANCE
-      const prnNumber = isIssuing
-        ? generatePrnNumber({ nation: prn.nation, isExport: prn.isExport })
-        : undefined
+      let updatedPrn
 
-      // Update status
-      const updatedPrn =
-        await lumpyPackagingRecyclingNotesRepository.updateStatus({
+      if (isIssuing) {
+        // Issue with collision retry logic
+        updatedPrn = await issuePrnWithRetry(
+          lumpyPackagingRecyclingNotesRepository,
+          { id, status: newStatus, updatedBy: userId, updatedAt: now },
+          { nation: prn.nation, isExport: prn.isExport }
+        )
+      } else {
+        // Simple status update without PRN number
+        updatedPrn = await lumpyPackagingRecyclingNotesRepository.updateStatus({
           id,
           status: newStatus,
           updatedBy: userId,
           updatedAt: now,
-          prnNumber
+          prnNumber: undefined
         })
+      }
 
       if (!updatedPrn) {
         throw Boom.badImplementation('Failed to update PRN status')

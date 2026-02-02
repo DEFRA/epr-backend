@@ -19,6 +19,7 @@ import {
   NATION,
   WASTE_PROCESSING_TYPE
 } from '#domain/organisations/model.js'
+import { PrnNumberConflictError } from '#l-packaging-recycling-notes/repository/mongodb.js'
 import { packagingRecyclingNotesUpdateStatusPath } from './status.js'
 
 const organisationId = 'org-123'
@@ -290,6 +291,178 @@ describe(`${packagingRecyclingNotesUpdateStatusPath} route`, () => {
 
         const body = JSON.parse(response.payload)
         expect(body.prnNumber).toMatch(/^ER26\d{5}$/)
+      })
+
+      it('retries with suffix when PRN number collision occurs', async () => {
+        const awaitingAuthPrn = createMockPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+
+        // First call throws conflict, second succeeds
+        lumpyPackagingRecyclingNotesRepository.updateStatus
+          .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
+          .mockResolvedValueOnce({
+            ...awaitingAuthPrn,
+            prnNumber: 'ER2612345A',
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+              history: awaitingAuthPrn.status.history
+            }
+          })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+
+        // Should have been called twice - once without suffix, once with A
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledTimes(2)
+
+        // Second call should have suffix A
+        const secondCall =
+          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[1][0]
+        expect(secondCall.prnNumber).toMatch(/^ER26\d{5}A$/)
+      })
+
+      it('continues through suffixes until one succeeds', async () => {
+        const awaitingAuthPrn = createMockPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+
+        // First three calls throw conflict, fourth succeeds
+        lumpyPackagingRecyclingNotesRepository.updateStatus
+          .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
+          .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345A'))
+          .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345B'))
+          .mockResolvedValueOnce({
+            ...awaitingAuthPrn,
+            prnNumber: 'ER2612345C',
+            status: {
+              currentStatus: PRN_STATUS.AWAITING_ACCEPTANCE,
+              history: awaitingAuthPrn.status.history
+            }
+          })
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.OK)
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledTimes(4)
+
+        // Fourth call should have suffix C
+        const fourthCall =
+          lumpyPackagingRecyclingNotesRepository.updateStatus.mock.calls[3][0]
+        expect(fourthCall.prnNumber).toMatch(/^ER26\d{5}C$/)
+      })
+
+      it('returns 500 when all suffix attempts are exhausted', async () => {
+        const awaitingAuthPrn = createMockPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+
+        // All 27 attempts (no suffix + A-Z) throw conflict
+        lumpyPackagingRecyclingNotesRepository.updateStatus.mockRejectedValue(
+          new PrnNumberConflictError('ER2612345')
+        )
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+
+        // Should have tried 27 times (no suffix + A through Z)
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledTimes(27)
+      })
+
+      it('returns 500 when non-collision error occurs during retry', async () => {
+        const awaitingAuthPrn = createMockPrn({
+          status: {
+            currentStatus: PRN_STATUS.AWAITING_AUTHORISATION,
+            history: [
+              {
+                status: PRN_STATUS.AWAITING_AUTHORISATION,
+                updatedAt: new Date()
+              }
+            ]
+          }
+        })
+
+        lumpyPackagingRecyclingNotesRepository.findById.mockResolvedValueOnce(
+          awaitingAuthPrn
+        )
+
+        // First call throws conflict, second throws database error
+        lumpyPackagingRecyclingNotesRepository.updateStatus
+          .mockRejectedValueOnce(new PrnNumberConflictError('ER2612345'))
+          .mockRejectedValueOnce(new Error('Database connection lost'))
+
+        const response = await server.inject({
+          method: 'POST',
+          url: `/v1/organisations/${organisationId}/registrations/${registrationId}/l-packaging-recycling-notes/${prnId}/status`,
+          ...asStandardUser({ linkedOrgId: organisationId }),
+          payload: { status: PRN_STATUS.AWAITING_ACCEPTANCE }
+        })
+
+        expect(response.statusCode).toBe(StatusCodes.INTERNAL_SERVER_ERROR)
+
+        // Should have only tried twice before non-collision error
+        expect(
+          lumpyPackagingRecyclingNotesRepository.updateStatus
+        ).toHaveBeenCalledTimes(2)
       })
     })
 

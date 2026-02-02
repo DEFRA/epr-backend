@@ -31,10 +31,11 @@ const RANDOM_SUFFIX_PADDING = 5
  * @param {Object} params
  * @param {string} params.nation - The nation (england, scotland, wales, northern_ireland)
  * @param {boolean} params.isExport - True for exporter, false for reprocessor
- * @returns {string} PRN number in format XXNNnnnnn (e.g. ER2612345)
+ * @param {string} [params.suffix] - Optional single character suffix (A-Z) for collision avoidance
+ * @returns {string} PRN number in format XXNNnnnnn or XXNNnnnnnX (e.g. ER2612345 or ER2612345A)
  * @throws {Error} If nation is unknown
  */
-export function generatePrnNumber({ nation, isExport }) {
+export function generatePrnNumber({ nation, isExport, suffix }) {
   const agencyCode = AGENCY_CODE[nation]
   if (!agencyCode) {
     throw new Error(`Unknown nation: ${nation}`)
@@ -47,5 +48,7 @@ export function generatePrnNumber({ nation, isExport }) {
   const randomSuffix = Math.floor(Math.random() * RANDOM_SUFFIX_RANGE)
   const paddedSuffix = String(randomSuffix).padStart(RANDOM_SUFFIX_PADDING, '0')
 
-  return `${agencyCode}${operatorTypeCode}${ACCREDITATION_YEAR}${paddedSuffix}`
+  const base = `${agencyCode}${operatorTypeCode}${ACCREDITATION_YEAR}${paddedSuffix}`
+
+  return suffix ? `${base}${suffix}` : base
 }

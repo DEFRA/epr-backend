@@ -1,6 +1,19 @@
 import { ObjectId } from 'mongodb'
 
 const COLLECTION_NAME = 'l-packaging-recycling-notes'
+const MONGODB_DUPLICATE_KEY_ERROR_CODE = 11000
+
+/**
+ * Error thrown when a PRN number already exists in the database.
+ * Callers can catch this to retry with a different PRN number.
+ */
+export class PrnNumberConflictError extends Error {
+  constructor(prnNumber) {
+    super(`PRN number already exists: ${prnNumber}`)
+    this.name = 'PrnNumberConflictError'
+    this.prnNumber = prnNumber
+  }
+}
 
 /**
  * Ensures the collection exists with required indexes.
@@ -21,10 +34,10 @@ async function ensureCollection(db) {
     { name: 'issuedBy_status' }
   )
 
-  // Index for PRN number lookups
+  // Unique index for PRN numbers - sparse to allow null values
   await collection.createIndex(
     { prnNumber: 1 },
-    { name: 'prnNumber', sparse: true }
+    { name: 'prnNumber', sparse: true, unique: true }
   )
 
   return collection
@@ -103,24 +116,34 @@ const updateStatus = async (
     setFields.prnNumber = prnNumber
   }
 
-  const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
-    { _id: ObjectId.createFromHexString(id) },
-    {
-      $set: setFields,
-      $push: {
-        'status.history': { status, updatedAt, updatedBy }
-      }
-    },
-    { returnDocument: 'after' }
-  )
+  try {
+    const result = await db.collection(COLLECTION_NAME).findOneAndUpdate(
+      { _id: ObjectId.createFromHexString(id) },
+      {
+        $set: setFields,
+        $push: {
+          'status.history': { status, updatedAt, updatedBy }
+        }
+      },
+      { returnDocument: 'after' }
+    )
 
-  if (!result) {
-    return null
-  }
+    if (!result) {
+      return null
+    }
 
-  return {
-    ...result,
-    id: result._id.toHexString()
+    return {
+      ...result,
+      id: result._id.toHexString()
+    }
+  } catch (error) {
+    if (
+      error.code === MONGODB_DUPLICATE_KEY_ERROR_CODE &&
+      error.keyPattern?.prnNumber
+    ) {
+      throw new PrnNumberConflictError(prnNumber)
+    }
+    throw error
   }
 }
 

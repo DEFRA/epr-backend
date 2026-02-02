@@ -178,5 +178,38 @@ describe('prn-number-generator', () => {
         expect(prnNumber).toMatch(/^WR26\d{5}$/)
       })
     })
+
+    describe('suffix for collision avoidance', () => {
+      it('appends suffix when provided', () => {
+        const prnNumber = generatePrnNumber({
+          nation: NATION.ENGLAND,
+          isExport: false,
+          suffix: 'A'
+        })
+
+        expect(prnNumber).toMatch(/^ER26\d{5}A$/)
+        expect(prnNumber).toHaveLength(10)
+      })
+
+      it('does not append suffix when not provided', () => {
+        const prnNumber = generatePrnNumber({
+          nation: NATION.ENGLAND,
+          isExport: false
+        })
+
+        expect(prnNumber).toMatch(/^ER26\d{5}$/)
+        expect(prnNumber).toHaveLength(9)
+      })
+
+      it('accepts any single character suffix', () => {
+        const prnNumber = generatePrnNumber({
+          nation: NATION.ENGLAND,
+          isExport: false,
+          suffix: 'Z'
+        })
+
+        expect(prnNumber).toMatch(/^ER26\d{5}Z$/)
+      })
+    })
   })
 })
