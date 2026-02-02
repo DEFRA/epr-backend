@@ -145,7 +145,7 @@ export default async function summaryLogsWorkerThread(command) {
       const wasteRecordsRepository = wasteRecordsRepositoryFactory()
 
       const systemLogsRepositoryFactory = await createSystemLogsRepository(db)
-      const systemLogsRepository = systemLogsRepositoryFactory()
+      const systemLogsRepository = systemLogsRepositoryFactory(logger)
 
       const wasteBalancesRepositoryFactory =
         await createWasteBalancesRepository(db, {

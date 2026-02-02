@@ -101,6 +101,7 @@ export const saveBalance = (db) => async (updatedBalance, newTransactions) => {
  * @param {import('mongodb').Db} db - MongoDB database instance
  * @param {Object} [dependencies] - Optional dependencies
  * @param {import('#repositories/organisations/port.js').OrganisationsRepository} [dependencies.organisationsRepository]
+ * @param {import('#repositories/system-logs/port.js').SystemLogsRepository} [dependencies.systemLogsRepository]
  * @returns {Promise<import('./port.js').WasteBalancesRepositoryFactory>}
  */
 export const createWasteBalancesRepository = async (db, dependencies = {}) => {
