@@ -4,50 +4,76 @@ import {
 } from '#common/enums/index.js'
 import { createSqsClient } from '#common/helpers/sqs/sqs-client.js'
 import { createSummaryLogExtractor } from '#application/summary-logs/extractor.js'
+import { createUploadsRepository } from '#adapters/repositories/uploads/cdp-uploader.js'
+import { createS3Client } from '#common/helpers/s3/s3-client.js'
 import { createCommandQueueConsumer } from './consumer.js'
 
 export const commandQueueConsumerPlugin = {
   name: 'command-queue-consumer',
   version: '1.0.0',
   dependencies: [
+    'mongodb',
     'summaryLogsRepository',
     'organisationsRepository',
     'wasteRecordsRepository',
     'wasteBalancesRepository',
-    'uploadsRepository'
+    'feature-flags'
   ],
 
   register: async (server, options) => {
     const { config } = options
 
-    const queueName = config.get('commandQueue.queueName')
     const awsRegion = config.get('awsRegion')
     const sqsEndpoint = config.get('commandQueue.endpoint')
+    const queueName = config.get('commandQueue.queueName')
+    const s3Endpoint = config.get('s3Endpoint')
+    const isDevelopment = config.get('isDevelopment')
 
     const sqsClient = createSqsClient({
       region: awsRegion,
       endpoint: sqsEndpoint
     })
 
-    // Access deps registered by other plugins
-    const {
-      uploadsRepository,
-      summaryLogsRepository,
-      organisationsRepository,
-      wasteRecordsRepository,
-      wasteBalancesRepository
-    } = server.app
+    const s3Client = createS3Client({
+      region: awsRegion,
+      endpoint: s3Endpoint,
+      forcePathStyle: isDevelopment
+    })
+
+    const uploadsRepository = createUploadsRepository({
+      s3Client,
+      cdpUploaderUrl: config.get('cdpUploader.url'),
+      s3Bucket: config.get('cdpUploader.s3Bucket')
+    })
 
     const summaryLogExtractor = createSummaryLogExtractor({
       uploadsRepository,
       logger: server.logger
     })
 
-    // Consumer created lazily on server start to avoid SQS connection during tests
-    let consumer = null
+    // Access repositories registered by other plugins
+    const summaryLogsRepository = server.app.summaryLogsRepository
+    const organisationsRepository = server.app.organisationsRepository
+    const wasteRecordsRepository = server.app.wasteRecordsRepository
+    const wasteBalancesRepository = server.app.wasteBalancesRepository
+
+    // Access feature flags
+    const featureFlags = server.app.featureFlags
+
+    const consumer = await createCommandQueueConsumer({
+      sqsClient,
+      queueName,
+      logger: server.logger,
+      summaryLogsRepository,
+      organisationsRepository,
+      wasteRecordsRepository,
+      wasteBalancesRepository,
+      summaryLogExtractor,
+      featureFlags
+    })
 
     // Start consuming on server start
-    server.events.on('start', async () => {
+    server.events.on('start', () => {
       server.logger.info({
         message: 'Starting SQS command queue consumer',
         queueName,
@@ -55,17 +81,6 @@ export const commandQueueConsumerPlugin = {
           category: LOGGING_EVENT_CATEGORIES.SERVER,
           action: LOGGING_EVENT_ACTIONS.START_SUCCESS
         }
-      })
-
-      consumer = await createCommandQueueConsumer({
-        sqsClient,
-        queueName,
-        logger: server.logger,
-        summaryLogsRepository,
-        organisationsRepository,
-        wasteRecordsRepository,
-        wasteBalancesRepository,
-        summaryLogExtractor
       })
 
       consumer.start()
@@ -81,10 +96,9 @@ export const commandQueueConsumerPlugin = {
         }
       })
 
-      if (consumer) {
-        consumer.stop()
-      }
+      consumer.stop()
       sqsClient.destroy()
+      s3Client.destroy()
 
       server.logger.info({
         message: 'SQS command queue consumer stopped',
