@@ -10,7 +10,7 @@ import {
   markAsSubmissionFailed,
   markAsValidationFailed
 } from '#domain/summary-logs/mark-as-failed.js'
-import { validateSummaryLog } from '#application/summary-logs/validate.js'
+import { createSummaryLogsValidator } from '#application/summary-logs/validate.js'
 import { submitSummaryLog } from '#application/summary-logs/submit.js'
 
 /** @typedef {import('@aws-sdk/client-sqs').SQSClient} SQSClient */
@@ -33,6 +33,29 @@ import { submitSummaryLog } from '#application/summary-logs/submit.js'
  * @property {object} summaryLogExtractor
  * @property {object} featureFlags
  */
+
+/**
+ * Handles a validate command.
+ * @param {string} summaryLogId
+ * @param {ConsumerDependencies} deps
+ */
+const handleValidateCommand = async (summaryLogId, deps) => {
+  const {
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    summaryLogExtractor
+  } = deps
+
+  const validateSummaryLog = createSummaryLogsValidator({
+    summaryLogsRepository,
+    organisationsRepository,
+    wasteRecordsRepository,
+    summaryLogExtractor
+  })
+
+  await validateSummaryLog(summaryLogId)
+}
 
 /**
  * Parses and validates a command message from SQS.
@@ -126,7 +149,7 @@ const createMessageHandler = (deps) => async (message) => {
   try {
     switch (commandType) {
       case SUMMARY_LOG_COMMAND.VALIDATE:
-        await validateSummaryLog(summaryLogId, deps)
+        await handleValidateCommand(summaryLogId, deps)
         break
 
       case SUMMARY_LOG_COMMAND.SUBMIT:
