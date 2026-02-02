@@ -67,13 +67,12 @@ const handleSubmitCommand = async (summaryLogId, deps) => {
 }
 
 /**
- * Creates the message handler for the SQS consumer.
- * @param {ConsumerDependencies} deps
- * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<void>}
+ * Parses and validates a command message from SQS.
+ * @param {import('@aws-sdk/client-sqs').Message} message
+ * @param {object} logger
+ * @returns {CommandMessage | null} The parsed command, or null if invalid
  */
-const createMessageHandler = (deps) => async (message) => {
-  const { logger, summaryLogsRepository } = deps
-
+const parseCommandMessage = (message, logger) => {
   /** @type {CommandMessage} */
   let command
 
@@ -88,8 +87,7 @@ const createMessageHandler = (deps) => async (message) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
-    // Delete malformed messages - no point retrying
-    return
+    return null
   }
 
   const { command: commandType, summaryLogId } = command
@@ -104,9 +102,50 @@ const createMessageHandler = (deps) => async (message) => {
         action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
       }
     })
-    // Delete invalid messages - no point retrying
+    return null
+  }
+
+  return command
+}
+
+/**
+ * Marks a summary log as failed based on the command type.
+ * @param {string} commandType
+ * @param {string} summaryLogId
+ * @param {object} summaryLogsRepository
+ * @param {object} logger
+ */
+const markCommandAsFailed = async (
+  commandType,
+  summaryLogId,
+  summaryLogsRepository,
+  logger
+) => {
+  switch (commandType) {
+    case SUMMARY_LOG_COMMAND.VALIDATE:
+      await markAsValidationFailed(summaryLogId, summaryLogsRepository, logger)
+      break
+
+    case SUMMARY_LOG_COMMAND.SUBMIT:
+      await markAsSubmissionFailed(summaryLogId, summaryLogsRepository, logger)
+      break
+  }
+}
+
+/**
+ * Creates the message handler for the SQS consumer.
+ * @param {ConsumerDependencies} deps
+ * @returns {(message: import('@aws-sdk/client-sqs').Message) => Promise<void>}
+ */
+const createMessageHandler = (deps) => async (message) => {
+  const { logger, summaryLogsRepository } = deps
+
+  const command = parseCommandMessage(message, logger)
+  if (!command) {
     return
   }
+
+  const { command: commandType, summaryLogId } = command
 
   logger.info({
     message: `Processing command: ${commandType} for summaryLogId=${summaryLogId}`,
@@ -136,7 +175,6 @@ const createMessageHandler = (deps) => async (message) => {
             action: LOGGING_EVENT_ACTIONS.PROCESS_FAILURE
           }
         })
-        // Delete unknown commands - no point retrying
         return
     }
 
@@ -159,27 +197,12 @@ const createMessageHandler = (deps) => async (message) => {
       }
     })
 
-    // Mark as failed (permanent failure) and delete message
-    switch (commandType) {
-      case SUMMARY_LOG_COMMAND.VALIDATE:
-        await markAsValidationFailed(
-          summaryLogId,
-          summaryLogsRepository,
-          logger
-        )
-        break
-
-      case SUMMARY_LOG_COMMAND.SUBMIT:
-        await markAsSubmissionFailed(
-          summaryLogId,
-          summaryLogsRepository,
-          logger
-        )
-        break
-    }
-
-    // Message will be deleted after handler returns (success path)
-    // If we wanted to retry, we'd throw here instead
+    await markCommandAsFailed(
+      commandType,
+      summaryLogId,
+      summaryLogsRepository,
+      logger
+    )
   }
 }
 
